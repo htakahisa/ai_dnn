@@ -145,3 +145,56 @@ class DefaultDefenderController(BaseController):
         return self.get_next_pos_random(char.pos, grid)
 
 
+class UserInputController(BaseController):
+    """人間の入力（マウスクリック）によって動かすコントローラー。
+    選択したキャラクターをクリックした地点へBFS最短経路で移動させる。"""
+
+    def __init__(self):
+        super().__init__()
+        self.selected_char = None   # 現在選択中のキャラ名
+        self.targets = {}           # キャラ名 -> 目的地座標(タプル)
+
+    def reset_round(self):
+        """ラウンド開始時に選択状態・目的地をリセットする"""
+        self.selected_char = None
+        self.targets.clear()
+
+    def handle_click(self, r, c, grid, chars, my_team):
+        """
+        キャンバスクリック時に呼び出す。
+        r, c: クリックされたマス座標
+        grid: マップグリッド
+        chars: 全キャラクターのリスト
+        my_team: このコントローラーが担当するチーム（"A" or "D"）
+        """
+        # 壁をクリックしたら選択解除
+        if grid[r, c] == 1:
+            self.selected_char = None
+            return
+
+        # 自チームの生存キャラがそのマスにいればそれを選択する（移動中でも選択可能）
+        clicked_char = next(
+            (ch for ch in chars if ch.is_alive and ch.team == my_team and tuple(ch.pos) == (r, c)),
+            None
+        )
+        if clicked_char is not None:
+            self.selected_char = clicked_char.name
+            return
+
+        # 選択中のキャラがいれば、そのマスを新しい目的地として設定する
+        if self.selected_char is not None:
+            self.targets[self.selected_char] = (r, c)
+            self.selected_char = None  # 指示を出したら選択解除
+
+    def decide_move(self, char, game_state):
+        grid = game_state["grid"]
+
+        target = self.targets.get(char.name)
+        if target is None:
+            return char.pos  # 目的地未設定ならその場に留まる
+
+        if tuple(char.pos) == target:
+            del self.targets[char.name]
+            return char.pos  # 到着したら目的地をクリア
+
+        return self.move_towards_target(char.pos, target, grid)

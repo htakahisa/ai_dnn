@@ -3,12 +3,12 @@ import tkinter as tk
 import numpy as np
 
 # 分離した操作用クラスをインポート
-from controllers import DefaultAttackerController, DefaultDefenderController
+from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
 from map_data import NEW_MAZE_STR
 
-WINNING_ROUNDS = 13
-TICK_TIME = 100
+WINNING_ROUNDS = 5
+TICK_TIME = 500
 
 
 class Character:
@@ -47,6 +47,7 @@ class VisualFPSBattle:
             self.root.title("Attacker vs Defender")
             self.canvas = tk.Canvas(self.root, width=self.width*self.cell_size, height=self.height*self.cell_size)
             self.canvas.pack()
+            self.canvas.bind("<Button-1>", self.on_canvas_click)   # 💡追加
             self.label = tk.Label(self.root, text="Round 1 Start", font=("Arial", 10))
             self.label.pack()
         
@@ -82,6 +83,10 @@ class VisualFPSBattle:
         # ディフェンダーコントローラの内部状態(サイト割り当て等)をリセットする
         if hasattr(self.defender_controller, "reset_round"):
             self.defender_controller.reset_round()
+            
+        # 💡追加：アタッカー側も同様にリセット(UserInputController用)
+        if hasattr(self.attacker_controller, "reset_round"):
+            self.attacker_controller.reset_round()
 
     def move_character(self, char):
         r, c = char.pos
@@ -90,16 +95,24 @@ class VisualFPSBattle:
         # 💡 【修正】アタッカーのPlant自動処理の条件を厳密化
         # ---------------------------------------------------------------------
         # 単に grid == 2 ではなく、アタッカーが目指している target_plant_pos に到達した時のみタイマーを進める
-        if char.team == "A" and char.has_spike and self.target_plant_pos:
-            if list(char.pos) == list(self.target_plant_pos):
+        if char.team == "A" and char.has_spike:
+            is_user_controlled = isinstance(self.attacker_controller, UserInputController)
+
+            if is_user_controlled:
+                # 💡 ユーザー操作時：2のマスならどこでも、そこで止まればplant開始
+                on_plant_site = (self.grid[r, c] == 2)
+            else:
+                # 💡 AI操作時：従来通りtarget_plant_posに到達した時のみ
+                on_plant_site = self.target_plant_pos and list(char.pos) == list(self.target_plant_pos)
+
+            if on_plant_site:
                 char.plant_timer += 1
                 if char.plant_timer >= 4:
                     self.is_planted = True
-                    self.planted_pos = (r, c)  
+                    self.planted_pos = (r, c)
                     char.has_spike = False
                 return  # プラント中は移動処理を行わずその場に留まる
             else:
-                # ターゲットサイトに向かう途中なら、交戦などで蓄積したタイマーをリセットして移動を許可する
                 char.plant_timer = 0
 
         # ---------------------------------------------------------------------
@@ -175,6 +188,30 @@ class VisualFPSBattle:
             e2 = 2 * err
             if e2 >= dy: err += dy; curr_x += sx
             if e2 <= dx: err += dx; curr_y += sy
+            
+    def get_user_controllers(self):
+        """ユーザー操作のコントローラーとそのチームのペアを返す"""
+        result = []
+        if isinstance(self.attacker_controller, UserInputController):
+            result.append((self.attacker_controller, "A"))
+        if isinstance(self.defender_controller, UserInputController):
+            result.append((self.defender_controller, "D"))
+        return result
+
+    def on_canvas_click(self, event):
+        c = event.x // self.cell_size
+        r = event.y // self.cell_size
+        if not (0 <= r < self.height and 0 <= c < self.width):
+            return
+
+        user_controllers = self.get_user_controllers()
+        if not user_controllers:
+            return
+
+        for ctrl, team in user_controllers:
+            ctrl.handle_click(r, c, self.grid, self.chars, team)
+
+        self.draw()
 
     def get_spotted_info(self):
         spike_holder = next((c for c in self.chars if c.is_alive and c.team == "A" and c.has_spike), None)
@@ -339,6 +376,10 @@ class VisualFPSBattle:
             self.canvas.create_line((c1.pos[1]+0.5)*self.cell_size, (c1.pos[0]+0.5)*self.cell_size, 
                                     (c2.pos[1]+0.5)*self.cell_size, (c2.pos[0]+0.5)*self.cell_size, fill="red", width=1)
         
+        # ユーザー操作コントローラーの現在の選択中キャラ名を集める
+        selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
+
+        
         for c in self.chars:
             if not c.is_alive and not c.just_died: continue
             row, col = c.pos
@@ -348,7 +389,10 @@ class VisualFPSBattle:
                 c.just_died = False
             else:
                 bg = "#2980b9" if (getattr(c, 'defuse_timer', 0) > 0 and self.is_planted) else c.bg_color
-                self.canvas.create_oval(col*self.cell_size, row*self.cell_size, (col+1)*self.cell_size, (row+1)*self.cell_size, fill=bg)
+               # 選択中は黄色い枠線をつける
+                outline_color = "yellow" if c.name in selected_names else ""
+                outline_width = 3 if c.name in selected_names else 1
+                self.canvas.create_oval(col*self.cell_size, row*self.cell_size, (col+1)*self.cell_size, (row+1)*self.cell_size, fill=bg, outline=outline_color, width=outline_width)
                 
                 if c.has_spike:
                     self.canvas.create_oval(col*self.cell_size+1, row*self.cell_size+1, (col+1)*self.cell_size-1, (row+1)*self.cell_size-1, fill="black", outline="")
@@ -390,7 +434,8 @@ if __name__ == "__main__":
     # FALSE: 画面ありでいつものプレイ（人間が観戦する用）
     LEARNING_MODE = True # AIモデルを使うのでTrueに
     
-    att_ctrl = DefaultAttackerController()
+    #att_ctrl = DefaultAttackerController()
+    att_ctrl = UserInputController()
     
     if LEARNING_MODE:
         # 新しい統合モデルでテストしたい場合
