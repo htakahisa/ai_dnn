@@ -134,6 +134,11 @@ class CombinedGridWorldEnv(gym.Env):
         # ---------------------------------------------------------------------
         if not self.is_planted:
             if self.current_step > 15 or random.random() < 0.05:
+                # 初めて目撃した瞬間、メインのゴール自体を敵の位置に切り替える
+                if self.enemy_spotted < 0.5:
+                    self.goal_pos = self.true_enemy_target
+                    self.dist_map = self._bfs_distances_from_goal(self.goal_pos)
+                    self.prev_dist = self.dist_map[self.player_pos[0], self.player_pos[1]]
                 self.enemy_spotted = 1.0
                 self.spotted_site_pos = self.true_enemy_target 
             
@@ -181,11 +186,6 @@ class CombinedGridWorldEnv(gym.Env):
                 # 移動によるゴールへの距離報酬計算
                 new_dist = self.dist_map[self.player_pos[0], self.player_pos[1]]
                 shaping = (self.prev_dist - new_dist) * 0.5
-                
-                if not self.is_planted and self.enemy_spotted > 0.5:
-                    new_enemy_target_dist = self.enemy_target_dist_map[self.player_pos[0], self.player_pos[1]]
-                    shaping_pre_plant = (self.prev_enemy_target_dist - new_enemy_target_dist) * 0.4 
-                    self.prev_enemy_target_dist = new_enemy_target_dist
 
                 # 移動だけでゴール（スパイク位置）に重なっても即終了にはせず、
                 # あくまで「解除アクションでタイマーを貯めること」をゴールとするため terminated=False のまま。

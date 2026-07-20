@@ -7,7 +7,7 @@ from controllers import DefaultAttackerController, DefaultDefenderController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
 from map_data import NEW_MAZE_STR
 
-WINNING_ROUNDS = 5
+WINNING_ROUNDS = 13
 TICK_TIME = 100
 
 
