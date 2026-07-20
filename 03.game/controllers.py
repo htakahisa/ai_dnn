@@ -63,17 +63,18 @@ class BaseController:
 
 class DefaultAttackerController(BaseController):
     """アタッカー側の標準ロジック"""
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
         spike_pos = game_state["spike_pos"]
         is_planted = game_state["is_planted"]
         planted_pos = game_state["planted_pos"]
-        target_plant_pos = game_state.get("target_plant_pos") # 【追加】今ラウンドの目標プラント位置
+        target_plant_pos = game_state.get("target_plant_pos")
         chars = game_state["chars"]
         r, c = char.pos
 
         # ---------------------------------------------------------------------
-        # 2. プラント後の防衛ロジック
+        # 1. プラント後の防衛ロジック
         # ---------------------------------------------------------------------
         if is_planted and planted_pos:
             dist_to_spike = max(abs(planted_pos[0] - r), abs(planted_pos[1] - c))
@@ -83,27 +84,34 @@ class DefaultAttackerController(BaseController):
                 return self.move_towards_target(char.pos, planted_pos, grid)
 
         # ---------------------------------------------------------------------
-        # プラント前の通常ロジック
+        # 2. プラント前の通常ロジック
         # ---------------------------------------------------------------------
-        # スパイク持ちは指定されたランダムなプラントサイトを目指す
+        # 【最優先】スパイク持ちの挙動（拾った瞬間もここを通る）
         if char.has_spike:
             if target_plant_pos:
-                # 【変更】一番近い場所ではなく、ゲーム開始時に選ばれた本命サイトへ進む
+                if list(char.pos) == list(target_plant_pos):
+                    return char.pos  
                 return self.move_towards_target(char.pos, target_plant_pos, grid)
             
-            # フォールバック用（指定がなければ従来通り一番近い場所へ）
             plants = list(zip(*np.where(grid == 2)))
             if plants:
-                target = min(plants, key=lambda p: abs(p[0] - r) + abs(p[1] - c))
+                target = plants[0] 
+                if list(char.pos) == list(target):
+                    return char.pos
                 return self.move_towards_target(char.pos, target, grid)
             return self.get_next_pos_random(char.pos, grid)
 
-        # 1. スパイクを持っていないアタッカーは護衛または回収
-        if spike_pos:
+        # 現在誰かがスパイクを持っているか確認
+        holder = next((c for c in chars if c.is_alive and c.has_spike), None)
+
+        # スパイクが落ちており、生存している味方の誰もスパイクを持っていない場合は回収に行く
+        if holder is None and spike_pos is not None:
+            # 💡 【修正】スパイクの位置に到達したら、その場に留まってシステム側の回収判定（has_spike=True）を待つ
+            if list(char.pos) == list(spike_pos):
+                return char.pos  # ランダムに逃げず、その場に留まる
             return self.move_towards_target(char.pos, spike_pos, grid)
         
-        # スパイクを誰かが持っている場合、そのキャラを「ついていく」
-        holder = next((c for c in chars if c.is_alive and c.has_spike), None)
+        # すでに他の味方がスパイクを持っている場合、そのキャラを護衛（追従）する
         if holder:
             dist_to_holder = max(abs(holder.pos[0] - r), abs(holder.pos[1] - c))
             if random.random() < 0.3:
@@ -135,3 +143,5 @@ class DefaultDefenderController(BaseController):
 
         # プラント前は通常のランダム索敵
         return self.get_next_pos_random(char.pos, grid)
+
+
