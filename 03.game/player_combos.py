@@ -168,7 +168,7 @@ COMBOS = [
         "effect_text": "参加者全員のHit率 +15ポイント、反応速度 +10ポイント",
     },
     {
-        "name": "工場現場,
+        "name": "工場現場",
         "players": ("IbarakiNinja", "Brawk"),
         "bonuses": {
             "accuracy": 0.20,
@@ -178,7 +178,7 @@ COMBOS = [
         "effect_text": "IbarakiNinjaとBrawkのHit率 +20ポイント、反応速度 +5ポイント",
     },
     {
-        "name": "VisionStrikers,
+        "name": "VisionStrikers",
         "players": ("Stax", "Mako", "Buzz", "Rb"),
         "bonuses": {
             "accuracy": 0.20,
@@ -189,7 +189,7 @@ COMBOS = [
         "effect_text": "参加者全員のHit率 +20ポイント、反応速度 +10ポイント、回避率 + 15ポイント",
     },
     {
-        "name": "スキューバカンカンチュー,
+        "name": "スキューバカンカンチュー",
         "players": ("skuba", "ZMJKK", "CHICHOO"),
         "bonuses": {
             "accuracy": 0.20,
