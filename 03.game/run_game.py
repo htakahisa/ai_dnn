@@ -5,6 +5,7 @@ import numpy as np
 # 分離した操作用クラスをインポート
 from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
+from learning_attacker import LearningAttackerController
 from map_data import NEW_MAZE_STR
 
 WINNING_ROUNDS = 5
@@ -91,11 +92,12 @@ class VisualFPSBattle:
     def move_character(self, char):
         r, c = char.pos
         
+        is_ai_attacker = isinstance(self.attacker_controller, LearningAttackerController)
+        
         # ---------------------------------------------------------------------
         # 💡 【修正】アタッカーのPlant自動処理の条件を厳密化
         # ---------------------------------------------------------------------
-        # 単に grid == 2 ではなく、アタッカーが目指している target_plant_pos に到達した時のみタイマーを進める
-        if char.team == "A" and char.has_spike:
+        if char.team == "A" and char.has_spike and not is_ai_attacker:
             is_user_controlled = isinstance(self.attacker_controller, UserInputController)
 
             if is_user_controlled:
@@ -141,9 +143,11 @@ class VisualFPSBattle:
         }
 
         if char.team == "A":
-            # アタッカー側（位置だけ返す想定）
-            next_pos = self.attacker_controller.decide_move(char, game_state)
-            action_type = "MOVE"
+            result = self.attacker_controller.decide_move(char, game_state)
+            if isinstance(result, tuple) and len(result) == 2:
+                next_pos, action_type = result
+            else:
+                next_pos, action_type = result, "MOVE"
         else:
             # ディフェンダー側：コントローラーによって戻り値の数が異なるため自動判別
             result = self.defender_controller.decide_move(char, game_state)
@@ -158,7 +162,19 @@ class VisualFPSBattle:
         # ---------------------------------------------------------------------
         #  アクションタイプに応じたシステム処理 (修正版)
         # ---------------------------------------------------------------------
-        if action_type == "DEFUSE":
+        if action_type == "PLANT":
+            if char.team == "A" and char.has_spike:
+                on_site = self.target_plant_pos is not None and list(char.pos) == list(self.target_plant_pos)
+                if on_site:
+                    char.plant_timer += 1
+                    if char.plant_timer >= 4:
+                        self.is_planted = True
+                        self.planted_pos = tuple(char.pos)
+                        char.has_spike = False
+                else:
+                    char.plant_timer = 0
+            return
+        elif action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
                 if dist <= 1:
@@ -169,9 +185,9 @@ class VisualFPSBattle:
             char.defuse_timer = 0
 
         else:
-            # MOVE アクションの処理
+            char.plant_timer = 0
             char.defuse_timer = 0  
-            # 💡 インデックス参照エラーを防ぐため、next_pos が有効な2次元座標であることを保証
+            # インデックス参照エラーを防ぐため、next_pos が有効な2次元座標であることを保証
             if isinstance(next_pos, (list, np.ndarray)) and len(next_pos) == 2:
                 if self.grid[next_pos[0], next_pos[1]] != 1:
                     char.pos = list(next_pos)
@@ -435,7 +451,8 @@ if __name__ == "__main__":
     LEARNING_MODE = True # AIモデルを使うのでTrueに
     
     #att_ctrl = DefaultAttackerController()
-    att_ctrl = UserInputController()
+    att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
+    #att_ctrl = UserInputController()
     
     if LEARNING_MODE:
         # 新しい統合モデルでテストしたい場合
