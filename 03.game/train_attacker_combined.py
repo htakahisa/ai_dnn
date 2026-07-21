@@ -125,7 +125,7 @@ class AttackerCombinedEnv:
         if self.last_action is not None:
             last_onehot[self.last_action] = 1.0
 
-        max_dist = self.height * self.width
+        max_dist = max(self.height, self.width) * 2
         dists = []
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nr, nc = pr + dr, pc + dc
@@ -257,7 +257,7 @@ class AttackerCombinedEnv:
         walls = [0.0 if self._is_walkable(pr + dr, pc + dc) else 1.0
                  for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
         last_onehot = [0.0] * 5  # teammateの前回行動は簡略化のため追跡しない
-        max_dist = self.height * self.width
+        max_dist = max(self.height, self.width) * 2
         dists = []
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nr, nc = pr + dr, pc + dc
@@ -301,13 +301,22 @@ class AttackerCombinedEnv:
             return arrival_reward, True
 
         reward = -1.0 + shaping
+
+        # 💡追加: ゴール手前(BFS距離3以内)は詰める価値を強めに評価し、
+        # 最終アプローチの精度を上げる
+        if arrival_reward is not None and np.isfinite(new_dist) and new_dist <= 3:
+            reward += 1.5
+
         pos_tuple = (nr, nc)
-        if pos_tuple in self.pos_history and new_dist >= self.prev_dist:
+        # 💡変更: ゴール手前(距離3以内)では後戻りペナルティを外す。
+        # 狭い入り口や折れ曲がった経路では最短ルートでも近くを通り直すことがあり、
+        # このペナルティが最終アプローチの精度を妨げていた可能性があるため。
+        near_goal = arrival_reward is not None and np.isfinite(new_dist) and new_dist <= 3
+        if not near_goal and pos_tuple in self.pos_history and new_dist >= self.prev_dist:
             reward -= 2.0
         self.pos_history.append(pos_tuple)
 
         if guard_mode:
-            # スパイクから離れすぎたら軽いペナルティ（適度な距離を保たせる）
             d_spike = max(abs(nr - self.goal_pos[0]), abs(nc - self.goal_pos[1]))
             if d_spike > 6:
                 reward -= 0.3
@@ -328,7 +337,7 @@ def train():
 
     env = AttackerCombinedEnv(fixed_grid, plant_candidates)
 
-    num_episodes = 5000
+    num_episodes = 4000
     batch_size = 64
     gamma = 0.99
     epsilon_start, epsilon_end, epsilon_decay = 1.0, 0.05, 0.997
