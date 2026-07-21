@@ -1,4 +1,5 @@
 import random
+import math
 import tkinter as tk
 import numpy as np
 
@@ -10,23 +11,83 @@ from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 
 WINNING_ROUNDS = 13
-TICK_TIME = 500
+TICK_TIME = 1000
 
 MAX_HP = 100
 BODY_DAMAGE = 40
 HEADSHOT_DAMAGE = 160
 SHOOT_INTERVAL_TICKS = 1
 SIDE_PANEL_WIDTH = 260
-DEFUSE_REQUIRED_TICKS = 12  # 0.5秒/tick × 12 = 6秒（従来より3秒延長）
-SMOKE_DURATION_TICKS = 30  # 15秒
+PLANT_REQUIRED_SECONDS = 4.0
+DEFUSE_REQUIRED_SECONDS = 6.0
+SMOKE_DURATION_SECONDS = 15.0
 MOVING_ACCURACY = 0.50
 MOVING_TARGET_HIT_MULTIPLIER = 0.70
+BLIND_DURATION_SECONDS = 3.0
+FLASH_BURST_DURATION_SECONDS = 2.0
+BLIND_ACCURACY_MULTIPLIER = 0.30
+FLASH_SPEED_CELLS_PER_TICK = 3
+FLASH_MAX_FLIGHT_TICKS = 5
+RECON_SPEED_CELLS_PER_TICK = 3
+REVEAL_DURATION_SECONDS = 5.0
+REVEALED_DODGE_MULTIPLIER = 0.50
+RECON_REVEAL_SIZE = 9
 
-# character_stats.py が持つキー名に差があっても読み込めるようにする。
-try:
-    import character_stats as _character_stats
-except ImportError:
-    _character_stats = None
+# 設定ファイルは、このrun_game.pyと同じフォルダから読み込む。
+# バージョン名や「(1)」付きファイルを直接importしないことで、
+# 古いファイルを誤って読む問題を防ぐ。
+import importlib.util
+from pathlib import Path
+
+_BASE_DIR = Path(__file__).resolve().parent
+
+
+def _load_local_module(module_name, filenames):
+    """候補のうち最初に存在するローカルPythonファイルを読み込む。"""
+    for filename in filenames:
+        path = _BASE_DIR / filename
+        if not path.is_file():
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location(module_name, path)
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            print(f"[LOAD] {module_name}: {path.name}")
+            return module
+        except Exception as exc:
+            print(f"[LOAD ERROR] {path.name}: {exc}")
+    print(f"[LOAD ERROR] {module_name}: usable file not found")
+    return None
+
+
+# 配布時は canonical 名（character_stats.py / player_combos.py）を使う。
+_character_stats = _load_local_module(
+    "game_character_stats",
+    ("character_stats.py", "character_stats_dynamic.py", "character_stats_v3.py", "character_stats(1).py"),
+)
+
+_combo_module = _load_local_module(
+    "game_player_combos",
+    ("player_combos.py", "player_combos_v3.py", "player_combos(1).py", "player_combos_v2.py"),
+)
+PLAYER_COMBOS = getattr(_combo_module, "COMBOS", []) if _combo_module else []
+if not isinstance(PLAYER_COMBOS, list):
+    print("[LOAD ERROR] player_combos.py の COMBOS がlistではありません")
+    PLAYER_COMBOS = []
+
+_awakening_module = _load_local_module(
+    "game_awakening_events",
+    ("awakening_events.py",),
+)
+AWAKENING_EVENTS = getattr(_awakening_module, "AWAKENING_EVENTS", []) if _awakening_module else []
+if not isinstance(AWAKENING_EVENTS, list):
+    print("[LOAD ERROR] awakening_events.py の AWAKENING_EVENTS がlistではありません")
+    AWAKENING_EVENTS = []
+
+COMBO_DISPLAY_TICKS = 3
+COMBO_BANNER_HEIGHT = 92
 
 
 def _clamp_rate(value, default):
@@ -40,9 +101,48 @@ def _clamp_rate(value, default):
     return max(0.0, min(1.0, value))
 
 
+def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
+    """現在の5ステータスから総合戦闘力を動的に算出する。
+
+    割合は 1.0 = 100% として扱う。
+    総合戦闘力 =
+        HS%*130
+        + 回避率*170
+        + IQ/2
+        + (命中率-0.2)*130
+        + 反応速度/2.2
+    """
+    hs_rate = _clamp_rate(hs_rate, 0.0)
+    dodge_rate = _clamp_rate(dodge_rate, 0.0)
+    accuracy = _clamp_rate(accuracy, 0.0)
+    try:
+        iq = float(iq)
+    except (TypeError, ValueError):
+        iq = 0.0
+    try:
+        reaction = float(reaction)
+    except (TypeError, ValueError):
+        reaction = 0.0
+
+    return (
+        hs_rate * 130.0
+        + dodge_rate * 170.0
+        + (iq / 2.0)
+        + (accuracy - 0.2) * 130.0
+        + (reaction / 2.2)
+    )
+
+
 def get_character_combat_stats(name):
     """キャラクター定義から命中率・弾除け率・HS率を取得する。未定義時は既定値。"""
-    defaults = {"accuracy": 0.50, "dodge_rate": 0.10, "hs_rate": 0.20}
+    defaults = {
+        "accuracy": 0.50,
+        "dodge_rate": 0.10,
+        "hs_rate": 0.20,
+        "iq": 50,
+        "reaction": 100,
+        "role": "フラッシュ",
+    }
     if _character_stats is None:
         return defaults
 
@@ -76,10 +176,28 @@ def get_character_combat_stats(name):
                 return _clamp_rate(raw[key], default)
         return default
 
+    def pick_text(keys, default):
+        for key in keys:
+            if key in raw and raw[key] is not None:
+                return str(raw[key])
+        return default
+
+    def pick_number(keys, default):
+        for key in keys:
+            if key in raw:
+                try:
+                    return float(raw[key])
+                except (TypeError, ValueError):
+                    pass
+        return float(default)
+
     return {
         "accuracy": pick(("accuracy", "aim", "hit_rate", "hit_pct", "命中率"), defaults["accuracy"]),
         "dodge_rate": pick(("dodge_rate", "dodge", "dodge_pct", "evasion", "弾除け率"), defaults["dodge_rate"]),
         "hs_rate": pick(("hs_rate", "hs", "hs_pct", "headshot_rate", "HS", "HS%"), defaults["hs_rate"]),
+        "iq": pick_number(("iq", "IQ", "判断力"), defaults["iq"]),
+        "reaction": pick_number(("reaction", "reaction_speed", "反応速度"), defaults["reaction"]),
+        "role": pick_text(("role", "ロール"), defaults["role"]),
     }
 
 
@@ -131,9 +249,23 @@ def get_all_character_names():
     return []
 
 
+def _print_data_diagnostics():
+    names = get_all_character_names()
+    print(f"[DATA] characters={len(names)} / combos={len(PLAYER_COMBOS)} / awakenings={len(AWAKENING_EVENTS)}")
+    if not names:
+        print("[DATA ERROR] キャラクター一覧が0件です。character_stats.pyをrun_game.pyと同じフォルダに置いてください。")
+    if not PLAYER_COMBOS:
+        print("[DATA WARNING] コンボが0件です。player_combos.pyを確認してください。")
+
+
+_print_data_diagnostics()
+
+
 class Character:
     def __init__(self, name, team, pos, text_color, bg_color, has_spike=False, kills=0, deaths=0):
         self.name = name
+        self.base_name = name
+        self.display_name = name
         self.team = team
         self.pos = list(pos)
         self.text_color = text_color
@@ -142,18 +274,106 @@ class Character:
         self.just_died = False
         self.has_spike = has_spike
         self.plant_timer = 0
+        self.is_planting = False
         self.defuse_timer = 0
         self.max_hp = MAX_HP
         self.hp = MAX_HP
         self.kills = kills
         self.deaths = deaths
+        # 覚醒条件用。試合通算キルとは別に、各ラウンド開始時に0から数える。
+        self.round_kills = 0
 
         stats = get_character_combat_stats(name)
+        self.role = stats.get("role", "フラッシュ")
         self.accuracy = stats["accuracy"]
         self.dodge_rate = stats["dodge_rate"]
         self.hs_rate = stats["hs_rate"]
+        self.iq = stats.get("iq", 50.0)
+        self.reaction = stats.get("reaction", 100.0)
+        # タイガーの固有パッシブ「ハンター」：常時 Hit% を10ポイント、HS% を5ポイント上昇。
+        self.hunter_active = self.role == "タイガー"
+        if self.hunter_active:
+            self.accuracy = min(1.0, self.accuracy + 0.10)
+            self.hs_rate = min(1.0, self.hs_rate + 0.05)
+        self.ability_name = {
+            "フラッシュ": "FLASH",
+            "スモーカー": "SMOKE",
+            "シーカー": "RECON",
+            "タイガー": "HUNT",
+        }.get(self.role, "FLASH")
         self.moved_this_tick = False
-        self.smoke_charges = 1
+        self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
+        self.flash_charges = 1 if self.ability_name == "FLASH" else 0
+        self.recon_charges = 1 if self.ability_name == "RECON" else 0
+        self.blind_remaining = 0.0
+        self.reveal_remaining = 0.0
+        self.los_revealed = False
+        # このラウンドで発動しているプレイヤーコンボ名。
+        self.active_combos = []
+        self.active_awakening = None
+        self.triggered_awakening_events = set()
+
+    @property
+    def combat_power(self):
+        """補正後の現在ステータスから総合戦闘力を毎回計算する。"""
+        return calculate_combat_power(
+            self.hs_rate, self.dodge_rate, self.iq, self.accuracy, self.reaction
+        )
+
+def _canonical_combo_stat_key(key):
+    """コンボ定義内の表記ゆれを Character の属性名へ変換する。"""
+    normalized = str(key).strip().lower().replace("％", "%").replace(" ", "")
+    aliases = {
+        "accuracy": "accuracy",
+        "hit": "accuracy",
+        "hit%": "accuracy",
+        "hit_pct": "accuracy",
+        "hit_rate": "accuracy",
+        "命中率": "accuracy",
+        "hs": "hs_rate",
+        "hs%": "hs_rate",
+        "hs_pct": "hs_rate",
+        "hs_rate": "hs_rate",
+        "headshot_rate": "hs_rate",
+        "ヘッドショット率": "hs_rate",
+        "dodge": "dodge_rate",
+        "dodge%": "dodge_rate",
+        "dodge_pct": "dodge_rate",
+        "dodge_rate": "dodge_rate",
+        "回避率": "dodge_rate",
+        "弾除け率": "dodge_rate",
+        "reaction": "reaction",
+        "reaction_speed": "reaction",
+        "反応速度": "reaction",
+        "hp": "max_hp",
+        "max_hp": "max_hp",
+    }
+    return aliases.get(normalized)
+
+
+def _apply_combo_bonus(character, stat_key, value):
+    """一つのコンボ補正を適用する。率は加算後0～100%に収める。"""
+    attr = _canonical_combo_stat_key(stat_key)
+    if attr is None:
+        return False
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return False
+
+    if attr in ("accuracy", "hs_rate", "dodge_rate"):
+        # 10 のような指定も10ポイントとして扱う。
+        if abs(amount) > 1.0:
+            amount /= 100.0
+        setattr(character, attr, max(0.0, min(1.0, getattr(character, attr) + amount)))
+    elif attr == "reaction":
+        character.reaction = max(0.0, character.reaction + amount)
+    elif attr == "max_hp":
+        old_max = character.max_hp
+        character.max_hp = max(1, int(round(character.max_hp + amount)))
+        character.hp = max(0, min(character.max_hp, character.hp + (character.max_hp - old_max)))
+    return True
+
 
 class VisualFPSBattle:
     def __init__(self, maze_str, attacker_controller, defender_controller, headless=False, attacker_roster=None, spike_holder_name=None):
@@ -180,7 +400,7 @@ class VisualFPSBattle:
         self.map_offset_x = SIDE_PANEL_WIDTH
         self.map_pixel_width = self.width * self.cell_size
         self.map_pixel_height = self.height * self.cell_size
-        self.ability_area_height = 92
+        self.ability_area_height = 110
         
         # 画面非表示（headless）モードの時はTkinterを立ち上げない
         if not self.headless:
@@ -189,12 +409,12 @@ class VisualFPSBattle:
             self.canvas = tk.Canvas(
                 self.root,
                 width=self.map_pixel_width + SIDE_PANEL_WIDTH * 2,
-                height=self.map_pixel_height + self.ability_area_height,
+                height=self.map_pixel_height + self.ability_area_height + COMBO_BANNER_HEIGHT,
                 bg="#10141c",
                 highlightthickness=0,
             )
             self.canvas.pack(fill="both", expand=True)
-            self.root.minsize(self.map_pixel_width + SIDE_PANEL_WIDTH * 2, self.map_pixel_height + self.ability_area_height + 30)
+            self.root.minsize(self.map_pixel_width + SIDE_PANEL_WIDTH * 2, self.map_pixel_height + self.ability_area_height + COMBO_BANNER_HEIGHT + 30)
             self.canvas.bind("<Button-1>", self.on_canvas_click)   # 💡追加
             self.label = tk.Label(self.root, text="Round 1 Start", font=("Arial", 10))
             self.label.pack()
@@ -246,6 +466,18 @@ class VisualFPSBattle:
             saved = self.match_stats.setdefault(name, {"kills": 0, "deaths": 0})
             self.chars.append(Character(name, "D", pos, "white", "#27ae60",
                                         kills=saved["kills"], deaths=saved["deaths"]))
+
+        # ロール補正を含む基礎能力の初期化後、チーム編成によるコンボ補正を適用する。
+        # Character はラウンドごとに作り直されるため、補正が累積することはない。
+        self._apply_player_combos()
+        # コンボと覚醒イベントを同じ告知キューで順番に表示する。
+        self.announcement_queue = []
+        self.combo_announcement_index = 0
+        self.combo_announcement_ticks_left = 0
+        for combo_announcement in self.active_player_combos:
+            item = dict(combo_announcement)
+            item.setdefault("type", "combo")
+            self._enqueue_announcement(item)
             
         plants = list(zip(*np.where(self.grid == 2)))
         self.target_plant_pos = random.choice(plants) if plants else None
@@ -256,11 +488,16 @@ class VisualFPSBattle:
         self.round_timer = 90          
         self.detonate_timer = 45       
         self.is_defused = False        
+        self.active_defuser_name = None
         self.last_engagements = []
         self.last_shot = None
         self.last_shots = []
         self.battle_tick = 0
-        self.smokes = []  # {cells:set[(r,c)], remaining:int, owner:str}
+        self.smokes = []  # {cells:set[(r,c)], remaining_seconds:float, owner:str}
+        self.flash_projectiles = []  # {owner, team, path, progress, ticks_alive}
+        self.recon_projectiles = []  # {owner, team, path, progress}
+        self.flash_bursts = []  # {pos, remaining_seconds}
+        self.recon_bursts = []  # {cells, remaining_seconds}
         self.ability_mode = None
         
         # ディフェンダーコントローラの内部状態(サイト割り当て等)をリセットする
@@ -271,37 +508,211 @@ class VisualFPSBattle:
         if hasattr(self.attacker_controller, "reset_round"):
             self.attacker_controller.reset_round()
 
+    def _apply_player_combos(self):
+        """同じチームに必要メンバーが全員いるコンボを発動する。"""
+        self.active_player_combos = []
+        for team in ("A", "D"):
+            team_chars = [char for char in self.chars if char.team == team]
+            chars_by_name = {char.name: char for char in team_chars}
+            team_names = set(chars_by_name)
+
+            for combo in PLAYER_COMBOS:
+                if not isinstance(combo, dict):
+                    continue
+                combo_name = str(combo.get("name", "名称未設定コンボ"))
+                required_players = tuple(str(name) for name in combo.get("players", ()))
+                if not required_players or not set(required_players).issubset(team_names):
+                    continue
+
+                common_bonuses = combo.get("bonuses", {})
+                per_player_bonuses = combo.get("player_bonuses", {})
+                renames = combo.get("renames", {})
+                affected = []
+
+                for player_name in required_players:
+                    char = chars_by_name[player_name]
+                    if isinstance(common_bonuses, dict):
+                        for stat_key, value in common_bonuses.items():
+                            _apply_combo_bonus(char, stat_key, value)
+                    own_bonuses = per_player_bonuses.get(player_name, {}) if isinstance(per_player_bonuses, dict) else {}
+                    if isinstance(own_bonuses, dict):
+                        for stat_key, value in own_bonuses.items():
+                            _apply_combo_bonus(char, stat_key, value)
+                    if isinstance(renames, dict) and player_name in renames:
+                        char.display_name = str(renames[player_name])
+                    if combo_name not in char.active_combos:
+                        char.active_combos.append(combo_name)
+                    affected.append(player_name)
+
+                self.active_player_combos.append({
+                    "type": "combo",
+                    "name": combo_name,
+                    "team": team,
+                    "players": tuple(affected),
+                    "display_players": tuple(chars_by_name[n].display_name for n in affected),
+                    "effect_text": str(combo.get("effect_text") or self._describe_bonuses(common_bonuses, per_player_bonuses)),
+                })
+
+    def _describe_bonuses(self, common_bonuses, per_player_bonuses=None):
+        labels = {"accuracy": "Hit%", "hs_rate": "HS%", "dodge_rate": "回避率", "reaction": "反応速度", "max_hp": "最大HP"}
+        parts = []
+        if isinstance(common_bonuses, dict):
+            for key, value in common_bonuses.items():
+                canonical = _canonical_combo_stat_key(key)
+                if canonical:
+                    amount = float(value)
+                    shown = amount * 100 if canonical != "max_hp" and abs(amount) <= 1 else amount
+                    parts.append(f"{labels.get(canonical, canonical)} {shown:+g}")
+        if isinstance(per_player_bonuses, dict) and per_player_bonuses:
+            parts.append("個別補正あり")
+        return " / ".join(parts) if parts else "特殊効果"
+
+    def _enqueue_announcement(self, announcement):
+        """コンボ・覚醒イベントの告知を表示待ちキューへ追加する。"""
+        if not isinstance(announcement, dict):
+            return
+        if not hasattr(self, "announcement_queue"):
+            self.announcement_queue = []
+        self.announcement_queue.append(announcement)
+
+        # 現在何も表示していない場合は、追加された告知を直ちに表示開始する。
+        if self.combo_announcement_index >= len(self.announcement_queue) - 1:
+            self.combo_announcement_index = len(self.announcement_queue) - 1
+            self.combo_announcement_ticks_left = COMBO_DISPLAY_TICKS
+
+    def _advance_combo_announcement(self):
+        """現在の告知を1Tick進め、終了したら次の告知へ移る。"""
+        if not getattr(self, "announcement_queue", None):
+            return
+        if self.combo_announcement_index >= len(self.announcement_queue):
+            return
+        self.combo_announcement_ticks_left -= 1
+        if self.combo_announcement_ticks_left <= 0:
+            self.combo_announcement_index += 1
+            if self.combo_announcement_index < len(self.announcement_queue):
+                self.combo_announcement_ticks_left = COMBO_DISPLAY_TICKS
+
+    def _get_character_preset(self, name):
+        if _character_stats is None:
+            return None
+        getter = getattr(_character_stats, "get_by_name", None)
+        raw = getter(name) if callable(getter) else None
+        if raw is None:
+            table = getattr(_character_stats, "CHARACTER_TABLE", {})
+            raw = table.get(name) if isinstance(table, dict) else None
+        return raw
+
+    def _apply_awakening_preset(self, char, preset_name):
+        raw = self._get_character_preset(preset_name)
+        if raw is None:
+            return
+        data = vars(raw) if hasattr(raw, "__dict__") else raw
+        char.accuracy = _clamp_rate(data.get("hit_pct", data.get("accuracy")), char.accuracy)
+        char.hs_rate = _clamp_rate(data.get("hs_pct", data.get("hs_rate")), char.hs_rate)
+        char.dodge_rate = _clamp_rate(data.get("dodge_pct", data.get("dodge_rate")), char.dodge_rate)
+        try:
+            char.iq = float(data.get("iq", data.get("IQ", char.iq)))
+        except (TypeError, ValueError):
+            pass
+        try:
+            char.reaction = float(
+                data.get("reaction", data.get("reaction_speed", data.get("反応速度", char.reaction)))
+            )
+        except (TypeError, ValueError):
+            pass
+        role = str(data.get("role", char.role))
+        char.role = role
+        char.ability_name = {"フラッシュ":"FLASH", "スモーカー":"SMOKE", "シーカー":"RECON", "タイガー":"HUNT"}.get(role, char.ability_name)
+        char.hunter_active = role == "タイガー"
+        char.smoke_charges = 1 if char.ability_name == "SMOKE" else 0
+        char.flash_charges = 1 if char.ability_name == "FLASH" else 0
+        char.recon_charges = 1 if char.ability_name == "RECON" else 0
+
+    def _awakening_condition_met(self, event, char):
+        condition = str(event.get("condition", ""))
+        value = event.get("condition_value")
+        if condition == "all_allies_dead":
+            allies = [c for c in self.chars if c.team == char.team and c is not char]
+            return char.is_alive and bool(allies) and all(not c.is_alive for c in allies)
+        if condition == "hp_at_or_below":
+            try: return char.is_alive and char.hp <= float(value)
+            except (TypeError, ValueError): return False
+        if condition == "kills_at_least":
+            try:
+                return char.is_alive and char.round_kills >= int(value)
+            except (TypeError, ValueError):
+                return False
+        return False
+
+    def _check_awakening_events(self):
+        for event in AWAKENING_EVENTS:
+            if not isinstance(event, dict):
+                continue
+            player = str(event.get("player", ""))
+            event_name = str(event.get("name", "名称未設定の覚醒"))
+            char = next((c for c in self.chars if c.base_name == player), None)
+            if char is None or event_name in char.triggered_awakening_events:
+                continue
+            if not self._awakening_condition_met(event, char):
+                continue
+            preset = event.get("transform_to")
+            if preset:
+                self._apply_awakening_preset(char, str(preset))
+            bonuses = event.get("bonuses", {})
+            if isinstance(bonuses, dict):
+                for key, value in bonuses.items():
+                    _apply_combo_bonus(char, key, value)
+            if event.get("rename"):
+                char.display_name = str(event["rename"])
+            char.active_awakening = event_name
+            char.triggered_awakening_events.add(event_name)
+
+            # 覚醒した瞬間に、プレイヤーコンボと同じ上部パネルへ表示する。
+            # 同一Tickに複数人が覚醒した場合も、追加された順に3Tickずつ表示される。
+            effect_text = str(event.get("effect_text") or self._describe_bonuses(bonuses))
+            self._enqueue_announcement({
+                "type": "awakening",
+                "name": event_name,
+                "team": char.team,
+                "players": (char.base_name,),
+                "display_players": (char.display_name,),
+                "effect_text": effect_text,
+            })
+
+    def _tick_seconds(self):
+        """1シミュレーションTickが表す秒数。時間制効果はすべてこれを使う。"""
+        return max(0.001, TICK_TIME / 1000.0)
+
     def move_character(self, char):
         r, c = char.pos
         old_pos = tuple(char.pos)
         char.moved_this_tick = False
         
         # ---------------------------------------------------------------------
-        # 💡 【修正】アタッカーのPlant自動処理の条件を厳密化
+        # プラント処理
+        # ユーザー操作時は、プラントゾーンに入っただけでは開始しない。
+        # 選択中キャラクターの下部UIに出るPLANTボタンから明示的に開始する。
+        # AI操作時のみ、従来どおり目標サイト到達時に自動で開始する。
         # ---------------------------------------------------------------------
-        # 単に grid == 2 ではなく、アタッカーが目指している target_plant_pos に到達した時のみタイマーを進める
-        if char.team == "A" and char.has_spike:
+        if char.team == "A" and char.has_spike and not self.is_planted:
             is_user_controlled = isinstance(self.attacker_controller, UserInputController)
+            on_plant_site = (self.grid[r, c] == 2) if is_user_controlled else (
+                self.target_plant_pos and list(char.pos) == list(self.target_plant_pos)
+            )
+            should_plant = char.is_planting if is_user_controlled else bool(on_plant_site)
 
-            if is_user_controlled:
-                # 💡 ユーザー操作時：2のマスならどこでも、そこで止まればplant開始
-                on_plant_site = (self.grid[r, c] == 2)
-            else:
-                # 💡 AI操作時：従来通りtarget_plant_posに到達した時のみ
-                on_plant_site = self.target_plant_pos and list(char.pos) == list(self.target_plant_pos)
-
-            if on_plant_site:
-                char.plant_timer += 1
-                if char.plant_timer >= 4:
+            if should_plant and on_plant_site:
+                char.plant_timer += self._tick_seconds()
+                if char.plant_timer >= PLANT_REQUIRED_SECONDS:
                     self.is_planted = True
                     self.planted_pos = (r, c)
                     char.has_spike = False
-                    # 設置完了後も plant_timer が残ると、射撃処理で永久に
-                    # 「設置中」と判定されるため必ずリセットする。
                     char.plant_timer = 0
-                return  # プラント中は移動処理を行わずその場に留まる
-            else:
-                char.plant_timer = 0
+                    char.is_planting = False
+                return  # 設置中は移動・射撃を行わない
+            if char.is_planting and not on_plant_site:
+                char.is_planting = False
+            char.plant_timer = 0
 
         # ---------------------------------------------------------------------
         # AIにどう動くか（または解除するか）を聞く
@@ -350,19 +761,34 @@ class VisualFPSBattle:
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
                 if dist <= 1:
-                    char.defuse_timer += 1
-                    # 解除完了は射撃解決後に判定する。これにより最終解除tickでも、
-                    # 射線が通る攻撃側は先に射撃でき、解除者が倒れた場合は解除失敗になる。
-                    return  # 解除時はここで処理を終了し、その場に留まる
+                    # 同時に解除できるのは一人だけ。担当者がいない時だけロックを取得する。
+                    if self.active_defuser_name in (None, char.name):
+                        self.active_defuser_name = char.name
+                        char.defuse_timer += self._tick_seconds()
+                        # 解除完了は射撃解決後に判定する。最終解除tickでも射撃を先に解決する。
+                        return
+                    # 別のキャラクターが解除中なら、このキャラクターは解除を開始できない。
+                    char.defuse_timer = 0
+                    return
+            if self.active_defuser_name == char.name:
+                self.active_defuser_name = None
             char.defuse_timer = 0
 
         else:
-            # MOVE アクションの処理
+            # MOVE アクションの処理。解除担当者が解除をやめたらロックを解放する。
+            if self.active_defuser_name == char.name:
+                self.active_defuser_name = None
             char.defuse_timer = 0  
             # 💡 インデックス参照エラーを防ぐため、next_pos が有効な2次元座標であることを保証
             if isinstance(next_pos, (list, np.ndarray)) and len(next_pos) == 2:
-                if self.grid[next_pos[0], next_pos[1]] != 1:
-                    char.pos = list(next_pos)
+                nr, nc = int(next_pos[0]), int(next_pos[1])
+                in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
+                occupied = any(
+                    other is not char and other.is_alive and tuple(other.pos) == (nr, nc)
+                    for other in self.chars
+                )
+                if in_bounds and self.grid[nr, nc] != 1 and not occupied:
+                    char.pos = [nr, nc]
 
         char.moved_this_tick = tuple(char.pos) != old_pos
 
@@ -372,31 +798,72 @@ class VisualFPSBattle:
             cells.update(smoke["cells"])
         return cells
 
-    def check_line_of_sight(self, p1, p2):
-        """壁またはスモークを横切る射線を遮断する。"""
-        x0, y0, x1, y1 = p1.pos[1], p1.pos[0], p2.pos[1], p2.pos[0]
+    def _line_cells(self, start, end):
+        """2マス間を結ぶBresenham線上のセルを順番に返す。"""
+        y0, x0 = int(start[0]), int(start[1])
+        y1, x1 = int(end[0]), int(end[1])
         dx, dy = abs(x1 - x0), -abs(y1 - y0)
         sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
         err = dx + dy
-        curr_x, curr_y = x0, y0
-        smoke_cells = self._smoke_cells()
-        first = True
+        cells = []
         while True:
-            if self.grid[curr_y, curr_x] == 1:
-                return False
-            # 自分がいる開始マスは判定せず、それ以降にスモークがあれば遮断
-            if not first and (curr_y, curr_x) in smoke_cells:
-                return False
-            if curr_x == x1 and curr_y == y1:
-                return True
-            first = False
+            cells.append((y0, x0))
+            if x0 == x1 and y0 == y1:
+                return cells
             e2 = 2 * err
             if e2 >= dy:
                 err += dy
-                curr_x += sx
+                x0 += sx
             if e2 <= dx:
                 err += dx
-                curr_y += sy
+                y0 += sy
+
+    def _smoke_allows_line(self, line_cells, smoke_cells):
+        """指定された射線がスモーク規則上通るか判定する。
+
+        通る:
+        - 始点と終点がどちらもスモーク内
+
+        通らない:
+        - 外から中
+        - 中から外
+        - 外から外で、途中にスモークがある
+        """
+        if not line_cells:
+            return True
+
+        start_in_smoke = line_cells[0] in smoke_cells
+        end_in_smoke = line_cells[-1] in smoke_cells
+
+        if start_in_smoke and end_in_smoke:
+            return True
+
+        if start_in_smoke != end_in_smoke:
+            return False
+
+        return not any(cell in smoke_cells for cell in line_cells[1:-1])
+
+    def check_cell_line_of_sight(self, start, end, block_smoke=True):
+        line_cells = self._line_cells(start, end)
+
+        for r, c in line_cells:
+            if self.grid[r, c] == 1:
+                return False
+
+        if block_smoke and not self._smoke_allows_line(line_cells, self._smoke_cells()):
+            return False
+
+        return True
+
+    def check_line_of_sight(self, p1, p2):
+        """壁とスモーク規則を考慮して、2人の間に射線が通るか判定する。"""
+        line_cells = self._line_cells(tuple(p1.pos), tuple(p2.pos))
+
+        for r, c in line_cells:
+            if self.grid[r, c] == 1:
+                return False
+
+        return self._smoke_allows_line(line_cells, self._smoke_cells())
 
     def get_viewer_team(self):
         controllers = self.get_user_controllers()
@@ -405,8 +872,47 @@ class VisualFPSBattle:
     def is_visible_to_team(self, target, viewer_team):
         if viewer_team is None or target.team == viewer_team:
             return True
+        if target.reveal_remaining > 0:
+            return True
         return any(ally.is_alive and ally.team == viewer_team and self.check_line_of_sight(ally, target)
                    for ally in self.chars)
+
+    def _update_los_reveal(self):
+        """敵同士の射線が通っている間、双方をリビール状態として扱う。"""
+        for char in self.chars:
+            char.los_revealed = False
+        alive = [char for char in self.chars if char.is_alive]
+        for i, first in enumerate(alive):
+            for second in alive[i + 1:]:
+                if first.team != second.team and self.check_line_of_sight(first, second):
+                    first.los_revealed = True
+                    second.los_revealed = True
+
+    def _is_revealed(self, char):
+        return char.reveal_remaining > 0 or char.los_revealed
+
+    def _current_los_revealed_names(self):
+        """現在、敵との射線が通っているキャラクター名の集合を返す。"""
+        revealed = set()
+        alive = [char for char in self.chars if char.is_alive]
+        for i, first in enumerate(alive):
+            for second in alive[i + 1:]:
+                if first.team != second.team and self.check_line_of_sight(first, second):
+                    revealed.add(first.name)
+                    revealed.add(second.name)
+        return revealed
+
+    def _is_revealed_for_shot(self, char, current_los_revealed_names):
+        """射撃判定用のリビール状態。
+
+        リコン由来のリビールは即時適用する。
+        射線由来は「前Tickでもリビール済み」かつ「現在も射線が通る」場合だけ
+        回避率低下を適用する。これにより初めて視認したTickは通常回避率で撃たれ、
+        その射撃後から射線リビール状態になる。
+        """
+        recon_revealed = char.reveal_remaining > 0
+        persistent_los_revealed = char.los_revealed and char.name in current_los_revealed_names
+        return recon_revealed or persistent_los_revealed
 
     def get_user_controllers(self):
         """ユーザー操作のコントローラーとそのチームのペアを返す"""
@@ -418,20 +924,38 @@ class VisualFPSBattle:
         return result
 
     def on_canvas_click(self, event):
-        # 下部アビリティパネルのSMOKEボタン。構え中に再クリックするとキャンセル。
-        panel = self._ability_panel_bounds()
-        if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
-            selected = self._selected_user_character()
-            same_smoke_is_armed = (
-                selected is not None
-                and self.ability_mode == ("SMOKE", selected.team, selected.name)
-            )
-            if same_smoke_is_armed:
-                self.ability_mode = None
-            elif selected and selected.smoke_charges > 0:
-                self.ability_mode = ("SMOKE", selected.team, selected.name)
+        if event.y < COMBO_BANNER_HEIGHT:
+            return
+        event.y -= COMBO_BANNER_HEIGHT
+        selected = self._selected_user_character()
+
+        # プラント可能な選択キャラクターにだけ表示されるPLANTボタン。
+        plant_bounds = self._plant_button_bounds()
+        if selected and plant_bounds and plant_bounds[0] <= event.x <= plant_bounds[2] and plant_bounds[1] <= event.y <= plant_bounds[3]:
+            selected.is_planting = not selected.is_planting
+            selected.plant_timer = 0
+            self.ability_mode = None
             self.draw()
             return
+
+        # 選択中キャラクターは、ロールに対応したアビリティ一つだけ使用できる。
+        if selected and selected.ability_name in ("SMOKE", "FLASH", "RECON"):
+            ability_name = selected.ability_name
+            panel = self._ability_button_bounds(ability_name)
+            if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
+                same_is_armed = self.ability_mode == (ability_name, selected.team, selected.name)
+                if same_is_armed:
+                    self.ability_mode = None
+                else:
+                    charges = {
+                        "SMOKE": selected.smoke_charges,
+                        "FLASH": selected.flash_charges,
+                        "RECON": selected.recon_charges,
+                    }[ability_name]
+                    if charges > 0:
+                        self.ability_mode = (ability_name, selected.team, selected.name)
+                self.draw()
+                return
 
         map_x = event.x - self.map_offset_x
         if map_x < 0 or map_x >= self.map_pixel_width:
@@ -441,14 +965,30 @@ class VisualFPSBattle:
         if not (0 <= r < self.height and 0 <= c < self.width):
             return
 
-        if self.ability_mode and self.ability_mode[0] == "SMOKE":
-            _, team, owner_name = self.ability_mode
+        if self.ability_mode:
+            ability_name, team, owner_name = self.ability_mode
             owner = next((ch for ch in self.chars if ch.name == owner_name and ch.is_alive), None)
-            if owner and owner.team == team and owner.smoke_charges > 0 and self.grid[r, c] != 1:
-                cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
-                         if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
-                self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS, "owner": owner.name})
-                owner.smoke_charges -= 1
+            if owner and owner.team == team and owner.ability_name == ability_name and self.grid[r, c] != 1:
+                if ability_name == "SMOKE" and owner.smoke_charges > 0:
+                    cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
+                             if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
+                    self.smokes.append({"cells": cells, "remaining_seconds": SMOKE_DURATION_SECONDS, "owner": owner.name})
+                    owner.smoke_charges -= 1
+                elif ability_name == "FLASH" and owner.flash_charges > 0:
+                    path = self._projectile_path(tuple(owner.pos), (r, c))
+                    if len(path) > 1:
+                        self.flash_projectiles.append({
+                            "owner": owner.name, "team": owner.team, "path": path,
+                            "progress": 0, "ticks_alive": 0
+                        })
+                        owner.flash_charges -= 1
+                elif ability_name == "RECON" and owner.recon_charges > 0:
+                    path = self._projectile_path(tuple(owner.pos), (r, c))
+                    if len(path) > 1:
+                        self.recon_projectiles.append({
+                            "owner": owner.name, "team": owner.team, "path": path, "progress": 0
+                        })
+                        owner.recon_charges -= 1
             self.ability_mode = None
             self.draw()
             return
@@ -463,14 +1003,59 @@ class VisualFPSBattle:
                 return next((ch for ch in self.chars if ch.name == ctrl.selected_char and ch.team == team and ch.is_alive), None)
         return None
 
-    def _ability_panel_bounds(self):
+    def _can_selected_plant(self):
         selected = self._selected_user_character()
-        if not selected:
+        if not selected or not selected.is_alive or selected.team != "A":
+            return False
+        if self.is_planted or not selected.has_spike:
+            return False
+        r, c = selected.pos
+        return self.grid[r, c] == 2
+
+    def _bottom_control_layout(self):
+        total_w, h = min(690, self.map_pixel_width - 20), 68
+        x1 = self.map_offset_x + (self.map_pixel_width - total_w) / 2
+        y1 = self.map_pixel_height + 28
+        if self._can_selected_plant():
+            gap, plant_w = 10, 150
+            return (x1, y1, x1 + total_w - plant_w - gap, y1 + h), (x1 + total_w - plant_w, y1, x1 + total_w, y1 + h)
+        return (x1, y1, x1 + total_w, y1 + h), None
+
+    def _ability_panel_bounds(self):
+        if not self._selected_user_character():
             return None
-        w, h = 250, 62
-        x1 = self.map_offset_x + (self.map_pixel_width - w) / 2
-        y1 = self.map_pixel_height + 14
-        return (x1, y1, x1+w, y1+h)
+        return self._bottom_control_layout()[0]
+
+    def _plant_button_bounds(self):
+        if not self._can_selected_plant():
+            return None
+        return self._bottom_control_layout()[1]
+
+    def _ability_button_bounds(self, ability_name):
+        panel = self._ability_panel_bounds()
+        selected = self._selected_user_character()
+        if not panel or not selected or selected.ability_name != ability_name:
+            return None
+        return panel
+
+    def _projectile_path(self, start, aimed_cell):
+        """指定マスを方向として、壁またはマップ端まで伸びる投射経路を作る。"""
+        sr, sc = start
+        ar, ac = aimed_cell
+        dr, dc = ar - sr, ac - sc
+        if dr == 0 and dc == 0:
+            return [start]
+        scale = max(self.height, self.width) * 3
+        far = (sr + dr * scale, sc + dc * scale)
+        raw = self._line_cells(start, far)
+        path = [start]
+        for rr, cc in raw[1:]:
+            if not (0 <= rr < self.height and 0 <= cc < self.width):
+                break
+            if self.grid[rr, cc] == 1:
+                break
+            path.append((rr, cc))
+        return path
 
     def get_spotted_info(self):
         spike_holder = next((c for c in self.chars if c.is_alive and c.team == "A" and c.has_spike), None)
@@ -514,20 +1099,23 @@ class VisualFPSBattle:
         target.just_died = True
         target.deaths += 1
         shooter.kills += 1
+        shooter.round_kills += 1
         self.match_stats.setdefault(target.name, {"kills": 0, "deaths": 0})["deaths"] = target.deaths
         self.match_stats.setdefault(shooter.name, {"kills": 0, "deaths": 0})["kills"] = shooter.kills
+        target.is_planting = False
+        target.plant_timer = 0
+        if self.active_defuser_name == target.name:
+            self.active_defuser_name = None
         if target.has_spike:
             self.spike_pos = tuple(target.pos)
             target.has_spike = False
 
-    def _resolve_all_shots(self, engagements=None):
-        """生存中の各キャラクターが、毎tick最大1回ずつ射撃する。
+    def _resolve_all_shots(self, engagements=None, current_los_revealed_names=None):
+        """同Tickの射撃を反応速度が高い順に逐次処理する。
 
-        各射手について、その瞬間に生存していて射線が通る敵を直接再検索する。
-        解除中の敵が見えている場合は、その敵を最優先で狙う。
-        射撃予定を全員分確定してからダメージを適用するため、同じtick中に
-        倒されたキャラクターも、そのtick開始時に予定した射撃は実行できる。
-        設置中・解除中のキャラクター自身は射撃できない。
+        Tick開始時に射撃予定者と標的を確定する。
+        反応速度の高い射手から順に射撃し、同値の場合だけランダム順にする。
+        自分の射撃順が来る前に死亡した射手は射撃できない。
         """
         if self.battle_tick % SHOOT_INTERVAL_TICKS != 0:
             self.last_shots = []
@@ -536,10 +1124,13 @@ class VisualFPSBattle:
 
         alive_at_tick_start = [c for c in self.chars if c.is_alive]
         shot_intents = []
+        executed_shots = []
+
+        if current_los_revealed_names is None:
+            current_los_revealed_names = self._current_los_revealed_names()
 
         for shooter in alive_at_tick_start:
-            busy = (shooter.plant_timer > 0) or (shooter.defuse_timer > 0)
-            if busy:
+            if shooter.plant_timer > 0 or shooter.defuse_timer > 0:
                 continue
 
             possible_targets = [
@@ -550,7 +1141,6 @@ class VisualFPSBattle:
             if not possible_targets:
                 continue
 
-            # 解除中の敵を最優先。複数いれば近い敵、その次にHPの低い敵を狙う。
             defusers = [
                 target for target in possible_targets
                 if self.is_planted and target.defuse_timer > 0
@@ -564,35 +1154,60 @@ class VisualFPSBattle:
                     t.name,
                 ),
             )
+            shot_intents.append({"shooter": shooter, "target": target})
+
+        # シャッフル後に安定ソートすることで、同じ反応速度だけ順番がランダムになる。
+        random.shuffle(shot_intents)
+        shot_intents.sort(
+            key=lambda intent: intent["shooter"].reaction,
+            reverse=True,
+        )
+
+        for intent in shot_intents:
+            shooter = intent["shooter"]
+            target = intent["target"]
+
+            if not shooter.is_alive:
+                continue
+            if not target.is_alive:
+                continue
 
             shooter_accuracy = MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
-            hit_chance = shooter_accuracy * (1.0 - target.dodge_rate)
+            if shooter.blind_remaining > 0:
+                shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
+
+            effective_dodge = target.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER
+                if self._is_revealed_for_shot(target, current_los_revealed_names)
+                else 1.0
+            )
+            hit_chance = shooter_accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
-            headshot = hit and (random.random() < shooter.hs_rate)
+            headshot = hit and random.random() < shooter.hs_rate
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
-            shot_intents.append({
+
+            shot = {
                 "shooter": shooter,
                 "target": target,
                 "hit": hit,
                 "headshot": headshot,
                 "damage": damage,
                 "hit_chance": hit_chance,
-            })
+                "reaction": shooter.reaction,
+            }
+            executed_shots.append(shot)
 
-        for shot in shot_intents:
-            target = shot["target"]
-            if shot["damage"] <= 0 or not target.is_alive:
-                continue
-            target.hp = max(0, target.hp - shot["damage"])
-            if target.hp <= 0:
-                self._kill_character(shot["shooter"], target)
+            if damage > 0:
+                target.hp = max(0, target.hp - damage)
+                if target.hp <= 0:
+                    self._kill_character(shooter, target)
 
-        self.last_shots = shot_intents
-        self.last_shot = shot_intents[-1] if shot_intents else None
+        self.last_shots = executed_shots
+        self.last_shot = executed_shots[-1] if executed_shots else None
 
     def _resolve_defuse_completion(self):
         """射撃後に解除完了を確定する。生存している解除者だけが完了できる。"""
@@ -600,16 +1215,82 @@ class VisualFPSBattle:
             return
         completed = [
             c for c in self.chars
-            if c.is_alive and c.team == "D" and c.defuse_timer >= DEFUSE_REQUIRED_TICKS
+            if c.is_alive and c.team == "D" and c.defuse_timer >= DEFUSE_REQUIRED_SECONDS
         ]
         if completed:
             self.is_defused = True
+            self.active_defuser_name = None
+
+    def _explode_flash(self, projectile, impact=None):
+        impact = impact or projectile["path"][min(projectile["progress"], len(projectile["path"]) - 1)]
+        self.flash_bursts.append({"pos": impact, "remaining_seconds": FLASH_BURST_DURATION_SECONDS})
+        owner_team = projectile.get("team")
+        for char in self.chars:
+            if not char.is_alive or char.team == owner_team:
+                continue
+            if self.check_cell_line_of_sight(tuple(char.pos), impact, block_smoke=True):
+                char.blind_remaining = max(char.blind_remaining, BLIND_DURATION_SECONDS)
+
+    def _explode_recon(self, projectile, impact=None):
+        impact = impact or projectile["path"][min(projectile["progress"], len(projectile["path"]) - 1)]
+        ir, ic = impact
+        # 9x9: 着弾地点を中心に上下左右へ4マスずつ。
+        radius = RECON_REVEAL_SIZE // 2
+        cells = {
+            (rr, cc)
+            for rr in range(ir - radius, ir + radius + 1)
+            for cc in range(ic - radius, ic + radius + 1)
+            if 0 <= rr < self.height and 0 <= cc < self.width
+        }
+        self.recon_bursts.append({"cells": cells, "remaining_seconds": 1.0})
+        owner_team = projectile.get("team")
+        for char in self.chars:
+            if char.is_alive and char.team != owner_team and tuple(char.pos) in cells:
+                char.reveal_remaining = max(char.reveal_remaining, REVEAL_DURATION_SECONDS)
+
+    def _advance_flash_projectiles(self):
+        remaining = []
+        for projectile in self.flash_projectiles:
+            projectile["ticks_alive"] += 1
+            next_progress = projectile["progress"] + FLASH_SPEED_CELLS_PER_TICK
+            hit_wall_or_edge = next_progress >= len(projectile["path"]) - 1
+            projectile["progress"] = min(next_progress, len(projectile["path"]) - 1)
+            if hit_wall_or_edge or projectile["ticks_alive"] >= FLASH_MAX_FLIGHT_TICKS:
+                self._explode_flash(projectile)
+            else:
+                remaining.append(projectile)
+        self.flash_projectiles = remaining
+
+    def _advance_recon_projectiles(self):
+        remaining = []
+        for projectile in self.recon_projectiles:
+            next_progress = projectile["progress"] + RECON_SPEED_CELLS_PER_TICK
+            hit_wall_or_edge = next_progress >= len(projectile["path"]) - 1
+            projectile["progress"] = min(next_progress, len(projectile["path"]) - 1)
+            if hit_wall_or_edge:
+                self._explode_recon(projectile)
+            else:
+                remaining.append(projectile)
+        self.recon_projectiles = remaining
 
     def process_battle(self):
         self.battle_tick += 1
+        # 時間制効果は秒で管理する。TICK_TIMEを変更しても効果時間は変わらない。
+        dt = self._tick_seconds()
+        for char in self.chars:
+            char.blind_remaining = max(0.0, char.blind_remaining - dt)
+            char.reveal_remaining = max(0.0, char.reveal_remaining - dt)
+        for burst in self.flash_bursts:
+            burst["remaining_seconds"] -= dt
+        self.flash_bursts = [burst for burst in self.flash_bursts if burst["remaining_seconds"] > 0]
+        for burst in self.recon_bursts:
+            burst["remaining_seconds"] -= dt
+        self.recon_bursts = [burst for burst in self.recon_bursts if burst["remaining_seconds"] > 0]
+        self._advance_flash_projectiles()
+        self._advance_recon_projectiles()
         for smoke in self.smokes:
-            smoke["remaining"] -= 1
-        self.smokes = [smoke for smoke in self.smokes if smoke["remaining"] > 0]
+            smoke["remaining_seconds"] -= dt
+        self.smokes = [smoke for smoke in self.smokes if smoke["remaining_seconds"] > 0]
 
         if self.spike_pos is not None:
             for c in self.chars:
@@ -623,6 +1304,9 @@ class VisualFPSBattle:
                 self.spike_pos = tuple(c.pos)
                 c.has_spike = False
 
+        # 現在の射線状況は先に計算するが、射線リビール状態への反映は射撃後に行う。
+        # そのため、初めて敵を視認したTickの射撃は通常の回避率で判定される。
+        current_los_revealed_names = self._current_los_revealed_names()
         alive = [c for c in self.chars if c.is_alive]
         engagements = [
             (alive[i], alive[j])
@@ -632,7 +1316,15 @@ class VisualFPSBattle:
         ]
         self.last_engagements = engagements
         self.last_shot = None
-        self._resolve_all_shots(engagements)
+        self._resolve_all_shots(engagements, current_los_revealed_names)
+
+        # 射撃判定後に、現在の射線状況を次のTick用リビール状態として反映する。
+        for char in self.chars:
+            char.los_revealed = char.is_alive and char.name in current_los_revealed_names
+
+        # 射撃結果で条件を満たした覚醒イベントを判定する。
+        self._check_awakening_events()
+
         # 射撃を解決してから解除完了を判定する。
         self._resolve_defuse_completion()
 
@@ -646,7 +1338,7 @@ class VisualFPSBattle:
             self.round_over = True
             self.check_match_winner()
         elif self.is_planted:
-            self.detonate_timer -= 1
+            self.detonate_timer -= self._tick_seconds()
             if self.detonate_timer <= 0:
                 self.attacker_wins += 1
                 if not self.headless: self.label.config(text=f"💥 Spike Detonated! Attacker WIN Round {self.current_round}! {score_text}", fg="red")
@@ -660,14 +1352,14 @@ class VisualFPSBattle:
             elif not alive_A:
                 if not self.headless:
                     max_defuse = max([c.defuse_timer for c in self.chars if c.team == "D" and c.is_alive] + [0])
-                    defuse_str = f" (Defusing: {max_defuse}/{DEFUSE_REQUIRED_TICKS})" if max_defuse > 0 else ""
-                    self.label.config(text=f"💀 Attacker Eliminated! Defuse the Spike! {self.detonate_timer}s{defuse_str} | R{self.current_round}{score_text}", fg="#27ae60")
+                    defuse_str = f" (Defusing: {max_defuse:.1f}/{DEFUSE_REQUIRED_SECONDS:.0f}s)" if max_defuse > 0 else ""
+                    self.label.config(text=f"💀 Attacker Eliminated! Defuse the Spike! {math.ceil(self.detonate_timer)}s{defuse_str} | R{self.current_round}{score_text}", fg="#27ae60")
             elif not self.headless:
                 max_defuse = max([c.defuse_timer for c in self.chars if c.team == "D" and c.is_alive] + [0])
-                defuse_str = f" (Defusing: {max_defuse}/{DEFUSE_REQUIRED_TICKS})" if max_defuse > 0 else ""
-                self.label.config(text=f"🔥 Spike Planted! Detonation in {self.detonate_timer}s{defuse_str} | R{self.current_round}{score_text}", fg="red")
+                defuse_str = f" (Defusing: {max_defuse:.1f}/{DEFUSE_REQUIRED_SECONDS:.0f}s)" if max_defuse > 0 else ""
+                self.label.config(text=f"🔥 Spike Planted! Detonation in {math.ceil(self.detonate_timer)}s{defuse_str} | R{self.current_round}{score_text}", fg="red")
         else:
-            self.round_timer -= 1
+            self.round_timer -= self._tick_seconds()
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 if not self.headless: self.label.config(text=f"⏰ Time Expired! Defender WIN Round {self.current_round}! {score_text}", fg="#27ae60")
@@ -685,37 +1377,134 @@ class VisualFPSBattle:
                 self.check_match_winner()
             elif not self.headless:
                 site_side = "Left Side" if self.target_plant_pos and self.target_plant_pos[1] < self.width // 2 else "Right Side"
-                self.label.config(text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {self.round_timer}s | {score_text}", fg="black")
+                self.label.config(text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {math.ceil(self.round_timer)}s | {score_text}", fg="black")
 
     def _map_x(self, x):
         return self.map_offset_x + x
 
+    def _draw_compact_ability_icon(self, ability_name, cx, cy, available):
+        """構えるUIと同じ意匠の小型アビリティアイコンを描く。"""
+        active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
+        fill = active_color if available else "#59616c"
+        outline = "#f8c471" if available else "#7f8c8d"
+        if ability_name == "SMOKE":
+            for ox, oy, radius in [(-4, 2, 4), (0, -2, 5), (5, 2, 4), (1, 5, 4)]:
+                self.canvas.create_oval(cx+ox-radius, cy+oy-radius, cx+ox+radius, cy+oy+radius,
+                                        fill=fill, outline=outline, width=1)
+        elif ability_name == "FLASH":
+            self.canvas.create_oval(cx-6, cy-6, cx+6, cy+6, fill=fill, outline=outline, width=1)
+            for dx, dy in [(0,-9),(0,9),(-9,0),(9,0)]:
+                self.canvas.create_line(cx, cy, cx+dx, cy+dy, fill=fill, width=1)
+        elif ability_name == "RECON":
+            self.canvas.create_polygon(cx-8, cy+3, cx+5, cy-5, cx+8, cy-2, cx-4, cy+6,
+                                       fill=fill, outline=outline)
+        else:  # HUNT
+            self.canvas.create_text(cx, cy, text="H", fill=fill, font=("Arial", 10, "bold"))
+
     def _draw_team_panel(self, team, x0, title, accent):
+        """左右パネルへHP・K/D・アビリティ・現在の戦闘ステータスを表示する。"""
         panel_w = SIDE_PANEL_WIDTH
-        self.canvas.create_rectangle(x0, 0, x0 + panel_w, self.map_pixel_height + self.ability_area_height, fill="#111722", outline="#2a3444")
+        panel_h = self.map_pixel_height + self.ability_area_height
+        self.canvas.create_rectangle(
+            x0, 0, x0 + panel_w, panel_h,
+            fill="#111722", outline="#2a3444"
+        )
         self.canvas.create_rectangle(x0, 0, x0 + panel_w, 42, fill=accent, outline="")
-        self.canvas.create_text(x0 + panel_w / 2, 21, text=title, fill="white", font=("Arial", 13, "bold"))
+        self.canvas.create_text(
+            x0 + panel_w / 2, 21,
+            text=title, fill="white", font=("Arial", 13, "bold")
+        )
+
         chars = [c for c in self.chars if c.team == team][:5]
-        viewer_team = self.get_viewer_team()
-        row_h = 76
+        row_h = 108
+        card_h = 100
+
         for i, char in enumerate(chars):
-            y = 54 + i * row_h
+            y = 48 + i * row_h
             row_fill = "#1b2432" if char.is_alive else "#17191e"
-            self.canvas.create_rectangle(x0 + 10, y, x0 + panel_w - 10, y + 66, fill=row_fill, outline="#323e50")
+            muted = "#aeb8c6" if char.is_alive else "#666b73"
             name_fill = "white" if char.is_alive else "#777b83"
-            # 名前とK/Dは視認状態に関係なく常時表示する。
-            display_name = char.name
-            self.canvas.create_text(x0 + 20, y + 16, text=display_name, anchor="w", fill=name_fill, font=("Arial", 10, "bold"))
-            kd_text = f"K {char.kills}  D {char.deaths}"
-            self.canvas.create_text(x0 + panel_w - 18, y + 16, text=kd_text, anchor="e", fill="#d6dde8", font=("Arial", 9, "bold"))
-            # 左右パネルでは、名前・K/D・HPを視認状態に関係なく常時表示する。
-            # 視界判定で隠すのはマップ上の敵キャラクター本体だけ。
-            hp_ratio = char.hp / char.max_hp if char.is_alive else 0.0
-            bar_x1, bar_x2 = x0 + 20, x0 + panel_w - 20
-            self.canvas.create_rectangle(bar_x1, y + 36, bar_x2, y + 50, fill="#343a45", outline="")
-            self.canvas.create_rectangle(bar_x1, y + 36, bar_x1 + (bar_x2 - bar_x1) * hp_ratio, y + 50, fill=accent, outline="")
-            hp_text = f"{char.hp}/{char.max_hp}" if char.is_alive else "DEAD"
-            self.canvas.create_text((bar_x1 + bar_x2) / 2, y + 43, text=hp_text, fill="white", font=("Arial", 8, "bold"))
+
+            self.canvas.create_rectangle(
+                x0 + 10, y, x0 + panel_w - 10, y + card_h,
+                fill=row_fill, outline="#323e50"
+            )
+
+            # 名前・K/D
+            self.canvas.create_text(
+                x0 + 18, y + 13,
+                text=char.display_name, anchor="w",
+                fill=name_fill, font=("Arial", 9, "bold")
+            )
+            self.canvas.create_text(
+                x0 + panel_w - 17, y + 13,
+                text=f"K {char.kills}  D {char.deaths}", anchor="e",
+                fill="#d6dde8" if char.is_alive else "#777b83",
+                font=("Arial", 8, "bold")
+            )
+
+            # HPバー
+            hp_ratio = char.hp / char.max_hp if char.is_alive and char.max_hp > 0 else 0.0
+            bar_x1, bar_x2 = x0 + 18, x0 + panel_w - 18
+            self.canvas.create_rectangle(bar_x1, y + 25, bar_x2, y + 37, fill="#343a45", outline="")
+            self.canvas.create_rectangle(
+                bar_x1, y + 25,
+                bar_x1 + (bar_x2 - bar_x1) * hp_ratio, y + 37,
+                fill=accent, outline=""
+            )
+            hp_text = f"HP {char.hp}/{char.max_hp}" if char.is_alive else "DEAD"
+            self.canvas.create_text(
+                (bar_x1 + bar_x2) / 2, y + 31,
+                text=hp_text, fill="white", font=("Arial", 7, "bold")
+            )
+
+            # 現在値を表示するため、タイガー・コンボ・覚醒後の4能力から総合戦闘力も毎回再計算される。
+            accuracy_pct = round(char.accuracy * 100)
+            dodge_pct = round(char.dodge_rate * 100)
+            hs_pct = round(char.hs_rate * 100)
+            iq_text = f"{char.iq:g}"
+            reaction_text = f"{char.reaction:g}"
+            power_text = str(math.floor(char.combat_power))
+
+            self.canvas.create_text(
+                x0 + 18, y + 49,
+                text=f"命中精度 {accuracy_pct}%   判断力(IQ) {iq_text}",
+                anchor="w", fill=muted, font=("Arial", 7, "bold")
+            )
+            self.canvas.create_text(
+                x0 + 18, y + 63,
+                text=f"キャラコン(回避) {dodge_pct}%   HS {hs_pct}%",
+                anchor="w", fill=muted, font=("Arial", 7, "bold")
+            )
+            self.canvas.create_text(
+                x0 + 18, y + 77,
+                text=f"反応速度 {reaction_text}",
+                anchor="w", fill=muted, font=("Arial", 7, "bold")
+            )
+            self.canvas.create_text(
+                x0 + panel_w - 18, y + 77,
+                text=f"総合戦闘力 {power_text}",
+                anchor="e", fill="#f5c76b" if char.is_alive else "#777b83",
+                font=("Arial", 8, "bold")
+            )
+
+            # ロールに対応するアビリティ
+            ability = char.ability_name
+            charges = {
+                "SMOKE": char.smoke_charges,
+                "FLASH": char.flash_charges,
+                "RECON": char.recon_charges,
+                "HUNT": 1,
+            }[ability]
+            available = char.is_alive and (charges > 0 or ability == "HUNT")
+            self._draw_compact_ability_icon(ability, x0 + 27, y + 91, available)
+            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +10%"}[ability]
+            status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
+            self.canvas.create_text(
+                x0 + 43, y + 91,
+                text=f"{label}  {status}", anchor="w",
+                fill=muted, font=("Arial", 7, "bold")
+            )
 
     def draw(self):
         if self.headless:
@@ -734,6 +1523,9 @@ class VisualFPSBattle:
         # 煙らしく見えるように、半透明風の円を重ねて雲状に描画する。
         # Tkinter CanvasはRGBA非対応なのでstippleを使う。
         for smoke_index, smoke in enumerate(self.smokes):
+            warning = smoke["remaining_seconds"] <= 3 * self._tick_seconds()
+            if warning and self.battle_tick % 2 == 0:
+                continue
             for sr, sc in smoke["cells"]:
                 x1 = self._map_x(sc*self.cell_size)
                 y1 = sr*self.cell_size
@@ -778,13 +1570,59 @@ class VisualFPSBattle:
                 fill="#ff3b30" if self.last_shot["hit"] else "#aab2bd", width=2, dash=() if self.last_shot["hit"] else (4, 3),
             )
 
+        # 飛翔中フラッシュ：投擲済み経路を点線、現在位置を小さな光点で表示。
+        for projectile in self.flash_projectiles:
+            path = projectile["path"]
+            end_index = min(projectile["progress"], len(path) - 1)
+            if end_index > 0:
+                coords = []
+                for rr, cc in path[:end_index + 1]:
+                    coords.extend([self._map_x((cc + 0.5) * self.cell_size), (rr + 0.5) * self.cell_size])
+                if len(coords) >= 4:
+                    self.canvas.create_line(*coords, fill="#f4d03f", width=2, dash=(3, 4))
+            rr, cc = path[end_index]
+            cx = self._map_x((cc + 0.5) * self.cell_size)
+            cy = (rr + 0.5) * self.cell_size
+            self.canvas.create_oval(cx-4, cy-4, cx+4, cy+4, fill="#fff4a3", outline="#d4ac0d")
+
+        # 飛翔中リコン。フラッシュ同様に点線で進行方向を示す。
+        for projectile in self.recon_projectiles:
+            path = projectile["path"]
+            end_index = min(projectile["progress"], len(path) - 1)
+            if end_index > 0:
+                coords = []
+                for rr, cc in path[:end_index + 1]:
+                    coords.extend([self._map_x((cc + 0.5) * self.cell_size), (rr + 0.5) * self.cell_size])
+                if len(coords) >= 4:
+                    self.canvas.create_line(*coords, fill="#65d8e8", width=2, dash=(3, 4))
+            rr, cc = path[end_index]
+            cx = self._map_x((cc + 0.5) * self.cell_size)
+            cy = (rr + 0.5) * self.cell_size
+            self.canvas.create_polygon(cx-7, cy+3, cx+5, cy-5, cx+8, cy-2, cx-4, cy+6,
+                                       fill="#9eeaf4", outline="#2aa9bd")
+
+        for burst in self.recon_bursts:
+            for rr, cc in burst["cells"]:
+                x1 = self._map_x(cc * self.cell_size)
+                y1 = rr * self.cell_size
+                self.canvas.create_rectangle(x1, y1, x1+self.cell_size, y1+self.cell_size,
+                                             fill="#6ed7e8", outline="", stipple="gray50")
+
+        for burst in self.flash_bursts:
+            rr, cc = burst["pos"]
+            cx = self._map_x((cc + 0.5) * self.cell_size)
+            cy = (rr + 0.5) * self.cell_size
+            radius = self.cell_size * 0.65
+            self.canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
+                                    fill="#fff7bf", outline="#f1c40f", width=2, stipple="gray50")
+
         selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
         viewer_team = self.get_viewer_team()
-        for char in self.chars:
-            if not self.is_visible_to_team(char, viewer_team):
-                continue
-            if not char.is_alive and not char.just_died:
-                continue
+        visible_chars = [
+            c for c in self.chars
+            if self.is_visible_to_team(c, viewer_team) and (c.is_alive or c.just_died)
+        ]
+        for char in visible_chars:
             row, col = char.pos
             x1 = self._map_x(col*self.cell_size)
             cx, cy = x1 + self.cell_size/2, (row+0.5)*self.cell_size
@@ -797,17 +1635,34 @@ class VisualFPSBattle:
             outline_color = "yellow" if char.name in selected_names else ""
             outline_width = 3 if char.name in selected_names else 1
             self.canvas.create_oval(x1, row*self.cell_size, x1+self.cell_size, (row+1)*self.cell_size, fill=bg, outline=outline_color, width=outline_width)
+            if char.blind_remaining > 0:
+                # 視認性を壊さない薄い二重リングと小さな印でブラインド状態を表示。
+                self.canvas.create_oval(x1+2, row*self.cell_size+2, x1+self.cell_size-2, (row+1)*self.cell_size-2,
+                                        outline="#fff2a8", width=2, dash=(2, 2))
+                self.canvas.create_text(cx, cy, text="✦", fill="#fff7c2", font=("Arial", 9, "bold"))
+            if self._is_revealed(char):
+                self.canvas.create_rectangle(x1+3, row*self.cell_size+3, x1+self.cell_size-3, (row+1)*self.cell_size-3,
+                                             outline="#7de3f2", width=2, dash=(4, 2))
+                self.canvas.create_text(cx, cy+7, text="◇", fill="#b8f4fb", font=("Arial", 8, "bold"))
             if char.has_spike:
                 self.canvas.create_oval(x1+3, row*self.cell_size+3, x1+self.cell_size-3, (row+1)*self.cell_size-3, fill="black", outline="")
 
             # キャラクター上部の名前・HPパネル
-            panel_w = max(56, min(110, 16 + len(char.name) * 7))
+            panel_w = max(56, min(150, 16 + len(char.display_name) * 7))
             panel_h = 23
             px1 = cx - panel_w / 2
             py2 = row*self.cell_size - 3
             py1 = py2 - panel_h
-            self.canvas.create_rectangle(px1, py1, px1+panel_w, py2, fill="#101820", outline=char.bg_color, width=1)
-            self.canvas.create_text(cx, py1+8, text=char.name, fill="yellow" if char.has_spike else "white", font=("Arial", 8, "bold"))
+            has_adjacent = any(
+                other is not char and other.is_alive
+                and max(abs(other.pos[0] - char.pos[0]), abs(other.pos[1] - char.pos[1])) <= 1
+                for other in visible_chars
+            )
+            # 隣接時は札を半透明風(stipple)にして重なりの圧迫感を減らす。
+            self.canvas.create_rectangle(px1, py1, px1+panel_w, py2, fill="#101820", outline=char.bg_color,
+                                         width=1, stipple="gray50" if has_adjacent else "")
+            name_color = "#d6d9de" if has_adjacent else ("yellow" if char.has_spike else "white")
+            self.canvas.create_text(cx, py1+8, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
             hp_ratio = char.hp / char.max_hp
             self.canvas.create_rectangle(px1+4, py2-7, px1+panel_w-4, py2-3, fill="#3a404a", outline="")
             self.canvas.create_rectangle(px1+4, py2-7, px1+4+(panel_w-8)*hp_ratio, py2-3, fill=char.bg_color, outline="")
@@ -827,26 +1682,92 @@ class VisualFPSBattle:
         bounds = self._ability_panel_bounds()
         selected = self._selected_user_character()
         if bounds and selected:
+            ability_name = selected.ability_name
             x1, y1, x2, y2 = bounds
-            armed = self.ability_mode is not None
-            self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27", outline="#e67e22" if armed else "#536273", width=2)
+            accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
+            charges = {
+                "SMOKE": selected.smoke_charges,
+                "FLASH": selected.flash_charges,
+                "RECON": selected.recon_charges,
+                "HUNT": 1,
+            }[ability_name]
+            armed = self.ability_mode == (ability_name, selected.team, selected.name)
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27",
+                                         outline=accent if armed or ability_name == "HUNT" else "#536273", width=2)
+            icon_cx, icon_cy = x1 + 42, (y1 + y2) / 2
+            self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, charges > 0)
 
-            # 左側に煙のようなアイコンをCanvas図形で描く（環境依存の絵文字を使わない）。
-            icon_cx = x1 + 34
-            icon_cy = (y1 + y2) / 2
-            smoke_fill = "#f39c12" if selected.smoke_charges > 0 else "#59616c"
-            for ox, oy, radius in [(-9, 4, 8), (0, -3, 11), (10, 3, 9), (2, 8, 10)]:
-                self.canvas.create_oval(
-                    icon_cx + ox - radius, icon_cy + oy - radius,
-                    icon_cx + ox + radius, icon_cy + oy + radius,
-                    fill=smoke_fill, outline="#f8c471" if armed else "#7f8c8d", width=1
-                )
+            text_cx = (x1 + 70 + x2) / 2
+            if ability_name == "HUNT":
+                state = "HUNT / ハンター（常時発動）"
+                help_text = "Hit% +10ポイント・HS% +5ポイント"
+            else:
+                label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
+                state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
+                help_text = ("方向を指定" if armed and ability_name in ("FLASH", "RECON")
+                             else ("マスを選択" if armed else f"クリックして{label}を構える"))
+            self.canvas.create_text(text_cx, y1+22, text=state,
+                                    fill=accent if charges else "#777", font=("Arial", 10, "bold"))
+            self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
 
-            text_cx = (x1 + 58 + x2) / 2
-            state = "構え中：再クリックでキャンセル" if armed else f"SMOKE  残り {selected.smoke_charges}"
-            self.canvas.create_text(text_cx, y1+20, text=state, fill="#f5b041" if selected.smoke_charges else "#777", font=("Arial", 11, "bold"))
-            help_text = "マップ上のマスを選択" if armed else "クリックしてスモークを構える"
-            self.canvas.create_text(text_cx, y1+44, text=help_text, fill="white", font=("Arial", 9))
+            plant_bounds = self._plant_button_bounds()
+            if plant_bounds:
+                px1, py1, px2, py2 = plant_bounds
+                planting = selected.is_planting
+                self.canvas.create_rectangle(px1, py1, px2, py2, fill="#2a1d0d",
+                                             outline="#f39c12" if planting else "#8a6a32", width=2)
+                self.canvas.create_text((px1+px2)/2, py1+22,
+                                        text="PLANTING..." if planting else "PLANT",
+                                        fill="#ffd27a", font=("Arial", 11, "bold"))
+                progress = min(1.0, selected.plant_timer / max(0.001, PLANT_REQUIRED_SECONDS))
+                self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
+                self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
+                                             fill="#f39c12", outline="")
+
+        # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
+        self.canvas.move("all", 0, COMBO_BANNER_HEIGHT)
+        self._draw_combo_announcement_banner()
+
+    def _draw_combo_announcement_banner(self):
+        """コンボと覚醒イベントを共通の上部パネルへ描画する。"""
+        total_w = self.map_pixel_width + SIDE_PANEL_WIDTH * 2
+        self.canvas.create_rectangle(0, 0, total_w, COMBO_BANNER_HEIGHT, fill="#090d14", outline="#2a3444", width=2)
+
+        queue = getattr(self, "announcement_queue", [])
+        if self.combo_announcement_index >= len(queue):
+            self.canvas.create_text(
+                total_w / 2, COMBO_BANNER_HEIGHT / 2,
+                text=f"ROUND {self.current_round}", fill="#768394",
+                font=("Arial", 14, "bold")
+            )
+            return
+
+        announcement = queue[self.combo_announcement_index]
+        is_awakening = announcement.get("type") == "awakening"
+        team = announcement.get("team")
+        accent = "#c0392b" if team == "A" else "#27ae60"
+        team_text = "ATTACKERS" if team == "A" else "DEFENDERS"
+        category_text = "覚醒イベント" if is_awakening else "プレイヤーコンボ"
+        title_color = "#ff8f70" if is_awakening else "#ffd66b"
+
+        self.canvas.create_rectangle(12, 10, total_w-12, COMBO_BANNER_HEIGHT-10, fill="#151c27", outline=accent, width=3)
+        self.canvas.create_text(
+            30, 25, text=category_text, anchor="w",
+            fill=accent, font=("Arial", 10, "bold")
+        )
+        self.canvas.create_text(
+            total_w/2, 25, text=announcement.get("name", "名称未設定"),
+            fill=title_color, font=("Arial", 17, "bold")
+        )
+        names = " × ".join(announcement.get("display_players", announcement.get("players", ())))
+        self.canvas.create_text(
+            total_w/2, 51, text=f"{team_text}  |  {names}",
+            fill="white", font=("Arial", 11, "bold")
+        )
+        self.canvas.create_text(
+            total_w/2, 73, text=announcement.get("effect_text", "特殊効果"),
+            fill="#b9c6d8", font=("Arial", 10)
+        )
 
     def loop(self):
         if not self.round_over and not self.match_over:
@@ -854,6 +1775,7 @@ class VisualFPSBattle:
                 if c.is_alive: self.move_character(c)
             self.process_battle()
             self.draw()
+            self._advance_combo_announcement()
             self.root.after(TICK_TIME, self.loop)
 
     def run_headless_loop(self):
@@ -864,6 +1786,7 @@ class VisualFPSBattle:
                 for c in self.chars:
                     if c.is_alive: self.move_character(c)
                 self.process_battle()
+                self._advance_combo_announcement()
             # round_over 時の初期化は check_match_winner 内で自動処理されます
 
     def run(self):
