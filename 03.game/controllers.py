@@ -204,6 +204,15 @@ class UserInputController(BaseController):
 
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
+        
+        # 💡追加: defender操作時、プラント後にスパイク隣接エリアにいれば自動的に解除を試みる
+        # (attackerの自動PLANTと同様、クリック操作だけでは解除の意思表示ができないため)
+        is_planted = game_state.get("is_planted")
+        planted_pos = game_state.get("planted_pos")
+        if char.team == "D" and is_planted and planted_pos:
+            dist = max(abs(char.pos[0] - planted_pos[0]), abs(char.pos[1] - planted_pos[1]))
+            if dist <= 1:
+                return char.pos, "DEFUSE"
 
         target = self.targets.get(char.name)
         if target is None:

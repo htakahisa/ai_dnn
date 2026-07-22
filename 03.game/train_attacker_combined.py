@@ -1,4 +1,5 @@
 # train_attacker_combined.py
+import os
 import numpy as np
 import random
 import torch
@@ -6,13 +7,15 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import deque
 from torch.utils.tensorboard import SummaryWriter
+from pathlib import Path
 
 from map_data import NEW_MAZE_STR
 from train_defender_combined import QNetwork, ReplayBuffer
 
 OBS_DIM = 25
 N_ACTIONS = 5  # 0:上 1:下 2:左 3:右 4:設置/見張り(局面依存)
-
+NUM_EPISODES = 1000
+SAVE_INTERVAL = 100
 
 def has_line_of_sight(p1, p2, grid):
     x0, y0, x1, y1 = p1[1], p1[0], p2[1], p2[0]
@@ -47,6 +50,83 @@ def bfs_distances(target, grid):
     return dist
 
 
+class DefenderBotAI:
+    """学習環境内で使う、本物のdefender AIをラップしたクラス。
+    LearningDefenderAllAIControllerのプラント後ロジックと同じ挙動を再現する。
+    (観測の次元・スケールは train_defender_combined.py の CombinedGridWorldEnv と厳密に一致させる)"""
+
+    def __init__(self, model_path="dqn_defender_combined_best.pt", obs_dim=20, n_actions=5):
+        self.device = torch.device("cpu")
+        model_path_obj = Path(model_path)
+        full_path = model_path_obj if model_path_obj.is_absolute() else Path(__file__).resolve().parent / model_path_obj
+        self.model = QNetwork(obs_dim, n_actions).to(self.device)
+        self.model.load_state_dict(torch.load(str(full_path), map_location=self.device))
+        self.model.eval()
+
+    def _is_walkable(self, r, c, grid):
+        h, w = grid.shape
+        return 0 <= r < h and 0 <= c < w and grid[r, c] != 1
+
+    def decide_action(self, bot_pos, goal_pos, dist_map, last_action, grid):
+        br, bc = bot_pos
+        gr, gc = goal_pos
+
+        # 💡本物と同じ: 解除可能範囲(距離1以内)なら強制DEFUSE
+        dist_to_spike = max(abs(br - gr), abs(bc - gc))
+        if dist_to_spike <= 1:
+            return 4
+
+        height, width = grid.shape
+        base = [br / (height - 1), bc / (width - 1), gr / (height - 1), gc / (width - 1)]
+        walls = [0.0 if self._is_walkable(br + dr, bc + dc, grid) else 1.0
+                 for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
+        last_onehot = [1.0 if last_action == i else 0.0 for i in range(5)]
+
+        # 💡注意: defenderモデルの学習時スケールに合わせる(attacker用のmax(h,w)*2とは異なる)
+        max_dist = height * width
+        dists = []
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = br + dr, bc + dc
+            if self._is_walkable(nr, nc, grid):
+                d = dist_map[nr][nc]
+                dists.append(d / max_dist if np.isfinite(d) else 1.0)
+            else:
+                dists.append(1.0)
+
+        # プラント後は常にスパイク位置が分かっている(本物の spotted_info と同じ扱い)
+        enemy_info = [1.0, gr / (height - 1), gc / (width - 1)]
+
+        obs = np.array(base + walls + last_onehot + dists + enemy_info, dtype=np.float32)
+        with torch.no_grad():
+            state_t = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+            q_values = self.model(state_t).squeeze(0)
+            probs = torch.softmax(q_values / 0.5, dim=-1).cpu().numpy()
+        return int(np.random.choice(len(probs), p=probs))
+
+
+class DuelingQNetwork(nn.Module):
+    """Attacker用のDueling DQN構造。状態価値V(s)と行動優位性A(s,a)を分離することで、
+    guardフェーズのように『多くの行動でほぼ同じ価値』の局面での学習を安定させる狙い。"""
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+        self.shared = nn.Sequential(
+            nn.Linear(state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+        )
+        self.value_head = nn.Linear(128, 1)
+        self.advantage_head = nn.Linear(128, action_dim)
+
+    def forward(self, x):
+        h = self.shared(x)
+        value = self.value_head(h)
+        advantage = self.advantage_head(h)
+        return value + (advantage - advantage.mean(dim=-1, keepdim=True))
+
+
+
+
 class AttackerCombinedEnv:
     """1体のattackerが retrieve(拾得) / carry(運搬+設置) / guard(見張り) の
     3局面をランダムに経験して学習する、単一エージェント・単一モデルの統合環境"""
@@ -59,6 +139,7 @@ class AttackerCombinedEnv:
         self.detonate_limit = 45
         self.defuse_required = 6
         self.policy_net = None
+        self.defender_bot = None
 
     def _is_walkable(self, r, c):
         return 0 <= r < self.height and 0 <= c < self.width and self.grid[r, c] != 1
@@ -106,6 +187,7 @@ class AttackerCombinedEnv:
 
             self.bot_pos = self._random_walkable()
             self.bot_alive = True
+            self.bot_last_action = None
 
         self.dist_map = bfs_distances(self.goal_pos, self.grid)
         self.prev_dist = self.dist_map[self.player_pos[0]][self.player_pos[1]]
@@ -200,19 +282,40 @@ class AttackerCombinedEnv:
 
             # --- defender botの行動 ---
             if self.bot_alive:
-                br, bc = self.bot_pos
-                best, best_d = None, self.dist_map[br][bc]
-                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    nr, nc = br + dr, bc + dc
-                    if self._is_walkable(nr, nc) and self.dist_map[nr][nc] < best_d:
-                        best_d = self.dist_map[nr][nc]
-                        best = (nr, nc)
-                dist_to_spike = max(abs(br - self.goal_pos[0]), abs(bc - self.goal_pos[1]))
-                if dist_to_spike <= 1:
-                    self.bot_defuse_timer += 1
-                elif best is not None:
-                    self.bot_pos = best
-                    self.bot_defuse_timer = 0
+                if self.defender_bot is not None:
+                    # 💡変更: 本物のdefender AIで行動決定
+                    bot_action = self.defender_bot.decide_action(
+                        self.bot_pos, self.goal_pos, self.dist_map, self.bot_last_action, self.grid
+                    )
+                    self.bot_last_action = bot_action
+                    if bot_action == 4:
+                        dist_to_spike = max(abs(self.bot_pos[0] - self.goal_pos[0]), abs(self.bot_pos[1] - self.goal_pos[1]))
+                        if dist_to_spike <= 1:
+                            self.bot_defuse_timer += 1
+                        else:
+                            self.bot_defuse_timer = 0
+                    else:
+                        moves = {0: [-1, 0], 1: [1, 0], 2: [0, -1], 3: [0, 1]}
+                        br, bc = self.bot_pos
+                        nr, nc = br + moves[bot_action][0], bc + moves[bot_action][1]
+                        if self._is_walkable(nr, nc):
+                            self.bot_pos = (nr, nc)
+                        self.bot_defuse_timer = 0
+                else:
+                    # 従来のフォールバック(単純直進bot)
+                    br, bc = self.bot_pos
+                    best, best_d = None, self.dist_map[br][bc]
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = br + dr, bc + dc
+                        if self._is_walkable(nr, nc) and self.dist_map[nr][nc] < best_d:
+                            best_d = self.dist_map[nr][nc]
+                            best = (nr, nc)
+                    dist_to_spike = max(abs(br - self.goal_pos[0]), abs(bc - self.goal_pos[1]))
+                    if dist_to_spike <= 1:
+                        self.bot_defuse_timer += 1
+                    elif best is not None:
+                        self.bot_pos = best
+                        self.bot_defuse_timer = 0
 
             # --- 視認判定: 自分 or 味方どちらが見つけても迎撃扱い ---
             spotted_by = None
@@ -320,6 +423,14 @@ class AttackerCombinedEnv:
             d_spike = max(abs(nr - self.goal_pos[0]), abs(nc - self.goal_pos[1]))
             if d_spike > 6:
                 reward -= 0.3
+            
+            # 💡追加: スパイク位置への視線が通っているかを評価
+            # (解除に来た敵は必ずスパイクの隣接マスに立つため、スパイクへの視線が
+            #  通っていれば、その敵をほぼ確実に視認できることになる)
+            if has_line_of_sight((nr, nc), self.goal_pos, self.grid):
+                reward += 0.3
+            else:
+                reward -= 0.5
 
         self.prev_dist = new_dist
         return reward, False
@@ -327,6 +438,11 @@ class AttackerCombinedEnv:
 
 def train():
     writer = SummaryWriter(log_dir="logs")
+    
+    # ========= 保存用フォルダの作成 =========
+    SAVE_DIR = "attacker_data"
+    os.makedirs(SAVE_DIR, exist_ok=True)
+
 
     lines = [line.strip() for line in NEW_MAZE_STR.strip("\n").split("\n") if line.strip()]
     fixed_grid = np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
@@ -336,17 +452,19 @@ def train():
         raise ValueError("プラントサイト(2)が定義されていません。")
 
     env = AttackerCombinedEnv(fixed_grid, plant_candidates)
+    env.defender_bot = DefenderBotAI(model_path="dqn_defender_combined_best.pt")
 
-    num_episodes = 4000
+    
     batch_size = 64
     gamma = 0.99
-    epsilon_start, epsilon_end, epsilon_decay = 1.0, 0.05, 0.997
+    epsilon_start, epsilon_end, epsilon_decay = 1.0, 0.05, 0.9985
     lr = 0.0005
     IMPROVEMENT_MARGIN = 5.0
 
+    #  attacker側のみDueling構造に変更(DefenderBotAIのQNetworkはそのまま)
     device = torch.device("cpu")
-    q_net = QNetwork(OBS_DIM, N_ACTIONS).to(device)
-    target_net = QNetwork(OBS_DIM, N_ACTIONS).to(device)
+    q_net = DuelingQNetwork(OBS_DIM, N_ACTIONS).to(device)
+    target_net = DuelingQNetwork(OBS_DIM, N_ACTIONS).to(device)
     target_net.load_state_dict(q_net.state_dict())
     env.policy_net = target_net
 
@@ -360,7 +478,7 @@ def train():
     # 以下 print文削除禁止
     print("python -m tensorboard.main --logdir=logs")
 
-    for episode in range(num_episodes):
+    for episode in range(NUM_EPISODES):
         obs, _ = env.reset()
         episode_reward = 0.0
         losses = []
@@ -407,19 +525,32 @@ def train():
         epsilon = max(epsilon_end, epsilon * epsilon_decay)
         writer.add_scalar("Train/Episode_Reward", episode_reward, episode)
 
+        # ========= 変更: エピソード終了時のログと定期保存 =========
         if (episode + 1) % 50 == 0:
             avg_loss = np.mean(losses) if losses else 0.0
-            print(f"Episode {episode+1}/{num_episodes} | Reward: {episode_reward:.2f} | Loss: {avg_loss:.4f} | Epsilon: {epsilon:.3f}")
+            print(f"Episode {episode+1}/{NUM_EPISODES} | Reward: {episode_reward:.2f} | Loss: {avg_loss:.4f} | Epsilon: {epsilon:.3f}")
 
-            # 💡追加: 局面別にeval rewardを分けて計測
+            # 💡追加: 局面別evalログ(softmax評価+carry強制PLANT対応)
             phase_rewards = {"retrieve": [], "carry": [], "guard": []}
             for _ in range(30):
                 eval_obs, _ = env.reset()
                 phase = env.phase
                 eval_reward = 0.0
                 while True:
-                    with torch.no_grad():
-                        a = q_net(torch.tensor(eval_obs, dtype=torch.float32, device=device).unsqueeze(0)).argmax(dim=1).item()
+                    # carry中、設置サイトに到達していたら強制的にPLANT(action=4)を選ぶ
+                    # (learning_attacker.pyの推論ロジックと一致させる)
+                    if phase == "carry" and tuple(env.player_pos) == env.goal_pos:
+                        a = 4
+                    else:
+                        with torch.no_grad():
+                            q_values = q_net(torch.tensor(eval_obs, dtype=torch.float32, device=device).unsqueeze(0)).squeeze(0).cpu().numpy()
+                        if phase != "guard":
+                            q_values = q_values.copy()
+                            q_values[4] = -np.inf
+                        probs = np.exp((q_values - np.max(q_values)) / 0.5)
+                        probs = probs / probs.sum()
+                        a = np.random.choice(len(probs), p=probs)
+
                     eval_obs, r, term, trunc, _ = env.step(a)
                     eval_reward += r
                     if term or trunc:
@@ -431,18 +562,31 @@ def train():
                     writer.add_scalar(f"Eval/{phase_name}_Reward", np.mean(rewards_list), episode)
                     print(f"   [{phase_name}] mean={np.mean(rewards_list):.2f} n={len(rewards_list)}")
 
-            mean_eval = np.mean([r for rs in phase_rewards.values() for r in rs])
-            writer.add_scalar("Eval/Greedy_Reward", mean_eval, episode)
+            # 加重平均(guardを重視)でbest model判定
+            guard_mean = np.mean(phase_rewards["guard"]) if phase_rewards["guard"] else 0.0
+            other_mean = np.mean(phase_rewards["retrieve"] + phase_rewards["carry"]) if (phase_rewards["retrieve"] + phase_rewards["carry"]) else 0.0
+            mean_eval = 0.5 * guard_mean + 0.5 * other_mean
+
+            writer.add_scalar("Eval/Weighted_Reward", mean_eval, episode)
 
             if mean_eval > best_eval_reward + IMPROVEMENT_MARGIN:
                 best_eval_reward = mean_eval
-                torch.save(q_net.state_dict(), "dqn_attacker_combined_best.pt")
-                print(f"   New best model saved (Eval Reward: {mean_eval:.2f})")
+                best_path = os.path.join(SAVE_DIR, "dqn_attacker_combined_best_by_eval.pt")
+                torch.save(q_net.state_dict(), best_path)
+                print(f"   [Eval Best] 保存しました (Eval Reward: {mean_eval:.2f}): {best_path}")
 
-    torch.save(q_net.state_dict(), "dqn_attacker_combined.pt")
-    print("モデルの保存が完了しました: dqn_attacker_combined.pt")
+        # 指定エピソードごとにモデルを保存
+        if (episode + 1) % SAVE_INTERVAL == 0:
+            save_path = os.path.join(SAVE_DIR, f"dqn_attacker_ep{episode+1}.pt")
+            torch.save(q_net.state_dict(), save_path)
+            print(f"   [Save] 定期保存しました: {save_path}")
+        # ==========================================
+
+    # 最終モデルの保存
+    final_path = os.path.join(SAVE_DIR, "dqn_attacker_combined_final.pt")
+    torch.save(q_net.state_dict(), final_path)
+    print(f"学習が完了しました。最終モデル: {final_path}")
     writer.close()
-
 
 if __name__ == "__main__":
     train()

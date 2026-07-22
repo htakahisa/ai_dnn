@@ -6,20 +6,20 @@ import numpy as np
 import torch
 
 from controllers import BaseController
-from train_defender_combined import QNetwork
+from train_attacker_combined import DuelingQNetwork
 
 
 class LearningAttackerController(BaseController):
     """【AIモデル適用】アタッカー側の操作クラス（1モデルで retrieve/carry/guard 全局面をカバー）"""
 
-    def __init__(self, model_path="dqn_attacker_combined_best.pt", obs_dim=25, n_actions=5):
+    def __init__(self, model_path="dqn_attacker_combined_best.pt", obs_dim=25, n_actions=5, greedy=False):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         model_path_obj = Path(model_path)
         full_path = model_path_obj if model_path_obj.is_absolute() else Path(__file__).resolve().parent / model_path_obj
 
-        self.model = QNetwork(obs_dim, n_actions).to(self.device)
+        self.model = DuelingQNetwork(obs_dim, n_actions).to(self.device)
         self.model.load_state_dict(torch.load(str(full_path), map_location=self.device))
         self.model.eval()
 
@@ -27,6 +27,8 @@ class LearningAttackerController(BaseController):
         self.pos_history = {}
         self.cached_target_pos = {}
         self.cached_dist_maps = {}
+        
+        self.greedy = greedy
 
     def reset_round(self):
         self.last_actions.clear()
@@ -94,9 +96,13 @@ class LearningAttackerController(BaseController):
             q_values[4] = -np.inf
 
         # 💡 ルートの多様性: Q値の差が小さいほど確率的に選ぶ(softmax)
-        probs = np.exp((q_values - np.max(q_values)) / 0.5)
-        probs = probs / probs.sum()
-        action = np.random.choice(len(probs), p=probs)
+        # 💡変更: greedyモードなら確率的サンプリングをスキップしてargmaxを使う
+        if self.greedy:
+            action = int(np.argmax(q_values))
+        else:
+            probs = np.exp((q_values - np.max(q_values)) / 0.5)
+            probs = probs / probs.sum()
+            action = np.random.choice(len(probs), p=probs)
 
         self.last_actions[char.name] = action
         self.pos_history.setdefault(char.name, deque(maxlen=7)).append(tuple(char.pos))
@@ -127,7 +133,7 @@ class LearningAttackerController(BaseController):
         if last_act is not None:
             last_onehot[last_act] = 1.0
 
-        max_dist = height * width
+        max_dist = max(height, width) * 2
         dists = []
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nr, nc = pr + dr, pc + dc

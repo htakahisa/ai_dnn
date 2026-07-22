@@ -9,7 +9,7 @@ from learning_attacker import LearningAttackerController
 from map_data import NEW_MAZE_STR
 
 WINNING_ROUNDS = 5
-TICK_TIME = 500
+TICK_TIME = 100
 
 
 class Character:
@@ -245,12 +245,12 @@ class VisualFPSBattle:
         if self.attacker_wins >= WINNING_ROUNDS:
             if not self.headless:
                 self.label.config(text=f"🏆 MATCH OVER: Attacker WINS! ({self.attacker_wins} - {self.defender_wins})", fg="#c0392b", font=("Arial", 12, "bold"))
-            print(f"MATCH OVER: Attacker WINS! ({self.attacker_wins} - {self.defender_wins})")
+            print(f"MATCH OVER: 💥 Attacker WINS! ({self.attacker_wins} - {self.defender_wins})")
             self.match_over = True
         elif self.defender_wins >= WINNING_ROUNDS:
             if not self.headless:
                 self.label.config(text=f"🏆 MATCH OVER: Defender WINS! ({self.defender_wins} - {self.attacker_wins})", fg="#27ae60", font=("Arial", 12, "bold"))
-            print(f"MATCH OVER: Defender WINS! ({self.defender_wins} - {self.attacker_wins})")
+            print(f"MATCH OVER: 🛡️ Defender WINS! ({self.defender_wins} - {self.attacker_wins})")
             self.match_over = True
         else:
             self.current_round += 1
@@ -452,14 +452,16 @@ if __name__ == "__main__":
     
     #att_ctrl = DefaultAttackerController()
     att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
+    #att_ctrl = LearningAttackerController(model_path="attacker_data\dqn_attacker_ep2000.pt")
     #att_ctrl = UserInputController()
     
     if LEARNING_MODE:
         # 新しい統合モデルでテストしたい場合
-        def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-    
+        #def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
         # 迷路探索のみモデル
         #def_ctrl = LearningDefenderController(model_path="dqn_gridworld_fixedmap.pt")
+        
+        def_ctrl = UserInputController()
         
         # 動きを確認したいので headless=False で可視化する
         game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
