@@ -198,5 +198,24 @@ COMBOS = [
         "renames": {},
         "effect_text": "参加者全員のHit率 +20ポイント、反応速度 +10ポイント",
     },
-    
+    {
+        "name": "ライチューモッギー",
+        "players": ("Lysoar", "CHICHOO", "Smoggy"),
+        "bonuses": {
+            "accuracy": 0.20,
+            "reaction": 10,
+        },
+        "renames": {},
+        "effect_text": "参加者全員のHit率 +20ポイント、反応速度 +10ポイント",
+    },
+    {
+        "name": "問題児",
+        "players": ("Canezera", "Rossy", "Sayonara"),
+        "bonuses": {
+            "accuracy": 0.20,
+            "reaction": 10,
+        },
+        "renames": {},
+        "effect_text": "参加者全員のHit率 +20ポイント、反応速度 +10ポイント",
+    },
 ]
