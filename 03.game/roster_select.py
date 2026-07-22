@@ -5,6 +5,18 @@ from character_stats import all_names
 
 MAX_ROSTER = 5
 
+# 💡追加: コントローラー選択の選択肢（表示名 -> 内部キー）
+ATTACKER_CONTROLLER_OPTIONS = {
+    "AI (学習済み)": "learning",
+    "ロジック": "default",
+    "ユーザー操作": "user",
+}
+DEFENDER_CONTROLLER_OPTIONS = {
+    "AI (学習済み)": "learning_all",
+    "ロジック": "default",
+    "ユーザー操作": "user",
+}
+
 
 class RosterSelectScreen:
     def __init__(self, on_confirm, max_roster=MAX_ROSTER):
@@ -17,10 +29,28 @@ class RosterSelectScreen:
         # 必ず先にTkウィンドウを作る
         self.root = tk.Tk()
         self.root.title("キャラクター編成")
-        self.root.geometry("420x650")
+        self.root.geometry("420x760")
 
         # Tk生成後にStringVarを作る
         self.spike_var = tk.StringVar(master=self.root, value="")
+        # 💡追加: コントローラー選択用の変数
+        self.defender_ctrl_var = tk.StringVar(master=self.root, value=list(DEFENDER_CONTROLLER_OPTIONS.keys())[0])
+        self.attacker_ctrl_var = tk.StringVar(master=self.root, value=list(ATTACKER_CONTROLLER_OPTIONS.keys())[0])
+
+        # 💡追加: コントローラー選択セクション
+        ctrl_frame = tk.LabelFrame(self.root, text="操作方法", padx=8, pady=6)
+        ctrl_frame.pack(fill="x", padx=18, pady=(10, 0))
+
+        tk.Label(ctrl_frame, text="Defender:").grid(row=0, column=0, sticky="w", pady=2)
+        tk.OptionMenu(ctrl_frame, self.defender_ctrl_var, *DEFENDER_CONTROLLER_OPTIONS.keys()).grid(
+            row=0, column=1, sticky="ew", padx=(6, 0)
+        )
+        tk.Label(ctrl_frame, text="Attacker:").grid(row=1, column=0, sticky="w", pady=2)
+        tk.OptionMenu(ctrl_frame, self.attacker_ctrl_var, *ATTACKER_CONTROLLER_OPTIONS.keys()).grid(
+            row=1, column=1, sticky="ew", padx=(6, 0)
+        )
+
+        ctrl_frame.grid_columnconfigure(1, weight=1)
 
         tk.Label(
             self.root,
@@ -30,7 +60,7 @@ class RosterSelectScreen:
 
         list_frame = tk.Frame(self.root)
         list_frame.pack(fill="both", expand=True, padx=12)
-        canvas = tk.Canvas(list_frame, height=300, highlightthickness=0)
+        canvas = tk.Canvas(list_frame, height=280, highlightthickness=0)
         scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
         inner_frame = tk.Frame(canvas)
         inner_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
@@ -113,12 +143,18 @@ class RosterSelectScreen:
     def confirm(self):
         roster = list(self.roster)
         spike_holder = self.spike_holder
+        # 💡追加: 選択された表示名を内部キーに変換して渡す
+        attacker_ctrl_key = ATTACKER_CONTROLLER_OPTIONS[self.attacker_ctrl_var.get()]
+        defender_ctrl_key = DEFENDER_CONTROLLER_OPTIONS[self.defender_ctrl_var.get()]
         self.root.destroy()
         try:
-            self.on_confirm(roster, spike_holder)
+            self.on_confirm(roster, spike_holder, attacker_ctrl_key, defender_ctrl_key)
         except TypeError:
             # 古いコールバックとの互換性
-            self.on_confirm(roster)
+            try:
+                self.on_confirm(roster, spike_holder)
+            except TypeError:
+                self.on_confirm(roster)
 
     def run(self):
         self.root.mainloop()

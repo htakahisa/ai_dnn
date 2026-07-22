@@ -75,9 +75,15 @@ class BattleLogicMixin:
         }
 
         if char.team == "A":
-            # アタッカー側（位置だけ返す想定）
-            next_pos = self.attacker_controller.decide_move(char, game_state)
-            action_type = "MOVE"
+            # アタッカー側：コントローラーによって戻り値の数が異なるため自動判別
+            result = self.attacker_controller.decide_move(char, game_state)
+            if isinstance(result, tuple) and len(result) == 2:
+                # LearningAttackerController などのアクションタイプ付きの戻り値
+                next_pos, action_type = result
+            else:
+                # DefaultAttackerController などの座標のみの戻り値
+                next_pos = result
+                action_type = "MOVE"
         else:
             # ディフェンダー側：コントローラーによって戻り値の数が異なるため自動判別
             result = self.defender_controller.decide_move(char, game_state)
@@ -92,7 +98,20 @@ class BattleLogicMixin:
         # ---------------------------------------------------------------------
         #  アクションタイプに応じたシステム処理 (修正版)
         # ---------------------------------------------------------------------
-        if action_type == "DEFUSE":
+        if action_type == "PLANT":
+            if char.team == "A" and char.has_spike:
+                on_site = self.target_plant_pos is not None and list(char.pos) == list(self.target_plant_pos)
+                if on_site:
+                    char.plant_timer += self._tick_seconds()
+                    if char.plant_timer >= PLANT_REQUIRED_SECONDS:
+                        self.is_planted = True
+                        self.planted_pos = tuple(char.pos)
+                        char.has_spike = False
+                        char.plant_timer = 0
+                else:
+                    char.plant_timer = 0
+            return
+        elif action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
                 if dist <= 1:

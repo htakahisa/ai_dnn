@@ -7,6 +7,22 @@ class BaseController:
     """すべての操作クラスの基底となるクラス"""
     def decide_move(self, char, game_state):
         raise NotImplementedError
+        
+    @staticmethod
+    def has_line_of_sight(p1, p2, grid):
+        x0, y0, x1, y1 = p1[1], p1[0], p2[1], p2[0]
+        dx, dy = abs(x1 - x0), -abs(y1 - y0)
+        sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+        err = dx + dy
+        curr_x, curr_y = x0, y0
+        while True:
+            if grid[curr_y, curr_x] == 1:
+                return False
+            if curr_x == x1 and curr_y == y1:
+                return True
+            e2 = 2 * err
+            if e2 >= dy: err += dy; curr_x += sx
+            if e2 <= dx: err += dx; curr_y += sy
 
     def get_next_pos_random(self, pos, grid):
         """共通で使えるランダム移動ロジック"""
@@ -189,6 +205,15 @@ class UserInputController(BaseController):
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
 
+        # 💡追加: defender操作時、プラント後にスパイク隣接エリアにいれば自動的に解除を試みる
+        # (attackerの自動PLANTと同様、クリック操作だけでは解除の意思表示ができないため)
+        is_planted = game_state.get("is_planted")
+        planted_pos = game_state.get("planted_pos")
+        if char.team == "D" and is_planted and planted_pos:
+            dist = max(abs(char.pos[0] - planted_pos[0]), abs(char.pos[1] - planted_pos[1]))
+            if dist <= 1:
+                return char.pos, "DEFUSE"
+                
         target = self.targets.get(char.name)
         if target is None:
             return char.pos  # 目的地未設定ならその場に留まる
