@@ -141,15 +141,12 @@ class AbilityLosMixin:
 
 
     def _projectile_path(self, start, aimed_cell):
-        """指定マスを方向として、壁またはマップ端まで伸びる投射経路を作る。"""
-        sr, sc = start
-        ar, ac = aimed_cell
-        dr, dc = ar - sr, ac - sc
-        if dr == 0 and dc == 0:
-            return [start]
-        scale = max(self.height, self.width) * 3
-        far = (sr + dr * scale, sc + dc * scale)
-        raw = self._line_cells(start, far)
+        """指定マスへ向かう投射経路を作る。
+
+        - 指定地点へ到達したら終了
+        - 壁を選択した場合は壁の手前で終了
+        """
+        raw = self._line_cells(start, aimed_cell)
         path = [start]
         for rr, cc in raw[1:]:
             if not (0 <= rr < self.height and 0 <= cc < self.width):
@@ -157,6 +154,8 @@ class AbilityLosMixin:
             if self.grid[rr, cc] == 1:
                 break
             path.append((rr, cc))
+            if (rr, cc) == aimed_cell:
+                break
         return path
 
 
@@ -214,5 +213,3 @@ class AbilityLosMixin:
             else:
                 remaining.append(projectile)
         self.recon_projectiles = remaining
-
-

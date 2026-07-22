@@ -535,4 +535,3 @@ class RenderingUIMixin:
             fill="#b9c6d8", font=("Arial", 10)
         )
 
-

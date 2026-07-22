@@ -133,19 +133,116 @@ class ComboAwakeningMixin:
 
 
     def _awakening_condition_met(self, event, char):
-        condition = str(event.get("condition", ""))
+        """覚醒イベントの発動条件を判定する。
+
+        対応条件:
+        - all_allies_dead:
+            覚醒者以外の味方が全員死亡
+        - hp_at_or_below:
+            覚醒者のHPが condition_value 以下
+        - kills_at_least:
+            覚醒者のラウンド内キル数が condition_value 以上
+        - specific_player_dead:
+            condition_player で指定したプレイヤーが死亡
+        - specific_player_killed:
+            condition_player で指定したプレイヤーを覚醒者が倒した
+        - team_kills_at_least:
+            覚醒者のチームのラウンド内合計キル数が condition_value 以上
+        - enemy_count_at_or_below:
+            生存している敵人数が condition_value 以下
+        """
+        condition = str(event.get("condition", "")).strip()
         value = event.get("condition_value")
+
         if condition == "all_allies_dead":
-            allies = [c for c in self.chars if c.team == char.team and c is not char]
-            return char.is_alive and bool(allies) and all(not c.is_alive for c in allies)
+            allies = [
+                c for c in self.chars
+                if c.team == char.team and c is not char
+            ]
+            return (
+                char.is_alive
+                and bool(allies)
+                and all(not c.is_alive for c in allies)
+            )
+
         if condition == "hp_at_or_below":
-            try: return char.is_alive and char.hp <= float(value)
-            except (TypeError, ValueError): return False
-        if condition == "kills_at_least":
             try:
-                return char.is_alive and char.round_kills >= int(value)
+                return char.is_alive and char.hp <= float(value)
             except (TypeError, ValueError):
                 return False
+
+        if condition == "kills_at_least":
+            try:
+                return (
+                    char.is_alive
+                    and int(getattr(char, "round_kills", 0)) >= int(value)
+                )
+            except (TypeError, ValueError):
+                return False
+
+        if condition == "specific_player_dead":
+            target_name = str(
+                event.get("condition_player")
+                or event.get("condition_value")
+                or ""
+            ).strip()
+
+            if not target_name or not char.is_alive:
+                return False
+
+            return any(
+                not candidate.is_alive
+                and getattr(candidate, "base_name", getattr(candidate, "name", "")) == target_name
+                for candidate in self.chars
+            )
+
+        if condition == "specific_player_killed":
+            target_name = str(
+                event.get("condition_player")
+                or event.get("condition_value")
+                or ""
+            ).strip()
+
+            if not target_name or not char.is_alive:
+                return False
+
+            # 推奨形式:
+            # char.round_killed_players = ["Lohen", ...]
+            killed_players = getattr(char, "round_killed_players", ())
+            if target_name in killed_players:
+                return True
+
+            # 互換用:
+            # char.killed_players = ["Lohen", ...]
+            killed_players = getattr(char, "killed_players", ())
+            return target_name in killed_players
+
+        if condition == "team_kills_at_least":
+            try:
+                required_kills = int(value)
+            except (TypeError, ValueError):
+                return False
+
+            team_kills = sum(
+                int(getattr(candidate, "round_kills", 0))
+                for candidate in self.chars
+                if candidate.team == char.team
+            )
+            return char.is_alive and team_kills >= required_kills
+
+        if condition == "enemy_count_at_or_below":
+            try:
+                maximum_enemies = int(value)
+            except (TypeError, ValueError):
+                return False
+
+            alive_enemies = sum(
+                1
+                for candidate in self.chars
+                if candidate.team != char.team and candidate.is_alive
+            )
+            return char.is_alive and alive_enemies <= maximum_enemies
+
         return False
 
 
@@ -183,5 +280,3 @@ class ComboAwakeningMixin:
                 "display_players": (char.display_name,),
                 "effect_text": effect_text,
             })
-
-
