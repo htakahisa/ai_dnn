@@ -14,7 +14,8 @@ from party_presets import all_preset_names, get_preset
 MAX_ROSTER = 5
 
 ATTACKER_CONTROLLER_OPTIONS = {
-    "AI (学習済み)": "learning",
+    "AI ver1.0": "aiv1",
+    "AI ver2.0": "aiv2",
     "ロジック": "default",
     "ユーザー操作": "user",
 }

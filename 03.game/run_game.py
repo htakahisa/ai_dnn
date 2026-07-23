@@ -11,6 +11,7 @@ import numpy as np
 from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
 from learning_attacker import LearningAttackerController
+from learning_attacker_multi import LearningAttackerMultiController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 
@@ -31,8 +32,12 @@ def _build_attacker_controller(key):
         return DefaultAttackerController()
     if key == "user":
         return UserInputController()
+    if key == "aiv2":
+        return LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt")
+    if key == "aiv1":
+        return LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt")
     # "learning" またはそれ以外は学習済みAIをデフォルトとする
-    return LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
+    return LearningAttackerController(model_path="dqn_attacker_multi_best_by_eval.pt")
 
 
 def _build_defender_controller(key):
