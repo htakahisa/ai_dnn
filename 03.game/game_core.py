@@ -8,28 +8,33 @@ from pathlib import Path
 
 # Gameplay configuration
 WINNING_ROUNDS = 13
-TICK_TIME = 1000
+TICK_TIME = 100
 MAX_HP = 100
 BODY_DAMAGE = 40
 HEADSHOT_DAMAGE = 160
 SHOOT_INTERVAL_TICKS = 1
 SIDE_PANEL_WIDTH = 260
-PLANT_REQUIRED_SECONDS = 4.0
-DEFUSE_REQUIRED_SECONDS = 6.0
-SMOKE_DURATION_SECONDS = 15.0
+PLANT_REQUIRED_TICKS = 4
+DEFUSE_REQUIRED_TICKS = 6
+SMOKE_DURATION_TICKS = 15
 MOVING_ACCURACY = 0.50
 MOVING_TARGET_HIT_MULTIPLIER = 0.70
-BLIND_DURATION_SECONDS = 3.0
-FLASH_BURST_DURATION_SECONDS = 2.0
+BLIND_DURATION_TICKS = 3
+FLASH_BURST_DURATION_TICKS = 2
 BLIND_ACCURACY_MULTIPLIER = 0.30
 FLASH_SPEED_CELLS_PER_TICK = 3
 FLASH_MAX_FLIGHT_TICKS = 5
 RECON_SPEED_CELLS_PER_TICK = 3
-REVEAL_DURATION_SECONDS = 5.0
+REVEAL_DURATION_TICKS = 5
 REVEALED_DODGE_MULTIPLIER = 0.50
 RECON_REVEAL_SIZE = 9
 COMBO_DISPLAY_TICKS = 3
-COMBO_BANNER_HEIGHT = 92
+COMBO_BANNER_HEIGHT = 112
+ROUND_DURATION_TICKS = 90
+SPIKE_DETONATION_TICKS = 45
+RECON_BURST_DISPLAY_TICKS = 1
+SMOKE_WARNING_TICKS = 3
+ROUND_TRANSITION_TICKS = 2
 
 _BASE_DIR = Path(__file__).resolve().parent
 
@@ -78,9 +83,10 @@ if not isinstance(AWAKENING_EVENTS, list):
     AWAKENING_EVENTS = []
 
 COMBO_DISPLAY_TICKS = 3
-COMBO_BANNER_HEIGHT = 92
+COMBO_BANNER_HEIGHT = 112
 
 def _clamp_rate(value, default):
+    """HS率・回避率など、0～100%に収める割合を正規化する。"""
     try:
         value = float(value)
     except (TypeError, ValueError):
@@ -89,6 +95,18 @@ def _clamp_rate(value, default):
     if value > 1.0:
         value /= 100.0
     return max(0.0, min(1.0, value))
+
+
+def _normalize_accuracy(value, default):
+    """命中率を正規化する。0未満だけ防ぎ、100%超はそのまま保持する。"""
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return default
+    # Excel等で 110 と書かれている場合は110%として1.10へ変換。
+    if value > 10.0:
+        value /= 100.0
+    return max(0.0, value)
 
 
 def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
@@ -104,7 +122,7 @@ def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
     """
     hs_rate = _clamp_rate(hs_rate, 0.0)
     dodge_rate = _clamp_rate(dodge_rate, 0.0)
-    accuracy = _clamp_rate(accuracy, 0.0)
+    accuracy = _normalize_accuracy(accuracy, 0.0)
     try:
         iq = float(iq)
     except (TypeError, ValueError):
@@ -132,6 +150,7 @@ def get_character_combat_stats(name):
         "iq": 50,
         "reaction": 100,
         "role": "フラッシュ",
+        "influence": 0.0,
     }
     if _character_stats is None:
         return defaults
@@ -166,6 +185,12 @@ def get_character_combat_stats(name):
                 return _clamp_rate(raw[key], default)
         return default
 
+    def pick_accuracy(keys, default):
+        for key in keys:
+            if key in raw:
+                return _normalize_accuracy(raw[key], default)
+        return default
+
     def pick_text(keys, default):
         for key in keys:
             if key in raw and raw[key] is not None:
@@ -182,12 +207,16 @@ def get_character_combat_stats(name):
         return float(default)
 
     return {
-        "accuracy": pick(("accuracy", "aim", "hit_rate", "hit_pct", "命中率"), defaults["accuracy"]),
+        "accuracy": pick_accuracy(("accuracy", "aim", "hit_rate", "hit_pct", "命中率"), defaults["accuracy"]),
         "dodge_rate": pick(("dodge_rate", "dodge", "dodge_pct", "evasion", "弾除け率"), defaults["dodge_rate"]),
         "hs_rate": pick(("hs_rate", "hs", "hs_pct", "headshot_rate", "HS", "HS%"), defaults["hs_rate"]),
         "iq": pick_number(("iq", "IQ", "判断力"), defaults["iq"]),
         "reaction": pick_number(("reaction", "reaction_speed", "反応速度"), defaults["reaction"]),
         "role": pick_text(("role", "ロール"), defaults["role"]),
+        "influence": pick_number(
+            ("influence", "influence_score", "impact", "影響度", "影響力"),
+            defaults["influence"],
+        ),
     }
 
 
@@ -277,12 +306,18 @@ class Character:
         self.accuracy = stats["accuracy"]
         self.dodge_rate = stats["dodge_rate"]
         self.hs_rate = stats["hs_rate"]
-        self.iq = stats.get("iq", 50.0)
+        self.base_iq = stats.get("iq", 50.0)
+        self.iq = self.base_iq
+        self.effective_iq = self.base_iq
+        self.is_igl = False
         self.reaction = stats.get("reaction", 100.0)
+        self.influence = stats.get("influence", 0.0)
         # タイガーの固有パッシブ「ハンター」：常時 Hit% を10ポイント、HS% を5ポイント上昇。
         self.hunter_active = self.role == "タイガー"
         if self.hunter_active:
-            self.accuracy = min(1.0, self.accuracy + 0.10)
+            # 命中率は相手の回避率と掛け合わせて最終判定するため、
+            # 100%を超えてもここではクランプしない。
+            self.accuracy = max(0.0, self.accuracy + 0.10)
             self.hs_rate = min(1.0, self.hs_rate + 0.05)
         self.ability_name = {
             "フラッシュ": "FLASH",
@@ -306,7 +341,7 @@ class Character:
     def combat_power(self):
         """補正後の現在ステータスから総合戦闘力を毎回計算する。"""
         return calculate_combat_power(
-            self.hs_rate, self.dodge_rate, self.iq, self.accuracy, self.reaction
+            self.hs_rate, self.dodge_rate, self.effective_iq, self.accuracy, self.reaction
         )
 
 
@@ -335,6 +370,10 @@ def _canonical_combo_stat_key(key):
         "reaction": "reaction",
         "reaction_speed": "reaction",
         "反応速度": "reaction",
+        "iq": "iq",
+        "intelligence": "iq",
+        "判断力": "iq",
+        "知能": "iq",
         "hp": "max_hp",
         "max_hp": "max_hp",
     }
@@ -355,9 +394,21 @@ def _apply_combo_bonus(character, stat_key, value):
         # 10 のような指定も10ポイントとして扱う。
         if abs(amount) > 1.0:
             amount /= 100.0
-        setattr(character, attr, max(0.0, min(1.0, getattr(character, attr) + amount)))
+        updated = getattr(character, attr) + amount
+        if attr == "accuracy":
+            # 命中率だけは100%超を保持する。
+            setattr(character, attr, max(0.0, updated))
+        else:
+            setattr(character, attr, max(0.0, min(1.0, updated)))
     elif attr == "reaction":
         character.reaction = max(0.0, character.reaction + amount)
+    elif attr == "iq":
+        # コンボIQは素のIQ(base_iq)を書き換えず、
+        # IGL計算前の現在IQに加算する。
+        current_iq = float(getattr(character, "iq", getattr(character, "base_iq", 100.0)))
+        updated_iq = max(0.0, current_iq + amount)
+        character.iq = updated_iq
+        character.effective_iq = updated_iq
     elif attr == "max_hp":
         old_max = character.max_hp
         character.max_hp = max(1, int(round(character.max_hp + amount)))

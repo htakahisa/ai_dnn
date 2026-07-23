@@ -2,8 +2,9 @@
 
 from game_core import (
     FLASH_SPEED_CELLS_PER_TICK, FLASH_MAX_FLIGHT_TICKS,
-    RECON_SPEED_CELLS_PER_TICK, FLASH_BURST_DURATION_SECONDS,
-    BLIND_DURATION_SECONDS, RECON_REVEAL_SIZE, REVEAL_DURATION_SECONDS,
+    RECON_SPEED_CELLS_PER_TICK, FLASH_BURST_DURATION_TICKS,
+    RECON_BURST_DISPLAY_TICKS,
+    BLIND_DURATION_TICKS, RECON_REVEAL_SIZE, REVEAL_DURATION_TICKS,
 )
 
 class AbilityLosMixin:
@@ -141,12 +142,15 @@ class AbilityLosMixin:
 
 
     def _projectile_path(self, start, aimed_cell):
-        """指定マスへ向かう投射経路を作る。
-
-        - 指定地点へ到達したら終了
-        - 壁を選択した場合は壁の手前で終了
-        """
-        raw = self._line_cells(start, aimed_cell)
+        """指定マスを方向として、壁またはマップ端まで伸びる投射経路を作る。"""
+        sr, sc = start
+        ar, ac = aimed_cell
+        dr, dc = ar - sr, ac - sc
+        if dr == 0 and dc == 0:
+            return [start]
+        scale = max(self.height, self.width) * 3
+        far = (sr + dr * scale, sc + dc * scale)
+        raw = self._line_cells(start, far)
         path = [start]
         for rr, cc in raw[1:]:
             if not (0 <= rr < self.height and 0 <= cc < self.width):
@@ -154,20 +158,18 @@ class AbilityLosMixin:
             if self.grid[rr, cc] == 1:
                 break
             path.append((rr, cc))
-            if (rr, cc) == aimed_cell:
-                break
         return path
 
 
     def _explode_flash(self, projectile, impact=None):
         impact = impact or projectile["path"][min(projectile["progress"], len(projectile["path"]) - 1)]
-        self.flash_bursts.append({"pos": impact, "remaining_seconds": FLASH_BURST_DURATION_SECONDS})
+        self.flash_bursts.append({"pos": impact, "remaining_ticks": FLASH_BURST_DURATION_TICKS})
         owner_team = projectile.get("team")
         for char in self.chars:
             if not char.is_alive or char.team == owner_team:
                 continue
             if self.check_cell_line_of_sight(tuple(char.pos), impact, block_smoke=True):
-                char.blind_remaining = max(char.blind_remaining, BLIND_DURATION_SECONDS)
+                char.blind_remaining = max(char.blind_remaining, BLIND_DURATION_TICKS)
 
 
     def _explode_recon(self, projectile, impact=None):
@@ -181,11 +183,11 @@ class AbilityLosMixin:
             for cc in range(ic - radius, ic + radius + 1)
             if 0 <= rr < self.height and 0 <= cc < self.width
         }
-        self.recon_bursts.append({"cells": cells, "remaining_seconds": 1.0})
+        self.recon_bursts.append({"cells": cells, "remaining_ticks": RECON_BURST_DISPLAY_TICKS})
         owner_team = projectile.get("team")
         for char in self.chars:
             if char.is_alive and char.team != owner_team and tuple(char.pos) in cells:
-                char.reveal_remaining = max(char.reveal_remaining, REVEAL_DURATION_SECONDS)
+                char.reveal_remaining = max(char.reveal_remaining, REVEAL_DURATION_TICKS)
 
 
     def _advance_flash_projectiles(self):
@@ -213,3 +215,5 @@ class AbilityLosMixin:
             else:
                 remaining.append(projectile)
         self.recon_projectiles = remaining
+
+

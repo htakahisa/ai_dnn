@@ -6,17 +6,13 @@ import numpy as np
 
 from controllers import UserInputController
 from game_core import (
-    TICK_TIME, PLANT_REQUIRED_SECONDS, DEFUSE_REQUIRED_SECONDS,
+    TICK_TIME, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS, ROUND_TRANSITION_TICKS,
     SHOOT_INTERVAL_TICKS, MOVING_ACCURACY, BLIND_ACCURACY_MULTIPLIER,
     REVEALED_DODGE_MULTIPLIER, MOVING_TARGET_HIT_MULTIPLIER,
     HEADSHOT_DAMAGE, BODY_DAMAGE, WINNING_ROUNDS,
 )
 
 class BattleLogicMixin:
-    def _tick_seconds(self):
-        """1シミュレーションTickが表す秒数。時間制効果はすべてこれを使う。"""
-        return max(0.001, TICK_TIME / 1000.0)
-
 
     def move_character(self, char):
         r, c = char.pos
@@ -37,8 +33,8 @@ class BattleLogicMixin:
             should_plant = char.is_planting if is_user_controlled else bool(on_plant_site)
 
             if should_plant and on_plant_site:
-                char.plant_timer += self._tick_seconds()
-                if char.plant_timer >= PLANT_REQUIRED_SECONDS:
+                char.plant_timer += 1
+                if char.plant_timer >= PLANT_REQUIRED_TICKS:
                     self.is_planted = True
                     self.planted_pos = (r, c)
                     char.has_spike = False
@@ -75,50 +71,43 @@ class BattleLogicMixin:
         }
 
         if char.team == "A":
-            # アタッカー側：コントローラーによって戻り値の数が異なるため自動判別
+            # アタッカー側もコントローラーによって戻り値が異なる。
+            # DefaultAttackerController: 座標のみ
+            # LearningAttackerController: (座標, "MOVE"/"PLANT")
             result = self.attacker_controller.decide_move(char, game_state)
-            if isinstance(result, tuple) and len(result) == 2:
-                # LearningAttackerController などのアクションタイプ付きの戻り値
+            if (
+                isinstance(result, tuple)
+                and len(result) == 2
+                and isinstance(result[1], str)
+            ):
                 next_pos, action_type = result
             else:
-                # DefaultAttackerController などの座標のみの戻り値
                 next_pos = result
                 action_type = "MOVE"
         else:
-            # ディフェンダー側：コントローラーによって戻り値の数が異なるため自動判別
+            # ディフェンダー側も同様に自動判別する。
             result = self.defender_controller.decide_move(char, game_state)
-            if isinstance(result, tuple) and len(result) == 2:
-                # LearningDefenderAllAIController などのアクションタイプ付きの戻り値
+            if (
+                isinstance(result, tuple)
+                and len(result) == 2
+                and isinstance(result[1], str)
+            ):
                 next_pos, action_type = result
             else:
-                # DefaultDefenderController などの座標のみの戻り値
                 next_pos = result
                 action_type = "MOVE"
 
         # ---------------------------------------------------------------------
         #  アクションタイプに応じたシステム処理 (修正版)
         # ---------------------------------------------------------------------
-        if action_type == "PLANT":
-            if char.team == "A" and char.has_spike:
-                on_site = self.target_plant_pos is not None and list(char.pos) == list(self.target_plant_pos)
-                if on_site:
-                    char.plant_timer += self._tick_seconds()
-                    if char.plant_timer >= PLANT_REQUIRED_SECONDS:
-                        self.is_planted = True
-                        self.planted_pos = tuple(char.pos)
-                        char.has_spike = False
-                        char.plant_timer = 0
-                else:
-                    char.plant_timer = 0
-            return
-        elif action_type == "DEFUSE":
+        if action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
                 if dist <= 1:
                     # 同時に解除できるのは一人だけ。担当者がいない時だけロックを取得する。
                     if self.active_defuser_name in (None, char.name):
                         self.active_defuser_name = char.name
-                        char.defuse_timer += self._tick_seconds()
+                        char.defuse_timer += 1
                         # 解除完了は射撃解決後に判定する。最終解除tickでも射撃を先に解決する。
                         return
                     # 別のキャラクターが解除中なら、このキャラクターは解除を開始できない。
@@ -173,16 +162,23 @@ class BattleLogicMixin:
         else:
             self.current_round += 1
             if not self.headless:
-                # プレイ用の時は2秒ディレイをかける
-                self.root.after(2000, self.init_next_round_delayed)
+                # ラウンド間待機もリアルタイム秒ではなくTick数で管理する。
+                self.round_transition_ticks_left = ROUND_TRANSITION_TICKS
+                self._advance_round_transition()
             else:
-                # 学習用の時はディレイなしで即時次ラウンドへ
+                # 学習用は表示待機が不要なので即時次ラウンドへ。
                 self.init_round()
 
 
-    def init_next_round_delayed(self):
-        self.init_round()
-        self.loop()
+    def _advance_round_transition(self):
+        if self.match_over:
+            return
+        if self.round_transition_ticks_left <= 0:
+            self.init_round()
+            self.loop()
+            return
+        self.round_transition_ticks_left -= 1
+        self.root.after(TICK_TIME, self._advance_round_transition)
 
 
     def _kill_character(self, shooter, target):
@@ -309,7 +305,7 @@ class BattleLogicMixin:
             return
         completed = [
             c for c in self.chars
-            if c.is_alive and c.team == "D" and c.defuse_timer >= DEFUSE_REQUIRED_SECONDS
+            if c.is_alive and c.team == "D" and c.defuse_timer >= DEFUSE_REQUIRED_TICKS
         ]
         if completed:
             self.is_defused = True
@@ -318,22 +314,21 @@ class BattleLogicMixin:
 
     def process_battle(self):
         self.battle_tick += 1
-        # 時間制効果は秒で管理する。TICK_TIMEを変更しても効果時間は変わらない。
-        dt = self._tick_seconds()
+        # すべての持続効果をTick数で管理する。
         for char in self.chars:
-            char.blind_remaining = max(0.0, char.blind_remaining - dt)
-            char.reveal_remaining = max(0.0, char.reveal_remaining - dt)
+            char.blind_remaining = max(0, char.blind_remaining - 1)
+            char.reveal_remaining = max(0, char.reveal_remaining - 1)
         for burst in self.flash_bursts:
-            burst["remaining_seconds"] -= dt
-        self.flash_bursts = [burst for burst in self.flash_bursts if burst["remaining_seconds"] > 0]
+            burst["remaining_ticks"] -= 1
+        self.flash_bursts = [burst for burst in self.flash_bursts if burst["remaining_ticks"] > 0]
         for burst in self.recon_bursts:
-            burst["remaining_seconds"] -= dt
-        self.recon_bursts = [burst for burst in self.recon_bursts if burst["remaining_seconds"] > 0]
+            burst["remaining_ticks"] -= 1
+        self.recon_bursts = [burst for burst in self.recon_bursts if burst["remaining_ticks"] > 0]
         self._advance_flash_projectiles()
         self._advance_recon_projectiles()
         for smoke in self.smokes:
-            smoke["remaining_seconds"] -= dt
-        self.smokes = [smoke for smoke in self.smokes if smoke["remaining_seconds"] > 0]
+            smoke["remaining_ticks"] -= 1
+        self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
 
         if self.spike_pos is not None:
             for c in self.chars:
@@ -381,7 +376,7 @@ class BattleLogicMixin:
             self.round_over = True
             self.check_match_winner()
         elif self.is_planted:
-            self.detonate_timer -= self._tick_seconds()
+            self.detonate_timer -= 1
             if self.detonate_timer <= 0:
                 self.attacker_wins += 1
                 if not self.headless: self.label.config(text=f"💥 Spike Detonated! Attacker WIN Round {self.current_round}! {score_text}", fg="red")
@@ -395,14 +390,14 @@ class BattleLogicMixin:
             elif not alive_A:
                 if not self.headless:
                     max_defuse = max([c.defuse_timer for c in self.chars if c.team == "D" and c.is_alive] + [0])
-                    defuse_str = f" (Defusing: {max_defuse:.1f}/{DEFUSE_REQUIRED_SECONDS:.0f}s)" if max_defuse > 0 else ""
-                    self.label.config(text=f"💀 Attacker Eliminated! Defuse the Spike! {math.ceil(self.detonate_timer)}s{defuse_str} | R{self.current_round}{score_text}", fg="#27ae60")
+                    defuse_str = f" (Defusing: {int(max_defuse)}/{DEFUSE_REQUIRED_TICKS} Tick)" if max_defuse > 0 else ""
+                    self.label.config(text=f"💀 Attacker Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}", fg="#27ae60")
             elif not self.headless:
                 max_defuse = max([c.defuse_timer for c in self.chars if c.team == "D" and c.is_alive] + [0])
-                defuse_str = f" (Defusing: {max_defuse:.1f}/{DEFUSE_REQUIRED_SECONDS:.0f}s)" if max_defuse > 0 else ""
-                self.label.config(text=f"🔥 Spike Planted! Detonation in {math.ceil(self.detonate_timer)}s{defuse_str} | R{self.current_round}{score_text}", fg="red")
+                defuse_str = f" (Defusing: {int(max_defuse)}/{DEFUSE_REQUIRED_TICKS} Tick)" if max_defuse > 0 else ""
+                self.label.config(text=f"🔥 Spike Planted! Detonation in {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}", fg="red")
         else:
-            self.round_timer -= self._tick_seconds()
+            self.round_timer -= 1
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 if not self.headless: self.label.config(text=f"⏰ Time Expired! Defender WIN Round {self.current_round}! {score_text}", fg="#27ae60")
@@ -420,7 +415,7 @@ class BattleLogicMixin:
                 self.check_match_winner()
             elif not self.headless:
                 site_side = "Left Side" if self.target_plant_pos and self.target_plant_pos[1] < self.width // 2 else "Right Side"
-                self.label.config(text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {math.ceil(self.round_timer)}s | {score_text}", fg="black")
+                self.label.config(text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick | {score_text}", fg="black")
 
 
     def loop(self):

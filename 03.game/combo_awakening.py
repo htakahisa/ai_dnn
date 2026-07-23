@@ -53,14 +53,24 @@ class ComboAwakeningMixin:
 
 
     def _describe_bonuses(self, common_bonuses, per_player_bonuses=None):
-        labels = {"accuracy": "Hit%", "hs_rate": "HS%", "dodge_rate": "回避率", "reaction": "反応速度", "max_hp": "最大HP"}
+        labels = {
+            "accuracy": "Hit%",
+            "hs_rate": "HS%",
+            "dodge_rate": "回避率",
+            "reaction": "反応速度",
+            "iq": "IQ",
+            "max_hp": "最大HP",
+        }
         parts = []
         if isinstance(common_bonuses, dict):
             for key, value in common_bonuses.items():
                 canonical = _canonical_combo_stat_key(key)
                 if canonical:
                     amount = float(value)
-                    shown = amount * 100 if canonical != "max_hp" and abs(amount) <= 1 else amount
+                    if canonical in ("accuracy", "hs_rate", "dodge_rate") and abs(amount) <= 1:
+                        shown = amount * 100
+                    else:
+                        shown = amount
                     parts.append(f"{labels.get(canonical, canonical)} {shown:+g}")
         if isinstance(per_player_bonuses, dict) and per_player_bonuses:
             parts.append("個別補正あり")

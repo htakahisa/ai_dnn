@@ -24,6 +24,35 @@ class BaseController:
             if e2 >= dy: err += dy; curr_x += sx
             if e2 <= dx: err += dx; curr_y += sy
 
+
+    @staticmethod
+    def decision_accuracy(char):
+        """実効IQを0.0～1.0の判断精度へ変換する。"""
+        iq = float(getattr(char, "effective_iq", getattr(char, "iq", 100.0)))
+        return max(0.0, min(1.0, iq / 100.0))
+
+    def choose_optimal_or_random(self, char, optimal_pos, grid):
+        """IQ判定に成功すれば最適移動、失敗すれば有効な別方向へ動く。"""
+        if random.random() < self.decision_accuracy(char):
+            return list(optimal_pos)
+
+        random_pos = self.get_next_pos_random(char.pos, grid)
+        if list(random_pos) == list(optimal_pos):
+            r, c = char.pos
+            candidates = []
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                if (
+                    0 <= nr < grid.shape[0]
+                    and 0 <= nc < grid.shape[1]
+                    and grid[nr, nc] != 1
+                    and [nr, nc] != list(optimal_pos)
+                ):
+                    candidates.append([nr, nc])
+            if candidates:
+                return random.choice(candidates)
+        return random_pos
+
     def get_next_pos_random(self, pos, grid):
         """共通で使えるランダム移動ロジック"""
         r, c = pos
@@ -97,7 +126,8 @@ class DefaultAttackerController(BaseController):
             if dist_to_spike <= 3:
                 return self.get_next_pos_random(char.pos, grid)
             else:
-                return self.move_towards_target(char.pos, planted_pos, grid)
+                optimal = self.move_towards_target(char.pos, planted_pos, grid)
+                return self.choose_optimal_or_random(char, optimal, grid)
 
         # ---------------------------------------------------------------------
         # 2. プラント前の通常ロジック
@@ -107,14 +137,16 @@ class DefaultAttackerController(BaseController):
             if target_plant_pos:
                 if list(char.pos) == list(target_plant_pos):
                     return char.pos  
-                return self.move_towards_target(char.pos, target_plant_pos, grid)
+                optimal = self.move_towards_target(char.pos, target_plant_pos, grid)
+                return self.choose_optimal_or_random(char, optimal, grid)
             
             plants = list(zip(*np.where(grid == 2)))
             if plants:
                 target = plants[0] 
                 if list(char.pos) == list(target):
                     return char.pos
-                return self.move_towards_target(char.pos, target, grid)
+                optimal = self.move_towards_target(char.pos, target, grid)
+                return self.choose_optimal_or_random(char, optimal, grid)
             return self.get_next_pos_random(char.pos, grid)
 
         # 現在誰かがスパイクを持っているか確認
@@ -125,7 +157,8 @@ class DefaultAttackerController(BaseController):
             # 💡 【修正】スパイクの位置に到達したら、その場に留まってシステム側の回収判定（has_spike=True）を待つ
             if list(char.pos) == list(spike_pos):
                 return char.pos  # ランダムに逃げず、その場に留まる
-            return self.move_towards_target(char.pos, spike_pos, grid)
+            optimal = self.move_towards_target(char.pos, spike_pos, grid)
+            return self.choose_optimal_or_random(char, optimal, grid)
         
         # すでに他の味方がスパイクを持っている場合、そのキャラを護衛（追従）する
         if holder:
@@ -134,7 +167,8 @@ class DefaultAttackerController(BaseController):
                 return self.get_next_pos_random(char.pos, grid)
             
             if dist_to_holder > 5:
-                return self.move_towards_target(char.pos, holder.pos, grid)
+                optimal = self.move_towards_target(char.pos, holder.pos, grid)
+                return self.choose_optimal_or_random(char, optimal, grid)
             else:
                 return self.get_next_pos_random(char.pos, grid)
 
@@ -155,7 +189,8 @@ class DefaultDefenderController(BaseController):
             if dist_to_spike <= 1:
                 return char.pos
             else:
-                return self.move_towards_target(char.pos, planted_pos, grid)
+                optimal = self.move_towards_target(char.pos, planted_pos, grid)
+                return self.choose_optimal_or_random(char, optimal, grid)
 
         # プラント前は通常のランダム索敵
         return self.get_next_pos_random(char.pos, grid)

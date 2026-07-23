@@ -30,6 +30,49 @@ class LearningAttackerController(BaseController):
         
         self.greedy = greedy
 
+
+    def _select_action_by_iq(self, q_values, char):
+        """IQ100以上では従来どおりの行動選択を保ち、100未満だけ判断ミスを加える。"""
+        q_values = np.asarray(q_values, dtype=np.float64)
+        valid = np.flatnonzero(np.isfinite(q_values))
+        if len(valid) == 0:
+            return 0
+
+        # まず、IQ実装前と同じ方法で通常行動を選ぶ。
+        if self.greedy:
+            baseline_action = int(valid[np.argmax(q_values[valid])])
+        else:
+            valid_q = q_values[valid]
+            probs = np.exp((valid_q - np.max(valid_q)) / 0.5)
+            probs = probs / probs.sum()
+            baseline_action = int(np.random.choice(valid, p=probs))
+
+        iq = float(getattr(char, "effective_iq", getattr(char, "iq", 100.0)))
+        decision_accuracy = max(0.0, min(1.0, iq / 100.0))
+
+        # IQ100までは「従来行動を維持できる確率」として扱う。
+        if iq <= 100.0:
+            if random.random() < decision_accuracy or len(valid) == 1:
+                return baseline_action
+        else:
+            # 100超過分は小さな「判断修正率」へ還元する。
+            # 例: IQ130なら15%の確率で、Softmaxが外した行動をargmaxへ修正する。
+            best_action = int(valid[np.argmax(q_values[valid])])
+            overcap_correction = min(0.20, max(0.0, (iq - 100.0) / 200.0))
+            if baseline_action != best_action and random.random() < overcap_correction:
+                return best_action
+            return baseline_action
+
+        # IQ100未満で判断に失敗した時だけ、通常選択とは別の有効行動を選ぶ。
+        alternatives = valid[valid != baseline_action]
+        if len(alternatives) == 0:
+            return baseline_action
+
+        alternative_q = q_values[alternatives]
+        probs = np.exp((alternative_q - np.max(alternative_q)) / 0.5)
+        probs = probs / probs.sum()
+        return int(np.random.choice(alternatives, p=probs))
+
     def reset_round(self):
         self.last_actions.clear()
         self.pos_history.clear()
@@ -95,14 +138,9 @@ class LearningAttackerController(BaseController):
             q_values = q_values.copy()
             q_values[4] = -np.inf
 
-        # 💡 ルートの多様性: Q値の差が小さいほど確率的に選ぶ(softmax)
-        # 💡変更: greedyモードなら確率的サンプリングをスキップしてargmaxを使う
-        if self.greedy:
-            action = int(np.argmax(q_values))
-        else:
-            probs = np.exp((q_values - np.max(q_values)) / 0.5)
-            probs = probs / probs.sum()
-            action = np.random.choice(len(probs), p=probs)
+        # 実効IQ100なら常に最適手、80なら約80%で最適手を選ぶ。
+        # greedy=TrueでもIQの影響は残し、キャラクター差を維持する。
+        action = self._select_action_by_iq(q_values, char)
 
         self.last_actions[char.name] = action
         self.pos_history.setdefault(char.name, deque(maxlen=7)).append(tuple(char.pos))

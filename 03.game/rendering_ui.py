@@ -4,8 +4,8 @@ import math
 
 from controllers import UserInputController
 from game_core import (
-    COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_SECONDS,
-    COMBO_DISPLAY_TICKS, PLANT_REQUIRED_SECONDS, DEFUSE_REQUIRED_SECONDS,
+    COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_TICKS,
+    COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS, SMOKE_WARNING_TICKS,
 )
 
 class RenderingUIMixin:
@@ -19,10 +19,83 @@ class RenderingUIMixin:
         return result
 
 
+    def _controller_for_team(self, team):
+        controller = self.attacker_controller if team == "A" else self.defender_controller
+        return controller if isinstance(controller, UserInputController) else None
+
+
+    def _clear_other_user_selections(self, active_team):
+        for ctrl, team in self.get_user_controllers():
+            if team != active_team:
+                ctrl.selected_char = None
+
+
+    def _set_active_user_character(self, team, character_name):
+        ctrl = self._controller_for_team(team)
+        if ctrl is None:
+            return False
+
+        character = next(
+            (
+                ch for ch in self.chars
+                if ch.team == team and ch.name == character_name and ch.is_alive
+            ),
+            None,
+        )
+        if character is None:
+            return False
+
+        self._clear_other_user_selections(team)
+        ctrl.selected_char = character.name
+        self.active_user_team = team
+        self.ability_mode = None
+        return True
+
+
+    def _is_character_selected(self, character):
+        ctrl = self._controller_for_team(character.team)
+        return bool(ctrl and ctrl.selected_char == character.name)
+
+
+    def _handle_team_panel_click(self, x, y):
+        if x < SIDE_PANEL_WIDTH:
+            team = "A"
+            panel_x = 0
+        elif x >= self.map_offset_x + self.map_pixel_width:
+            team = "D"
+            panel_x = self.map_offset_x + self.map_pixel_width
+        else:
+            return False
+
+        if self._controller_for_team(team) is None:
+            return False
+
+        local_x = x - panel_x
+        if not (10 <= local_x <= SIDE_PANEL_WIDTH - 10):
+            return False
+
+        chars = [ch for ch in self.chars if ch.team == team][:5]
+        row_h = 108
+        card_h = 100
+
+        for index, character in enumerate(chars):
+            y1 = 48 + index * row_h
+            y2 = y1 + card_h
+            if y1 <= y <= y2:
+                self._set_active_user_character(team, character.name)
+                self.draw()
+                return True
+        return False
+
+
     def on_canvas_click(self, event):
         if event.y < COMBO_BANNER_HEIGHT:
             return
         event.y -= COMBO_BANNER_HEIGHT
+
+        if self._handle_team_panel_click(event.x, event.y):
+            return
+
         selected = self._selected_user_character()
 
         # プラント可能な選択キャラクターにだけ表示されるPLANTボタン。
@@ -68,7 +141,7 @@ class RenderingUIMixin:
                 if ability_name == "SMOKE" and owner.smoke_charges > 0:
                     cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
                              if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
-                    self.smokes.append({"cells": cells, "remaining_seconds": SMOKE_DURATION_SECONDS, "owner": owner.name})
+                    self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "owner": owner.name})
                     owner.smoke_charges -= 1
                 elif ability_name == "FLASH" and owner.flash_charges > 0:
                     path = self._projectile_path(tuple(owner.pos), (r, c))
@@ -89,15 +162,68 @@ class RenderingUIMixin:
             self.draw()
             return
 
-        for ctrl, team in self.get_user_controllers():
-            ctrl.handle_click(r, c, self.grid, self.chars, team)
+        clicked_char = next(
+            (
+                ch for ch in self.chars
+                if ch.is_alive
+                and tuple(ch.pos) == (r, c)
+                and self._controller_for_team(ch.team) is not None
+            ),
+            None,
+        )
+
+        if clicked_char is not None:
+            self._clear_other_user_selections(clicked_char.team)
+            self.active_user_team = clicked_char.team
+            ctrl = self._controller_for_team(clicked_char.team)
+            ctrl.handle_click(r, c, self.grid, self.chars, clicked_char.team)
+            self.ability_mode = None
+        else:
+            active_team = getattr(self, "active_user_team", None)
+            ctrl = self._controller_for_team(active_team) if active_team in ("A", "D") else None
+
+            if ctrl is None:
+                user_controllers = self.get_user_controllers()
+                if len(user_controllers) == 1:
+                    ctrl, active_team = user_controllers[0]
+                    self.active_user_team = active_team
+
+            if ctrl is not None:
+                ctrl.handle_click(r, c, self.grid, self.chars, active_team)
+
         self.draw()
 
 
     def _selected_user_character(self):
+        active_team = getattr(self, "active_user_team", None)
+        ctrl = self._controller_for_team(active_team) if active_team in ("A", "D") else None
+        if ctrl and ctrl.selected_char:
+            selected = next(
+                (
+                    ch for ch in self.chars
+                    if ch.name == ctrl.selected_char
+                    and ch.team == active_team
+                    and ch.is_alive
+                ),
+                None,
+            )
+            if selected is not None:
+                return selected
+
         for ctrl, team in self.get_user_controllers():
             if ctrl.selected_char:
-                return next((ch for ch in self.chars if ch.name == ctrl.selected_char and ch.team == team and ch.is_alive), None)
+                selected = next(
+                    (
+                        ch for ch in self.chars
+                        if ch.name == ctrl.selected_char
+                        and ch.team == team
+                        and ch.is_alive
+                    ),
+                    None,
+                )
+                if selected is not None:
+                    self.active_user_team = team
+                    return selected
         return None
 
 
@@ -189,14 +315,26 @@ class RenderingUIMixin:
             muted = "#aeb8c6" if char.is_alive else "#666b73"
             name_fill = "white" if char.is_alive else "#777b83"
 
+            selected = self._is_character_selected(char)
+            selectable = self._controller_for_team(team) is not None and char.is_alive
+            card_outline = "#f1c40f" if selected else ("#52657c" if selectable else "#323e50")
+            card_width = 3 if selected else 1
+
             self.canvas.create_rectangle(
                 x0 + 10, y, x0 + panel_w - 10, y + card_h,
-                fill=row_fill, outline="#323e50"
+                fill=row_fill, outline=card_outline, width=card_width
             )
+
+            if selected:
+                self.canvas.create_text(
+                    x0 + 14, y + 13,
+                    text="▶", anchor="w",
+                    fill="#f1c40f", font=("Arial", 9, "bold")
+                )
 
             # 名前・K/D
             self.canvas.create_text(
-                x0 + 18, y + 13,
+                x0 + (30 if selected else 18), y + 13,
                 text=char.display_name, anchor="w",
                 fill=name_fill, font=("Arial", 9, "bold")
             )
@@ -226,7 +364,7 @@ class RenderingUIMixin:
             accuracy_pct = round(char.accuracy * 100)
             dodge_pct = round(char.dodge_rate * 100)
             hs_pct = round(char.hs_rate * 100)
-            iq_text = f"{char.iq:g}"
+            iq_text = str(math.floor(char.iq)) + (" [IGL]" if getattr(char, "is_igl", False) else "")
             reaction_text = f"{char.reaction:g}"
             power_text = str(math.floor(char.combat_power))
 
@@ -288,7 +426,7 @@ class RenderingUIMixin:
         # 煙らしく見えるように、半透明風の円を重ねて雲状に描画する。
         # Tkinter CanvasはRGBA非対応なのでstippleを使う。
         for smoke_index, smoke in enumerate(self.smokes):
-            warning = smoke["remaining_seconds"] <= 3 * self._tick_seconds()
+            warning = smoke["remaining_ticks"] <= SMOKE_WARNING_TICKS
             if warning and self.battle_tick % 2 == 0:
                 continue
             for sr, sc in smoke["cells"]:
@@ -381,7 +519,11 @@ class RenderingUIMixin:
             self.canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
                                     fill="#fff7bf", outline="#f1c40f", width=2, stipple="gray50")
 
-        selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
+        selected_characters = {
+            (team, ctrl.selected_char)
+            for ctrl, team in self.get_user_controllers()
+            if ctrl.selected_char is not None
+        }
         viewer_team = self.get_viewer_team()
         visible_chars = [
             c for c in self.chars
@@ -397,8 +539,9 @@ class RenderingUIMixin:
                 continue
 
             bg = "#2980b9" if (char.defuse_timer > 0 and self.is_planted) else char.bg_color
-            outline_color = "yellow" if char.name in selected_names else ""
-            outline_width = 3 if char.name in selected_names else 1
+            is_selected = (char.team, char.name) in selected_characters
+            outline_color = "yellow" if is_selected else ""
+            outline_width = 3 if is_selected else 1
             self.canvas.create_oval(x1, row*self.cell_size, x1+self.cell_size, (row+1)*self.cell_size, fill=bg, outline=outline_color, width=outline_width)
             if char.blind_remaining > 0:
                 # 視認性を壊さない薄い二重リングと小さな印でブラインド状態を表示。
@@ -484,7 +627,7 @@ class RenderingUIMixin:
                 self.canvas.create_text((px1+px2)/2, py1+22,
                                         text="PLANTING..." if planting else "PLANT",
                                         fill="#ffd27a", font=("Arial", 11, "bold"))
-                progress = min(1.0, selected.plant_timer / max(0.001, PLANT_REQUIRED_SECONDS))
+                progress = min(1.0, selected.plant_timer / max(1, PLANT_REQUIRED_TICKS))
                 self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
                 self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
                                              fill="#f39c12", outline="")
@@ -516,22 +659,49 @@ class RenderingUIMixin:
         category_text = "覚醒イベント" if is_awakening else "プレイヤーコンボ"
         title_color = "#ff8f70" if is_awakening else "#ffd66b"
 
-        self.canvas.create_rectangle(12, 10, total_w-12, COMBO_BANNER_HEIGHT-10, fill="#151c27", outline=accent, width=3)
+        self.canvas.create_rectangle(
+            12, 10, total_w - 12, COMBO_BANNER_HEIGHT - 10,
+            fill="#151c27", outline=accent, width=3
+        )
+
+        title_y = 25
+        players_y = 52
+        effect_y = COMBO_BANNER_HEIGHT - 25
+
         self.canvas.create_text(
-            30, 25, text=category_text, anchor="w",
+            30, title_y, text=category_text, anchor="w",
             fill=accent, font=("Arial", 10, "bold")
         )
         self.canvas.create_text(
-            total_w/2, 25, text=announcement.get("name", "名称未設定"),
+            total_w / 2, title_y,
+            text=announcement.get("name", "名称未設定"),
             fill=title_color, font=("Arial", 17, "bold")
         )
-        names = " × ".join(announcement.get("display_players", announcement.get("players", ())))
+
+        names = " × ".join(
+            announcement.get("display_players", announcement.get("players", ()))
+        )
         self.canvas.create_text(
-            total_w/2, 51, text=f"{team_text}  |  {names}",
+            total_w / 2, players_y,
+            text=f"{team_text}  |  {names}",
             fill="white", font=("Arial", 11, "bold")
         )
-        self.canvas.create_text(
-            total_w/2, 73, text=announcement.get("effect_text", "特殊効果"),
-            fill="#b9c6d8", font=("Arial", 10)
-        )
 
+        effect_text = announcement.get("effect_text", "特殊効果")
+        if isinstance(effect_text, str):
+            parts = [part.strip() for part in effect_text.split("\n") if part.strip()]
+            if len(parts) > 1:
+                effect_text = "\n".join(
+                    " / ".join(parts[i:i + 2])
+                    for i in range(0, len(parts), 2)
+                )
+
+        self.canvas.create_text(
+            total_w / 2, effect_y,
+            text=effect_text,
+            fill="#b9c6d8",
+            font=("Arial", 9),
+            width=max(200, total_w - 100),
+            justify="center",
+            anchor="center",
+        )

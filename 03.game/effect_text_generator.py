@@ -64,37 +64,26 @@ def format_awakening_condition(event):
         return condition
 
 
-def _compact_bonus_text(bonuses):
-    """コンボ告知用に、能力補正を短い1行へ変換します。"""
-    return " / ".join(format_bonus_lines(bonuses))
-
-
 def generate_combo_effect_text(combo):
-    """コンボ効果を必ず1行で生成します。
-
-    既存のコンボ告知欄は高さが1行分なので、改行を入れると
-    ATTACKERS表示やマップへ重なります。
-    """
     manual = combo.get("effect_text")
     if manual:
-        # 手動文にも改行が含まれていたら、表示崩れ防止のため1行化します。
-        return " / ".join(str(manual).splitlines())
+        return str(manual)
 
     sections = []
 
-    common_text = _compact_bonus_text(combo.get("bonuses"))
-    if common_text:
-        sections.append(common_text)
+    common_lines = format_bonus_lines(combo.get("bonuses"))
+    if common_lines:
+        sections.append("参加者全員\n" + "\n".join(common_lines))
 
     for player_name, bonuses in (combo.get("player_bonuses") or {}).items():
-        bonus_text = _compact_bonus_text(bonuses)
-        if bonus_text:
-            sections.append(f"{player_name}: {bonus_text}")
+        lines = format_bonus_lines(bonuses)
+        if lines:
+            sections.append(f"{player_name}\n" + "\n".join(lines))
 
     for old_name, new_name in (combo.get("renames") or {}).items():
-        sections.append(f"{old_name}→{new_name}")
+        sections.append(f"{old_name}の表示名を「{new_name}」に変更")
 
-    return " / ".join(sections) if sections else "能力補正なし"
+    return "\n\n".join(sections) if sections else "能力補正なし"
 
 
 def generate_awakening_effect_text(event):

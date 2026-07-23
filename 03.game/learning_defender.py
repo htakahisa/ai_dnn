@@ -47,6 +47,45 @@ class LearningDefenderController(BaseController):
         self.cached_planted_pos = None  # キャッシュしたスパイク位置を記録
         self.cached_dist_map = None     # キャッシュした距離マップを記録
 
+
+    def _select_action_by_iq(self, q_values, char, baseline_mode="softmax"):
+        """IQ100以上では従来の選択方法を維持し、100未満だけ判断ミスを加える。"""
+        q_values = np.asarray(q_values, dtype=np.float64)
+        valid = np.flatnonzero(np.isfinite(q_values))
+        if len(valid) == 0:
+            return 0
+
+        if baseline_mode == "argmax":
+            baseline_action = int(valid[np.argmax(q_values[valid])])
+        else:
+            valid_q = q_values[valid]
+            probs = np.exp((valid_q - np.max(valid_q)) / 0.5)
+            probs = probs / probs.sum()
+            baseline_action = int(np.random.choice(valid, p=probs))
+
+        iq = float(getattr(char, "effective_iq", getattr(char, "iq", 100.0)))
+        decision_accuracy = max(0.0, min(1.0, iq / 100.0))
+
+        if iq <= 100.0:
+            if random.random() < decision_accuracy or len(valid) == 1:
+                return baseline_action
+        else:
+            # 100超過分は、Softmax時に外した選択をargmaxへ戻す小さな補正にする。
+            # 通常時のargmax挙動はそのままなので、既存AIを壊さない。
+            best_action = int(valid[np.argmax(q_values[valid])])
+            overcap_correction = min(0.20, max(0.0, (iq - 100.0) / 200.0))
+            if baseline_action != best_action and random.random() < overcap_correction:
+                return best_action
+            return baseline_action
+
+        alternatives = valid[valid != baseline_action]
+        if len(alternatives) == 0:
+            return baseline_action
+        values = q_values[alternatives]
+        probs = np.exp((values - np.max(values)) / 0.5)
+        probs /= probs.sum()
+        return int(np.random.choice(alternatives, p=probs))
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
         is_planted = game_state["is_planted"]
@@ -86,8 +125,7 @@ class LearningDefenderController(BaseController):
                 q_values = self.model(state_t).squeeze(0)
                 
                 # 💡 デッドロック（上下反復ハメ）を学習能力の枠組みで回避するためSoftmaxサンプリング
-                probs = torch.softmax(q_values / 0.5, dim=-1).cpu().numpy()
-                action = np.random.choice(len(probs), p=probs)
+                action = self._select_action_by_iq(q_values.cpu().numpy(), char, baseline_mode="softmax")
 
             self.last_actions[char.name] = action 
             
@@ -180,6 +218,45 @@ class LearningDefenderAllAIController(BaseController):
         self.cached_dist_maps = {}     
         self.pos_history = {}   # 💡追加：直近位置の履歴（デッドロック検知用）
 
+
+    def _select_action_by_iq(self, q_values, char, baseline_mode="softmax"):
+        """IQ100以上では従来の選択方法を維持し、100未満だけ判断ミスを加える。"""
+        q_values = np.asarray(q_values, dtype=np.float64)
+        valid = np.flatnonzero(np.isfinite(q_values))
+        if len(valid) == 0:
+            return 0
+
+        if baseline_mode == "argmax":
+            baseline_action = int(valid[np.argmax(q_values[valid])])
+        else:
+            valid_q = q_values[valid]
+            probs = np.exp((valid_q - np.max(valid_q)) / 0.5)
+            probs = probs / probs.sum()
+            baseline_action = int(np.random.choice(valid, p=probs))
+
+        iq = float(getattr(char, "effective_iq", getattr(char, "iq", 100.0)))
+        decision_accuracy = max(0.0, min(1.0, iq / 100.0))
+
+        if iq <= 100.0:
+            if random.random() < decision_accuracy or len(valid) == 1:
+                return baseline_action
+        else:
+            # 100超過分は、Softmax時に外した選択をargmaxへ戻す小さな補正にする。
+            # 通常時のargmax挙動はそのままなので、既存AIを壊さない。
+            best_action = int(valid[np.argmax(q_values[valid])])
+            overcap_correction = min(0.20, max(0.0, (iq - 100.0) / 200.0))
+            if baseline_action != best_action and random.random() < overcap_correction:
+                return best_action
+            return baseline_action
+
+        alternatives = valid[valid != baseline_action]
+        if len(alternatives) == 0:
+            return baseline_action
+        values = q_values[alternatives]
+        probs = np.exp((values - np.max(values)) / 0.5)
+        probs /= probs.sum()
+        return int(np.random.choice(alternatives, p=probs))
+
     def reset_round(self):
         self.last_actions.clear()
         self.assigned_sites.clear()
@@ -234,12 +311,15 @@ class LearningDefenderAllAIController(BaseController):
         is_stuck = len(history) == history.maxlen and len(set(map(tuple, history))) <= 2
 
         if is_stuck:
-            # デッドロックしていそうな時だけ確率的サンプリングで揺らす
-            probs = np.exp((q_values - np.max(q_values)) / 0.5)
-            action = np.random.choice(len(probs), p=probs/np.sum(probs))
+            # IQ実装前と同じく、詰まり時はSoftmaxで揺らす。
+            action = self._select_action_by_iq(
+                q_values, char, baseline_mode="softmax"
+            )
         else:
-            # 通常時は最も確信度の高い行動を選ぶ
-            action = int(np.argmax(q_values))
+            # IQ実装前と同じく、通常時はargmax。
+            action = self._select_action_by_iq(
+                q_values, char, baseline_mode="argmax"
+            )
 
         self.last_actions[char.name] = action
         history.append(tuple(char.pos))
