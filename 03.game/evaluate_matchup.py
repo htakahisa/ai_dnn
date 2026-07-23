@@ -14,6 +14,10 @@ from map_data import NEW_MAZE_STR
 from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_attacker import LearningAttackerController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
+from learning_attacker_multi import LearningAttackerMultiController
+
+TARGET_DIR = "attacker_multi_data"
+TARGET_FILE = "dqn_attacker_multi_ep"
 
 
 def build_controller(kind, side, greedy=False, model_path=None):
@@ -22,8 +26,10 @@ def build_controller(kind, side, greedy=False, model_path=None):
     if kind == "learning":
         if side == "A":
             # 外部からパスを指定できるように引数を追加
-            path = model_path if model_path else "dqn_attacker_combined_best.pt"
-            return LearningAttackerController(model_path=path, greedy=greedy)
+            path = model_path if model_path else "dqn_attacker_multi_best_by_eval.pt"
+            #return LearningAttackerController(model_path=path, greedy=greedy)
+            return LearningAttackerMultiController(model_path=path, greedy=greedy)
+            
         else:
             return LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
     raise ValueError(f"unknown controller kind: {kind}")
@@ -92,7 +98,7 @@ def print_summary(stats):
     total_rounds = stats["total_att_rounds"] + stats["total_def_rounds"]
     att_round_rate = stats["total_att_rounds"] / total_rounds * 100 if total_rounds else 0
     def_round_rate = stats["total_def_rounds"] / total_rounds * 100 if total_rounds else 0
-
+    
     print("\n" + "=" * 50)
     print(f"総マッチ数: {n}  (所要時間: {stats['elapsed']:.1f}秒)")
     print("-" * 50)
@@ -107,11 +113,11 @@ def print_summary(stats):
 
 
 def evaluate_all_saved_models(matches_per_model, greedy=False):
-    target_dir = "attacker_data"
-    model_files = glob.glob(os.path.join(target_dir, "dqn_attacker_ep*.pt"))
+
+    model_files = glob.glob(os.path.join(TARGET_DIR, TARGET_FILE + "*.pt"))
     
     if not model_files:
-        print(f"エラー: {target_dir} フォルダ内に評価対象のモデルが見つかりません。")
+        print(f"エラー: {TARGET_DIR} フォルダ内に評価対象のモデルが見つかりません。")
         return
 
     print(f"合計 {len(model_files)} 個のモデルを連続評価します。 (各 {matches_per_model} マッチ)")
@@ -123,7 +129,7 @@ def evaluate_all_saved_models(matches_per_model, greedy=False):
     best_model_path = ""
     results = {}
 
-    for model_path in sorted(model_files, key=lambda x: int(os.path.basename(x).replace("dqn_attacker_ep", "").replace(".pt", ""))):
+    for model_path in sorted(model_files, key=lambda x: int(os.path.basename(x).replace(TARGET_FILE, "").replace(".pt", ""))):
         print(f"\n▶ 評価開始: {model_path}")
         att_ctrl = build_controller("learning", "A", greedy=greedy, model_path=model_path)
         
@@ -153,7 +159,7 @@ def evaluate_all_saved_models(matches_per_model, greedy=False):
     print(f"👑 最高勝率モデル: {best_model_path} ({best_win_rate * 100:.1f}%)")
     
     # 最高のモデルを combined_best として上書きコピー保存
-    final_save_path = os.path.join(target_dir, "dqn_attacker_combined_best.pt")
+    final_save_path = os.path.join(TARGET_DIR, "dqn_attacker_combined_best.pt")
     shutil.copy(best_model_path, final_save_path)
     print(f"✅ 最高モデルを {final_save_path} に保存・上書きしました。")
 

@@ -6,6 +6,7 @@ import numpy as np
 from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
 from learning_attacker import LearningAttackerController
+from learning_attacker_multi import LearningAttackerMultiController, DEFUSE_REQUIRED
 from map_data import NEW_MAZE_STR
 
 WINNING_ROUNDS = 5
@@ -92,7 +93,10 @@ class VisualFPSBattle:
     def move_character(self, char):
         r, c = char.pos
         
-        is_ai_attacker = isinstance(self.attacker_controller, LearningAttackerController)
+        is_ai_attacker = isinstance(
+            self.attacker_controller,
+            (LearningAttackerController, LearningAttackerMultiController)
+        )
         
         # ---------------------------------------------------------------------
         # 💡 【修正】アタッカーのPlant自動処理の条件を厳密化
@@ -128,6 +132,12 @@ class VisualFPSBattle:
             site_r = float(self.target_plant_pos[0]) if self.target_plant_pos else 0.0
             site_c = float(self.target_plant_pos[1]) if self.target_plant_pos else 0.0
 
+        defender_defuse_info = {
+            d.name: (d.defuse_timer, DEFUSE_REQUIRED)  # 6 = DEFUSE_REQUIRED (learning_attacker_multi.py の DEFUSE_REQUIRED と一致させる)
+            for d in self.chars
+            if d.team == "D" and d.is_alive
+        }
+
         game_state = {
             "grid": self.grid,
             "spike_pos": self.spike_pos,
@@ -139,7 +149,8 @@ class VisualFPSBattle:
                 'spotted': 1.0,
                 'site_r': site_r,
                 'site_c': site_c
-            }
+            },
+            "defender_defuse_info": defender_defuse_info,
         }
 
         if char.team == "A":
@@ -164,7 +175,8 @@ class VisualFPSBattle:
         # ---------------------------------------------------------------------
         if action_type == "PLANT":
             if char.team == "A" and char.has_spike:
-                on_site = self.target_plant_pos is not None and list(char.pos) == list(self.target_plant_pos)
+                r, c = char.pos
+                on_site = self.grid[r, c] == 2   # 💡サイト内であればどこでも設置可能
                 if on_site:
                     char.plant_timer += 1
                     if char.plant_timer >= 4:
@@ -443,30 +455,22 @@ class VisualFPSBattle:
             self.root.mainloop()
 
 if __name__ == "__main__":
-    # =========================================================================
-    # ⚙️ モード切り替えスイッチ
-    # =========================================================================
-    # TRUE : 画面なしでバックグラウンド超高速計算（学習やテスト用）
-    # FALSE: 画面ありでいつものプレイ（人間が観戦する用）
-    LEARNING_MODE = True # AIモデルを使うのでTrueに
+
     
     #att_ctrl = DefaultAttackerController()
-    att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
+    #att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
+    att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
     #att_ctrl = LearningAttackerController(model_path="attacker_data\dqn_attacker_ep2000.pt")
     #att_ctrl = UserInputController()
+
+    # 新しい統合モデルでテストしたい場合
+    def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
+    # 迷路探索のみモデル
+    #def_ctrl = LearningDefenderController(model_path="dqn_gridworld_fixedmap.pt")
+    #def_ctrl = UserInputController()
     
-    if LEARNING_MODE:
-        # 新しい統合モデルでテストしたい場合
-        #def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-        # 迷路探索のみモデル
-        #def_ctrl = LearningDefenderController(model_path="dqn_gridworld_fixedmap.pt")
-        
-        def_ctrl = UserInputController()
-        
-        # 動きを確認したいので headless=False で可視化する
-        game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
-    else:
-        def_ctrl = DefaultDefenderController()
-        game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
+    # 動きを確認したいので headless=False で可視化する
+    game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
+
         
     game.run()
