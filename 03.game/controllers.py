@@ -163,25 +163,24 @@ class DefaultDefenderController(BaseController):
 
 class UserInputController(BaseController):
     """人間の入力（マウスクリック）によって動かすコントローラー。
-    選択したキャラクターをクリックした地点へBFS最短経路で移動させる。"""
+    選択したキャラクターをクリックした地点へBFS最短経路で移動させる。
+    右クリックは選択中キャラのアビリティをそのマスへ向けて発動する指示になる。"""
 
     def __init__(self):
         super().__init__()
-        self.selected_char = None   # 現在選択中のキャラ名
-        self.targets = {}           # キャラ名 -> 目的地座標(タプル)
+        self.selected_char = None      # 現在選択中のキャラ名
+        self.targets = {}              # キャラ名 -> 目的地座標(タプル)
+        self.pending_abilities = {}    # キャラ名 -> 発動先座標(タプル、1回分)
 
     def reset_round(self):
         """ラウンド開始時に選択状態・目的地をリセットする"""
         self.selected_char = None
         self.targets.clear()
+        self.pending_abilities.clear()
 
     def handle_click(self, r, c, grid, chars, my_team):
         """
-        キャンバスクリック時に呼び出す。
-        r, c: クリックされたマス座標
-        grid: マップグリッド
-        chars: 全キャラクターのリスト
-        my_team: このコントローラーが担当するチーム（"A" or "D"）
+        キャンバス左クリック時に呼び出す。移動指示、またはキャラ選択。
         """
         # 壁をクリックしたら選択解除
         if grid[r, c] == 1:
@@ -202,9 +201,34 @@ class UserInputController(BaseController):
             self.targets[self.selected_char] = (r, c)
             self.selected_char = None  # 指示を出したら選択解除
 
+    def handle_right_click(self, r, c, grid, chars, my_team):
+        """
+        キャンバス右クリック時に呼び出す。選択中のキャラがいれば、
+        そのキャラのアビリティをクリックされたマスへ向けて発動する指示を出す。
+        壁マスでも方向指定として有効(投射物は壁の手前で止まる)なので選択解除しない。
+        """
+        if self.selected_char is None:
+            return
+
+        clicked_char = next(
+            (ch for ch in chars if ch.is_alive and ch.team == my_team and ch.name == self.selected_char),
+            None
+        )
+        if clicked_char is None:
+            self.selected_char = None
+            return
+
+        self.pending_abilities[self.selected_char] = (r, c)
+        self.selected_char = None  # 指示を出したら選択解除
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
-        
+
+        # 💡追加: 右クリックでアビリティ発動指示が出ていれば、最優先でABILITYアクションを返す
+        target_cell = self.pending_abilities.pop(char.name, None)
+        if target_cell is not None:
+            return target_cell, "ABILITY"
+
         # 💡追加: defender操作時、プラント後にスパイク隣接エリアにいれば自動的に解除を試みる
         # (attackerの自動PLANTと同様、クリック操作だけでは解除の意思表示ができないため)
         is_planted = game_state.get("is_planted")

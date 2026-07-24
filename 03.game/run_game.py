@@ -8,25 +8,14 @@ from learning_defender import LearningDefenderController, LearningDefenderAllAIC
 from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController, DEFUSE_REQUIRED
 from map_data import NEW_MAZE_STR
+from game_core import Character
+from abilities import AbilityMixin
 
 WINNING_ROUNDS = 5
 TICK_TIME = 100
 
 
-class Character:
-    def __init__(self, name, team, pos, text_color, bg_color, has_spike=False):
-        self.name = name
-        self.team = team
-        self.pos = list(pos)
-        self.text_color = text_color
-        self.bg_color = bg_color    
-        self.is_alive = True
-        self.just_died = False
-        self.has_spike = has_spike
-        self.plant_timer = 0
-        self.defuse_timer = 0 
-
-class VisualFPSBattle:
+class VisualFPSBattle(AbilityMixin):
     def __init__(self, maze_str, attacker_controller, defender_controller, headless=False):
         self.maze_str = maze_str
         self.headless = headless # 【新機能】画面を描画しない設定
@@ -50,6 +39,7 @@ class VisualFPSBattle:
             self.canvas = tk.Canvas(self.root, width=self.width*self.cell_size, height=self.height*self.cell_size)
             self.canvas.pack()
             self.canvas.bind("<Button-1>", self.on_canvas_click)   # 💡追加
+            self.canvas.bind("<Button-3>", self.on_canvas_right_click)   # 💡追加: 右クリックでアビリティ発動
             self.label = tk.Label(self.root, text="Round 1 Start", font=("Arial", 10))
             self.label.pack()
         
@@ -89,6 +79,14 @@ class VisualFPSBattle:
         # 💡追加：アタッカー側も同様にリセット(UserInputController用)
         if hasattr(self.attacker_controller, "reset_round"):
             self.attacker_controller.reset_round()
+
+        # 💡追加: アビリティ関連の状態初期化と割り当て
+        self.smokes = []
+        self.flash_projectiles = []
+        self.recon_projectiles = []
+        self.flash_bursts = []
+        self.recon_bursts = []
+        self.assign_abilities()
 
     def move_character(self, char):
         r, c = char.pos
@@ -186,6 +184,10 @@ class VisualFPSBattle:
                 else:
                     char.plant_timer = 0
             return
+        elif action_type == "ABILITY":
+            # 💡追加: next_pos はここでは発動先セル(target_cell)として扱う
+            self.use_ability(char, tuple(next_pos))
+            return
         elif action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
@@ -210,12 +212,16 @@ class VisualFPSBattle:
         sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
         err = dx + dy
         curr_x, curr_y = x0, y0
+        line_cells = []
         while True:
             if self.grid[curr_y, curr_x] == 1: return False
-            if curr_x == x1 and curr_y == y1: return True
+            line_cells.append((curr_y, curr_x))
+            if curr_x == x1 and curr_y == y1: break
             e2 = 2 * err
             if e2 >= dy: err += dy; curr_x += sx
             if e2 <= dx: err += dx; curr_y += sy
+        # 💡追加: スモークによる視線遮断判定
+        return self._smoke_allows_line(line_cells, self._smoke_cells())
             
     def get_user_controllers(self):
         """ユーザー操作のコントローラーとそのチームのペアを返す"""
@@ -238,6 +244,22 @@ class VisualFPSBattle:
 
         for ctrl, team in user_controllers:
             ctrl.handle_click(r, c, self.grid, self.chars, team)
+
+        self.draw()
+
+    def on_canvas_right_click(self, event):
+        c = event.x // self.cell_size
+        r = event.y // self.cell_size
+        if not (0 <= r < self.height and 0 <= c < self.width):
+            return
+
+        user_controllers = self.get_user_controllers()
+        if not user_controllers:
+            return
+
+        for ctrl, team in user_controllers:
+            if hasattr(ctrl, "handle_right_click"):
+                ctrl.handle_right_click(r, c, self.grid, self.chars, team)
 
         self.draw()
 
@@ -278,6 +300,9 @@ class VisualFPSBattle:
         self.loop()
 
     def process_battle(self):
+        # 💡追加: アビリティ効果(投射物飛行・着弾・持続時間)の進行
+        self._advance_ability_effects()
+
         # ---------------------------------------------------------------------
         # 💡 【追加】落ちているスパイクを生存しているアタッカーが踏んだら拾い上げる
         # ---------------------------------------------------------------------
@@ -459,9 +484,9 @@ if __name__ == "__main__":
     
     #att_ctrl = DefaultAttackerController()
     #att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
-    att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
+    #att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
     #att_ctrl = LearningAttackerController(model_path="attacker_data\dqn_attacker_ep2000.pt")
-    #att_ctrl = UserInputController()
+    att_ctrl = UserInputController()
 
     # 新しい統合モデルでテストしたい場合
     def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
