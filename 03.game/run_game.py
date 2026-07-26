@@ -6,7 +6,9 @@ import numpy as np
 from controllers import DefaultAttackerController, DefaultDefenderController, UserInputController
 from learning_defender import LearningDefenderController, LearningDefenderAllAIController
 from learning_attacker import LearningAttackerController
-from learning_attacker_multi import LearningAttackerMultiController, DEFUSE_REQUIRED
+from learning_attacker_multi import LearningAttackerMultiController
+from learning_attacker_ability import LearningAttackerAbilityController
+from train_attacker_ability import DEFUSE_REQUIRED
 from map_data import NEW_MAZE_STR
 from game_core import Character
 from abilities import AbilityMixin
@@ -52,12 +54,20 @@ class VisualFPSBattle(AbilityMixin):
         area_3 = list(zip(*np.where(self.grid == 3)))
         area_4 = list(zip(*np.where(self.grid == 4)))
         
-        spike_holder_index = random.randint(0, len(area_3) - 1) if area_3 else -1
         
+        spike_holder_index = random.randint(0, len(area_3) - 1) if area_3 else -1
         self.chars = []
         for i, pos in enumerate(area_3):
             has_spike = (i == spike_holder_index)
             self.chars.append(Character(f"Att{i+1}", "A", pos, "white", "#c0392b", has_spike=has_spike))
+        
+        
+        #self.chars = []
+        #if area_3:
+        #    spawn_pos = random.choice(area_3)
+        #    self.chars.append(Character("Att1", "A", spawn_pos, "white", "#c0392b", has_spike=True))
+
+
         for i, pos in enumerate(area_4):
             self.chars.append(Character(f"Def{i+1}", "D", pos, "white", "#27ae60"))
             
@@ -93,7 +103,7 @@ class VisualFPSBattle(AbilityMixin):
         
         is_ai_attacker = isinstance(
             self.attacker_controller,
-            (LearningAttackerController, LearningAttackerMultiController)
+            (LearningAttackerController, LearningAttackerMultiController, LearningAttackerAbilityController)
         )
         
         # ---------------------------------------------------------------------
@@ -176,13 +186,9 @@ class VisualFPSBattle(AbilityMixin):
                 r, c = char.pos
                 on_site = self.grid[r, c] == 2   # 💡サイト内であればどこでも設置可能
                 if on_site:
-                    char.plant_timer += 1
-                    if char.plant_timer >= 4:
-                        self.is_planted = True
-                        self.planted_pos = tuple(char.pos)
-                        char.has_spike = False
-                else:
-                    char.plant_timer = 0
+                    self.is_planted = True
+                    self.planted_pos = tuple(char.pos)
+                    char.has_spike = False
             return
         elif action_type == "ABILITY":
             # 💡追加: next_pos はここでは発動先セル(target_cell)として扱う
@@ -200,11 +206,14 @@ class VisualFPSBattle(AbilityMixin):
 
         else:
             char.plant_timer = 0
-            char.defuse_timer = 0  
-            # インデックス参照エラーを防ぐため、next_pos が有効な2次元座標であることを保証
+            char.defuse_timer = 0
+            moved = False
             if isinstance(next_pos, (list, np.ndarray)) and len(next_pos) == 2:
                 if self.grid[next_pos[0], next_pos[1]] != 1:
                     char.pos = list(next_pos)
+                    moved = True
+            if char.team == "A" and char.has_spike:
+                print(f"MOVE_APPLY {char.name} next_pos={next_pos} moved={moved} new_pos={char.pos}")
 
     def check_line_of_sight(self, p1, p2):
         x0, y0, x1, y1 = p1.pos[1], p1.pos[0], p2.pos[1], p2.pos[0]
@@ -327,20 +336,27 @@ class VisualFPSBattle(AbilityMixin):
                        if alive[i].team != alive[j].team and self.check_line_of_sight(alive[i], alive[j])]
         
         random.shuffle(engagements)
+        # process_battle 内、交戦解決ループの target 決定部分を置き換え
         for c1, c2 in engagements:
             if not c1.is_alive or not c2.is_alive: continue
             self.last_engagements.append((c1, c2))
-            
+
+            c1_blind = c1.blind_remaining > 0
+            c2_blind = c2.blind_remaining > 0
             c1_busy = (c1.plant_timer > 0) or (c1.defuse_timer > 0)
             c2_busy = (c2.plant_timer > 0) or (c2.defuse_timer > 0)
-            
-            if c1_busy and not c2_busy:
+
+            if c1_blind and not c2_blind:
+                target = c1
+            elif c2_blind and not c1_blind:
+                target = c2
+            elif c1_busy and not c2_busy:
                 target = c1
             elif c2_busy and not c1_busy:
                 target = c2
             else:
                 target = c2 if random.random() < 0.5 else c1
-            
+
             target.is_alive = False
             target.just_died = True
             if target.has_spike:
@@ -413,6 +429,52 @@ class VisualFPSBattle(AbilityMixin):
                 color = color_map.get(str(self.grid[r, c]), "white")
                 self.canvas.create_rectangle(c*self.cell_size, r*self.cell_size, (c+1)*self.cell_size, (r+1)*self.cell_size, fill=color, outline="#eee")
         
+        # -----------------------------------------------------------------
+        # 💡 [追加] アビリティの描画処理
+        # -----------------------------------------------------------------
+        # 1. スモークの描画（半透明風のグレーで範囲を描画）
+        for smoke in self.smokes:
+            for r, c in smoke["cells"]:
+                self.canvas.create_rectangle(
+                    c * self.cell_size, r * self.cell_size,
+                    (c + 1) * self.cell_size, (r + 1) * self.cell_size,
+                    fill="#7f8c8d", outline="#95a5a6", stipple="gray50"
+                )
+
+        # 2. リコン着弾範囲の描画（水色枠）
+        for burst in self.recon_bursts:
+            for r, c in burst["cells"]:
+                self.canvas.create_rectangle(
+                    c * self.cell_size, r * self.cell_size,
+                    (c + 1) * self.cell_size, (r + 1) * self.cell_size,
+                    fill="#3498db", outline="#2980b9", stipple="gray25"
+                )
+
+        # 3. フラッシュ爆発（黄色の大円）
+        for burst in self.flash_bursts:
+            r, c = burst["pos"]
+            cx, cy = (c + 0.5) * self.cell_size, (r + 0.5) * self.cell_size
+            rad = self.cell_size * 0.8
+            self.canvas.create_oval(cx - rad, cy - rad, cx + rad, cy + rad, fill="#f1c40f", outline="#f39c12")
+
+        # 4. フラッシュ弾（飛翔中の小さな黄色円）
+        for p in self.flash_projectiles:
+            if p["path"] and p["progress"] < len(p["path"]):
+                r, c = p["path"][p["progress"]]
+                cx, cy = (c + 0.5) * self.cell_size, (r + 0.5) * self.cell_size
+                rad = self.cell_size * 0.3
+                self.canvas.create_oval(cx - rad, cy - rad, cx + rad, cy + rad, fill="#f1c40f", outline="black")
+
+        # 5. リコン弾（飛翔中の小さな青色円）
+        for p in self.recon_projectiles:
+            if p["path"] and p["progress"] < len(p["path"]):
+                r, c = p["path"][p["progress"]]
+                cx, cy = (c + 0.5) * self.cell_size, (r + 0.5) * self.cell_size
+                rad = self.cell_size * 0.3
+                self.canvas.create_oval(cx - rad, cy - rad, cx + rad, cy + rad, fill="#2980b9", outline="black")
+        # -----------------------------------------------------------------
+
+
         if not self.is_planted and self.target_plant_pos:
             tr, tc = self.target_plant_pos
             self.canvas.create_rectangle(tc*self.cell_size, tr*self.cell_size, (tc+1)*self.cell_size, (tr+1)*self.cell_size, fill="#f39c12", outline="#d35400")
@@ -483,15 +545,12 @@ if __name__ == "__main__":
 
     
     #att_ctrl = DefaultAttackerController()
-    #att_ctrl = LearningAttackerController(model_path="dqn_attacker_combined_best.pt")
     #att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
-    #att_ctrl = LearningAttackerController(model_path="attacker_data\dqn_attacker_ep2000.pt")
-    att_ctrl = UserInputController()
+    #att_ctrl = UserInputController()
+    att_ctrl = LearningAttackerAbilityController(model_path="dqn_attacker_ability_best_by_eval.pt", greedy=False)
 
     # 新しい統合モデルでテストしたい場合
     def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-    # 迷路探索のみモデル
-    #def_ctrl = LearningDefenderController(model_path="dqn_gridworld_fixedmap.pt")
     #def_ctrl = UserInputController()
     
     # 動きを確認したいので headless=False で可視化する

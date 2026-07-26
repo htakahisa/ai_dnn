@@ -568,7 +568,7 @@ class AttackerMultiEnv:
 
 def train():
     writer = SummaryWriter(log_dir="logs")
-    SAVE_DIR = "attacker_multi_data"
+    SAVE_DIR = "data_temp/attacker_multi_data"
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     lines = [line.strip() for line in NEW_MAZE_STR.strip("\n").split("\n") if line.strip()]

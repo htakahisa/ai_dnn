@@ -440,7 +440,7 @@ def train():
     writer = SummaryWriter(log_dir="logs")
     
     # ========= 保存用フォルダの作成 =========
-    SAVE_DIR = "attacker_data"
+    SAVE_DIR = "data_temp/attacker_data"
     os.makedirs(SAVE_DIR, exist_ok=True)
 
 
