@@ -8,6 +8,7 @@ from learning_defender import LearningDefenderController, LearningDefenderAllAIC
 from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController
 from learning_attacker_ability import LearningAttackerAbilityController
+from attacker_v2.learning_attacker_carry import LearningAttackerCarryController
 from train_attacker_ability import DEFUSE_REQUIRED
 from map_data import NEW_MAZE_STR
 from game_core import Character
@@ -133,6 +134,14 @@ class VisualFPSBattle(AbilityMixin):
         # AIにどう動くか（または解除するか）を聞く
         # ---------------------------------------------------------------------
         # 💡 プラント状態に応じた適切なターゲット座標の確定
+        if char.team == "A" and char.has_spike and self.target_plant_pos is None:
+            # 盤面から2（サイト）の座標を探し、現在地から一番近いものを仮のターゲットにする
+            site_coords = np.argwhere(self.grid == 2)
+            if len(site_coords) > 0:
+                dists = np.abs(site_coords[:, 0] - char.pos[0]) + np.abs(site_coords[:, 1] - char.pos[1])
+                nearest_idx = np.argmin(dists)
+                self.target_plant_pos = tuple(site_coords[nearest_idx])
+
         if self.is_planted:
             site_r = float(self.planted_pos[0]) if self.planted_pos else 0.0
             site_c = float(self.planted_pos[1]) if self.planted_pos else 0.0
@@ -208,12 +217,11 @@ class VisualFPSBattle(AbilityMixin):
             char.plant_timer = 0
             char.defuse_timer = 0
             moved = False
-            if isinstance(next_pos, (list, np.ndarray)) and len(next_pos) == 2:
-                if self.grid[next_pos[0], next_pos[1]] != 1:
+            # 💡 【修正】tuple を判定に追加し、AIからの戻り値を確実に受け取る
+            if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
+                if self.grid[int(next_pos[0]), int(next_pos[1])] != 1:
                     char.pos = list(next_pos)
                     moved = True
-            if char.team == "A" and char.has_spike:
-                print(f"MOVE_APPLY {char.name} next_pos={next_pos} moved={moved} new_pos={char.pos}")
 
     def check_line_of_sight(self, p1, p2):
         x0, y0, x1, y1 = p1.pos[1], p1.pos[0], p2.pos[1], p2.pos[0]
@@ -547,7 +555,8 @@ if __name__ == "__main__":
     #att_ctrl = DefaultAttackerController()
     #att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
     #att_ctrl = UserInputController()
-    att_ctrl = LearningAttackerAbilityController(model_path="dqn_attacker_ability_best_by_eval.pt", greedy=False)
+    #att_ctrl = LearningAttackerAbilityController(model_path="data_temp/attacker_ability_data/dqn_attacker_ability_ep6000.pt", greedy=False)
+    att_ctrl = LearningAttackerCarryController(model_path="attacker_v2/data_temp/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt", greedy=False)
 
     # 新しい統合モデルでテストしたい場合
     def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
