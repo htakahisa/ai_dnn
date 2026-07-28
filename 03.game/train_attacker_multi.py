@@ -160,10 +160,25 @@ class FixedEscortController:
                 blocked_grid[pr, pc] = 1
 
         next_pos = self._base.move_towards_target(escort_pos, target, blocked_grid)
-        if tuple(next_pos) == tuple(escort_pos):
-            # 完全にブロックされていた場合は通常gridでフォールバック(足止め回避)
-            next_pos = self._base.move_towards_target(escort_pos, target, grid)
-        return next_pos
+        if tuple(next_pos) != tuple(escort_pos):
+            return next_pos
+
+        # 他キャラを貫通するフォールバックは禁止。
+        # 目的地へ近い空き隣接マスへ横移動し、通路を譲る。
+        er, ec = escort_pos
+        candidates = []
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = er + dr, ec + dc
+            if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+                continue
+            if blocked_grid[nr, nc] == 1:
+                continue
+            score = max(abs(target[0] - nr), abs(target[1] - nc))
+            candidates.append((score, random.random(), (nr, nc)))
+        if candidates:
+            candidates.sort(key=lambda item: (item[0], item[1]))
+            return candidates[0][2]
+        return escort_pos
 
 
 # =====================================================================
@@ -249,8 +264,18 @@ class AttackerMultiEnv:
             self.carrying = True
             self.goal_pos = random.choice(self.plant_candidates)
             self.dist_map = bfs_distances(self.goal_pos, self.grid)
-            self.escort_positions["front"] = random.choice(self.attacker_spawn_candidates)
-            self.escort_positions["back"] = random.choice(self.attacker_spawn_candidates)
+            available_spawns = [
+                p for p in self.attacker_spawn_candidates
+                if tuple(p) != tuple(self.player_pos)
+            ]
+            random.shuffle(available_spawns)
+            self.escort_positions["front"] = (
+                available_spawns[0] if available_spawns else tuple(self.player_pos)
+            )
+            self.escort_positions["back"] = (
+                available_spawns[1] if len(available_spawns) > 1
+                else self.escort_positions["front"]
+            )
             self.carry_end_reason = None          # 💡追加
             self.carry_arrival_step = None        # 💡追加: 到達できた場合、何tick目だったか
 

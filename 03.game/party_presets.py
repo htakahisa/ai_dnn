@@ -71,12 +71,19 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="jawgemo",
         description="2023 Champions優勝メンバーの組織力編成",
     ),
-    "Furinaパーティー": TeamPreset(
-        name="Furinaパーティー",
+    "フリーナクラシック": TeamPreset(
+        name="フリーナクラシック",
         players=("Lohen", "Furina", "Lisa", "Jean", "Arlecchino"),
         igl="Furina",
         spike_holder="Lohen",
         description="FurinaをIGL兼コンボ中核にした編成",
+    ),
+    "フリーナタルタリヤ": TeamPreset(
+        name="フリーナタルタリヤ",
+        players=("Lohen", "Furina", "Lisa", "Tartaglia", "Arlecchino"),
+        igl="Furina",
+        spike_holder="Lohen",
+        description="クラシックなフリーナパのジンをタルタリヤに変更した編成",
     ),
     "VisionStrikers": TeamPreset(
         name="VisionStrikers",

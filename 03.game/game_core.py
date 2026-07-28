@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Gameplay configuration
 WINNING_ROUNDS = 13
-TICK_TIME = 100
+TICK_TIME = 10
 MAX_HP = 100
 BODY_DAMAGE = 40
 HEADSHOT_DAMAGE = 160

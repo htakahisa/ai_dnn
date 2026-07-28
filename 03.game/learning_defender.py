@@ -10,6 +10,7 @@ import sys
 from controllers import BaseController
 # 統合された最新の学習スクリプトからネットワークをインポート
 from train_defender_combined import QNetwork
+from ai_tactics import collision_safe_step, decide_ability
 
 class LearningDefenderController(BaseController):
     """【AIモデル適用】ディフェンダーの操作クラス（ファイル分離＆BFSキャッシュ最適化版）"""
@@ -270,6 +271,10 @@ class LearningDefenderAllAIController(BaseController):
         planted_pos = game_state["planted_pos"]
         r, c = char.pos
 
+        ability_action = decide_ability(char, game_state)
+        if ability_action is not None:
+            return char.pos, "ABILITY", ability_action
+
         # 🎯 ターゲット情報の取得（初期値を学習環境と完全一致させる）
         spotted_info = game_state.get('spotted_info', {'spotted': 0.0, 'site_r': 0.0, 'site_c': 0.0})
 
@@ -330,8 +335,10 @@ class LearningDefenderAllAIController(BaseController):
         moves = {0: [-1, 0], 1: [1, 0], 2: [0, -1], 3: [0, 1]}
         next_pos = [r + moves[action][0], c + moves[action][1]]
         if 0 <= next_pos[0] < grid.shape[0] and 0 <= next_pos[1] < grid.shape[1] and grid[next_pos[0], next_pos[1]] != 1:
-            return next_pos, "MOVE"
-        return char.pos, "MOVE"
+            safe_pos = collision_safe_step(char, next_pos, target_pos, grid, game_state["chars"])
+            return safe_pos, "MOVE"
+        safe_pos = collision_safe_step(char, char.pos, target_pos, grid, game_state["chars"])
+        return safe_pos, "MOVE"
 
     def _make_observation(self, char, target_pos, game_state, spotted_info):
         grid = game_state["grid"]
