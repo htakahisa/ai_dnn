@@ -67,7 +67,9 @@ class BattleLogicMixin:
                 'spotted': 1.0,
                 'site_r': site_r,
                 'site_c': site_c
-            }
+            },
+            "defender_defuse_info": defender_defuse_info,
+            "detonate_timer": self.detonate_timer,
         }
 
         if char.team == "A":

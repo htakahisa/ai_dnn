@@ -51,4 +51,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-logs
+logs/
+data_temp/
