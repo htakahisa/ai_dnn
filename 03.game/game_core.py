@@ -41,6 +41,7 @@ ABILITY_TYPES = ["flash", "smoke", "recon", "none"]
 FLASH_BLIND_TICKS = 3
 SMOKE_RADIUS = 2
 RECON_RADIUS = 4
+DEFUSE_REQUIRED = 6
 
 
 _BASE_DIR = Path(__file__).resolve().parent
