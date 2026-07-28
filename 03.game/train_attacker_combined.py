@@ -182,7 +182,8 @@ class AttackerCombinedEnv:
             ]
             pool = candidates if candidates else [self._random_walkable()]
             self.player_pos = random.choice(pool)
-            self.teammate_pos = random.choice(pool)  # 💡追加: 味方guardも同時スポーン
+            teammate_pool = [p for p in pool if tuple(p) != tuple(self.player_pos)]
+            self.teammate_pos = random.choice(teammate_pool or pool)
             self.teammate_alive = True                # 💡追加
 
             self.bot_pos = self._random_walkable()

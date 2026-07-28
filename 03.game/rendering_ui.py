@@ -364,13 +364,13 @@ class RenderingUIMixin:
             accuracy_pct = round(char.accuracy * 100)
             dodge_pct = round(char.dodge_rate * 100)
             hs_pct = round(char.hs_rate * 100)
-            iq_text = str(math.floor(char.iq)) + (" [IGL]" if getattr(char, "is_igl", False) else "")
+            judgment_text = str(math.floor(float(getattr(char, "effective_iq", getattr(char, "iq", 0))))) + (" [IGL]" if getattr(char, "is_igl", False) else "")
             reaction_text = f"{char.reaction:g}"
             power_text = str(math.floor(char.combat_power))
 
             self.canvas.create_text(
                 x0 + 18, y + 49,
-                text=f"命中精度 {accuracy_pct}%   判断力(IQ) {iq_text}",
+                text=f"命中精度 {accuracy_pct}%   判断力 {judgment_text}",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
             self.canvas.create_text(

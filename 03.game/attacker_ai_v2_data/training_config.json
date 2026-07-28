@@ -1,0 +1,19 @@
+{
+  "obs_dim": 125,
+  "n_actions": 13,
+  "action_names": {
+    "0": "MOVE_UP",
+    "1": "MOVE_DOWN",
+    "2": "MOVE_LEFT",
+    "3": "MOVE_RIGHT",
+    "4": "WAIT_OR_PLANT",
+    "5": "ABILITY_UP_NEAR",
+    "6": "ABILITY_DOWN_NEAR",
+    "7": "ABILITY_LEFT_NEAR",
+    "8": "ABILITY_RIGHT_NEAR",
+    "9": "ABILITY_UP_FAR",
+    "10": "ABILITY_DOWN_FAR",
+    "11": "ABILITY_LEFT_FAR",
+    "12": "ABILITY_RIGHT_FAR"
+  }
+}

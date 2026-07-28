@@ -117,7 +117,7 @@ class DefaultAttackerController(BaseController):
         if char.has_spike:
             if target_plant_pos:
                 if list(char.pos) == list(target_plant_pos):
-                    return char.pos, "PLANT"
+                    return char.pos  
                 optimal = self.move_towards_target(char.pos, target_plant_pos, grid)
                 return optimal
             
@@ -125,7 +125,7 @@ class DefaultAttackerController(BaseController):
             if plants:
                 target = plants[0] 
                 if list(char.pos) == list(target):
-                    return char.pos, "PLANT"
+                    return char.pos
                 optimal = self.move_towards_target(char.pos, target, grid)
                 return optimal
             return self.get_next_pos_random(char.pos, grid)
@@ -164,8 +164,6 @@ class DefaultAttackerController(BaseController):
         """
         chars = game_state["chars"]
         grid = game_state["grid"]
-        target_plant_pos = game_state.get("target_plant_pos")
-        planted_pos = game_state.get("planted_pos")
         
         # 射線が通ってる敵を取得
         visible_enemies = [
@@ -176,22 +174,21 @@ class DefaultAttackerController(BaseController):
         ]
         
         # ===== 1. リコン（索敵）=====
-        # ルール：敵が見えない ＋ リコンチャージがある ＋
-        #         プラント目標地点（またはプラント済み地点）にある程度近づいている
-        # 開幕直後の無駄撃ちを避け、実際にサイトへ寄ったタイミングで
-        # サイト方向を偵察する「意味のあるリコン」にする。
-        site_pos = planted_pos if planted_pos else target_plant_pos
-        if char.recon_charges > 0 and len(visible_enemies) == 0 and site_pos:
-            dist_to_site = max(
-                abs(site_pos[0] - char.pos[0]),
-                abs(site_pos[1] - char.pos[1]),
-            )
-            RECON_TRIGGER_DISTANCE = 10  # サイトからこの距離以内で初めて偵察する
-            if dist_to_site <= RECON_TRIGGER_DISTANCE:
-                return {
-                    "ability": "RECON",
-                    "target": (int(site_pos[0]), int(site_pos[1]))
-                }
+        # ルール：敵が見えない かつ リコンチャージがある
+        if char.recon_charges > 0 and len(visible_enemies) == 0:
+            directions = [
+                (-1, 0), (1, 0), (0, -1), (0, 1),
+                (-1, -1), (-1, 1), (1, -1), (1, 1)
+            ]
+            dr, dc = random.choice(directions)
+            target_r = char.pos[0] + dr * 5
+            target_c = char.pos[1] + dc * 5
+            target_r = max(0, min(grid.shape[0] - 1, target_r))
+            target_c = max(0, min(grid.shape[1] - 1, target_c))
+            return {
+                "ability": "RECON",
+                "target": (target_r, target_c)
+            }
         
         # ===== 2. スモーク（牽制・移動援護）=====
         # ルール：敵が2人以上見える
@@ -237,7 +234,7 @@ class DefaultDefenderController(BaseController):
         if is_planted and planted_pos:
             dist_to_spike = max(abs(planted_pos[0] - r), abs(planted_pos[1] - c))
             if dist_to_spike <= 1:
-                return char.pos, "DEFUSE"  # ← 隣接したら解除を試みる
+                return char.pos
             else:
                 optimal = self.move_towards_target(char.pos, planted_pos, grid)
                 return optimal

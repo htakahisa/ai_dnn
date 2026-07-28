@@ -29,10 +29,39 @@ class BattleLogicMixin:
         char.moved_this_tick = False
 
         # ---------------------------------------------------------------------
-        # プラントは自動開始しない。
-        # AIはコントローラーから "PLANT" を返した場合のみ設置する。
-        # ユーザー操作はPLANTボタンで char.is_planting=True になった場合のみ設置する。
+        # プラント処理
+        # ユーザー操作時は、プラントゾーンに入っただけでは開始しない。
+        # 選択中キャラクターの下部UIに出るPLANTボタンから明示的に開始する。
+        # AI操作時のみ、従来どおり目標サイト到達時に自動で開始する。
         # ---------------------------------------------------------------------
+        if char.team == "A" and char.has_spike and not self.is_planted:
+            is_user_controlled = isinstance(
+                self.attacker_controller, UserInputController
+            )
+            on_plant_site = (
+                (self.grid[r, c] == 2)
+                if is_user_controlled
+                else (
+                    self.target_plant_pos
+                    and list(char.pos) == list(self.target_plant_pos)
+                )
+            )
+            should_plant = (
+                char.is_planting if is_user_controlled else bool(on_plant_site)
+            )
+
+            if should_plant and on_plant_site:
+                char.plant_timer += 1
+                if char.plant_timer >= PLANT_REQUIRED_TICKS:
+                    self.is_planted = True
+                    self.planted_pos = (r, c)
+                    char.has_spike = False
+                    char.plant_timer = 0
+                    char.is_planting = False
+                return  # 設置中は移動・射撃を行わない
+            if char.is_planting and not on_plant_site:
+                char.is_planting = False
+            char.plant_timer = 0
 
         # ---------------------------------------------------------------------
         # AIにどう動くか（または解除するか）を聞く
@@ -87,15 +116,6 @@ class BattleLogicMixin:
                 next_pos = result
                 action_type = "MOVE"
 
-            # 手動操作ではPLANTボタンが char.is_planting を立てる。
-            # サイトに入っただけでは開始せず、ボタン操作時だけPLANTとして処理する。
-            if (
-                isinstance(self.attacker_controller, UserInputController)
-                and char.is_planting
-            ):
-                next_pos = char.pos
-                action_type = "PLANT"
-
             print(
                 "[ATTACKER DEBUG]",
                 "controller=",
@@ -133,12 +153,10 @@ class BattleLogicMixin:
                 action_type = "MOVE"
 
         # ---------------------------------------------------------------------
-        # アクションタイプに応じたシステム処理
+        #  アクションタイプに応じたシステム処理 (修正版)
         # ---------------------------------------------------------------------
         if action_type == "ABILITY":
-            # アビリティ使用Tickは移動・設置・解除を行わない。
-            char.is_planting = False
-            char.plant_timer = 0
+            # アビリティ使用Tickは移動・解除を行わない。
             if self.active_defuser_name == char.name:
                 self.active_defuser_name = None
             char.defuse_timer = 0
@@ -146,96 +164,56 @@ class BattleLogicMixin:
             char.moved_this_tick = False
             return
 
-        if action_type == "PLANT":
-            # PLANTは明示的に選択された場合だけ進行する。
-            on_plant_site = (
-                char.team == "A"
-                and char.has_spike
-                and not self.is_planted
-                and 0 <= r < self.height
-                and 0 <= c < self.width
-                and self.grid[r, c] == 2
-            )
-
-            if on_plant_site:
-                char.is_planting = True
-                char.plant_timer += 1
-                char.defuse_timer = 0
-                if self.active_defuser_name == char.name:
-                    self.active_defuser_name = None
-
-                if char.plant_timer >= PLANT_REQUIRED_TICKS:
-                    self.is_planted = True
-                    self.planted_pos = (r, c)
-                    self.spike_pos = None
-                    char.has_spike = False
-                    char.plant_timer = 0
-                    char.is_planting = False
-
-                # 設置中は移動・射撃を行わない。
-                char.moved_this_tick = False
-                return
-
-            # 無効な場所でのPLANTは失敗し、設置進捗をリセットする。
-            char.is_planting = False
-            char.plant_timer = 0
-            char.moved_this_tick = False
-            return
-
-        # PLANT以外を選んだ時点で設置を中断する。
-        char.is_planting = False
-        char.plant_timer = 0
-
         if action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
                 dist = max(abs(self.planted_pos[0] - r), abs(self.planted_pos[1] - c))
                 if dist <= 1:
-                    # 同時に解除できるのは一人だけ。
+                    # 同時に解除できるのは一人だけ。担当者がいない時だけロックを取得する。
                     if self.active_defuser_name in (None, char.name):
                         self.active_defuser_name = char.name
                         char.defuse_timer += 1
-                        # 解除完了は射撃解決後に判定する。
+                        # 解除完了は射撃解決後に判定する。最終解除tickでも射撃を先に解決する。
                         return
+                    # 別のキャラクターが解除中なら、このキャラクターは解除を開始できない。
                     char.defuse_timer = 0
                     return
-
             if self.active_defuser_name == char.name:
                 self.active_defuser_name = None
             char.defuse_timer = 0
-            return
 
-        # MOVE処理。解除担当者が解除をやめたらロックを解放する。
-        if self.active_defuser_name == char.name:
-            self.active_defuser_name = None
-        char.defuse_timer = 0
+        else:
+            # MOVE アクションの処理。解除担当者が解除をやめたらロックを解放する。
+            if self.active_defuser_name == char.name:
+                self.active_defuser_name = None
+            char.defuse_timer = 0
+            # 💡 インデックス参照エラーを防ぐため、next_pos が有効な2次元座標であることを保証
+            if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
+                nr, nc = int(next_pos[0]), int(next_pos[1])
+                in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
+                occupied = any(
+                    other is not char
+                    and other.is_alive
+                    and tuple(other.pos) == (nr, nc)
+                    for other in self.chars
+                )
+                is_wall = in_bounds and self.grid[nr, nc] == 1
 
-        if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
-            nr, nc = int(next_pos[0]), int(next_pos[1])
-            in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
-            occupied = any(
-                other is not char
-                and other.is_alive
-                and tuple(other.pos) == (nr, nc)
-                for other in self.chars
-            )
-            is_wall = in_bounds and self.grid[nr, nc] == 1
+                print(
+                    "[MOVE DEBUG]",
+                    "from=",
+                    old_pos,
+                    "to=",
+                    (nr, nc),
+                    "in_bounds=",
+                    in_bounds,
+                    "wall=",
+                    is_wall,
+                    "occupied=",
+                    occupied,
+                )
 
-            print(
-                "[MOVE DEBUG]",
-                "from=",
-                old_pos,
-                "to=",
-                (nr, nc),
-                "in_bounds=",
-                in_bounds,
-                "wall=",
-                is_wall,
-                "occupied=",
-                occupied,
-            )
-
-            if in_bounds and not is_wall and not occupied:
-                char.pos = [nr, nc]
+                if in_bounds and not is_wall and not occupied:
+                    char.pos = [nr, nc]
 
         char.moved_this_tick = tuple(char.pos) != old_pos
 

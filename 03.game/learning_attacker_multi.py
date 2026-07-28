@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from controllers import BaseController
+from ai_tactics import collision_safe_step, decide_ability
 from train_attacker_multi import (
     DuelingQNetwork,
     EnemyMemoryTracker,
@@ -23,7 +24,7 @@ class LearningAttackerMultiController(BaseController):
     """【AIモデル適用・複数敵対応版】アタッカー操作クラス。
     キャリアー本人はDQNで判断し、護衛役はFixedEscortControllerに委譲する。"""
 
-    def __init__(self, model_path="dqn_attacker_multi_final.pt", obs_dim=OBS_DIM, n_actions=N_ACTIONS, greedy=False):
+    def __init__(self, model_path="attacker_multi_data/dqn_attacker_multi_best_by_eval.pt", obs_dim=OBS_DIM, n_actions=N_ACTIONS, greedy=False):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -66,6 +67,10 @@ class LearningAttackerMultiController(BaseController):
         chars = game_state["chars"]
         r, c = char.pos
 
+        ability_action = decide_ability(char, game_state)
+        if ability_action is not None:
+            return char.pos, "ABILITY", ability_action
+
         # --- 局面判定 ---
         if is_planted and planted_pos:
             target_pos = tuple(planted_pos)
@@ -81,7 +86,8 @@ class LearningAttackerMultiController(BaseController):
             holder = next((ch for ch in chars if ch.is_alive and ch.has_spike), None)
             if holder is not None:
                 return self._decide_escort_move(char, holder, grid, chars, target_plant_pos)
-            return self.get_next_pos_random(char.pos, grid), "MOVE"
+            desired = self.get_next_pos_random(char.pos, grid)
+            return collision_safe_step(char, desired, target_plant_pos, grid, chars), "MOVE"
 
         if self.cached_target_pos.get(char.name) != target_pos:
             self.cached_target_pos[char.name] = target_pos
@@ -121,7 +127,8 @@ class LearningAttackerMultiController(BaseController):
         next_pos = [r + moves[action][0], c + moves[action][1]]
         height, width = grid.shape
         if 0 <= next_pos[0] < height and 0 <= next_pos[1] < width and grid[next_pos[0], next_pos[1]] != 1:
-            return next_pos, "MOVE"
+            safe_pos = collision_safe_step(char, next_pos, target_pos, grid, chars)
+            return safe_pos, "MOVE"
         else:
             holder = next((ch for ch in chars if ch.is_alive and ch.has_spike), None)
             if holder is not None:
@@ -151,7 +158,8 @@ class LearningAttackerMultiController(BaseController):
 
         self.last_actions[char.name] = None
         self.pos_history.setdefault(char.name, deque(maxlen=7)).append(tuple(char.pos))
-        return next_pos, "MOVE"
+        safe_pos = collision_safe_step(char, next_pos, target, grid, chars)
+        return safe_pos, "MOVE"
 
     def _make_observation(self, char, target_pos, grid, chars, carrying, planted_flag, game_state):
         pr, pc = char.pos

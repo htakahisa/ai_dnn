@@ -9,6 +9,7 @@ import tkinter as tk
 import numpy as np
 
 from learning_attacker_ai_v2 import LearningAttackerAIv2Controller
+from learning_attacker_ai_v4 import LearningAttackerAIv4Controller
 from controllers import (
     DefaultAttackerController,
     DefaultDefenderController,
@@ -38,16 +39,19 @@ from battle_logic import BattleLogicMixin
 from rendering_ui import RenderingUIMixin
 
 ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
+ATTACKER_AI_V4_MODEL_PATH = (
+    "attacker_ai_v3_phase3_data/" "dqn_attacker_ai_v3_phase3_best.pt"
+)
 
 
 def _build_attacker_controller(key):
     normalized = str(key or "default").strip().lower()
 
     if normalized in {"default", "logic"}:
-        return DefaultAttackerController()
+        return None
 
     if normalized == "user":
-        return UserInputController()
+        return "user"
 
     if normalized in {
         "learning",
@@ -57,6 +61,7 @@ def _build_attacker_controller(key):
         "v1",
         "aiv1",
     }:
+        # ここは現在使っているAI Ver1の生成処理を残す
         return LearningAttackerController(
             model_path=ATTACKER_MODEL_PATH,
             greedy=True,
@@ -72,7 +77,6 @@ def _build_attacker_controller(key):
             model_path=ATTACKER_AI_V2_MODEL_PATH,
             greedy=True,
         )
-
     if normalized in {
         "learning_v4",
         "ai_v4",
@@ -261,7 +265,7 @@ class VisualFPSBattle(
 
     def _swap_sides_if_needed(self):
         """通常戦は13R開始時、OTは毎ラウンド開始時に攻守を交代する。
-
+        
         disable_side_swap=True の場合はスワップを一切行わない
         （学習データ収集時、A/D固定でロジックの実力をそのまま計測したい場合用）。
         """
@@ -408,6 +412,8 @@ if __name__ == "__main__":
         attacker_igl_name=None,
         defender_igl_name=None,
     ):
+        attacker_ctrl_key = "v4"
+
         att_ctrl = _build_attacker_controller(attacker_ctrl_key)
         def_ctrl = _build_defender_controller(defender_ctrl_key)
 

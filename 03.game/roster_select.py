@@ -14,8 +14,8 @@ from party_presets import all_preset_names, get_preset
 MAX_ROSTER = 5
 
 ATTACKER_CONTROLLER_OPTIONS = {
-    "AI ver1.0": "aiv1",
-    "AI ver2.0": "aiv2",
+    "AI Ver1": "learning_v1",
+    "AI Ver2": "learning_v2",
     "ロジック": "default",
     "ユーザー操作": "user",
 }
@@ -51,7 +51,7 @@ class RosterSelectScreen:
         self.defender_igl_var = tk.StringVar(master=self.root, value="")
         self.attacker_ctrl_var = tk.StringVar(
             master=self.root,
-            value=list(ATTACKER_CONTROLLER_OPTIONS.keys())[0],
+            value="AI Ver2",
         )
         self.defender_ctrl_var = tk.StringVar(
             master=self.root,

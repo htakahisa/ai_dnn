@@ -51,4 +51,10 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+demos/
+tensorboard/
+
 logs
+
+
+
