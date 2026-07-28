@@ -8,13 +8,14 @@ from learning_defender import LearningDefenderController, LearningDefenderAllAIC
 from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController
 from learning_attacker_ability import LearningAttackerAbilityController
-from attacker_v2.learning_attacker_carry import LearningAttackerCarryController
+from attacker_v2.multi_role_attacker_controller import MultiRoleAttackerController
+from learning_attacker_guard import LearningAttackerGuardController
 from train_attacker_ability import DEFUSE_REQUIRED
 from map_data import NEW_MAZE_STR
 from game_core import Character
 from abilities import AbilityMixin
 
-WINNING_ROUNDS = 5
+WINNING_ROUNDS = 13
 TICK_TIME = 100
 
 
@@ -104,7 +105,7 @@ class VisualFPSBattle(AbilityMixin):
         
         is_ai_attacker = isinstance(
             self.attacker_controller,
-            (LearningAttackerController, LearningAttackerMultiController, LearningAttackerAbilityController)
+            (LearningAttackerController, LearningAttackerMultiController, LearningAttackerAbilityController, MultiRoleAttackerController)
         )
         
         # ---------------------------------------------------------------------
@@ -126,6 +127,7 @@ class VisualFPSBattle(AbilityMixin):
                     self.is_planted = True
                     self.planted_pos = (r, c)
                     char.has_spike = False
+                    char.plant_timer = 0
                 return  # プラント中は移動処理を行わずその場に留まる
             else:
                 char.plant_timer = 0
@@ -168,6 +170,7 @@ class VisualFPSBattle(AbilityMixin):
                 'site_c': site_c
             },
             "defender_defuse_info": defender_defuse_info,
+            "detonate_timer": self.detonate_timer,
         }
 
         if char.team == "A":
@@ -200,6 +203,8 @@ class VisualFPSBattle(AbilityMixin):
                     char.has_spike = False
             return
         elif action_type == "ABILITY":
+            char.plant_timer = 0     # 💡追加
+            char.defuse_timer = 0    # 💡追加
             # 💡追加: next_pos はここでは発動先セル(target_cell)として扱う
             self.use_ability(char, tuple(next_pos))
             return
@@ -556,7 +561,13 @@ if __name__ == "__main__":
     #att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
     #att_ctrl = UserInputController()
     #att_ctrl = LearningAttackerAbilityController(model_path="data_temp/attacker_ability_data/dqn_attacker_ability_ep6000.pt", greedy=False)
-    att_ctrl = LearningAttackerCarryController(model_path="attacker_v2/data_temp/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt", greedy=False)
+    att_ctrl = MultiRoleAttackerController(
+        carry_model_path="attacker_v2/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
+        escort_model_path="attacker_v2/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
+        retrieve_model_path="attacker_v2/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
+        guard_model_path="attacker_v2/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
+        greedy=False,
+    )
 
     # 新しい統合モデルでテストしたい場合
     def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")

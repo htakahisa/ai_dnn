@@ -43,7 +43,6 @@ class AbilityMixin:
     # 発動(コントローラーから呼ばれる想定の入口)
     # -----------------------------------------------------------------
     def use_ability(self, char, target_cell):
-        print(char.flash_charges) 
         """所持アビリティを発動する。チャージが無ければ何もせずFalseを返す。"""
         if char.ability_type == "flash" and char.flash_charges > 0:
             self._launch_flash(char, target_cell)
