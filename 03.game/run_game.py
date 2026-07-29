@@ -224,9 +224,23 @@ class VisualFPSBattle(AbilityMixin):
             moved = False
             # 💡 【修正】tuple を判定に追加し、AIからの戻り値を確実に受け取る
             if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
-                if self.grid[int(next_pos[0]), int(next_pos[1])] != 1:
-                    char.pos = list(next_pos)
-                    moved = True
+                target_r, target_c = int(next_pos[0]), int(next_pos[1])
+                
+                # 1. 移動先が壁でないかをチェック
+                if self.grid[target_r, target_c] != 1:
+                    
+                    # 2. 移動先に他の生存しているキャラクターがいないかをチェック
+                    is_occupied = False
+                    for other_char in self.chars:
+                        if other_char != char and other_char.is_alive:
+                            if other_char.pos[0] == target_r and other_char.pos[1] == target_c:
+                                is_occupied = True
+                                break
+                    
+                    # 3. 壁でもキャラクターでもなければ移動を実行
+                    if not is_occupied:
+                        char.pos = list(next_pos)
+                        moved = True
 
     def check_line_of_sight(self, p1, p2):
         x0, y0, x1, y1 = p1.pos[1], p1.pos[0], p2.pos[1], p2.pos[0]
