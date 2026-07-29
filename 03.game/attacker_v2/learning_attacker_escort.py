@@ -108,9 +108,10 @@ class LearningAttackerEscortController(BaseController):
             self.site_cells = self.site_cell_sets[0]
 
         tracked_enemy = self._find_tracked_enemy(char, game_state)
+        occupied_cells = self._occupied_cells(char, game_state)   # 💡追加
 
-        obs = self._make_observation(char, grid, tracked_enemy, carrier)
-        mask = self._get_action_mask(char, grid)
+        obs = self._make_observation(char, grid, tracked_enemy, carrier, occupied_cells)
+        mask = self._get_action_mask(char, grid, occupied_cells)
 
         with torch.no_grad():
             state_t = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -133,6 +134,12 @@ class LearningAttackerEscortController(BaseController):
         if 0 <= next_pos[0] < height and 0 <= next_pos[1] < width and grid[next_pos[0], next_pos[1]] != 1:
             return next_pos, "MOVE"
         return char.pos, "MOVE"
+    
+    def _occupied_cells(self, char, game_state):
+        return {
+            tuple(o.pos) for o in game_state["chars"]
+            if o is not char and o.is_alive
+        }
 
     def _get_aim_cell(self, char, grid, tracked_enemy):
         pr, pc = char.pos
@@ -159,7 +166,7 @@ class LearningAttackerEscortController(BaseController):
             best_dir = (0, 1)
         return (pr + best_dir[0], pc + best_dir[1])
 
-    def _make_observation(self, char, grid, tracked_enemy, carrier):
+    def _make_observation(self, char, grid, tracked_enemy, carrier, occupied_cells):
         pr, pc = char.pos
         height, width = grid.shape
 
@@ -207,19 +214,34 @@ class LearningAttackerEscortController(BaseController):
 
         teammate_used_flag = [1.0 if self.site_ability_used_by_teammate else 0.0]
 
+        # 💡追加: キャリアーを除いた占有マスの中で最も近いもの(=他escort仲間 or 敵)
+        others = [p for p in occupied_cells if p != (cr, cc)]
+        other_escort_info = [0.0, 0.0, 0.0]
+        if others:
+            nearest = min(others, key=lambda p: max(abs(p[0]-pr), abs(p[1]-pc)))
+            dist = max(abs(nearest[0]-pr), abs(nearest[1]-pc))
+            max_d = max(height, width)
+            other_escort_info = [
+                1.0 - min(dist / max_d, 1.0),
+                (nearest[0]-pr) / height,
+                (nearest[1]-pc) / width,
+            ]
+
         return np.array(
             base + carrier_rel + walls + last_onehot + site_dists +
             ability_onehot + ability_charge + enemy_blinded_flag + enemy +
-            own_site_dist_norm + teammate_used_flag,
+            own_site_dist_norm + teammate_used_flag + other_escort_info,   # 💡追加
             dtype=np.float32
         )
 
-    def _get_action_mask(self, char, grid):
+    def _get_action_mask(self, char, grid, occupied_cells): 
         r, c = char.pos
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(r + dr, c + dc, grid) else 0.0
+            nr, nc = r + dr, c + dc
+            free = self._is_walkable(nr, nc, grid) and (nr, nc) not in occupied_cells   # 💡変更
+            mask[a] = 1.0 if free else 0.0
         has_charge = (char.flash_charges > 0) or (char.smoke_charges > 0) or (char.recon_charges > 0)
         mask[4] = 1.0 if has_charge else 0.0
         return mask

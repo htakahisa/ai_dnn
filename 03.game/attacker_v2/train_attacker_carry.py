@@ -58,7 +58,7 @@ from game_core import (
     RECON_RADIUS,
 )
 
-OBS_DIM = 26
+OBS_DIM = 29
 N_ACTIONS = 6   # 0:上 1:下 2:左 3:右 4:設置 5:アビリティ使用
 NUM_EPISODES = 9000
 SAVE_INTERVAL = 100
@@ -89,6 +89,11 @@ FLASH_OPEN_THROW_BONUS = 0.0  # 0で無効      # 開けた通路へ適切に投
 # 命中判定(FLASH_SUCCESS_BONUS等)とは独立に加算される。
 SITE_APPROACH_BONUS = 1.0
 SITE_APPROACH_DIST_THRESHOLD = 5
+
+TEAMMATE_COUNT_MIN = 0
+TEAMMATE_COUNT_MAX = 4       # carry:escort = 1:4 を想定、死亡分は減る
+TEAMMATE_MOVE_PROB = 0.5     # 毎tickの味方の移動確率(完全静止だと偏る)
+
 
 EVAL_EPISODES = 100  # 💡変更: 30→100。敵出現確率50%のブレをならしやすくする
 
@@ -310,6 +315,18 @@ class CarryOnlyEnv:
         self.last_action = None
         self.player_pos = self._random_walkable()
 
+        # 💡追加: 味方(エスコート役)を動く障害物としてスポーン
+        n_teammates = random.randint(TEAMMATE_COUNT_MIN, TEAMMATE_COUNT_MAX)
+        occupied = {self.player_pos}
+        self.teammate_positions = []
+        for _ in range(n_teammates):
+            for _try in range(50):
+                p = self._random_walkable()
+                if p not in occupied:
+                    self.teammate_positions.append(p)
+                    occupied.add(p)
+                    break
+
         # 💡変更: ラウンドごとにどちらのサイトを狙うかをランダムに選び、そのサイト専用の
         # dist_map/label_mapを使う(実ゲームのtarget_plant_posランダム割当を再現するため)
         self.current_site_index = random.randrange(len(self.site_components))
@@ -340,6 +357,17 @@ class CarryOnlyEnv:
 
         self.pos_history = deque(maxlen=6)
         return self._get_obs(), {}
+
+    def _is_occupied(self, r, c):
+        """味方 or (視認中でなくても)敵がいるマスかどうか。実ゲームのis_occupiedと同じ扱い。"""
+        if (r, c) in self.teammate_positions:
+            return True
+        if self.bot_present and (r, c) == self.bot_pos:
+            return True
+        return False
+
+    def _is_free(self, r, c):
+        return self._is_walkable(r, c) and not self._is_occupied(r, c)
 
     def _get_obs(self):
         pr, pc = self.player_pos
@@ -380,8 +408,24 @@ class CarryOnlyEnv:
                 br, bc = self.bot_pos
                 enemy = [1.0, (br - pr) / self.height, (bc - pc) / self.width]
 
+        # 💡追加: 最も近い味方との相対位置(渋滞回避のための事前情報)
+        teammate_info = [0.0, 0.0, 0.0]
+        if self.teammate_positions:
+            nearest = min(
+                self.teammate_positions,
+                key=lambda p: max(abs(p[0] - pr), abs(p[1] - pc))
+            )
+            dist = max(abs(nearest[0] - pr), abs(nearest[1] - pc))
+            max_dist = max(self.height, self.width)
+            teammate_info = [
+                1.0 - min(dist / max_dist, 1.0),
+                (nearest[0] - pr) / self.height,
+                (nearest[1] - pc) / self.width,
+            ]
+
         return np.array(
-            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy,
+            base + walls + last_onehot + dists + ability_onehot +
+            ability_charge + enemy_blinded_flag + enemy + teammate_info,   # 💡追加
             dtype=np.float32
         )
 
@@ -391,7 +435,7 @@ class CarryOnlyEnv:
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(pr + dr, pc + dc) else 0.0
+            mask[a] = 1.0 if self._is_free(pr + dr, pc + dc) else 0.0   # 💡変更
         mask[4] = 1.0 if (pr, pc) in self.site_cells else 0.0
         mask[5] = 1.0 if self.own_ability_charge > 0 else 0.0  # 💡追加
         return mask
@@ -411,6 +455,8 @@ class CarryOnlyEnv:
             terminated = False
         else:
             reward, terminated = self._step_move(action)
+
+        self._move_teammates()          # 💡追加: 味方も動かす
 
         # 💡追加: 飛翔中の投射物(前tick以前に投げたものも含む)を1tick分進める。
         # このtickのactionが移動や設置であっても、投射物は独立して飛び続ける(実ゲームと同じ)。
@@ -583,7 +629,7 @@ class CarryOnlyEnv:
         r, c = self.player_pos
         nr, nc = r + moves[action][0], c + moves[action][1]
 
-        if not self._is_walkable(nr, nc):
+        if not self._is_free(nr, nc):
             return -1.5, False
 
         self.player_pos = (nr, nc)
@@ -602,6 +648,27 @@ class CarryOnlyEnv:
 
         self.prev_dist = new_dist
         return reward, False
+
+    def _move_teammates(self):
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        occupied = set(self.teammate_positions) | {self.player_pos}
+        if self.bot_present:
+            occupied.add(self.bot_pos)
+
+        new_positions = []
+        for (tr, tc) in self.teammate_positions:
+            occupied.discard((tr, tc))
+            new_pos = (tr, tc)
+            if random.random() < TEAMMATE_MOVE_PROB:
+                candidates = [
+                    (tr + dr, tc + dc) for dr, dc in moves
+                    if self._is_walkable(tr + dr, tc + dc) and (tr + dr, tc + dc) not in occupied
+                ]
+                if candidates:
+                    new_pos = random.choice(candidates)
+            occupied.add(new_pos)
+            new_positions.append(new_pos)
+        self.teammate_positions = new_positions
 
 # ===========================================================================
 # マスクを考慮した行動選択ヘルパー

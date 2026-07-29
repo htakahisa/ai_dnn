@@ -61,7 +61,7 @@ from game_core import (
     RECON_RADIUS,
 )
 
-OBS_DIM = 28
+OBS_DIM = 31
 N_ACTIONS = 5   # 0:上 1:下 2:左 3:右 4:アビリティ使用(設置行動は無い)
 NUM_EPISODES = 9000
 SAVE_INTERVAL = 100
@@ -97,6 +97,9 @@ IN_RANGE_REWARD = 0.3
 OUT_OF_RANGE_PENALTY_SCALE = 1.0
 CARRIER_SITE_SUCCESS_BONUS = 100.0    # キャリアーがサイトに到達(プラント相当)したら護衛にも完了報酬
 
+OTHER_ESCORT_COUNT_MIN = 0
+OTHER_ESCORT_COUNT_MAX = 3    # 💡追加: carry:escort=1:4想定、自分以外に最大3体のescort仲間
+TEAMMATE_MOVE_PROB = 0.5      # 💡追加: 他escortの毎tick移動確率
 
 # ===========================================================================
 # 共通ヘルパー(train_attacker_carry.pyと同じロジックをこのファイル内に複製)
@@ -313,6 +316,18 @@ class EscortOnlyEnv:
         self.escort_pos = self._random_walkable()
         self.carrier_pos = self._random_walkable()
 
+        # 💡追加: 他のescort仲間を動く障害物としてスポーン
+        n_others = random.randint(OTHER_ESCORT_COUNT_MIN, OTHER_ESCORT_COUNT_MAX)
+        occupied = {self.escort_pos, self.carrier_pos}
+        self.other_escort_positions = []
+        for _ in range(n_others):
+            for _try in range(50):
+                p = self._random_walkable()
+                if p not in occupied:
+                    self.other_escort_positions.append(p)
+                    occupied.add(p)
+                    break
+
         self.current_site_index = random.randrange(len(self.site_components))
         self.dist_map, self.label_map = self.site_maps[self.current_site_index]
         self.site_cells = self.site_cell_sets[self.current_site_index]
@@ -339,6 +354,19 @@ class EscortOnlyEnv:
         self.pending_recon = None
 
         return self._get_obs(), {}
+
+    def _is_occupied(self, r, c):
+        """他のescort仲間・キャリアー・敵(視認不要)がいるマスかどうか。実ゲームのis_occupiedと同じ扱い。"""
+        if (r, c) in self.other_escort_positions:
+            return True
+        if (r, c) == self.carrier_pos:
+            return True
+        if self.bot_present and (r, c) == self.bot_pos:
+            return True
+        return False
+
+    def _is_free(self, r, c):
+        return self._is_walkable(r, c) and not self._is_occupied(r, c)
 
     def _get_obs(self):
         pr, pc = self.escort_pos
@@ -384,10 +412,25 @@ class EscortOnlyEnv:
 
         teammate_used_flag = [1.0 if self.site_ability_used_by_teammate else 0.0]
 
+        # 💡追加: 他escort仲間のうち最も近い1体との相対位置(carrierとは別枠)
+        other_escort_info = [0.0, 0.0, 0.0]
+        if self.other_escort_positions:
+            nearest = min(
+                self.other_escort_positions,
+                key=lambda p: max(abs(p[0] - pr), abs(p[1] - pc))
+            )
+            dist = max(abs(nearest[0] - pr), abs(nearest[1] - pc))
+            max_dist = max(height, width)
+            other_escort_info = [
+                1.0 - min(dist / max_dist, 1.0),
+                (nearest[0] - pr) / height,
+                (nearest[1] - pc) / width,
+            ]
+
         return np.array(
             base + carrier_rel + walls + last_onehot + site_dists +
             ability_onehot + ability_charge + enemy_blinded_flag + enemy +
-            own_site_dist_norm + teammate_used_flag,
+            own_site_dist_norm + teammate_used_flag + other_escort_info,   # 💡追加
             dtype=np.float32
         )
 
@@ -396,20 +439,22 @@ class EscortOnlyEnv:
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(r + dr, c + dc) else 0.0
+            mask[a] = 1.0 if self._is_free(r + dr, c + dc) else 0.0   # 💡変更
         mask[4] = 1.0 if self.own_ability_charge > 0 else 0.0
         return mask
 
     def _move_carrier(self):
-        """キャリアーはBFS勾配に沿ってサイトへ直進する(簡略化した固定ロジック)。
-        タイ(同距離)は複数あればランダムに選び、多少の経路の揺れを出す。"""
         cr, cc = self.carrier_pos
         if (cr, cc) in self.site_cells:
             return
+        blocked = set(self.other_escort_positions) | {self.escort_pos}   # 💡追加: この行が抜けていた
+        if self.bot_present:
+            blocked.add(self.bot_pos)
+
         candidates = []
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nr, nc = cr + dr, cc + dc
-            if self._is_walkable(nr, nc):
+            if self._is_walkable(nr, nc) and (nr, nc) not in blocked:
                 d = self.dist_map[nr, nc]
                 if np.isfinite(d):
                     candidates.append((d, (nr, nc)))
@@ -418,6 +463,27 @@ class EscortOnlyEnv:
         best_d = min(d for d, _ in candidates)
         best_moves = [pos for d, pos in candidates if d == best_d]
         self.carrier_pos = random.choice(best_moves)
+
+    def _move_other_escorts(self):
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        occupied = set(self.other_escort_positions) | {self.escort_pos, self.carrier_pos}
+        if self.bot_present:
+            occupied.add(self.bot_pos)
+
+        new_positions = []
+        for (tr, tc) in self.other_escort_positions:
+            occupied.discard((tr, tc))
+            new_pos = (tr, tc)
+            if random.random() < TEAMMATE_MOVE_PROB:
+                candidates = [
+                    (tr + dr, tc + dc) for dr, dc in moves
+                    if self._is_walkable(tr + dr, tc + dc) and (tr + dr, tc + dc) not in occupied
+                ]
+                if candidates:
+                    new_pos = random.choice(candidates)
+            occupied.add(new_pos)
+            new_positions.append(new_pos)
+        self.other_escort_positions = new_positions
 
     def _get_aim_direction(self):
         """狙う方向を決める。carryと同じ優先順位:
@@ -557,7 +623,7 @@ class EscortOnlyEnv:
         r, c = self.escort_pos
         dr, dc = moves[action]
         nr, nc = r + dr, c + dc
-        if not self._is_walkable(nr, nc):
+        if not self._is_free(nr, nc):    # 💡変更: _is_walkable → _is_free
             return -1.5
         self.escort_pos = (nr, nc)
         return 0.0
@@ -575,6 +641,7 @@ class EscortOnlyEnv:
 
         # 💡キャリアーはescortのactionと無関係に毎tick自動で動く(実ゲームでは別キャラのため)
         self._move_carrier()
+        self._move_other_escorts() 
 
         reward += self._advance_projectiles()
 
