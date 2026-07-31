@@ -18,6 +18,7 @@ from game_core import (
     HEADSHOT_DAMAGE,
     BODY_DAMAGE,
     WINNING_ROUNDS,
+    DEFUSE_REQUIRED,
 )
 
 
@@ -45,6 +46,12 @@ class BattleLogicMixin:
             site_r = float(self.target_plant_pos[0]) if self.target_plant_pos else 0.0
             site_c = float(self.target_plant_pos[1]) if self.target_plant_pos else 0.0
 
+        defender_defuse_info = {
+            d.name: (d.defuse_timer, DEFUSE_REQUIRED)  # 6 = DEFUSE_REQUIRED (learning_attacker_multi.py の DEFUSE_REQUIRED と一致させる)
+            for d in self.chars
+            if d.team == "D" and d.is_alive
+        }
+
         game_state = {
             "grid": self.grid,
             "spike_pos": self.spike_pos,
@@ -52,11 +59,13 @@ class BattleLogicMixin:
             "planted_pos": self.planted_pos,
             "target_plant_pos": self.target_plant_pos,
             "chars": self.chars,
-            "spotted_info": (
-                self.get_spotted_info()
-                if not self.is_planted
-                else {"spotted": 1.0, "site_r": site_r, "site_c": site_c}
-            ),
+            "spotted_info": self.get_spotted_info() if not self.is_planted else {
+                'spotted': 1.0,
+                'site_r': site_r,
+                'site_c': site_c
+            },
+            "defender_defuse_info": defender_defuse_info,
+            "detonate_timer": self.detonate_timer,
         }
 
         if char.team == "A":

@@ -18,7 +18,9 @@ from learning_defender import (
     LearningDefenderController,
     LearningDefenderAllAIController,
 )
+from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController
+from attacker_v2.multi_role_attacker_controller import MultiRoleAttackerController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 
@@ -68,9 +70,12 @@ def _build_attacker_controller(key):
         "v2",
         "aiv2",
     }:
-        return LearningAttackerAIv2Controller(
-            model_path=ATTACKER_AI_V2_MODEL_PATH,
-            greedy=True,
+        return MultiRoleAttackerController(
+            carry_model_path="attacker_v2/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
+            escort_model_path="attacker_v2/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
+            retrieve_model_path="attacker_v2/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
+            guard_model_path="attacker_v2/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
+            greedy=False,
         )
 
     if normalized in {

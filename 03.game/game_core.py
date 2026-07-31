@@ -36,6 +36,14 @@ RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
 
+# とるようパラメータ
+ABILITY_TYPES = ["flash", "smoke", "recon", "none"]
+FLASH_BLIND_TICKS = 3
+SMOKE_RADIUS = 2
+RECON_RADIUS = 4
+DEFUSE_REQUIRED = 6
+
+
 _BASE_DIR = Path(__file__).resolve().parent
 
 def _load_local_module(module_name, filenames):
@@ -336,6 +344,10 @@ class Character:
         self.active_combos = []
         self.active_awakening = None
         self.triggered_awakening_events = set()
+
+        #とるよう設定
+        self.ability_type = "none"     # "flash" / "smoke" / "recon" / "none"
+
 
     @property
     def combat_power(self):
