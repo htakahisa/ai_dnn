@@ -64,6 +64,12 @@ class LearningAttackerRetrieveController(BaseController):
         pr, pc = char.pos
         return min(defenders, key=lambda d: max(abs(d.pos[0] - pr), abs(d.pos[1] - pc)))
 
+    def _occupied_cells(self, char, game_state):
+        return {
+            tuple(o.pos) for o in game_state["chars"]
+            if o is not char and o.is_alive
+        }
+
     def _get_spike_position(self, game_state):
         """
         💡実ゲームの仕様に合わせて、落ちているスパイクの位置を取得するロジックを実装してください。
@@ -83,9 +89,10 @@ class LearningAttackerRetrieveController(BaseController):
         self._ensure_spike_map(grid, spike_pos)
 
         tracked_enemy = self._find_tracked_enemy(char, game_state)
+        occupied_cells = self._occupied_cells(char, game_state)   # 💡追加
 
-        obs = self._make_observation(char, grid, tracked_enemy, spike_pos)
-        mask = self._get_action_mask(char, grid)
+        obs = self._make_observation(char, grid, tracked_enemy, spike_pos, occupied_cells)   # 💡修正
+        mask = self._get_action_mask(char, grid, occupied_cells)                              # 💡修正
 
         with torch.no_grad():
             state_t = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -134,13 +141,12 @@ class LearningAttackerRetrieveController(BaseController):
             best_dir = (0, 1)
         return (pr + best_dir[0], pc + best_dir[1])
 
-    def _make_observation(self, char, grid, tracked_enemy, spike_pos):
+    def _make_observation(self, char, grid, tracked_enemy, spike_pos, occupied_cells):   # 💡修正: 引数追加
         pr, pc = char.pos
         sr, sc = spike_pos
         height, width = grid.shape
 
         base = [pr / (height - 1), pc / (width - 1), sr / (height - 1), sc / (width - 1)]
-
         walls = [0.0 if self._is_walkable(pr + dr, pc + dc, grid) else 1.0
                  for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
 
@@ -164,7 +170,6 @@ class LearningAttackerRetrieveController(BaseController):
         ability_charge = [1.0 if has_charge else 0.0]
 
         enemy_blinded_flag = [1.0 if (tracked_enemy is not None and tracked_enemy.blind_remaining > 0) else 0.0]
-
         enemy = [0.0, 0.0, 0.0]
         if tracked_enemy is not None:
             visible = self.has_line_of_sight(char.pos, tracked_enemy.pos, grid)
@@ -173,17 +178,32 @@ class LearningAttackerRetrieveController(BaseController):
                 er, ec = tracked_enemy.pos
                 enemy = [1.0, (er - pr) / height, (ec - pc) / width]
 
+        # 💡追加: 学習時のteammate_infoと同じ形式
+        others = [p for p in occupied_cells if p != (pr, pc)]
+        teammate_info = [0.0, 0.0, 0.0]
+        if others:
+            nearest = min(others, key=lambda p: max(abs(p[0]-pr), abs(p[1]-pc)))
+            dist = max(abs(nearest[0]-pr), abs(nearest[1]-pc))
+            max_d = max(height, width)
+            teammate_info = [
+                1.0 - min(dist / max_d, 1.0),
+                (nearest[0]-pr) / height,
+                (nearest[1]-pc) / width,
+            ]
+
         return np.array(
-            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy,
+            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy + teammate_info,   # 💡追加
             dtype=np.float32
         )
 
-    def _get_action_mask(self, char, grid):
+    def _get_action_mask(self, char, grid, occupied_cells):   # 💡修正: 引数追加
         r, c = char.pos
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(r + dr, c + dc, grid) else 0.0
+            nr, nc = r + dr, c + dc
+            free = self._is_walkable(nr, nc, grid) and (nr, nc) not in occupied_cells   # 💡変更
+            mask[a] = 1.0 if free else 0.0
         has_charge = (char.flash_charges > 0) or (char.smoke_charges > 0) or (char.recon_charges > 0)
         mask[4] = 1.0 if has_charge else 0.0
         return mask
