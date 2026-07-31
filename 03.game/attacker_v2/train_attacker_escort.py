@@ -61,7 +61,7 @@ from game_core import (
     RECON_RADIUS,
 )
 
-OBS_DIM = 31
+OBS_DIM = 32
 N_ACTIONS = 5   # 0:上 1:下 2:左 3:右 4:アビリティ使用(設置行動は無い)
 NUM_EPISODES = 9000
 SAVE_INTERVAL = 100
@@ -100,6 +100,8 @@ CARRIER_SITE_SUCCESS_BONUS = 100.0    # キャリアーがサイトに到達(プ
 OTHER_ESCORT_COUNT_MIN = 0
 OTHER_ESCORT_COUNT_MAX = 3    # 💡追加: carry:escort=1:4想定、自分以外に最大3体のescort仲間
 TEAMMATE_MOVE_PROB = 0.5      # 💡追加: 他escortの毎tick移動確率
+BLOCKING_PENALTY = -2.0       # 💡追加: 進路封鎖(自分がキャリアーよりサイトに近い位置で近接)への追加ペナルティ
+BLOCKING_CHECK_DIST = 3       # 💡追加: キャリアーがこの距離以内なら「詰まりリスクあり」とみなす
 
 # ===========================================================================
 # 共通ヘルパー(train_attacker_carry.pyと同じロジックをこのファイル内に複製)
@@ -427,10 +429,18 @@ class EscortOnlyEnv:
                 (nearest[1] - pc) / width,
             ]
 
+        # 💡追加: 自分がキャリアーよりサイトに近い位置にいるか(進路封鎖の自己認識用フラグ)
+        carrier_site_dist = self.dist_map[cr, cc]
+        is_ahead_of_carrier = [
+            1.0 if (np.isfinite(own_site_dist) and np.isfinite(carrier_site_dist)
+                     and own_site_dist < carrier_site_dist) else 0.0
+        ]
+
         return np.array(
             base + carrier_rel + walls + last_onehot + site_dists +
             ability_onehot + ability_charge + enemy_blinded_flag + enemy +
-            own_site_dist_norm + teammate_used_flag + other_escort_info,   # 💡追加
+            own_site_dist_norm + teammate_used_flag + other_escort_info +
+            is_ahead_of_carrier,   # 💡追加
             dtype=np.float32
         )
 
@@ -660,6 +670,20 @@ class EscortOnlyEnv:
             reward -= OUT_OF_RANGE_PENALTY_SCALE * (ESCORT_MIN_DIST - dist)
         else:
             reward -= OUT_OF_RANGE_PENALTY_SCALE * (dist - ESCORT_MAX_DIST)
+
+        # 💡追加: 進路封鎖ペナルティ。
+        # 「自分がキャリアーよりサイトに近い位置にいて、かつキャリアーが接近中」の場合、
+        # 通路を塞いでいる可能性が高いとみなし追加ペナルティを与える。
+        # これにより「サイト方向へ進んで道を空ける」または「横に避ける」行動を誘導する。
+        er, ec = self.escort_pos
+        cr, cc = self.carrier_pos
+        escort_site_dist = self.dist_map[er, ec]
+        carrier_site_dist = self.dist_map[cr, cc]
+
+        if (dist <= BLOCKING_CHECK_DIST
+            and np.isfinite(escort_site_dist) and np.isfinite(carrier_site_dist)
+            and escort_site_dist < carrier_site_dist):
+            reward += BLOCKING_PENALTY
 
         if self.bot_blind_remaining > 0:
             self.bot_blind_remaining -= 1

@@ -94,10 +94,10 @@ class LearningAttackerEscortController(BaseController):
 
         r, c = char.pos
 
+        # 💡修正: carry用の「has_spikeでなければ何もしない」ロジックが誤って混入していたため削除。
+        # escortは代わりにキャリアーを探し、見つからなければ待機する。
         carrier = self._find_carrier(char, game_state)
         if carrier is None:
-            # 💡キャリアーが見つからない(誰もスパイクを持っていない等)場合はその場に留まる。
-            # retrieve/guardフェーズへの遷移はMultiRoleAttackerController側で振り分けられる想定。
             return char.pos, "MOVE"
 
         target_plant_pos = game_state.get("target_plant_pos")
@@ -108,9 +108,9 @@ class LearningAttackerEscortController(BaseController):
             self.site_cells = self.site_cell_sets[0]
 
         tracked_enemy = self._find_tracked_enemy(char, game_state)
-        occupied_cells = self._occupied_cells(char, game_state)   # 💡追加
+        occupied_cells = self._occupied_cells(char, game_state)
 
-        obs = self._make_observation(char, grid, tracked_enemy, carrier, occupied_cells)
+        obs = self._make_observation(char, grid, tracked_enemy, carrier, occupied_cells)   # 💡修正: carrierを追加
         mask = self._get_action_mask(char, grid, occupied_cells)
 
         with torch.no_grad():
@@ -227,10 +227,18 @@ class LearningAttackerEscortController(BaseController):
                 (nearest[1]-pc) / width,
             ]
 
+        # 💡追加: 自分がキャリアーよりサイトに近い位置にいるか(学習時のis_ahead_of_carrierと同じ)
+        carrier_site_dist = self.dist_map[cr, cc]
+        is_ahead_of_carrier = [
+            1.0 if (np.isfinite(own_site_dist) and np.isfinite(carrier_site_dist)
+                     and own_site_dist < carrier_site_dist) else 0.0
+        ]
+
         return np.array(
             base + carrier_rel + walls + last_onehot + site_dists +
             ability_onehot + ability_charge + enemy_blinded_flag + enemy +
-            own_site_dist_norm + teammate_used_flag + other_escort_info,   # 💡追加
+            own_site_dist_norm + teammate_used_flag + other_escort_info +
+            is_ahead_of_carrier,   # 💡追加
             dtype=np.float32
         )
 

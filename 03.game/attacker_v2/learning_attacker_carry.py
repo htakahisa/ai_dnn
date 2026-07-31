@@ -108,7 +108,7 @@ class LearningAttackerCarryController(BaseController):
         # 💡追加: 学習環境の「単一の敵bot」に相当する、最も近い生存defenderを追跡対象にする
         tracked_enemy = self._find_tracked_enemy(char, game_state)
 
-        obs = self._make_observation(char, grid, tracked_enemy)
+        obs = self._make_observation(char, grid, tracked_enemy, occupied_cells)
         mask = self._get_action_mask(char, grid, occupied_cells)
 
         with torch.no_grad():

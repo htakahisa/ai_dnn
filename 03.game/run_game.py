@@ -35,6 +35,10 @@ class VisualFPSBattle(AbilityMixin):
         self.attacker_wins = 0
         self.defender_wins = 0
         self.current_round = 1
+
+        # 💡 追加: 打ち合い（射撃）の勝敗カウンター
+        self.attacker_gunfight_wins = 0
+        self.defender_gunfight_wins = 0
         
         # 画面非表示（headless）モードの時はTkinterを立ち上げない
         if not self.headless:
@@ -386,6 +390,13 @@ class VisualFPSBattle(AbilityMixin):
 
             target.is_alive = False
             target.just_died = True
+
+            # 💡 追加: 倒されたキャラの相手チーム（撃ち合い勝者）にカウントを入れる
+            if target.team == "A":
+                self.defender_gunfight_wins += 1
+            else:
+                self.attacker_gunfight_wins += 1
+
             if target.has_spike:
                 self.spike_pos = tuple(target.pos)
                 target.has_spike = False
@@ -570,11 +581,6 @@ class VisualFPSBattle(AbilityMixin):
 
 if __name__ == "__main__":
 
-    
-    #att_ctrl = DefaultAttackerController()
-    #att_ctrl = LearningAttackerMultiController(model_path="dqn_attacker_multi_best_by_eval.pt", greedy=True)
-    #att_ctrl = UserInputController()
-    #att_ctrl = LearningAttackerAbilityController(model_path="data_temp/attacker_ability_data/dqn_attacker_ability_ep6000.pt", greedy=False)
     att_ctrl = MultiRoleAttackerController(
         carry_model_path="attacker_v2/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
         escort_model_path="attacker_v2/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
@@ -582,13 +588,27 @@ if __name__ == "__main__":
         guard_model_path="attacker_v2/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
         greedy=False,
     )
-
-    # 新しい統合モデルでテストしたい場合
     def_ctrl = LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-    #def_ctrl = UserInputController()
-    
-    # 動きを確認したいので headless=False で可視化する
-    game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
 
-        
+    # 全マッチ分を通して打ち合いの合計数を集計
+    total_att_gunfight_wins = 0
+    total_def_gunfight_wins = 0
+
+    game = VisualFPSBattle(NEW_MAZE_STR, att_ctrl, def_ctrl, headless=False)
     game.run()
+    total_att_gunfight_wins += game.attacker_gunfight_wins
+    total_def_gunfight_wins += game.defender_gunfight_wins
+    total_engagements = game.attacker_gunfight_wins + game.defender_gunfight_wins
+
+
+    # 最終集計
+    total_gunfights = total_att_gunfight_wins + total_def_gunfight_wins
+    att_win_rate = (total_att_gunfight_wins / total_gunfights * 100) if total_gunfights > 0 else 0
+    def_win_rate = (total_def_gunfight_wins / total_gunfights * 100) if total_gunfights > 0 else 0
+
+    print("\n" + "=" * 55)
+    print("【 射撃（打ち合い）対戦成績・勝率 】")
+    print(f"総打ち合い回数 : {total_gunfights} 回")
+    print(f"Attacker win  : {total_att_gunfight_wins} (勝率: {att_win_rate:.1f}%)")
+    print(f"Defender win  : {total_def_gunfight_wins} (勝率: {def_win_rate:.1f}%)")
+    print("=" * 55)
