@@ -634,10 +634,18 @@ class BattleLogicMixin:
                     text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick | {score_text}",
                     fg="black",
                 )
+    
+    def _move_order(self):
+        """スパイク保持者(carry)を最優先で処理する。
+        先に動いた者勝ちの衝突判定のため、carryの移動先を先に確定させることで
+        escort/retrieveが自然とそのマスを避けるようになる。"""
+        carriers = [c for c in self.chars if c.is_alive and c.has_spike]
+        others = [c for c in self.chars if c.is_alive and not c.has_spike]
+        return carriers + others
 
     def loop(self):
         if not self.round_over and not self.match_over:
-            for c in self.chars:
+            for c in self._move_order():
                 if c.is_alive:
                     self.move_character(c)
             self.process_battle()
@@ -650,7 +658,7 @@ class BattleLogicMixin:
         print("💡 Headless Mode: シミュレーションをバックグラウンドで高速実行中...")
         while not self.match_over:
             if not self.round_over:
-                for c in self.chars:
+                for c in self._move_order():
                     if c.is_alive:
                         self.move_character(c)
                 self.process_battle()

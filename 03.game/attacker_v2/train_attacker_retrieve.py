@@ -60,7 +60,7 @@ from game_core import (
     RECON_RADIUS,
 )
 
-OBS_DIM = 25
+OBS_DIM = 28
 N_ACTIONS = 5   # 0:上 1:下 2:左 3:右 4:アビリティ使用(専用の「拾う」アクションは無い)
 NUM_EPISODES = 13000
 SAVE_INTERVAL = 100
@@ -90,6 +90,9 @@ SPIKE_APPROACH_HIT_RADIUS = 1  # 投射経路がスパイク位置からこの�
 
 RETRIEVE_SUCCESS_REWARD = 200.0
 
+TEAMMATE_COUNT_MIN = 0
+TEAMMATE_COUNT_MAX = 4       # 💡追加: 他のattacker(carry/escort/guard等)を動く障害物として想定
+TEAMMATE_MOVE_PROB = 0.5     # 💡追加: 毎tickの味方の移動確率
 
 # ===========================================================================
 # 共通ヘルパー(train_attacker_carry.pyと同じロジックをこのファイル内に複製)
@@ -254,6 +257,18 @@ class RetrieveOnlyEnv:
         while self.spike_pos == self.player_pos:
             self.spike_pos = self._random_walkable()
 
+        # 💡追加: 他のattacker(動く障害物)をスポーン
+        n_teammates = random.randint(TEAMMATE_COUNT_MIN, TEAMMATE_COUNT_MAX)
+        occupied = {self.player_pos}
+        self.teammate_positions = []
+        for _ in range(n_teammates):
+            for _try in range(50):
+                p = self._random_walkable()
+                if p not in occupied:
+                    self.teammate_positions.append(p)
+                    occupied.add(p)
+                    break
+
         # 💡毎エピソード、スパイク位置が変わるためBFSも都度計算し直す
         self.dist_map = bfs_distances(self.spike_pos, self.grid)
         self.prev_dist = self.dist_map[self.player_pos[0], self.player_pos[1]]
@@ -277,6 +292,17 @@ class RetrieveOnlyEnv:
 
         self.pos_history = deque(maxlen=6)
         return self._get_obs(), {}
+
+    def _is_occupied(self, r, c):
+        """味方 or 敵(視認不要)がいるマスかどうか。実ゲームのoccupied判定と同じ扱い。"""
+        if (r, c) in self.teammate_positions:
+            return True
+        if self.bot_present and (r, c) == self.bot_pos:
+            return True
+        return False
+
+    def _is_free(self, r, c):
+        return self._is_walkable(r, c) and not self._is_occupied(r, c)
 
     def _get_obs(self):
         pr, pc = self.player_pos
@@ -313,8 +339,23 @@ class RetrieveOnlyEnv:
                 br, bc = self.bot_pos
                 enemy = [1.0, (br - pr) / height, (bc - pc) / width]
 
+        # 💡追加: 最も近い味方との相対位置(渋滞回避のための事前情報)
+        teammate_info = [0.0, 0.0, 0.0]
+        if self.teammate_positions:
+            nearest = min(
+                self.teammate_positions,
+                key=lambda p: max(abs(p[0] - pr), abs(p[1] - pc))
+            )
+            dist = max(abs(nearest[0] - pr), abs(nearest[1] - pc))
+            max_dist_tm = max(height, width)
+            teammate_info = [
+                1.0 - min(dist / max_dist_tm, 1.0),
+                (nearest[0] - pr) / height,
+                (nearest[1] - pc) / width,
+            ]
+
         return np.array(
-            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy,
+            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy + teammate_info,
             dtype=np.float32
         )
 
@@ -323,7 +364,7 @@ class RetrieveOnlyEnv:
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(pr + dr, pc + dc) else 0.0
+            mask[a] = 1.0 if self._is_free(pr + dr, pc + dc) else 0.0   # 💡変更
         mask[4] = 1.0 if self.own_ability_charge > 0 else 0.0
         return mask
 
@@ -465,7 +506,7 @@ class RetrieveOnlyEnv:
         dr, dc = moves[action]
         nr, nc = r + dr, c + dc
 
-        if not self._is_walkable(nr, nc):
+        if not self._is_free(nr, nc):    # 💡変更: _is_walkable → _is_free
             return -1.5, False
 
         self.player_pos = (nr, nc)
@@ -489,6 +530,27 @@ class RetrieveOnlyEnv:
         self.prev_dist = new_dist
         return reward, False
 
+    def _move_teammates(self):
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        occupied = set(self.teammate_positions) | {self.player_pos}
+        if self.bot_present:
+            occupied.add(self.bot_pos)
+
+        new_positions = []
+        for (tr, tc) in self.teammate_positions:
+            occupied.discard((tr, tc))
+            new_pos = (tr, tc)
+            if random.random() < TEAMMATE_MOVE_PROB:
+                candidates = [
+                    (tr + dr, tc + dc) for dr, dc in moves
+                    if self._is_walkable(tr + dr, tc + dc) and (tr + dr, tc + dc) not in occupied
+                ]
+                if candidates:
+                    new_pos = random.choice(candidates)
+            occupied.add(new_pos)
+            new_positions.append(new_pos)
+        self.teammate_positions = new_positions
+
     def step(self, action):
         self.current_step += 1
         self.last_action = action
@@ -498,6 +560,8 @@ class RetrieveOnlyEnv:
             terminated = False
         else:
             reward, terminated = self._step_move(action)
+
+        self._move_teammates()          # 💡追加: 味方も動かす
 
         reward += self._advance_projectiles()
 
@@ -551,7 +615,7 @@ def masked_softmax_action(q_values, mask, temperature=0.5):
 def train():
     writer = SummaryWriter(log_dir="logs")
 
-    EVAL_BEST_SAVE_DIR = "data_temp/attacker_retrieve_data/"
+    EVAL_BEST_SAVE_DIR = "data/attacker_retrieve_data/"
     SAVE_DIR = "data_temp/attacker_retrieve_data/"
     os.makedirs(SAVE_DIR, exist_ok=True)
 

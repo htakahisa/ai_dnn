@@ -459,8 +459,9 @@ class LearningAttackerGuardController(BaseController):
         self.last_action[char.name] = action
 
         if action == 4:
-            target_cell = self._aim_direction(char, game_state, grid)
-            return target_cell, "ABILITY"
+            aim_cell = self._aim_direction(char, game_state, grid)   # 💡修正: このクラス自身のメソッドを使用
+            ability_name = char.ability_type.upper()
+            return char.pos, {"ability": ability_name, "target": tuple(aim_cell)}
 
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         dr, dc = moves[action]

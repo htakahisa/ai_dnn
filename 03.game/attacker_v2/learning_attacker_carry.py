@@ -20,41 +20,6 @@ for _p in (_THIS_DIR, _ROOT_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from game_core import (
-    WINNING_ROUNDS,
-    TICK_TIME,
-    MAX_HP,
-    BODY_DAMAGE,
-    HEADSHOT_DAMAGE,
-    SHOOT_INTERVAL_TICKS,
-    SIDE_PANEL_WIDTH,
-    PLANT_REQUIRED_TICKS,
-    DEFUSE_REQUIRED_TICKS,
-    SMOKE_DURATION_TICKS,
-    MOVING_ACCURACY,
-    MOVING_TARGET_HIT_MULTIPLIER,
-    BLIND_DURATION_TICKS,
-    FLASH_BURST_DURATION_TICKS,
-    BLIND_ACCURACY_MULTIPLIER,
-    FLASH_SPEED_CELLS_PER_TICK,
-    FLASH_MAX_FLIGHT_TICKS,
-    RECON_SPEED_CELLS_PER_TICK,
-    REVEAL_DURATION_TICKS,
-    REVEALED_DODGE_MULTIPLIER,
-    RECON_REVEAL_SIZE,
-    COMBO_DISPLAY_TICKS,
-    COMBO_BANNER_HEIGHT,
-    ROUND_DURATION_TICKS,
-    SPIKE_DETONATION_TICKS,
-    RECON_BURST_DISPLAY_TICKS,
-    SMOKE_WARNING_TICKS,
-    ROUND_TRANSITION_TICKS,
-    ABILITY_TYPES,
-    FLASH_BLIND_TICKS,
-    SMOKE_RADIUS,
-    RECON_RADIUS,
-)
-
 from controllers import BaseController
 from train_attacker_carry import (
     DuelingQNetwork, OBS_DIM, N_ACTIONS, ABILITY_TYPES,
@@ -85,6 +50,7 @@ class LearningAttackerCarryController(BaseController):
         self.site_components = None
         self.site_maps = None
         self.site_cell_sets = None
+        
 
     def reset_round(self):
         self.last_actions.clear()
@@ -115,10 +81,17 @@ class LearningAttackerCarryController(BaseController):
         h, w = grid.shape
         return 0 <= r < h and 0 <= c < w and grid[r, c] != 1
 
+    def _occupied_cells(self, char, game_state):
+        return {
+            tuple(o.pos) for o in game_state["chars"]
+            if o is not char and o.is_alive
+        }
+
     # -----------------------------------------------------------------
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
         self._ensure_site_maps(grid)
+        occupied_cells = self._occupied_cells(char, game_state)   # 💡追加
 
         r, c = char.pos
 
@@ -135,8 +108,8 @@ class LearningAttackerCarryController(BaseController):
         # 💡追加: 学習環境の「単一の敵bot」に相当する、最も近い生存defenderを追跡対象にする
         tracked_enemy = self._find_tracked_enemy(char, game_state)
 
-        obs = self._make_observation(char, grid, tracked_enemy)
-        mask = self._get_action_mask(char, grid)
+        obs = self._make_observation(char, grid, tracked_enemy, occupied_cells)
+        mask = self._get_action_mask(char, grid, occupied_cells)
 
         with torch.no_grad():
             state_t = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -156,7 +129,8 @@ class LearningAttackerCarryController(BaseController):
             # 💡追加: アビリティ発動。狙うマスは学習時と同じ優先順位で決める。
             # 実際の着弾判定・効果適用(blind_remaining/reveal_remaining更新)はabilities.py側が行う。
             aim_cell = self._get_aim_cell(char, grid, tracked_enemy)
-            return aim_cell, "ABILITY"
+            ability_name = char.ability_type.upper()
+            return char.pos, {"ability": ability_name, "target": tuple(aim_cell)}
 
         moves = {0: [-1, 0], 1: [1, 0], 2: [0, -1], 3: [0, 1]}
         next_pos = [r + moves[action][0], c + moves[action][1]]
@@ -208,7 +182,7 @@ class LearningAttackerCarryController(BaseController):
         return (pr + best_dir[0], pc + best_dir[1])
 
     # -----------------------------------------------------------------
-    def _make_observation(self, char, grid, tracked_enemy):
+    def _make_observation(self, char, grid, tracked_enemy, occupied_cells): 
         pr, pc = char.pos
         gr, gc = self.label_map[pr][pc]
         height, width = grid.shape
@@ -250,19 +224,35 @@ class LearningAttackerCarryController(BaseController):
                 er, ec = tracked_enemy.pos
                 enemy = [1.0, (er - pr) / height, (ec - pc) / width]
 
+        # 💡追加: 学習時のteammate_infoと同じ形式
+        pr, pc = char.pos
+        others = [p for p in occupied_cells if p != (pr, pc)]
+        teammate_info = [0.0, 0.0, 0.0]
+        if others:
+            nearest = min(others, key=lambda p: max(abs(p[0]-pr), abs(p[1]-pc)))
+            dist = max(abs(nearest[0]-pr), abs(nearest[1]-pc))
+            max_dist = max(grid.shape)
+            teammate_info = [
+                1.0 - min(dist / max_dist, 1.0),
+                (nearest[0]-pr) / grid.shape[0],
+                (nearest[1]-pc) / grid.shape[1],
+            ]
+
         return np.array(
-            base + walls + last_onehot + dists + ability_onehot + ability_charge + enemy_blinded_flag + enemy,
+            base + walls + last_onehot + dists + ability_onehot +
+            ability_charge + enemy_blinded_flag + enemy + teammate_info,
             dtype=np.float32
         )
 
-    def _get_action_mask(self, char, grid):
+    def _get_action_mask(self, char, grid, occupied_cells):
         r, c = char.pos
         moves = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
         mask = np.zeros(N_ACTIONS, dtype=np.float32)
         for a, (dr, dc) in moves.items():
-            mask[a] = 1.0 if self._is_walkable(r + dr, c + dc, grid) else 0.0
+            nr, nc = r + dr, c + dc
+            free = self._is_walkable(nr, nc, grid) and (nr, nc) not in occupied_cells
+            mask[a] = 1.0 if free else 0.0
         mask[4] = 1.0 if (r, c) in self.site_cells else 0.0
-        # 💡追加: 実際のチャージが残っている場合のみアビリティ使用を許可
         mask[5] = 1.0 if (char.flash_charges > 0 or char.smoke_charges > 0 or char.recon_charges > 0) else 0.0
         return mask
 
