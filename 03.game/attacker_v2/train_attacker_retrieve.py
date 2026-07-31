@@ -615,7 +615,7 @@ def masked_softmax_action(q_values, mask, temperature=0.5):
 def train():
     writer = SummaryWriter(log_dir="logs")
 
-    EVAL_BEST_SAVE_DIR = "data_temp/attacker_retrieve_data/"
+    EVAL_BEST_SAVE_DIR = "data/attacker_retrieve_data/"
     SAVE_DIR = "data_temp/attacker_retrieve_data/"
     os.makedirs(SAVE_DIR, exist_ok=True)
 

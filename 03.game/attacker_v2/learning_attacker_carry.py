@@ -129,7 +129,8 @@ class LearningAttackerCarryController(BaseController):
             # 💡追加: アビリティ発動。狙うマスは学習時と同じ優先順位で決める。
             # 実際の着弾判定・効果適用(blind_remaining/reveal_remaining更新)はabilities.py側が行う。
             aim_cell = self._get_aim_cell(char, grid, tracked_enemy)
-            return aim_cell, "ABILITY"
+            ability_name = char.ability_type.upper()
+            return char.pos, {"ability": ability_name, "target": tuple(aim_cell)}
 
         moves = {0: [-1, 0], 1: [1, 0], 2: [0, -1], 3: [0, 1]}
         next_pos = [r + moves[action][0], c + moves[action][1]]

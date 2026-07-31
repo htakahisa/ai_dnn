@@ -86,20 +86,36 @@ class BattleLogicMixin:
             "detonate_timer": self.detonate_timer,
         }
 
+        ability_payload = None
+
         if char.team == "A":
             result = self.attacker_controller.decide_move(char, game_state)
+
             if isinstance(result, tuple) and len(result) == 2:
-                next_pos, action_type = result
+                next_pos, second_elem = result
+
+                # 💡追加: 辞書型アビリティ({"ability": ..., "target": ...})に対応
+                if isinstance(second_elem, dict) and "ability" in second_elem:
+                    ability_payload = second_elem
+                    action_type = "ABILITY"
+                else:
+                    action_type = second_elem
             else:
                 next_pos, action_type = result, "MOVE"
         else:
             # ディフェンダー側：コントローラーによって戻り値の数が異なるため自動判別
             result = self.defender_controller.decide_move(char, game_state)
+
             if isinstance(result, tuple) and len(result) == 2:
-                # LearningDefenderAllAIController などのアクションタイプ付きの戻り値
-                next_pos, action_type = result
+                next_pos, second_elem = result
+
+                # 💡追加: ディフェンダー側も将来的な辞書型アビリティに備えて同様に対応
+                if isinstance(second_elem, dict) and "ability" in second_elem:
+                    ability_payload = second_elem
+                    action_type = "ABILITY"
+                else:
+                    action_type = second_elem
             else:
-                # DefaultDefenderController などの座標のみの戻り値
                 next_pos = result
                 action_type = "MOVE"
 
@@ -116,10 +132,17 @@ class BattleLogicMixin:
                     char.has_spike = False
             return
         elif action_type == "ABILITY":
-            char.plant_timer = 0     # 💡追加
-            char.defuse_timer = 0    # 💡追加
-            # 💡追加: next_pos はここでは発動先セル(target_cell)として扱う
-            self.use_ability(char, tuple(next_pos))
+            char.plant_timer = 0
+            char.defuse_timer = 0
+            # 💡修正: 辞書型なら payload の "target" を使う。
+            # 旧形式(next_posが発動先セルそのもの)との互換性のためフォールバックも残す。
+            if ability_payload is not None:
+                target_cell = ability_payload.get("target")
+            else:
+                target_cell = next_pos
+
+            if target_cell is not None:
+                self.use_ability(char, tuple(target_cell))
             return
         elif action_type == "DEFUSE":
             if self.is_planted and self.planted_pos and char.team == "D":
