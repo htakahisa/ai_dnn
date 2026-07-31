@@ -1,310 +1,548 @@
 # controllers.py
 import random
 from collections import deque
+
 import numpy as np
 
+
 class BaseController:
-    """すべての操作クラスの基底となるクラス"""
+    """すべての操作クラスの基底となるクラス。"""
+
+    CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
     def decide_move(self, char, game_state):
         raise NotImplementedError
-        
+
     @staticmethod
     def has_line_of_sight(p1, p2, grid):
-        x0, y0, x1, y1 = p1[1], p1[0], p2[1], p2[0]
-        dx, dy = abs(x1 - x0), -abs(y1 - y0)
-        sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+        """Bresenham法で壁による射線遮断を判定する。"""
+        x0, y0, x1, y1 = int(p1[1]), int(p1[0]), int(p2[1]), int(p2[0])
+        dx = abs(x1 - x0)
+        dy = -abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
         err = dx + dy
         curr_x, curr_y = x0, y0
+
         while True:
             if grid[curr_y, curr_x] == 1:
                 return False
             if curr_x == x1 and curr_y == y1:
                 return True
+
             e2 = 2 * err
-            if e2 >= dy: err += dy; curr_x += sx
-            if e2 <= dx: err += dx; curr_y += sy
+            if e2 >= dy:
+                err += dy
+                curr_x += sx
+            if e2 <= dx:
+                err += dx
+                curr_y += sy
 
+    @staticmethod
+    def _alive_occupied_positions(chars, moving_char=None):
+        """
+        生存キャラクターが占有している座標を返す。
 
+        moving_char自身の現在地はブロック対象から除外する。
+        """
+        occupied = set()
 
+        for other in chars or []:
+            if other is moving_char:
+                continue
+            if not getattr(other, "is_alive", True):
+                continue
 
-    def get_next_pos_random(self, pos, grid):
-        """共通で使えるランダム移動ロジック"""
-        r, c = pos
-        height, width = grid.shape
-        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        valid = [
-            (r + dr, c + dc) for dr, dc in moves 
-            if 0 <= r + dr < height and 0 <= c + dc < width and grid[r + dr, c + dc] != 1
-        ]
-        return list(random.choice(valid)) if valid else pos
+            pos = getattr(other, "pos", None)
+            if pos is None or len(pos) != 2:
+                continue
 
-    def move_towards_target(self, pos, target, grid):
-        """BFS（幅優先探索）を用いて、壁を迂回する本当の最短ルートで1マス進む"""
-        start = tuple(pos)
-        goal = tuple(target)
-        
+            occupied.add((int(pos[0]), int(pos[1])))
+
+        return occupied
+
+    @staticmethod
+    def _in_bounds(pos, grid):
+        r, c = int(pos[0]), int(pos[1])
+        return 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]
+
+    @classmethod
+    def _is_walkable(cls, pos, grid, blocked):
+        r, c = int(pos[0]), int(pos[1])
+        return (
+            cls._in_bounds((r, c), grid)
+            and grid[r, c] != 1
+            and (r, c) not in blocked
+        )
+
+    def get_next_pos_random(self, pos, grid, chars=None, moving_char=None):
+        """
+        上下左右から、壁・マップ外・生存キャラクター占有マスを除外して
+        ランダムに1マス移動する。
+
+        動ける場所がない場合はその場に留まる。
+        """
+        r, c = int(pos[0]), int(pos[1])
+        blocked = self._alive_occupied_positions(chars, moving_char)
+
+        valid = []
+        for dr, dc in self.CARDINAL_MOVES:
+            candidate = (r + dr, c + dc)
+            if self._is_walkable(candidate, grid, blocked):
+                valid.append(candidate)
+
+        return list(random.choice(valid)) if valid else [r, c]
+
+    def _candidate_goals(self, goal, grid, blocked, allow_adjacent_goal):
+        """
+        BFSで到達対象にするゴール候補を返す。
+
+        goalが空いていればgoalそのものを使う。
+        goalが他キャラクターに占有されている場合、または
+        allow_adjacent_goal=Trueの場合は、goalの上下左右にある
+        到達可能マスも候補にする。
+        """
+        goal = (int(goal[0]), int(goal[1]))
+        candidates = []
+
+        if self._is_walkable(goal, grid, blocked):
+            candidates.append(goal)
+
+        if allow_adjacent_goal or goal in blocked:
+            for dr, dc in self.CARDINAL_MOVES:
+                adjacent = (goal[0] + dr, goal[1] + dc)
+                if self._is_walkable(adjacent, grid, blocked):
+                    candidates.append(adjacent)
+
+        # 重複を順序を保って除去する
+        return list(dict.fromkeys(candidates))
+
+    def move_towards_target(
+        self,
+        pos,
+        target,
+        grid,
+        chars=None,
+        moving_char=None,
+        allow_adjacent_goal=False,
+    ):
+        """
+        BFSで壁と生存キャラクターを避けながら、目標へ1マス進む。
+
+        targetが味方などに占有されている場合は、targetそのものへ
+        進もうとせず、到達可能な隣接マスをゴール候補にする。
+
+        allow_adjacent_goal=Trueの場合は、targetが空いていても
+        target周辺の隣接マスへの到達を許可する。護衛・追従向け。
+        """
+        start = (int(pos[0]), int(pos[1]))
+        goal = (int(target[0]), int(target[1]))
+
+        blocked = self._alive_occupied_positions(chars, moving_char)
+        blocked.discard(start)
+
         if start == goal:
-            return list(pos)
+            return [start[0], start[1]]
 
-        height, width = grid.shape
-        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        
-        # BFSのためのキューと探索済み(親ノード)の記録
+        candidate_goals = self._candidate_goals(
+            goal=goal,
+            grid=grid,
+            blocked=blocked,
+            allow_adjacent_goal=allow_adjacent_goal,
+        )
+
+        if not candidate_goals:
+            return self.get_next_pos_random(
+                pos=start,
+                grid=grid,
+                chars=chars,
+                moving_char=moving_char,
+            )
+
+        candidate_goal_set = set(candidate_goals)
         queue = deque([start])
         parent = {start: None}
-        
-        found = False
+        reached_goal = None
+
         while queue:
-            curr = queue.popleft()
-            if curr == goal:
-                found = True
+            current = queue.popleft()
+
+            if current in candidate_goal_set:
+                reached_goal = current
                 break
-                
-            r, c = curr
-            for dr, dc in moves:
-                nr, nc = r + dr, c + dc
-                if 0 <= nr < height and 0 <= nc < width:
-                    # 壁(1)でなければ進める
-                    if grid[nr, nc] != 1 and (nr, nc) not in parent:
-                        parent[(nr, nc)] = curr
-                        queue.append((nr, nc))
-        
-        # ゴールまでのルートが見つかった場合、スタートから最初の1歩を逆算する
-        if found:
-            curr = goal
-            while parent[curr] != start:
-                curr = parent[curr]
-            return list(curr)
-            
-        # 万が一、完全に孤立したエリアなどで経路がない場合はランダム移動にフォールバック
-        return self.get_next_pos_random(pos, grid)
+
+            r, c = current
+            for dr, dc in self.CARDINAL_MOVES:
+                nxt = (r + dr, c + dc)
+
+                if nxt in parent:
+                    continue
+                if not self._is_walkable(nxt, grid, blocked):
+                    continue
+
+                parent[nxt] = current
+                queue.append(nxt)
+
+        if reached_goal is None:
+            return self.get_next_pos_random(
+                pos=start,
+                grid=grid,
+                chars=chars,
+                moving_char=moving_char,
+            )
+
+        # startの直後の1マスまで親をたどる
+        step = reached_goal
+        while parent[step] is not None and parent[step] != start:
+            step = parent[step]
+
+        if parent[step] is None:
+            return [start[0], start[1]]
+
+        return [int(step[0]), int(step[1])]
 
 
 class DefaultAttackerController(BaseController):
-    """アタッカー側の標準ロジック"""
+    """アタッカー側の標準ロジック。"""
 
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
-        spike_pos = game_state["spike_pos"]
-        is_planted = game_state["is_planted"]
-        planted_pos = game_state["planted_pos"]
+        spike_pos = game_state.get("spike_pos")
+        is_planted = bool(game_state.get("is_planted", False))
+        planted_pos = game_state.get("planted_pos")
         target_plant_pos = game_state.get("target_plant_pos")
-        chars = game_state["chars"]
-        r, c = char.pos
+        chars = game_state.get("chars", [])
+        r, c = int(char.pos[0]), int(char.pos[1])
 
-        # ================================================================
-        # 【新】アビリティチェック（移動前に実行）
-        # ================================================================
+        # アビリティ判定は移動より先に行う
         ability_action = self._decide_ability(char, game_state)
         if ability_action:
-            return char.pos, ability_action
+            return list(char.pos), ability_action
 
-        # ================================================================
-        # 移動ロジック（常に最適移動）
-        # ================================================================
-        
-        # 1. プラント後の防衛ロジック
+        # 1. プラント後：スパイク周辺を防衛
         if is_planted and planted_pos:
-            dist_to_spike = max(abs(planted_pos[0] - r), abs(planted_pos[1] - c))
+            dist_to_spike = max(
+                abs(int(planted_pos[0]) - r),
+                abs(int(planted_pos[1]) - c),
+            )
+
             if dist_to_spike <= 3:
-                return self.get_next_pos_random(char.pos, grid)
-            else:
-                optimal = self.move_towards_target(char.pos, planted_pos, grid)
-                return optimal
+                return self.get_next_pos_random(
+                    char.pos,
+                    grid,
+                    chars=chars,
+                    moving_char=char,
+                )
 
-        # 2. プラント前の通常ロジック
-        # 【最優先】スパイク持ちの挙動
-        if char.has_spike:
-            if target_plant_pos:
-                if list(char.pos) == list(target_plant_pos):
-                    return char.pos, "PLANT"
-                optimal = self.move_towards_target(char.pos, target_plant_pos, grid)
-                return optimal
-            
-            plants = list(zip(*np.where(grid == 2)))
-            if plants:
-                target = plants[0] 
-                if list(char.pos) == list(target):
-                    return char.pos, "PLANT"
-                optimal = self.move_towards_target(char.pos, target, grid)
-                return optimal
-            return self.get_next_pos_random(char.pos, grid)
+            return self.move_towards_target(
+                char.pos,
+                planted_pos,
+                grid,
+                chars=chars,
+                moving_char=char,
+                allow_adjacent_goal=True,
+            )
 
-        # 現在誰かがスパイクを持っているか確認
-        holder = next((c for c in chars if c.is_alive and c.has_spike), None)
+        # 2. スパイク所持者は設置地点へ向かう
+        if getattr(char, "has_spike", False):
+            if target_plant_pos is not None:
+                if list(map(int, char.pos)) == list(map(int, target_plant_pos)):
+                    return list(char.pos), "PLANT"
 
-        # スパイクが落ちており、生存している味方の誰もスパイクを持っていない場合は回収に行く
+                return self.move_towards_target(
+                    char.pos,
+                    target_plant_pos,
+                    grid,
+                    chars=chars,
+                    moving_char=char,
+                )
+
+            plant_cells = list(zip(*np.where(grid == 2)))
+            if plant_cells:
+                target = plant_cells[0]
+
+                if list(map(int, char.pos)) == list(map(int, target)):
+                    return list(char.pos), "PLANT"
+
+                return self.move_towards_target(
+                    char.pos,
+                    target,
+                    grid,
+                    chars=chars,
+                    moving_char=char,
+                )
+
+            return self.get_next_pos_random(
+                char.pos,
+                grid,
+                chars=chars,
+                moving_char=char,
+            )
+
+        holder = next(
+            (
+                other
+                for other in chars
+                if getattr(other, "is_alive", True)
+                and getattr(other, "team", None) == char.team
+                and getattr(other, "has_spike", False)
+            ),
+            None,
+        )
+
+        # 3. 落ちているスパイクを回収
         if holder is None and spike_pos is not None:
-            if list(char.pos) == list(spike_pos):
-                return char.pos
-            optimal = self.move_towards_target(char.pos, spike_pos, grid)
-            return optimal
-        
-        # すでに他の味方がスパイクを持っている場合、そのキャラを護衛（追従）する
-        if holder:
-            dist_to_holder = max(abs(holder.pos[0] - r), abs(holder.pos[1] - c))
-            if random.random() < 0.3:
-                return self.get_next_pos_random(char.pos, grid)
-            
-            if dist_to_holder > 5:
-                optimal = self.move_towards_target(char.pos, holder.pos, grid)
-                return optimal
-            else:
-                return self.get_next_pos_random(char.pos, grid)
+            if list(map(int, char.pos)) == list(map(int, spike_pos)):
+                return list(char.pos)
 
-        return self.get_next_pos_random(char.pos, grid)
+            return self.move_towards_target(
+                char.pos,
+                spike_pos,
+                grid,
+                chars=chars,
+                moving_char=char,
+            )
+
+        # 4. スパイク所持者を護衛
+        if holder is not None and holder is not char:
+            dist_to_holder = max(
+                abs(int(holder.pos[0]) - r),
+                abs(int(holder.pos[1]) - c),
+            )
+
+            if random.random() < 0.3:
+                return self.get_next_pos_random(
+                    char.pos,
+                    grid,
+                    chars=chars,
+                    moving_char=char,
+                )
+
+            if dist_to_holder > 5:
+                # holder本人のマスは占有されているので隣接マスへ向かう
+                return self.move_towards_target(
+                    char.pos,
+                    holder.pos,
+                    grid,
+                    chars=chars,
+                    moving_char=char,
+                    allow_adjacent_goal=True,
+                )
+
+            return self.get_next_pos_random(
+                char.pos,
+                grid,
+                chars=chars,
+                moving_char=char,
+            )
+
+        return self.get_next_pos_random(
+            char.pos,
+            grid,
+            chars=chars,
+            moving_char=char,
+        )
 
     def _decide_ability(self, char, game_state):
         """
-        アビリティを使うべきかチェック。
-        
-        戻り値：
-        - None（使わない）
-        - {"ability": "SMOKE"|"FLASH"|"RECON", "target": (r, c)} 形式
+        アビリティを使うべきか判定する。
+
+        戻り値:
+        - None
+        - {"ability": "SMOKE"|"FLASH"|"RECON", "target": (r, c)}
         """
-        chars = game_state["chars"]
+        chars = game_state.get("chars", [])
         grid = game_state["grid"]
         target_plant_pos = game_state.get("target_plant_pos")
         planted_pos = game_state.get("planted_pos")
-        
-        # 射線が通ってる敵を取得
+
         visible_enemies = [
-            enemy for enemy in chars
-            if enemy.is_alive
-            and enemy.team != char.team
+            enemy
+            for enemy in chars
+            if getattr(enemy, "is_alive", True)
+            and getattr(enemy, "team", None) != char.team
             and self.has_line_of_sight(char.pos, enemy.pos, grid)
         ]
-        
-        # ===== 1. リコン（索敵）=====
-        # ルール：敵が見えない ＋ リコンチャージがある ＋
-        #         プラント目標地点（またはプラント済み地点）にある程度近づいている
-        # 開幕直後の無駄撃ちを避け、実際にサイトへ寄ったタイミングで
-        # サイト方向を偵察する「意味のあるリコン」にする。
-        site_pos = planted_pos if planted_pos else target_plant_pos
-        if char.recon_charges > 0 and len(visible_enemies) == 0 and site_pos:
+
+        # 1. リコン
+        site_pos = planted_pos if planted_pos is not None else target_plant_pos
+        if (
+            getattr(char, "recon_charges", 0) > 0
+            and not visible_enemies
+            and site_pos is not None
+        ):
             dist_to_site = max(
-                abs(site_pos[0] - char.pos[0]),
-                abs(site_pos[1] - char.pos[1]),
+                abs(int(site_pos[0]) - int(char.pos[0])),
+                abs(int(site_pos[1]) - int(char.pos[1])),
             )
-            RECON_TRIGGER_DISTANCE = 10  # サイトからこの距離以内で初めて偵察する
-            if dist_to_site <= RECON_TRIGGER_DISTANCE:
+            recon_trigger_distance = 10
+
+            if dist_to_site <= recon_trigger_distance:
                 return {
                     "ability": "RECON",
-                    "target": (int(site_pos[0]), int(site_pos[1]))
+                    "target": (int(site_pos[0]), int(site_pos[1])),
                 }
-        
-        # ===== 2. スモーク（牽制・移動援護）=====
-        # ルール：敵が2人以上見える
-        if char.smoke_charges > 0 and len(visible_enemies) >= 2:
+
+        # 2. スモーク
+        if getattr(char, "smoke_charges", 0) > 0 and len(visible_enemies) >= 2:
             enemy_pos = visible_enemies[0].pos
             return {
                 "ability": "SMOKE",
-                "target": tuple(enemy_pos)
+                "target": (int(enemy_pos[0]), int(enemy_pos[1])),
             }
-        
-        # ===== 3. フラッシュ（敵閃光）=====
-        # ルール：敵が1人以上見え、かつ5マス以内に接近
-        if char.flash_charges > 0 and len(visible_enemies) > 0:
+
+        # 3. フラッシュ
+        if getattr(char, "flash_charges", 0) > 0 and visible_enemies:
             closest_enemy = min(
                 visible_enemies,
-                key=lambda e: max(
-                    abs(e.pos[0] - char.pos[0]), 
-                    abs(e.pos[1] - char.pos[1])
-                )
+                key=lambda enemy: max(
+                    abs(int(enemy.pos[0]) - int(char.pos[0])),
+                    abs(int(enemy.pos[1]) - int(char.pos[1])),
+                ),
             )
-            dist = max(
-                abs(closest_enemy.pos[0] - char.pos[0]), 
-                abs(closest_enemy.pos[1] - char.pos[1])
+            distance = max(
+                abs(int(closest_enemy.pos[0]) - int(char.pos[0])),
+                abs(int(closest_enemy.pos[1]) - int(char.pos[1])),
             )
-            if dist <= 5:
+
+            if distance <= 5:
                 return {
                     "ability": "FLASH",
-                    "target": tuple(closest_enemy.pos)
+                    "target": (
+                        int(closest_enemy.pos[0]),
+                        int(closest_enemy.pos[1]),
+                    ),
                 }
-        
+
         return None
 
 
 class DefaultDefenderController(BaseController):
-    """ディフェンダー側の標準ロジック"""
+    """ディフェンダー側の標準ロジック。"""
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
-        is_planted = game_state["is_planted"]
-        planted_pos = game_state["planted_pos"]
-        r, c = char.pos
+        is_planted = bool(game_state.get("is_planted", False))
+        planted_pos = game_state.get("planted_pos")
+        chars = game_state.get("chars", [])
+        r, c = int(char.pos[0]), int(char.pos[1])
 
-        # プラントされた場合の挙動
-        if is_planted and planted_pos:
-            dist_to_spike = max(abs(planted_pos[0] - r), abs(planted_pos[1] - c))
+        if is_planted and planted_pos is not None:
+            dist_to_spike = max(
+                abs(int(planted_pos[0]) - r),
+                abs(int(planted_pos[1]) - c),
+            )
+
             if dist_to_spike <= 1:
-                return char.pos, "DEFUSE"  # ← 隣接したら解除を試みる
-            else:
-                optimal = self.move_towards_target(char.pos, planted_pos, grid)
-                return optimal
+                return list(char.pos), "DEFUSE"
 
-        # プラント前は通常のランダム索敵
-        return self.get_next_pos_random(char.pos, grid)
+            # スパイク本体のマスではなく解除可能な隣接マスへ進む
+            return self.move_towards_target(
+                char.pos,
+                planted_pos,
+                grid,
+                chars=chars,
+                moving_char=char,
+                allow_adjacent_goal=True,
+            )
+
+        return self.get_next_pos_random(
+            char.pos,
+            grid,
+            chars=chars,
+            moving_char=char,
+        )
 
 
 class UserInputController(BaseController):
-    """人間の入力（マウスクリック）によって動かすコントローラー。
-    選択したキャラクターをクリックした地点へBFS最短経路で移動させる。"""
+    """
+    人間の入力によって動かすコントローラー。
+
+    選択したキャラクターを、クリックした地点へ
+    BFS最短経路で1マスずつ移動させる。
+    """
 
     def __init__(self):
         super().__init__()
-        self.selected_char = None   # 現在選択中のキャラ名
-        self.targets = {}           # キャラ名 -> 目的地座標(タプル)
+        self.selected_char = None
+        self.targets = {}
 
     def reset_round(self):
-        """ラウンド開始時に選択状態・目的地をリセットする"""
+        """ラウンド開始時に選択状態・目的地をリセットする。"""
         self.selected_char = None
         self.targets.clear()
 
     def handle_click(self, r, c, grid, chars, my_team):
         """
-        キャンバスクリック時に呼び出す。
-        r, c: クリックされたマス座標
-        grid: マップグリッド
-        chars: 全キャラクターのリスト
-        my_team: このコントローラーが担当するチーム（"A" or "D"）
+        r, c:
+            クリックされたマス座標
+        grid:
+            マップグリッド
+        chars:
+            全キャラクター
+        my_team:
+            操作対象チーム
         """
-        # 壁をクリックしたら選択解除
+        r, c = int(r), int(c)
+
+        if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]):
+            self.selected_char = None
+            return
+
         if grid[r, c] == 1:
             self.selected_char = None
             return
 
-        # 自チームの生存キャラがそのマスにいればそれを選択する（移動中でも選択可能）
         clicked_char = next(
-            (ch for ch in chars if ch.is_alive and ch.team == my_team and tuple(ch.pos) == (r, c)),
-            None
+            (
+                char
+                for char in chars
+                if getattr(char, "is_alive", True)
+                and getattr(char, "team", None) == my_team
+                and tuple(map(int, char.pos)) == (r, c)
+            ),
+            None,
         )
+
         if clicked_char is not None:
             self.selected_char = clicked_char.name
             return
 
-        # 選択中のキャラがいれば、そのマスを新しい目的地として設定する
         if self.selected_char is not None:
             self.targets[self.selected_char] = (r, c)
-            self.selected_char = None  # 指示を出したら選択解除
+            self.selected_char = None
 
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
-
-        # 💡追加: defender操作時、プラント後にスパイク隣接エリアにいれば自動的に解除を試みる
-        # (attackerの自動PLANTと同様、クリック操作だけでは解除の意思表示ができないため)
-        is_planted = game_state.get("is_planted")
+        chars = game_state.get("chars", [])
+        is_planted = bool(game_state.get("is_planted", False))
         planted_pos = game_state.get("planted_pos")
-        if char.team == "D" and is_planted and planted_pos:
-            dist = max(abs(char.pos[0] - planted_pos[0]), abs(char.pos[1] - planted_pos[1]))
-            if dist <= 1:
-                return char.pos, "DEFUSE"
-                
+
+        # 手動D操作時も、隣接していれば解除を継続する
+        if char.team == "D" and is_planted and planted_pos is not None:
+            distance = max(
+                abs(int(char.pos[0]) - int(planted_pos[0])),
+                abs(int(char.pos[1]) - int(planted_pos[1])),
+            )
+            if distance <= 1:
+                return list(char.pos), "DEFUSE"
+
         target = self.targets.get(char.name)
         if target is None:
-            return char.pos  # 目的地未設定ならその場に留まる
+            return list(char.pos)
 
-        if tuple(char.pos) == target:
-            del self.targets[char.name]
-            return char.pos  # 到着したら目的地をクリア
+        if tuple(map(int, char.pos)) == tuple(map(int, target)):
+            self.targets.pop(char.name, None)
+            return list(char.pos)
 
-        return self.move_towards_target(char.pos, target, grid)
+        next_pos = self.move_towards_target(
+            char.pos,
+            target,
+            grid,
+            chars=chars,
+            moving_char=char,
+        )
+
+        # 他キャラクターにより一時的に経路が塞がれても、
+        # 目的地は消さず次Tickに再試行する。
+        return next_pos

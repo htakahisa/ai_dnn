@@ -25,11 +25,32 @@ from controllers import DefaultAttackerController, DefaultDefenderController
 from map_data import NEW_MAZE_STR
 from roster_utils import build_two_balanced_rosters
 from run_game import VisualFPSBattle
-from train_bc import NUM_ACTIONS, PolicyNetwork, observation_to_vector
 
 # ============================================================================
-# 学習時と同じモデル構造・観測ベクトル化をtrain_bc.pyから共有する。
+# Standalone model / observation / action helpers
+# train_bc.py と dagger_train.py は import しない。
 # ============================================================================
+
+
+class PolicyNetwork(torch.nn.Module):
+    """学習時と同じ 512 -> 256 -> 128 -> 13 の分類モデル。"""
+
+    def __init__(self, obs_size: int = 2672, num_actions: int = 13) -> None:
+        super().__init__()
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(obs_size, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.2),
+            torch.nn.Linear(512, 256),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.2),
+            torch.nn.Linear(256, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, num_actions),
+        )
+
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        return self.net(obs)
 
 
 DIRECTION_BY_ACTION = {
@@ -37,184 +58,20 @@ DIRECTION_BY_ACTION = {
     1: (1, 0),
     2: (0, -1),
     3: (0, 1),
+    4: (-1, -1),
+    5: (-1, 1),
+    6: (1, -1),
+    7: (1, 1),
 }
 
 
-LOCAL_MAP_RADIUS = 3
-
-LOCAL_EMPTY = 0
-LOCAL_WALL = 1
-LOCAL_SITE = 2
-LOCAL_ALLY = 3
-LOCAL_ENEMY = 4
-LOCAL_SELF = 5
-LOCAL_OUT_OF_MAP = 6
-LOCAL_SPIKE = 7
-
-
-def occupied_positions(game: Any, viewer: Any | None = None) -> dict[tuple[int, int], Any]:
-    occupied: dict[tuple[int, int], Any] = {}
-
-    for char in getattr(game, "chars", []):
-        if not character_is_alive(char) or char is viewer:
-            continue
-
-        pos = getattr(char, "pos", None)
-        if pos is None or len(pos) != 2:
-            continue
-
-        occupied[(int(pos[0]), int(pos[1]))] = char
-
-    return occupied
-
-
-def is_valid_destination(game: Any, viewer: Any, row: int, col: int) -> bool:
-    row = int(row)
-    col = int(col)
-    grid = game.grid
-
-    if not (0 <= row < grid.shape[0] and 0 <= col < grid.shape[1]):
-        return False
-
-    if grid[row, col] == 1:
-        return False
-
-    if (row, col) in occupied_positions(game, viewer):
-        return False
-
-    return True
-
-
-def build_valid_move_mask(game: Any, viewer: Any) -> list[int]:
-    row = int(viewer.pos[0])
-    col = int(viewer.pos[1])
-
-    return [
-        int(is_valid_destination(game, viewer, row + dr, col + dc))
-        for dr, dc in DIRECTION_BY_ACTION.values()
-    ]
-
-
-
-
-def build_action_mask(game: Any, char: Any, game_state: dict) -> torch.Tensor:
-    """現在の状態で実行可能な9アクションをTrueで返す。"""
-    mask = torch.ones(NUM_ACTIONS, dtype=torch.bool)
-
-    # 0-3: 上下左右。壁・範囲外・占有マスを除外する。
-    move_mask = build_valid_move_mask(game, char)
-    for action_idx in range(4):
-        mask[action_idx] = bool(move_mask[action_idx])
-
-    # 4-6: 所持チャージがないアビリティを除外する。
-    mask[4] = getattr(char, "smoke_charges", 0) > 0
-    mask[5] = getattr(char, "flash_charges", 0) > 0
-    mask[6] = getattr(char, "recon_charges", 0) > 0
-
-    # 7: STOPは常に有効。
-    mask[7] = True
-
-    # 8: スパイク所持・設置地点上・未設置の場合のみPLANT可能。
-    target = game_state.get("target_plant_pos")
-    mask[8] = bool(
-        getattr(char, "has_spike", False)
-        and target is not None
-        and list(map(int, char.pos)) == list(map(int, target))
-        and not bool(game_state.get("is_planted", False))
-    )
-
-    return mask
-
-
-def masked_action_probabilities(
-    logits: torch.Tensor,
-    action_mask: torch.Tensor,
-) -> torch.Tensor:
-    """無効アクションの確率を0にして再正規化する。"""
-    if logits.ndim != 2 or logits.shape[0] != 1:
-        raise ValueError(f"expected logits shape [1, N], got {tuple(logits.shape)}")
-    if action_mask.numel() != logits.shape[1]:
-        raise ValueError(
-            f"action mask size mismatch: mask={action_mask.numel()}, "
-            f"logits={logits.shape[1]}"
-        )
-
-    mask = action_mask.to(device=logits.device).unsqueeze(0)
-    masked_logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
-    return torch.softmax(masked_logits, dim=1)
-
-def build_local_map(
-    game: Any,
-    viewer: Any,
-    radius: int = LOCAL_MAP_RADIUS,
-) -> list[list[int]]:
-    grid = game.grid
-    height, width = grid.shape
-
-    viewer_row = int(viewer.pos[0])
-    viewer_col = int(viewer.pos[1])
-    viewer_team = viewer.team
-
-    all_characters: dict[tuple[int, int], Any] = {}
-    for char in getattr(game, "chars", []):
-        if character_is_alive(char):
-            all_characters[(int(char.pos[0]), int(char.pos[1]))] = char
-
-    spike = getattr(game, "spike_pos", None)
-    spike_position = (
-        (int(spike[0]), int(spike[1]))
-        if spike is not None
-        else None
-    )
-
-    local_map: list[list[int]] = []
-
-    for dr in range(-radius, radius + 1):
-        row_values: list[int] = []
-
-        for dc in range(-radius, radius + 1):
-            row = viewer_row + dr
-            col = viewer_col + dc
-            position = (row, col)
-
-            if not (0 <= row < height and 0 <= col < width):
-                value = LOCAL_OUT_OF_MAP
-            elif position == (viewer_row, viewer_col):
-                value = LOCAL_SELF
-            elif position in all_characters:
-                other = all_characters[position]
-                value = (
-                    LOCAL_ALLY
-                    if getattr(other, "team", None) == viewer_team
-                    else LOCAL_ENEMY
-                )
-            elif spike_position is not None and position == spike_position:
-                value = LOCAL_SPIKE
-            elif grid[row, col] == 1:
-                value = LOCAL_WALL
-            elif grid[row, col] == 2:
-                value = LOCAL_SITE
-            else:
-                value = LOCAL_EMPTY
-
-            row_values.append(int(value))
-
-        local_map.append(row_values)
-
-    return local_map
-
-
 def get_game_observation(game: Any, viewer: Any) -> dict:
-    """学習・DAgger収集時と同一形式の観測を生成する。"""
+    """行動するキャラクター本人を先頭にした観測を生成する。"""
     if viewer is None:
         raise ValueError("viewer must not be None")
 
     viewer_team = viewer.team
     enemy_team = "D" if viewer_team == "A" else "A"
-
-    viewer_row = int(viewer.pos[0])
-    viewer_col = int(viewer.pos[1])
-
     obs_dict = {
         "grid": game.grid.flatten().tolist(),
         "allies": [],
@@ -224,28 +81,21 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
         "target_plant_pos": [0, 0],
         "visible_enemy_count": 0,
         "distance_to_site": 0.0,
-        "viewer_pos": [viewer_row, viewer_col],
-        "local_map": build_local_map(game, viewer),
-        "valid_move_mask": build_valid_move_mask(game, viewer),
     }
 
     allies = [viewer] + [
-        char
-        for char in game.chars
-        if char.team == viewer_team and char is not viewer
+        char for char in game.chars if char.team == viewer_team and char is not viewer
     ]
-
     for char in allies:
         obs_dict["allies"].append(
             {
                 "name": char.name,
                 "pos": [int(char.pos[0]), int(char.pos[1])],
                 "rel_pos": [
-                    int(char.pos[0]) - viewer_row,
-                    int(char.pos[1]) - viewer_col,
+                    int(char.pos[0] - viewer.pos[0]),
+                    int(char.pos[1] - viewer.pos[1]),
                 ],
                 "hp": int(char.hp),
-                "is_alive": 1 if character_is_alive(char) else 0,
                 "has_spike": 1 if getattr(char, "has_spike", False) else 0,
                 "recon_cd": 1 if getattr(char, "recon_charges", 0) > 0 else 0,
                 "flash_cd": 1 if getattr(char, "flash_charges", 0) > 0 else 0,
@@ -257,10 +107,9 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
         if char.team == enemy_team and character_is_alive(char):
             obs_dict["visible_enemies"].append(
                 {
-                    "name": char.name,
                     "rel_pos": [
-                        int(char.pos[0]) - viewer_row,
-                        int(char.pos[1]) - viewer_col,
+                        int(char.pos[0] - viewer.pos[0]),
+                        int(char.pos[1] - viewer.pos[1]),
                     ],
                     "hp": int(char.hp),
                 }
@@ -271,15 +120,14 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
     spike_pos = getattr(game, "spike_pos", None)
     if spike_pos is not None:
         obs_dict["spike_pos"] = [
-            int(spike_pos[0]) - viewer_row,
-            int(spike_pos[1]) - viewer_col,
+            int(spike_pos[0] - viewer.pos[0]),
+            int(spike_pos[1] - viewer.pos[1]),
         ]
 
     target_plant_pos = getattr(game, "target_plant_pos", None)
     if target_plant_pos is not None:
-        plant_dr = int(target_plant_pos[0]) - viewer_row
-        plant_dc = int(target_plant_pos[1]) - viewer_col
-
+        plant_dr = int(target_plant_pos[0] - viewer.pos[0])
+        plant_dc = int(target_plant_pos[1] - viewer.pos[1])
         obs_dict["target_plant_pos"] = [plant_dr, plant_dc]
         obs_dict["distance_to_site"] = float(abs(plant_dr) + abs(plant_dc))
 
@@ -287,8 +135,63 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
         float(getattr(game, "round_timer", 0.0)) / 100.0,
         1.0 if bool(getattr(game, "is_planted", False)) else 0.0,
     ]
-
     return obs_dict
+
+
+def observation_to_vector(obs: dict) -> np.ndarray:
+    """train_bc.py と同一順序で観測辞書をベクトル化する。"""
+    grid_vec = np.asarray(obs["grid"], dtype=np.float32)
+
+    ally_vec = np.zeros(30, dtype=np.float32)
+    for i, ally in enumerate(obs["allies"][:5]):
+        rel_pos = ally.get("rel_pos", ally.get("pos", [0, 0]))
+        ally_vec[i * 6 : (i + 1) * 6] = [
+            rel_pos[0] / 25.0,
+            rel_pos[1] / 35.0,
+            ally["hp"] / 100.0,
+            float(ally.get("has_spike", 0)),
+            float(ally.get("recon_cd", 0)),
+            float(ally.get("flash_cd", 0)),
+        ]
+
+    enemy_vec = np.zeros(15, dtype=np.float32)
+    for i, enemy in enumerate(obs["visible_enemies"][:5]):
+        enemy_vec[i * 3 : (i + 1) * 3] = [
+            enemy["rel_pos"][0] / 25.0,
+            enemy["rel_pos"][1] / 35.0,
+            enemy["hp"] / 100.0,
+        ]
+
+    game_state_vec = np.asarray(obs["game_state"], dtype=np.float32)
+    spike_pos = obs.get("spike_pos", [0, 0])
+    spike_vec = np.asarray([spike_pos[0] / 25.0, spike_pos[1] / 35.0], dtype=np.float32)
+    target = obs.get("target_plant_pos", [0, 0])
+    plant_target_vec = np.asarray(
+        [target[0] / 25.0, target[1] / 35.0], dtype=np.float32
+    )
+    enemy_count = float(
+        obs.get("visible_enemy_count", len(obs.get("visible_enemies", [])))
+    )
+    enemy_count_vec = np.asarray(
+        [min(max(enemy_count, 0.0), 5.0) / 5.0], dtype=np.float32
+    )
+    site_distance = float(obs.get("distance_to_site", 0.0))
+    site_distance_vec = np.asarray(
+        [min(max(site_distance, 0.0), 60.0) / 60.0], dtype=np.float32
+    )
+
+    return np.concatenate(
+        [
+            grid_vec,
+            ally_vec,
+            enemy_vec,
+            game_state_vec,
+            spike_vec,
+            plant_target_vec,
+            enemy_count_vec,
+            site_distance_vec,
+        ]
+    ).astype(np.float32)
 
 
 def choose_ability_target(
@@ -340,66 +243,30 @@ def _unwrap_state_dict(loaded: Any) -> dict:
 
 
 def load_policy(model_path: Path, device: str) -> tuple[PolicyNetwork, int]:
-    """新旧チェックポイントから学習時と同じPolicyNetworkを復元する。"""
+    """保存重みから入力次元を推定してモデルを復元する。"""
     loaded = torch.load(model_path, map_location=device)
+    state_dict = _unwrap_state_dict(loaded)
 
-    if not isinstance(loaded, dict):
-        raise TypeError("モデルファイルが辞書形式ではありません。")
-
-    if isinstance(loaded.get("model_state_dict"), dict):
-        state_dict = loaded["model_state_dict"]
-        obs_size = loaded.get("obs_size")
-        num_actions = int(loaded.get("num_actions", NUM_ACTIONS))
-    elif isinstance(loaded.get("state_dict"), dict):
-        state_dict = loaded["state_dict"]
-        obs_size = loaded.get("obs_size")
-        num_actions = int(loaded.get("num_actions", NUM_ACTIONS))
-    elif isinstance(loaded.get("policy_state_dict"), dict):
-        state_dict = loaded["policy_state_dict"]
-        obs_size = loaded.get("obs_size")
-        num_actions = int(loaded.get("num_actions", NUM_ACTIONS))
-    else:
-        # 旧形式: state_dictを直接保存
-        state_dict = loaded
-        obs_size = None
-        num_actions = NUM_ACTIONS
-
+    # DataParallel保存時の module. 接頭辞にも対応する。
     if any(str(key).startswith("module.") for key in state_dict):
         state_dict = {
-            str(key).removeprefix("module."): value
-            for key, value in state_dict.items()
+            str(key).removeprefix("module."): value for key, value in state_dict.items()
         }
 
     first_weight = state_dict.get("net.0.weight")
     if first_weight is None:
         raise KeyError(
             "モデル内に net.0.weight がありません。"
-            "現在のPolicyNetwork形式か確認してください。"
+            "PolicyNetwork の state_dict か確認してください。"
         )
+    output_weight = state_dict.get("net.8.weight")
+    num_actions = int(output_weight.shape[0]) if output_weight is not None else 13
+    if num_actions != 13:
+        raise ValueError(f"モデルの出力数が13ではありません: {num_actions}")
 
-    if obs_size is None:
-        obs_size = int(first_weight.shape[1])
-    else:
-        obs_size = int(obs_size)
-
-    if num_actions != NUM_ACTIONS:
-        raise ValueError(
-            f"モデルの出力数が{NUM_ACTIONS}ではありません: {num_actions}"
-        )
-
-    model = PolicyNetwork(
-        obs_size=obs_size,
-        num_actions=num_actions,
-    ).to(device)
-
-    try:
-        model.load_state_dict(state_dict)
-    except RuntimeError as exc:
-        raise RuntimeError(
-            "モデル構造が現在のtrain_bc.pyと一致しません。"
-            "古い観測・旧ネットワークで学習したモデルは再学習が必要です。"
-        ) from exc
-
+    obs_size = int(first_weight.shape[1])
+    model = PolicyNetwork(obs_size=obs_size, num_actions=num_actions).to(device)
+    model.load_state_dict(state_dict)
     model.eval()
     return model, obs_size
 
@@ -409,21 +276,25 @@ ACTION_NAMES = {
     1: "MOVE_DOWN",
     2: "MOVE_LEFT",
     3: "MOVE_RIGHT",
-    4: "SMOKE",
-    5: "FLASH",
-    6: "RECON",
-    7: "STOP",
-    8: "PLANT",
+    4: "MOVE_UP_LEFT",
+    5: "MOVE_UP_RIGHT",
+    6: "MOVE_DOWN_LEFT",
+    7: "MOVE_DOWN_RIGHT",
+    8: "SMOKE",
+    9: "FLASH",
+    10: "RECON",
+    11: "STOP",
+    12: "PLANT",
 }
 
-ABILITY_BY_ACTION = {4: "SMOKE", 5: "FLASH", 6: "RECON"}
+ABILITY_BY_ACTION = {8: "SMOKE", 9: "FLASH", 10: "RECON"}
 GROUP_ORDER = ["MOVE", "STOP", "PLANT", "SMOKE", "FLASH", "RECON", "UNKNOWN"]
 
 
 def group_action_index(action_idx: int) -> str:
     if action_idx in DIRECTION_BY_ACTION:
         return "MOVE"
-    return {4: "SMOKE", 5: "FLASH", 6: "RECON", 7: "STOP", 8: "PLANT"}.get(
+    return {8: "SMOKE", 9: "FLASH", 10: "RECON", 11: "STOP", 12: "PLANT"}.get(
         action_idx, "UNKNOWN"
     )
 
@@ -488,17 +359,8 @@ def decode_evaluation_action(
         target = choose_ability_target(ability_name, char, game_state, expert_result)
         return list(char.pos), {"ability": ability_name, "target": target}
 
-    if action_idx == 8:
-        target = game_state.get("target_plant_pos")
-        can_plant = (
-            bool(getattr(char, "has_spike", False))
-            and target is not None
-            and list(map(int, char.pos)) == list(map(int, target))
-            and not bool(game_state.get("is_planted", False))
-        )
-        if can_plant:
-            return list(char.pos), "PLANT"
-        return list(char.pos)
+    if action_idx == 12:
+        return list(char.pos), "PLANT"
 
     return list(char.pos)
 
@@ -515,7 +377,7 @@ class ControllerStatistics:
     invalid_moves: int = 0
     confidence_sum: float = 0.0
     probability_sums: np.ndarray = field(
-        default_factory=lambda: np.zeros(NUM_ACTIONS, dtype=np.float64)
+        default_factory=lambda: np.zeros(13, dtype=np.float64)
     )
     plant_predictions: int = 0
     plant_executions: int = 0
@@ -692,7 +554,7 @@ class EvaluationAttackerController:
                 if idx < len(probability_array)
                 else 0.0
             )
-            for idx in range(NUM_ACTIONS)
+            for idx in range(13)
         }
 
         self.invalid_debug_records.append(
@@ -740,7 +602,7 @@ class EvaluationAttackerController:
 
             print("\nNetwork probabilities")
             print("-" * 40)
-            for idx in range(NUM_ACTIONS):
+            for idx in range(13):
                 name = ACTION_NAMES[idx]
                 print(f"{name:<18}: {record['probabilities'][name]:.4f}")
 
@@ -789,8 +651,7 @@ class EvaluationAttackerController:
         with torch.no_grad():
             obs_tensor = torch.from_numpy(obs_vec).unsqueeze(0).to(self.device)
             logits = self.model(obs_tensor)
-            action_mask = build_action_mask(self.game, char, game_state)
-            probabilities = masked_action_probabilities(logits, action_mask)
+            probabilities = torch.softmax(logits, dim=1)
             action_idx = int(probabilities.argmax(dim=1).item())
             confidence = float(probabilities[0, action_idx].item())
             probability_array = probabilities[0].detach().cpu().numpy()
@@ -800,7 +661,7 @@ class EvaluationAttackerController:
         self.stats.predicted[action_group] += 1
         self.stats.detailed[ACTION_NAMES.get(action_idx, f"UNKNOWN_{action_idx}")] += 1
         self.stats.confidence_sum += confidence
-        if len(probability_array) == NUM_ACTIONS:
+        if len(probability_array) == 13:
             self.stats.probability_sums += probability_array
 
         if action_idx in DIRECTION_BY_ACTION:
@@ -824,7 +685,7 @@ class EvaluationAttackerController:
                     reason=invalid_reason,
                     target=target_cell,
                 )
-        if action_idx == 8:
+        if action_idx == 12:
             self.stats.plant_predictions += 1
 
         # 現モデルは標的座標を出力しないため、アビリティ標的だけ既存AIで補う。
@@ -1022,7 +883,7 @@ class ModelEvaluator:
         total: int,
     ) -> None:
         print(f"\n{title}\n" + "-" * 60)
-        for action_idx in range(NUM_ACTIONS):
+        for action_idx in range(13):
             name = ACTION_NAMES[action_idx]
             count = int(counter.get(name, 0))
             percentage = count / total * 100.0 if total else 0.0
@@ -1030,7 +891,7 @@ class ModelEvaluator:
 
     def _print_invalid_by_direction(self, stats: ControllerStatistics) -> None:
         print("\nInvalid MOVE by Direction\n" + "-" * 60)
-        for action_idx in range(4):
+        for action_idx in range(8):
             name = ACTION_NAMES[action_idx]
             predicted = int(stats.detailed.get(name, 0))
             invalid = int(stats.invalid_detailed.get(name, 0))
@@ -1107,7 +968,7 @@ class ModelEvaluator:
         if total:
             average_probabilities = stats.probability_sums / total
             print("\nAverage Probability by Action\n" + "-" * 60)
-            for action_idx in range(NUM_ACTIONS):
+            for action_idx in range(13):
                 print(
                     f"{ACTION_NAMES[action_idx]:<18}: {average_probabilities[action_idx]:.4f}"
                 )
