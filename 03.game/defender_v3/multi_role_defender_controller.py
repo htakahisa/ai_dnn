@@ -16,30 +16,26 @@ for _p in (_THIS_DIR, _ROOT_DIR):
 
 from controllers import BaseController, DefaultAttackerController
 from learning_attacker_carry import LearningAttackerCarryController
-from learning_attacker_escort import LearningAttackerEscortController
+
 # 💡各フェーズのモデルができたらこれらの行を差し替える
 # from learning_attacker_retrieve import LearningAttackerRetrieveController
 # from learning_attacker_guard import LearningAttackerGuardController
 
 
-class MultiRoleAttackerController(BaseController):
+class MultiRoleDefenderController(BaseController):
     """attacker側の窓口となる単一コントローラー。
     内部でキャリアーモデル・護衛モデルを保持し、キャラごとに使い分ける。
     run_game.py からは通常のコントローラー1つとして扱われる(isinstance判定にはこのクラスを追加する)。"""
 
     def __init__(
         self,
-        carry_model_path="attacker_v3/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
-        escort_model_path="attacker_v3/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
-        # retrieve_model_path="attacker_v3/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
-        # guard_model_path="attacker_v3/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
+        search_model_path="defender_v3/data/defender_search_data/dqn_defender_search_best_by_eval.pt",
+        retake_model_path="defender_v3/data/defender_retake_data/dqn_defender_retake_best_by_eval.pt",
         greedy=False,
     ):
         super().__init__()
-        self.carry_controller = LearningAttackerCarryController(model_path=carry_model_path, greedy=greedy)
-        self.escort_controller = LearningAttackerEscortController(model_path=escort_model_path, greedy=greedy)
-        self.retrieve_controller = DefaultAttackerController()
-        self.guard_controller = DefaultAttackerController()
+        self.search_controller = LearningDefenderSearchController(model_path=search_model_path, greedy=greedy)
+        self.retake_controller = LearningDefenderRetakeController(model_path=retake_model_path, greedy=greedy)
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。
@@ -51,19 +47,15 @@ class MultiRoleAttackerController(BaseController):
         return DefaultAttackerController()
 
     def reset_round(self):
-        for ctrl in (self.carry_controller, self.escort_controller, self.retrieve_controller, self.guard_controller):
+        for ctrl in (self.search_controller, self.retake_controller):
             if hasattr(ctrl, "reset_round"):
                 ctrl.reset_round()
         self.site_ability_used_by_team = False  # 💡追加
 
     def decide_move(self, char, game_state):
         if game_state.get("is_planted"):
-            return self.guard_controller.decide_move(char, game_state)
+            return self.retake_controller.decide_move(char, game_state)
 
-        if char.has_spike:
-            result = self.carry_controller.decide_move(char, game_state)
-            self._maybe_mark_site_ability_used(char, result, self.carry_controller)
-            return result
 
         chars = game_state.get("chars", [])
         holder = next((c for c in chars if c.is_alive and c.team == "A" and c.has_spike), None)
