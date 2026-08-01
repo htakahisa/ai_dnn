@@ -115,11 +115,10 @@ def build_action_mask(game: Any, char: Any, game_state: dict) -> torch.Tensor:
     mask[7] = True
 
     # 8: スパイク所持・設置地点上・未設置の場合のみPLANT可能。
-    target = game_state.get("target_plant_pos")
+    row, col = int(char.pos[0]), int(char.pos[1])
     mask[8] = bool(
         getattr(char, "has_spike", False)
-        and target is not None
-        and list(map(int, char.pos)) == list(map(int, target))
+        and game_state["grid"][row, col] == 2
         and not bool(game_state.get("is_planted", False))
     )
 
@@ -142,6 +141,58 @@ def masked_action_probabilities(
     mask = action_mask.to(device=logits.device).unsqueeze(0)
     masked_logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
     return torch.softmax(masked_logits, dim=1)
+
+def objective_override_action(
+    game: Any,
+    char: Any,
+    game_state: dict,
+    helper: DefaultAttackerController,
+) -> int | None:
+    """設置と落下スパイク回収の最後の操作だけを確定させる。"""
+    grid = game_state["grid"]
+    row, col = int(char.pos[0]), int(char.pos[1])
+
+    if (
+        getattr(char, "has_spike", False)
+        and grid[row, col] == 2
+        and not bool(game_state.get("is_planted", False))
+    ):
+        return 8
+
+    spike_pos = game_state.get("spike_pos")
+    holder = next((
+        other for other in game_state.get("chars", [])
+        if character_is_alive(other)
+        and getattr(other, "team", None) == char.team
+        and getattr(other, "has_spike", False)
+    ), None)
+    if holder is not None or spike_pos is None:
+        return None
+
+    alive_attackers = [
+        other for other in game_state.get("chars", [])
+        if character_is_alive(other) and getattr(other, "team", None) == char.team
+    ]
+    if not alive_attackers:
+        return None
+    retriever = min(
+        alive_attackers,
+        key=lambda other: (
+            helper.shortest_path_distance(other.pos, spike_pos, grid),
+            str(getattr(other, "name", "")),
+        ),
+    )
+    if retriever is not char:
+        return None
+
+    next_pos = helper.move_towards_target(
+        char.pos, spike_pos, grid,
+        chars=game_state.get("chars", []), moving_char=char,
+    )
+    dr = int(next_pos[0]) - row
+    dc = int(next_pos[1]) - col
+    return {(-1, 0): 0, (1, 0): 1, (0, -1): 2, (0, 1): 3}.get((dr, dc))
+
 
 def build_local_map(
     game: Any,
@@ -227,6 +278,24 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
         "viewer_pos": [viewer_row, viewer_col],
         "local_map": build_local_map(game, viewer),
         "valid_move_mask": build_valid_move_mask(game, viewer),
+
+        # スパイク状態を明示する3特徴
+        "spike_on_ground": (
+            1 if getattr(game, "spike_pos", None) is not None else 0
+        ),
+        "ally_has_spike": (
+            1
+            if any(
+                getattr(other, "team", None) == viewer_team
+                and character_is_alive(other)
+                and getattr(other, "has_spike", False)
+                for other in game.chars
+            )
+            else 0
+        ),
+        "viewer_has_spike": (
+            1 if getattr(viewer, "has_spike", False) else 0
+        ),
     }
 
     allies = [viewer] + [
@@ -489,16 +558,13 @@ def decode_evaluation_action(
         return list(char.pos), {"ability": ability_name, "target": target}
 
     if action_idx == 8:
-        target = game_state.get("target_plant_pos")
+        row, col = int(char.pos[0]), int(char.pos[1])
         can_plant = (
             bool(getattr(char, "has_spike", False))
-            and target is not None
-            and list(map(int, char.pos)) == list(map(int, target))
+            and game_state["grid"][row, col] == 2
             and not bool(game_state.get("is_planted", False))
         )
-        if can_plant:
-            return list(char.pos), "PLANT"
-        return list(char.pos)
+        return (list(char.pos), "PLANT") if can_plant else list(char.pos)
 
     return list(char.pos)
 
@@ -792,6 +858,11 @@ class EvaluationAttackerController:
             action_mask = build_action_mask(self.game, char, game_state)
             probabilities = masked_action_probabilities(logits, action_mask)
             action_idx = int(probabilities.argmax(dim=1).item())
+            forced_action = objective_override_action(
+                self.game, char, game_state, self.target_helper
+            )
+            if forced_action is not None:
+                action_idx = forced_action
             confidence = float(probabilities[0, action_idx].item())
             probability_array = probabilities[0].detach().cpu().numpy()
 

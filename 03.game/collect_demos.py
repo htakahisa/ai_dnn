@@ -6,7 +6,9 @@
 - viewer自身の絶対座標 viewer_pos を追加
 - viewer中心の7×7ローカルマップ local_map を追加
 - 4方向の移動可否 valid_move_mask を追加
+- spike_on_ground / ally_has_spike / viewer_has_spike を追加
 - 教師が返した行動が収集時点で有効か teacher_action_valid を記録
+- サイト内の任意マス設置・固定回収担当の教師行動に対応
 - 既存の観測項目は互換性のため維持
 
 使い方:
@@ -283,6 +285,24 @@ def get_game_observation(game, viewer):
         "viewer_pos": [viewer_row, viewer_col],
         "local_map": build_local_map(game, viewer),
         "valid_move_mask": build_valid_move_mask(game, viewer),
+
+        # スパイク状態を明示する3特徴
+        "spike_on_ground": (
+            1 if getattr(game, "spike_pos", None) is not None else 0
+        ),
+        "ally_has_spike": (
+            1
+            if any(
+                getattr(other, "team", None) == viewer_team
+                and character_is_alive(other)
+                and getattr(other, "has_spike", False)
+                for other in game.chars
+            )
+            else 0
+        ),
+        "viewer_has_spike": (
+            1 if getattr(viewer, "has_spike", False) else 0
+        ),
     }
 
     # viewer自身を必ず先頭にする
