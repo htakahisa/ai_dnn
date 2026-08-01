@@ -2,7 +2,7 @@
 学習済みBC / DAggerモデルをアタッカー側に使い、試合を画面表示する。
 
 ディフェンダー側は既存のルールベースAI。
-観測形式・9アクション・アクションマスクは evaluate_bc_dagger.py と共通。
+観測形式・9アクション・アクションマスク・設置/回収補助は evaluate_bc_dagger.py と共通。
 
 使い方:
     python watch_policy_battle.py

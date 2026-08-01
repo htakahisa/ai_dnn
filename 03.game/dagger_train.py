@@ -65,6 +65,13 @@ TRAIN_EPOCHS = 80
 TRAIN_BATCH_SIZE = 64
 TRAIN_VAL_SPLIT = 0.10
 
+# DAggerは直前モデルから継続学習する。
+DAGGER_LEARNING_RATE = 1e-4
+
+# Trueなら実行開始時に古い集約データを破棄し、
+# 現在のrule_based_demos.jsonから作り直す。
+RESET_AGGREGATED_DATASET = True
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 SEED = 42
@@ -173,12 +180,10 @@ def build_action_mask(game, char, game_state):
     mask[5] = getattr(char, "flash_charges", 0) > 0
     mask[6] = getattr(char, "recon_charges", 0) > 0
     mask[7] = True
-
-    target = game_state.get("target_plant_pos")
+    row, col = int(char.pos[0]), int(char.pos[1])
     mask[8] = bool(
         getattr(char, "has_spike", False)
-        and target is not None
-        and list(map(int, char.pos)) == list(map(int, target))
+        and game_state["grid"][row, col] == 2
         and not bool(game_state.get("is_planted", False))
     )
 
@@ -198,6 +203,49 @@ def masked_action_probabilities(logits, action_mask):
     mask = action_mask.to(device=logits.device).unsqueeze(0)
     masked_logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
     return torch.softmax(masked_logits, dim=1)
+
+def objective_override_action(game, char, game_state, helper):
+    """設置と落下スパイク回収の最後の操作だけを確定させる。"""
+    grid = game_state["grid"]
+    row, col = int(char.pos[0]), int(char.pos[1])
+    if (
+        getattr(char, "has_spike", False)
+        and grid[row, col] == 2
+        and not bool(game_state.get("is_planted", False))
+    ):
+        return 8
+
+    spike_pos = game_state.get("spike_pos")
+    holder = next((
+        other for other in game_state.get("chars", [])
+        if character_is_alive(other)
+        and getattr(other, "team", None) == char.team
+        and getattr(other, "has_spike", False)
+    ), None)
+    if holder is not None or spike_pos is None:
+        return None
+    alive_attackers = [
+        other for other in game_state.get("chars", [])
+        if character_is_alive(other) and getattr(other, "team", None) == char.team
+    ]
+    if not alive_attackers:
+        return None
+    retriever = min(
+        alive_attackers,
+        key=lambda other: (
+            helper.shortest_path_distance(other.pos, spike_pos, grid),
+            str(getattr(other, "name", "")),
+        ),
+    )
+    if retriever is not char:
+        return None
+    next_pos = helper.move_towards_target(
+        char.pos, spike_pos, grid,
+        chars=game_state.get("chars", []), moving_char=char,
+    )
+    dr, dc = int(next_pos[0]) - row, int(next_pos[1]) - col
+    return {(-1, 0): 0, (1, 0): 1, (0, -1): 2, (0, 1): 3}.get((dr, dc))
+
 
 def build_local_map(game, viewer, radius=LOCAL_MAP_RADIUS):
     grid = game.grid
@@ -280,6 +328,24 @@ def get_game_observation(game, viewer):
         "viewer_pos": [viewer_row, viewer_col],
         "local_map": build_local_map(game, viewer),
         "valid_move_mask": build_valid_move_mask(game, viewer),
+
+        # スパイク状態を明示する3特徴
+        "spike_on_ground": (
+            1 if getattr(game, "spike_pos", None) is not None else 0
+        ),
+        "ally_has_spike": (
+            1
+            if any(
+                getattr(other, "team", None) == viewer_team
+                and character_is_alive(other)
+                and getattr(other, "has_spike", False)
+                for other in game.chars
+            )
+            else 0
+        ),
+        "viewer_has_spike": (
+            1 if getattr(viewer, "has_spike", False) else 0
+        ),
     }
 
     allies = [viewer] + [
@@ -516,15 +582,13 @@ def decode_model_action(action_idx, char, game_state, expert_result):
         }
 
     if action_idx == 8:
-        # 不正な場所でのPLANT予測は停止へ変換
-        target = game_state.get("target_plant_pos")
+        row, col = int(char.pos[0]), int(char.pos[1])
         if (
             getattr(char, "has_spike", False)
-            and target is not None
-            and list(map(int, char.pos)) == list(map(int, target))
+            and game_state["grid"][row, col] == 2
+            and not bool(game_state.get("is_planted", False))
         ):
             return list(char.pos), "PLANT"
-
         return list(char.pos)
 
     return list(char.pos)
@@ -645,13 +709,13 @@ class DAggerAttackerController:
     def _group_action_index(self, action_idx):
         if action_idx in DIRECTION_BY_ACTION:
             return "MOVE"
-        if action_idx == 8:
+        if action_idx == 4:
             return "SMOKE"
-        if action_idx == 9:
+        if action_idx == 5:
             return "FLASH"
-        if action_idx == 10:
+        if action_idx == 6:
             return "RECON"
-        if action_idx == 11:
+        if action_idx == 7:
             return "STOP"
         if action_idx == 8:
             return "PLANT"
@@ -774,6 +838,11 @@ class DAggerAttackerController:
             model_action_idx = int(
                 probabilities.argmax(dim=1).item()
             )
+            forced_action = objective_override_action(
+                self.game, char, game_state, self.expert
+            )
+            if forced_action is not None:
+                model_action_idx = forced_action
 
             probability_array = (
                 probabilities[0]
@@ -1130,17 +1199,33 @@ def prepare_aggregated_dataset():
             f"元デモがありません: {BASE_DEMO_FILE}"
         )
 
-    if AGGREGATED_DEMO_FILE.exists():
+    AGGREGATED_DEMO_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if (
+        AGGREGATED_DEMO_FILE.exists()
+        and not RESET_AGGREGATED_DATASET
+    ):
         print(
             f"既存の集約データを継続使用します: "
             f"{AGGREGATED_DEMO_FILE}"
         )
         return
 
-    AGGREGATED_DEMO_FILE.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    if AGGREGATED_DEMO_FILE.exists():
+        backup_path = AGGREGATED_DEMO_FILE.with_suffix(
+            AGGREGATED_DEMO_FILE.suffix + ".bak"
+        )
+        shutil.copy2(
+            AGGREGATED_DEMO_FILE,
+            backup_path,
+        )
+        print(
+            f"古い集約データを退避しました: "
+            f"{backup_path}"
+        )
 
     shutil.copy2(
         BASE_DEMO_FILE,
@@ -1148,12 +1233,12 @@ def prepare_aggregated_dataset():
     )
 
     print(
-        f"元デモを集約データとしてコピーしました: "
+        f"集約データを現在の元デモから初期化しました: "
         f"{AGGREGATED_DEMO_FILE}"
     )
 
 
-def retrain_on_aggregated_data(iteration):
+def retrain_on_aggregated_data(iteration, initial_model_path):
     trainer = BCTrainer(
         device=DEVICE,
         seed=SEED + iteration,
@@ -1170,13 +1255,19 @@ def retrain_on_aggregated_data(iteration):
         f"policy_dagger_iter_{iteration}_best.pt"
     )
 
+    print(
+        f"継続学習元: {initial_model_path}"
+    )
+
     trainer.train(
         observations,
         actions,
         epochs=TRAIN_EPOCHS,
         batch_size=TRAIN_BATCH_SIZE,
         val_split=TRAIN_VAL_SPLIT,
+        learning_rate=DAGGER_LEARNING_RATE,
         best_model_path=best_path,
+        initial_model_path=initial_model_path,
     )
 
     iteration_model = Path(
@@ -1251,7 +1342,8 @@ def main():
         )
 
         current_model = retrain_on_aggregated_data(
-            iteration
+            iteration,
+            initial_model_path=current_model,
         )
 
     shutil.copy2(

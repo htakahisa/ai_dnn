@@ -5,6 +5,7 @@ Behavioral Cloning（模倣学習）完全版
 - viewer_pos
 - local_map（7x7）
 - valid_move_mask（4方向）
+- spike_on_ground / ally_has_spike / viewer_has_spike
 - teacher_action_valid
 - 従来のgrid / allies / visible_enemies / game_state 等
 
@@ -139,6 +140,9 @@ def observation_to_vector(obs):
     9. target_plant_pos
     10. visible_enemy_count
     11. distance_to_site
+    12. spike_on_ground
+    13. ally_has_spike
+    14. viewer_has_spike
     """
 
     if not isinstance(obs, dict):
@@ -319,6 +323,18 @@ def observation_to_vector(obs):
         dtype=np.float32,
     )
 
+    # ------------------------------------------------------------------------
+    # 12-14. スパイク状態
+    # ------------------------------------------------------------------------
+    spike_state_vec = np.array(
+        [
+            float(bool(obs.get("spike_on_ground", 0))),
+            float(bool(obs.get("ally_has_spike", 0))),
+            float(bool(obs.get("viewer_has_spike", 0))),
+        ],
+        dtype=np.float32,
+    )
+
     full_obs = np.concatenate(
         [
             grid_vec,
@@ -332,6 +348,7 @@ def observation_to_vector(obs):
             plant_target_vec,
             visible_enemy_count_vec,
             distance_to_site_vec,
+            spike_state_vec,
         ]
     ).astype(np.float32, copy=False)
 
@@ -728,6 +745,7 @@ class BCTrainer:
         weight_decay=1e-5,
         patience=15,
         best_model_path="policy_bc_best.pt",
+        initial_model_path=None,
     ):
         if len(obs_array) != len(action_array):
             raise ValueError("obs_arrayとaction_arrayの件数が一致しません")
@@ -745,6 +763,14 @@ class BCTrainer:
         print(f"Learning rate   : {learning_rate}")
         print(f"Validation split: {val_split}")
         print(f"Observation size: {obs_array.shape[1]}")
+        print(
+            "Initialization  : "
+            + (
+                f"continue from {initial_model_path}"
+                if initial_model_path is not None
+                else "random initialization"
+            )
+        )
         print("=" * 64)
 
         self.train_losses = []
@@ -798,6 +824,87 @@ class BCTrainer:
             obs_size=self.obs_size,
             num_actions=NUM_ACTIONS,
         ).to(self.device)
+
+        if initial_model_path is not None:
+            initial_model_path = Path(initial_model_path)
+
+            if not initial_model_path.exists():
+                raise FileNotFoundError(
+                    f"継続学習元モデルが見つかりません: {initial_model_path}"
+                )
+
+            loaded = torch.load(
+                initial_model_path,
+                map_location=self.device,
+            )
+
+            if not isinstance(loaded, dict):
+                raise TypeError(
+                    "継続学習元モデルが辞書形式ではありません"
+                )
+
+            if isinstance(loaded.get("model_state_dict"), dict):
+                state_dict = loaded["model_state_dict"]
+                checkpoint_obs_size = loaded.get("obs_size")
+                checkpoint_num_actions = int(
+                    loaded.get("num_actions", NUM_ACTIONS)
+                )
+            elif isinstance(loaded.get("state_dict"), dict):
+                state_dict = loaded["state_dict"]
+                checkpoint_obs_size = loaded.get("obs_size")
+                checkpoint_num_actions = int(
+                    loaded.get("num_actions", NUM_ACTIONS)
+                )
+            elif isinstance(loaded.get("policy_state_dict"), dict):
+                state_dict = loaded["policy_state_dict"]
+                checkpoint_obs_size = loaded.get("obs_size")
+                checkpoint_num_actions = int(
+                    loaded.get("num_actions", NUM_ACTIONS)
+                )
+            else:
+                # 旧形式: state_dictを直接保存
+                state_dict = loaded
+                checkpoint_obs_size = None
+                checkpoint_num_actions = NUM_ACTIONS
+
+            if any(
+                str(key).startswith("module.")
+                for key in state_dict
+            ):
+                state_dict = {
+                    str(key).removeprefix("module."): value
+                    for key, value in state_dict.items()
+                }
+
+            first_weight = state_dict.get("net.0.weight")
+            if first_weight is None:
+                raise KeyError(
+                    "継続学習元モデルに net.0.weight がありません"
+                )
+
+            inferred_obs_size = int(first_weight.shape[1])
+            if checkpoint_obs_size is None:
+                checkpoint_obs_size = inferred_obs_size
+            else:
+                checkpoint_obs_size = int(checkpoint_obs_size)
+
+            if checkpoint_obs_size != self.obs_size:
+                raise ValueError(
+                    "継続学習元モデルと現在データの観測次元が一致しません: "
+                    f"model={checkpoint_obs_size}, data={self.obs_size}"
+                )
+
+            if checkpoint_num_actions != NUM_ACTIONS:
+                raise ValueError(
+                    "継続学習元モデルと現在コードのアクション数が一致しません: "
+                    f"model={checkpoint_num_actions}, code={NUM_ACTIONS}"
+                )
+
+            self.model.load_state_dict(state_dict)
+            print(
+                f"継続学習元モデルを読み込みました: "
+                f"{initial_model_path}"
+            )
 
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
@@ -902,6 +1009,7 @@ class BCTrainer:
                     best_model_path,
                     epoch=epoch,
                     val_loss=val_loss,
+                    initial_model_path=initial_model_path,
                 )
             else:
                 patience_counter += 1
@@ -978,7 +1086,13 @@ class BCTrainer:
     # 保存
     # ------------------------------------------------------------------------
 
-    def _save_checkpoint(self, filepath, epoch, val_loss):
+    def _save_checkpoint(
+        self,
+        filepath,
+        epoch,
+        val_loss,
+        initial_model_path=None,
+    ):
         filepath = Path(filepath)
 
         checkpoint = {
@@ -990,6 +1104,11 @@ class BCTrainer:
             "val_loss": float(val_loss),
             "observation_version": 2,
             "local_map_size": LOCAL_MAP_SIZE,
+            "continued_from": (
+                str(initial_model_path)
+                if initial_model_path is not None
+                else None
+            ),
         }
 
         torch.save(checkpoint, filepath)

@@ -201,9 +201,64 @@ class BaseController:
 
         return [int(step[0]), int(step[1])]
 
+    def shortest_path_distance(self, pos, target, grid):
+        """壁を考慮した上下左右の最短距離。到達不能なら無限大。"""
+        start = (int(pos[0]), int(pos[1]))
+        goal = (int(target[0]), int(target[1]))
+        if start == goal:
+            return 0
+
+        queue = deque([(start, 0)])
+        visited = {start}
+        while queue:
+            (r, c), distance = queue.popleft()
+            for dr, dc in self.CARDINAL_MOVES:
+                nxt = (r + dr, c + dc)
+                if nxt in visited or not self._in_bounds(nxt, grid):
+                    continue
+                if grid[nxt[0], nxt[1]] == 1:
+                    continue
+                if nxt == goal:
+                    return distance + 1
+                visited.add(nxt)
+                queue.append((nxt, distance + 1))
+        return float("inf")
+
 
 class DefaultAttackerController(BaseController):
     """アタッカー側の標準ロジック。"""
+
+    def __init__(self):
+        self.spike_retriever_name = None
+
+    def reset_round(self):
+        self.spike_retriever_name = None
+
+    def _choose_spike_retriever(self, chars, spike_pos, grid):
+        alive_attackers = [
+            other for other in chars
+            if getattr(other, "is_alive", True)
+            and getattr(other, "team", None) == "A"
+        ]
+        current = next(
+            (other for other in alive_attackers
+             if getattr(other, "name", None) == self.spike_retriever_name),
+            None,
+        )
+        if current is not None:
+            return current
+        if not alive_attackers:
+            self.spike_retriever_name = None
+            return None
+        retriever = min(
+            alive_attackers,
+            key=lambda other: (
+                self.shortest_path_distance(other.pos, spike_pos, grid),
+                str(getattr(other, "name", "")),
+            ),
+        )
+        self.spike_retriever_name = getattr(retriever, "name", None)
+        return retriever
 
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
@@ -243,12 +298,13 @@ class DefaultAttackerController(BaseController):
                 allow_adjacent_goal=True,
             )
 
-        # 2. スパイク所持者は設置地点へ向かう
+        # 2. スパイク所持者は、サイト属性のマスなら場所を問わず即設置する。
         if getattr(char, "has_spike", False):
-            if target_plant_pos is not None:
-                if list(map(int, char.pos)) == list(map(int, target_plant_pos)):
-                    return list(char.pos), "PLANT"
+            self.spike_retriever_name = None
+            if grid[r, c] == 2:
+                return list(char.pos), "PLANT"
 
+            if target_plant_pos is not None:
                 return self.move_towards_target(
                     char.pos,
                     target_plant_pos,
@@ -259,11 +315,10 @@ class DefaultAttackerController(BaseController):
 
             plant_cells = list(zip(*np.where(grid == 2)))
             if plant_cells:
-                target = plant_cells[0]
-
-                if list(map(int, char.pos)) == list(map(int, target)):
-                    return list(char.pos), "PLANT"
-
+                target = min(
+                    plant_cells,
+                    key=lambda cell: self.shortest_path_distance(char.pos, cell, grid),
+                )
                 return self.move_towards_target(
                     char.pos,
                     target,
@@ -273,10 +328,7 @@ class DefaultAttackerController(BaseController):
                 )
 
             return self.get_next_pos_random(
-                char.pos,
-                grid,
-                chars=chars,
-                moving_char=char,
+                char.pos, grid, chars=chars, moving_char=char
             )
 
         holder = next(
@@ -290,18 +342,21 @@ class DefaultAttackerController(BaseController):
             None,
         )
 
-        # 3. 落ちているスパイクを回収
+        # 3. 落下スパイクは最短の1人だけが直接回収し、他は回収役を護衛する。
         if holder is None and spike_pos is not None:
-            if list(map(int, char.pos)) == list(map(int, spike_pos)):
-                return list(char.pos)
+            retriever = self._choose_spike_retriever(chars, spike_pos, grid)
+            if retriever is char:
+                if list(map(int, char.pos)) == list(map(int, spike_pos)):
+                    return list(char.pos)
+                return self.move_towards_target(
+                    char.pos, spike_pos, grid, chars=chars, moving_char=char
+                )
 
-            return self.move_towards_target(
-                char.pos,
-                spike_pos,
-                grid,
-                chars=chars,
-                moving_char=char,
-            )
+            if retriever is not None:
+                return self.move_towards_target(
+                    char.pos, retriever.pos, grid,
+                    chars=chars, moving_char=char, allow_adjacent_goal=True,
+                )
 
         # 4. スパイク所持者を護衛
         if holder is not None and holder is not char:
