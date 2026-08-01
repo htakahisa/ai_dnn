@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
+
 from game_core import (
     MAX_HP,
     BODY_DAMAGE,
@@ -37,7 +38,7 @@ EPISODE_COUNT = 9000
 # ---------------------------------------------------------------------------
 # 設定
 # ---------------------------------------------------------------------------
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cpu")
 
 MAX_TICKS = 70
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -368,7 +369,7 @@ def train(
     eps_start=1.0,
     eps_end=0.05,
     eps_decay_episodes=8000,
-    save_path="data/attacker_retrieve_data/attacker_retrieve_best_by_eval.pt",
+    save_path="data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
 ):
     env = RetrieveEnv()
     policy_net = DuelingQNet(RetrieveEnv.OBS_DIM, N_ACTIONS).to(DEVICE)
