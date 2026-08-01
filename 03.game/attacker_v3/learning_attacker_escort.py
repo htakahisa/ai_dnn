@@ -1,0 +1,501 @@
+"""learning_attacker_escort.py
+
+train_attacker_escort.py で学習した Escort（護衛）役 4体用の
+Dueling DQN モデルを使い、各escortキャラクターの移動・アビリティ判断を行う
+推論用コントローラー。
+
+【重要】4体は重み共有】
+train_attacker_escort.py 側は4体のescortが同一ネットワークの重みを
+共有して学習している（パラメータ共有方式）。そのため、run_game.py側でも
+carry以外の4キャラクターすべてに「同じ LearningAttackerEscortController
+インスタンス」を割り当てる想定である（インスタンスは1つ、
+decide_move はキャラクターごとに呼ばれる）。
+
+【観測ベクトルは train_attacker_escort.py の EscortEnv._get_obs() と
+完全に一致させる必要がある（36次元）。ここがズレると学習結果が
+正しく反映されない。
+
+【本番環境との差異・既知の制約】
+1. キャリアーの「進むべき方向」予測
+   学習環境では、キャラクター同士の衝突を考慮しない固定BFS経路
+   （壁のみを障害物とした経路）をキャリアーの行動基準にしていた。
+   推論側もこれに合わせ、味方・敵の位置を無視した「壁のみのBFS勾配」で
+   キャリアーの理想進行方向を毎tick再計算する。これにより
+   「自分がその理想進行方向のマスに立っているかどうか」を
+   ブロック中フラグとして使える。
+
+2. スモークによる射線遮蔽は考慮できない
+   battle_logic.py の move_character が渡す game_state には、
+   現在有効なスモークの情報が含まれていないため、視界判定は
+   壁のみを考慮したBresenham判定になる（学習環境よりやや楽観的）。
+
+3. アビリティの発動判定
+   char.ability_name / char.flash_charges / char.smoke_charges /
+   char.recon_charges など、実際の Character オブジェクトが持つ値を
+   そのまま使う（学習側のような内部トラッキングは不要で、
+   むしろ実データの方が正確）。射程内に有効な標的がいない場合は、
+   実際のアビリティチャージを無駄撃ちしないよう STAY にフォールバックする。
+
+run_game.py からは他の learning_attacker_*.py 系コントローラーと同様の
+インターフェース（decide_move(char, game_state) -> next_pos または
+(next_pos, {"ability": ..., "target": (r, c)})）で呼び出される想定。
+"""
+
+import os
+from collections import deque
+
+import numpy as np
+import torch
+import torch.nn as nn
+
+from controllers import BaseController
+
+
+# ---------------------------------------------------------------------------
+# 行動定義（train_attacker_escort.py の EscortEnv と同一でなければならない）
+# ---------------------------------------------------------------------------
+ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
+N_ACTIONS = 6
+_MOVE_DELTA = {
+    ACTION_UP: (-1, 0),
+    ACTION_DOWN: (1, 0),
+    ACTION_LEFT: (0, -1),
+    ACTION_RIGHT: (0, 1),
+    ACTION_STAY: (0, 0),
+}
+
+BLIND_DURATION_TICKS = 3
+REVEAL_DURATION_TICKS = 5
+ABILITY_TYPES = ("FLASH", "RECON", "SMOKE")
+ABILITY_RANGE = 6
+
+DIST_BAND_MIN = 2
+DIST_BAND_MAX = 7
+DIST_NORM_MAX = 15.0
+
+
+# ---------------------------------------------------------------------------
+# 汎用ヘルパー（train_attacker_escort.py と同一ロジック）
+# ---------------------------------------------------------------------------
+def _chebyshev(p1, p2):
+    return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
+
+
+def _line_cells(p1, p2):
+    """Bresenham法で2点間のセル列を返す（abilities_los.py と同一ロジック）。"""
+    y0, x0 = int(p1[0]), int(p1[1])
+    y1, x1 = int(p2[0]), int(p2[1])
+    dx, dy = abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    err = dx + dy
+    cells = []
+    while True:
+        cells.append((y0, x0))
+        if x0 == x1 and y0 == y1:
+            return cells
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
+
+
+def _has_los_walls_only(grid, p1, p2):
+    """壁のみを考慮した射線判定。スモークは game_state から参照できないため
+    考慮しない（既知の制約。学習環境よりやや楽観的な視界判定になる）。"""
+    for r, c in _line_cells(p1, p2):
+        if grid[r, c] == 1:
+            return False
+    return True
+
+
+def _build_distance_map_walls_only(grid, source_cells):
+    """指定座標群を始点とした、壁のみを障害物としたマルチソースBFS距離マップ。
+    キャラクター同士の占有は考慮しない（学習環境の固定経路と同じ前提）。
+    """
+    height, width = grid.shape
+    dist = np.full((height, width), np.inf, dtype=np.float32)
+    q = deque()
+    for r, c in source_cells:
+        if 0 <= r < height and 0 <= c < width and grid[r, c] != 1:
+            dist[r, c] = 0.0
+            q.append((r, c))
+
+    while q:
+        r, c = q.popleft()
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
+                if dist[nr, nc] > dist[r, c] + 1:
+                    dist[nr, nc] = dist[r, c] + 1
+                    q.append((nr, nc))
+    return dist
+
+
+# ---------------------------------------------------------------------------
+# Dueling DQN（train_attacker_escort.py と同一アーキテクチャ）
+# ---------------------------------------------------------------------------
+class DuelingQNetwork(nn.Module):
+    def __init__(self, obs_dim, n_actions, hidden=128):
+        super().__init__()
+        self.feature = nn.Sequential(
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+        )
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2),
+            nn.ReLU(),
+            nn.Linear(hidden // 2, 1),
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2),
+            nn.ReLU(),
+            nn.Linear(hidden // 2, n_actions),
+        )
+
+    def forward(self, x):
+        feat = self.feature(x)
+        value = self.value_head(feat)
+        advantage = self.advantage_head(feat)
+        return value + (advantage - advantage.mean(dim=1, keepdim=True))
+
+
+class LearningAttackerEscortController(BaseController):
+    """Escort Phaseの学習済みモデルで、護衛キャラクター4体の移動・
+    アビリティ使用を決定する。4体は同一インスタンス（同一ネットワーク）を
+    共有する想定。
+    """
+
+    def __init__(
+        self,
+        model_path,
+        device=None,
+        greedy=True,
+        epsilon=0.0,
+        max_ticks=90,
+        verbose=False,
+    ):
+        super().__init__()
+        self.device = device or torch.device("cpu")
+        self.greedy = greedy
+        self.epsilon = epsilon
+        self.max_ticks = max_ticks
+        self.verbose = verbose
+
+        if not os.path.isfile(model_path):
+            raise FileNotFoundError(f"Escortモデルが見つかりません: {model_path}")
+
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        obs_dim = checkpoint["obs_dim"]
+        n_actions = checkpoint.get("n_actions", N_ACTIONS)
+
+        self.policy_net = DuelingQNetwork(obs_dim, n_actions).to(self.device)
+        self.policy_net.load_state_dict(checkpoint["model_state_dict"])
+        self.policy_net.eval()
+
+        if self.verbose:
+            print(
+                f"[LearningAttackerEscortController] モデル読込完了: {model_path} "
+                f"(obs_dim={obs_dim}, episode={checkpoint.get('episode')}, "
+                f"success_rate={checkpoint.get('success_rate')})"
+            )
+
+        # goal座標(r, c) -> 壁のみBFS距離マップ のキャッシュ
+        self._goal_dist_cache = {}
+        # キャラクター名ごとの episode 内状態（tick数・移動履歴・停滞カウント）
+        self._char_state = {}
+
+    # ------------------------------------------------------------------
+    # ラウンド開始時にrun_game.pyから呼ばれる（hasattr判定で自動検出される）
+    # ------------------------------------------------------------------
+    def reset_round(self):
+        self._char_state.clear()
+
+    # ------------------------------------------------------------------
+    # 内部ヘルパー
+    # ------------------------------------------------------------------
+    def _get_char_state(self, char):
+        return self._char_state.setdefault(
+            char.name,
+            {"tick": 0, "last_delta": (0.0, 0.0), "stuck": 0},
+        )
+
+    @staticmethod
+    def _is_wall(grid, r, c):
+        height, width = grid.shape
+        if not (0 <= r < height and 0 <= c < width):
+            return True
+        return grid[r, c] == 1
+
+    def _get_goal_dist_map(self, grid, goal):
+        key = (grid.tobytes(), tuple(goal))
+        cached = self._goal_dist_cache.get(key)
+        if cached is None:
+            cached = _build_distance_map_walls_only(grid, [tuple(goal)])
+            self._goal_dist_cache[key] = cached
+        return cached
+
+    def _resolve_carry_and_goal(self, char, game_state):
+        """護衛対象（キャリアー）の位置と、その目的地(goal)を決める。
+
+        優先順位:
+          1. 生存している味方でスパイクを持っている者 -> その位置。
+             goalは is_planted なら planted_pos、そうでなければ target_plant_pos。
+          2. 誰もスパイクを持っていない場合（設置済み） -> planted_pos を
+             疑似的なキャリアー位置として扱う（サイト周辺の護衛に切り替わる）。
+          3. スパイクが地面に落ちている場合 -> spike_pos を疑似的な
+             キャリアー位置として扱う（回収を待つ形で近くに集まる）。
+          4. どれも取得できない場合 -> target_plant_pos、それも無ければ
+             自分自身の位置（実質、何もしない）。
+        """
+        chars = game_state.get("chars", [])
+        is_planted = bool(game_state.get("is_planted", False))
+        planted_pos = game_state.get("planted_pos")
+        target_plant_pos = game_state.get("target_plant_pos")
+        spike_pos = game_state.get("spike_pos")
+
+        carrier = next(
+            (
+                c for c in chars
+                if getattr(c, "is_alive", True)
+                and getattr(c, "team", None) == char.team
+                and getattr(c, "has_spike", False)
+            ),
+            None,
+        )
+
+        if carrier is not None:
+            carry_pos = tuple(int(v) for v in carrier.pos)
+            goal = tuple(planted_pos) if is_planted and planted_pos else (
+                tuple(target_plant_pos) if target_plant_pos else carry_pos
+            )
+            return carry_pos, goal
+
+        if is_planted and planted_pos:
+            pos = tuple(int(v) for v in planted_pos)
+            return pos, pos
+
+        if spike_pos:
+            pos = tuple(int(v) for v in spike_pos)
+            return pos, pos
+
+        if target_plant_pos:
+            pos = tuple(int(v) for v in target_plant_pos)
+            return pos, pos
+
+        pos = tuple(int(v) for v in char.pos)
+        return pos, pos
+
+    def _predict_carry_next_step(self, grid, carry_pos, goal):
+        """キャリアーの理想進行方向（他キャラクターの占有を無視した、
+        壁のみのBFS勾配）を予測する。他エージェントを避けないため、
+        「今このマスに立っていたらキャリアーの進路を塞いでいる」
+        という判定にそのまま使える。
+        """
+        if carry_pos == goal:
+            return carry_pos
+
+        dist_map = self._get_goal_dist_map(grid, goal)
+        height, width = grid.shape
+        r, c = carry_pos
+        best_cell = carry_pos
+        best_dist = dist_map[r, c] if 0 <= r < height and 0 <= c < width else np.inf
+
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < height and 0 <= nc < width):
+                continue
+            if grid[nr, nc] == 1:
+                continue
+            d = dist_map[nr, nc]
+            if np.isfinite(d) and d < best_dist:
+                best_dist = d
+                best_cell = (nr, nc)
+
+        return best_cell
+
+    def _nearest_visible_enemy(self, grid, chars, my_team, from_pos, max_range=None):
+        best_char, best_dist = None, None
+        for c in chars:
+            if not getattr(c, "is_alive", True) or getattr(c, "team", None) == my_team:
+                continue
+            enemy_pos = (int(c.pos[0]), int(c.pos[1]))
+            dist = _chebyshev(from_pos, enemy_pos)
+            if max_range is not None and dist > max_range:
+                continue
+            if not _has_los_walls_only(grid, from_pos, enemy_pos):
+                continue
+            if best_dist is None or dist < best_dist:
+                best_char, best_dist = c, dist
+        return best_char, best_dist
+
+    def _team_effect_active(self, chars, my_team):
+        """味方の誰かが敵にかけた blind/reveal が現在有効かどうか。
+        スモークの有無は game_state から取得できないため考慮しない
+        （既知の制約）。
+        """
+        for c in chars:
+            if getattr(c, "team", None) == my_team or not getattr(c, "is_alive", True):
+                continue
+            if getattr(c, "blind_remaining", 0) > 0 or getattr(c, "reveal_remaining", 0) > 0:
+                return True
+        return False
+
+    # ------------------------------------------------------------------
+    # 観測構築（train_attacker_escort.py の EscortEnv._get_obs() と
+    # 要素の順序・個数を完全一致させること。全36次元。）
+    # ------------------------------------------------------------------
+    def _build_obs(self, char, game_state, st):
+        grid = game_state["grid"]
+        height, width = grid.shape
+        chars = game_state.get("chars", [])
+        r, c = int(char.pos[0]), int(char.pos[1])
+
+        carry_pos, goal = self._resolve_carry_and_goal(char, game_state)
+        cr, cc = carry_pos
+        next_step = self._predict_carry_next_step(grid, carry_pos, goal)
+
+        obs = []
+        obs.append(r / max(1, height - 1))
+        obs.append(c / max(1, width - 1))
+
+        dist_to_carry = _chebyshev((r, c), (cr, cc))
+        obs.append(min(1.0, dist_to_carry / DIST_NORM_MAX))
+        obs.append(max(-1.0, min(1.0, (cr - r) / DIST_NORM_MAX)))
+        obs.append(max(-1.0, min(1.0, (cc - c) / DIST_NORM_MAX)))
+
+        # キャリアーの進行方向（次の理想セルへの差分）
+        obs.append(float(np.sign(next_step[0] - cr)))
+        obs.append(float(np.sign(next_step[1] - cc)))
+
+        # 壁フラグ（4方向）
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            obs.append(1.0 if self._is_wall(grid, r + dr, c + dc) else 0.0)
+
+        # 各方向に動いた場合のキャリアーまでの距離勾配
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            wall = self._is_wall(grid, nr, nc)
+            gdist = _chebyshev((nr, nc), (cr, cc))
+            obs.append(1.0 if wall else min(1.0, gdist / DIST_NORM_MAX))
+
+        # 斜め壁フラグ
+        for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
+            obs.append(1.0 if self._is_wall(grid, r + dr, c + dc) else 0.0)
+
+        # 距離帯の逸脱量
+        if dist_to_carry < DIST_BAND_MIN:
+            band_dev = (dist_to_carry - DIST_BAND_MIN) / DIST_NORM_MAX
+        elif dist_to_carry > DIST_BAND_MAX:
+            band_dev = (dist_to_carry - DIST_BAND_MAX) / DIST_NORM_MAX
+        else:
+            band_dev = 0.0
+        obs.append(band_dev)
+
+        # 最寄りの視認可能な敵
+        enemy_char, enemy_dist = self._nearest_visible_enemy(grid, chars, char.team, (r, c))
+        if enemy_char is not None:
+            er, ec = int(enemy_char.pos[0]), int(enemy_char.pos[1])
+            obs.append(1.0)
+            obs.append(max(-1.0, min(1.0, (er - r) / DIST_NORM_MAX)))
+            obs.append(max(-1.0, min(1.0, (ec - c) / DIST_NORM_MAX)))
+            obs.append(min(1.0, enemy_dist / DIST_NORM_MAX))
+            obs.append(min(1.0, getattr(enemy_char, "blind_remaining", 0) / max(1, BLIND_DURATION_TICKS)))
+            obs.append(min(1.0, getattr(enemy_char, "reveal_remaining", 0) / max(1, REVEAL_DURATION_TICKS)))
+        else:
+            obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+
+        # 自分のアビリティ状態（実際のCharacterオブジェクトの値をそのまま使う）
+        total_charges = (
+            getattr(char, "flash_charges", 0)
+            + getattr(char, "smoke_charges", 0)
+            + getattr(char, "recon_charges", 0)
+        )
+        obs.append(1.0 if total_charges > 0 else 0.0)
+        for ability in ABILITY_TYPES:
+            obs.append(1.0 if char.ability_name == ability else 0.0)
+
+        # チーム状況：誰かの効果(blind/reveal)が現在有効か
+        obs.append(1.0 if self._team_effect_active(chars, char.team) else 0.0)
+
+        obs.append(st["last_delta"][0])
+        obs.append(st["last_delta"][1])
+        obs.append(min(1.0, st["stuck"] / 10.0))
+        obs.append(1.0 - min(1.0, st["tick"] / max(1, self.max_ticks)))
+        # 自分が現在、キャリアーの理想進行先セルに立っているか（＝塞いでいるか）
+        obs.append(1.0 if (r, c) == next_step and (r, c) != (cr, cc) else 0.0)
+
+        return np.array(obs, dtype=np.float32)
+
+    def _action_mask(self, char, grid):
+        r, c = int(char.pos[0]), int(char.pos[1])
+        mask = np.ones(N_ACTIONS, dtype=bool)
+        for a, (dr, dc) in _MOVE_DELTA.items():
+            if a == ACTION_STAY:
+                continue
+            if self._is_wall(grid, r + dr, c + dc):
+                mask[a] = False
+
+        total_charges = (
+            getattr(char, "flash_charges", 0)
+            + getattr(char, "smoke_charges", 0)
+            + getattr(char, "recon_charges", 0)
+        )
+        if total_charges <= 0:
+            mask[ACTION_ABILITY] = False
+
+        return mask
+
+    # ------------------------------------------------------------------
+    # コントローラー本体
+    # ------------------------------------------------------------------
+    def decide_move(self, char, game_state):
+        grid = game_state["grid"]
+        chars = game_state.get("chars", [])
+        st = self._get_char_state(char)
+        st["tick"] += 1
+
+        obs = self._build_obs(char, game_state, st)
+        mask = self._action_mask(char, grid)
+
+        if (not self.greedy) and np.random.random() < self.epsilon:
+            action = int(np.random.choice(np.flatnonzero(mask)))
+        else:
+            with torch.no_grad():
+                state_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+                q = self.policy_net(state_t).squeeze(0).cpu().numpy()
+            q = np.where(mask, q, -1e9)
+            action = int(np.argmax(q))
+
+        r, c = int(char.pos[0]), int(char.pos[1])
+
+        if action == ACTION_ABILITY:
+            enemy_char, _ = self._nearest_visible_enemy(
+                grid, chars, char.team, (r, c), max_range=ABILITY_RANGE
+            )
+            if enemy_char is not None:
+                st["last_delta"] = (0.0, 0.0)
+                st["stuck"] += 1
+                target = (int(enemy_char.pos[0]), int(enemy_char.pos[1]))
+                return list(char.pos), {"ability": char.ability_name, "target": target}
+            # 射程内に有効な標的がいない場合、実チャージを無駄撃ちしないよう
+            # STAY にフォールバックする。
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return [r, c]
+
+        dr, dc = _MOVE_DELTA[action]
+        nr, nc = r + dr, c + dc
+
+        if action == ACTION_STAY or self._is_wall(grid, nr, nc):
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return [r, c]
+
+        st["last_delta"] = (float(dr), float(dc))
+        st["stuck"] = 0
+        return [nr, nc]

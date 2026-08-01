@@ -14,12 +14,13 @@ from party_presets import all_preset_names, get_preset
 MAX_ROSTER = 5
 
 ATTACKER_CONTROLLER_OPTIONS = {
+    "Toru AI v3": "toru_attacker_v3",
     "AI Ver1": "learning_v1",
-    "AI Ver2": "learning_v2",
     "ロジック": "default",
     "ユーザー操作": "user",
 }
 DEFENDER_CONTROLLER_OPTIONS = {
+    "Toru AI v3": "toru_defender_v3",
     "AI (学習済み)": "learning_all",
     "ロジック": "default",
     "ユーザー操作": "user",
@@ -51,7 +52,7 @@ class RosterSelectScreen:
         self.defender_igl_var = tk.StringVar(master=self.root, value="")
         self.attacker_ctrl_var = tk.StringVar(
             master=self.root,
-            value="AI Ver2",
+            value=list(ATTACKER_CONTROLLER_OPTIONS.keys())[0],
         )
         self.defender_ctrl_var = tk.StringVar(
             master=self.root,

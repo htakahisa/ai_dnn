@@ -303,7 +303,6 @@ def train():
     lr = 0.0005
     IMPROVEMENT_MARGIN = 10.0
 
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device("cpu")
     q_net = QNetwork(env.obs_dim, env.action_space.n).to(device)
     target_net = QNetwork(env.obs_dim, env.action_space.n).to(device)

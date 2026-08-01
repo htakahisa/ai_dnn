@@ -20,7 +20,8 @@ from learning_defender import (
 )
 from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController
-from attacker_v2.multi_role_attacker_controller import MultiRoleAttackerController
+from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
+from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 
@@ -64,19 +65,8 @@ def _build_attacker_controller(key):
             greedy=True,
         )
 
-    if normalized in {
-        "learning_v2",
-        "ai_v2",
-        "v2",
-        "aiv2",
-    }:
-        return MultiRoleAttackerController(
-            carry_model_path="attacker_v2/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
-            escort_model_path="attacker_v2/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
-            retrieve_model_path="attacker_v2/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
-            guard_model_path="attacker_v2/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
-            greedy=False,
-        )
+    if normalized in {"toru_attacker_v3",}:
+        return MultiRoleAttackerController(        )
 
     if normalized in {
         "learning_v4",
@@ -99,6 +89,10 @@ def _build_defender_controller(key):
         return DefaultDefenderController()
     if key == "user":
         return UserInputController()
+    
+    if key  == "toru_defender_v3":
+        return MultiRoleDefenderController()
+
     # "learning_all" またはそれ以外は統合学習済みAIをデフォルトとする
     return LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
 
