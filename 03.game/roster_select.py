@@ -10,18 +10,12 @@ from character_stats import all_names, get_by_name
 from game_core import calculate_combat_power
 from party_presets import all_preset_names, get_preset
 
-
 MAX_ROSTER = 5
 
-ATTACKER_CONTROLLER_OPTIONS = {
-    "Toru AI v3": "toru_attacker_v3",
-    "AI Ver1": "learning_v1",
-    "ロジック": "default",
-    "ユーザー操作": "user",
-}
-DEFENDER_CONTROLLER_OPTIONS = {
-    "Toru AI v3": "toru_defender_v3",
-    "AI (学習済み)": "learning_all",
+TEAM_AI_OPTIONS = {
+    "Fnatic v1": "fnatic_v1",
+    "Toru AI v3": "toru_ai_v3",
+    "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
 }
@@ -52,11 +46,11 @@ class RosterSelectScreen:
         self.defender_igl_var = tk.StringVar(master=self.root, value="")
         self.attacker_ctrl_var = tk.StringVar(
             master=self.root,
-            value=list(ATTACKER_CONTROLLER_OPTIONS.keys())[0],
+            value=list(TEAM_AI_OPTIONS.keys())[0],
         )
         self.defender_ctrl_var = tk.StringVar(
             master=self.root,
-            value=list(DEFENDER_CONTROLLER_OPTIONS.keys())[0],
+            value=list(TEAM_AI_OPTIONS.keys())[0],
         )
 
         preset_names = all_preset_names()
@@ -90,14 +84,14 @@ class RosterSelectScreen:
         tk.OptionMenu(
             frame,
             self.attacker_ctrl_var,
-            *ATTACKER_CONTROLLER_OPTIONS.keys(),
+            *TEAM_AI_OPTIONS.keys(),
         ).grid(row=0, column=1, sticky="ew", padx=(7, 22))
 
         tk.Label(frame, text="Defender:").grid(row=0, column=2, sticky="w")
         tk.OptionMenu(
             frame,
             self.defender_ctrl_var,
-            *DEFENDER_CONTROLLER_OPTIONS.keys(),
+            *TEAM_AI_OPTIONS.keys(),
         ).grid(row=0, column=3, sticky="ew", padx=(7, 0))
 
         frame.grid_columnconfigure(1, weight=1)
@@ -114,9 +108,7 @@ class RosterSelectScreen:
 
         preset_names = all_preset_names()
 
-        tk.Label(frame, text="Attackerプリセット:").grid(
-            row=2, column=0, sticky="w"
-        )
+        tk.Label(frame, text="Attackerプリセット:").grid(row=2, column=0, sticky="w")
         attacker_menu = tk.OptionMenu(
             frame,
             self.attacker_preset_var,
@@ -126,9 +118,7 @@ class RosterSelectScreen:
         tk.Button(
             frame,
             text="Attackerへ適用",
-            command=lambda: self.apply_preset(
-                "A", self.attacker_preset_var.get()
-            ),
+            command=lambda: self.apply_preset("A", self.attacker_preset_var.get()),
         ).grid(row=2, column=2, sticky="ew", padx=(0, 8))
 
         tk.Label(frame, text="Defenderプリセット:").grid(
@@ -139,15 +129,11 @@ class RosterSelectScreen:
             self.defender_preset_var,
             *preset_names,
         )
-        defender_menu.grid(
-            row=3, column=1, sticky="ew", padx=(7, 8), pady=(5, 0)
-        )
+        defender_menu.grid(row=3, column=1, sticky="ew", padx=(7, 8), pady=(5, 0))
         tk.Button(
             frame,
             text="Defenderへ適用",
-            command=lambda: self.apply_preset(
-                "D", self.defender_preset_var.get()
-            ),
+            command=lambda: self.apply_preset("D", self.defender_preset_var.get()),
         ).grid(row=3, column=2, sticky="ew", padx=(0, 8), pady=(5, 0))
 
         self.preset_status_label = tk.Label(
@@ -232,9 +218,7 @@ class RosterSelectScreen:
         def bind_wheel(_event, cv=canvas):
             cv.bind_all(
                 "<MouseWheel>",
-                lambda event: cv.yview_scroll(
-                    int(-event.delta / 120), "units"
-                ),
+                lambda event: cv.yview_scroll(int(-event.delta / 120), "units"),
             )
 
         def unbind_wheel(_event, cv=canvas):
@@ -378,9 +362,7 @@ class RosterSelectScreen:
             padx=5,
             pady=3,
         )
-        self.attacker_spike_box.grid(
-            row=0, column=0, sticky="nsew", padx=(0, 4)
-        )
+        self.attacker_spike_box.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
 
         self.defender_spike_box = tk.LabelFrame(
             columns,
@@ -388,9 +370,7 @@ class RosterSelectScreen:
             padx=5,
             pady=3,
         )
-        self.defender_spike_box.grid(
-            row=0, column=1, sticky="nsew", padx=(4, 0)
-        )
+        self.defender_spike_box.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
 
     def _build_igl_section(self, parent):
         self.igl_frame = tk.LabelFrame(
@@ -420,9 +400,7 @@ class RosterSelectScreen:
             padx=5,
             pady=3,
         )
-        self.attacker_igl_box.grid(
-            row=0, column=0, sticky="nsew", padx=(0, 4)
-        )
+        self.attacker_igl_box.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
 
         self.defender_igl_box = tk.LabelFrame(
             columns,
@@ -430,9 +408,7 @@ class RosterSelectScreen:
             padx=5,
             pady=3,
         )
-        self.defender_igl_box.grid(
-            row=0, column=1, sticky="nsew", padx=(4, 0)
-        )
+        self.defender_igl_box.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
 
     def _build_footer(self):
         footer = tk.Frame(self.root)
@@ -556,8 +532,7 @@ class RosterSelectScreen:
         self.update_all_ui()
 
         details = (
-            f"{team_label}へ「{preset.name}」を適用しました"
-            f"｜IGL: {preset.igl}"
+            f"{team_label}へ「{preset.name}」を適用しました" f"｜IGL: {preset.igl}"
         )
         spike_holder = (
             self.attacker_spike_var.get()
@@ -625,15 +600,10 @@ class RosterSelectScreen:
     def _update_roster_labels(self):
         for team in ("A", "D"):
             roster = self._roster_for(team)
-            self.count_labels[team].config(
-                text=f"{len(roster)} / {self.max_roster}"
-            )
+            self.count_labels[team].config(text=f"{len(roster)} / {self.max_roster}")
 
             roster_text = (
-                "\n".join(
-                    f"{index + 1}. {name}"
-                    for index, name in enumerate(roster)
-                )
+                "\n".join(f"{index + 1}. {name}" for index, name in enumerate(roster))
                 if roster
                 else "未選択"
             )
@@ -647,10 +617,7 @@ class RosterSelectScreen:
                 )
                 color = "#b03a2e"
             else:
-                summary = (
-                    f"影響度合計: {self._format_number(total)}\n"
-                    "IQ低下なし"
-                )
+                summary = f"影響度合計: {self._format_number(total)}\n" "IQ低下なし"
                 color = "#2874a6"
 
             self.team_summary_labels[team].config(text=summary, fg=color)
@@ -783,8 +750,7 @@ class RosterSelectScreen:
             )
         else:
             hint = (
-                f"各チームが{self.max_roster}人揃うと、"
-                "そのチームのIGLを選択できます"
+                f"各チームが{self.max_roster}人揃うと、" "そのチームのIGLを選択できます"
             )
         self.igl_hint.config(text=hint)
 
@@ -833,18 +799,10 @@ class RosterSelectScreen:
     def _update_confirm_state(self):
         attackers_ready = len(self.attacker_roster) == self.max_roster
         defenders_ready = len(self.defender_roster) == self.max_roster
-        attacker_spike_ready = (
-            self.attacker_spike_var.get() in self.attacker_roster
-        )
-        defender_spike_ready = (
-            self.defender_spike_var.get() in self.defender_roster
-        )
-        attacker_igl_ready = (
-            self.attacker_igl_var.get() in self.attacker_roster
-        )
-        defender_igl_ready = (
-            self.defender_igl_var.get() in self.defender_roster
-        )
+        attacker_spike_ready = self.attacker_spike_var.get() in self.attacker_roster
+        defender_spike_ready = self.defender_spike_var.get() in self.defender_roster
+        attacker_igl_ready = self.attacker_igl_var.get() in self.attacker_roster
+        defender_igl_ready = self.defender_igl_var.get() in self.defender_roster
 
         if not attackers_ready:
             message = (
@@ -880,21 +838,15 @@ class RosterSelectScreen:
             and attacker_igl_ready
             and defender_igl_ready
         )
-        self.confirm_button.config(
-            state="normal" if ready else "disabled"
-        )
+        self.confirm_button.config(state="normal" if ready else "disabled")
 
     # ------------------------------------------------------------------
     # Finish
     # ------------------------------------------------------------------
 
     def confirm(self):
-        attacker_ctrl_key = ATTACKER_CONTROLLER_OPTIONS[
-            self.attacker_ctrl_var.get()
-        ]
-        defender_ctrl_key = DEFENDER_CONTROLLER_OPTIONS[
-            self.defender_ctrl_var.get()
-        ]
+        attacker_ctrl_key = TEAM_AI_OPTIONS[self.attacker_ctrl_var.get()]
+        defender_ctrl_key = TEAM_AI_OPTIONS[self.defender_ctrl_var.get()]
 
         args = (
             list(self.attacker_roster),

@@ -8,6 +8,7 @@ import random
 import tkinter as tk
 import numpy as np
 
+
 from learning_attacker_ai_v2 import LearningAttackerAIv2Controller
 from controllers import (
     DefaultAttackerController,
@@ -22,8 +23,11 @@ from learning_attacker import LearningAttackerController
 from learning_attacker_multi import LearningAttackerMultiController
 from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
 from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
+from policy_attacker_controller import PolicyAttackerController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
+from team_ai import DualRoleTeamAI
+from policy_attacker_controller import PolicyAttackerController
 
 from game_core import (
     Character,
@@ -41,6 +45,57 @@ from battle_logic import BattleLogicMixin
 from rendering_ui import RenderingUIMixin
 
 ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
+FNATIC_V1_ATTACKER_MODEL_PATH = "policy_dagger_final.pt"
+
+
+def _build_team_ai(key):
+    normalized = str(key or "default").strip().lower()
+
+    if normalized == "fnatic_v1":
+        return DualRoleTeamAI(
+            name="Fnatic v1",
+            attacker_factory=lambda: PolicyAttackerController(
+                model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
+                device="auto",
+            ),
+            # Fnatic Defenderモデル完成までの暫定処理
+            defender_factory=lambda: DefaultDefenderController(),
+        )
+
+    if normalized == "toru_ai_v3":
+        return DualRoleTeamAI(
+            name="Toru AI v3",
+            attacker_factory=lambda: MultiRoleAttackerController(),
+            defender_factory=lambda: MultiRoleDefenderController(),
+        )
+
+    if normalized == "learning_v1":
+        return DualRoleTeamAI(
+            name="AI v1",
+            attacker_factory=lambda: LearningAttackerController(
+                model_path=ATTACKER_MODEL_PATH,
+                greedy=True,
+            ),
+            defender_factory=lambda: LearningDefenderAllAIController(
+                model_path="dqn_defender_combined_best.pt",
+            ),
+        )
+
+    if normalized == "default":
+        return DualRoleTeamAI(
+            name="ロジック",
+            attacker_factory=lambda: DefaultAttackerController(),
+            defender_factory=lambda: DefaultDefenderController(),
+        )
+
+    if normalized == "user":
+        return DualRoleTeamAI(
+            name="ユーザー操作",
+            attacker_factory=lambda: UserInputController(),
+            defender_factory=lambda: UserInputController(),
+        )
+
+    raise ValueError(f"不明なTeam AIです: {key}")
 
 
 def _build_attacker_controller(key):
@@ -51,6 +106,15 @@ def _build_attacker_controller(key):
 
     if normalized == "user":
         return UserInputController()
+
+    if normalized in {
+        "fnatic_v1",
+        "fnatic",
+    }:
+        return PolicyAttackerController(
+            model_path=FNATIC_V1_MODEL_PATH,
+            device="auto",
+        )
 
     if normalized in {
         "learning",
@@ -65,8 +129,10 @@ def _build_attacker_controller(key):
             greedy=True,
         )
 
-    if normalized in {"toru_attacker_v3",}:
-        return MultiRoleAttackerController(        )
+    if normalized in {
+        "toru_attacker_v3",
+    }:
+        return MultiRoleAttackerController()
 
     if normalized in {
         "learning_v4",
@@ -89,8 +155,8 @@ def _build_defender_controller(key):
         return DefaultDefenderController()
     if key == "user":
         return UserInputController()
-    
-    if key  == "toru_defender_v3":
+
+    if key == "toru_defender_v3":
         return MultiRoleDefenderController()
 
     # "learning_all" またはそれ以外は統合学習済みAIをデフォルトとする
@@ -103,11 +169,26 @@ class VisualFPSBattle(
     BattleLogicMixin,
     RenderingUIMixin,
 ):
+
+    def _refresh_active_controllers(self):
+        self.attacker_controller = (
+            self.current_attacker_team_ai.get_attacker_controller()
+        )
+        self.defender_controller = (
+            self.current_defender_team_ai.get_defender_controller()
+        )
+
+        for team_ai in (
+            self.current_attacker_team_ai,
+            self.current_defender_team_ai,
+        ):
+            team_ai.bind_game(self)
+
     def __init__(
         self,
         maze_str,
-        attacker_controller,
-        defender_controller,
+        initial_attacker_team_ai,
+        initial_defender_team_ai,
         headless=False,
         attacker_roster=None,
         defender_roster=None,
@@ -136,8 +217,13 @@ class VisualFPSBattle(
         )
         self.cell_size = 24
 
-        self.attacker_controller = attacker_controller
-        self.defender_controller = defender_controller
+        self.initial_attacker_team_ai = initial_attacker_team_ai
+        self.initial_defender_team_ai = initial_defender_team_ai
+        self.current_attacker_team_ai = initial_attacker_team_ai
+        self.current_defender_team_ai = initial_defender_team_ai
+
+        self.attacker_controller = None
+        self.defender_controller = None
         self.active_user_team = None
 
         self.attacker_wins = 0
@@ -178,6 +264,15 @@ class VisualFPSBattle(
             self.label.pack()
 
         self.match_over = False
+
+        if hasattr(self.attacker_controller, "set_game"):
+            self.attacker_controller.set_game(self)
+
+        if hasattr(self.defender_controller, "set_game"):
+            self.defender_controller.set_game(self)
+
+        self._refresh_active_controllers()
+
         self.init_round()
 
     def _apply_igl_iq_bonus(self):
@@ -257,6 +352,12 @@ class VisualFPSBattle(
             self.defender_wins,
             self.attacker_wins,
         )
+        self.current_attacker_team_ai, self.current_defender_team_ai = (
+            self.current_defender_team_ai,
+            self.current_attacker_team_ai,
+        )
+
+        self._refresh_active_controllers()
 
     def _swap_sides_if_needed(self):
         """通常戦は13R開始時、OTは毎ラウンド開始時に攻守を交代する。
@@ -402,18 +503,18 @@ if __name__ == "__main__":
         defender_roster,
         spike_holder_name=None,
         defender_spike_holder_name=None,
-        attacker_ctrl_key="v4",
-        defender_ctrl_key="learning_all",
+        initial_attacker_team_ai_key="default",
+        initial_defender_team_ai_key="default",
         attacker_igl_name=None,
         defender_igl_name=None,
     ):
-        att_ctrl = _build_attacker_controller(attacker_ctrl_key)
-        def_ctrl = _build_defender_controller(defender_ctrl_key)
+        initial_attacker_team_ai = _build_team_ai(initial_attacker_team_ai_key)
+        initial_defender_team_ai = _build_team_ai(initial_defender_team_ai_key)
 
         game = VisualFPSBattle(
             NEW_MAZE_STR,
-            att_ctrl,
-            def_ctrl,
+            initial_attacker_team_ai,
+            initial_defender_team_ai,
             headless=False,
             attacker_roster=attacker_roster,
             defender_roster=defender_roster,
