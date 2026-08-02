@@ -1,29 +1,19 @@
-"""train_defender_retake.py
+"""train_defender_retake.py (修正版)
 
-Retake フェーズ用 Defender AI 学習スクリプト。
+変更点: プラント地点への距離・方向をチェビシェフ距離(直線)ではなく
+BFS距離マップ(壁を考慮した実際の経路距離)に基づいて計算するよう修正。
+角での迂回行動が正しく報酬付けされるようになる。
 
-完全に自己完結。controllers.py / run_game.py / battle_logic.py / abilities_los.py /
-rendering_ui.py / combo_awakening.py 等は一切importせず、必要な移動(BFS)・LOS判定・
-戦闘解決・アビリティ処理のロジックはすべてこのファイル内に複製する。
-game_core からは定数のみ参照し(ロジックは参照しない)、Character クラスも
-character_stats.py に依存する形では使わず、このファイル内で固定ベースライン
-ステータスを持つ軽量キャラクター表現を独自定義する。
+以下は前バージョンからの主な差分:
+- bfs_site_zone() を削除し、bfs_distance_map() を新設(プラント地点からの
+  全マス距離を1回のBFSで計算)。site_zoneはこのマップから派生させる。
+- build_observation(): dx, dy(直線方向) を good_dir(上下左右いずれが
+  BFS距離を縮めるか、4次元) に置き換え。dist_to_plant もBFS距離ベースに変更。
+- snapshot_before() / compute_rewards(): 接近報酬の距離差分をBFS距離ベースに変更。
 
-学習データ・チェックポイントは data/defender_retake_data/ 以下に保存する。
-
-シナリオ:
-    スパイクが既に設置された状態からスタートし、Defender 5人が
-    サイトへ再突入してAttacker(簡易固定AI)を排除しつつスパイクを解除する。
-
-設計方針(要調整ポイント):
-- Attacker側は学習対象ではなく、サイト付近を保持するだけの固定ロジック
-  (AttackerStub)。Attacker側も学習したい場合は別途self-play化が必要。
-- Defenderのロール(フラッシュ/スモーカー/シーカー)はラウンドごとに固定サイクルで
-  割り当てる。実キャラクター名・実ステータスを使いたい場合は差し替え可能。
-- アビリティ(FLASH/RECON/SMOKE)は「プラント地点(サイト)」へ向けて使用する前提で
-  実装している。retrieve/guardモデルのような「見えている敵を直接狙う」方式では
-  ないため、これらのモデルとは着弾点の意味づけが異なる。
-- 観測次元(OBS_DIM)は実行時にbuild_observation()の出力shapeから自動計算する。
+それ以外(行動空間・行動マスク・アビリティ処理・戦闘解決・保存先パス等)は
+前バージョンと同一。完全に自己完結という制約(controllers.py / run_game.py /
+battle_logic.py 等をimportしない)も維持している。
 """
 
 import random
@@ -36,19 +26,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# ---------------------------------------------------------------------------
-# map_data.py の解決（defnder_v3/ 配下・プロジェクト直下のどちらでも動く）
-# ---------------------------------------------------------------------------
-_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = (
-    os.path.dirname(_CURRENT_DIR)
-    if os.path.basename(_CURRENT_DIR) == "defender_v3"
-    else _CURRENT_DIR
-)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from map_data import NEW_MAZE_STR 
+from map_data import NEW_MAZE_STR
 
 from game_core import (
     MAX_HP,
@@ -66,10 +47,10 @@ from game_core import (
     RECON_REVEAL_SIZE,
 )
 
+EPISODE_COUNT = 20000
+
 DEVICE = torch.device("cpu")
 SAVE_DIR = "data/defender_retake_data"
-
-EPISODE_COUNT = 7000
 
 # ============================================================
 # マップ読み込み
@@ -91,8 +72,13 @@ PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c]
 # 移動・LOS等の共通ロジック(controllers.py非依存の自前実装)
 # ============================================================
 
-CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
 
+TAU = 0.005
+
+def soft_update(target_net, net, tau=TAU):
+    for t_param, param in zip(target_net.parameters(), net.parameters()):
+        t_param.data.copy_(tau * param.data + (1.0 - tau) * t_param.data)
 
 def _alive_occupied_positions(chars, moving_char=None):
     occupied = set()
@@ -101,7 +87,6 @@ def _alive_occupied_positions(chars, moving_char=None):
             continue
         occupied.add((int(other.pos[0]), int(other.pos[1])))
     return occupied
-
 
 def _in_bounds(pos):
     r, c = pos
@@ -136,6 +121,38 @@ def _candidate_goals(goal, blocked, allow_adjacent_goal):
                 candidates.append(adj)
     return list(dict.fromkeys(candidates))
 
+def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
+    wins = 0
+    entered_site_count = 0
+    reason_counts = {"defused": 0, "detonated": 0, "defenders_wiped": 0, "timeout": 0}
+    zero_obs = np.zeros(obs_dim, dtype=np.float32)
+
+    for _ in range(num_eval_episodes):
+        env.reset()
+        entered = False
+        while True:
+            terminal, reason = env.is_terminal()
+            if terminal:
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+                break
+            actions = {}
+            for char in env.defenders():
+                if not char.is_alive:
+                    continue
+                state = env.build_observation(char)
+                mask = env.action_mask(char)
+                action = select_action(net, state, mask, epsilon=0.0)
+                actions[char.name] = action
+                if tuple(char.pos) in env.site_zone:
+                    entered = True
+            env.step_tick(actions)
+        if env.is_defused:
+            wins += 1
+        if entered:
+            entered_site_count += 1
+
+    print(f"    breakdown: {reason_counts}")
+    return wins / num_eval_episodes, entered_site_count / num_eval_episodes
 
 def move_towards_target(pos, target, chars, moving_char=None, allow_adjacent_goal=False):
     """BFSで壁・生存キャラクターを避けながらtargetへ1マス進む(controllers.py複製版)。"""
@@ -215,23 +232,40 @@ def has_los(p1, p2, smoke_cells):
     return _smoke_allows_line(cells, smoke_cells)
 
 
-def bfs_site_zone(plant_pos, radius):
-    """プラント地点からBFSでradius歩以内に到達できる床マスの集合(通路経由)。"""
-    start = (int(plant_pos[0]), int(plant_pos[1]))
-    visited = {start: 0}
-    queue = deque([start])
+def bfs_distance_map(goal):
+    """goal(プラント地点)から各床マスへの最短距離マップ(壁越え不可)。
+    到達不能マスは-1。retrieveモデルのbfs_distance_map()と同一方式。"""
+    dist = np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
+    gr, gc = int(goal[0]), int(goal[1])
+    if GRID[gr, gc] == 1:
+        return dist
+    dist[gr, gc] = 0
+    queue = deque([(gr, gc)])
     while queue:
-        cur = queue.popleft()
-        dist = visited[cur]
-        if dist >= radius:
-            continue
+        r, c = queue.popleft()
         for dr, dc in CARDINAL_MOVES:
-            nxt = (cur[0] + dr, cur[1] + dc)
-            if not _in_bounds(nxt) or GRID[nxt[0], nxt[1]] == 1 or nxt in visited:
-                continue
-            visited[nxt] = dist + 1
-            queue.append(nxt)
-    return set(visited.keys())
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+                dist[nr, nc] = dist[r, c] + 1
+                queue.append((nr, nc))
+    return dist
+
+
+def good_directions(dist_map, r, c):
+    """現在地から上下左右のうち、BFS距離マップ上でプラントへの距離を実際に
+    縮められる方向を1.0、そうでない方向(壁・行き止まり・遠回りになる方向)を
+    0.0とする4次元フラグ。行動ID 0=UP,1=DOWN,2=LEFT,3=RIGHTと対応させる。"""
+    good = [0.0, 0.0, 0.0, 0.0]
+    raw = dist_map[r, c]
+    if raw < 0:
+        return good
+    for i, (dr, dc) in enumerate(CARDINAL_MOVES):
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1:
+            nd = dist_map[nr, nc]
+            if nd != -1 and nd < raw:
+                good[i] = 1.0
+    return good
 
 
 # ============================================================
@@ -268,7 +302,6 @@ class SimChar:
         self.flash_charges = 1 if ability == "FLASH" else 0
         self.recon_charges = 1 if ability == "RECON" else 0
 
-        # 個体差を持たせるための微小ランダム分散(character_stats.py非依存の簡易ステータス)
         self.accuracy = max(0.0, BASE_ACCURACY + random.uniform(-0.05, 0.05))
         self.dodge_rate = max(0.0, BASE_DODGE + random.uniform(-0.03, 0.03))
         self.hs_rate = max(0.0, BASE_HS_RATE + random.uniform(-0.03, 0.03))
@@ -315,9 +348,13 @@ ACTION_ABILITY = 6
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
-MIN_ALLIES_FOR_ENTRY = 2
-LOW_TIME_OVERRIDE_FRAC = 0.35
+MIN_ALLIES_FOR_ENTRY = 1
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2}
+
+# 💡追加: 「解除が安全かどうか」の判定を、起爆タイマーの割合(detonate_frac)ではなく
+# 「解除完了に最低限必要なtick数からの絶対的な残り時間」で判定するための定数。
+DEFUSE_SAFETY_MARGIN_TICKS = 4
+ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
 
 # ============================================================
@@ -339,9 +376,18 @@ class RetakeEnv:
         self.active_defuser_name = None
 
         self.planted_pos = random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
-        self.site_zone = bfs_site_zone(self.planted_pos, SITE_ZONE_RADIUS)
-        self.detonate_timer = random.randint(self.min_detonate_ticks, self.max_detonate_ticks)
 
+        # 💡修正: プラント地点からの全マスBFS距離を1回だけ計算し、
+        # site_zoneも観測・報酬の距離計算もすべてこれに基づかせる。
+        self.dist_map = bfs_distance_map(self.planted_pos)
+        self.site_zone = {
+            (r, c)
+            for r in range(HEIGHT)
+            for c in range(WIDTH)
+            if 0 <= self.dist_map[r, c] <= SITE_ZONE_RADIUS
+        }
+
+        self.detonate_timer = random.randint(self.min_detonate_ticks, self.max_detonate_ticks)
         self.smokes = []  # list of {"cells": set, "remaining_ticks": int, "owner": str}
 
         used = set()
@@ -417,7 +463,6 @@ class RetakeEnv:
             self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "owner": char.name})
 
     def ally_ability_active(self, char):
-        """自チームのアビリティ効果(敵の状態異常、または自チーム設置スモーク)が現在有効か。"""
         for enemy in self.chars:
             if enemy.team != char.team and enemy.is_alive:
                 if enemy.blind_remaining > 0 or enemy.reveal_remaining > 0:
@@ -455,9 +500,12 @@ class RetakeEnv:
         r, c = char.pos
         pr, pc = self.planted_pos
 
-        dx = (pc - c) / w
-        dy = (pr - r) / h
-        dist_to_plant = max(abs(pr - r), abs(pc - c)) / max(h, w)
+        # 💡修正: 直線方向(dx, dy)ではなく、BFS距離マップ上で実際に
+        # 距離を縮められる方向を4次元フラグとして与える。
+        good_dir = good_directions(self.dist_map, r, c)
+        raw_dist = self.dist_map[r, c]
+        dist_to_plant = min(1.0, raw_dist / (h + w)) if raw_dist >= 0 else 1.0
+
         in_site_zone = 1.0 if (r, c) in self.site_zone else 0.0
         adjacent_to_plant = 1.0 if max(abs(pr - r), abs(pc - c)) <= 1 else 0.0
 
@@ -506,7 +554,8 @@ class RetakeEnv:
         obs = [
             r / h, c / w,
             char.hp / char.max_hp,
-            dx, dy, dist_to_plant,
+            *good_dir,                 # up, down, left, right (4次元。BFSベース)
+            dist_to_plant,              # BFS距離ベース
             in_site_zone, adjacent_to_plant,
             own_charge, blind_norm, defuse_norm, detonate_norm,
             allies_alive_norm, allies_in_zone, allies_near_entry, nearest_ally_dist,
@@ -519,7 +568,6 @@ class RetakeEnv:
 
     # -- 1Tick進行 ---------------------------------------------------------
     def step_tick(self, defender_actions):
-        """defender_actions: {name: action_id}。Attacker側は内部でstubが決定する。"""
         for char in self.chars:
             char.moved_this_tick = False
 
@@ -543,12 +591,10 @@ class RetakeEnv:
             else:
                 next_positions[char.name] = self.attacker_stub.decide_move(char, self.chars, self.planted_pos)
 
-        # --- アビリティ適用(移動より先に解決。移動やDEFUSE状態はこのTickは行わない) ---
         for char in self.chars:
             if char.name in pending_ability:
                 self.apply_ability(char)
 
-        # --- DEFUSE処理(ロックは1人まで) ---
         pr, pc = self.planted_pos
         for char in self.chars:
             if char.name not in pending_defuse:
@@ -567,7 +613,6 @@ class RetakeEnv:
             else:
                 char.defuse_timer = 0
 
-        # --- 移動処理(順序をシャッフルして先着優先の衝突判定を行う) ---
         move_order = [c for c in self.chars if c.is_alive and c.name in next_positions]
         random.shuffle(move_order)
         for char in move_order:
@@ -586,7 +631,6 @@ class RetakeEnv:
                 char.pos = [nr, nc]
             char.moved_this_tick = tuple(char.pos) != old_pos
 
-        # --- 効果減衰 ---
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
             char.reveal_remaining = max(0, char.reveal_remaining - 1)
@@ -594,7 +638,6 @@ class RetakeEnv:
             smoke["remaining_ticks"] -= 1
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
-        # --- 戦闘解決 ---
         current_los_revealed = set()
         alive = [c for c in self.chars if c.is_alive]
         for i, a in enumerate(alive):
@@ -608,7 +651,6 @@ class RetakeEnv:
         for char in self.chars:
             char.los_revealed = char.is_alive and char.name in current_los_revealed
 
-        # --- 解除完了判定 ---
         if not self.is_defused:
             completed = [
                 c for c in self.defenders()
@@ -618,9 +660,7 @@ class RetakeEnv:
                 self.is_defused = True
                 self.active_defuser_name = None
 
-        # --- 起爆タイマー ---
         self.detonate_timer -= 1
-
         self.tick += 1
 
     def _resolve_shots(self, current_los_revealed):
@@ -699,7 +739,7 @@ class RetakeEnv:
 
 APPROACH_REWARD_SCALE = 0.05
 ENTRY_WITH_SUPPORT_BONUS = 1.5
-ENTRY_ALONE_PENALTY = -1.0
+ENTRY_ALONE_PENALTY = -0.3
 ENTRY_ALONE_LINGER_PENALTY = -0.15
 ABILITY_GOOD_USE_BONUS = 0.4
 ABILITY_PREMATURE_PENALTY = -0.5
@@ -719,11 +759,14 @@ def snapshot_before(env):
     before = {}
     for char in env.defenders():
         r, c = char.pos
-        pr, pc = env.planted_pos
+        # 💡修正: 直線距離ではなくBFS距離を保存する。到達不能(-1)の場合は
+        # マップ最大距離相当の値でフォールバックする(通常は起こらない想定)。
+        raw = env.dist_map[r, c]
+        dist_val = raw if raw >= 0 else (HEIGHT + WIDTH)
         before[char.name] = {
             "alive": char.is_alive,
             "in_zone": (r, c) in env.site_zone,
-            "dist_to_plant": max(abs(pr - r), abs(pc - c)),
+            "dist_to_plant": dist_val,
             "defuse_timer": char.defuse_timer,
         }
     return before
@@ -750,19 +793,25 @@ def compute_rewards(env, before, chosen_actions):
 
         reward = TICK_TIME_PENALTY
         r, c = char.pos
-        dist_now = max(abs(pr - r), abs(pc - c))
         in_zone_now = (r, c) in env.site_zone
+
+        # 💡修正: 接近報酬もBFS距離の減少量で計算する。
+        raw_now = env.dist_map[r, c]
+        dist_now = raw_now if raw_now >= 0 else (HEIGHT + WIDTH)
 
         allies_near_entry = sum(
             1 for a in allies_alive if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
         )
 
+        # 💡変更: detonate_frac(割合)ではなく、残りtickの絶対値で「時間切れ間近か」を判定する。
+        time_critical_for_entry = env.detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
+
         if in_zone_now and not b["in_zone"]:
-            if allies_near_entry >= MIN_ALLIES_FOR_ENTRY or detonate_frac < LOW_TIME_OVERRIDE_FRAC:
+            if allies_near_entry >= MIN_ALLIES_FOR_ENTRY or time_critical_for_entry:
                 reward += ENTRY_WITH_SUPPORT_BONUS
             else:
                 reward += ENTRY_ALONE_PENALTY
-        elif in_zone_now and allies_near_entry < MIN_ALLIES_FOR_ENTRY and detonate_frac >= LOW_TIME_OVERRIDE_FRAC:
+        elif in_zone_now and allies_near_entry < MIN_ALLIES_FOR_ENTRY and not time_critical_for_entry:
             reward += ENTRY_ALONE_LINGER_PENALTY
         elif not in_zone_now:
             reward += APPROACH_REWARD_SCALE * (b["dist_to_plant"] - dist_now)
@@ -771,7 +820,7 @@ def compute_rewards(env, before, chosen_actions):
         if action_id == ACTION_ABILITY:
             char_dist_to_plant = max(abs(pr - char.pos[0]), abs(pc - char.pos[1]))
             ready = char_dist_to_plant <= ENTRY_READY_RADIUS and allies_near_entry >= MIN_ALLIES_FOR_ENTRY
-            if ready or detonate_frac < LOW_TIME_OVERRIDE_FRAC:
+            if ready or time_critical_for_entry:
                 reward += ABILITY_GOOD_USE_BONUS
             else:
                 reward += ABILITY_PREMATURE_PENALTY
@@ -783,7 +832,10 @@ def compute_rewards(env, before, chosen_actions):
             threat = any(
                 e.is_alive and env.check_line_of_sight(char, e) for e in env.attackers()
             )
-            if threat and detonate_frac >= LOW_TIME_OVERRIDE_FRAC:
+            # 💡変更: 解除に最低限必要な時間(DEFUSE_REQUIRED_TICKS)+安全マージンを
+            # 切っている場合は、脅威がいてもペナルティを科さない(間に合わなくなるのを防ぐ)。
+            time_critical_for_defuse = env.detonate_timer <= (DEFUSE_REQUIRED_TICKS + DEFUSE_SAFETY_MARGIN_TICKS)
+            if threat and not time_critical_for_defuse:
                 reward += UNSAFE_DEFUSE_PENALTY
 
         rewards[name] = rewards.get(name, 0.0) + reward
@@ -966,7 +1018,7 @@ def main():
     batch_size = 256
     gamma = 0.99
     target_update_every = 1000
-    epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.05, 8000
+    epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.02, 9000
 
     global_step = 0
     win_history = deque(maxlen=200)
@@ -979,18 +1031,18 @@ def main():
         win_history.append(1 if defused else 0)
 
         for _ in range(max(1, ticks_used)):
-            train_step(net, target_net, optimizer, replay, batch_size, gamma)
+            loss = train_step(net, target_net, optimizer, replay, batch_size, gamma)
+            if loss is not None:
+                soft_update(target_net, net)
             global_step += 1
-            if global_step % target_update_every == 0:
-                target_net.load_state_dict(net.state_dict())
 
-        if episode % 100 == 0:
-            win_rate = sum(win_history) / max(1, len(win_history))
-            print(f"[EP {episode}/{EPISODE_COUNT}] epsilon={epsilon:.3f} win_rate(直近{len(win_history)})={win_rate:.3f} replay={len(replay)}")
-            if win_rate > best_win_rate and len(win_history) >= 100:
-                best_win_rate = win_rate
-                torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_best_by_eval.pt"))
-                print(f"  -> best model updated (win_rate={best_win_rate:.3f})")
+        if episode % 500 == 0:
+            eval_win_rate, eval_entered_rate = evaluate_greedy(env, net, obs_dim, num_eval_episodes=200)
+            print(f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}")
+            if eval_win_rate > best_win_rate:
+                best_win_rate = eval_win_rate
+                torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_best.pt"))
+                print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
 
         if episode % 2000 == 0:
             torch.save(net.state_dict(), os.path.join(SAVE_DIR, f"dqn_defender_retake_ep{episode}.pt"))

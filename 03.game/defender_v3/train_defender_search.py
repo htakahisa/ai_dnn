@@ -7,10 +7,30 @@ abilities_los.py などのfeatureモジュールは一切importしない。
 LOS判定・BFS・衝突判定・射撃解決・アビリティ適用など必要なロジックは
 すべてこのファイル内に複製する。
 
-game_core / map_data からは定数とマップ文字列のみを参照し、ロジック
-(関数・クラス)は一切参照しない(train_attacker_retrieve.py と同じ方針)。
+game_core / map_data / map_data_search からは定数・マップ文字列のみを
+参照し、ロジック(関数・クラス)は一切参照しない(train_attacker_retrieve.py
+と同じ方針)。
 
 学習データ・チェックポイントは data/defender_search_data/ 以下に保存する。
+
+--------------------------------------------------------------------------
+map_data_search.py に期待するフォーマット:
+
+    map_data.NEW_MAZE_STR と全く同じレイアウト・同じ行数/列数の文字列を
+    SEARCH_MAZE_STR という名前でエクスポートする。ただし、Defenderにとって
+    有利な待機ポジションとして使いたい床マス('0'だった場所)だけを '7' に
+    置き換える。壁('1')やスパイク配置マス('2')、スポーン地点('3'/'4')の
+    配置はNEW_MAZE_STRと完全に一致させること(このファイルは歩行可否の
+    判定には map_data.NEW_MAZE_STR 側のグリッドを使うため、7の位置以外に
+    差異があっても無視されるが、念のため一致させておくのが安全)。
+
+    例:
+        # map_data_search.py
+        SEARCH_MAZE_STR = """
+        11111111111111111111111111111111111111111111
+        ...(NEW_MAZE_STRと同じ行数/形状)...
+        """
+--------------------------------------------------------------------------
 """
 
 import os
@@ -28,6 +48,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
+from map_data_search import SEARCH_MAZE_STR
 
 from game_core import (
     MAX_HP,
@@ -61,7 +82,7 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 31
+OBS_DIM = 34  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
@@ -71,6 +92,7 @@ MAX_TICKS = ROUND_DURATION_TICKS  # 90
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30
+REACH_RADIUS = 1        # 担当ポジションへ「到着した」とみなすChebyshev距離
 
 # デフォルトの戦闘ステータス(character_stats.pyの既定値相当。ロジックではなく
 # 数値のみの簡易複製)
@@ -83,6 +105,9 @@ DEFAULT_REACTION = 100.0
 STEP_PENALTY = -0.001
 SPIKE_PULL_REWARD = 0.05
 SIGHTING_PULL_REWARD = 0.01
+DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る
+HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
+HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 DEBUFF_KILL_BONUS = 0.3
@@ -95,20 +120,31 @@ PLANT_PENALTY = -0.5            # このフェーズの範囲外(プラント成
 
 
 # ============================================================================
-# マップ読み込み(map_data.NEW_MAZE_STRのみ参照。パース処理は自前で複製)
+# マップ読み込み(map_data.NEW_MAZE_STR / map_data_search.SEARCH_MAZE_STR
+# のみ参照。パース処理は自前で複製)
 # ============================================================================
 
-def _load_grid():
-    lines = [l.strip() for l in NEW_MAZE_STR.strip("\n").split("\n") if l.strip()]
+def _parse_grid(maze_str):
+    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
 
 
-GRID = _load_grid()
+GRID = _parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
 ATTACKER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3]
 DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
 PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
+
+_SEARCH_GRID = _parse_grid(SEARCH_MAZE_STR)
+DEFENSE_POSITIONS = [
+    (r, c) for r in range(_SEARCH_GRID.shape[0]) for c in range(_SEARCH_GRID.shape[1])
+    if _SEARCH_GRID[r, c] == 7
+]
+if not DEFENSE_POSITIONS:
+    # 万一7が定義されていない場合のフォールバック(defenderスポーン地点を代用)
+    print("[WARN] map_data_search.py に7のポジションが見つかりません。DEFENDER_SPAWNSで代用します。")
+    DEFENSE_POSITIONS = list(DEFENDER_SPAWNS) if DEFENDER_SPAWNS else [(HEIGHT // 2, WIDTH // 2)]
 
 
 def _extract_site_positions(cells, max_sites=2):
@@ -135,7 +171,6 @@ def _extract_site_positions(cells, max_sites=2):
 
 SITE_POSITIONS = _extract_site_positions(PLANT_CELLS, max_sites=2)
 if not SITE_POSITIONS:
-    # マップにサイトが存在しない異常系のフォールバック
     SITE_POSITIONS = [(HEIGHT / 2.0, WIDTH / 2.0)]
 
 
@@ -193,6 +228,7 @@ def bfs_distance_map(goal):
 
 
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
+DEFENSE_POS_DIST_MAPS = [bfs_distance_map(pos) for pos in DEFENSE_POSITIONS]
 
 
 # ============================================================================
@@ -219,6 +255,8 @@ class UnitStub:
         self.dodge_rate = DEFAULT_DODGE
         self.hs_rate = DEFAULT_HS_RATE
         self.reaction = DEFAULT_REACTION + random.uniform(-10, 10)
+        # Defender専用: 割り当てられた待機ポジション(7)。Attackerには使わない。
+        self.assigned_defense_pos = None
 
 
 # ============================================================================
@@ -364,6 +402,14 @@ def build_observation(unit, defenders, attackers, team_memory, smoke_cells, own_
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 0.0  # 予備次元
 
+    # --- 担当する有利ポジション(7)への相対方向・到着フラグ ---
+    if unit.assigned_defense_pos is not None:
+        dp = unit.assigned_defense_pos
+        obs[31] = (dp[0] - unit.pos[0]) / HEIGHT
+        obs[32] = (dp[1] - unit.pos[1]) / WIDTH
+        dist_to_dp = max(abs(dp[0] - unit.pos[0]), abs(dp[1] - unit.pos[1]))
+        obs[33] = 1.0 if dist_to_dp <= REACH_RADIUS else 0.0
+
     return obs
 
 
@@ -405,6 +451,11 @@ class SearchEnv:
     動かす。射撃・アビリティも簡易な即時判定モデルで再実装している
     (本物のプロジェクタイル物理は再現しない。train_attacker_retrieve.py の
     簡易化方針に倣う)。
+
+    Defenderは平常時、map_data_search.py の7地点(DEFENSE_POSITIONS)から
+    ラウンド開始時に割り当てられた1箇所へ向かい、到着後は待機する。
+    スパイクや敵の目撃情報が入った時点で、その情報がこの待機行動より
+    優先される(_compute_rewardsの優先順位ツリーを参照)。
     """
 
     def __init__(self):
@@ -443,11 +494,34 @@ class SearchEnv:
 
         self.carrier_target_site_idx = random.randrange(len(SITE_POSITIONS))
 
+        self._assign_defense_positions()
+
         self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
 
         return self._collect_observations()
+
+    def _assign_defense_positions(self):
+        """各defenderへ、自スポーンから最も近い未割当の7地点を貪欲に割り当てる。
+
+        7地点数がdefender数より少ない場合は、余ったdefenderへランダムに
+        (重複を許容して)割り当てる(その場合は移動衝突判定側で隣接マスへ
+        自然に押し出される)。
+        """
+        remaining = list(DEFENSE_POSITIONS)
+        order = list(self.defenders)
+        random.shuffle(order)
+        for d in order:
+            if remaining:
+                pos = min(
+                    remaining,
+                    key=lambda p: max(abs(p[0] - d.pos[0]), abs(p[1] - d.pos[1])),
+                )
+                remaining.remove(pos)
+            else:
+                pos = random.choice(DEFENSE_POSITIONS)
+            d.assigned_defense_pos = pos
 
     def _smoke_cells(self):
         cells = set()
@@ -493,7 +567,6 @@ class SearchEnv:
                     if d >= 0 and (best_dist < 0 or d < best_dist):
                         best_dist = d
                         best_move = (dr, dc)
-            # たまにノイズを入れて一直線に来すぎないようにする
             if random.random() < 0.15:
                 best_move = random.choice(CARDINAL)
             return best_move
@@ -532,21 +605,18 @@ class SearchEnv:
 
         smoke_cells = self._smoke_cells()
 
-        # --- 移動先・アビリティ要求を先に決める(先着順で衝突解決するため) ---
         move_plans = []  # (unit, (dr, dc))
         ability_requests = []  # (unit, target_pos)
         ability_whiff = {}
         ability_overlap = {}
         held_angle = {}
 
-        # Attacker側(carrier優先で先に確定)
         carriers = [a for a in self.attackers if a.is_alive and a.has_spike]
         others = [a for a in self.attackers if a.is_alive and not a.has_spike]
         for unit in carriers + others:
             dr, dc = self._attacker_decide_move(unit)
             move_plans.append((unit, (dr, dc)))
 
-        # Defender側(DQN行動)
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
@@ -582,7 +652,6 @@ class SearchEnv:
                     elif self.team_memory.last_seen_enemy is not None:
                         ability_requests.append((d, self.team_memory.last_seen_enemy["pos"]))
 
-        # --- 移動を逐次適用(先勝ちで衝突を解決) ---
         for unit, (dr, dc) in move_plans:
             if not unit.is_alive:
                 continue
@@ -600,7 +669,6 @@ class SearchEnv:
                 unit.pos = [nr, nc]
             unit.moved_this_tick = tuple(unit.pos) != old_pos
 
-        # --- アビリティ適用(即時判定。プロジェクタイル物理は簡易化のため省略) ---
         for unit, target_pos in ability_requests:
             unit.charges -= 1
             if unit.role == "SMOKE":
@@ -625,22 +693,16 @@ class SearchEnv:
                     if a.is_alive and has_los(target_pos, a.pos, smoke_cells):
                         a.reveal_remaining = max(a.reveal_remaining, REVEAL_DURATION_TICKS)
 
-        # --- 落下スパイクの拾い直し(carrierが死亡した場合) ---
         if not any(a.is_alive and a.has_spike for a in self.attackers):
             dropped_holder = next((a for a in self.attackers if a.has_spike), None)
             if dropped_holder is not None:
-                drop_pos = tuple(dropped_holder.pos)
-                nearest_alive = next(
-                    (a for a in self.attackers if a.is_alive), None
-                )
+                nearest_alive = next((a for a in self.attackers if a.is_alive), None)
                 if nearest_alive is not None:
                     nearest_alive.has_spike = True
                 dropped_holder.has_spike = False
 
-        # --- 射撃解決(反応速度順、battle_logic._resolve_all_shotsの簡易複製) ---
         self._resolve_shots()
 
-        # --- 持続効果の減衰 ---
         for u in self.defenders + self.attackers:
             u.blind_remaining = max(0, u.blind_remaining - 1)
             u.reveal_remaining = max(0, u.reveal_remaining - 1)
@@ -651,7 +713,6 @@ class SearchEnv:
         self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
         self.round_timer -= 1
 
-        # --- プラント判定(carrierがサイト中心セルへ十分近づいたら簡易成立) ---
         carrier = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
         if carrier is not None:
             site = SITE_POSITIONS[self.carrier_target_site_idx]
@@ -667,7 +728,6 @@ class SearchEnv:
         else:
             self._plant_progress = 0
 
-        # --- 報酬計算 ---
         rewards = self._compute_rewards(
             pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle
         )
@@ -761,6 +821,11 @@ class SearchEnv:
         for d in self.defenders:
             r = STEP_PENALTY
 
+            # --- 平常時の寄せ先を優先度順に決める ---
+            # 1. スパイク確定情報(最優先)
+            # 2. 敵目撃情報(retake準備としてチーム全体で寄る)
+            # 3. どちらも無ければ、担当する有利ポジション(7)へ向かい、
+            #    到着後は静止する
             if self.team_memory.spike_pos is not None:
                 sp = self.team_memory.spike_pos
                 dist = max(abs(sp[0]-d.pos[0]), abs(sp[1]-d.pos[1]))
@@ -769,6 +834,17 @@ class SearchEnv:
                 ls = self.team_memory.last_seen_enemy["pos"]
                 dist = max(abs(ls[0]-d.pos[0]), abs(ls[1]-d.pos[1]))
                 r += SIGHTING_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
+            elif d.assigned_defense_pos is not None:
+                dp = d.assigned_defense_pos
+                dist = max(abs(dp[0]-d.pos[0]), abs(dp[1]-d.pos[1]))
+                if dist > REACH_RADIUS:
+                    r += DEFENSE_POSITION_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
+                else:
+                    # 到着済み: 動かないことを評価し、無駄なうろつきを抑制する
+                    if not d.moved_this_tick:
+                        r += HOLD_POSITION_BONUS
+                    else:
+                        r += HOLD_POSITION_PENALTY
 
             if ability_whiff.get(d.name):
                 r += ABILITY_WHIFF_PENALTY

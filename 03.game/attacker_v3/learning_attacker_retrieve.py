@@ -28,8 +28,7 @@ ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY"]
 N_ACTIONS = len(ACTIONS)
 ROLES = ["FLASH", "SMOKE", "RECON"]
 
-OBS_DIM = 18  # 位置2 + 壁4方向 + spikeへの方向2 + dist正規化1 +
-                  # role onehot3 + charge1 + 敵存在1 + 敵相対2 + 敵blind1 + 敵reveal1
+OBS_DIM = 20
 
 DEFAULT_MODEL_PATH = "attacker_retrieve_best.pt"
 
@@ -157,11 +156,21 @@ class LearningAttackerRetrieveController:
         wall_right = is_wall(r, c + 1)
 
         dist_map = _bfs_distance_map(grid, spike_pos)
-        sr, sc = int(spike_pos[0]), int(spike_pos[1])
-        dr = float(np.clip((sr - r) / height, -1, 1))
-        dc = float(np.clip((sc - c) / width, -1, 1))
+        max_dist_scale = float(height + width)
+
+        neighbor_dists = []
+        for (dr_, dc_), is_wall_flag in zip(
+            CARDINAL, [wall_up, wall_down, wall_left, wall_right]
+        ):
+            nr, nc = r + dr_, c + dc_
+            if is_wall_flag or not (0 <= nr < height and 0 <= nc < width):
+                neighbor_dists.append(1.0)
+            else:
+                nd = dist_map[nr, nc]
+                neighbor_dists.append(1.0 if nd < 0 else min(1.0, nd / max_dist_scale))
+
         raw_dist = dist_map[r, c]
-        dist_norm = min(1.0, raw_dist / (height + width)) if raw_dist >= 0 else 1.0
+        dist_norm = min(1.0, raw_dist / max_dist_scale) if raw_dist >= 0 else 1.0
 
         role_onehot = _role_onehot(char)
         charge = float(_ability_charge(char))
@@ -181,7 +190,8 @@ class LearningAttackerRetrieveController:
         obs = [
             r / height, c / width,
             wall_up, wall_down, wall_left, wall_right,
-            dr, dc, dist_norm,
+            *neighbor_dists,
+            dist_norm,
             *role_onehot,
             charge,
             e_present, edr, edc, e_blind, e_reveal,
