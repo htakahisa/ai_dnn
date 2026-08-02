@@ -7,23 +7,17 @@ run_game.py / battle_logic.py の decide_move(char, game_state) 呼び出し
 
 完全に自己完結。run_game.py / controllers.py / battle_logic.py /
 abilities_los.py への依存はなく、必要なLOS計算・行動マスク・観測構築は
-このファイル内に複製する。game_core からは定数のみ参照する(ロジックは
-参照しない)。
+このファイル内に複製する。game_core / map_data_search からは定数・
+マップ文字列のみを参照する(ロジックは参照しない)。
+
+train_defender_search.py と同じ優先順位ツリーを踏襲する:
+    1. スパイク確定情報があればそちらへ最優先で寄る
+    2. 敵目撃情報があればそちらへ寄る(retake準備)
+    3. どちらも無ければ、ラウンド開始時に自チーム内で貪欲割り当てた
+       map_data_search.py の7地点(有利ポジション)へ向かい、到着後は静止する
 
 LearningDefenderAllAIController と同様、Defenderチーム全体で1つの
 コントローラーインスタンスを共有する想定(重み共有Dueling DQN)。
-decide_move はキャラクターごとに毎tick呼び出されるため、チーム共有メモリ
-(team_memory)は「同じキャラクターが再度呼ばれたら次のtickに入った」と
-みなして更新するタイミングを内部で管理する。
-
-decide_move の戻り値は以下のいずれか:
-    - next_pos (list[int, int])                        : 通常移動
-    - (next_pos, {"ability": name, "target": (r, c)})   : アビリティ使用
-
-このモデルはプラント前フェーズ専用。is_planted=True の場合は
-このコントローラーの責務外なので、その場に留まる安全策のみ行う
-(実運用では MultiRoleAttackerController 同様、上位のフェーズ切替側で
-別コントローラーに委譲することを想定)。
 """
 
 from collections import deque
@@ -36,18 +30,20 @@ from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
+from map_data_search import SEARCH_MAZE_STR
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 31
+OBS_DIM = 34  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
+REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすChebyshev距離
 
-DEFAULT_MODEL_PATH = "data/defender_search_data/dqn_defender_search_best.pt"
+DEFAULT_MODEL_PATH = "data/defender_search_data/dqn_defender_search_best_by_eval.pt"
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +70,7 @@ class DefenderSearchDuelingDQN(nn.Module):
 # 補助関数(LOS)。abilities_los.py とは独立した複製実装。
 #
 # 注意: game_state には smokes(煙リスト)が含まれないため、この推論用LOSは
-# 壁のみを考慮する(スモークによる遮蔽は考慮しない)。これは
-# learning_attacker_retrieve.py の _has_los と同じ簡略化方針。
+# 壁のみを考慮する(スモークによる遮蔽は考慮しない)。
 # ---------------------------------------------------------------------------
 def _line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
@@ -103,6 +98,25 @@ def _has_los(grid, p1, p2):
         if grid[r, c] == 1:
             return False
     return True
+
+
+def _parse_search_grid(maze_str):
+    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+
+
+def _extract_defense_positions():
+    """map_data_search.SEARCH_MAZE_STR から7のセルを抽出する。
+    見つからない場合は空リストを返す(呼び出し側でフォールバックする)。"""
+    grid = _parse_search_grid(SEARCH_MAZE_STR)
+    positions = [
+        (r, c) for r in range(grid.shape[0]) for c in range(grid.shape[1])
+        if grid[r, c] == 7
+    ]
+    return positions
+
+
+_DEFENSE_POSITIONS_CACHE = _extract_defense_positions()
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -205,12 +219,19 @@ class LearningDefenderSearchController:
         self._site_positions_cache = None
         self._processed_this_tick = set()
 
+        # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
+        self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
+        self._assigned_positions = {}   # char_name -> (r, c)
+        self._assignment_done = False
+
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
         self.team_memory.reset()
         self._processed_this_tick.clear()
-        # site_positions はマップ形状に依存するだけなのでラウンドをまたいで
-        # キャッシュを保持して構わない(クリアしない)。
+        self._assigned_positions.clear()
+        self._assignment_done = False
+        # site_positions / defense_positions はマップ形状に依存するだけなので
+        # ラウンドをまたいでキャッシュを保持して構わない(クリアしない)。
 
     def _maybe_advance_tick(self, char, grid, chars):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
@@ -219,6 +240,38 @@ class LearningDefenderSearchController:
             self._processed_this_tick.clear()
             self.team_memory.update(grid, char.team, chars)
         self._processed_this_tick.add(char.name)
+
+    def _ensure_defense_assignment(self, char, grid, chars):
+        """ラウンド開始時、自チーム全員に7地点を貪欲割り当てする。
+        フォールバック: 7地点が見つからない場合は自チームのスポーン
+        位置集合を代用する。"""
+        if self._assignment_done:
+            return
+
+        if not self._defense_positions:
+            teammates_now = [c for c in chars if c.team == char.team and c.is_alive]
+            fallback = [tuple(c.pos) for c in teammates_now] or [
+                (grid.shape[0] // 2, grid.shape[1] // 2)
+            ]
+            self._defense_positions = fallback
+
+        teammates = [c for c in chars if c.team == char.team and c.is_alive]
+        remaining = list(self._defense_positions)
+        # 名前順で安定させる(乱数を使わず決定的に割り当てる)
+        for teammate in sorted(teammates, key=lambda c: c.name):
+            if remaining:
+                pos = min(
+                    remaining,
+                    key=lambda p: max(abs(p[0] - teammate.pos[0]), abs(p[1] - teammate.pos[1])),
+                )
+                remaining.remove(pos)
+            else:
+                pos = self._defense_positions[
+                    hash(teammate.name) % len(self._defense_positions)
+                ]
+            self._assigned_positions[teammate.name] = pos
+
+        self._assignment_done = True
 
     # -- 観測構築 ----------------------------------------------------------
     def _build_observation(self, char, game_state, site_positions):
@@ -259,10 +312,8 @@ class LearningDefenderSearchController:
             for e in enemies
         ) else 0.0
 
-        # 味方スモーク展開中か。game_state には smokes が含まれないため、
-        # 代替として「自チームの誰かが直近でSMOKEチャージを消費済みか」を
-        # 判定できないので、ここでは常に0とする(壁LOSのみの簡略化と同様、
-        # 学習時のsmoke重複防止は事後の重み付けとして反映済みという前提)。
+        # 味方スモーク展開中フラグ。game_state に smokes が含まれないため
+        # 常に0とする(learning_attacker_retrieve.py と同じ簡略化方針)。
         obs[13] = 0.0
 
         if self.team_memory.spike_pos is not None:
@@ -299,11 +350,19 @@ class LearningDefenderSearchController:
             obs[27] = (site_positions[1][0] - char.pos[0]) / height
             obs[28] = (site_positions[1][1] - char.pos[1]) / width
 
-        round_timer = game_state.get("detonate_timer")
         # search phaseではdetonate_timerは未使用(プラント前)。
-        # ここではラウンド経過情報を持たないため中立値(0.5)を入れる。
+        # ラウンド経過情報を持たないため中立値(0.5)を入れる。
         obs[29] = 0.5
         obs[30] = 0.0
+
+        assigned_pos = self._assigned_positions.get(char.name)
+        if assigned_pos is not None:
+            obs[31] = (assigned_pos[0] - char.pos[0]) / height
+            obs[32] = (assigned_pos[1] - char.pos[1]) / width
+            dist_to_assigned = max(
+                abs(assigned_pos[0] - char.pos[0]), abs(assigned_pos[1] - char.pos[1])
+            )
+            obs[33] = 1.0 if dist_to_assigned <= REACH_RADIUS else 0.0
 
         return obs, visible_enemies
 
@@ -352,6 +411,7 @@ class LearningDefenderSearchController:
             if not self._site_positions_cache:
                 self._site_positions_cache = [(grid.shape[0] / 2.0, grid.shape[1] / 2.0)]
 
+        self._ensure_defense_assignment(char, grid, chars)
         self._maybe_advance_tick(char, grid, chars)
 
         obs, visible_enemies = self._build_observation(char, game_state, self._site_positions_cache)
@@ -365,8 +425,8 @@ class LearningDefenderSearchController:
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
 
-        move_idx, ability_flag = divmod(action_idx, 2)
-        use_ability = bool(ability_flag)
+        move_idx, use_ability_int = divmod(action_idx, 2)
+        use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
 
         if self.verbose:

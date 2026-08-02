@@ -211,12 +211,30 @@ def _build_candidate_tiers(grid, plant_pos, formation_cells):
     return tier1, tier2, tier3
 
 
-def _assign_goals(grid, plant_pos, formation_cells, positions_ordered):
-    """近い順の貪欲割当で、各エージェントの誘導目標(goal)とtier(0/1/2)を返す。
+def _assign_goals(grid, plant_pos, formation_cells, positions_ordered, cell_dist_maps):
+    """近い順（BFS実距離）の貪欲割当で、各エージェントの誘導目標(goal)とtier(0/1/2)を返す。
+
+    チェビシェフ距離（直線距離）ではなく、壁を考慮したBFS距離で「近い」を
+    判定する。直線距離だと壁の向こうのセルを「近い」と誤認し、
+    キャラクターが角で詰まる原因になるため。
 
     positions_ordered: [(agent_index, current_pos), ...] のリスト。
+    cell_dist_maps: {cell(tuple): distance_map(np.ndarray)} のキャッシュ辞書。
+        呼び出し元が episode/round 単位で使い回すこと（毎回作り直すと重い）。
     戻り値: {agent_index: (goal_pos, tier)}  tier: 0=設置位置, 1=隣接8マス, 2=map6
     """
+    def _dist_map_for(cell):
+        dm = cell_dist_maps.get(cell)
+        if dm is None:
+            dm = _build_distance_map_from_coords(grid, [cell])
+            cell_dist_maps[cell] = dm
+        return dm
+
+    def _bfs_dist(pos, cell):
+        dm = _dist_map_for(cell)
+        d = dm[pos[0], pos[1]]
+        return float(d) if np.isfinite(d) else float("inf")
+
     tier1, tier2, tier3 = _build_candidate_tiers(grid, plant_pos, formation_cells)
     tiers = [tier1, tier2, tier3]
     claimed = set()
@@ -226,7 +244,7 @@ def _assign_goals(grid, plant_pos, formation_cells, positions_ordered):
         for tier_idx, tier_cells in enumerate(tiers):
             avail = [s for s in tier_cells if s not in claimed]
             if avail:
-                chosen = min(avail, key=lambda s: _chebyshev(pos, s))
+                chosen = min(avail, key=lambda s: _bfs_dist(pos, s))
                 chosen_tier = tier_idx
                 break
         if chosen is None:
@@ -328,6 +346,7 @@ class GuardEnv:
         self.smokes = []
 
         self._enemy_goal_dist_map = None
+        self._cell_dist_maps = {}  # ゴール候補セル -> BFS距離マップ のキャッシュ（reset()ごとにクリア）
         self._blocking_none = None  # 予約（互換のため）
 
     # ------------------------------------------------------------------
@@ -348,6 +367,7 @@ class GuardEnv:
 
         self.plant_pos = self.rng.choice(self.site_cells) if self.site_cells else (0, 0)
         self._enemy_goal_dist_map = _build_distance_map_from_coords(self.grid, [self.plant_pos])
+        self._cell_dist_maps = {}  # ラウンドが変わればplant_posも変わるためクリア
 
         # --- Guard：設置直後を想定し、設置地点付近にランダム配置 ---
         occupied = {self.plant_pos}
@@ -387,7 +407,7 @@ class GuardEnv:
         goals = self._compute_goals()
         for i in range(self.n_guards):
             goal, _tier = goals[i]
-            self._prev_goal_dist[i] = _chebyshev(self.guard_pos[i], goal)
+            self._prev_goal_dist[i] = self._goal_distance(self.guard_pos[i], goal)
             self._prev_had_cover[i] = self._has_los_to_plant(self.guard_pos[i])
 
         return [self._get_obs(i, goals) for i in range(self.n_guards)]
@@ -453,12 +473,26 @@ class GuardEnv:
             return {i: (defuser_pos, -1) for i in range(self.n_guards)}
 
         order = [(i, self.guard_pos[i]) for i in range(self.n_guards) if self.guard_alive[i]]
-        assigned = _assign_goals(self.grid, self.plant_pos, self.formation_cells, order)
+        assigned = _assign_goals(
+            self.grid, self.plant_pos, self.formation_cells, order, self._cell_dist_maps
+        )
         # 死亡中のguardにもダミー値を入れておく（インデックスアクセスを安全にするため）
         for i in range(self.n_guards):
             if i not in assigned:
                 assigned[i] = (self.plant_pos, 0)
         return assigned
+
+    def _goal_distance(self, pos, goal):
+        """壁を考慮したBFS距離。ゴール（配置スロットや緊急時の解除者位置）
+        までの「実際に歩ける経路上の距離」を返す。チェビシェフ距離（直線）
+        を使うと壁の向こうを近いと誤認し、角で詰まる原因になるため。
+        """
+        dm = self._cell_dist_maps.get(goal)
+        if dm is None:
+            dm = _build_distance_map_from_coords(self.grid, [goal])
+            self._cell_dist_maps[goal] = dm
+        d = dm[pos[0], pos[1]]
+        return float(d) if np.isfinite(d) else DIST_NORM_MAX
 
     # ------------------------------------------------------------------
     def get_action_mask(self, i):
@@ -499,7 +533,7 @@ class GuardEnv:
         obs.append(max(-1.0, min(1.0, (pr - r) / DIST_NORM_MAX)))
         obs.append(max(-1.0, min(1.0, (pc - c) / DIST_NORM_MAX)))
 
-        dist_to_goal = _chebyshev((r, c), (gr, gc))
+        dist_to_goal = self._goal_distance((r, c), (gr, gc))
         obs.append(min(1.0, dist_to_goal / DIST_NORM_MAX))
         obs.append(max(-1.0, min(1.0, (gr - r) / DIST_NORM_MAX)))
         obs.append(max(-1.0, min(1.0, (gc - c) / DIST_NORM_MAX)))
@@ -532,7 +566,7 @@ class GuardEnv:
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
             wall = self._is_wall(nr, nc)
-            gdist = _chebyshev((nr, nc), (gr, gc))
+            gdist = self._goal_distance((nr, nc), (gr, gc))
             obs.append(1.0 if wall else min(1.0, gdist / DIST_NORM_MAX))
 
         for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
@@ -785,7 +819,7 @@ class GuardEnv:
                 continue
             goal, tier = goals_after[i]
             urgency = tier == -1
-            new_dist = _chebyshev(self.guard_pos[i], goal)
+            new_dist = self._goal_distance(self.guard_pos[i], goal)
             coef = self.urgency_shaping_coef if urgency else self.shaping_coef
             rewards[i] += (self._prev_goal_dist[i] - new_dist) * coef
             self._prev_goal_dist[i] = new_dist

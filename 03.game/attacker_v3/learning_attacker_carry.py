@@ -235,7 +235,13 @@ class LearningAttackerCarryController(BaseController):
     def _get_char_state(self, char):
         return self._char_state.setdefault(
             char.name,
-            {"tick": 0, "last_delta": (0.0, 0.0), "stuck": 0},
+            {
+                "tick": 0,
+                "last_delta": (0.0, 0.0),
+                "stuck": 0,
+                "prev_pos": None,       # 前tick終了時点での実座標
+                "intended_move": False,  # 前tickで「移動しよう」としていたか
+            },
         )
 
     @staticmethod
@@ -352,6 +358,22 @@ class LearningAttackerCarryController(BaseController):
         st = self._get_char_state(char)
         st["tick"] += 1
 
+        r, c = int(char.pos[0]), int(char.pos[1])
+
+        # --- ここが修正の核心 ---
+        # 前tickで「動くつもりだった」のに、実座標(prev_pos -> 現在r,c)が
+        # 変化していなければ、壁ではなく味方(escort)等にブロックされたということ。
+        # last_delta / stuck は「意図」ではなく「実際に起きた変化」で確定させる。
+        if st["prev_pos"] is not None:
+            pr, pc = st["prev_pos"]
+            actual_dr, actual_dc = r - pr, c - pc
+            if (actual_dr, actual_dc) == (0, 0):
+                st["last_delta"] = (0.0, 0.0)
+                st["stuck"] += 1
+            else:
+                st["last_delta"] = (float(actual_dr), float(actual_dc))
+                st["stuck"] = 0
+
         obs = self._build_obs(char, game_state, st)
         mask = self._action_mask(char, grid)
 
@@ -364,23 +386,17 @@ class LearningAttackerCarryController(BaseController):
             q = np.where(mask, q, -1e9)
             action = int(np.argmax(q))
 
-        r, c = int(char.pos[0]), int(char.pos[1])
-
         if action == ACTION_PLANT:
-            st["last_delta"] = (0.0, 0.0)
-            st["stuck"] += 1
-            # battle_logic.py の move_character が現在座標(r, c)を見て
-            # grid[r, c] == 2 かどうかで判定するため、next_posは現在地でよい。
+            st["prev_pos"] = (r, c)
             return [r, c], "PLANT"
 
         dr, dc = _MOVE_DELTA[action]
         nr, nc = r + dr, c + dc
 
         if action == ACTION_STAY or self._is_wall(grid, nr, nc):
-            st["last_delta"] = (0.0, 0.0)
-            st["stuck"] += 1
+            st["prev_pos"] = (r, c)
             return [r, c]
 
-        st["last_delta"] = (float(dr), float(dc))
-        st["stuck"] = 0
+        # ここでは「移動を試みる」だけで、成功したかどうかは次回のdecide_moveで判定する
+        st["prev_pos"] = (r, c)
         return [nr, nc]
