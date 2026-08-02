@@ -136,8 +136,7 @@ def has_los(p1, p2):
 class RetrieveEnv:
     """1体のリトリーブ役アタッカー + 0〜1体の簡易敵スタブ。"""
 
-    OBS_DIM = 18  # 位置2 + 壁4方向 + spikeへの方向2 + dist正規化1 +
-                  # role onehot3 + charge1 + 敵存在1 + 敵相対2 + 敵blind1 + 敵reveal1
+    OBS_DIM = 20
 
     def reset(self):
         self.tick = 0
@@ -185,10 +184,20 @@ class RetrieveEnv:
         wall_left = 1.0 if GRID[r, c - 1] == 1 else 0.0
         wall_right = 1.0 if GRID[r, c + 1] == 1 else 0.0
 
-        dr = np.clip((self.spike_pos[0] - r) / HEIGHT, -1, 1)
-        dc = np.clip((self.spike_pos[1] - c) / WIDTH, -1, 1)
-        dist_norm = min(1.0, self.dist_map[r, c] / (HEIGHT + WIDTH))
+        # 直線方向(dr, dc)は廃止し、隣接4マスの「実際のBFS距離」を渡す。
+        # 壁の場合は最大値(=最も悪い)扱いにして、壁方向を選ばせないようにする。
+        max_dist_scale = float(HEIGHT + WIDTH)
+        neighbor_dists = []
+        for (dr_, dc_), is_wall in zip(
+            CARDINAL, [wall_up, wall_down, wall_left, wall_right]
+        ):
+            nr, nc = r + dr_, c + dc_
+            if is_wall or not (0 <= nr < HEIGHT and 0 <= nc < WIDTH):
+                neighbor_dists.append(1.0)  # 壁 = 最悪値
+            else:
+                neighbor_dists.append(min(1.0, self.dist_map[nr, nc] / max_dist_scale))
 
+        dist_norm = min(1.0, self.dist_map[r, c] / max_dist_scale)
         role_onehot = [1.0 if self.role == role else 0.0 for role in ROLES]
 
         visible = self._visible_enemy()
@@ -206,7 +215,8 @@ class RetrieveEnv:
         obs = [
             r / HEIGHT, c / WIDTH,
             wall_up, wall_down, wall_left, wall_right,
-            dr, dc, dist_norm,
+            *neighbor_dists,          # ここが変更点: dr, dc(2) -> neighbor_dists(4)
+            dist_norm,
             *role_onehot,
             float(self.charge),
             e_present, edr, edc, e_blind, e_reveal,
@@ -254,8 +264,8 @@ class RetrieveEnv:
             done = True
             info["result"] = "reached"
 
-        # 敵の反撃(簡易)
-        if not done and self._visible_enemy() and random.random() < ENEMY_REACTION_HIT_CHANCE:
+        # 敵の反撃(簡易) — LOSが通っていれば毎tick必ず撃ち合いが発生する
+        if not done and self._visible_enemy():
             reward += self._resolve_enemy_shot()
             if self.hp <= 0:
                 reward += DEATH_PENALTY
@@ -363,12 +373,13 @@ def train(
     episodes=EPISODE_COUNT,
     batch_size=128,
     gamma=0.97,
-    lr=1e-3,
+    lr=3e-4,                      # 1e-3 -> 3e-4
     buffer_size=50000,
-    target_update_every=500,
+    target_update_every=1000,     # 500 -> 1000 (振動を抑える)
     eps_start=1.0,
-    eps_end=0.05,
-    eps_decay_episodes=8000,
+    eps_end=0.10,                 # 0.05 -> 0.10 (崩壊時に抜け出す余地を残す)
+    eps_decay_episodes=11000,     # 8000 -> 11000 (ゆっくり絞る)
+    warmup_steps=2000,            # 追加: bufferが溜まるまで学習しない
     save_path="data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
 ):
     env = RetrieveEnv()
@@ -381,6 +392,7 @@ def train(
     best_avg_reward = -float("inf")
     recent_rewards = deque(maxlen=200)
     step_count = 0
+    best_success_rate = 0
 
     for ep in range(episodes):
         obs, mask = env.reset()
@@ -434,17 +446,43 @@ def train(
                 target_net.load_state_dict(policy_net.state_dict())
 
         recent_rewards.append(ep_reward)
-        if ep % 200 == 0 and len(recent_rewards) > 0:
-            avg = sum(recent_rewards) / len(recent_rewards)
-            print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} avg_reward(200)={avg:.3f}")
-            if avg > best_avg_reward and ep > eps_decay_episodes // 2:
-                best_avg_reward = avg
+        if ep % 200 == 0:
+            eval_reward, success_rate, death_rate = evaluate_greedy(policy_net, episodes=100)
+            print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
+                f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%}")
+            if success_rate > best_success_rate:
+                best_success_rate = success_rate
                 torch.save(policy_net.state_dict(), save_path)
-                print(f"  -> best model saved ({save_path}, avg={avg:.3f})")
+                print(f"  -> best model saved (success_rate={success_rate:.2%})")
 
     torch.save(policy_net.state_dict(), save_path.replace("best", "final"))
     print("Training complete.")
 
+def evaluate_greedy(policy_net, episodes=100):
+    """探索なし(eps=0)でN episode実行し、成功率・死亡率・平均報酬を計測する。"""
+    env = RetrieveEnv()
+    total_reward = 0.0
+    reached = 0
+    died = 0
+    for _ in range(episodes):
+        obs, mask = env.reset()
+        done = False
+        ep_reward = 0.0
+        while not done:
+            state_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
+            mask_t = torch.from_numpy(mask).to(DEVICE)
+            with torch.no_grad():
+                q_values = policy_net(state_t).squeeze(0)
+                action = masked_argmax(q_values, mask_t)
+            obs, reward, done, mask, info = env.step(action)
+            ep_reward += reward
+        total_reward += ep_reward
+        if info.get("result") == "reached":
+            reached += 1
+        elif info.get("result") == "died":
+            died += 1
+    n = episodes
+    return total_reward / n, reached / n, died / n
 
 if __name__ == "__main__":
     train()

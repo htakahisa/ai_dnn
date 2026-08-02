@@ -1,20 +1,19 @@
-"""learning_defender_retake.py
+"""learning_defender_retake.py (修正版)
 
-Retake フェーズ（スパイク解除のためのサイト再突入）用の推論コントローラー。
-train_defender_retake.py で学習した Dueling DQN を読み込み、
-run_game.py / battle_logic.py の decide_move(char, game_state) 呼び出し
-規約にそのまま乗せられる形で返す。
+train_defender_retake.py の観測変更(BFS距離マップベースのdist_to_plant /
+good_dir)に合わせて更新。以前のバージョンとは観測ベクトルの意味が異なるため、
+再学習済みのモデル(dqn_defender_retake_*.pt)と組み合わせて使うこと。
 
 完全に自己完結。controllers.py / battle_logic.py / abilities_los.py への
 依存はなく、必要なLOS・BFS・行動マスク・観測構築ロジックはこのファイル内に
-複製する（train_defender_retake.py の RetakeEnv と可能な限り同一の特徴量に
-なるよう実装している）。game_core からは定数のみ参照する。
+複製する。game_core からは定数のみ参照する。
 
 重要: 5人の Defender 全員に対して、このクラスの「同一インスタンス」を
 defender_controller として割り当てること。味方が使用中のアビリティ効果
 （特にSMOKE）を追跡するため、チーム内で状態を共有する設計になっている。
 """
 
+import random
 from collections import deque
 
 import numpy as np
@@ -32,7 +31,7 @@ from game_core import (
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
 N_ACTIONS = 7
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 ACTION_DEFUSE = 5
@@ -103,26 +102,41 @@ def _has_los(grid, p1, p2, smoke_cells):
     return _smoke_allows_line(cells, smoke_cells)
 
 
-def _bfs_site_zone(grid, plant_pos, radius):
-    """プラント地点からBFSでradius歩以内に到達できる床マスの集合(通路経由)。"""
+def _bfs_distance_map(grid, goal):
+    """goal(プラント地点)から各床マスへの最短距離マップ(壁越え不可)。
+    train_defender_retake.py の bfs_distance_map() と同一方式。"""
     height, width = grid.shape
-    start = (int(plant_pos[0]), int(plant_pos[1]))
-    visited = {start: 0}
-    queue = deque([start])
+    dist = np.full((height, width), -1, dtype=np.int32)
+    gr, gc = int(goal[0]), int(goal[1])
+    if grid[gr, gc] == 1:
+        return dist
+    dist[gr, gc] = 0
+    queue = deque([(gr, gc)])
     while queue:
-        cur = queue.popleft()
-        dist = visited[cur]
-        if dist >= radius:
-            continue
+        r, c = queue.popleft()
         for dr, dc in CARDINAL_MOVES:
-            nxt = (cur[0] + dr, cur[1] + dc)
-            if not (0 <= nxt[0] < height and 0 <= nxt[1] < width):
-                continue
-            if grid[nxt[0], nxt[1]] == 1 or nxt in visited:
-                continue
-            visited[nxt] = dist + 1
-            queue.append(nxt)
-    return set(visited.keys())
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
+                dist[nr, nc] = dist[r, c] + 1
+                queue.append((nr, nc))
+    return dist
+
+
+def _good_directions(grid, dist_map, r, c):
+    """現在地から上下左右のうち、BFS距離マップ上で実際にプラントへの距離を
+    縮められる方向を1.0とする4次元フラグ(train_defender_retake.py と同一)。"""
+    height, width = grid.shape
+    good = [0.0, 0.0, 0.0, 0.0]
+    raw = dist_map[r, c]
+    if raw < 0:
+        return good
+    for i, (dr, dc) in enumerate(CARDINAL_MOVES):
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
+            nd = dist_map[nr, nc]
+            if nd != -1 and nd < raw:
+                good[i] = 1.0
+    return good
 
 
 def _alive_occupied_positions(chars, moving_char=None):
@@ -153,7 +167,6 @@ def _get_next_pos_random(grid, pos, chars, moving_char=None):
             valid.append(cand)
     if not valid:
         return [r, c]
-    import random
     return list(random.choice(valid))
 
 
@@ -171,7 +184,8 @@ def _candidate_goals(grid, goal, blocked, allow_adjacent_goal):
 
 
 def _move_towards_target(grid, pos, target, chars, moving_char=None, allow_adjacent_goal=False):
-    """BFSで壁・生存キャラクターを避けながらtargetへ1マス進む(controllers.py非依存の複製)。"""
+    """BFSで壁・生存キャラクターを避けながらtargetへ1マス進む(controllers.py非依存の複製)。
+    プラント前(is_planted=False)の待避移動にのみ使用する。"""
     start = (int(pos[0]), int(pos[1]))
     goal = (int(target[0]), int(target[1]))
     blocked = _alive_occupied_positions(chars, moving_char)
@@ -243,15 +257,9 @@ class LearningDefenderRetakeController:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, obs_dim=None, greedy=True, verbose=False):
         self.greedy = greedy
         self.verbose = verbose
-
-        # obs_dimが指定されなければ、build_observation()の出力から実行時に確定する。
-        # (モデルロード前に次元が分からないため、最初のdecide_move呼び出し時に
-        #  遅延構築する。)
         self._obs_dim = obs_dim
         self._model_path = model_path
         self.model = None
-
-        # ラウンドごとにリセットする内部状態
         self.reset_round()
 
     def _lazy_init_model(self, obs_dim):
@@ -268,15 +276,15 @@ class LearningDefenderRetakeController:
 
     # -- ラウンド開始時のリセット ------------------------------------------
     def reset_round(self):
+        self._dist_map = None
+        self._dist_map_key = None  # プラント地点座標。変化時のみ再計算する
         self._site_zone = None
-        self._site_zone_key = None  # (planted_pos) を記録し、変化時のみ再計算する
         self._processed_this_tick = set()
         self._smoke_remaining = {}   # name -> 残りTick数
         self._smoke_cells_cache = set()
 
     # -- 味方アビリティ使用状況の追跡 ---------------------------------------
     def _advance_tick_if_needed(self, name):
-        """同じキャラクター名が2回連続で呼ばれたら新しいTickが始まったとみなす。"""
         if name in self._processed_this_tick:
             self._processed_this_tick = set()
             expired = []
@@ -293,8 +301,6 @@ class LearningDefenderRetakeController:
         self._processed_this_tick.add(name)
 
     def _register_own_smoke_cast(self, planted_pos, grid, caster_name):
-        """このコントローラー配下のキャラがSMOKEを撃った際、着弾点(サイト)周辺を
-        自チームのスモーク領域として記憶する(実際のenv.smokesは参照できないため)。"""
         pr, pc = int(planted_pos[0]), int(planted_pos[1])
         height, width = grid.shape
         cells = {
@@ -307,21 +313,25 @@ class LearningDefenderRetakeController:
         self._smoke_cells_cache = self._smoke_cells_cache | cells
 
     def _ally_ability_active(self, char, chars):
-        """自チームのアビリティ効果(敵の状態異常、または自チームSMOKE)が現在有効か。
-        現在有効ならtrue -> ABILITY行動をマスクして無駄撃ちを防ぐ。"""
         for enemy in chars:
             if getattr(enemy, "team", None) != char.team and getattr(enemy, "is_alive", True):
                 if enemy.blind_remaining > 0 or enemy.reveal_remaining > 0:
                     return True
         return bool(self._smoke_remaining)
 
-    # -- サイトゾーン(遅延計算・キャッシュ) ---------------------------------
-    def _get_site_zone(self, grid, plant_pos):
+    # -- BFS距離マップ・サイトゾーン(遅延計算・キャッシュ) --------------------
+    def _get_dist_map(self, grid, plant_pos):
         key = (int(plant_pos[0]), int(plant_pos[1]))
-        if self._site_zone is None or self._site_zone_key != key:
-            self._site_zone = _bfs_site_zone(grid, plant_pos, SITE_ZONE_RADIUS)
-            self._site_zone_key = key
-        return self._site_zone
+        if self._dist_map is None or self._dist_map_key != key:
+            self._dist_map = _bfs_distance_map(grid, plant_pos)
+            self._dist_map_key = key
+            self._site_zone = {
+                (r, c)
+                for r in range(grid.shape[0])
+                for c in range(grid.shape[1])
+                if 0 <= self._dist_map[r, c] <= SITE_ZONE_RADIUS
+            }
+        return self._dist_map, self._site_zone
 
     # -- 観測構築(train_defender_retake.py の RetakeEnv.build_observation と対応) --
     def _build_observation(self, char, game_state):
@@ -335,14 +345,15 @@ class LearningDefenderRetakeController:
         if planted_pos is None:
             planted_pos = tuple(char.pos)
 
-        site_zone = self._get_site_zone(grid, planted_pos)
+        dist_map, site_zone = self._get_dist_map(grid, planted_pos)
 
         r, c = char.pos
         pr, pc = planted_pos
 
-        dx = (pc - c) / width
-        dy = (pr - r) / height
-        dist_to_plant = max(abs(pr - r), abs(pc - c)) / max(height, width)
+        good_dir = _good_directions(grid, dist_map, r, c)
+        raw_dist = dist_map[r, c]
+        dist_to_plant = min(1.0, raw_dist / (height + width)) if raw_dist >= 0 else 1.0
+
         in_site_zone = 1.0 if (r, c) in site_zone else 0.0
         adjacent_to_plant = 1.0 if max(abs(pr - r), abs(pc - c)) <= 1 else 0.0
 
@@ -394,7 +405,8 @@ class LearningDefenderRetakeController:
         obs = [
             r / height, c / width,
             char.hp / char.max_hp,
-            dx, dy, dist_to_plant,
+            *good_dir,
+            dist_to_plant,
             in_site_zone, adjacent_to_plant,
             own_charge, blind_norm, defuse_norm, detonate_norm,
             allies_alive_norm, allies_in_zone, allies_near_entry, nearest_ally_dist,
@@ -441,8 +453,6 @@ class LearningDefenderRetakeController:
         target_plant_pos = game_state.get("target_plant_pos")
         chars = game_state.get("chars", [])
 
-        # 設置前(退去中など)は、想定サイトへ向けて移動するだけに留める。
-        # 解除アクションは選択させない。
         if not is_planted:
             fallback_target = planted_pos or target_plant_pos
             if fallback_target is None:
@@ -474,8 +484,6 @@ class LearningDefenderRetakeController:
         if action == ACTION_DEFUSE:
             return list(char.pos), "DEFUSE"
 
-        # action == ACTION_ABILITY: 着弾点は常にプラント地点(サイト)。
-        # train_defender_retake.py の apply_ability() と対応させている。
         if char.ability_name == "SMOKE":
             self._register_own_smoke_cast(resolved_plant_pos, grid, char.name)
 
@@ -483,5 +491,4 @@ class LearningDefenderRetakeController:
         return list(char.pos), {"ability": char.ability_name, "target": target}
 
     def reset_round_public(self):
-        """外部から明示的に呼びたい場合のエイリアス(run_game.pyはreset_round()を呼ぶ)。"""
         self.reset_round()

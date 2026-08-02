@@ -179,6 +179,29 @@ def _chebyshev(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
 
 
+def _build_distance_map_walls_only(grid, source_cells):
+    """指定座標群を始点とした、壁のみを障害物としたマルチソースBFS距離マップ。
+    キャラクター同士の占有は考慮しない
+    （推論側 learning_attacker_escort.py と同一ロジック）。"""
+    height, width = grid.shape
+    dist = np.full((height, width), np.inf, dtype=np.float32)
+    q = deque()
+    for r, c in source_cells:
+        if 0 <= r < height and 0 <= c < width and grid[r, c] != 1:
+            dist[r, c] = 0.0
+            q.append((r, c))
+
+    while q:
+        r, c = q.popleft()
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
+                if dist[nr, nc] > dist[r, c] + 1:
+                    dist[nr, nc] = dist[r, c] + 1
+                    q.append((nr, nc))
+    return dist
+
+
 # ---------------------------------------------------------------------------
 # 環境
 # ---------------------------------------------------------------------------
@@ -271,6 +294,10 @@ class EscortEnv:
         self.smokes = []  # [{"cells": set, "remaining": int}]
 
         self._blocking_escort_idx = None  # このtickでキャリアーを塞いだescort index
+        # carry_pos を起点とした壁のみBFS距離マップ。キャリアー位置が
+        # 変わるたびに _refresh_carry_dist_map() で更新する
+        # （毎tick escortごとに再計算しないためのキャッシュ）。
+        self._carry_dist_map = None
 
     # ------------------------------------------------------------------
     # 初期化
@@ -295,6 +322,7 @@ class EscortEnv:
         self.carry_pos = self.carry_path[0]
         self.carry_hp = MAX_HP
         self.carry_alive = True
+        self._refresh_carry_dist_map()
 
         # --- Escort：残りの攻撃側スポーンに配置（不足時はランダム） ---
         occupied = {self.carry_pos}
@@ -388,6 +416,10 @@ class EscortEnv:
                 best_idx, best_dist = i, dist
         return best_idx, best_dist
 
+    def _refresh_carry_dist_map(self):
+        """carry_pos が変化した際に呼び、BFS距離マップを更新する。"""
+        self._carry_dist_map = _build_distance_map_walls_only(self.grid, [self.carry_pos])
+
     # ------------------------------------------------------------------
     # 観測
     # ------------------------------------------------------------------
@@ -408,6 +440,15 @@ class EscortEnv:
         # アビリティは1ラウンドに1回。使用済みなら選択不可にする。
         if self.escort_ability_used[i]:
             mask[self.ACTION_ABILITY] = False
+        else:
+            # 射程内に有効な標的（視認可能な敵）がいない場合もマスクする。
+            # マスクしないと「常にwaste_penaltyを受けるだけの無意味な
+            # ABILITY選択」がQ値の学習対象に残り続け、推論側で
+            # 標的なしのままABILITYを選び続けて実質STAY＝ブロック、
+            # という状態を誘発しうる。
+            enemy_idx, _ = self._nearest_visible_enemy((r, c), max_range=ABILITY_RANGE)
+            if enemy_idx is None:
+                mask[self.ACTION_ABILITY] = False
 
         return mask
 
@@ -417,15 +458,32 @@ class EscortEnv:
 
         r, c = self.escort_pos[i]
         cr, cc = self.carry_pos
+        if self._carry_dist_map is None:
+            self._refresh_carry_dist_map()
+        dist_map = self._carry_dist_map
 
         obs = []
         obs.append(r / max(1, self.height - 1))
         obs.append(c / max(1, self.width - 1))
 
-        dist_to_carry = _chebyshev((r, c), (cr, cc))
+        # escort自身からキャリアーまでの距離・方向はBFS実距離ベース
+        # （チェビシェフ距離は壁を無視するため、曲がった通路で
+        # 実際の経路と逆方向を指してしまうことがある）
+        raw_dist = dist_map[r, c]
+        dist_to_carry = float(raw_dist) if np.isfinite(raw_dist) else DIST_NORM_MAX
         obs.append(min(1.0, dist_to_carry / DIST_NORM_MAX))
-        obs.append(max(-1.0, min(1.0, (cr - r) / DIST_NORM_MAX)))
-        obs.append(max(-1.0, min(1.0, (cc - c) / DIST_NORM_MAX)))
+
+        # 方向成分は、隣接4マスのうちBFS距離を最も縮める方向を使う
+        best_dr, best_dc, best_d = 0, 0, dist_to_carry
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if not self._is_wall(nr, nc):
+                nd = dist_map[nr, nc]
+                if np.isfinite(nd) and nd < best_d:
+                    best_d = nd
+                    best_dr, best_dc = dr, dc
+        obs.append(float(best_dr))
+        obs.append(float(best_dc))
 
         # キャリアーの進行方向（次の経路セルへの差分）
         next_idx = min(self.carry_path_index + 1, len(self.carry_path) - 1)
@@ -437,16 +495,29 @@ class EscortEnv:
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
 
-        # 各方向に動いた場合のキャリアーまでの距離勾配
+        # 各方向に動いた場合のキャリアーまでのBFS距離勾配
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
             wall = self._is_wall(nr, nc)
-            gdist = _chebyshev((nr, nc), (cr, cc))
-            obs.append(1.0 if wall else min(1.0, gdist / DIST_NORM_MAX))
+            if wall:
+                obs.append(1.0)
+            else:
+                gdist = dist_map[nr, nc]
+                gdist = float(gdist) if np.isfinite(gdist) else DIST_NORM_MAX
+                obs.append(min(1.0, gdist / DIST_NORM_MAX))
 
         # 斜め壁フラグ
         for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
+
+        # 隣接4方向に生存中の味方escortがいるか（衝突・団子状態の回避用）
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            occupied_by_ally = any(
+                j != i and self.escort_alive[j] and self.escort_pos[j] == (nr, nc)
+                for j in range(self.n_escorts)
+            )
+            obs.append(1.0 if occupied_by_ally else 0.0)
 
         # 距離帯の逸脱量（負=近すぎ、正=遠すぎ、0=適正）
         if dist_to_carry < self.dist_band_min:
@@ -492,12 +563,12 @@ class EscortEnv:
     @staticmethod
     def _obs_dim():
         # _get_obs() の要素数と一致させる（固定値なのでズレたら即バグに気づけるようassert）
-        # 内訳: 自己座標2 + キャリアー距離/方向3 + キャリアー進行方向2
-        #      + 壁フラグ4 + 距離勾配4 + 斜め壁フラグ4 + 距離帯逸脱1
-        #      + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot3)
+        # 内訳: 自己座標2 + キャリアーBFS距離/方向3 + キャリアー進行方向2
+        #      + 壁フラグ4 + BFS距離勾配4 + 斜め壁フラグ4 + 味方隣接フラグ4
+        #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot3)
         #      + チーム効果1 + 直前移動2 + stuck1 + 残り時間1 + 被ブロック1
-        # = 2+3+2+4+4+4+1+6+4+1+2+1+1+1 = 36
-        return 36
+        # = 2+3+2+4+4+4+4+1+6+4+1+2+1+1+1 = 40
+        return 40
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -684,6 +755,7 @@ class EscortEnv:
             if next_cell not in occupied:
                 self.carry_path_index += 1
                 self.carry_pos = self.carry_path[self.carry_path_index]
+                self._refresh_carry_dist_map()
             else:
                 for i in range(self.n_escorts):
                     if self.escort_alive[i] and self.escort_pos[i] == next_cell:
