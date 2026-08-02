@@ -54,7 +54,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-EPISODE_COUNT = 6000
+EPISODE_COUNT = 9000
 
 # ---------------------------------------------------------------------------
 # map_data.py の解決（attacker_v3/ 配下・プロジェクト直下のどちらでも動く）
@@ -103,6 +103,10 @@ N_ENEMIES = 2
 DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0  # 観測正規化用の上限距離
+
+STALL_THRESHOLD_TICKS = 3       # これを超えて無進捗が続いたら混雑ペナルティ開始
+STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限（無限にエスカレートさせない）
+CONGESTION_RADIUS = 2           # carryからこの距離以内のescortを「渋滞に関与」とみなす
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +233,10 @@ class EscortEnv:
         team_progress_coef=1.0,
         block_penalty=1.0,
         dist_penalty_coef=0.08,
+        stall_threshold_ticks=STALL_THRESHOLD_TICKS,
+        stall_penalty_cap_ticks=STALL_PENALTY_CAP_TICKS,
+        congestion_radius=CONGESTION_RADIUS,
+        congestion_penalty_coef=0.15,
         ability_success_reward=2.0,
         ability_redundant_penalty=1.0,
         ability_waste_penalty=0.3,
@@ -251,6 +259,10 @@ class EscortEnv:
         self.team_progress_coef = team_progress_coef
         self.block_penalty = block_penalty
         self.dist_penalty_coef = dist_penalty_coef
+        self.stall_threshold_ticks = stall_threshold_ticks
+        self.stall_penalty_cap_ticks = stall_penalty_cap_ticks
+        self.congestion_radius = congestion_radius
+        self.congestion_penalty_coef = congestion_penalty_coef
         self.ability_success_reward = ability_success_reward
         self.ability_redundant_penalty = ability_redundant_penalty
         self.ability_waste_penalty = ability_waste_penalty
@@ -294,10 +306,8 @@ class EscortEnv:
         self.smokes = []  # [{"cells": set, "remaining": int}]
 
         self._blocking_escort_idx = None  # このtickでキャリアーを塞いだescort index
-        # carry_pos を起点とした壁のみBFS距離マップ。キャリアー位置が
-        # 変わるたびに _refresh_carry_dist_map() で更新する
-        # （毎tick escortごとに再計算しないためのキャッシュ）。
         self._carry_dist_map = None
+        self._stall_ticks = 0  # キャリアーが連続で進めていないtick数
 
     # ------------------------------------------------------------------
     # 初期化
@@ -364,6 +374,7 @@ class EscortEnv:
 
         self._blocking_escort_idx = None
         self._prev_carry_path_index = 0
+        self._stall_ticks = 0
 
         return [self._get_obs(i) for i in range(self.n_escorts)]
 
@@ -768,6 +779,28 @@ class EscortEnv:
                 rewards[i] += team_progress * self.team_progress_coef
         if self._blocking_escort_idx is not None:
             rewards[self._blocking_escort_idx] -= self.block_penalty
+
+        # --- stall検知：直接の1体だけでなく、carry周辺で団子状態を
+        # 作っている全escortに圧力をかける。escort同士の衝突で誰も
+        # 動けなくなるジャムは「直前セルを塞ぐ1体」だけでは説明できない
+        # ため、進捗ゼロが続くこと自体を検知して対処する。 ---
+        carry_reached_goal = self.carry_path_index >= len(self.carry_path) - 1
+        if team_progress > 0 or not self.carry_alive or carry_reached_goal:
+            self._stall_ticks = 0
+        else:
+            self._stall_ticks += 1
+
+        if self._stall_ticks > self.stall_threshold_ticks:
+            overflow = min(
+                self._stall_ticks - self.stall_threshold_ticks,
+                self.stall_penalty_cap_ticks,
+            )
+            congestion_penalty = overflow * self.congestion_penalty_coef
+            for i in range(self.n_escorts):
+                if not self.escort_alive[i]:
+                    continue
+                if _chebyshev(self.escort_pos[i], self.carry_pos) <= self.congestion_radius:
+                    rewards[i] -= congestion_penalty
 
         # 5. Escortの移動（アビリティ使用者・死亡者を除く、ランダム順で逐次解決）
         move_order = [
