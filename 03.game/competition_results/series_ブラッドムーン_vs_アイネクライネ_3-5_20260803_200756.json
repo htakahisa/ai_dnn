@@ -1,0 +1,990 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "ブラッドムーン",
+  "team2": "アイネクライネ",
+  "maps_to_win": 5,
+  "team1_wins": 3,
+  "team2_wins": 5,
+  "winner": "アイネクライネ",
+  "loser": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 112183662,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 11,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "WoohyuN",
+        "kills": 19,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 20,
+        "deaths": 9
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 11
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 16
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 9,
+          "deaths": 10
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 17
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 7
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 20,
+          "deaths": 13
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 20,
+          "deaths": 9
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 10
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 3981953285,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 6,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Meteor",
+        "kills": 17,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 21,
+        "deaths": 10
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 10
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 8
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 8,
+          "deaths": 8
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 8,
+          "deaths": 10
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 10
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 0,
+          "deaths": 10
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 21,
+          "deaths": 10
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 12
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 7,
+          "deaths": 11
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 443676824,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 7,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 31,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 16,
+        "deaths": 15
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 31,
+          "deaths": 9
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 11
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 9
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 11
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 10,
+          "deaths": 18
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 12,
+          "deaths": 14
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 16,
+          "deaths": 15
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 12
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 8,
+          "deaths": 10
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 1940139338,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 7,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 21,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 16,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 21,
+          "deaths": 13
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 12
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 9
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 1,
+          "deaths": 10
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 10
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 10,
+          "deaths": 8
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 16,
+          "deaths": 14
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 15,
+          "deaths": 14
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 1555575977,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 7,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "WoohyuN",
+        "kills": 12,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 38,
+        "deaths": 5
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 10,
+          "deaths": 17
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 5,
+          "deaths": 13
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 16
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 4,
+          "deaths": 19
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 15,
+          "deaths": 15
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 4
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 38,
+          "deaths": 5
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 12,
+          "deaths": 11
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 7
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "seed": 3870798818,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 10,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "WoohyuN",
+        "kills": 19,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 27,
+        "deaths": 11
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 14
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 6
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 7,
+          "deaths": 15
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 8,
+          "deaths": 9
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 27,
+          "deaths": 11
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 10,
+          "deaths": 13
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 16
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "seed": 666515318,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 7,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 18,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 13
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 12
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 11
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 10,
+          "deaths": 9
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 3,
+          "deaths": 15
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 8,
+          "deaths": 10
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 30,
+          "deaths": 12
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 13,
+          "deaths": 9
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 3,
+          "deaths": 7
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "seed": 3543282336,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 8,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Meteor",
+        "kills": 18,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 23,
+        "deaths": 12
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 13
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 11
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 10
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 23,
+          "deaths": 12
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 8
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 8
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 191,
+        "deaths": 92,
+        "maps": 8,
+        "mvps": 7,
+        "kd": 2.076,
+        "kills_per_map": 23.875
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 137,
+        "deaths": 100,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.37,
+        "kills_per_map": 17.125
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 110,
+        "deaths": 98,
+        "maps": 8,
+        "mvps": 2,
+        "kd": 1.122,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 98,
+        "deaths": 88,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.114,
+        "kills_per_map": 12.25
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 95,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.021,
+        "kills_per_map": 12.125
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 191,
+        "deaths": 92,
+        "maps": 8,
+        "mvps": 7,
+        "kd": 2.076,
+        "kills_per_map": 23.875
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 137,
+        "deaths": 100,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.37,
+        "kills_per_map": 17.125
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 95,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.021,
+        "kills_per_map": 12.125
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 110,
+        "deaths": 98,
+        "maps": 8,
+        "mvps": 2,
+        "kd": 1.122,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 98,
+        "deaths": 88,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.114,
+        "kills_per_map": 12.25
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 191,
+        "deaths": 92,
+        "maps": 8,
+        "mvps": 7,
+        "kd": 2.076,
+        "kills_per_map": 23.875
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 137,
+        "deaths": 100,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.37,
+        "kills_per_map": 17.125
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 110,
+        "deaths": 98,
+        "maps": 8,
+        "mvps": 2,
+        "kd": 1.122,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 98,
+        "deaths": 88,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.114,
+        "kills_per_map": 12.25
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 95,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.021,
+        "kills_per_map": 12.125
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 191,
+        "deaths": 92,
+        "maps": 8,
+        "mvps": 7,
+        "kd": 2.076,
+        "kills_per_map": 23.875
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 137,
+        "deaths": 100,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.37,
+        "kills_per_map": 17.125
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 110,
+        "deaths": 98,
+        "maps": 8,
+        "mvps": 2,
+        "kd": 1.122,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 98,
+        "deaths": 88,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.114,
+        "kills_per_map": 12.25
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 95,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.021,
+        "kills_per_map": 12.125
+      }
+    ],
+    "all_players": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 191,
+        "deaths": 92,
+        "maps": 8,
+        "mvps": 7,
+        "kd": 2.076,
+        "kills_per_map": 23.875
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 137,
+        "deaths": 100,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.37,
+        "kills_per_map": 17.125
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 110,
+        "deaths": 98,
+        "maps": 8,
+        "mvps": 2,
+        "kd": 1.122,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 98,
+        "deaths": 88,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.114,
+        "kills_per_map": 12.25
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 95,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.021,
+        "kills_per_map": 12.125
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 81,
+        "deaths": 81,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 1.0,
+        "kills_per_map": 10.125
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 59,
+        "deaths": 72,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.819,
+        "kills_per_map": 7.375
+      },
+      {
+        "player": "FNS",
+        "team": "アイネクライネ",
+        "kills": 77,
+        "deaths": 115,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.67,
+        "kills_per_map": 9.625
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 52,
+        "deaths": 82,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.634,
+        "kills_per_map": 6.5
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 24,
+        "deaths": 103,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.233,
+        "kills_per_map": 3.0
+      }
+    ]
+  }
+}

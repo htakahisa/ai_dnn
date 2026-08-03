@@ -1,0 +1,542 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "ドラゴンテイル",
+  "team2": "アイネクライネ",
+  "maps_to_win": 2,
+  "team1_wins": 0,
+  "team2_wins": 2,
+  "winner": "アイネクライネ",
+  "loser": "ドラゴンテイル",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3991156297,
+      "team1": "ドラゴンテイル",
+      "team2": "アイネクライネ",
+      "score1": 4,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Canezerra",
+        "kills": 8,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 33,
+        "deaths": 9
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 15
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 2,
+          "deaths": 16
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 6,
+          "deaths": 10
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 8,
+          "deaths": 12
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 3,
+          "deaths": 9
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 12,
+          "deaths": 3
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 33,
+          "deaths": 9
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 15,
+          "deaths": 5
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 2,
+          "deaths": 2
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 3451782875,
+      "team1": "ドラゴンテイル",
+      "team2": "アイネクライネ",
+      "score1": 3,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 9,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 17,
+        "deaths": 9
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 12
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 2,
+          "deaths": 13
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 4,
+          "deaths": 10
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 8
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 9
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 9
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 7,
+          "deaths": 3
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 17,
+          "deaths": 9
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 15,
+          "deaths": 5
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 3
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 19,
+        "deaths": 6,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.167,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 10,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.0,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 50,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.778,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 11,
+        "deaths": 5,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 2.2,
+        "kills_per_map": 5.5
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 15,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.75,
+        "kills_per_map": 7.5
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 50,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.778,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 15,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.75,
+        "kills_per_map": 7.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 16,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.593,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 19,
+        "deaths": 6,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.167,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 10,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.0,
+        "kills_per_map": 15.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 50,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.778,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 10,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.0,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 19,
+        "deaths": 6,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.167,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 16,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.593,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 15,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.75,
+        "kills_per_map": 7.5
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 50,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.778,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 10,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.0,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 19,
+        "deaths": 6,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.167,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 16,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.593,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 15,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.75,
+        "kills_per_map": 7.5
+      }
+    ],
+    "all_players": [
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 19,
+        "deaths": 6,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.167,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 10,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 3.0,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 50,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.778,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 11,
+        "deaths": 5,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 2.2,
+        "kills_per_map": 5.5
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 15,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.75,
+        "kills_per_map": 7.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 16,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 0.593,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "vo0kashu",
+        "team": "ドラゴンテイル",
+        "kills": 12,
+        "deaths": 21,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.571,
+        "kills_per_map": 6.0
+      },
+      {
+        "player": "Ethan",
+        "team": "ドラゴンテイル",
+        "kills": 10,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.5,
+        "kills_per_map": 5.0
+      },
+      {
+        "player": "FNS",
+        "team": "アイネクライネ",
+        "kills": 7,
+        "deaths": 18,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.389,
+        "kills_per_map": 3.5
+      },
+      {
+        "player": "Derke",
+        "team": "ドラゴンテイル",
+        "kills": 4,
+        "deaths": 29,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.138,
+        "kills_per_map": 2.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 18,
+      "timestamp": "2026-08-04T08:41:35",
+      "type": "series",
+      "competition_id": "series_20260804_084108",
+      "context": "SERIES",
+      "team1": "ドラゴンテイル",
+      "team2": "アイネクライネ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "ドラゴンテイル": 2418.748,
+        "アイネクライネ": 2589.691
+      },
+      "after": {
+        "ドラゴンテイル": 2401.334,
+        "アイネクライネ": 2607.105
+      },
+      "delta": {
+        "ドラゴンテイル": -17.414,
+        "アイネクライネ": 17.414
+      },
+      "expected": {
+        "ドラゴンテイル": 0.2721,
+        "アイネクライネ": 0.7279
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "フリーナタルタリヤ": 2607.213,
+    "アイネクライネ": 2607.105,
+    "EG2023": 2500.0,
+    "Fnatic2023": 2500.0,
+    "Leo軸": 2500.0,
+    "日本代表": 2500.0,
+    "VisionStrikers": 2498.582,
+    "フリーナクラシック": 2497.671,
+    "ブラッドムーン": 2495.098,
+    "radiantdancer": 2453.702,
+    "クイーンズフラワーギャンビット": 2439.294,
+    "ドラゴンテイル": 2401.334
+  }
+}

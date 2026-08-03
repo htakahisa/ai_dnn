@@ -1,0 +1,170 @@
+{
+  "team1": "フリーナタルタリヤ",
+  "team2": "日本代表",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 1,
+  "winner": "フリーナタルタリヤ",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 4,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lohen",
+        "kills": 31,
+        "deaths": 6
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 10,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 10,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lohen",
+        "kills": 22,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Meiy",
+        "kills": 19,
+        "deaths": 13
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 10,
+      "score2": 13,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Tartaglia",
+        "kills": 14,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Meiy",
+        "kills": 17,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 7,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Arlecchino",
+        "kills": 23,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Meiy",
+        "kills": 11,
+        "deaths": 13
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 9,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lohen",
+        "kills": 23,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Laz",
+        "kills": 13,
+        "deaths": 17
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 3,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lohen",
+        "kills": 24,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Laz",
+        "kills": 8,
+        "deaths": 12
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 5,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lohen",
+        "kills": 31,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Laz",
+        "kills": 13,
+        "deaths": 15
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "フリーナタルタリヤ",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 9,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Furina",
+        "kills": 22,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Laz",
+        "kills": 15,
+        "deaths": 14
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    }
+  ]
+}

@@ -1,0 +1,3868 @@
+{
+  "mode": "round_robin",
+  "maps_to_win": 3,
+  "teams": [
+    "Leo軸",
+    "EG2023",
+    "フリーナクラシック",
+    "フリーナタルタリヤ",
+    "VisionStrikers",
+    "日本代表",
+    "クイーンズフラワーギャンビット",
+    "ドラゴンテイル",
+    "ブラッドムーン",
+    "radiantdancer"
+  ],
+  "champion": "フリーナタルタリヤ",
+  "standings": {
+    "Leo軸": {
+      "series_wins": 1,
+      "series_losses": 8,
+      "map_wins": 6,
+      "map_losses": 25,
+      "round_wins": 270,
+      "round_losses": 416
+    },
+    "EG2023": {
+      "series_wins": 3,
+      "series_losses": 6,
+      "map_wins": 13,
+      "map_losses": 19,
+      "round_wins": 337,
+      "round_losses": 370
+    },
+    "フリーナクラシック": {
+      "series_wins": 8,
+      "series_losses": 1,
+      "map_wins": 25,
+      "map_losses": 7,
+      "round_wins": 390,
+      "round_losses": 290
+    },
+    "フリーナタルタリヤ": {
+      "series_wins": 9,
+      "series_losses": 0,
+      "map_wins": 27,
+      "map_losses": 2,
+      "round_wins": 375,
+      "round_losses": 231
+    },
+    "VisionStrikers": {
+      "series_wins": 4,
+      "series_losses": 5,
+      "map_wins": 18,
+      "map_losses": 16,
+      "round_wins": 411,
+      "round_losses": 397
+    },
+    "日本代表": {
+      "series_wins": 2,
+      "series_losses": 7,
+      "map_wins": 14,
+      "map_losses": 24,
+      "round_wins": 383,
+      "round_losses": 458
+    },
+    "クイーンズフラワーギャンビット": {
+      "series_wins": 6,
+      "series_losses": 3,
+      "map_wins": 21,
+      "map_losses": 14,
+      "round_wins": 420,
+      "round_losses": 344
+    },
+    "ドラゴンテイル": {
+      "series_wins": 2,
+      "series_losses": 7,
+      "map_wins": 7,
+      "map_losses": 25,
+      "round_wins": 311,
+      "round_losses": 417
+    },
+    "ブラッドムーン": {
+      "series_wins": 5,
+      "series_losses": 4,
+      "map_wins": 16,
+      "map_losses": 17,
+      "round_wins": 356,
+      "round_losses": 352
+    },
+    "radiantdancer": {
+      "series_wins": 5,
+      "series_losses": 4,
+      "map_wins": 16,
+      "map_losses": 14,
+      "round_wins": 335,
+      "round_losses": 313
+    }
+  },
+  "ranking": [
+    "フリーナタルタリヤ",
+    "フリーナクラシック",
+    "クイーンズフラワーギャンビット",
+    "radiantdancer",
+    "ブラッドムーン",
+    "VisionStrikers",
+    "EG2023",
+    "日本代表",
+    "ドラゴンテイル",
+    "Leo軸"
+  ],
+  "matches": [
+    {
+      "team1": "Leo軸",
+      "team2": "EG2023",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "EG2023",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "Leo軸",
+          "team2": "EG2023",
+          "score1": 11,
+          "score2": 13,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 33,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 20,
+            "deaths": 17
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "Leo軸",
+          "team2": "EG2023",
+          "score1": 2,
+          "score2": 13,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Leo",
+            "kills": 17,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 13,
+            "deaths": 11
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "Leo軸",
+          "team2": "EG2023",
+          "score1": 7,
+          "score2": 13,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 16,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 16
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナクラシック",
+      "team2": "Leo軸",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "フリーナクラシック",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナクラシック",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 3,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 10,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナクラシック",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 10,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Jean",
+            "kills": 16,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 15
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナクラシック",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 2,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 13,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 10
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "Leo軸",
+      "team2": "フリーナタルタリヤ",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナタルタリヤ",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "Leo軸",
+          "team2": "フリーナタルタリヤ",
+          "score1": 7,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 16,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 16,
+            "deaths": 8
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "Leo軸",
+          "team2": "フリーナタルタリヤ",
+          "score1": 6,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 13,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 25,
+            "deaths": 12
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "Leo軸",
+          "team2": "フリーナタルタリヤ",
+          "score1": 4,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 11,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Furina",
+            "kills": 22,
+            "deaths": 6
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "VisionStrikers",
+      "team2": "Leo軸",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "VisionStrikers",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "VisionStrikers",
+          "team2": "Leo軸",
+          "score1": 11,
+          "score2": 13,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 23,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 20
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "VisionStrikers",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 11,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Rb",
+            "kills": 17,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Aspas",
+            "kills": 15,
+            "deaths": 17
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "VisionStrikers",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 5,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 17,
+            "deaths": 4
+          },
+          "mvp2": {
+            "name": "Leo",
+            "kills": 10,
+            "deaths": 13
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "VisionStrikers",
+          "team2": "Leo軸",
+          "score1": 23,
+          "score2": 21,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 43,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 28,
+            "deaths": 37
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "Leo軸",
+      "team2": "日本代表",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "Leo軸",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "Leo軸",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 11,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 16,
+            "deaths": 13
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "Leo軸",
+          "team2": "日本代表",
+          "score1": 4,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Leo",
+            "kills": 10,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 16,
+            "deaths": 4
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "Leo軸",
+          "team2": "日本代表",
+          "score1": 16,
+          "score2": 14,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 33,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Meiy",
+            "kills": 19,
+            "deaths": 20
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "Leo軸",
+          "team2": "日本代表",
+          "score1": 14,
+          "score2": 12,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 18,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 16,
+            "deaths": 16
+          },
+          "initial_attacker": "日本代表",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "Leo軸",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 5,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 17,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 18,
+            "deaths": 14
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 6,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 16,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Aspas",
+            "kills": 15,
+            "deaths": 9
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 4,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 18,
+            "deaths": 3
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 11,
+            "deaths": 12
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "Leo軸",
+      "team2": "ドラゴンテイル",
+      "maps_to_win": 3,
+      "team1_wins": 2,
+      "team2_wins": 3,
+      "winner": "ドラゴンテイル",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "Leo軸",
+          "team2": "ドラゴンテイル",
+          "score1": 9,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 18,
+            "deaths": 10
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "Leo軸",
+          "team2": "ドラゴンテイル",
+          "score1": 19,
+          "score2": 17,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 29,
+            "deaths": 25
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 34,
+            "deaths": 14
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "Leo軸",
+          "team2": "ドラゴンテイル",
+          "score1": 14,
+          "score2": 12,
+          "winner": "Leo軸",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 21,
+            "deaths": 15
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "Leo軸",
+          "team2": "ドラゴンテイル",
+          "score1": 12,
+          "score2": 14,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Aspas",
+            "kills": 19,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "vo0kashu",
+            "kills": 23,
+            "deaths": 13
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        },
+        {
+          "number": 5,
+          "team1": "Leo軸",
+          "team2": "ドラゴンテイル",
+          "score1": 9,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 15,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 20,
+            "deaths": 7
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ブラッドムーン",
+      "team2": "Leo軸",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "ブラッドムーン",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ブラッドムーン",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 4,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 16,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 10,
+            "deaths": 12
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ブラッドムーン",
+          "team2": "Leo軸",
+          "score1": 16,
+          "score2": 14,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 33,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 20,
+            "deaths": 21
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "ブラッドムーン",
+          "team2": "Leo軸",
+          "score1": 13,
+          "score2": 4,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 34,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 20,
+            "deaths": 14
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "Leo軸",
+      "team2": "radiantdancer",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "radiantdancer",
+      "loser": "Leo軸",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "Leo軸",
+          "team2": "radiantdancer",
+          "score1": 7,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 18,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 24,
+            "deaths": 11
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "Leo軸",
+          "team2": "radiantdancer",
+          "score1": 6,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 11,
+            "deaths": 7
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "Leo軸",
+          "team2": "radiantdancer",
+          "score1": 8,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 18,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 15,
+            "deaths": 10
+          },
+          "initial_attacker": "Leo軸",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナクラシック",
+      "team2": "EG2023",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "フリーナクラシック",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナクラシック",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 9,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Furina",
+            "kills": 22,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 14,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナクラシック",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 15,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 25,
+            "deaths": 23
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 35,
+            "deaths": 21
+          },
+          "initial_attacker": "EG2023",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "フリーナクラシック",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 4,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 27,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "フリーナクラシック",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 5,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 14,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 14,
+            "deaths": 11
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "EG2023",
+      "team2": "フリーナタルタリヤ",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナタルタリヤ",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "EG2023",
+          "team2": "フリーナタルタリヤ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 13,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 16,
+            "deaths": 5
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "EG2023",
+          "team2": "フリーナタルタリヤ",
+          "score1": 10,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 18,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 25,
+            "deaths": 11
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "EG2023",
+          "team2": "フリーナタルタリヤ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 18,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 17,
+            "deaths": 14
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "VisionStrikers",
+      "team2": "EG2023",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "VisionStrikers",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "VisionStrikers",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 9,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 21,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 14,
+            "deaths": 17
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "VisionStrikers",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 11,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 31,
+            "deaths": 2
+          },
+          "mvp2": {
+            "name": "Ethan",
+            "kills": 15,
+            "deaths": 17
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "VisionStrikers",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 8,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Mako",
+            "kills": 24,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 12,
+            "deaths": 18
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "EG2023",
+      "team2": "日本代表",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "EG2023",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "EG2023",
+          "team2": "日本代表",
+          "score1": 10,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 19,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 18,
+            "deaths": 11
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "EG2023",
+          "team2": "日本代表",
+          "score1": 14,
+          "score2": 12,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 30,
+            "deaths": 11
+          },
+          "initial_attacker": "日本代表",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "EG2023",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 8,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 22,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 20,
+            "deaths": 15
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "EG2023",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 10,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 20,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 24,
+            "deaths": 9
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "EG2023",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 7,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 23,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 20,
+            "deaths": 11
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 6,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "leaf",
+            "kills": 22,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 16,
+            "deaths": 14
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 7,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "leaf",
+            "kills": 18,
+            "deaths": 5
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 11,
+            "deaths": 10
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "EG2023",
+      "team2": "ドラゴンテイル",
+      "maps_to_win": 3,
+      "team1_wins": 2,
+      "team2_wins": 3,
+      "winner": "ドラゴンテイル",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "EG2023",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 4,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 24,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 15,
+            "deaths": 13
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "EG2023",
+          "team2": "ドラゴンテイル",
+          "score1": 12,
+          "score2": 14,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 33,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 21,
+            "deaths": 19
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "EG2023",
+          "team2": "ドラゴンテイル",
+          "score1": 10,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 25,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 28,
+            "deaths": 11
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "EG2023",
+          "team2": "ドラゴンテイル",
+          "score1": 15,
+          "score2": 13,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 25,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 35,
+            "deaths": 11
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        },
+        {
+          "number": 5,
+          "team1": "EG2023",
+          "team2": "ドラゴンテイル",
+          "score1": 11,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 24,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 25,
+            "deaths": 15
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ブラッドムーン",
+      "team2": "EG2023",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "ブラッドムーン",
+      "loser": "EG2023",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ブラッドムーン",
+          "team2": "EG2023",
+          "score1": 11,
+          "score2": 13,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 29,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "C0M",
+            "kills": 15,
+            "deaths": 13
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ブラッドムーン",
+          "team2": "EG2023",
+          "score1": 14,
+          "score2": 12,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 27,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 20,
+            "deaths": 21
+          },
+          "initial_attacker": "EG2023",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "ブラッドムーン",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 5,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 20,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "jawgemo",
+            "kills": 15,
+            "deaths": 14
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "ブラッドムーン",
+          "team2": "EG2023",
+          "score1": 13,
+          "score2": 10,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 29,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Demon1",
+            "kills": 21,
+            "deaths": 16
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "EG2023",
+      "team2": "radiantdancer",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "EG2023",
+      "loser": "radiantdancer",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "EG2023",
+          "team2": "radiantdancer",
+          "score1": 14,
+          "score2": 12,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 25,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Derke",
+            "kills": 19,
+            "deaths": 15
+          },
+          "initial_attacker": "EG2023",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "EG2023",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 10,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "jawgemo",
+            "kills": 22,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Derke",
+            "kills": 18,
+            "deaths": 13
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "EG2023",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 8,
+          "winner": "EG2023",
+          "mvp1": {
+            "name": "Demon1",
+            "kills": 15,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 18,
+            "deaths": 9
+          },
+          "initial_attacker": "EG2023",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナタルタリヤ",
+      "team2": "フリーナクラシック",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "フリーナタルタリヤ",
+      "loser": "フリーナクラシック",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナタルタリヤ",
+          "team2": "フリーナクラシック",
+          "score1": 13,
+          "score2": 6,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 26,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナタルタリヤ",
+          "team2": "フリーナクラシック",
+          "score1": 10,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 23,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 18
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナタルタリヤ",
+          "team2": "フリーナクラシック",
+          "score1": 13,
+          "score2": 3,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 13,
+            "deaths": 13
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "フリーナタルタリヤ",
+          "team2": "フリーナクラシック",
+          "score1": 13,
+          "score2": 10,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 31,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 20,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナクラシック",
+      "team2": "VisionStrikers",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "フリーナクラシック",
+      "loser": "VisionStrikers",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナクラシック",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 9,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lisa",
+            "kills": 15,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Mako",
+            "kills": 22,
+            "deaths": 13
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナクラシック",
+          "team2": "VisionStrikers",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Jean",
+            "kills": 15,
+            "deaths": 21
+          },
+          "mvp2": {
+            "name": "Mako",
+            "kills": 38,
+            "deaths": 11
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "フリーナクラシック",
+          "team2": "VisionStrikers",
+          "score1": 20,
+          "score2": 18,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Jean",
+            "kills": 24,
+            "deaths": 31
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 40,
+            "deaths": 18
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "maps_to_win": 3,
+      "team1_wins": 1,
+      "team2_wins": 3,
+      "winner": "フリーナクラシック",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "日本代表",
+          "team2": "フリーナクラシック",
+          "score1": 13,
+          "score2": 9,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 17,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 14
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "日本代表",
+          "team2": "フリーナクラシック",
+          "score1": 1,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 8,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 14,
+            "deaths": 5
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "日本代表",
+          "team2": "フリーナクラシック",
+          "score1": 10,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 22,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 20,
+            "deaths": 16
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "日本代表",
+          "team2": "フリーナクラシック",
+          "score1": 3,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 8,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 9
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナクラシック",
+      "team2": "クイーンズフラワーギャンビット",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "フリーナクラシック",
+      "loser": "クイーンズフラワーギャンビット",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナクラシック",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 25,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 17,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "フリーナクラシック",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 2,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 11,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 16,
+            "deaths": 8
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナクラシック",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 29,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 19,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "フリーナクラシック",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 13,
+          "score2": 11,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 30,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 15,
+            "deaths": 16
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ドラゴンテイル",
+      "team2": "フリーナクラシック",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナクラシック",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナクラシック",
+          "score1": 10,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 17,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 23,
+            "deaths": 15
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナクラシック",
+          "score1": 3,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "vo0kashu",
+            "kills": 10,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 11
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナクラシック",
+          "score1": 4,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 11,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 9
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナクラシック",
+      "team2": "ブラッドムーン",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "フリーナクラシック",
+      "loser": "ブラッドムーン",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 8,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 20,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 26,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 11,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 30,
+            "deaths": 11
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 5,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 22,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 21,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Furina",
+            "kills": 20,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 28,
+            "deaths": 10
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "radiantdancer",
+      "team2": "フリーナクラシック",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナクラシック",
+      "loser": "radiantdancer",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "radiantdancer",
+          "team2": "フリーナクラシック",
+          "score1": 7,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "something",
+            "kills": 22,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 21,
+            "deaths": 14
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "radiantdancer",
+          "team2": "フリーナクラシック",
+          "score1": 11,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 19,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 21,
+            "deaths": 18
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "radiantdancer",
+          "team2": "フリーナクラシック",
+          "score1": 6,
+          "score2": 13,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "marteen",
+            "kills": 11,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 17,
+            "deaths": 6
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "フリーナタルタリヤ",
+      "loser": "VisionStrikers",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 12,
+          "score2": 14,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 15,
+            "deaths": 21
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 31,
+            "deaths": 8
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 11,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 14,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 25,
+            "deaths": 9
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 15,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 14,
+            "deaths": 20
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 24,
+            "deaths": 13
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 8,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 21,
+            "deaths": 8
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナタルタリヤ",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "日本代表",
+          "team2": "フリーナタルタリヤ",
+          "score1": 6,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 16,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Furina",
+            "kills": 23,
+            "deaths": 8
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "日本代表",
+          "team2": "フリーナタルタリヤ",
+          "score1": 5,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 12,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 31,
+            "deaths": 11
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "日本代表",
+          "team2": "フリーナタルタリヤ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Meiy",
+            "kills": 17,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 29,
+            "deaths": 15
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナタルタリヤ",
+      "team2": "クイーンズフラワーギャンビット",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "フリーナタルタリヤ",
+      "loser": "クイーンズフラワーギャンビット",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナタルタリヤ",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 13,
+          "score2": 11,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 21,
+            "deaths": 9
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナタルタリヤ",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 13,
+          "score2": 11,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 21,
+            "deaths": 18
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナタルタリヤ",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 13,
+          "score2": 6,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 17,
+            "deaths": 12
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ドラゴンテイル",
+      "team2": "フリーナタルタリヤ",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナタルタリヤ",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナタルタリヤ",
+          "score1": 5,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 14,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 17,
+            "deaths": 14
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナタルタリヤ",
+          "score1": 9,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 15,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 17
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ドラゴンテイル",
+          "team2": "フリーナタルタリヤ",
+          "score1": 5,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 15,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 22,
+            "deaths": 11
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "フリーナタルタリヤ",
+      "team2": "ブラッドムーン",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "フリーナタルタリヤ",
+      "loser": "ブラッドムーン",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 10,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 14,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 23,
+            "deaths": 12
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 9,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "WoohyuN",
+            "kills": 19,
+            "deaths": 11
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 7,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 21,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 20,
+            "deaths": 16
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "フリーナタルタリヤ",
+      "loser": "radiantdancer",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "radiantdancer",
+          "team2": "フリーナタルタリヤ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "something",
+            "kills": 16,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 28,
+            "deaths": 14
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "radiantdancer",
+          "team2": "フリーナタルタリヤ",
+          "score1": 3,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 12,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 19,
+            "deaths": 5
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "radiantdancer",
+          "team2": "フリーナタルタリヤ",
+          "score1": 7,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Sayonara",
+            "kills": 16,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Furina",
+            "kills": 15,
+            "deaths": 9
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "VisionStrikers",
+      "team2": "日本代表",
+      "maps_to_win": 3,
+      "team1_wins": 2,
+      "team2_wins": 3,
+      "winner": "日本代表",
+      "loser": "VisionStrikers",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "VisionStrikers",
+          "team2": "日本代表",
+          "score1": 11,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 28,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 18,
+            "deaths": 16
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "VisionStrikers",
+          "team2": "日本代表",
+          "score1": 9,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Mako",
+            "kills": 17,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 23,
+            "deaths": 11
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "VisionStrikers",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 7,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 21,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 18,
+            "deaths": 16
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "VisionStrikers",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 8,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 20,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 11,
+            "deaths": 15
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 5,
+          "team1": "VisionStrikers",
+          "team2": "日本代表",
+          "score1": 9,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 28,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 13,
+            "deaths": 20
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "VisionStrikers",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 2,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "VisionStrikers",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 8,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "nAts",
+            "kills": 20,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 25,
+            "deaths": 10
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "VisionStrikers",
+          "score1": 9,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 14,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Rb",
+            "kills": 18,
+            "deaths": 7
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "VisionStrikers",
+          "score1": 15,
+          "score2": 17,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "nAts",
+            "kills": 19,
+            "deaths": 26
+          },
+          "mvp2": {
+            "name": "Mako",
+            "kills": 33,
+            "deaths": 21
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 11,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 19,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 27,
+            "deaths": 10
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 5,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 7,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 13,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Mako",
+            "kills": 20,
+            "deaths": 10
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "VisionStrikers",
+      "team2": "ドラゴンテイル",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "VisionStrikers",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "VisionStrikers",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 0,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Buzz",
+            "kills": 17,
+            "deaths": 7
+          },
+          "mvp2": {
+            "name": "vo0kashu",
+            "kills": 12,
+            "deaths": 9
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "VisionStrikers",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 11,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 30,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "vo0kashu",
+            "kills": 17,
+            "deaths": 17
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "VisionStrikers",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 8,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 25,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 22,
+            "deaths": 16
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "VisionStrikers",
+      "loser": "ブラッドムーン",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ブラッドムーン",
+          "team2": "VisionStrikers",
+          "score1": 12,
+          "score2": 14,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 33,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Rb",
+            "kills": 21,
+            "deaths": 12
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "ブラッドムーン",
+          "team2": "VisionStrikers",
+          "score1": 7,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Meteor",
+            "kills": 15,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 21,
+            "deaths": 13
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ブラッドムーン",
+          "team2": "VisionStrikers",
+          "score1": 10,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 14,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "Mako",
+            "kills": 25,
+            "deaths": 11
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "VisionStrikers",
+      "team2": "radiantdancer",
+      "maps_to_win": 3,
+      "team1_wins": 1,
+      "team2_wins": 3,
+      "winner": "radiantdancer",
+      "loser": "VisionStrikers",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "VisionStrikers",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 15,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 26,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "marteen",
+            "kills": 17,
+            "deaths": 18
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "VisionStrikers",
+          "team2": "radiantdancer",
+          "score1": 6,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Mako",
+            "kills": 18,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 17,
+            "deaths": 12
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "VisionStrikers",
+          "team2": "radiantdancer",
+          "score1": 15,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 23,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 14,
+            "deaths": 19
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": true
+        },
+        {
+          "number": 4,
+          "team1": "VisionStrikers",
+          "team2": "radiantdancer",
+          "score1": 3,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Rb",
+            "kills": 13,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "marteen",
+            "kills": 13,
+            "deaths": 10
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "日本代表",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 2,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 6,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 16,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 20,
+            "deaths": 13
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 8,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 20,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 13,
+            "deaths": 11
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "日本代表",
+          "score1": 11,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 20,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 19,
+            "deaths": 9
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "日本代表",
+          "score1": 11,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 22,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 24,
+            "deaths": 11
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 5,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 3,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "nAts",
+            "kills": 17,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 10,
+            "deaths": 7
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "日本代表",
+      "team2": "ドラゴンテイル",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 1,
+      "winner": "日本代表",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "日本代表",
+          "team2": "ドラゴンテイル",
+          "score1": 14,
+          "score2": 12,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 28,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 25,
+            "deaths": 17
+          },
+          "initial_attacker": "日本代表",
+          "overtime": true
+        },
+        {
+          "number": 2,
+          "team1": "日本代表",
+          "team2": "ドラゴンテイル",
+          "score1": 9,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Meiy",
+            "kills": 18,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 27,
+            "deaths": 13
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "日本代表",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 11,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 23,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 20,
+            "deaths": 14
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "日本代表",
+          "team2": "ドラゴンテイル",
+          "score1": 20,
+          "score2": 18,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 27,
+            "deaths": 24
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 42,
+            "deaths": 20
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "ブラッドムーン",
+      "team2": "日本代表",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 2,
+      "winner": "ブラッドムーン",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ブラッドムーン",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 11,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 30,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 19,
+            "deaths": 13
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ブラッドムーン",
+          "team2": "日本代表",
+          "score1": 5,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 22,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "SugarZ3ro",
+            "kills": 13,
+            "deaths": 10
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ブラッドムーン",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 11,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 23,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 21,
+            "deaths": 16
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "ブラッドムーン",
+          "team2": "日本代表",
+          "score1": 11,
+          "score2": 13,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Meteor",
+            "kills": 24,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Dep",
+            "kills": 24,
+            "deaths": 18
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 5,
+          "team1": "ブラッドムーン",
+          "team2": "日本代表",
+          "score1": 13,
+          "score2": 2,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 18,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Laz",
+            "kills": 19,
+            "deaths": 10
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "日本代表",
+      "team2": "radiantdancer",
+      "maps_to_win": 3,
+      "team1_wins": 1,
+      "team2_wins": 3,
+      "winner": "radiantdancer",
+      "loser": "日本代表",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "日本代表",
+          "team2": "radiantdancer",
+          "score1": 10,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Laz",
+            "kills": 22,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Derke",
+            "kills": 20,
+            "deaths": 16
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "日本代表",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 15,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 23,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 26,
+            "deaths": 18
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": true
+        },
+        {
+          "number": 3,
+          "team1": "日本代表",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 8,
+          "winner": "日本代表",
+          "mvp1": {
+            "name": "Dep",
+            "kills": 21,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "something",
+            "kills": 15,
+            "deaths": 15
+          },
+          "initial_attacker": "日本代表",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "日本代表",
+          "team2": "radiantdancer",
+          "score1": 5,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "SugarZ3ro",
+            "kills": 12,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Derke",
+            "kills": 14,
+            "deaths": 12
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ドラゴンテイル",
+      "team2": "クイーンズフラワーギャンビット",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ドラゴンテイル",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 8,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 17,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "nAts",
+            "kills": 15,
+            "deaths": 9
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ドラゴンテイル",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 11,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 24,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 25,
+            "deaths": 14
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ドラゴンテイル",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 14,
+          "score2": 16,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 34,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "nAts",
+            "kills": 31,
+            "deaths": 19
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": true
+        }
+      ]
+    },
+    {
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ブラッドムーン",
+      "maps_to_win": 3,
+      "team1_wins": 2,
+      "team2_wins": 3,
+      "winner": "ブラッドムーン",
+      "loser": "クイーンズフラワーギャンビット",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 9,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 17,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 35,
+            "deaths": 11
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ブラッドムーン",
+          "score1": 10,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 17,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 20,
+            "deaths": 14
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 4,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 13,
+            "deaths": 3
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 20,
+            "deaths": 8
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ブラッドムーン",
+          "score1": 3,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "nAts",
+            "kills": 6,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 24,
+            "deaths": 4
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 5,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ブラッドムーン",
+          "score1": 11,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 12,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "WoohyuN",
+            "kills": 25,
+            "deaths": 11
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "radiantdancer",
+      "team2": "クイーンズフラワーギャンビット",
+      "maps_to_win": 3,
+      "team1_wins": 1,
+      "team2_wins": 3,
+      "winner": "クイーンズフラワーギャンビット",
+      "loser": "radiantdancer",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "radiantdancer",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 11,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Derke",
+            "kills": 19,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "nAts",
+            "kills": 17,
+            "deaths": 7
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "radiantdancer",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 13,
+          "score2": 11,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Sayonara",
+            "kills": 26,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 18,
+            "deaths": 13
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "radiantdancer",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 10,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 18,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 15,
+            "deaths": 11
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 4,
+          "team1": "radiantdancer",
+          "team2": "クイーンズフラワーギャンビット",
+          "score1": 9,
+          "score2": 13,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Sayonara",
+            "kills": 17,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Chronicle",
+            "kills": 14,
+            "deaths": 14
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ドラゴンテイル",
+      "team2": "ブラッドムーン",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "ブラッドムーン",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ドラゴンテイル",
+          "team2": "ブラッドムーン",
+          "score1": 6,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 21,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 29,
+            "deaths": 9
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ドラゴンテイル",
+          "team2": "ブラッドムーン",
+          "score1": 9,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 17,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 23,
+            "deaths": 11
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ドラゴンテイル",
+          "team2": "ブラッドムーン",
+          "score1": 6,
+          "score2": 13,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Canezerra",
+            "kills": 11,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 25,
+            "deaths": 9
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "maps_to_win": 3,
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "winner": "radiantdancer",
+      "loser": "ドラゴンテイル",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "radiantdancer",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 7,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Derke",
+            "kills": 14,
+            "deaths": 11
+          },
+          "mvp2": {
+            "name": "vo0kashu",
+            "kills": 14,
+            "deaths": 11
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "radiantdancer",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 9,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 25,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 17,
+            "deaths": 15
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "radiantdancer",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 6,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Sayonara",
+            "kills": 16,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 10,
+            "deaths": 12
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        }
+      ]
+    },
+    {
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "maps_to_win": 3,
+      "team1_wins": 0,
+      "team2_wins": 3,
+      "winner": "radiantdancer",
+      "loser": "ブラッドムーン",
+      "maps": [
+        {
+          "number": 1,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 7,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Meteor",
+            "kills": 15,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 17,
+            "deaths": 11
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        },
+        {
+          "number": 2,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 6,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 16,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 12,
+            "deaths": 9
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false
+        },
+        {
+          "number": 3,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 11,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "WoohyuN",
+            "kills": 21,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Derke",
+            "kills": 19,
+            "deaths": 15
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false
+        }
+      ]
+    }
+  ]
+}

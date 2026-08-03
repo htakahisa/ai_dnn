@@ -30,8 +30,8 @@ REVEALED_DODGE_MULTIPLIER = 0.50
 RECON_REVEAL_SIZE = 9
 COMBO_DISPLAY_TICKS = 3
 COMBO_BANNER_HEIGHT = 112
-ROUND_DURATION_TICKS = 90
-SPIKE_DETONATION_TICKS = 45
+ROUND_DURATION_TICKS = 100
+SPIKE_DETONATION_TICKS = 55
 RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
@@ -45,6 +45,7 @@ DEFUSE_REQUIRED = 6
 
 
 _BASE_DIR = Path(__file__).resolve().parent
+
 
 def _load_local_module(module_name, filenames):
     """候補のうち最初に存在するローカルPythonファイルを読み込む。"""
@@ -69,12 +70,22 @@ def _load_local_module(module_name, filenames):
 # 配布時は canonical 名（character_stats.py / player_combos.py）を使う。
 _character_stats = _load_local_module(
     "game_character_stats",
-    ("character_stats.py", "character_stats_dynamic.py", "character_stats_v3.py", "character_stats(1).py"),
+    (
+        "character_stats.py",
+        "character_stats_dynamic.py",
+        "character_stats_v3.py",
+        "character_stats(1).py",
+    ),
 )
 
 _combo_module = _load_local_module(
     "game_player_combos",
-    ("player_combos.py", "player_combos_v3.py", "player_combos(1).py", "player_combos_v2.py"),
+    (
+        "player_combos.py",
+        "player_combos_v3.py",
+        "player_combos(1).py",
+        "player_combos_v2.py",
+    ),
 )
 PLAYER_COMBOS = getattr(_combo_module, "COMBOS", []) if _combo_module else []
 if not isinstance(PLAYER_COMBOS, list):
@@ -85,13 +96,16 @@ _awakening_module = _load_local_module(
     "game_awakening_events",
     ("awakening_events.py",),
 )
-AWAKENING_EVENTS = getattr(_awakening_module, "AWAKENING_EVENTS", []) if _awakening_module else []
+AWAKENING_EVENTS = (
+    getattr(_awakening_module, "AWAKENING_EVENTS", []) if _awakening_module else []
+)
 if not isinstance(AWAKENING_EVENTS, list):
     print("[LOAD ERROR] awakening_events.py の AWAKENING_EVENTS がlistではありません")
     AWAKENING_EVENTS = []
 
 COMBO_DISPLAY_TICKS = 3
 COMBO_BANNER_HEIGHT = 112
+
 
 def _clamp_rate(value, default):
     """HS率・回避率など、0～100%に収める割合を正規化する。"""
@@ -215,11 +229,21 @@ def get_character_combat_stats(name):
         return float(default)
 
     return {
-        "accuracy": pick_accuracy(("accuracy", "aim", "hit_rate", "hit_pct", "命中率"), defaults["accuracy"]),
-        "dodge_rate": pick(("dodge_rate", "dodge", "dodge_pct", "evasion", "弾除け率"), defaults["dodge_rate"]),
-        "hs_rate": pick(("hs_rate", "hs", "hs_pct", "headshot_rate", "HS", "HS%"), defaults["hs_rate"]),
+        "accuracy": pick_accuracy(
+            ("accuracy", "aim", "hit_rate", "hit_pct", "命中率"), defaults["accuracy"]
+        ),
+        "dodge_rate": pick(
+            ("dodge_rate", "dodge", "dodge_pct", "evasion", "弾除け率"),
+            defaults["dodge_rate"],
+        ),
+        "hs_rate": pick(
+            ("hs_rate", "hs", "hs_pct", "headshot_rate", "HS", "HS%"),
+            defaults["hs_rate"],
+        ),
         "iq": pick_number(("iq", "IQ", "判断力"), defaults["iq"]),
-        "reaction": pick_number(("reaction", "reaction_speed", "反応速度"), defaults["reaction"]),
+        "reaction": pick_number(
+            ("reaction", "reaction_speed", "反応速度"), defaults["reaction"]
+        ),
         "role": pick_text(("role", "ロール"), defaults["role"]),
         "influence": pick_number(
             ("influence", "influence_score", "impact", "影響度", "影響力"),
@@ -258,7 +282,13 @@ def get_all_character_names():
         except Exception:
             pass
 
-    for attr in ("CHARACTER_TABLE", "CHARACTER_STATS", "character_stats", "characters", "CHARACTERS"):
+    for attr in (
+        "CHARACTER_TABLE",
+        "CHARACTER_STATS",
+        "character_stats",
+        "characters",
+        "CHARACTERS",
+    ):
         table = getattr(_character_stats, attr, None)
         if isinstance(table, dict):
             return [str(name) for name in table.keys()]
@@ -278,17 +308,24 @@ def get_all_character_names():
 
 def _print_data_diagnostics():
     names = get_all_character_names()
-    print(f"[DATA] characters={len(names)} / combos={len(PLAYER_COMBOS)} / awakenings={len(AWAKENING_EVENTS)}")
+    print(
+        f"[DATA] characters={len(names)} / combos={len(PLAYER_COMBOS)} / awakenings={len(AWAKENING_EVENTS)}"
+    )
     if not names:
-        print("[DATA ERROR] キャラクター一覧が0件です。character_stats.pyをrun_game.pyと同じフォルダに置いてください。")
+        print(
+            "[DATA ERROR] キャラクター一覧が0件です。character_stats.pyをrun_game.pyと同じフォルダに置いてください。"
+        )
     if not PLAYER_COMBOS:
         print("[DATA WARNING] コンボが0件です。player_combos.pyを確認してください。")
 
 
 _print_data_diagnostics()
 
+
 class Character:
-    def __init__(self, name, team, pos, text_color, bg_color, has_spike=False, kills=0, deaths=0):
+    def __init__(
+        self, name, team, pos, text_color, bg_color, has_spike=False, kills=0, deaths=0
+    ):
         self.name = name
         self.base_name = name
         self.display_name = name
@@ -345,15 +382,18 @@ class Character:
         self.active_awakening = None
         self.triggered_awakening_events = set()
 
-        #とるよう設定
-        self.ability_type = "none"     # "flash" / "smoke" / "recon" / "none"
-
+        # とるよう設定
+        self.ability_type = "none"  # "flash" / "smoke" / "recon" / "none"
 
     @property
     def combat_power(self):
         """補正後の現在ステータスから総合戦闘力を毎回計算する。"""
         return calculate_combat_power(
-            self.hs_rate, self.dodge_rate, self.effective_iq, self.accuracy, self.reaction
+            self.hs_rate,
+            self.dodge_rate,
+            self.effective_iq,
+            self.accuracy,
+            self.reaction,
         )
 
 
@@ -417,13 +457,16 @@ def _apply_combo_bonus(character, stat_key, value):
     elif attr == "iq":
         # コンボIQは素のIQ(base_iq)を書き換えず、
         # IGL計算前の現在IQに加算する。
-        current_iq = float(getattr(character, "iq", getattr(character, "base_iq", 100.0)))
+        current_iq = float(
+            getattr(character, "iq", getattr(character, "base_iq", 100.0))
+        )
         updated_iq = max(0.0, current_iq + amount)
         character.iq = updated_iq
         character.effective_iq = updated_iq
     elif attr == "max_hp":
         old_max = character.max_hp
         character.max_hp = max(1, int(round(character.max_hp + amount)))
-        character.hp = max(0, min(character.max_hp, character.hp + (character.max_hp - old_max)))
+        character.hp = max(
+            0, min(character.max_hp, character.hp + (character.max_hp - old_max))
+        )
     return True
-

@@ -1,7 +1,7 @@
 """
 Fnatic v1 用 学習済みポリシーController。
 
-run_game.py から直接読み込み、policy_dagger_final.pt で
+run_game.py から直接読み込み、policy_fnatic_attacker_dagger_final.pt で
 アタッカーを操作する。
 """
 
@@ -16,7 +16,6 @@ import torch
 
 from controllers import DefaultAttackerController
 from train_bc import NUM_ACTIONS, PolicyNetwork, observation_to_vector
-
 
 DIRECTION_BY_ACTION = {
     0: (-1, 0),
@@ -52,7 +51,9 @@ def resolve_device(requested: str) -> str:
     return normalized
 
 
-def occupied_positions(game: Any, viewer: Any | None = None) -> dict[tuple[int, int], Any]:
+def occupied_positions(
+    game: Any, viewer: Any | None = None
+) -> dict[tuple[int, int], Any]:
     occupied: dict[tuple[int, int], Any] = {}
     for char in getattr(game, "chars", []):
         if not character_is_alive(char) or char is viewer:
@@ -106,7 +107,9 @@ def build_action_mask(game: Any, char: Any, game_state: dict) -> torch.Tensor:
     return mask
 
 
-def masked_action_probabilities(logits: torch.Tensor, action_mask: torch.Tensor) -> torch.Tensor:
+def masked_action_probabilities(
+    logits: torch.Tensor, action_mask: torch.Tensor
+) -> torch.Tensor:
     if logits.ndim != 2 or logits.shape[0] != 1:
         raise ValueError(f"expected logits shape [1, N], got {tuple(logits.shape)}")
     if action_mask.numel() != logits.shape[1]:
@@ -118,7 +121,9 @@ def masked_action_probabilities(logits: torch.Tensor, action_mask: torch.Tensor)
     return torch.softmax(masked_logits, dim=1)
 
 
-def build_local_map(game: Any, viewer: Any, radius: int = LOCAL_MAP_RADIUS) -> list[list[int]]:
+def build_local_map(
+    game: Any, viewer: Any, radius: int = LOCAL_MAP_RADIUS
+) -> list[list[int]]:
     grid = game.grid
     height, width = grid.shape
     viewer_row = int(viewer.pos[0])
@@ -147,7 +152,11 @@ def build_local_map(game: Any, viewer: Any, radius: int = LOCAL_MAP_RADIUS) -> l
                 value = LOCAL_SELF
             elif position in characters:
                 other = characters[position]
-                value = LOCAL_ALLY if getattr(other, "team", None) == viewer_team else LOCAL_ENEMY
+                value = (
+                    LOCAL_ALLY
+                    if getattr(other, "team", None) == viewer_team
+                    else LOCAL_ENEMY
+                )
             elif spike_position is not None and position == spike_position:
                 value = LOCAL_SPIKE
             elif grid[row, col] == 1:
@@ -183,12 +192,16 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
         "local_map": build_local_map(game, viewer),
         "valid_move_mask": build_valid_move_mask(game, viewer),
         "spike_on_ground": 1 if getattr(game, "spike_pos", None) is not None else 0,
-        "ally_has_spike": 1 if any(
-            getattr(other, "team", None) == viewer_team
-            and character_is_alive(other)
-            and getattr(other, "has_spike", False)
-            for other in game.chars
-        ) else 0,
+        "ally_has_spike": (
+            1
+            if any(
+                getattr(other, "team", None) == viewer_team
+                and character_is_alive(other)
+                and getattr(other, "has_spike", False)
+                for other in game.chars
+            )
+            else 0
+        ),
         "viewer_has_spike": 1 if getattr(viewer, "has_spike", False) else 0,
     }
 
@@ -200,7 +213,10 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
             {
                 "name": char.name,
                 "pos": [int(char.pos[0]), int(char.pos[1])],
-                "rel_pos": [int(char.pos[0]) - viewer_row, int(char.pos[1]) - viewer_col],
+                "rel_pos": [
+                    int(char.pos[0]) - viewer_row,
+                    int(char.pos[1]) - viewer_col,
+                ],
                 "hp": int(char.hp),
                 "is_alive": 1 if character_is_alive(char) else 0,
                 "has_spike": 1 if getattr(char, "has_spike", False) else 0,
@@ -215,7 +231,10 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
             obs["visible_enemies"].append(
                 {
                     "name": char.name,
-                    "rel_pos": [int(char.pos[0]) - viewer_row, int(char.pos[1]) - viewer_col],
+                    "rel_pos": [
+                        int(char.pos[0]) - viewer_row,
+                        int(char.pos[1]) - viewer_col,
+                    ],
                     "hp": int(char.hp),
                 }
             )
@@ -224,7 +243,10 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
 
     spike_pos = getattr(game, "spike_pos", None)
     if spike_pos is not None:
-        obs["spike_pos"] = [int(spike_pos[0]) - viewer_row, int(spike_pos[1]) - viewer_col]
+        obs["spike_pos"] = [
+            int(spike_pos[0]) - viewer_row,
+            int(spike_pos[1]) - viewer_col,
+        ]
 
     target = getattr(game, "target_plant_pos", None)
     if target is not None:
@@ -240,7 +262,9 @@ def get_game_observation(game: Any, viewer: Any) -> dict:
     return obs
 
 
-def choose_ability_target(ability_name: str, char: Any, game_state: dict, helper_result: Any) -> tuple[int, int]:
+def choose_ability_target(
+    ability_name: str, char: Any, game_state: dict, helper_result: Any
+) -> tuple[int, int]:
     if (
         isinstance(helper_result, tuple)
         and len(helper_result) == 2
@@ -252,7 +276,8 @@ def choose_ability_target(ability_name: str, char: Any, game_state: dict, helper
             return int(target[0]), int(target[1])
 
     enemies = [
-        other for other in game_state.get("chars", [])
+        other
+        for other in game_state.get("chars", [])
         if character_is_alive(other) and getattr(other, "team", None) != char.team
     ]
     if ability_name in {"SMOKE", "FLASH"} and enemies:
@@ -322,14 +347,18 @@ def load_policy(model_path: str | Path, device: str) -> tuple[PolicyNetwork, int
     return model, obs_size
 
 
-def decode_action(action_idx: int, char: Any, game_state: dict, helper_result: Any) -> Any:
+def decode_action(
+    action_idx: int, char: Any, game_state: dict, helper_result: Any
+) -> Any:
     grid = game_state["grid"]
 
     if action_idx in DIRECTION_BY_ACTION:
         dr, dc = DIRECTION_BY_ACTION[action_idx]
         nr = int(char.pos[0]) + dr
         nc = int(char.pos[1]) + dc
-        valid = 0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1] and grid[nr, nc] != 1
+        valid = (
+            0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1] and grid[nr, nc] != 1
+        )
         if valid:
             for other in game_state.get("chars", []):
                 if other is char or not character_is_alive(other):
@@ -396,7 +425,7 @@ class PolicyAttackerController:
 
     def __init__(
         self,
-        model_path: str | Path = "policy_dagger_final.pt",
+        model_path: str | Path = "policy_fnatic_attacker_dagger_final.pt",
         device: str = "auto",
     ) -> None:
         self.model_path = Path(model_path)
@@ -439,7 +468,8 @@ class PolicyAttackerController:
         spike_pos = game_state.get("spike_pos")
         holder = next(
             (
-                other for other in game_state.get("chars", [])
+                other
+                for other in game_state.get("chars", [])
                 if character_is_alive(other)
                 and getattr(other, "team", None) == char.team
                 and getattr(other, "has_spike", False)
@@ -450,7 +480,8 @@ class PolicyAttackerController:
             return None
 
         alive_attackers = [
-            other for other in game_state.get("chars", [])
+            other
+            for other in game_state.get("chars", [])
             if character_is_alive(other) and getattr(other, "team", None) == char.team
         ]
         if not alive_attackers:

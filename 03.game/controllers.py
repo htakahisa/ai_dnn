@@ -482,6 +482,11 @@ class DefaultDefenderController(BaseController):
         chars = game_state.get("chars", [])
         r, c = int(char.pos[0]), int(char.pos[1])
 
+        # 移動や解除より先に、使用価値があるアビリティを判定する。
+        ability_action = self._decide_ability(char, game_state)
+        if ability_action is not None:
+            return list(char.pos), ability_action
+
         if is_planted and planted_pos is not None:
             dist_to_spike = max(
                 abs(int(planted_pos[0]) - r),
@@ -507,6 +512,80 @@ class DefaultDefenderController(BaseController):
             chars=chars,
             moving_char=char,
         )
+
+    def _decide_ability(self, char, game_state):
+        """ディフェンダー側のアビリティ使用判断。"""
+        chars = game_state.get("chars", [])
+        grid = game_state["grid"]
+        is_planted = bool(game_state.get("is_planted", False))
+        planted_pos = game_state.get("planted_pos")
+        target_plant_pos = game_state.get("target_plant_pos")
+
+        visible_enemies = [
+            enemy
+            for enemy in chars
+            if getattr(enemy, "is_alive", True)
+            and getattr(enemy, "team", None) != char.team
+            and self.has_line_of_sight(char.pos, enemy.pos, grid)
+        ]
+
+        # 1. RECON: 敵が見えていないとき、攻防の中心となるサイトを索敵する。
+        site_pos = planted_pos if is_planted and planted_pos is not None else target_plant_pos
+        if (
+            getattr(char, "recon_charges", 0) > 0
+            and not visible_enemies
+            and site_pos is not None
+        ):
+            distance_to_site = max(
+                abs(int(site_pos[0]) - int(char.pos[0])),
+                abs(int(site_pos[1]) - int(char.pos[1])),
+            )
+            if distance_to_site <= 10:
+                return {
+                    "ability": "RECON",
+                    "target": (int(site_pos[0]), int(site_pos[1])),
+                }
+
+        # 2. SMOKE: 複数の敵が射線内にいるとき、最も近い敵付近を遮断する。
+        if getattr(char, "smoke_charges", 0) > 0 and len(visible_enemies) >= 2:
+            closest_enemy = min(
+                visible_enemies,
+                key=lambda enemy: max(
+                    abs(int(enemy.pos[0]) - int(char.pos[0])),
+                    abs(int(enemy.pos[1]) - int(char.pos[1])),
+                ),
+            )
+            return {
+                "ability": "SMOKE",
+                "target": (
+                    int(closest_enemy.pos[0]),
+                    int(closest_enemy.pos[1]),
+                ),
+            }
+
+        # 3. FLASH: 近距離に視認中の敵がいるときに使用する。
+        if getattr(char, "flash_charges", 0) > 0 and visible_enemies:
+            closest_enemy = min(
+                visible_enemies,
+                key=lambda enemy: max(
+                    abs(int(enemy.pos[0]) - int(char.pos[0])),
+                    abs(int(enemy.pos[1]) - int(char.pos[1])),
+                ),
+            )
+            distance = max(
+                abs(int(closest_enemy.pos[0]) - int(char.pos[0])),
+                abs(int(closest_enemy.pos[1]) - int(char.pos[1])),
+            )
+            if distance <= 5:
+                return {
+                    "ability": "FLASH",
+                    "target": (
+                        int(closest_enemy.pos[0]),
+                        int(closest_enemy.pos[1]),
+                    ),
+                }
+
+        return None
 
 
 class UserInputController(BaseController):

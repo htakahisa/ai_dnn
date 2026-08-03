@@ -1,0 +1,203 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "アイネクライネ",
+  "team2": "クイーンズフラワーギャンビット",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 2,
+  "winner": "アイネクライネ",
+  "loser": "クイーンズフラワーギャンビット",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2299467635,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 11,
+      "score2": 13,
+      "winner": "クイーンズフラワーギャンビット",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 26,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 21,
+        "deaths": 13
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "seed": 102547026,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 21,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "leaf",
+        "kills": 11,
+        "deaths": 13
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "seed": 2500804595,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 27,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "leaf",
+        "kills": 17,
+        "deaths": 16
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "seed": 1911836321,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 31,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 18,
+        "deaths": 13
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "seed": 2653626664,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 11,
+      "score2": 13,
+      "winner": "クイーンズフラワーギャンビット",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 23,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "leaf",
+        "kills": 21,
+        "deaths": 15
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "seed": 343386466,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 15,
+        "deaths": 14
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "seed": 3374256262,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 9,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 32,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 15,
+        "deaths": 10
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "seed": 369233674,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 40,
+        "deaths": 5
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 10,
+        "deaths": 17
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 9,
+      "seed": 796773139,
+      "team1": "アイネクライネ",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 15,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 34,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 19,
+        "deaths": 13
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": true
+    }
+  ]
+}

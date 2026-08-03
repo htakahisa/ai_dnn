@@ -1,0 +1,245 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "アイネクライネ",
+  "team2": "radiantdancer",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 4,
+  "winner": "アイネクライネ",
+  "loser": "radiantdancer",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 603983954,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 19,
+        "deaths": 16
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "seed": 2702058320,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 14,
+      "score2": 16,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 31,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 20,
+        "deaths": 19
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": true
+    },
+    {
+      "number": 3,
+      "seed": 3121494085,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 9,
+      "score2": 13,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 16,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "seed": 2249256183,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 13,
+        "deaths": 14
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "seed": 546733974,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 6,
+      "score2": 13,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 13,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 16,
+        "deaths": 10
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "seed": 1897506758,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 12,
+      "score2": 14,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 17,
+        "deaths": 18
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": true
+    },
+    {
+      "number": 7,
+      "seed": 2119149437,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 5,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 21,
+        "deaths": 15
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "seed": 424105091,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 31,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 12,
+        "deaths": 15
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 9,
+      "seed": 1718090217,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 6,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 22,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 14,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 10,
+      "seed": 3431914962,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 9,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 33,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 17,
+        "deaths": 13
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 11,
+      "seed": 2186542085,
+      "team1": "アイネクライネ",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 6,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 24,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lar0k",
+        "kills": 12,
+        "deaths": 13
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    }
+  ]
+}

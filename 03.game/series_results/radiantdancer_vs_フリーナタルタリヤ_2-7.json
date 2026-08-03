@@ -1,0 +1,190 @@
+{
+  "team1": "radiantdancer",
+  "team2": "フリーナタルタリヤ",
+  "maps_to_win": 7,
+  "team1_wins": 2,
+  "team2_wins": 7,
+  "winner": "フリーナタルタリヤ",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 5,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 9,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 21,
+        "deaths": 11
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 4,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 15,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 22,
+        "deaths": 5
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 19,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "Furina",
+        "kills": 16,
+        "deaths": 14
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 6,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 20,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 18,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 6,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 14,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Furina",
+        "kills": 18,
+        "deaths": 6
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 6,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 12,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 26,
+        "deaths": 11
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 9,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "something",
+        "kills": 16,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 21,
+        "deaths": 18
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 9,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "something",
+        "kills": 17,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 11,
+        "deaths": 16
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 9,
+      "team1": "radiantdancer",
+      "team2": "フリーナタルタリヤ",
+      "score1": 8,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 11,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 25,
+        "deaths": 15
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "team1": "ブラッドムーン",
+  "team2": "VisionStrikers",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 3,
+  "winner": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 7,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 23,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Rb",
+        "kills": 25,
+        "deaths": 3
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 25,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 25,
+        "deaths": 19
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 24,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Mako",
+        "kills": 25,
+        "deaths": 9
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 41,
+        "deaths": 23
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 41,
+        "deaths": 23
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 0,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 16,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 16,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 10,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 26,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Rb",
+        "kills": 30,
+        "deaths": 12
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 6,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Meteor",
+        "kills": 18,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Mako",
+        "kills": 19,
+        "deaths": 10
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 18,
+      "score2": 16,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 40,
+        "deaths": 24
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 40,
+        "deaths": 24
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": true
+    },
+    {
+      "number": 9,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 10,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 27,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 27,
+        "deaths": 19
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 10,
+      "team1": "ブラッドムーン",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 18,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "stax",
+        "kills": 21,
+        "deaths": 6
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    }
+  ]
+}

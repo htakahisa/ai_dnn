@@ -1,0 +1,518 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "アイネクライネ",
+  "team2": "フリーナタルタリヤ",
+  "maps_to_win": 15,
+  "team1_wins": 15,
+  "team2_wins": 9,
+  "winner": "アイネクライネ",
+  "loser": "フリーナタルタリヤ",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2032877477,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 11,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 31,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 21,
+        "deaths": 21
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "seed": 801957741,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 5,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 20,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "seed": 116645847,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 8,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 21,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 21,
+        "deaths": 18
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "seed": 2437558559,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 7,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 22,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 23,
+        "deaths": 15
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "seed": 4195325417,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 15,
+        "deaths": 17
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "seed": 1512803404,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 11,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 22,
+        "deaths": 18
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "seed": 2725720154,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 11,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 21,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 25,
+        "deaths": 15
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "seed": 4215059711,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 27,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 15,
+        "deaths": 20
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 9,
+      "seed": 1529995672,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 18,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 19,
+        "deaths": 16
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 10,
+      "seed": 1974585736,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 28,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 14,
+        "deaths": 19
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 11,
+      "seed": 4163198779,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 23,
+        "deaths": 16
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 12,
+      "seed": 1665422266,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 26,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 16,
+        "deaths": 15
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 13,
+      "seed": 3358643943,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 10,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 27,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 20,
+        "deaths": 16
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 14,
+      "seed": 4043840786,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 36,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 24,
+        "deaths": 18
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 15,
+      "seed": 2481481211,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 32,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 20,
+        "deaths": 17
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 16,
+      "seed": 418387574,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 11,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 19,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 33,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 17,
+      "seed": 3284009138,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 17,
+        "deaths": 20
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 18,
+      "seed": 2930717624,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 6,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 42,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 18,
+        "deaths": 11
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 19,
+      "seed": 722501758,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 6,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 28,
+        "deaths": 12
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 20,
+      "seed": 1953161405,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 28,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 17,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 21,
+      "seed": 2230045473,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 34,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 17,
+        "deaths": 12
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 22,
+      "seed": 140192838,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 6,
+      "score2": 13,
+      "winner": "フリーナタルタリヤ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 23,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 13,
+        "deaths": 14
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    },
+    {
+      "number": 23,
+      "seed": 352800468,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 40,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 23,
+        "deaths": 18
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 24,
+      "seed": 4042271429,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 4,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 35,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 8,
+        "deaths": 15
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false
+    }
+  ]
+}

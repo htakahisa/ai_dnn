@@ -24,10 +24,10 @@ from learning_attacker_multi import LearningAttackerMultiController
 from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
 from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
 from policy_attacker_controller import PolicyAttackerController
+from policy_defender_controller import PolicyDefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
-from policy_attacker_controller import PolicyAttackerController
 
 from game_core import (
     Character,
@@ -45,7 +45,8 @@ from battle_logic import BattleLogicMixin
 from rendering_ui import RenderingUIMixin
 
 ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
-FNATIC_V1_ATTACKER_MODEL_PATH = "policy_dagger_final.pt"
+FNATIC_V1_ATTACKER_MODEL_PATH = "policy_fnatic_attacker_dagger_final.pt"
+FNATIC_V1_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
 
 def _build_team_ai(key):
@@ -58,8 +59,10 @@ def _build_team_ai(key):
                 model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
                 device="auto",
             ),
-            # Fnatic Defenderモデル完成までの暫定処理
-            defender_factory=lambda: DefaultDefenderController(),
+            defender_factory=lambda: PolicyDefenderController(
+                model_path=FNATIC_V1_DEFENDER_MODEL_PATH,
+                device="auto",
+            ),
         )
 
     if normalized == "toru_ai_v3":
@@ -276,61 +279,47 @@ class VisualFPSBattle(
         self.init_round()
 
     def _apply_igl_iq_bonus(self):
-        """コンボ後IQを使ってIGL補正を行い、最後に影響度ペナルティを適用する。
+        """IGL本人を含む全員へ補正し、最終IQを0～300へ制限する。"""
+        IQ_MIN = 0.0
+        IQ_MAX = 300.0
 
-        適用順:
-            1. 素のIQ
-            2. プレイヤーコンボによるIQ加算
-            3. コンボ後のIGL IQを参照した味方IQ倍率
-            4. 影響度超過によるチーム全員のIQ低下
-
-        IGL本人にもIGL倍率を掛ける。
-        IGL本人は「自身のIQ × 自身のIQ / 100」で計算される。
-        """
         for team, igl_name in (
             ("A", self.attacker_igl_name),
             ("D", self.defender_igl_name),
         ):
             members = [char for char in self.chars if char.team == team]
-            igl = next((char for char in members if char.name == igl_name), None)
+            igl = next(
+                (char for char in members if char.name == igl_name),
+                None,
+            )
 
-            # _apply_player_combos() 後の char.iq が、IGL計算前のIQ。
             pre_igl_iq = {}
             for char in members:
                 char.is_igl = bool(igl and char.name == igl.name)
-                current_iq = max(
-                    0.0,
-                    float(getattr(char, "iq", getattr(char, "base_iq", 100.0))),
-                )
-                pre_igl_iq[id(char)] = current_iq
-                char.effective_iq = current_iq
-                char.iq = current_iq
+                value = float(getattr(char, "iq", getattr(char, "base_iq", 100.0)))
+                value = max(IQ_MIN, value)
+                pre_igl_iq[id(char)] = value
+                char.iq = value
+                char.effective_iq = value
 
             if igl is not None:
-                # IGL自身がコンボでIQ上昇していれば、その上昇後の値を参照する。
-                igl_iq_after_combo = pre_igl_iq[id(igl)]
-                multiplier = max(0.0, igl_iq_after_combo / 100.0)
-
+                multiplier = max(0.0, pre_igl_iq[id(igl)] / 100.0)
                 for char in members:
-                    # IGL本人を含め、全員にIGL倍率を適用する。
-                    # IGL本人は「自身のIQ × 自身のIQ / 100」になる。
-                    adjusted_iq = max(0.0, pre_igl_iq[id(char)] * multiplier)
-                    char.effective_iq = adjusted_iq
-                    char.iq = adjusted_iq
+                    value = pre_igl_iq[id(char)] * multiplier
+                    value = min(IQ_MAX, max(IQ_MIN, value))
+                    char.iq = value
+                    char.effective_iq = value
 
             total_influence = sum(
                 max(0.0, float(getattr(char, "influence", 0.0))) for char in members
             )
-            influence_iq_penalty = max(0.0, (total_influence - 300.0) / 10.0)
+            penalty = max(0.0, (total_influence - 300.0) / 10.0)
 
-            if influence_iq_penalty > 0.0:
-                for char in members:
-                    adjusted_iq = max(
-                        0.0,
-                        float(char.effective_iq) - influence_iq_penalty,
-                    )
-                    char.effective_iq = adjusted_iq
-                    char.iq = adjusted_iq
+            for char in members:
+                value = float(char.effective_iq) - penalty
+                value = min(IQ_MAX, max(IQ_MIN, value))
+                char.iq = value
+                char.effective_iq = value
 
     def _swap_sides(self):
         """編成・IGL・スパイク担当・スコアをチームごと攻守交換する。"""

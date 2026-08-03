@@ -1,0 +1,150 @@
+{
+  "team1": "ブラッドムーン",
+  "team2": "ドラゴンテイル",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 0,
+  "winner": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 7,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 41,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 41,
+        "deaths": 18
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 6,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 36,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 36,
+        "deaths": 18
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 9,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 27,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 27,
+        "deaths": 20
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 8,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 36,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 36,
+        "deaths": 20
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 9,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 28,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 28,
+        "deaths": 20
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 10,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 27,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 27,
+        "deaths": 20
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 4,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 16
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    }
+  ]
+}
