@@ -158,12 +158,28 @@ class LearningAttackerRetrieveController:
         dist_map = _bfs_distance_map(grid, spike_pos)
         max_dist_scale = float(height + width)
 
+        # 生存中の味方が占有しているセルを取得し、壁と同様に「進めない」扱いにする。
+        # train_attacker_retrieve.py の ally_blocked_cell と対応させるための変更。
+        ally_occupied = {
+            tuple(map(int, other.pos))
+            for other in chars
+            if other is not char
+            and getattr(other, "is_alive", True)
+            and getattr(other, "team", None) == char.team
+        }
+
         neighbor_dists = []
         for (dr_, dc_), is_wall_flag in zip(
             CARDINAL, [wall_up, wall_down, wall_left, wall_right]
         ):
             nr, nc = r + dr_, c + dc_
-            if is_wall_flag or not (0 <= nr < height and 0 <= nc < width):
+            in_bounds = 0 <= nr < height and 0 <= nc < width
+            blocked = (
+                is_wall_flag
+                or not in_bounds
+                or (in_bounds and (nr, nc) in ally_occupied)
+            )
+            if blocked:
                 neighbor_dists.append(1.0)
             else:
                 nd = dist_map[nr, nc]

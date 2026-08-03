@@ -22,6 +22,15 @@ train_attacker_guard.py の _build_candidate_tiers / _assign_goals と
 index順」に相当する近似であり、厳密に同一である必要はない
 （毎tick一貫していれば十分機能する）。
 
+【重要：候補までの「近さ」はBFS実距離で判定する】
+チェビシェフ距離（直線距離）で「近い」を判定すると、壁の向こう側の
+セルを誤って近いと判定してしまい、キャラクターが角で詰まる原因になる。
+そのため _assign_goals・観測特徴・報酬計算に相当する距離取得は、
+すべて壁を考慮したBFS距離マップを使う（train_attacker_guard.py と
+同一の対応）。敵との距離判定（アビリティ射程・戦闘）は、実ゲーム側の
+射線・射程の概念に合わせてチェビシェフ距離のままでよい
+（角スタックの原因はゴールへの移動誘導であり、射程判定ではないため）。
+
 【重要：6は本番マップに存在しない】
 map_data_guard.py の grid==6 は学習専用。本番の map_data.py には
 存在しないため、carryモデルの優先地点(5)と同じ設計判断で、
@@ -159,13 +168,31 @@ def _build_candidate_tiers(grid, plant_pos, formation_cells):
     return tier1, tier2, tier3
 
 
-def _assign_goals(grid, plant_pos, formation_cells, positions_ordered):
-    """近い順の貪欲割当で、各エージェントの誘導目標(goal)とtier(0/1/2)を返す。
+def _assign_goals(grid, plant_pos, formation_cells, positions_ordered, cell_dist_maps):
+    """近い順（BFS実距離）の貪欲割当で、各エージェントの誘導目標(goal)とtier(0/1/2)を返す。
+
+    チェビシェフ距離（直線距離）ではなく、壁を考慮したBFS距離で「近い」を
+    判定する。直線距離だと壁の向こうのセルを「近い」と誤認し、
+    キャラクターが角で詰まる原因になるため。
     train_attacker_guard.py と同一ロジック。
 
     positions_ordered: [(agent_key, current_pos), ...] のリスト。
+    cell_dist_maps: {cell(tuple): distance_map(np.ndarray)} のキャッシュ辞書。
+        呼び出し元がラウンド単位で使い回すこと（毎回作り直すと重い）。
     戻り値: {agent_key: (goal_pos, tier)}  tier: 0=設置位置, 1=隣接8マス, 2=map6
     """
+    def _dist_map_for(cell):
+        dm = cell_dist_maps.get(cell)
+        if dm is None:
+            dm = _build_distance_map_from_coords(grid, [cell])
+            cell_dist_maps[cell] = dm
+        return dm
+
+    def _bfs_dist(pos, cell):
+        dm = _dist_map_for(cell)
+        d = dm[pos[0], pos[1]]
+        return float(d) if np.isfinite(d) else float("inf")
+
     tier1, tier2, tier3 = _build_candidate_tiers(grid, plant_pos, formation_cells)
     tiers = [tier1, tier2, tier3]
     claimed = set()
@@ -175,7 +202,7 @@ def _assign_goals(grid, plant_pos, formation_cells, positions_ordered):
         for tier_idx, tier_cells in enumerate(tiers):
             avail = [s for s in tier_cells if s not in claimed]
             if avail:
-                chosen = min(avail, key=lambda s: _chebyshev(pos, s))
+                chosen = min(avail, key=lambda s: _bfs_dist(pos, s))
                 chosen_tier = tier_idx
                 break
         if chosen is None:
@@ -261,7 +288,8 @@ class LearningAttackerGuardController(BaseController):
                 f"formation_cells={self.formation_cells})"
             )
 
-        # goal座標(r, c) -> 壁のみBFS距離マップ のキャッシュ
+        # goal座標(r, c) -> 壁のみBFS距離マップ のキャッシュ。
+        # ラウンドが変わればplant_posも変わるため reset_round() でクリアする。
         self._goal_dist_cache = {}
         # キャラクター名ごとの episode 内状態（移動履歴・停滞カウント）
         self._char_state = {}
@@ -290,12 +318,26 @@ class LearningAttackerGuardController(BaseController):
         return grid[r, c] == 1
 
     def _get_goal_dist_map(self, grid, goal):
-        key = (grid.tobytes(), tuple(goal))
+        key = tuple(goal)
         cached = self._goal_dist_cache.get(key)
         if cached is None:
-            cached = _build_distance_map_from_coords(grid, [tuple(goal)])
+            cached = _build_distance_map_from_coords(grid, [key])
             self._goal_dist_cache[key] = cached
         return cached
+
+    def _goal_distance(self, grid, pos, goal):
+        """壁を考慮したBFS距離。ゴール（配置スロットや緊急時の解除者位置）
+        までの「実際に歩ける経路上の距離」を返す。チェビシェフ距離（直線）
+        を使うと壁の向こうを近いと誤認し、角で詰まる原因になるため。
+        train_attacker_guard.py の GuardEnv._goal_distance と同一ロジック。
+        """
+        dist_map = self._get_goal_dist_map(grid, goal)
+        r, c = pos
+        height, width = grid.shape
+        if not (0 <= r < height and 0 <= c < width):
+            return DIST_NORM_MAX
+        d = dist_map[r, c]
+        return float(d) if np.isfinite(d) else DIST_NORM_MAX
 
     def _resolve_plant_pos(self, game_state):
         """スパイク設置位置を取得する。Guardフェーズは設置後を前提とするが、
@@ -354,7 +396,9 @@ class LearningAttackerGuardController(BaseController):
         positions_ordered = [
             (c.name, (int(c.pos[0]), int(c.pos[1]))) for c in team_chars
         ]
-        return _assign_goals(grid, plant_pos, self.formation_cells, positions_ordered)
+        return _assign_goals(
+            grid, plant_pos, self.formation_cells, positions_ordered, self._goal_dist_cache
+        )
 
     def _nearest_visible_enemy(self, grid, chars, my_team, from_pos, max_range=None):
         best_char, best_dist = None, None
@@ -399,12 +443,16 @@ class LearningAttackerGuardController(BaseController):
         obs.append(r / max(1, height - 1))
         obs.append(c / max(1, width - 1))
 
+        # 設置位置までの距離は「現在地の把握」用の補助情報であり、
+        # train側でも一貫してチェビシェフ距離を使っている箇所なので合わせる。
         dist_to_plant = _chebyshev((r, c), (pr, pc))
         obs.append(min(1.0, dist_to_plant / DIST_NORM_MAX))
         obs.append(max(-1.0, min(1.0, (pr - r) / DIST_NORM_MAX)))
         obs.append(max(-1.0, min(1.0, (pc - c) / DIST_NORM_MAX)))
 
-        dist_to_goal = _chebyshev((r, c), (gr, gc))
+        # ゴール（配置スロット or 緊急時の解除者位置）までの距離は
+        # 壁を考慮したBFS距離を使う（角で詰まる問題の対策）。
+        dist_to_goal = self._goal_distance(grid, (r, c), (gr, gc))
         obs.append(min(1.0, dist_to_goal / DIST_NORM_MAX))
         obs.append(max(-1.0, min(1.0, (gr - r) / DIST_NORM_MAX)))
         obs.append(max(-1.0, min(1.0, (gc - c) / DIST_NORM_MAX)))
@@ -436,10 +484,11 @@ class LearningAttackerGuardController(BaseController):
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             obs.append(1.0 if self._is_wall(grid, r + dr, c + dc) else 0.0)
 
+        # 各方向に動いた場合の「ゴール」までの距離勾配も、BFS距離を使う。
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
             wall = self._is_wall(grid, nr, nc)
-            gdist = _chebyshev((nr, nc), (gr, gc))
+            gdist = self._goal_distance(grid, (nr, nc), (gr, gc))
             obs.append(1.0 if wall else min(1.0, gdist / DIST_NORM_MAX))
 
         for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):

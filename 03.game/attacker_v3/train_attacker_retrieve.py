@@ -54,6 +54,13 @@ ENEMY_DODGE = 0.15
 ENEMY_HS_RATE = 0.25
 ENEMY_REACTION_HIT_CHANCE = 0.5  # そのTickに敵が反撃してくる確率(簡易反応速度)
 
+# 味方渋滞スタブ(狭い通路で先頭が塞ぐ状況を再現する)
+ALLY_BLOCK_PROB = 0.35          # このエピソードで味方が経路上に立っている確率
+ALLY_BLOCK_MIN_CLEAR_TICKS = 4  # 塞がれてから解除されるまでの最短tick数
+ALLY_BLOCK_MAX_CLEAR_TICKS = 12 # 塞がれてから解除されるまでの最長tick数
+STALL_TICKS_PENALTY = -0.05     # 同じマスに留まり続けている場合の追加ペナルティ
+STALL_TICKS_THRESHOLD = 3       # 何tick同じ位置に留まったらペナルティを課すか
+
 # 報酬
 STEP_PENALTY = -0.02
 GOAL_REWARD = 12.0
@@ -134,7 +141,7 @@ def has_los(p1, p2):
 # 環境
 # ---------------------------------------------------------------------------
 class RetrieveEnv:
-    """1体のリトリーブ役アタッカー + 0〜1体の簡易敵スタブ。"""
+    """1体のリトリーブ役アタッカー + 0〜1体の簡易敵スタブ + 味方渋滞スタブ。"""
 
     OBS_DIM = 20
 
@@ -149,6 +156,7 @@ class RetrieveEnv:
         # スポーン地点はspikeから到達可能な場所からランダムに選ぶ
         reachable = [p for p in WALKABLE if self.dist_map[p] > 0]
         self.pos = list(random.choice(reachable)) if reachable else list(self.spike_pos)
+        start_dist = self.dist_map[tuple(self.pos)]
 
         self.hp = MAX_HP
         self.alive = True
@@ -169,6 +177,25 @@ class RetrieveEnv:
                 else:
                     self.enemy_reveal = REVEAL_DURATION_TICKS
 
+        # 味方渋滞スタブ: 経路上(自分より少しゴールに近いセル)に味方が立っている
+        # 想定を作る。一定tick後に自動で解除する(先頭が動いて道が空く想定)。
+        self.ally_blocked_cell = None
+        self.ally_block_clear_tick = None
+        if random.random() < ALLY_BLOCK_PROB and start_dist > 1:
+            path_candidates = [
+                p for p in WALKABLE
+                if p != tuple(self.pos)
+                and p != self.spike_pos
+                and 0 <= self.dist_map[p] < start_dist
+            ]
+            if path_candidates:
+                self.ally_blocked_cell = random.choice(path_candidates)
+                self.ally_block_clear_tick = self.tick + random.randint(
+                    ALLY_BLOCK_MIN_CLEAR_TICKS, ALLY_BLOCK_MAX_CLEAR_TICKS
+                )
+
+        self.stall_ticks = 0
+
         return self._obs(), self._action_mask()
 
     # -- 観測 --------------------------------------------------------------
@@ -177,6 +204,9 @@ class RetrieveEnv:
             return False
         return has_los(tuple(self.pos), tuple(self.enemy_pos))
 
+    def _is_ally_blocked(self, cell):
+        return self.ally_blocked_cell is not None and cell == self.ally_blocked_cell
+
     def _obs(self):
         r, c = self.pos
         wall_up = 1.0 if GRID[r - 1, c] == 1 else 0.0
@@ -184,16 +214,19 @@ class RetrieveEnv:
         wall_left = 1.0 if GRID[r, c - 1] == 1 else 0.0
         wall_right = 1.0 if GRID[r, c + 1] == 1 else 0.0
 
-        # 直線方向(dr, dc)は廃止し、隣接4マスの「実際のBFS距離」を渡す。
-        # 壁の場合は最大値(=最も悪い)扱いにして、壁方向を選ばせないようにする。
+        # 隣接4マスの「実際のBFS距離」を渡す。
+        # 壁 または 味方に塞がれているセルは最悪値(1.0)扱いにして避けさせる。
         max_dist_scale = float(HEIGHT + WIDTH)
         neighbor_dists = []
         for (dr_, dc_), is_wall in zip(
             CARDINAL, [wall_up, wall_down, wall_left, wall_right]
         ):
             nr, nc = r + dr_, c + dc_
-            if is_wall or not (0 <= nr < HEIGHT and 0 <= nc < WIDTH):
-                neighbor_dists.append(1.0)  # 壁 = 最悪値
+            blocked = is_wall or not (0 <= nr < HEIGHT and 0 <= nc < WIDTH)
+            if not blocked and self._is_ally_blocked((nr, nc)):
+                blocked = True
+            if blocked:
+                neighbor_dists.append(1.0)
             else:
                 neighbor_dists.append(min(1.0, self.dist_map[nr, nc] / max_dist_scale))
 
@@ -215,7 +248,7 @@ class RetrieveEnv:
         obs = [
             r / HEIGHT, c / WIDTH,
             wall_up, wall_down, wall_left, wall_right,
-            *neighbor_dists,          # ここが変更点: dr, dc(2) -> neighbor_dists(4)
+            *neighbor_dists,
             dist_norm,
             *role_onehot,
             float(self.charge),
@@ -224,9 +257,9 @@ class RetrieveEnv:
         return np.array(obs, dtype=np.float32)
 
     def _action_mask(self):
-        """壁への移動 / チャージ0でのABILITY / 敵不可視でのABILITYは禁止しない
-        (空撃ちは行動として選択可能にし、学習でペナルティにより淘汰させる)。
-        ただしチャージ0でのABILITYだけは物理的に無意味なので禁止する。"""
+        """壁への移動 / チャージ0でのABILITYは禁止する。
+        味方に塞がれたセルへの移動は、実ゲームと同様に"物理的には選べるが失敗する"
+        挙動を再現したいため、ここではマスクせずstep側で失敗させる。"""
         mask = [True] * N_ACTIONS
         r, c = self.pos
         for i, (dr, dc) in enumerate(CARDINAL):
@@ -244,19 +277,46 @@ class RetrieveEnv:
         done = False
         info = {}
 
+        # 味方渋滞の自動解除(先頭が動いて道が空く想定)
+        if (
+            self.ally_blocked_cell is not None
+            and self.ally_block_clear_tick is not None
+            and self.tick >= self.ally_block_clear_tick
+        ):
+            self.ally_blocked_cell = None
+
+        moved = False
         if action < 4:
             dr, dc = CARDINAL[action]
             nr, nc = self.pos[0] + dr, self.pos[1] + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1:
+            in_bounds = 0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            is_wall = in_bounds and GRID[nr, nc] == 1
+            blocked_by_ally = in_bounds and self._is_ally_blocked((nr, nc))
+
+            if in_bounds and not is_wall and not blocked_by_ally:
                 old_dist = self.dist_map[self.pos[0], self.pos[1]]
                 self.pos = [nr, nc]
                 new_dist = self.dist_map[nr, nc]
                 # BFS距離ポテンシャルによる報酬シェーピング
                 reward += 0.3 * (old_dist - new_dist)
+                moved = True
+            elif blocked_by_ally:
+                # 実ゲームのoccupied判定と同様、位置は変わらずtickだけ消費する。
+                # 明確な負のシグナルにはしすぎない(迂回や待機は状況次第で正解のため)。
+                pass
         elif action == 4:
             pass  # STAY
         elif action == 5:
             reward += self._resolve_ability()
+
+        # 足踏み(同じマスに留まり続ける)ペナルティ。
+        # 迂回路を探させる/待つべき時と無駄な足踏みを区別するための緩い誘導。
+        if moved:
+            self.stall_ticks = 0
+        else:
+            self.stall_ticks += 1
+            if self.stall_ticks > STALL_TICKS_THRESHOLD:
+                reward += STALL_TICKS_PENALTY
 
         # スパイク到達判定
         if tuple(self.pos) == self.spike_pos:
@@ -373,13 +433,13 @@ def train(
     episodes=EPISODE_COUNT,
     batch_size=128,
     gamma=0.97,
-    lr=3e-4,                      # 1e-3 -> 3e-4
+    lr=3e-4,
     buffer_size=50000,
-    target_update_every=1000,     # 500 -> 1000 (振動を抑える)
+    target_update_every=1000,
     eps_start=1.0,
-    eps_end=0.10,                 # 0.05 -> 0.10 (崩壊時に抜け出す余地を残す)
-    eps_decay_episodes=11000,     # 8000 -> 11000 (ゆっくり絞る)
-    warmup_steps=2000,            # 追加: bufferが溜まるまで学習しない
+    eps_end=0.10,
+    eps_decay_episodes=6000,
+    warmup_steps=2000,
     save_path="data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
 ):
     env = RetrieveEnv()
@@ -389,7 +449,6 @@ def train(
     optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 
     replay = deque(maxlen=buffer_size)
-    best_avg_reward = -float("inf")
     recent_rewards = deque(maxlen=200)
     step_count = 0
     best_success_rate = 0
@@ -458,6 +517,7 @@ def train(
     torch.save(policy_net.state_dict(), save_path.replace("best", "final"))
     print("Training complete.")
 
+
 def evaluate_greedy(policy_net, episodes=100):
     """探索なし(eps=0)でN episode実行し、成功率・死亡率・平均報酬を計測する。"""
     env = RetrieveEnv()
@@ -483,6 +543,7 @@ def evaluate_greedy(policy_net, episodes=100):
             died += 1
     n = episodes
     return total_reward / n, reached / n, died / n
+
 
 if __name__ == "__main__":
     train()

@@ -73,7 +73,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-EPISODE_COUNT = 9000
+EPISODE_COUNT = 12000
 
 # ---------------------------------------------------------------------------
 # map_data_guard.py（推奨配置点=6を含む学習専用マップ）を優先ロードし、
@@ -280,6 +280,7 @@ class GuardEnv:
         urgency_shaping_coef=0.30,
         cover_stationary_bonus=0.10,
         cover_move_penalty=0.08,
+        block_penalty=0.15,
         ability_success_reward=2.0,
         ability_redundant_penalty=1.0,
         ability_waste_penalty=0.3,
@@ -307,6 +308,7 @@ class GuardEnv:
         self.urgency_shaping_coef = urgency_shaping_coef
         self.cover_stationary_bonus = cover_stationary_bonus
         self.cover_move_penalty = cover_move_penalty
+        self.block_penalty = block_penalty
         self.ability_success_reward = ability_success_reward
         self.ability_redundant_penalty = ability_redundant_penalty
         self.ability_waste_penalty = ability_waste_penalty
@@ -346,7 +348,8 @@ class GuardEnv:
         self.smokes = []
 
         self._enemy_goal_dist_map = None
-        self._cell_dist_maps = {}  # ゴール候補セル -> BFS距離マップ のキャッシュ（reset()ごとにクリア）
+        self._cell_dist_maps = {}
+        self._blocking_guard_idx = None  # このtickで味方の移動を塞いだguardのindex
         self._blocking_none = None  # 予約（互換のため）
 
     # ------------------------------------------------------------------
@@ -766,8 +769,6 @@ class GuardEnv:
         for i in range(self.n_guards):
             rewards[i] -= 0.01
 
-        goals_before = self._compute_goals()
-
         used_ability_this_tick = set()
         for i in range(self.n_guards):
             if not self.guard_alive[i] or actions[i] is None:
@@ -779,6 +780,8 @@ class GuardEnv:
                 self.guard_stuck[i] += 1
 
         self._advance_enemies()
+
+        self._blocking_guard_idx = {}  # {塞がれたguard_idx: 塞いだguard_idx}
 
         move_order = [
             i for i in range(self.n_guards)
@@ -804,6 +807,14 @@ class GuardEnv:
 
             occ = self._occupied_all("guard", i)
             if (nr, nc) in occ:
+                # 誰が塞いでいるかを記録する（後段でその塞いだ本人に
+                # 「まだ自分のゴールに未到達なのに居座っている」場合のみ罰する）
+                blocker_idx = next(
+                    (j for j in range(self.n_guards) if self.guard_alive[j] and self.guard_pos[j] == (nr, nc)),
+                    None,
+                )
+                if blocker_idx is not None:
+                    self._blocking_guard_idx[i] = blocker_idx
                 self.guard_last_delta[i] = (0.0, 0.0)
                 self.guard_stuck[i] += 1
                 continue
@@ -813,6 +824,15 @@ class GuardEnv:
             self.guard_stuck[i] = 0
 
         goals_after = self._compute_goals()
+
+        # このtickで誰かを塞いだguardのうち、まだ自分のゴールに
+        # 到達していない者だけをペナルティ対象にする。
+        blocker_penalty_targets = set()
+        for blocked_idx, blocker_idx in self._blocking_guard_idx.items():
+            blocker_goal, _blocker_tier = goals_after[blocker_idx]
+            blocker_dist = self._goal_distance(self.guard_pos[blocker_idx], blocker_goal)
+            if blocker_dist > 0.0:
+                blocker_penalty_targets.add(blocker_idx)
 
         for i in range(self.n_guards):
             if not self.guard_alive[i]:
@@ -826,12 +846,25 @@ class GuardEnv:
 
             moved = self.guard_last_delta[i] != (0.0, 0.0)
             has_cover_now = self._has_los_to_plant(self.guard_pos[i])
+            # 「割り当てられたゴールに実際に到達しているか」で判定する。
+            # これが無いと、通路の途中でたまたま射線が通った時点で
+            # stationary_bonusが発生し続け、本来のゴールまで進まずに
+            # 居座ってしまい、後続の味方の通路を塞ぐ原因になる。
+            at_goal = new_dist <= 0.0
             if not urgency:
-                if not moved and has_cover_now:
+                if not moved and has_cover_now and at_goal:
                     rewards[i] += self.cover_stationary_bonus
-                elif moved and self._prev_had_cover[i]:
+                elif moved and self._prev_had_cover[i] and at_goal:
                     rewards[i] -= self.cover_move_penalty
             self._prev_had_cover[i] = has_cover_now
+
+            # ゴール未到達なのに味方の移動を塞いでいる場合はペナルティ。
+            # 既にゴールに到達済みの味方が結果的に他の味方の通路上にいるのは
+            # 正当な位置取りなので罰しない（狭い通路自体の構造的制約は
+            # マップ側／配置スロット設計の問題であり、ここでは「まだ
+            # 到達していないのに居座る」個体だけを是正する）。
+            if i in blocker_penalty_targets:
+                rewards[i] -= self.block_penalty
 
         kill_bonus_targets, defuse_stopped = self._resolve_combat()
         for guard_idx in kill_bonus_targets:
