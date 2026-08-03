@@ -47,7 +47,7 @@ from game_core import (
     PLANT_REQUIRED_TICKS,
 )
 
-EPISODE_COUNT = 5000
+EPISODE_COUNT = 4000
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -64,7 +64,7 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 34  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
+OBS_DIM = 35  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
@@ -386,11 +386,21 @@ def build_observation(unit, defenders, attackers, team_memory, smoke_cells, own_
 
     # --- 担当する有利ポジション(7)への相対方向・到着フラグ ---
     if unit.assigned_defense_pos is not None:
-        dp = unit.assigned_defense_pos
-        obs[31] = (dp[0] - unit.pos[0]) / HEIGHT
-        obs[32] = (dp[1] - unit.pos[1]) / WIDTH
-        dist_to_dp = max(abs(dp[0] - unit.pos[0]), abs(dp[1] - unit.pos[1]))
-        obs[33] = 1.0 if dist_to_dp <= REACH_RADIUS else 0.0
+        dist_map = unit.assigned_defense_dist_map
+        bfs_dist = dist_map[int(unit.pos[0]), int(unit.pos[1])]
+        obs[31] = min(max(bfs_dist, 0), HEIGHT + WIDTH) / (HEIGHT + WIDTH)
+        best_dr, best_dc = 0, 0
+        best_d = bfs_dist
+        r0, c0 = int(unit.pos[0]), int(unit.pos[1])
+        for dr, dc in CARDINAL:
+            nr, nc = r0 + dr, c0 + dc
+            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and dist_map[nr, nc] >= 0:
+                if best_d < 0 or dist_map[nr, nc] < best_d:
+                    best_d = dist_map[nr, nc]
+                    best_dr, best_dc = dr, dc
+        obs[32] = float(best_dr)
+        obs[33] = float(best_dc)
+        obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
 
     return obs
 
@@ -484,13 +494,8 @@ class SearchEnv:
 
         return self._collect_observations()
 
+    # _assign_defense_positions内、割り当てと同時にBFS距離マップも保持する
     def _assign_defense_positions(self):
-        """各defenderへ、自スポーンから最も近い未割当の7地点を貪欲に割り当てる。
-
-        7地点数がdefender数より少ない場合は、余ったdefenderへランダムに
-        (重複を許容して)割り当てる(その場合は移動衝突判定側で隣接マスへ
-        自然に押し出される)。
-        """
         remaining = list(DEFENSE_POSITIONS)
         order = list(self.defenders)
         random.shuffle(order)
@@ -504,6 +509,8 @@ class SearchEnv:
             else:
                 pos = random.choice(DEFENSE_POSITIONS)
             d.assigned_defense_pos = pos
+            d.assigned_defense_dist_map = DEFENSE_POS_DIST_MAPS[DEFENSE_POSITIONS.index(pos)]
+            d.prev_defense_bfs_dist = d.assigned_defense_dist_map[int(d.pos[0]), int(d.pos[1])]
 
     def _smoke_cells(self):
         cells = set()
@@ -816,17 +823,23 @@ class SearchEnv:
                 ls = self.team_memory.last_seen_enemy["pos"]
                 dist = max(abs(ls[0]-d.pos[0]), abs(ls[1]-d.pos[1]))
                 r += SIGHTING_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
+            # _compute_rewards内、該当ブロックを置き換え
             elif d.assigned_defense_pos is not None:
-                dp = d.assigned_defense_pos
-                dist = max(abs(dp[0]-d.pos[0]), abs(dp[1]-d.pos[1]))
-                if dist > REACH_RADIUS:
-                    r += DEFENSE_POSITION_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
+                dist_map = d.assigned_defense_dist_map
+                bfs_dist = dist_map[int(d.pos[0]), int(d.pos[1])]
+                if bfs_dist < 0:
+                    bfs_dist = d.prev_defense_bfs_dist  # 到達不能セルへの一時退避対策
+
+                if bfs_dist > REACH_RADIUS:
+                    # ポテンシャルベース: 実際に縮んだ分だけ報酬を与える
+                    r += DEFENSE_POSITION_PULL_REWARD * (d.prev_defense_bfs_dist - bfs_dist)
                 else:
-                    # 到着済み: 動かないことを評価し、無駄なうろつきを抑制する
                     if not d.moved_this_tick:
                         r += HOLD_POSITION_BONUS
                     else:
                         r += HOLD_POSITION_PENALTY
+
+                d.prev_defense_bfs_dist = bfs_dist
 
             if ability_whiff.get(d.name):
                 r += ABILITY_WHIFF_PENALTY

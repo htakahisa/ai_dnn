@@ -14,7 +14,11 @@ train_defender_search.py と同じ優先順位ツリーを踏襲する:
     1. スパイク確定情報があればそちらへ最優先で寄る
     2. 敵目撃情報があればそちらへ寄る(retake準備)
     3. どちらも無ければ、ラウンド開始時に自チーム内で貪欲割り当てた
-       map_data_search.py の7地点(有利ポジション)へ向かい、到着後は静止する
+       map_data_search.py の7地点(有利ポジション)へ、BFS距離マップに
+       基づいて向かい、到着後は静止する
+
+OBS_DIM=35: 31(従来) + 4(担当ポジションへのBFS正規化距離 + 推奨方向dr,dc
+           + 到着フラグ)。train_defender_search.py と完全に一致させること。
 
 LearningDefenderAllAIController と同様、Defenderチーム全体で1つの
 コントローラーインスタンスを共有する想定(重み共有Dueling DQN)。
@@ -36,12 +40,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 34  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
+OBS_DIM = 35  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
-REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすChebyshev距離
+REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすBFS距離
 
 DEFAULT_MODEL_PATH = "data/defender_search_data/dqn_defender_search_best_by_eval.pt"
 
@@ -98,6 +102,26 @@ def _has_los(grid, p1, p2):
         if grid[r, c] == 1:
             return False
     return True
+
+
+def _bfs_distance_map(grid, goal):
+    """指定ゴールから各セルへの最短距離マップ(壁越え不可)。
+    train_defender_search.py の bfs_distance_map と同一ロジック。"""
+    height, width = grid.shape
+    dist = np.full((height, width), -1, dtype=np.int32)
+    gr, gc = int(goal[0]), int(goal[1])
+    if grid[gr, gc] == 1:
+        return dist
+    dist[gr, gc] = 0
+    queue = deque([(gr, gc)])
+    while queue:
+        r, c = queue.popleft()
+        for dr, dc in CARDINAL:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
+                dist[nr, nc] = dist[r, c] + 1
+                queue.append((nr, nc))
+    return dist
 
 
 def _parse_search_grid(maze_str):
@@ -221,14 +245,20 @@ class LearningDefenderSearchController:
 
         # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
-        self._assigned_positions = {}   # char_name -> (r, c)
+        self._assigned_positions = {}       # char_name -> (r, c)
+        self._assigned_dist_maps = {}       # char_name -> np.ndarray(BFS距離マップ)
+        self._prev_defense_bfs_dist = {}    # char_name -> float(未使用。観測のみのため不要だが
+                                             # デバッグ用に保持しておく)
         self._assignment_done = False
+        self._grid_cache = None
 
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
         self.team_memory.reset()
         self._processed_this_tick.clear()
         self._assigned_positions.clear()
+        self._assigned_dist_maps.clear()
+        self._prev_defense_bfs_dist.clear()
         self._assignment_done = False
         # site_positions / defense_positions はマップ形状に依存するだけなので
         # ラウンドをまたいでキャッシュを保持して構わない(クリアしない)。
@@ -242,7 +272,8 @@ class LearningDefenderSearchController:
         self._processed_this_tick.add(char.name)
 
     def _ensure_defense_assignment(self, char, grid, chars):
-        """ラウンド開始時、自チーム全員に7地点を貪欲割り当てする。
+        """ラウンド開始時、自チーム全員に7地点を貪欲割り当てし、
+        それぞれのBFS距離マップも同時に構築する。
         フォールバック: 7地点が見つからない場合は自チームのスポーン
         位置集合を代用する。"""
         if self._assignment_done:
@@ -270,6 +301,11 @@ class LearningDefenderSearchController:
                     hash(teammate.name) % len(self._defense_positions)
                 ]
             self._assigned_positions[teammate.name] = pos
+            dist_map = _bfs_distance_map(grid, pos)
+            self._assigned_dist_maps[teammate.name] = dist_map
+            self._prev_defense_bfs_dist[teammate.name] = float(
+                dist_map[int(teammate.pos[0]), int(teammate.pos[1])]
+            )
 
         self._assignment_done = True
 
@@ -355,14 +391,28 @@ class LearningDefenderSearchController:
         obs[29] = 0.5
         obs[30] = 0.0
 
-        assigned_pos = self._assigned_positions.get(char.name)
-        if assigned_pos is not None:
-            obs[31] = (assigned_pos[0] - char.pos[0]) / height
-            obs[32] = (assigned_pos[1] - char.pos[1]) / width
-            dist_to_assigned = max(
-                abs(assigned_pos[0] - char.pos[0]), abs(assigned_pos[1] - char.pos[1])
-            )
-            obs[33] = 1.0 if dist_to_assigned <= REACH_RADIUS else 0.0
+        # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
+        dist_map = self._assigned_dist_maps.get(char.name)
+        if dist_map is not None:
+            r0, c0 = int(char.pos[0]), int(char.pos[1])
+            bfs_dist = dist_map[r0, c0]
+            if bfs_dist < 0:
+                # 到達不能セルへの一時退避などの異常系。距離は最大値扱いにする。
+                bfs_dist = height + width
+
+            obs[31] = min(max(bfs_dist, 0), height + width) / (height + width)
+
+            best_dr, best_dc = 0, 0
+            best_d = bfs_dist
+            for dr, dc in CARDINAL:
+                nr, nc = r0 + dr, c0 + dc
+                if 0 <= nr < height and 0 <= nc < width and dist_map[nr, nc] >= 0:
+                    if best_d < 0 or dist_map[nr, nc] < best_d:
+                        best_d = dist_map[nr, nc]
+                        best_dr, best_dc = dr, dc
+            obs[32] = float(best_dr)
+            obs[33] = float(best_dc)
+            obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
 
         return obs, visible_enemies
 
