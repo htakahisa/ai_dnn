@@ -13,6 +13,18 @@ game_core / map_data / map_data_search からは定数・マップ文字列の�
 
 学習データ・チェックポイントは data/defender_search_data/ 以下に保存する。
 
+--------------------------------------------------------------------------
+優先順位ツリー(_compute_rewards / SearchEnv._priority_mode_and_distmap):
+    1. スパイク確定情報(spike_pos)     -- 最優先。SPIKE_PULL_REWARD
+    2. 敵目撃情報(last_seen_enemy)      -- 次点。retake準備として全員が寄る。
+       SIGHTING_PULL_REWARD
+    3. どちらも無い場合                -- 担当する有利ポジション(7)へ向かい、
+       到着後は静止する。DEFENSE_POSITION_PULL_REWARD / HOLD_POSITION_BONUS
+
+いずれもBFS距離のポテンシャル差分(前tick距離 - 今tick距離)に比例した
+報酬とすることで、直線距離ベースの報酬が持っていた「壁で勾配がねじれる」
+「動いても動かなくても大差ない」という弱点を解消している。
+--------------------------------------------------------------------------
 """
 
 import os
@@ -47,12 +59,12 @@ from game_core import (
     PLANT_REQUIRED_TICKS,
 )
 
-EPISODE_COUNT = 4000
+EPISODE_COUNT = 5000
 
 # ---------------------------------------------------------------------------
 # 保存先
 # ---------------------------------------------------------------------------
-DATA_DIR = "data/defender_search_data"
+DATA_DIR = "data/defender_search_data/"
 os.makedirs(DATA_DIR, exist_ok=True)
 MODEL_SAVE_PATH = os.path.join(DATA_DIR, "dqn_defender_search_best_by_eval.pt")
 MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_defender_search_latest.pt")
@@ -64,7 +76,7 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 35  # 31(従来) + 3(担当ポジションへの相対方向dr,dc + 到着フラグ)
+OBS_DIM = 35  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
@@ -74,7 +86,7 @@ MAX_TICKS = ROUND_DURATION_TICKS  # 90
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30
-REACH_RADIUS = 1        # 担当ポジションへ「到着した」とみなすChebyshev距離
+REACH_RADIUS = 1        # 担当ポジションへ「到着した」とみなすBFS距離
 
 # デフォルトの戦闘ステータス(character_stats.pyの既定値相当。ロジックではなく
 # 数値のみの簡易複製)
@@ -84,10 +96,12 @@ DEFAULT_HS_RATE = 0.20
 DEFAULT_REACTION = 100.0
 
 # 報酬パラメータ
+# 優先度: SPIKE > SIGHTING > DEFENSE_POSITION > HOLD_POSITION
+# の順で明確に重みを引き離し、「待機の方が得」という学習結果を防ぐ。
 STEP_PENALTY = -0.001
-SPIKE_PULL_REWARD = 0.05
-SIGHTING_PULL_REWARD = 0.01
-DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る
+SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(ポテンシャル差分)
+SIGHTING_PULL_REWARD = 0.05      # 敵目撃方向へ近づく(ポテンシャル差分)
+DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
 HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
 HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
 ABILITY_WHIFF_PENALTY = -0.05
@@ -209,6 +223,24 @@ def bfs_distance_map(goal):
     return dist
 
 
+def bfs_best_direction(dist_map, r0, c0):
+    """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
+    到達不能・移動不要なら(0,0)を返す。"""
+    if dist_map is None:
+        return 0, 0
+    cur = dist_map[r0, c0]
+    if cur < 0:
+        return 0, 0
+    best_dr, best_dc, best_d = 0, 0, cur
+    for dr, dc in CARDINAL:
+        nr, nc = r0 + dr, c0 + dc
+        if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and dist_map[nr, nc] >= 0:
+            if dist_map[nr, nc] < best_d:
+                best_d = dist_map[nr, nc]
+                best_dr, best_dc = dr, dc
+    return best_dr, best_dc
+
+
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
 DEFENSE_POS_DIST_MAPS = [bfs_distance_map(pos) for pos in DEFENSE_POSITIONS]
 
@@ -237,8 +269,16 @@ class UnitStub:
         self.dodge_rate = DEFAULT_DODGE
         self.hs_rate = DEFAULT_HS_RATE
         self.reaction = DEFAULT_REACTION + random.uniform(-10, 10)
-        # Defender専用: 割り当てられた待機ポジション(7)。Attackerには使わない。
+
+        # Defender専用: 割り当てられた待機ポジション(7)とそのBFS距離マップ。
         self.assigned_defense_pos = None
+        self.assigned_defense_dist_map = None
+
+        # Defender専用: 現在アクティブな優先モード("spike"/"sighting"/"position")
+        # と、そのモードで前tickに観測したBFS距離。モード切替直後は基準値を
+        # 揃えるためだけに使い、報酬は発生させない(_compute_rewards参照)。
+        self.prev_priority_mode = None
+        self.prev_priority_dist = None
 
 
 # ============================================================================
@@ -320,8 +360,12 @@ class ReplayBuffer:
 # 観測構築
 # ============================================================================
 
-def build_observation(unit, defenders, attackers, team_memory, smoke_cells, own_smoke_active, round_timer):
+def build_observation(
+    unit, defenders, attackers, team_memory, smoke_cells, own_smoke_active, round_timer,
+    spike_dist_map, sighting_dist_map,
+):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
+    r0, c0 = int(unit.pos[0]), int(unit.pos[1])
 
     obs[0] = unit.pos[0] / HEIGHT
     obs[1] = unit.pos[1] / WIDTH
@@ -350,17 +394,20 @@ def build_observation(unit, defenders, attackers, team_memory, smoke_cells, own_
     ) else 0.0
     obs[13] = 1.0 if own_smoke_active else 0.0
 
+    # --- スパイク確定情報: BFSベースの推奨方向 ---
     if team_memory.spike_pos is not None:
-        sp = team_memory.spike_pos
         obs[14] = 1.0
-        obs[15] = (sp[0] - unit.pos[0]) / HEIGHT
-        obs[16] = (sp[1] - unit.pos[1]) / WIDTH
+        best_dr, best_dc = bfs_best_direction(spike_dist_map, r0, c0)
+        obs[15] = float(best_dr)
+        obs[16] = float(best_dc)
 
+    # --- 敵目撃情報: BFSベースの推奨方向 ---
     if team_memory.last_seen_enemy is not None:
         ls = team_memory.last_seen_enemy
         obs[17] = 1.0
-        obs[18] = (ls["pos"][0] - unit.pos[0]) / HEIGHT
-        obs[19] = (ls["pos"][1] - unit.pos[1]) / WIDTH
+        best_dr, best_dc = bfs_best_direction(sighting_dist_map, r0, c0)
+        obs[18] = float(best_dr)
+        obs[19] = float(best_dc)
         obs[20] = min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
 
     obs[21] = len(visible_enemies) / 5.0
@@ -384,20 +431,14 @@ def build_observation(unit, defenders, attackers, team_memory, smoke_cells, own_
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 0.0  # 予備次元
 
-    # --- 担当する有利ポジション(7)への相対方向・到着フラグ ---
+    # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
     if unit.assigned_defense_pos is not None:
         dist_map = unit.assigned_defense_dist_map
-        bfs_dist = dist_map[int(unit.pos[0]), int(unit.pos[1])]
+        bfs_dist = dist_map[r0, c0]
+        if bfs_dist < 0:
+            bfs_dist = HEIGHT + WIDTH
         obs[31] = min(max(bfs_dist, 0), HEIGHT + WIDTH) / (HEIGHT + WIDTH)
-        best_dr, best_dc = 0, 0
-        best_d = bfs_dist
-        r0, c0 = int(unit.pos[0]), int(unit.pos[1])
-        for dr, dc in CARDINAL:
-            nr, nc = r0 + dr, c0 + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and dist_map[nr, nc] >= 0:
-                if best_d < 0 or dist_map[nr, nc] < best_d:
-                    best_d = dist_map[nr, nc]
-                    best_dr, best_dc = dr, dc
+        best_dr, best_dc = bfs_best_direction(dist_map, r0, c0)
         obs[32] = float(best_dr)
         obs[33] = float(best_dc)
         obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
@@ -410,10 +451,17 @@ def decode_action(action_idx):
     return MOVES[move_idx], bool(use_ability)
 
 
-def build_action_mask(unit, occupied):
+# 変更後
+def build_action_mask(unit, occupied, lock_movement=False):
+    """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
+    交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。"""
     mask = np.ones(ACTION_DIM, dtype=bool)
     r, c = int(unit.pos[0]), int(unit.pos[1])
     for move_idx, (dr, dc) in enumerate(MOVES):
+        if lock_movement and move_idx != 0:
+            mask[move_idx * 2] = False
+            mask[move_idx * 2 + 1] = False
+            continue
         nr, nc = r + dr, c + dc
         walkable = (
             0 <= nr < HEIGHT and 0 <= nc < WIDTH
@@ -444,10 +492,13 @@ class SearchEnv:
     (本物のプロジェクタイル物理は再現しない。train_attacker_retrieve.py の
     簡易化方針に倣う)。
 
-    Defenderは平常時、map_data_search.py の7地点(DEFENSE_POSITIONS)から
-    ラウンド開始時に割り当てられた1箇所へ向かい、到着後は待機する。
-    スパイクや敵の目撃情報が入った時点で、その情報がこの待機行動より
-    優先される(_compute_rewardsの優先順位ツリーを参照)。
+    Defenderは以下の優先順位で行動を評価される:
+        1. スパイク確定情報があればそちらへ最優先で寄る
+        2. 敵目撃情報があればそちらへ寄る(retake準備)
+        3. どちらも無ければ、担当する有利ポジション(7)へ向かい、
+           到着後は待機する
+    いずれもBFS距離のポテンシャル差分で評価するため、進んだ分だけ
+    報酬が得られる(直線距離ベースの弱い勾配問題を避けている)。
     """
 
     def __init__(self):
@@ -461,6 +512,8 @@ class SearchEnv:
         self.match_over_reason = None
         self._prev_kills = {}
         self._prev_alive = {}
+        self.spike_dist_map = None
+        self.sighting_dist_map = None
 
     # -- 初期化 --------------------------------------------------------
     def reset(self):
@@ -489,12 +542,12 @@ class SearchEnv:
         self._assign_defense_positions()
 
         self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
+        self._update_priority_dist_maps()
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
 
         return self._collect_observations()
 
-    # _assign_defense_positions内、割り当てと同時にBFS距離マップも保持する
     def _assign_defense_positions(self):
         remaining = list(DEFENSE_POSITIONS)
         order = list(self.defenders)
@@ -510,7 +563,21 @@ class SearchEnv:
                 pos = random.choice(DEFENSE_POSITIONS)
             d.assigned_defense_pos = pos
             d.assigned_defense_dist_map = DEFENSE_POS_DIST_MAPS[DEFENSE_POSITIONS.index(pos)]
-            d.prev_defense_bfs_dist = d.assigned_defense_dist_map[int(d.pos[0]), int(d.pos[1])]
+            d.prev_priority_mode = None
+            d.prev_priority_dist = None
+
+    def _update_priority_dist_maps(self):
+        """team_memory更新の直後に呼び、スパイク確定位置・敵目撃位置への
+        BFS距離マップを再計算する。全defenderで共有するため1tickあたり
+        最大2回のBFS呼び出しで済む(defenderの人数分は呼ばない)。"""
+        self.spike_dist_map = (
+            bfs_distance_map(self.team_memory.spike_pos)
+            if self.team_memory.spike_pos is not None else None
+        )
+        self.sighting_dist_map = (
+            bfs_distance_map(self.team_memory.last_seen_enemy["pos"])
+            if self.team_memory.last_seen_enemy is not None else None
+        )
 
     def _smoke_cells(self):
         cells = set()
@@ -522,6 +589,7 @@ class SearchEnv:
     def _own_smoke_active(self, team):
         return any(s["team"] == team and s["remaining_ticks"] > 0 for s in self.smokes)
 
+    # 変更後
     def _collect_observations(self):
         smoke_cells = self._smoke_cells()
         occupied = {
@@ -534,9 +602,13 @@ class SearchEnv:
             obs_dict[d.name] = build_observation(
                 d, self.defenders, self.attackers, self.team_memory,
                 smoke_cells, self._own_smoke_active("D"), self.round_timer,
+                self.spike_dist_map, self.sighting_dist_map,
             )
             own_occupied = occupied - {tuple(d.pos)}
-            mask_dict[d.name] = build_action_mask(d, own_occupied)
+            has_enemy_los = any(
+                a.is_alive and has_los(d.pos, a.pos, smoke_cells) for a in self.attackers
+            )
+            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=has_enemy_los)
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
@@ -700,6 +772,7 @@ class SearchEnv:
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
         self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
+        self._update_priority_dist_maps()
         self.round_timer -= 1
 
         carrier = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
@@ -805,41 +878,54 @@ class SearchEnv:
             else:
                 self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
 
+    def _priority_mode_and_distmap(self, defender):
+        """このtickでdefenderが最優先すべき対象と、そのBFS距離マップを返す。
+
+        1. スパイク確定情報(全員共通のspike_dist_map)
+        2. 敵目撃情報(全員共通のsighting_dist_map)
+        3. 担当する有利ポジション(defenderごとに異なるassigned_defense_dist_map)
+        """
+        if self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
+            return "spike", self.spike_dist_map
+        if self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
+            return "sighting", self.sighting_dist_map
+        return "position", defender.assigned_defense_dist_map
+
     def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle):
         rewards = {}
         for d in self.defenders:
             r = STEP_PENALTY
 
-            # --- 平常時の寄せ先を優先度順に決める ---
-            # 1. スパイク確定情報(最優先)
-            # 2. 敵目撃情報(retake準備としてチーム全体で寄る)
-            # 3. どちらも無ければ、担当する有利ポジション(7)へ向かい、
-            #    到着後は静止する
-            if self.team_memory.spike_pos is not None:
-                sp = self.team_memory.spike_pos
-                dist = max(abs(sp[0]-d.pos[0]), abs(sp[1]-d.pos[1]))
-                r += SPIKE_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
-            elif self.team_memory.last_seen_enemy is not None:
-                ls = self.team_memory.last_seen_enemy["pos"]
-                dist = max(abs(ls[0]-d.pos[0]), abs(ls[1]-d.pos[1]))
-                r += SIGHTING_PULL_REWARD * max(0.0, 1.0 - dist / max(HEIGHT, WIDTH))
-            # _compute_rewards内、該当ブロックを置き換え
-            elif d.assigned_defense_pos is not None:
-                dist_map = d.assigned_defense_dist_map
-                bfs_dist = dist_map[int(d.pos[0]), int(d.pos[1])]
-                if bfs_dist < 0:
-                    bfs_dist = d.prev_defense_bfs_dist  # 到達不能セルへの一時退避対策
+            # --- 優先度付きの寄せ先評価(ポテンシャルベース) ---
+            mode, dist_map = self._priority_mode_and_distmap(d)
+            r0, c0 = int(d.pos[0]), int(d.pos[1])
+            bfs_dist = dist_map[r0, c0] if dist_map is not None else None
+            if bfs_dist is not None and bfs_dist < 0:
+                bfs_dist = None  # 到達不能セル
 
-                if bfs_dist > REACH_RADIUS:
-                    # ポテンシャルベース: 実際に縮んだ分だけ報酬を与える
-                    r += DEFENSE_POSITION_PULL_REWARD * (d.prev_defense_bfs_dist - bfs_dist)
-                else:
-                    if not d.moved_this_tick:
-                        r += HOLD_POSITION_BONUS
+            if bfs_dist is None:
+                # 距離計算不可(到達不能等)。基準だけリセットし報酬は与えない。
+                d.prev_priority_mode = mode
+                d.prev_priority_dist = None
+            elif mode != d.prev_priority_mode or d.prev_priority_dist is None:
+                # モード切替直後(例: 待機中→スパイク確定)は基準値を
+                # そろえるだけにして、切替時に不自然な差分報酬が
+                # 発生しないようにする。
+                d.prev_priority_mode = mode
+                d.prev_priority_dist = bfs_dist
+            else:
+                delta = d.prev_priority_dist - bfs_dist
+                d.prev_priority_dist = bfs_dist
+
+                if mode == "spike":
+                    r += SPIKE_PULL_REWARD * delta
+                elif mode == "sighting":
+                    r += SIGHTING_PULL_REWARD * delta
+                else:  # position
+                    if bfs_dist > REACH_RADIUS:
+                        r += DEFENSE_POSITION_PULL_REWARD * delta
                     else:
-                        r += HOLD_POSITION_PENALTY
-
-                d.prev_defense_bfs_dist = bfs_dist
+                        r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
 
             if ability_whiff.get(d.name):
                 r += ABILITY_WHIFF_PENALTY
@@ -876,8 +962,9 @@ class SearchEnv:
 # 学習ループ
 # ============================================================================
 
-def epsilon_by_step(step, eps_start=1.0, eps_end=0.05, eps_decay=60_000):
-    return eps_end + (eps_start - eps_end) * math.exp(-1.0 * step / eps_decay)
+def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8):
+    decay_episodes = total_episodes * decay_ratio
+    return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
 
 
 def select_action(policy_net, obs, mask, epsilon):
@@ -946,9 +1033,9 @@ def train(
     for episode in range(1, episodes + 1):
         obs_dict, mask_dict = env.reset()
         episode_reward_total = 0.0
+        epsilon = epsilon_by_episode(episode)
 
         for tick in range(MAX_TICKS):
-            epsilon = epsilon_by_step(global_step)
 
             action_dict = {
                 name: select_action(policy_net, obs, mask_dict[name], epsilon)
@@ -990,7 +1077,7 @@ def train(
         if episode % 20 == 0:
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
-                f"avg100={avg_reward:.3f} epsilon={epsilon_by_step(global_step):.3f} "
+                f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
                 f"buffer={len(buffer)} reason={env.match_over_reason}"
             )
 

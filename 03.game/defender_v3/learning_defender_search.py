@@ -123,6 +123,24 @@ def _bfs_distance_map(grid, goal):
                 queue.append((nr, nc))
     return dist
 
+def _bfs_best_direction(dist_map, grid, r0, c0):
+    """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
+    到達不能・移動不要なら(0,0)を返す。train_defender_search.py の
+    bfs_best_direction と同一ロジック。"""
+    if dist_map is None:
+        return 0, 0
+    height, width = grid.shape
+    cur = dist_map[r0, c0]
+    if cur < 0:
+        return 0, 0
+    best_dr, best_dc, best_d = 0, 0, cur
+    for dr, dc in CARDINAL:
+        nr, nc = r0 + dr, c0 + dc
+        if 0 <= nr < height and 0 <= nc < width and dist_map[nr, nc] >= 0:
+            if dist_map[nr, nc] < best_d:
+                best_d = dist_map[nr, nc]
+                best_dr, best_dc = dr, dc
+    return best_dr, best_dc
 
 def _parse_search_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -251,6 +269,10 @@ class LearningDefenderSearchController:
                                              # デバッグ用に保持しておく)
         self._assignment_done = False
         self._grid_cache = None
+        self.spike_dist_map = None
+        self.sighting_dist_map = None
+        self._spike_dist_map_source = None       # 再計算要否判定用: 直前のspike_pos
+        self._sighting_dist_map_source = None    # 再計算要否判定用: 直前のlast_seen_enemy["pos"]
 
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
@@ -260,8 +282,10 @@ class LearningDefenderSearchController:
         self._assigned_dist_maps.clear()
         self._prev_defense_bfs_dist.clear()
         self._assignment_done = False
-        # site_positions / defense_positions はマップ形状に依存するだけなので
-        # ラウンドをまたいでキャッシュを保持して構わない(クリアしない)。
+        self.spike_dist_map = None
+        self.sighting_dist_map = None
+        self._spike_dist_map_source = None
+        self._sighting_dist_map_source = None
 
     def _maybe_advance_tick(self, char, grid, chars):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
@@ -270,6 +294,22 @@ class LearningDefenderSearchController:
             self._processed_this_tick.clear()
             self.team_memory.update(grid, char.team, chars)
         self._processed_this_tick.add(char.name)
+
+    def _update_priority_dist_maps(self, grid):
+        """team_memoryのspike_pos/last_seen_enemyが変化した時だけBFSを
+        再計算する(全defenderで共有するため、キャラクターごとには呼ばない)。"""
+        spike_pos = self.team_memory.spike_pos
+        if spike_pos != self._spike_dist_map_source:
+            self.spike_dist_map = _bfs_distance_map(grid, spike_pos) if spike_pos is not None else None
+            self._spike_dist_map_source = spike_pos
+
+        sighting_pos = (
+            self.team_memory.last_seen_enemy["pos"]
+            if self.team_memory.last_seen_enemy is not None else None
+        )
+        if sighting_pos != self._sighting_dist_map_source:
+            self.sighting_dist_map = _bfs_distance_map(grid, sighting_pos) if sighting_pos is not None else None
+            self._sighting_dist_map_source = sighting_pos
 
     def _ensure_defense_assignment(self, char, grid, chars):
         """ラウンド開始時、自チーム全員に7地点を貪欲割り当てし、
@@ -352,17 +392,21 @@ class LearningDefenderSearchController:
         # 常に0とする(learning_attacker_retrieve.py と同じ簡略化方針)。
         obs[13] = 0.0
 
+        # 変更後
+        r0, c0 = int(char.pos[0]), int(char.pos[1])
+
         if self.team_memory.spike_pos is not None:
-            sp = self.team_memory.spike_pos
             obs[14] = 1.0
-            obs[15] = (sp[0] - char.pos[0]) / height
-            obs[16] = (sp[1] - char.pos[1]) / width
+            best_dr, best_dc = _bfs_best_direction(self.spike_dist_map, grid, r0, c0)
+            obs[15] = float(best_dr)
+            obs[16] = float(best_dc)
 
         if self.team_memory.last_seen_enemy is not None:
             ls = self.team_memory.last_seen_enemy
             obs[17] = 1.0
-            obs[18] = (ls["pos"][0] - char.pos[0]) / height
-            obs[19] = (ls["pos"][1] - char.pos[1]) / width
+            best_dr, best_dc = _bfs_best_direction(self.sighting_dist_map, grid, r0, c0)
+            obs[18] = float(best_dr)
+            obs[19] = float(best_dc)
             obs[20] = min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
 
         obs[21] = len(visible_enemies) / 5.0
@@ -392,24 +436,15 @@ class LearningDefenderSearchController:
         obs[30] = 0.0
 
         # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
+        # 変更後(r0, c0 は上の5.で既に定義済みなので再宣言不要)
         dist_map = self._assigned_dist_maps.get(char.name)
         if dist_map is not None:
-            r0, c0 = int(char.pos[0]), int(char.pos[1])
             bfs_dist = dist_map[r0, c0]
             if bfs_dist < 0:
-                # 到達不能セルへの一時退避などの異常系。距離は最大値扱いにする。
                 bfs_dist = height + width
 
             obs[31] = min(max(bfs_dist, 0), height + width) / (height + width)
-
-            best_dr, best_dc = 0, 0
-            best_d = bfs_dist
-            for dr, dc in CARDINAL:
-                nr, nc = r0 + dr, c0 + dc
-                if 0 <= nr < height and 0 <= nc < width and dist_map[nr, nc] >= 0:
-                    if best_d < 0 or dist_map[nr, nc] < best_d:
-                        best_d = dist_map[nr, nc]
-                        best_dr, best_dc = dr, dc
+            best_dr, best_dc = _bfs_best_direction(dist_map, grid, r0, c0)
             obs[32] = float(best_dr)
             obs[33] = float(best_dc)
             obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
@@ -417,7 +452,9 @@ class LearningDefenderSearchController:
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
-    def _action_mask(self, char, grid, chars):
+    def _action_mask(self, char, grid, chars, lock_movement=False):
+        """lock_movement=True の場合、stay以外の移動を禁止する。
+        交戦中は静止させ、射撃の当たりやすさを優先する。"""
         mask = np.ones(ACTION_DIM, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -425,6 +462,10 @@ class LearningDefenderSearchController:
         }
 
         for move_idx, (dr, dc) in enumerate(MOVES):
+            if lock_movement and move_idx != 0:
+                mask[move_idx * 2] = False
+                mask[move_idx * 2 + 1] = False
+                continue
             nr, nc = r + dr, c + dc
             walkable = (
                 0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
@@ -463,9 +504,10 @@ class LearningDefenderSearchController:
 
         self._ensure_defense_assignment(char, grid, chars)
         self._maybe_advance_tick(char, grid, chars)
+        self._update_priority_dist_maps(grid)
 
         obs, visible_enemies = self._build_observation(char, game_state, self._site_positions_cache)
-        mask = self._action_mask(char, grid, chars)
+        mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)

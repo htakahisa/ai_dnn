@@ -1018,7 +1018,7 @@ def main():
     batch_size = 256
     gamma = 0.99
     target_update_every = 1000
-    epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.02, 9000
+    epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.02, int(EPISODE_COUNT * 0.8)
 
     global_step = 0
     win_history = deque(maxlen=200)
@@ -1044,8 +1044,8 @@ def main():
                 torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_best.pt"))
                 print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
 
-        if episode % 2000 == 0:
-            torch.save(net.state_dict(), os.path.join(SAVE_DIR, f"dqn_defender_retake_ep{episode}.pt"))
+        # if episode % 2000 == 0:
+        #     torch.save(net.state_dict(), os.path.join(SAVE_DIR, f"dqn_defender_retake_ep{episode}.pt"))
 
     torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_final.pt"))
     print("[DONE] training finished.")

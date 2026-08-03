@@ -438,7 +438,7 @@ def train(
     target_update_every=1000,
     eps_start=1.0,
     eps_end=0.10,
-    eps_decay_episodes=6000,
+    eps_decay_episodes=int(EPISODE_COUNT * 0.8),
     warmup_steps=2000,
     save_path="data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
 ):
