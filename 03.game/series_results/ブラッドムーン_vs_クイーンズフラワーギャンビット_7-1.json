@@ -1,0 +1,170 @@
+{
+  "team1": "ブラッドムーン",
+  "team2": "クイーンズフラワーギャンビット",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 1,
+  "winner": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 8,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 33,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "nAts",
+        "kills": 19,
+        "deaths": 15
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 4,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 36,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 14,
+        "deaths": 14
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 14,
+      "score2": 12,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 39,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 20,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": true
+    },
+    {
+      "number": 4,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 10,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 23,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 15,
+        "deaths": 10
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 9,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "WoohyuN",
+        "kills": 24,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 13,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 6,
+      "score2": 13,
+      "winner": "クイーンズフラワーギャンビット",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 20,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 18,
+        "deaths": 7
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Meteor",
+        "kills": 18,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "leaf",
+        "kills": 17,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 9,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 23,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "nAts",
+        "kills": 15,
+        "deaths": 15
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false
+    }
+  ]
+}

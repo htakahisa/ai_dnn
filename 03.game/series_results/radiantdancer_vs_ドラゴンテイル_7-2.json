@@ -1,0 +1,190 @@
+{
+  "team1": "radiantdancer",
+  "team2": "ドラゴンテイル",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 2,
+  "winner": "radiantdancer",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 3,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 16,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 16,
+        "deaths": 14
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 10,
+      "score2": 13,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 26,
+        "deaths": 22
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 26,
+        "deaths": 22
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 6,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "something",
+        "kills": 18,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 17,
+        "deaths": 9
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 7,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 19,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 12
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 7,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 18,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 17,
+        "deaths": 17
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 8,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 25,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 25,
+        "deaths": 19
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 11,
+      "score2": 13,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 22,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 22,
+        "deaths": 20
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 19,
+      "score2": 17,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 35,
+        "deaths": 32
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 35,
+        "deaths": 32
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": true
+    },
+    {
+      "number": 9,
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 6,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 24,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 15,
+        "deaths": 13
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    }
+  ]
+}

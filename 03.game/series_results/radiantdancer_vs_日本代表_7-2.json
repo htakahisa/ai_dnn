@@ -1,0 +1,190 @@
+{
+  "team1": "radiantdancer",
+  "team2": "日本代表",
+  "maps_to_win": 7,
+  "team1_wins": 7,
+  "team2_wins": 2,
+  "winner": "radiantdancer",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 10,
+      "score2": 13,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 15,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Meiy",
+        "kills": 19,
+        "deaths": 9
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 7,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 16,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Laz",
+        "kills": 15,
+        "deaths": 15
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 11,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 25,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 20,
+        "deaths": 13
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 8,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 15,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 15,
+        "deaths": 11
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 7,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 16,
+        "deaths": 6
+      },
+      "mvp2": {
+        "name": "Dep",
+        "kills": 17,
+        "deaths": 8
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 10,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 22,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Dep",
+        "kills": 22,
+        "deaths": 13
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 9,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 16,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 19,
+        "deaths": 10
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 17,
+      "score2": 19,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 26,
+        "deaths": 22
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 29,
+        "deaths": 18
+      },
+      "initial_attacker": "日本代表",
+      "overtime": true
+    },
+    {
+      "number": 9,
+      "team1": "radiantdancer",
+      "team2": "日本代表",
+      "score1": 13,
+      "score2": 4,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 18,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "SugarZ3ro",
+        "kills": 16,
+        "deaths": 13
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    }
+  ]
+}

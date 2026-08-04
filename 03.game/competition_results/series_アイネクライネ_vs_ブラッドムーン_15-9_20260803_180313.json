@@ -1,0 +1,518 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team1": "アイネクライネ",
+  "team2": "ブラッドムーン",
+  "maps_to_win": 15,
+  "team1_wins": 15,
+  "team2_wins": 9,
+  "winner": "アイネクライネ",
+  "loser": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2154863419,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 6,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 32,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 12,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "seed": 729563575,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 10,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 18,
+        "deaths": 11
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "seed": 3344691867,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 28,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 19,
+        "deaths": 13
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "seed": 477393688,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 9,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 24,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 21,
+        "deaths": 16
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "seed": 2784265086,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 11,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 35,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 26,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "seed": 3763310271,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 8,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 24,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 21,
+        "deaths": 11
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 7,
+      "seed": 3149837042,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 41,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 17,
+        "deaths": 11
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "seed": 4037100920,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 12,
+      "score2": 14,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 24,
+        "deaths": 17
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": true
+    },
+    {
+      "number": 9,
+      "seed": 2267470266,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 24,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 9
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 10,
+      "seed": 2871346062,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 8,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 23,
+        "deaths": 13
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 11,
+      "seed": 1920738672,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 10,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 36,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 26,
+        "deaths": 12
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 12,
+      "seed": 681917146,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 24,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 24,
+        "deaths": 16
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 13,
+      "seed": 3481396320,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 3,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 23,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Meteor",
+        "kills": 12,
+        "deaths": 10
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 14,
+      "seed": 3726409984,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 10,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 23,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Meteor",
+        "kills": 24,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 15,
+      "seed": 2519570185,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 20,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "WoohyuN",
+        "kills": 18,
+        "deaths": 9
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 16,
+      "seed": 3189475907,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 4,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "WoohyuN",
+        "kills": 14,
+        "deaths": 11
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 17,
+      "seed": 2842086922,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 11,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 22,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 26,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 18,
+      "seed": 1345807113,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 8,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 30,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 11
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 19,
+      "seed": 180388399,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 8,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 28,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 16,
+        "deaths": 13
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 20,
+      "seed": 2823613390,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 8,
+      "score2": 13,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "soulcas",
+        "kills": 18,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 24,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 21,
+      "seed": 50131572,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 32,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 23,
+        "deaths": 15
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 22,
+      "seed": 593751559,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 9,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "soulcas",
+        "kills": 19,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "WoohyuN",
+        "kills": 16,
+        "deaths": 13
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    },
+    {
+      "number": 23,
+      "seed": 3683428586,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 29,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "Meteor",
+        "kills": 22,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false
+    },
+    {
+      "number": 24,
+      "seed": 576777952,
+      "team1": "アイネクライネ",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 7,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 20,
+        "deaths": 10
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false
+    }
+  ]
+}

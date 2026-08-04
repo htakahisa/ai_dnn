@@ -1,0 +1,4463 @@
+{
+  "mode": "double_elimination",
+  "seed_mode": "random",
+  "base_seed": null,
+  "normal_maps_to_win": 2,
+  "lower_final_maps_to_win": 3,
+  "grand_final_maps_to_win": 3,
+  "teams": [
+    "フリーナタルタリヤ",
+    "VisionStrikers",
+    "クイーンズフラワーギャンビット",
+    "ドラゴンテイル",
+    "ブラッドムーン",
+    "radiantdancer",
+    "アイネクライネ",
+    "フリーナクラシック"
+  ],
+  "slots": [
+    "フリーナタルタリヤ",
+    "VisionStrikers",
+    "クイーンズフラワーギャンビット",
+    "ドラゴンテイル",
+    "ブラッドムーン",
+    "radiantdancer",
+    "アイネクライネ",
+    "フリーナクラシック"
+  ],
+  "bracket_size": 8,
+  "champion": "フリーナタルタリヤ",
+  "runner_up": "アイネクライネ",
+  "records": {
+    "フリーナタルタリヤ": {
+      "wins": 5,
+      "losses": 1,
+      "matches": 6,
+      "map_wins": 12,
+      "map_losses": 5
+    },
+    "VisionStrikers": {
+      "wins": 2,
+      "losses": 2,
+      "matches": 4,
+      "map_wins": 4,
+      "map_losses": 5
+    },
+    "クイーンズフラワーギャンビット": {
+      "wins": 0,
+      "losses": 2,
+      "matches": 2,
+      "map_wins": 1,
+      "map_losses": 4
+    },
+    "ドラゴンテイル": {
+      "wins": 1,
+      "losses": 2,
+      "matches": 3,
+      "map_wins": 3,
+      "map_losses": 5
+    },
+    "ブラッドムーン": {
+      "wins": 1,
+      "losses": 2,
+      "matches": 3,
+      "map_wins": 3,
+      "map_losses": 5
+    },
+    "radiantdancer": {
+      "wins": 0,
+      "losses": 2,
+      "matches": 2,
+      "map_wins": 2,
+      "map_losses": 4
+    },
+    "アイネクライネ": {
+      "wins": 3,
+      "losses": 1,
+      "matches": 4,
+      "map_wins": 8,
+      "map_losses": 4
+    },
+    "フリーナクラシック": {
+      "wins": 2,
+      "losses": 2,
+      "matches": 4,
+      "map_wins": 4,
+      "map_losses": 5
+    }
+  },
+  "ranking": [
+    "フリーナタルタリヤ",
+    "アイネクライネ",
+    "VisionStrikers",
+    "フリーナクラシック",
+    "ドラゴンテイル",
+    "ブラッドムーン",
+    "radiantdancer",
+    "クイーンズフラワーギャンビット"
+  ],
+  "bracket_matches": [
+    {
+      "id": "W1M1",
+      "bracket": "W",
+      "round": 1,
+      "match": 1,
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "winner": "VisionStrikers",
+      "loser": "フリーナタルタリヤ",
+      "team1_wins": 0,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 189698296,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 8,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 13,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 25,
+            "deaths": 7
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 16
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 15
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 4,
+              "deaths": 19
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 16
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 16
+            },
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 20,
+              "deaths": 13
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 10,
+              "deaths": 10
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 16,
+              "deaths": 8
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 25,
+              "deaths": 7
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 11,
+              "deaths": 6
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 1553578144,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 8,
+          "score2": 13,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 17,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 17,
+            "deaths": 10
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 17,
+              "deaths": 17
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 5,
+              "deaths": 15
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 15,
+              "deaths": 14
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 5,
+              "deaths": 13
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 17
+            },
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 12
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 7
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 14,
+              "deaths": 9
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 17,
+              "deaths": 10
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 11
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "SLOT-1",
+      "source2": "SLOT-2"
+    },
+    {
+      "id": "W1M2",
+      "bracket": "W",
+      "round": 1,
+      "match": 2,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "winner": "ドラゴンテイル",
+      "loser": "クイーンズフラワーギャンビット",
+      "team1_wins": 1,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3602398467,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 7,
+          "winner": "クイーンズフラワーギャンビット",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 22,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "vo0kashu",
+            "kills": 14,
+            "deaths": 12
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lar0k",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 15,
+              "deaths": 14
+            },
+            {
+              "name": "leaf",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 14,
+              "deaths": 8
+            },
+            {
+              "name": "nAts",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 11,
+              "deaths": 12
+            },
+            {
+              "name": "Chronicle",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 22,
+              "deaths": 8
+            },
+            {
+              "name": "Sayonara",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 5,
+              "deaths": 10
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 11,
+              "deaths": 15
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 16
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 5,
+              "deaths": 11
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 12,
+              "deaths": 13
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 12
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 373378165,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ドラゴンテイル",
+          "score1": 7,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 14,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 28,
+            "deaths": 12
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lar0k",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 14,
+              "deaths": 14
+            },
+            {
+              "name": "leaf",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 9,
+              "deaths": 15
+            },
+            {
+              "name": "nAts",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 7,
+              "deaths": 14
+            },
+            {
+              "name": "Chronicle",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 13,
+              "deaths": 9
+            },
+            {
+              "name": "Sayonara",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 9,
+              "deaths": 14
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 28,
+              "deaths": 12
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 8,
+              "deaths": 11
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 6,
+              "deaths": 9
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 11
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 9
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 971780085,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "ドラゴンテイル",
+          "score1": 10,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Chronicle",
+            "kills": 21,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 18,
+            "deaths": 7
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lar0k",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 15,
+              "deaths": 17
+            },
+            {
+              "name": "leaf",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 13,
+              "deaths": 11
+            },
+            {
+              "name": "nAts",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Chronicle",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 21,
+              "deaths": 13
+            },
+            {
+              "name": "Sayonara",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 8,
+              "deaths": 16
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 17,
+              "deaths": 15
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 20
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 11
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 18,
+              "deaths": 7
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 11
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "SLOT-3",
+      "source2": "SLOT-4"
+    },
+    {
+      "id": "W1M3",
+      "bracket": "W",
+      "round": 1,
+      "match": 3,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "winner": "ブラッドムーン",
+      "loser": "radiantdancer",
+      "team1_wins": 2,
+      "team2_wins": 1,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3321535108,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 8,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Meteor",
+            "kills": 21,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 15,
+            "deaths": 16
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 14,
+              "deaths": 11
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 21,
+              "deaths": 14
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 14,
+              "deaths": 8
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 14,
+              "deaths": 13
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 1,
+              "deaths": 9
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 6,
+              "deaths": 14
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 14,
+              "deaths": 13
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 15,
+              "deaths": 16
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 7,
+              "deaths": 10
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 11
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 3441034682,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 2,
+          "score2": 13,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 11,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "something",
+            "kills": 14,
+            "deaths": 7
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 9,
+              "deaths": 12
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 11,
+              "deaths": 9
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 6,
+              "deaths": 9
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 2,
+              "deaths": 14
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 7,
+              "deaths": 13
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 9,
+              "deaths": 5
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 6
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 4
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 14,
+              "deaths": 7
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 681109773,
+          "team1": "ブラッドムーン",
+          "team2": "radiantdancer",
+          "score1": 16,
+          "score2": 14,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 32,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 19,
+            "deaths": 16
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 32,
+              "deaths": 19
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 15,
+              "deaths": 12
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 15,
+              "deaths": 14
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 20,
+              "deaths": 17
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 1,
+              "deaths": 17
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 17,
+              "deaths": 20
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 19,
+              "deaths": 16
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 16
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 15
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 17,
+              "deaths": 16
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "SLOT-5",
+      "source2": "SLOT-6"
+    },
+    {
+      "id": "W1M4",
+      "bracket": "W",
+      "round": 1,
+      "match": 4,
+      "team1": "アイネクライネ",
+      "team2": "フリーナクラシック",
+      "winner": "アイネクライネ",
+      "loser": "フリーナクラシック",
+      "team1_wins": 2,
+      "team2_wins": 0,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 2360657507,
+          "team1": "アイネクライネ",
+          "team2": "フリーナクラシック",
+          "score1": 15,
+          "score2": 13,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 53,
+            "deaths": 13
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 24
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 17
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 13
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 53,
+              "deaths": 13
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 5,
+              "deaths": 9
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 11
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 19,
+              "deaths": 24
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 13,
+              "deaths": 16
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 19
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 10
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 9,
+              "deaths": 15
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 1933337870,
+          "team1": "アイネクライネ",
+          "team2": "フリーナクラシック",
+          "score1": 13,
+          "score2": 9,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 43,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 16,
+            "deaths": 17
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 3,
+              "deaths": 17
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 9
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 43,
+              "deaths": 12
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 4,
+              "deaths": 10
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 9,
+              "deaths": 6
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 16,
+              "deaths": 17
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 8,
+              "deaths": 13
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 5,
+              "deaths": 18
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 10
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 14,
+              "deaths": 11
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "SLOT-7",
+      "source2": "SLOT-8"
+    },
+    {
+      "id": "L1M1",
+      "bracket": "L",
+      "round": 1,
+      "match": 1,
+      "team1": "フリーナクラシック",
+      "team2": "radiantdancer",
+      "winner": "フリーナクラシック",
+      "loser": "radiantdancer",
+      "team1_wins": 2,
+      "team2_wins": 1,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 50512962,
+          "team1": "フリーナクラシック",
+          "team2": "radiantdancer",
+          "score1": 12,
+          "score2": 14,
+          "winner": "radiantdancer",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 23
+          },
+          "mvp2": {
+            "name": "Sayonara",
+            "kills": 22,
+            "deaths": 18
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 19,
+              "deaths": 23
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 12,
+              "deaths": 14
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 4,
+              "deaths": 19
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 14,
+              "deaths": 11
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 15,
+              "deaths": 14
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 13,
+              "deaths": 12
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 22,
+              "deaths": 18
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 15,
+              "deaths": 16
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 10,
+              "deaths": 7
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 21,
+              "deaths": 11
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 3935947385,
+          "team1": "フリーナクラシック",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 7,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Jean",
+            "kills": 17,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "Lar0k",
+            "kills": 17,
+            "deaths": 11
+          },
+          "initial_attacker": "radiantdancer",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 15,
+              "deaths": 16
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 5,
+              "deaths": 14
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 17,
+              "deaths": 6
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 12,
+              "deaths": 10
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 12,
+              "deaths": 14
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 11,
+              "deaths": 10
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 17,
+              "deaths": 11
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 11,
+              "deaths": 10
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 7,
+              "deaths": 11
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 2262431852,
+          "team1": "フリーナクラシック",
+          "team2": "radiantdancer",
+          "score1": 13,
+          "score2": 8,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Jean",
+            "kills": 13,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "something",
+            "kills": 18,
+            "deaths": 9
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 9,
+              "deaths": 16
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 6,
+              "deaths": 11
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 4,
+              "deaths": 9
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 13,
+              "deaths": 10
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 10,
+              "deaths": 7
+            },
+            {
+              "name": "Derke",
+              "team": "radiantdancer",
+              "kills": 10,
+              "deaths": 9
+            },
+            {
+              "name": "Sayonara",
+              "team": "radiantdancer",
+              "kills": 8,
+              "deaths": 6
+            },
+            {
+              "name": "Lar0k",
+              "team": "radiantdancer",
+              "kills": 11,
+              "deaths": 9
+            },
+            {
+              "name": "marteen",
+              "team": "radiantdancer",
+              "kills": 6,
+              "deaths": 9
+            },
+            {
+              "name": "something",
+              "team": "radiantdancer",
+              "kills": 18,
+              "deaths": 9
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "W1M4",
+      "source2": "W1M3"
+    },
+    {
+      "id": "L1M2",
+      "bracket": "L",
+      "round": 1,
+      "match": 2,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "フリーナタルタリヤ",
+      "winner": "フリーナタルタリヤ",
+      "loser": "クイーンズフラワーギャンビット",
+      "team1_wins": 0,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3920577034,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "フリーナタルタリヤ",
+          "score1": 10,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 21,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 29,
+            "deaths": 16
+          },
+          "initial_attacker": "クイーンズフラワーギャンビット",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lar0k",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 21,
+              "deaths": 15
+            },
+            {
+              "name": "leaf",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 18,
+              "deaths": 17
+            },
+            {
+              "name": "nAts",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 6,
+              "deaths": 15
+            },
+            {
+              "name": "Chronicle",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 12,
+              "deaths": 13
+            },
+            {
+              "name": "Sayonara",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 11,
+              "deaths": 14
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 29,
+              "deaths": 16
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 13
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 12
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 13
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 14,
+              "deaths": 14
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 2872482201,
+          "team1": "クイーンズフラワーギャンビット",
+          "team2": "フリーナタルタリヤ",
+          "score1": 4,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lar0k",
+            "kills": 14,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 17,
+            "deaths": 8
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lar0k",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 14,
+              "deaths": 14
+            },
+            {
+              "name": "leaf",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 9,
+              "deaths": 13
+            },
+            {
+              "name": "nAts",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 8,
+              "deaths": 15
+            },
+            {
+              "name": "Chronicle",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 8,
+              "deaths": 10
+            },
+            {
+              "name": "Sayonara",
+              "team": "クイーンズフラワーギャンビット",
+              "kills": 8,
+              "deaths": 11
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 12
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 12,
+              "deaths": 10
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 14,
+              "deaths": 5
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 17,
+              "deaths": 8
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "W1M2",
+      "source2": "W1M1"
+    },
+    {
+      "id": "W2M1",
+      "bracket": "W",
+      "round": 2,
+      "match": 1,
+      "team1": "VisionStrikers",
+      "team2": "ドラゴンテイル",
+      "winner": "VisionStrikers",
+      "loser": "ドラゴンテイル",
+      "team1_wins": 2,
+      "team2_wins": 0,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3285628614,
+          "team1": "VisionStrikers",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 10,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 19,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 23,
+            "deaths": 13
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 14,
+              "deaths": 16
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 16,
+              "deaths": 9
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 17,
+              "deaths": 11
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 13,
+              "deaths": 13
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 19,
+              "deaths": 10
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 23,
+              "deaths": 13
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 8,
+              "deaths": 18
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 17
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 11,
+              "deaths": 19
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 2841472537,
+          "team1": "VisionStrikers",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 9,
+          "winner": "VisionStrikers",
+          "mvp1": {
+            "name": "Buzz",
+            "kills": 24,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 12,
+            "deaths": 19
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 12,
+              "deaths": 12
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 20,
+              "deaths": 9
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 17,
+              "deaths": 5
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 24,
+              "deaths": 8
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 10,
+              "deaths": 8
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 8,
+              "deaths": 16
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 8,
+              "deaths": 18
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 7,
+              "deaths": 14
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 12,
+              "deaths": 19
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 7,
+              "deaths": 16
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "W1M1",
+      "source2": "W1M2"
+    },
+    {
+      "id": "W2M2",
+      "bracket": "W",
+      "round": 2,
+      "match": 2,
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "winner": "アイネクライネ",
+      "loser": "ブラッドムーン",
+      "team1_wins": 1,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 126780888,
+          "team1": "ブラッドムーン",
+          "team2": "アイネクライネ",
+          "score1": 13,
+          "score2": 11,
+          "winner": "ブラッドムーン",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 25,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "cNed",
+            "kills": 35,
+            "deaths": 15
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 25,
+              "deaths": 9
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 16,
+              "deaths": 14
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 17,
+              "deaths": 13
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 9,
+              "deaths": 15
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 4,
+              "deaths": 13
+            },
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 7,
+              "deaths": 19
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 9,
+              "deaths": 14
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 35,
+              "deaths": 15
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 8,
+              "deaths": 11
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 5,
+              "deaths": 12
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 843186640,
+          "team1": "ブラッドムーン",
+          "team2": "アイネクライネ",
+          "score1": 13,
+          "score2": 15,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 27,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "cNed",
+            "kills": 35,
+            "deaths": 17
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 27,
+              "deaths": 18
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 17,
+              "deaths": 14
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 24,
+              "deaths": 14
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 13,
+              "deaths": 18
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 7,
+              "deaths": 15
+            },
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 8,
+              "deaths": 22
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 17
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 35,
+              "deaths": 17
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 12,
+              "deaths": 19
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 14,
+              "deaths": 13
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 1971644519,
+          "team1": "ブラッドムーン",
+          "team2": "アイネクライネ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "Nanasaki",
+            "kills": 18,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "cNed",
+            "kills": 34,
+            "deaths": 9
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 18,
+              "deaths": 10
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 14,
+              "deaths": 11
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 3,
+              "deaths": 13
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 15,
+              "deaths": 11
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 6,
+              "deaths": 10
+            },
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 1,
+              "deaths": 17
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 10
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 34,
+              "deaths": 9
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 8,
+              "deaths": 10
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 10
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "W1M3",
+      "source2": "W1M4"
+    },
+    {
+      "id": "L2M1",
+      "bracket": "L",
+      "round": 2,
+      "match": 1,
+      "team1": "フリーナクラシック",
+      "team2": "ブラッドムーン",
+      "winner": "フリーナクラシック",
+      "loser": "ブラッドムーン",
+      "team1_wins": 2,
+      "team2_wins": 0,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 1762773209,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 13,
+          "score2": 3,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 16,
+            "deaths": 8
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 19,
+            "deaths": 11
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 7,
+              "deaths": 13
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 5,
+              "deaths": 8
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 9
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 5,
+              "deaths": 8
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 16,
+              "deaths": 8
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 19,
+              "deaths": 11
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 3,
+              "deaths": 9
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 16,
+              "deaths": 6
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 7,
+              "deaths": 8
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 1,
+              "deaths": 10
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 2861835559,
+          "team1": "フリーナクラシック",
+          "team2": "ブラッドムーン",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナクラシック",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 28,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 32,
+            "deaths": 21
+          },
+          "initial_attacker": "ブラッドムーン",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 17,
+              "deaths": 22
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 14,
+              "deaths": 17
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 14,
+              "deaths": 19
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 12,
+              "deaths": 12
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 28,
+              "deaths": 14
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ブラッドムーン",
+              "kills": 32,
+              "deaths": 21
+            },
+            {
+              "name": "Meteor",
+              "team": "ブラッドムーン",
+              "kills": 13,
+              "deaths": 15
+            },
+            {
+              "name": "Zest",
+              "team": "ブラッドムーン",
+              "kills": 23,
+              "deaths": 14
+            },
+            {
+              "name": "WoohyuN",
+              "team": "ブラッドムーン",
+              "kills": 16,
+              "deaths": 16
+            },
+            {
+              "name": "FNS",
+              "team": "ブラッドムーン",
+              "kills": 0,
+              "deaths": 19
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "L1M1",
+      "source2": "W2M2"
+    },
+    {
+      "id": "L2M2",
+      "bracket": "L",
+      "round": 2,
+      "match": 2,
+      "team1": "フリーナタルタリヤ",
+      "team2": "ドラゴンテイル",
+      "winner": "フリーナタルタリヤ",
+      "loser": "ドラゴンテイル",
+      "team1_wins": 2,
+      "team2_wins": 1,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 700952790,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ドラゴンテイル",
+          "score1": 8,
+          "score2": 13,
+          "winner": "ドラゴンテイル",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 19,
+            "deaths": 17
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 38,
+            "deaths": 11
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 19,
+              "deaths": 17
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 14
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 13
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 3,
+              "deaths": 18
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 16,
+              "deaths": 15
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 38,
+              "deaths": 11
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 17
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 6,
+              "deaths": 9
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 7,
+              "deaths": 11
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 12,
+              "deaths": 12
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 1039424441,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 10,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 26,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Canezerra",
+            "kills": 23,
+            "deaths": 11
+          },
+          "initial_attacker": "ドラゴンテイル",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 26,
+              "deaths": 18
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 10,
+              "deaths": 10
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 14,
+              "deaths": 14
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 11
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 14
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 15,
+              "deaths": 17
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 3,
+              "deaths": 10
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 23,
+              "deaths": 11
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 16
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 3352860959,
+          "team1": "フリーナタルタリヤ",
+          "team2": "ドラゴンテイル",
+          "score1": 13,
+          "score2": 10,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 21,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Nanasaki",
+            "kills": 28,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 21,
+              "deaths": 18
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 14,
+              "deaths": 16
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 12
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 14
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 18,
+              "deaths": 8
+            },
+            {
+              "name": "Nanasaki",
+              "team": "ドラゴンテイル",
+              "kills": 28,
+              "deaths": 14
+            },
+            {
+              "name": "Derke",
+              "team": "ドラゴンテイル",
+              "kills": 10,
+              "deaths": 18
+            },
+            {
+              "name": "Ethan",
+              "team": "ドラゴンテイル",
+              "kills": 3,
+              "deaths": 13
+            },
+            {
+              "name": "Canezerra",
+              "team": "ドラゴンテイル",
+              "kills": 14,
+              "deaths": 16
+            },
+            {
+              "name": "vo0kashu",
+              "team": "ドラゴンテイル",
+              "kills": 13,
+              "deaths": 12
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "L1M2",
+      "source2": "W2M1"
+    },
+    {
+      "id": "W3M1",
+      "bracket": "W",
+      "round": 3,
+      "match": 1,
+      "team1": "VisionStrikers",
+      "team2": "アイネクライネ",
+      "winner": "アイネクライネ",
+      "loser": "VisionStrikers",
+      "team1_wins": 0,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 4219871056,
+          "team1": "VisionStrikers",
+          "team2": "アイネクライネ",
+          "score1": 11,
+          "score2": 13,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "Zest",
+            "kills": 23,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "cNed",
+            "kills": 15,
+            "deaths": 20
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 16,
+              "deaths": 9
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 19,
+              "deaths": 9
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 11
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 19,
+              "deaths": 12
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 23,
+              "deaths": 6
+            },
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 1,
+              "deaths": 19
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 16
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 15,
+              "deaths": 20
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 13,
+              "deaths": 16
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 8,
+              "deaths": 21
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 4093525744,
+          "team1": "VisionStrikers",
+          "team2": "アイネクライネ",
+          "score1": 6,
+          "score2": 13,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "Rb",
+            "kills": 18,
+            "deaths": 12
+          },
+          "mvp2": {
+            "name": "cNed",
+            "kills": 17,
+            "deaths": 15
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 7
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 5,
+              "deaths": 10
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 18,
+              "deaths": 12
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 9,
+              "deaths": 7
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 15,
+              "deaths": 7
+            },
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 3,
+              "deaths": 17
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 13,
+              "deaths": 8
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 17,
+              "deaths": 15
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 4,
+              "deaths": 13
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 9
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "W2M1",
+      "source2": "W2M2"
+    },
+    {
+      "id": "L3M1",
+      "bracket": "L",
+      "round": 3,
+      "match": 1,
+      "team1": "フリーナクラシック",
+      "team2": "フリーナタルタリヤ",
+      "winner": "フリーナタルタリヤ",
+      "loser": "フリーナクラシック",
+      "team1_wins": 0,
+      "team2_wins": 2,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3117572221,
+          "team1": "フリーナクラシック",
+          "team2": "フリーナタルタリヤ",
+          "score1": 8,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 14
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 27,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナクラシック",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 18,
+              "deaths": 14
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 6,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 6,
+              "deaths": 14
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 9,
+              "deaths": 13
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 11
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 27,
+              "deaths": 14
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 11
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 9
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 7
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 9
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 2580577185,
+          "team1": "フリーナクラシック",
+          "team2": "フリーナタルタリヤ",
+          "score1": 9,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 18,
+            "deaths": 16
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 22,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナクラシック",
+              "kills": 18,
+              "deaths": 16
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナクラシック",
+              "kills": 5,
+              "deaths": 10
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナクラシック",
+              "kills": 11,
+              "deaths": 16
+            },
+            {
+              "name": "Jean",
+              "team": "フリーナクラシック",
+              "kills": 14,
+              "deaths": 12
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナクラシック",
+              "kills": 12,
+              "deaths": 14
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 22,
+              "deaths": 15
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 16,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 14
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 14,
+              "deaths": 8
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 11
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "",
+      "source1": "L2M1",
+      "source2": "L2M2"
+    },
+    {
+      "id": "LOWER_FINAL",
+      "bracket": "L",
+      "round": 4,
+      "match": 1,
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "winner": "フリーナタルタリヤ",
+      "loser": "VisionStrikers",
+      "team1_wins": 3,
+      "team2_wins": 0,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 1353200533,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 14,
+          "score2": 12,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Lohen",
+            "kills": 21,
+            "deaths": 18
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 24,
+            "deaths": 12
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 21,
+              "deaths": 18
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 10,
+              "deaths": 17
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 17
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 6,
+              "deaths": 20
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 17
+            },
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 19,
+              "deaths": 14
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 14,
+              "deaths": 11
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 16,
+              "deaths": 11
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 16,
+              "deaths": 9
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 24,
+              "deaths": 12
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 4100439985,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 13,
+          "score2": 8,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Arlecchino",
+            "kills": 13,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Buzz",
+            "kills": 23,
+            "deaths": 8
+          },
+          "initial_attacker": "VisionStrikers",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 9,
+              "deaths": 19
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 16
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 15
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 12
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 15
+            },
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 6,
+              "deaths": 12
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 13,
+              "deaths": 6
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 13,
+              "deaths": 10
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 23,
+              "deaths": 8
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 22,
+              "deaths": 8
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 3545793338,
+          "team1": "フリーナタルタリヤ",
+          "team2": "VisionStrikers",
+          "score1": 18,
+          "score2": 16,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "Furina",
+            "kills": 23,
+            "deaths": 25
+          },
+          "mvp2": {
+            "name": "Zest",
+            "kills": 33,
+            "deaths": 15
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 20,
+              "deaths": 28
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 23,
+              "deaths": 25
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 26
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 25
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 18,
+              "deaths": 29
+            },
+            {
+              "name": "Mako",
+              "team": "VisionStrikers",
+              "kills": 27,
+              "deaths": 19
+            },
+            {
+              "name": "stax",
+              "team": "VisionStrikers",
+              "kills": 26,
+              "deaths": 15
+            },
+            {
+              "name": "Rb",
+              "team": "VisionStrikers",
+              "kills": 23,
+              "deaths": 15
+            },
+            {
+              "name": "Buzz",
+              "team": "VisionStrikers",
+              "kills": 24,
+              "deaths": 15
+            },
+            {
+              "name": "Zest",
+              "team": "VisionStrikers",
+              "kills": 33,
+              "deaths": 15
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "lower_final",
+      "source1": "L3M1",
+      "source2": "W3M1"
+    },
+    {
+      "id": "GRAND_FINAL",
+      "bracket": "G",
+      "round": 1,
+      "match": 1,
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "winner": "フリーナタルタリヤ",
+      "loser": "アイネクライネ",
+      "team1_wins": 2,
+      "team2_wins": 3,
+      "maps": [
+        {
+          "number": 1,
+          "seed": 3088705960,
+          "team1": "アイネクライネ",
+          "team2": "フリーナタルタリヤ",
+          "score1": 12,
+          "score2": 14,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 31,
+            "deaths": 15
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 24,
+            "deaths": 20
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 4,
+              "deaths": 19
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 21,
+              "deaths": 15
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 31,
+              "deaths": 15
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 7,
+              "deaths": 10
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 14
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 24,
+              "deaths": 20
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 18,
+              "deaths": 12
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 15
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 10,
+              "deaths": 15
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 13,
+              "deaths": 11
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "seed": 3073426898,
+          "team1": "アイネクライネ",
+          "team2": "フリーナタルタリヤ",
+          "score1": 13,
+          "score2": 11,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 23,
+            "deaths": 19
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 26,
+            "deaths": 14
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 9,
+              "deaths": 18
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 13,
+              "deaths": 10
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 23,
+              "deaths": 19
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 6
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 10,
+              "deaths": 11
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 26,
+              "deaths": 14
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 7,
+              "deaths": 14
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 11
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 12
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 12,
+              "deaths": 10
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "seed": 3599484848,
+          "team1": "アイネクライネ",
+          "team2": "フリーナタルタリヤ",
+          "score1": 13,
+          "score2": 11,
+          "winner": "アイネクライネ",
+          "mvp1": {
+            "name": "crashies",
+            "kills": 21,
+            "deaths": 6
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 22,
+            "deaths": 14
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 7,
+              "deaths": 19
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 21,
+              "deaths": 6
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 20,
+              "deaths": 15
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 11,
+              "deaths": 9
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 12,
+              "deaths": 9
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 22,
+              "deaths": 14
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 6,
+              "deaths": 16
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 13
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 13
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 11,
+              "deaths": 15
+            }
+          ]
+        },
+        {
+          "number": 4,
+          "seed": 2282583623,
+          "team1": "アイネクライネ",
+          "team2": "フリーナタルタリヤ",
+          "score1": 2,
+          "score2": 13,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 12,
+            "deaths": 10
+          },
+          "mvp2": {
+            "name": "Arlecchino",
+            "kills": 10,
+            "deaths": 4
+          },
+          "initial_attacker": "フリーナタルタリヤ",
+          "overtime": false,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 1,
+              "deaths": 11
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 7
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 12,
+              "deaths": 10
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 2,
+              "deaths": 6
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 7,
+              "deaths": 2
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 8
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 5,
+              "deaths": 5
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 7
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 5,
+              "deaths": 4
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 10,
+              "deaths": 4
+            }
+          ]
+        },
+        {
+          "number": 5,
+          "seed": 3294839129,
+          "team1": "アイネクライネ",
+          "team2": "フリーナタルタリヤ",
+          "score1": 13,
+          "score2": 15,
+          "winner": "フリーナタルタリヤ",
+          "mvp1": {
+            "name": "cNed",
+            "kills": 35,
+            "deaths": 9
+          },
+          "mvp2": {
+            "name": "Lohen",
+            "kills": 28,
+            "deaths": 13
+          },
+          "initial_attacker": "アイネクライネ",
+          "overtime": true,
+          "player_stats": [
+            {
+              "name": "FNS",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 18
+            },
+            {
+              "name": "crashies",
+              "team": "アイネクライネ",
+              "kills": 6,
+              "deaths": 6
+            },
+            {
+              "name": "cNed",
+              "team": "アイネクライネ",
+              "kills": 35,
+              "deaths": 9
+            },
+            {
+              "name": "soulcas",
+              "team": "アイネクライネ",
+              "kills": 9,
+              "deaths": 13
+            },
+            {
+              "name": "trexx",
+              "team": "アイネクライネ",
+              "kills": 13,
+              "deaths": 10
+            },
+            {
+              "name": "Lohen",
+              "team": "フリーナタルタリヤ",
+              "kills": 28,
+              "deaths": 13
+            },
+            {
+              "name": "Furina",
+              "team": "フリーナタルタリヤ",
+              "kills": 10,
+              "deaths": 16
+            },
+            {
+              "name": "Lisa",
+              "team": "フリーナタルタリヤ",
+              "kills": 8,
+              "deaths": 15
+            },
+            {
+              "name": "Tartaglia",
+              "team": "フリーナタルタリヤ",
+              "kills": 4,
+              "deaths": 10
+            },
+            {
+              "name": "Arlecchino",
+              "team": "フリーナタルタリヤ",
+              "kills": 6,
+              "deaths": 15
+            }
+          ]
+        }
+      ],
+      "status": "finished",
+      "special": "grand_final",
+      "source1": "W3M1",
+      "source2": "LOWER_FINAL"
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 353,
+        "deaths": 169,
+        "maps": 12,
+        "mvps": 11,
+        "kd": 2.089,
+        "kills_per_map": 29.417
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 172,
+        "deaths": 83,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 2.072,
+        "kills_per_map": 19.111
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 170,
+        "deaths": 89,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 1.91,
+        "kills_per_map": 18.889
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 149,
+        "deaths": 92,
+        "maps": 9,
+        "mvps": 1,
+        "kd": 1.62,
+        "kills_per_map": 16.556
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 138,
+        "deaths": 86,
+        "maps": 9,
+        "mvps": 0,
+        "kd": 1.605,
+        "kills_per_map": 15.333
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 345,
+        "deaths": 277,
+        "maps": 17,
+        "mvps": 13,
+        "kd": 1.245,
+        "kills_per_map": 20.294
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 353,
+        "deaths": 169,
+        "maps": 12,
+        "mvps": 11,
+        "kd": 2.089,
+        "kills_per_map": 29.417
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 176,
+        "deaths": 111,
+        "maps": 8,
+        "mvps": 6,
+        "kd": 1.586,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 138,
+        "deaths": 161,
+        "maps": 9,
+        "mvps": 5,
+        "kd": 0.857,
+        "kills_per_map": 15.333
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 172,
+        "deaths": 83,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 2.072,
+        "kills_per_map": 19.111
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 353,
+        "deaths": 169,
+        "maps": 12,
+        "mvps": 11,
+        "kd": 2.089,
+        "kills_per_map": 29.417
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 345,
+        "deaths": 277,
+        "maps": 17,
+        "mvps": 13,
+        "kd": 1.245,
+        "kills_per_map": 20.294
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 200,
+        "deaths": 225,
+        "maps": 17,
+        "mvps": 3,
+        "kd": 0.889,
+        "kills_per_map": 11.765
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナタルタリヤ",
+        "kills": 180,
+        "deaths": 241,
+        "maps": 17,
+        "mvps": 1,
+        "kd": 0.747,
+        "kills_per_map": 10.588
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 176,
+        "deaths": 111,
+        "maps": 8,
+        "mvps": 6,
+        "kd": 1.586,
+        "kills_per_map": 22.0
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 353,
+        "deaths": 169,
+        "maps": 12,
+        "mvps": 11,
+        "kd": 2.089,
+        "kills_per_map": 29.417
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 176,
+        "deaths": 111,
+        "maps": 8,
+        "mvps": 6,
+        "kd": 1.586,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 167,
+        "deaths": 110,
+        "maps": 8,
+        "mvps": 4,
+        "kd": 1.518,
+        "kills_per_map": 20.875
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 345,
+        "deaths": 277,
+        "maps": 17,
+        "mvps": 13,
+        "kd": 1.245,
+        "kills_per_map": 20.294
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 172,
+        "deaths": 83,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 2.072,
+        "kills_per_map": 19.111
+      }
+    ],
+    "all_players": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 353,
+        "deaths": 169,
+        "maps": 12,
+        "mvps": 11,
+        "kd": 2.089,
+        "kills_per_map": 29.417
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 172,
+        "deaths": 83,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 2.072,
+        "kills_per_map": 19.111
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 170,
+        "deaths": 89,
+        "maps": 9,
+        "mvps": 4,
+        "kd": 1.91,
+        "kills_per_map": 18.889
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 149,
+        "deaths": 92,
+        "maps": 9,
+        "mvps": 1,
+        "kd": 1.62,
+        "kills_per_map": 16.556
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 138,
+        "deaths": 86,
+        "maps": 9,
+        "mvps": 0,
+        "kd": 1.605,
+        "kills_per_map": 15.333
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 176,
+        "deaths": 111,
+        "maps": 8,
+        "mvps": 6,
+        "kd": 1.586,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 167,
+        "deaths": 110,
+        "maps": 8,
+        "mvps": 4,
+        "kd": 1.518,
+        "kills_per_map": 20.875
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 76,
+        "deaths": 53,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.434,
+        "kills_per_map": 15.2
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 90,
+        "deaths": 65,
+        "maps": 6,
+        "mvps": 2,
+        "kd": 1.385,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 123,
+        "deaths": 91,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.352,
+        "kills_per_map": 15.375
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 144,
+        "deaths": 114,
+        "maps": 9,
+        "mvps": 0,
+        "kd": 1.263,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 345,
+        "deaths": 277,
+        "maps": 17,
+        "mvps": 13,
+        "kd": 1.245,
+        "kills_per_map": 20.294
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 127,
+        "deaths": 104,
+        "maps": 9,
+        "mvps": 2,
+        "kd": 1.221,
+        "kills_per_map": 14.111
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 83,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 2,
+        "kd": 1.221,
+        "kills_per_map": 13.833
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 106,
+        "deaths": 92,
+        "maps": 9,
+        "mvps": 2,
+        "kd": 1.152,
+        "kills_per_map": 11.778
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 84,
+        "deaths": 74,
+        "maps": 6,
+        "mvps": 2,
+        "kd": 1.135,
+        "kills_per_map": 14.0
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 60,
+        "deaths": 55,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.091,
+        "kills_per_map": 10.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 79,
+        "deaths": 74,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.068,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 106,
+        "deaths": 101,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 1.05,
+        "kills_per_map": 13.25
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 110,
+        "deaths": 105,
+        "maps": 8,
+        "mvps": 3,
+        "kd": 1.048,
+        "kills_per_map": 13.75
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 135,
+        "deaths": 131,
+        "maps": 12,
+        "mvps": 1,
+        "kd": 1.031,
+        "kills_per_map": 11.25
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 63,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.984,
+        "kills_per_map": 12.6
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 100,
+        "deaths": 107,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.935,
+        "kills_per_map": 12.5
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 200,
+        "deaths": 225,
+        "maps": 17,
+        "mvps": 3,
+        "kd": 0.889,
+        "kills_per_map": 11.765
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 110,
+        "deaths": 128,
+        "maps": 12,
+        "mvps": 0,
+        "kd": 0.859,
+        "kills_per_map": 9.167
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 138,
+        "deaths": 161,
+        "maps": 9,
+        "mvps": 5,
+        "kd": 0.857,
+        "kills_per_map": 15.333
+      },
+      {
+        "player": "vo0kashu",
+        "team": "ドラゴンテイル",
+        "kills": 91,
+        "deaths": 107,
+        "maps": 8,
+        "mvps": 1,
+        "kd": 0.85,
+        "kills_per_map": 11.375
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 65,
+        "deaths": 82,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 0.793,
+        "kills_per_map": 10.833
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナタルタリヤ",
+        "kills": 180,
+        "deaths": 241,
+        "maps": 17,
+        "mvps": 1,
+        "kd": 0.747,
+        "kills_per_map": 10.588
+      },
+      {
+        "player": "Lisa",
+        "team": "フリーナタルタリヤ",
+        "kills": 165,
+        "deaths": 232,
+        "maps": 17,
+        "mvps": 0,
+        "kd": 0.711,
+        "kills_per_map": 9.706
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 89,
+        "deaths": 132,
+        "maps": 12,
+        "mvps": 0,
+        "kd": 0.674,
+        "kills_per_map": 7.417
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナクラシック",
+        "kills": 76,
+        "deaths": 113,
+        "maps": 9,
+        "mvps": 0,
+        "kd": 0.673,
+        "kills_per_map": 8.444
+      },
+      {
+        "player": "Tartaglia",
+        "team": "フリーナタルタリヤ",
+        "kills": 140,
+        "deaths": 219,
+        "maps": 17,
+        "mvps": 0,
+        "kd": 0.639,
+        "kills_per_map": 8.235
+      },
+      {
+        "player": "Sayonara",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 41,
+        "deaths": 65,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.631,
+        "kills_per_map": 8.2
+      },
+      {
+        "player": "Derke",
+        "team": "ドラゴンテイル",
+        "kills": 83,
+        "deaths": 135,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.615,
+        "kills_per_map": 10.375
+      },
+      {
+        "player": "nAts",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 68,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.574,
+        "kills_per_map": 7.8
+      },
+      {
+        "player": "Ethan",
+        "team": "ドラゴンテイル",
+        "kills": 47,
+        "deaths": 89,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.528,
+        "kills_per_map": 5.875
+      },
+      {
+        "player": "Lisa",
+        "team": "フリーナクラシック",
+        "kills": 71,
+        "deaths": 137,
+        "maps": 9,
+        "mvps": 0,
+        "kd": 0.518,
+        "kills_per_map": 7.889
+      },
+      {
+        "player": "FNS",
+        "team": "アイネクライネ",
+        "kills": 56,
+        "deaths": 213,
+        "maps": 12,
+        "mvps": 0,
+        "kd": 0.263,
+        "kills_per_map": 4.667
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 22,
+        "deaths": 107,
+        "maps": 8,
+        "mvps": 0,
+        "kd": 0.206,
+        "kills_per_map": 2.75
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 4,
+      "timestamp": "2026-08-03T20:36:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M1",
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "score1": 0,
+      "score2": 2,
+      "winner": "VisionStrikers",
+      "before": {
+        "フリーナタルタリヤ": 2500.0,
+        "VisionStrikers": 2500.0
+      },
+      "after": {
+        "フリーナタルタリヤ": 2468.0,
+        "VisionStrikers": 2532.0
+      },
+      "delta": {
+        "フリーナタルタリヤ": -32.0,
+        "VisionStrikers": 32.0
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.5,
+        "VisionStrikers": 0.5
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 5,
+      "timestamp": "2026-08-03T20:37:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M2",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "score1": 1,
+      "score2": 2,
+      "winner": "ドラゴンテイル",
+      "before": {
+        "クイーンズフラワーギャンビット": 2500.0,
+        "ドラゴンテイル": 2436.0
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2471.628,
+        "ドラゴンテイル": 2464.372
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -28.372,
+        "ドラゴンテイル": 28.372
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.5911,
+        "ドラゴンテイル": 0.4089
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 6,
+      "timestamp": "2026-08-03T20:38:53",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M3",
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 2,
+      "score2": 1,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ブラッドムーン": 2532.0,
+        "radiantdancer": 2500.0
+      },
+      "after": {
+        "ブラッドムーン": 2553.796,
+        "radiantdancer": 2478.204
+      },
+      "delta": {
+        "ブラッドムーン": 21.796,
+        "radiantdancer": -21.796
+      },
+      "expected": {
+        "ブラッドムーン": 0.5459,
+        "radiantdancer": 0.4541
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 7,
+      "timestamp": "2026-08-03T20:39:36",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M4",
+      "team1": "アイネクライネ",
+      "team2": "フリーナクラシック",
+      "score1": 2,
+      "score2": 0,
+      "winner": "アイネクライネ",
+      "before": {
+        "アイネクライネ": 2532.0,
+        "フリーナクラシック": 2500.0
+      },
+      "after": {
+        "アイネクライネ": 2561.061,
+        "フリーナクラシック": 2470.939
+      },
+      "delta": {
+        "アイネクライネ": 29.061,
+        "フリーナクラシック": -29.061
+      },
+      "expected": {
+        "アイネクライネ": 0.5459,
+        "フリーナクラシック": 0.4541
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 8,
+      "timestamp": "2026-08-03T20:40:43",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R1 M1",
+      "team1": "フリーナクラシック",
+      "team2": "radiantdancer",
+      "score1": 2,
+      "score2": 1,
+      "winner": "フリーナクラシック",
+      "before": {
+        "フリーナクラシック": 2470.939,
+        "radiantdancer": 2478.204
+      },
+      "after": {
+        "フリーナクラシック": 2495.441,
+        "radiantdancer": 2453.702
+      },
+      "delta": {
+        "フリーナクラシック": 24.502,
+        "radiantdancer": -24.502
+      },
+      "expected": {
+        "フリーナクラシック": 0.4895,
+        "radiantdancer": 0.5105
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 9,
+      "timestamp": "2026-08-03T20:41:20",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R1 M2",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "フリーナタルタリヤ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "クイーンズフラワーギャンビット": 2471.628,
+        "フリーナタルタリヤ": 2468.0
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2439.294,
+        "フリーナタルタリヤ": 2500.334
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -32.334,
+        "フリーナタルタリヤ": 32.334
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.5052,
+        "フリーナタルタリヤ": 0.4948
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 10,
+      "timestamp": "2026-08-03T20:42:05",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R2 M1",
+      "team1": "VisionStrikers",
+      "team2": "ドラゴンテイル",
+      "score1": 2,
+      "score2": 0,
+      "winner": "VisionStrikers",
+      "before": {
+        "VisionStrikers": 2532.0,
+        "ドラゴンテイル": 2464.372
+      },
+      "after": {
+        "VisionStrikers": 2557.849,
+        "ドラゴンテイル": 2438.523
+      },
+      "delta": {
+        "VisionStrikers": 25.849,
+        "ドラゴンテイル": -25.849
+      },
+      "expected": {
+        "VisionStrikers": 0.5961,
+        "ドラゴンテイル": 0.4039
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 11,
+      "timestamp": "2026-08-03T20:43:13",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R2 M2",
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 1,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "ブラッドムーン": 2553.796,
+        "アイネクライネ": 2561.061
+      },
+      "after": {
+        "ブラッドムーン": 2530.298,
+        "アイネクライネ": 2584.559
+      },
+      "delta": {
+        "ブラッドムーン": -23.498,
+        "アイネクライネ": 23.498
+      },
+      "expected": {
+        "ブラッドムーン": 0.4895,
+        "アイネクライネ": 0.5105
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 12,
+      "timestamp": "2026-08-03T20:43:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R2 M1",
+      "team1": "フリーナクラシック",
+      "team2": "ブラッドムーン",
+      "score1": 2,
+      "score2": 0,
+      "winner": "フリーナクラシック",
+      "before": {
+        "フリーナクラシック": 2495.441,
+        "ブラッドムーン": 2530.298
+      },
+      "after": {
+        "フリーナクラシック": 2530.64,
+        "ブラッドムーン": 2495.098
+      },
+      "delta": {
+        "フリーナクラシック": 35.2,
+        "ブラッドムーン": -35.2
+      },
+      "expected": {
+        "フリーナクラシック": 0.45,
+        "ブラッドムーン": 0.55
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 13,
+      "timestamp": "2026-08-03T20:44:51",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R2 M2",
+      "team1": "フリーナタルタリヤ",
+      "team2": "ドラゴンテイル",
+      "score1": 2,
+      "score2": 1,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナタルタリヤ": 2500.334,
+        "ドラゴンテイル": 2438.523
+      },
+      "after": {
+        "フリーナタルタリヤ": 2520.109,
+        "ドラゴンテイル": 2418.748
+      },
+      "delta": {
+        "フリーナタルタリヤ": 19.775,
+        "ドラゴンテイル": -19.775
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.588,
+        "ドラゴンテイル": 0.412
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 14,
+      "timestamp": "2026-08-03T20:45:35",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R3 M1",
+      "team1": "VisionStrikers",
+      "team2": "アイネクライネ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "VisionStrikers": 2557.849,
+        "アイネクライネ": 2584.559
+      },
+      "after": {
+        "VisionStrikers": 2528.304,
+        "アイネクライネ": 2614.104
+      },
+      "delta": {
+        "VisionStrikers": -29.545,
+        "アイネクライネ": 29.545
+      },
+      "expected": {
+        "VisionStrikers": 0.4616,
+        "アイネクライネ": 0.5384
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 15,
+      "timestamp": "2026-08-03T20:46:12",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R3 M1",
+      "team1": "フリーナクラシック",
+      "team2": "フリーナタルタリヤ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナクラシック": 2530.64,
+        "フリーナタルタリヤ": 2520.109
+      },
+      "after": {
+        "フリーナクラシック": 2497.671,
+        "フリーナタルタリヤ": 2553.079
+      },
+      "delta": {
+        "フリーナクラシック": -32.97,
+        "フリーナタルタリヤ": 32.97
+      },
+      "expected": {
+        "フリーナクラシック": 0.5152,
+        "フリーナタルタリヤ": 0.4848
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 16,
+      "timestamp": "2026-08-03T20:47:28",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOWER FINAL",
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "score1": 3,
+      "score2": 0,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナタルタリヤ": 2553.079,
+        "VisionStrikers": 2528.304
+      },
+      "after": {
+        "フリーナタルタリヤ": 2582.801,
+        "VisionStrikers": 2498.582
+      },
+      "delta": {
+        "フリーナタルタリヤ": 29.722,
+        "VisionStrikers": -29.722
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.5356,
+        "VisionStrikers": 0.4644
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 17,
+      "timestamp": "2026-08-03T20:49:08",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "GRAND FINAL",
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 2,
+      "score2": 3,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "アイネクライネ": 2614.104,
+        "フリーナタルタリヤ": 2582.801
+      },
+      "after": {
+        "アイネクライネ": 2589.691,
+        "フリーナタルタリヤ": 2607.213
+      },
+      "delta": {
+        "アイネクライネ": -24.413,
+        "フリーナタルタリヤ": 24.413
+      },
+      "expected": {
+        "アイネクライネ": 0.5449,
+        "フリーナタルタリヤ": 0.4551
+      },
+      "margin_multiplier": 1.12
+    }
+  ],
+  "ratings_after_competition": {
+    "フリーナタルタリヤ": 2607.213,
+    "アイネクライネ": 2589.691,
+    "EG2023": 2500.0,
+    "Fnatic2023": 2500.0,
+    "Leo軸": 2500.0,
+    "日本代表": 2500.0,
+    "VisionStrikers": 2498.582,
+    "フリーナクラシック": 2497.671,
+    "ブラッドムーン": 2495.098,
+    "radiantdancer": 2453.702,
+    "クイーンズフラワーギャンビット": 2439.294,
+    "ドラゴンテイル": 2418.748
+  }
+}

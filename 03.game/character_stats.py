@@ -25,7 +25,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Derke": CharacterStats("Derke", 0.35, 0.24, 90, 0.75, 115, "フラッシュ", 100),
     "Boaster": CharacterStats("Boaster", 0.2, 0.12, 165, 0.62, 96, "スモーカー", 50),
     "Aspas": CharacterStats("Aspas", 0.4, 0.24, 90, 0.87, 120, "タイガー", 130),
-    "F0rsakeN": CharacterStats("F0rsakeN", 0.26, 0.14, 125, 0.69, 95, "スモーカー", 50),
+    "F0rsakeN": CharacterStats("F0rsakeN", 0.27, 0.14, 125, 0.69, 95, "スモーカー", 50),
     "Jinggg": CharacterStats("Jinggg", 0.3, 0.26, 68, 0.71, 90, "タイガー", 50),
     "d4v41": CharacterStats("d4v41", 0.35, 0.17, 70, 0.71, 105, "シーカー", 40),
     "Sato": CharacterStats("Sato", 0.4, 0.19, 67, 0.73, 105, "フラッシュ", 60),
@@ -39,8 +39,8 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Sayonara": CharacterStats("Sayonara", 0.33, 0.19, 89, 0.7, 90, "シーカー", 80),
     "Jamppi": CharacterStats("Jamppi", 0.27, 0.15, 125, 0.68, 85, "フラッシュ", 55),
     "Boostio": CharacterStats("Boostio", 0.28, 0.15, 128, 0.68, 85, "スモーカー", 70),
-    "Primmie": CharacterStats("Primmie", 0.47, 0.24, 59, 0.75, 98, "タイガー", 90),
-    "Meteor": CharacterStats("Meteor", 0.36, 0.28, 73, 0.76, 95, "フラッシュ", 75),
+    "Primmie": CharacterStats("Primmie", 0.47, 0.24, 59, 0.79, 98, "タイガー", 90),
+    "Meteor": CharacterStats("Meteor", 0.37, 0.29, 73, 0.78, 95, "フラッシュ", 75),
     "Laz": CharacterStats("Laz", 0.4, 0.14, 70, 0.75, 86, "フラッシュ", 80),
     "ZMJKK": CharacterStats("ZMJKK", 0.3, 0.17, 65, 0.71, 150, "タイガー", 90),
     "Brawk": CharacterStats("Brawk", 0.32, 0.15, 90, 0.69, 95, "シーカー", 90),
@@ -80,25 +80,35 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "mada": CharacterStats("mada", 0.34, 0.23, 105, 0.74, 105, "フラッシュ", 55),
     "s0m": CharacterStats("s0m", 0.3, 0.23, 145, 0.7, 116, "スモーカー", 55),
     "Lohen": CharacterStats("Lohen", 0.4, 0.31, 70, 0.75, 130, "タイガー", 100),
-    "Furina": CharacterStats("Furina", 0.29, 0.09, 149, 0.69, 129, "フラッシュ", 30),
-    "Lisa": CharacterStats("Lisa", 0.36, 0.25, 120, 0.78, 99, "スモーカー", 80),
-    "Jean": CharacterStats("Jean", 0.35, 0.2, 115, 0.75, 135, "シーカー", 50),
-    "Kachina": CharacterStats("Kachina", 0.45, 0.2, 60, 0.8, 90, "タイガー", 40),
+    "Furina": CharacterStats("Furina", 0.29, 0.09, 149, 0.69, 129, "フラッシュ", 20),
+    "Lisa": CharacterStats("Lisa", 0.36, 0.25, 120, 0.78, 99, "スモーカー", 40),
+    "Jean": CharacterStats("Jean", 0.35, 0.2, 115, 0.75, 135, "シーカー", 40),
+    "Kachina": CharacterStats("Kachina", 0.5, 0.2, 70, 0.9, 100, "タイガー", 40),
     "IbarakiNinja": CharacterStats(
         "IbarakiNinja", 0.28, 0.16, 110, 0.75, 115, "シーカー", 50
     ),
-    "Canezera": CharacterStats("Canezera", 0.41, 0.17, 95, 0.77, 135, "タイガー", 80),
+    "Canezerra": CharacterStats("Canezerra", 0.45, 0.17, 90, 0.8, 137, "タイガー", 80),
     "Arlecchino": CharacterStats(
         "Arlecchino", 0.47, 0.19, 135, 0.6, 125, "タイガー", 100
     ),
     "WsLeo": CharacterStats("WsLeo", 0.36, 0.21, 130, 0.78, 80, "シーカー", 50),
     "Zest": CharacterStats("Zest", 0.5, 0.25, 75, 0.76, 121, "シーカー", 100),
     "Tartaglia": CharacterStats(
-        "Tartaglia", 0.55, 0.15, 75, 0.72, 150, "フラッシュ", 150
+        "Tartaglia", 0.55, 0.15, 75, 0.72, 150, "フラッシュ", 80
     ),
-    "Less": CharacterStats("Less", 0.32, 0.16, 130, 0.71, 95, "スモーカー", 60),
-    "Asuna": CharacterStats("Asuna", 0.36, 0.22, 85, 0.73, 110, "タイガー", 60),
-    "Cryocells": CharacterStats("Cryocells", 0.35, 0.2, 95, 0.74, 105, "シーカー", 50),
+    "Nanasaki": CharacterStats("Nanasaki", 0.5, 0.2, 120, 0.65, 80, "スモーカー", 70),
+    "Less": CharacterStats("Less", 0.35, 0.22, 86, 0.74, 104, "タイガー", 80),
+    "WoohyuN": CharacterStats("WoohyuN", 0.46, 0.2, 85, 0.71, 150, "タイガー", 55),
+    "Asuna": CharacterStats("Asuna", 0.29, 0.17, 85, 0.75, 125, "フラッシュ", 65),
+    "Cryocells": CharacterStats("Cryocells", 0.29, 0.18, 85, 0.76, 110, "タイガー", 65),
+    "vo0kashu": CharacterStats("vo0kashu", 0.35, 0.23, 80, 0.76, 115, "タイガー", 50),
+    "Absol": CharacterStats("Absol", 0.31, 0.2, 105, 0.75, 135, "タイガー", 50),
+    "marteen": CharacterStats("marteen", 0.39, 0.2, 80, 0.78, 120, "タイガー", 85),
+    "Crewn": CharacterStats("Crewn", 0.25, 0.25, 135, 0.75, 115, "スモーカー", 65),
+    "Loita": CharacterStats("Loita", 0.33, 0.22, 111, 0.77, 111, "スモーカー", 77),
+    "cNed": CharacterStats("cNed", 0.41, 0.12, 85, 0.95, 155, "タイガー", 180),
+    "soulcas": CharacterStats("soulcas", 0.53, 0.17, 120, 0.63, 155, "フラッシュ", 90),
+    "trexx": CharacterStats("trexx", 0.25, 0.2, 100, 0.85, 135, "シーカー", 30),
 }
 
 # 旧コードとの互換用エイリアス

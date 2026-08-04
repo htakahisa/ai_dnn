@@ -253,14 +253,6 @@ class ComboAwakeningMixin:
             )
             return char.is_alive and alive_enemies <= maximum_enemies
 
-        if condition in {"overtime", "ot"}:
-            # battle_logic.py が12-12到達時に self.overtime=True にする。
-            # OT中のラウンドでは、生存中の覚醒対象に対して成立する。
-            return (
-                char.is_alive
-                and bool(getattr(self, "overtime", False))
-            )
-
         return False
 
 

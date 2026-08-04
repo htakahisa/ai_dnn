@@ -1,0 +1,150 @@
+{
+  "team1": "日本代表",
+  "team2": "VisionStrikers",
+  "maps_to_win": 7,
+  "team1_wins": 0,
+  "team2_wins": 7,
+  "winner": "VisionStrikers",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 6,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Meiy",
+        "kills": 11,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "Mako",
+        "kills": 25,
+        "deaths": 11
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 7,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 8,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "stax",
+        "kills": 21,
+        "deaths": 4
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 11,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 13,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Rb",
+        "kills": 24,
+        "deaths": 15
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 11,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 18,
+        "deaths": 20
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 31,
+        "deaths": 8
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 12,
+      "score2": 14,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "SugarZ3ro",
+        "kills": 15,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 30,
+        "deaths": 6
+      },
+      "initial_attacker": "日本代表",
+      "overtime": true
+    },
+    {
+      "number": 6,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 15,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 20,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Mako",
+        "kills": 25,
+        "deaths": 16
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": true
+    },
+    {
+      "number": 7,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 7,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Meiy",
+        "kills": 13,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "stax",
+        "kills": 31,
+        "deaths": 9
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false
+    }
+  ]
+}

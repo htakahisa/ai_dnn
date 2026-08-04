@@ -1,0 +1,543 @@
+{
+  "version": 1,
+  "default_rating": 2500.0,
+  "k_factor": 40.0,
+  "ratings": {
+    "EG2023": 2500.0,
+    "Fnatic2023": 2500.0,
+    "Leo軸": 2500.0,
+    "VisionStrikers": 2498.582,
+    "radiantdancer": 2453.702,
+    "アイネクライネ": 2607.105,
+    "クイーンズフラワーギャンビット": 2439.294,
+    "ドラゴンテイル": 2401.334,
+    "フリーナクラシック": 2497.671,
+    "フリーナタルタリヤ": 2607.213,
+    "ブラッドムーン": 2495.098,
+    "日本代表": 2500.0
+  },
+  "history": [
+    {
+      "event": 1,
+      "timestamp": "2026-08-03T20:31:47",
+      "type": "series",
+      "competition_id": "swiss_20260803_203104",
+      "context": "WINNERS R1 M1",
+      "team1": "ドラゴンテイル",
+      "team2": "ブラッドムーン",
+      "score1": 0,
+      "score2": 2,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ドラゴンテイル": 2500.0,
+        "ブラッドムーン": 2500.0
+      },
+      "after": {
+        "ドラゴンテイル": 2468.0,
+        "ブラッドムーン": 2532.0
+      },
+      "delta": {
+        "ドラゴンテイル": -32.0,
+        "ブラッドムーン": 32.0
+      },
+      "expected": {
+        "ドラゴンテイル": 0.5,
+        "ブラッドムーン": 0.5
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 2,
+      "timestamp": "2026-08-03T20:32:26",
+      "type": "series",
+      "competition_id": "swiss_20260803_203104",
+      "context": "WINNERS R1 M2",
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "radiantdancer": 2500.0,
+        "アイネクライネ": 2500.0
+      },
+      "after": {
+        "radiantdancer": 2468.0,
+        "アイネクライネ": 2532.0
+      },
+      "delta": {
+        "radiantdancer": -32.0,
+        "アイネクライネ": 32.0
+      },
+      "expected": {
+        "radiantdancer": 0.5,
+        "アイネクライネ": 0.5
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 3,
+      "timestamp": "2026-08-03T20:33:08",
+      "type": "series",
+      "competition_id": "swiss_20260803_203104",
+      "context": "LOSERS R1 M1",
+      "team1": "radiantdancer",
+      "team2": "ドラゴンテイル",
+      "score1": 2,
+      "score2": 0,
+      "winner": "radiantdancer",
+      "before": {
+        "radiantdancer": 2468.0,
+        "ドラゴンテイル": 2468.0
+      },
+      "after": {
+        "radiantdancer": 2500.0,
+        "ドラゴンテイル": 2436.0
+      },
+      "delta": {
+        "radiantdancer": 32.0,
+        "ドラゴンテイル": -32.0
+      },
+      "expected": {
+        "radiantdancer": 0.5,
+        "ドラゴンテイル": 0.5
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 4,
+      "timestamp": "2026-08-03T20:36:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M1",
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "score1": 0,
+      "score2": 2,
+      "winner": "VisionStrikers",
+      "before": {
+        "フリーナタルタリヤ": 2500.0,
+        "VisionStrikers": 2500.0
+      },
+      "after": {
+        "フリーナタルタリヤ": 2468.0,
+        "VisionStrikers": 2532.0
+      },
+      "delta": {
+        "フリーナタルタリヤ": -32.0,
+        "VisionStrikers": 32.0
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.5,
+        "VisionStrikers": 0.5
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 5,
+      "timestamp": "2026-08-03T20:37:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M2",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "score1": 1,
+      "score2": 2,
+      "winner": "ドラゴンテイル",
+      "before": {
+        "クイーンズフラワーギャンビット": 2500.0,
+        "ドラゴンテイル": 2436.0
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2471.628,
+        "ドラゴンテイル": 2464.372
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -28.372,
+        "ドラゴンテイル": 28.372
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.5911,
+        "ドラゴンテイル": 0.4089
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 6,
+      "timestamp": "2026-08-03T20:38:53",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M3",
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 2,
+      "score2": 1,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ブラッドムーン": 2532.0,
+        "radiantdancer": 2500.0
+      },
+      "after": {
+        "ブラッドムーン": 2553.796,
+        "radiantdancer": 2478.204
+      },
+      "delta": {
+        "ブラッドムーン": 21.796,
+        "radiantdancer": -21.796
+      },
+      "expected": {
+        "ブラッドムーン": 0.5459,
+        "radiantdancer": 0.4541
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 7,
+      "timestamp": "2026-08-03T20:39:36",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R1 M4",
+      "team1": "アイネクライネ",
+      "team2": "フリーナクラシック",
+      "score1": 2,
+      "score2": 0,
+      "winner": "アイネクライネ",
+      "before": {
+        "アイネクライネ": 2532.0,
+        "フリーナクラシック": 2500.0
+      },
+      "after": {
+        "アイネクライネ": 2561.061,
+        "フリーナクラシック": 2470.939
+      },
+      "delta": {
+        "アイネクライネ": 29.061,
+        "フリーナクラシック": -29.061
+      },
+      "expected": {
+        "アイネクライネ": 0.5459,
+        "フリーナクラシック": 0.4541
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 8,
+      "timestamp": "2026-08-03T20:40:43",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R1 M1",
+      "team1": "フリーナクラシック",
+      "team2": "radiantdancer",
+      "score1": 2,
+      "score2": 1,
+      "winner": "フリーナクラシック",
+      "before": {
+        "フリーナクラシック": 2470.939,
+        "radiantdancer": 2478.204
+      },
+      "after": {
+        "フリーナクラシック": 2495.441,
+        "radiantdancer": 2453.702
+      },
+      "delta": {
+        "フリーナクラシック": 24.502,
+        "radiantdancer": -24.502
+      },
+      "expected": {
+        "フリーナクラシック": 0.4895,
+        "radiantdancer": 0.5105
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 9,
+      "timestamp": "2026-08-03T20:41:20",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R1 M2",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "フリーナタルタリヤ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "クイーンズフラワーギャンビット": 2471.628,
+        "フリーナタルタリヤ": 2468.0
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2439.294,
+        "フリーナタルタリヤ": 2500.334
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -32.334,
+        "フリーナタルタリヤ": 32.334
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.5052,
+        "フリーナタルタリヤ": 0.4948
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 10,
+      "timestamp": "2026-08-03T20:42:05",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R2 M1",
+      "team1": "VisionStrikers",
+      "team2": "ドラゴンテイル",
+      "score1": 2,
+      "score2": 0,
+      "winner": "VisionStrikers",
+      "before": {
+        "VisionStrikers": 2532.0,
+        "ドラゴンテイル": 2464.372
+      },
+      "after": {
+        "VisionStrikers": 2557.849,
+        "ドラゴンテイル": 2438.523
+      },
+      "delta": {
+        "VisionStrikers": 25.849,
+        "ドラゴンテイル": -25.849
+      },
+      "expected": {
+        "VisionStrikers": 0.5961,
+        "ドラゴンテイル": 0.4039
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 11,
+      "timestamp": "2026-08-03T20:43:13",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R2 M2",
+      "team1": "ブラッドムーン",
+      "team2": "アイネクライネ",
+      "score1": 1,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "ブラッドムーン": 2553.796,
+        "アイネクライネ": 2561.061
+      },
+      "after": {
+        "ブラッドムーン": 2530.298,
+        "アイネクライネ": 2584.559
+      },
+      "delta": {
+        "ブラッドムーン": -23.498,
+        "アイネクライネ": 23.498
+      },
+      "expected": {
+        "ブラッドムーン": 0.4895,
+        "アイネクライネ": 0.5105
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 12,
+      "timestamp": "2026-08-03T20:43:49",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R2 M1",
+      "team1": "フリーナクラシック",
+      "team2": "ブラッドムーン",
+      "score1": 2,
+      "score2": 0,
+      "winner": "フリーナクラシック",
+      "before": {
+        "フリーナクラシック": 2495.441,
+        "ブラッドムーン": 2530.298
+      },
+      "after": {
+        "フリーナクラシック": 2530.64,
+        "ブラッドムーン": 2495.098
+      },
+      "delta": {
+        "フリーナクラシック": 35.2,
+        "ブラッドムーン": -35.2
+      },
+      "expected": {
+        "フリーナクラシック": 0.45,
+        "ブラッドムーン": 0.55
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 13,
+      "timestamp": "2026-08-03T20:44:51",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R2 M2",
+      "team1": "フリーナタルタリヤ",
+      "team2": "ドラゴンテイル",
+      "score1": 2,
+      "score2": 1,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナタルタリヤ": 2500.334,
+        "ドラゴンテイル": 2438.523
+      },
+      "after": {
+        "フリーナタルタリヤ": 2520.109,
+        "ドラゴンテイル": 2418.748
+      },
+      "delta": {
+        "フリーナタルタリヤ": 19.775,
+        "ドラゴンテイル": -19.775
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.588,
+        "ドラゴンテイル": 0.412
+      },
+      "margin_multiplier": 1.2
+    },
+    {
+      "event": 14,
+      "timestamp": "2026-08-03T20:45:35",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "WINNERS R3 M1",
+      "team1": "VisionStrikers",
+      "team2": "アイネクライネ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "VisionStrikers": 2557.849,
+        "アイネクライネ": 2584.559
+      },
+      "after": {
+        "VisionStrikers": 2528.304,
+        "アイネクライネ": 2614.104
+      },
+      "delta": {
+        "VisionStrikers": -29.545,
+        "アイネクライネ": 29.545
+      },
+      "expected": {
+        "VisionStrikers": 0.4616,
+        "アイネクライネ": 0.5384
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 15,
+      "timestamp": "2026-08-03T20:46:12",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOSERS R3 M1",
+      "team1": "フリーナクラシック",
+      "team2": "フリーナタルタリヤ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナクラシック": 2530.64,
+        "フリーナタルタリヤ": 2520.109
+      },
+      "after": {
+        "フリーナクラシック": 2497.671,
+        "フリーナタルタリヤ": 2553.079
+      },
+      "delta": {
+        "フリーナクラシック": -32.97,
+        "フリーナタルタリヤ": 32.97
+      },
+      "expected": {
+        "フリーナクラシック": 0.5152,
+        "フリーナタルタリヤ": 0.4848
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 16,
+      "timestamp": "2026-08-03T20:47:28",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "LOWER FINAL",
+      "team1": "フリーナタルタリヤ",
+      "team2": "VisionStrikers",
+      "score1": 3,
+      "score2": 0,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "フリーナタルタリヤ": 2553.079,
+        "VisionStrikers": 2528.304
+      },
+      "after": {
+        "フリーナタルタリヤ": 2582.801,
+        "VisionStrikers": 2498.582
+      },
+      "delta": {
+        "フリーナタルタリヤ": 29.722,
+        "VisionStrikers": -29.722
+      },
+      "expected": {
+        "フリーナタルタリヤ": 0.5356,
+        "VisionStrikers": 0.4644
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 17,
+      "timestamp": "2026-08-03T20:49:08",
+      "type": "series",
+      "competition_id": "swiss_20260803_203610",
+      "context": "GRAND FINAL",
+      "team1": "アイネクライネ",
+      "team2": "フリーナタルタリヤ",
+      "score1": 2,
+      "score2": 3,
+      "winner": "フリーナタルタリヤ",
+      "before": {
+        "アイネクライネ": 2614.104,
+        "フリーナタルタリヤ": 2582.801
+      },
+      "after": {
+        "アイネクライネ": 2589.691,
+        "フリーナタルタリヤ": 2607.213
+      },
+      "delta": {
+        "アイネクライネ": -24.413,
+        "フリーナタルタリヤ": 24.413
+      },
+      "expected": {
+        "アイネクライネ": 0.5449,
+        "フリーナタルタリヤ": 0.4551
+      },
+      "margin_multiplier": 1.12
+    },
+    {
+      "event": 18,
+      "timestamp": "2026-08-04T08:41:35",
+      "type": "series",
+      "competition_id": "series_20260804_084108",
+      "context": "SERIES",
+      "team1": "ドラゴンテイル",
+      "team2": "アイネクライネ",
+      "score1": 0,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "ドラゴンテイル": 2418.748,
+        "アイネクライネ": 2589.691
+      },
+      "after": {
+        "ドラゴンテイル": 2401.334,
+        "アイネクライネ": 2607.105
+      },
+      "delta": {
+        "ドラゴンテイル": -17.414,
+        "アイネクライネ": 17.414
+      },
+      "expected": {
+        "ドラゴンテイル": 0.2721,
+        "アイネクライネ": 0.7279
+      },
+      "margin_multiplier": 1.6
+    }
+  ]
+}

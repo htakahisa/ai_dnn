@@ -1,0 +1,170 @@
+{
+  "team1": "radiantdancer",
+  "team2": "EG2023",
+  "maps_to_win": 7,
+  "team1_wins": 1,
+  "team2_wins": 7,
+  "winner": "EG2023",
+  "maps": [
+    {
+      "number": 1,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 8,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 2,
+        "deaths": 1
+      },
+      "mvp2": {
+        "name": "Boostio",
+        "kills": 1,
+        "deaths": 0
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 2,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 8,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 2,
+        "deaths": 1
+      },
+      "mvp2": {
+        "name": "Ethan",
+        "kills": 2,
+        "deaths": 1
+      },
+      "initial_attacker": "EG2023",
+      "overtime": false
+    },
+    {
+      "number": 3,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 9,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 2,
+        "deaths": 1
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 2,
+        "deaths": 1
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 4,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 3,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 2,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 1,
+        "deaths": 1
+      },
+      "initial_attacker": "EG2023",
+      "overtime": false
+    },
+    {
+      "number": 5,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 11,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 1,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "jawgemo",
+        "kills": 0,
+        "deaths": 0
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 6,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 15,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "Derke",
+        "kills": 2,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "C0M",
+        "kills": 1,
+        "deaths": 0
+      },
+      "initial_attacker": "EG2023",
+      "overtime": true
+    },
+    {
+      "number": 7,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 10,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Lar0k",
+        "kills": 2,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 2,
+        "deaths": 1
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false
+    },
+    {
+      "number": 8,
+      "team1": "radiantdancer",
+      "team2": "EG2023",
+      "score1": 9,
+      "score2": 13,
+      "winner": "EG2023",
+      "mvp1": {
+        "name": "Sayonara",
+        "kills": 2,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "jawgemo",
+        "kills": 3,
+        "deaths": 0
+      },
+      "initial_attacker": "EG2023",
+      "overtime": false
+    }
+  ]
+}
