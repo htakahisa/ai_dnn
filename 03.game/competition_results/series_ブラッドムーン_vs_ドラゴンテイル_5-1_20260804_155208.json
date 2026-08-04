@@ -1,0 +1,878 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "ブラッドムーン": "toru_ai_v3",
+    "ドラゴンテイル": "toru_ai_v3"
+  },
+  "team1": "ブラッドムーン",
+  "team2": "ドラゴンテイル",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 1,
+  "winner": "ブラッドムーン",
+  "loser": "ドラゴンテイル",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 4011706364,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 2,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 5
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 13,
+        "deaths": 10
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 5
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 8
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 6
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 5
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 9
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 15
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 1,
+          "deaths": 15
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 13,
+          "deaths": 10
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 5,
+          "deaths": 14
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 1894343982,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 6,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 29,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 17,
+        "deaths": 11
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 9
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 9
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 29,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 5,
+          "deaths": 8
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 10
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 16,
+          "deaths": 12
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 3,
+          "deaths": 14
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 2,
+          "deaths": 13
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 17,
+          "deaths": 11
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 10,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 3198472039,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 15,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 41,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 36,
+        "deaths": 20
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 28,
+          "deaths": 19
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 20
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 41,
+          "deaths": 18
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 5,
+          "deaths": 17
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 17,
+          "deaths": 21
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 12,
+          "deaths": 21
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 5,
+          "deaths": 22
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 36,
+          "deaths": 20
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 17,
+          "deaths": 23
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 3016515017,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 31,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 23,
+        "deaths": 17
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 27,
+          "deaths": 12
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 19
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 31,
+          "deaths": 13
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 9
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 13
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 19,
+          "deaths": 22
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 18
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 2,
+          "deaths": 18
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 23,
+          "deaths": 17
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 15,
+          "deaths": 16
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 3206451810,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 1,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 24,
+        "deaths": 4
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 10,
+        "deaths": 11
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 24,
+          "deaths": 4
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 7
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 5
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 7,
+          "deaths": 5
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 0,
+          "deaths": 6
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 4,
+          "deaths": 14
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 0,
+          "deaths": 14
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 10,
+          "deaths": 11
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 8,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "seed": 96345607,
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 13,
+      "score2": 11,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 30,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 19,
+        "deaths": 17
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 30,
+          "deaths": 13
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 23,
+          "deaths": 14
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 15
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 16
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 19,
+          "deaths": 17
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 11,
+          "deaths": 19
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 8,
+          "deaths": 15
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 16,
+          "deaths": 16
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 17,
+          "deaths": 19
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 156,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.294,
+        "kills_per_map": 26.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 139,
+        "deaths": 62,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.242,
+        "kills_per_map": 23.167
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 104,
+        "deaths": 76,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.368,
+        "kills_per_map": 17.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 115,
+        "deaths": 85,
+        "maps": 6,
+        "mvps": 5,
+        "kd": 1.353,
+        "kills_per_map": 19.167
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 67,
+        "deaths": 55,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.218,
+        "kills_per_map": 11.167
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 115,
+        "deaths": 85,
+        "maps": 6,
+        "mvps": 5,
+        "kd": 1.353,
+        "kills_per_map": 19.167
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 156,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.294,
+        "kills_per_map": 26.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 139,
+        "deaths": 62,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.242,
+        "kills_per_map": 23.167
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 82,
+        "deaths": 101,
+        "maps": 6,
+        "mvps": 1,
+        "kd": 0.812,
+        "kills_per_map": 13.667
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 104,
+        "deaths": 76,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.368,
+        "kills_per_map": 17.333
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 156,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.294,
+        "kills_per_map": 26.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 139,
+        "deaths": 62,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.242,
+        "kills_per_map": 23.167
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 115,
+        "deaths": 85,
+        "maps": 6,
+        "mvps": 5,
+        "kd": 1.353,
+        "kills_per_map": 19.167
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 104,
+        "deaths": 76,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.368,
+        "kills_per_map": 17.333
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 82,
+        "deaths": 101,
+        "maps": 6,
+        "mvps": 1,
+        "kd": 0.812,
+        "kills_per_map": 13.667
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 156,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.294,
+        "kills_per_map": 26.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 139,
+        "deaths": 62,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.242,
+        "kills_per_map": 23.167
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 115,
+        "deaths": 85,
+        "maps": 6,
+        "mvps": 5,
+        "kd": 1.353,
+        "kills_per_map": 19.167
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 104,
+        "deaths": 76,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.368,
+        "kills_per_map": 17.333
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 82,
+        "deaths": 101,
+        "maps": 6,
+        "mvps": 1,
+        "kd": 0.812,
+        "kills_per_map": 13.667
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 156,
+        "deaths": 68,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.294,
+        "kills_per_map": 26.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 139,
+        "deaths": 62,
+        "maps": 6,
+        "mvps": 3,
+        "kd": 2.242,
+        "kills_per_map": 23.167
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 104,
+        "deaths": 76,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.368,
+        "kills_per_map": 17.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 115,
+        "deaths": 85,
+        "maps": 6,
+        "mvps": 5,
+        "kd": 1.353,
+        "kills_per_map": 19.167
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 67,
+        "deaths": 55,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 1.218,
+        "kills_per_map": 11.167
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 82,
+        "deaths": 101,
+        "maps": 6,
+        "mvps": 1,
+        "kd": 0.812,
+        "kills_per_map": 13.667
+      },
+      {
+        "player": "vo0kashu",
+        "team": "ドラゴンテイル",
+        "kills": 72,
+        "deaths": 99,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 0.727,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Derke",
+        "team": "ドラゴンテイル",
+        "kills": 45,
+        "deaths": 99,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 0.455,
+        "kills_per_map": 7.5
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 15,
+        "deaths": 71,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 0.211,
+        "kills_per_map": 2.5
+      },
+      {
+        "player": "Ethan",
+        "team": "ドラゴンテイル",
+        "kills": 18,
+        "deaths": 97,
+        "maps": 6,
+        "mvps": 0,
+        "kd": 0.186,
+        "kills_per_map": 3.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 73,
+      "timestamp": "2026-08-04T15:52:09",
+      "type": "series",
+      "competition_id": "series_20260804_155033",
+      "context": "SERIES",
+      "team1": "ブラッドムーン",
+      "team2": "ドラゴンテイル",
+      "score1": 5,
+      "score2": 1,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ブラッドムーン": 2787.112,
+        "ドラゴンテイル": 2430.478
+      },
+      "after": {
+        "ブラッドムーン": 2793.482,
+        "ドラゴンテイル": 2424.108
+      },
+      "delta": {
+        "ブラッドムーン": 6.37,
+        "ドラゴンテイル": -6.37
+      },
+      "expected": {
+        "ブラッドムーン": 0.8862,
+        "ドラゴンテイル": 0.1138
+      },
+      "margin_multiplier": 1.4
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2793.482,
+    "フリーナタルタリヤ": 2610.151,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2554.223,
+    "EG2023": 2494.804,
+    "Fnatic2023": 2455.285,
+    "radiantdancer": 2444.222,
+    "VisionStrikers": 2443.527,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "日本代表": 2389.74,
+    "クイーンズフラワーギャンビット": 2355.525
+  }
+}

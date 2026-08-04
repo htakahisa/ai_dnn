@@ -1,0 +1,629 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "アイネクライネ": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "アイネクライネ",
+  "maps_to_win": 2,
+  "team1_wins": 1,
+  "team2_wins": 2,
+  "winner": "アイネクライネ",
+  "loser": "日本代表",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3274380456,
+      "team1": "日本代表",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 7,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 18,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 25,
+        "deaths": 12
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 18,
+          "deaths": 13
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 12
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 13
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 9
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 5,
+          "deaths": 15
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 13
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 25,
+          "deaths": 12
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 19,
+          "deaths": 11
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 14
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 534076200,
+      "team1": "日本代表",
+      "team2": "アイネクライネ",
+      "score1": 4,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 14,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "cNed",
+        "kills": 27,
+        "deaths": 5
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 14
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 15
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 14,
+          "deaths": 15
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 11
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 9
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 8
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 27,
+          "deaths": 5
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 17,
+          "deaths": 5
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 10,
+          "deaths": 8
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 43389866,
+      "team1": "日本代表",
+      "team2": "アイネクライネ",
+      "score1": 10,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 19,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 27,
+        "deaths": 14
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 19,
+          "deaths": 16
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 17
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 18,
+          "deaths": 17
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 12
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 15
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 0,
+          "deaths": 17
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 17,
+          "deaths": 15
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 19,
+          "deaths": 16
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 27,
+          "deaths": 14
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 14,
+          "deaths": 16
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 71,
+        "deaths": 33,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.152,
+        "kills_per_map": 23.667
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 63,
+        "deaths": 30,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.1,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.219,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 48,
+        "deaths": 45,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.067,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 43,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.047,
+        "kills_per_map": 15.0
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 71,
+        "deaths": 33,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.152,
+        "kills_per_map": 23.667
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 43,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.047,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 63,
+        "deaths": 30,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.1,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 48,
+        "deaths": 45,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.067,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.219,
+        "kills_per_map": 13.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 71,
+        "deaths": 33,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.152,
+        "kills_per_map": 23.667
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 63,
+        "deaths": 30,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.1,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 48,
+        "deaths": 45,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.067,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 43,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.047,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.219,
+        "kills_per_map": 13.0
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 71,
+        "deaths": 33,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.152,
+        "kills_per_map": 23.667
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 63,
+        "deaths": 30,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.1,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 48,
+        "deaths": 45,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.067,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 43,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.047,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.219,
+        "kills_per_map": 13.0
+      }
+    ],
+    "all_players": [
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 71,
+        "deaths": 33,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.152,
+        "kills_per_map": 23.667
+      },
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 63,
+        "deaths": 30,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.1,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.219,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 48,
+        "deaths": 45,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.067,
+        "kills_per_map": 16.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 43,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.047,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 32,
+        "deaths": 36,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.889,
+        "kills_per_map": 10.667
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 30,
+        "deaths": 38,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.789,
+        "kills_per_map": 10.0
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 26,
+        "deaths": 41,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.634,
+        "kills_per_map": 8.667
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 20,
+        "deaths": 44,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.455,
+        "kills_per_map": 6.667
+      },
+      {
+        "player": "FNS",
+        "team": "アイネクライネ",
+        "kills": 9,
+        "deaths": 41,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.22,
+        "kills_per_map": 3.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 87,
+      "timestamp": "2026-08-04T17:10:32",
+      "type": "series",
+      "competition_id": "series_20260804_170953",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "アイネクライネ",
+      "score1": 1,
+      "score2": 2,
+      "winner": "アイネクライネ",
+      "before": {
+        "日本代表": 2519.964,
+        "アイネクライネ": 2611.576
+      },
+      "after": {
+        "日本代表": 2502.15,
+        "アイネクライネ": 2629.39
+      },
+      "delta": {
+        "日本代表": -17.814,
+        "アイネクライネ": 17.814
+      },
+      "expected": {
+        "日本代表": 0.3711,
+        "アイネクライネ": 0.6289
+      },
+      "margin_multiplier": 1.2
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2810.025,
+    "アイネクライネ": 2629.39,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2502.15,
+    "radiantdancer": 2474.556,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2331.137
+  }
+}

@@ -1,0 +1,795 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "Fnatic2023": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "Fnatic2023",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 0,
+  "winner": "日本代表",
+  "loser": "Fnatic2023",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2733133443,
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 6,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 26,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Alfajer",
+        "kills": 20,
+        "deaths": 10
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 14,
+          "deaths": 10
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 9
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 26,
+          "deaths": 7
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 11,
+          "deaths": 10
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 8
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 4,
+          "deaths": 15
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 10,
+          "deaths": 12
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 20,
+          "deaths": 10
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 3259507022,
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 5,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 23,
+        "deaths": 5
+      },
+      "mvp2": {
+        "name": "Leo",
+        "kills": 11,
+        "deaths": 13
+      },
+      "initial_attacker": "Fnatic2023",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 23,
+          "deaths": 5
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 10
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 17,
+          "deaths": 8
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 4
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 7
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 12
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 11,
+          "deaths": 13
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 2,
+          "deaths": 14
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 9,
+          "deaths": 8
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 5,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 3112660491,
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 5,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 24,
+        "deaths": 8
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 10,
+        "deaths": 6
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 24,
+          "deaths": 8
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 9
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 8
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 5
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 5
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 9,
+          "deaths": 12
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 1,
+          "deaths": 14
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 10,
+          "deaths": 6
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 8,
+          "deaths": 14
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 1599511122,
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 6,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 19,
+        "deaths": 6
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 10,
+        "deaths": 9
+      },
+      "initial_attacker": "Fnatic2023",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 19,
+          "deaths": 6
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 9
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 7
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 10,
+          "deaths": 9
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 17,
+          "deaths": 7
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 16
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 16
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 6,
+          "deaths": 14
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 10,
+          "deaths": 9
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 8,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 1367102934,
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 2,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 24,
+        "deaths": 2
+      },
+      "mvp2": {
+        "name": "Alfajer",
+        "kills": 7,
+        "deaths": 11
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 3
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 3
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 24,
+          "deaths": 2
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 3
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 1
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 1,
+          "deaths": 11
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 0,
+          "deaths": 12
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 1,
+          "deaths": 5
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 11
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 103,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 3.219,
+        "kills_per_map": 20.6
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 92,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 2.875,
+        "kills_per_map": 18.4
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.355,
+        "kills_per_map": 8.4
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 37,
+        "deaths": 28,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.321,
+        "kills_per_map": 7.4
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 40,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.0,
+        "kills_per_map": 8.0
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 92,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 2.875,
+        "kills_per_map": 18.4
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 103,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 3.219,
+        "kills_per_map": 20.6
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 40,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.0,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 48,
+        "deaths": 62,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 0.774,
+        "kills_per_map": 9.6
+      },
+      {
+        "player": "Leo",
+        "team": "Fnatic2023",
+        "kills": 33,
+        "deaths": 66,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.5,
+        "kills_per_map": 6.6
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 103,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 3.219,
+        "kills_per_map": 20.6
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 92,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 2.875,
+        "kills_per_map": 18.4
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 48,
+        "deaths": 62,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 0.774,
+        "kills_per_map": 9.6
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.355,
+        "kills_per_map": 8.4
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 40,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.0,
+        "kills_per_map": 8.0
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 103,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 3.219,
+        "kills_per_map": 20.6
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 92,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 2.875,
+        "kills_per_map": 18.4
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 48,
+        "deaths": 62,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 0.774,
+        "kills_per_map": 9.6
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.355,
+        "kills_per_map": 8.4
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 40,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.0,
+        "kills_per_map": 8.0
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 103,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 3.219,
+        "kills_per_map": 20.6
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 92,
+        "deaths": 32,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 2.875,
+        "kills_per_map": 18.4
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.355,
+        "kills_per_map": 8.4
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 37,
+        "deaths": 28,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.321,
+        "kills_per_map": 7.4
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 40,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.0,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 48,
+        "deaths": 62,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 0.774,
+        "kills_per_map": 9.6
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 28,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.7,
+        "kills_per_map": 5.6
+      },
+      {
+        "player": "Leo",
+        "team": "Fnatic2023",
+        "kills": 33,
+        "deaths": 66,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.5,
+        "kills_per_map": 6.6
+      },
+      {
+        "player": "Derke",
+        "team": "Fnatic2023",
+        "kills": 28,
+        "deaths": 68,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.412,
+        "kills_per_map": 5.6
+      },
+      {
+        "player": "Boaster",
+        "team": "Fnatic2023",
+        "kills": 14,
+        "deaths": 66,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.212,
+        "kills_per_map": 2.8
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 78,
+      "timestamp": "2026-08-04T16:22:03",
+      "type": "series",
+      "competition_id": "series_20260804_162059",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "Fnatic2023",
+      "score1": 5,
+      "score2": 0,
+      "winner": "日本代表",
+      "before": {
+        "日本代表": 2401.585,
+        "Fnatic2023": 2455.285
+      },
+      "after": {
+        "日本代表": 2438.492,
+        "Fnatic2023": 2418.378
+      },
+      "delta": {
+        "日本代表": 36.907,
+        "Fnatic2023": -36.907
+      },
+      "expected": {
+        "日本代表": 0.4233,
+        "Fnatic2023": 0.5767
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2802.817,
+    "フリーナタルタリヤ": 2610.151,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2554.223,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "radiantdancer": 2444.222,
+    "日本代表": 2438.492,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2418.378,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}

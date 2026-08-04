@@ -1,0 +1,629 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "ドラゴンテイル": "toru_ai_v3",
+    "VisionStrikers": "toru_ai_v3"
+  },
+  "team1": "ドラゴンテイル",
+  "team2": "VisionStrikers",
+  "maps_to_win": 2,
+  "team1_wins": 2,
+  "team2_wins": 1,
+  "winner": "ドラゴンテイル",
+  "loser": "VisionStrikers",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 734824837,
+      "team1": "ドラゴンテイル",
+      "team2": "VisionStrikers",
+      "score1": 11,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Canezerra",
+        "kills": 25,
+        "deaths": 14
+      },
+      "mvp2": {
+        "name": "stax",
+        "kills": 23,
+        "deaths": 15
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 22,
+          "deaths": 15
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 4,
+          "deaths": 19
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 8,
+          "deaths": 18
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 25,
+          "deaths": 14
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 15,
+          "deaths": 17
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 16,
+          "deaths": 15
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 23,
+          "deaths": 15
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 18,
+          "deaths": 19
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 8,
+          "deaths": 14
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 18,
+          "deaths": 11
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 148352480,
+      "team1": "ドラゴンテイル",
+      "team2": "VisionStrikers",
+      "score1": 15,
+      "score2": 13,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 30,
+        "deaths": 21
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 35,
+        "deaths": 12
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 30,
+          "deaths": 21
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 10,
+          "deaths": 23
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 22
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 20,
+          "deaths": 22
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 17,
+          "deaths": 23
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 15,
+          "deaths": 21
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 23,
+          "deaths": 22
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 21,
+          "deaths": 19
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 17,
+          "deaths": 10
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 35,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 1070512695,
+      "team1": "ドラゴンテイル",
+      "team2": "VisionStrikers",
+      "score1": 13,
+      "score2": 10,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Canezerra",
+        "kills": 21,
+        "deaths": 19
+      },
+      "mvp2": {
+        "name": "Rb",
+        "kills": 24,
+        "deaths": 16
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 15,
+          "deaths": 17
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 20
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 17
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 21,
+          "deaths": 19
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 15,
+          "deaths": 19
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 22,
+          "deaths": 16
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 16,
+          "deaths": 18
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 24,
+          "deaths": 16
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 8,
+          "deaths": 10
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 22,
+          "deaths": 9
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 75,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.344,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 67,
+        "deaths": 53,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.264,
+        "kills_per_map": 22.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 66,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.2,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 63,
+        "deaths": 54,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.167,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 62,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.127,
+        "kills_per_map": 20.667
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 66,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.2,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 75,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.344,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 67,
+        "deaths": 53,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.264,
+        "kills_per_map": 22.333
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 63,
+        "deaths": 54,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.167,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 62,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.127,
+        "kills_per_map": 20.667
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 75,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.344,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 67,
+        "deaths": 53,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.264,
+        "kills_per_map": 22.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 66,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.2,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 63,
+        "deaths": 54,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.167,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 62,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.127,
+        "kills_per_map": 20.667
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 75,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.344,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 67,
+        "deaths": 53,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.264,
+        "kills_per_map": 22.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 66,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.2,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 63,
+        "deaths": 54,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.167,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 62,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.127,
+        "kills_per_map": 20.667
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 75,
+        "deaths": 32,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.344,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 67,
+        "deaths": 53,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.264,
+        "kills_per_map": 22.333
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 66,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 1.2,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 63,
+        "deaths": 54,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.167,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 62,
+        "deaths": 55,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 1.127,
+        "kills_per_map": 20.667
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 52,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.019,
+        "kills_per_map": 17.667
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 33,
+        "deaths": 34,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.971,
+        "kills_per_map": 11.0
+      },
+      {
+        "player": "vo0kashu",
+        "team": "ドラゴンテイル",
+        "kills": 47,
+        "deaths": 59,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.797,
+        "kills_per_map": 15.667
+      },
+      {
+        "player": "Ethan",
+        "team": "ドラゴンテイル",
+        "kills": 24,
+        "deaths": 57,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.421,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "Derke",
+        "team": "ドラゴンテイル",
+        "kills": 23,
+        "deaths": 62,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.371,
+        "kills_per_map": 7.667
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 90,
+      "timestamp": "2026-08-04T17:13:12",
+      "type": "series",
+      "competition_id": "series_20260804_171206",
+      "context": "SERIES",
+      "team1": "ドラゴンテイル",
+      "team2": "VisionStrikers",
+      "score1": 2,
+      "score2": 1,
+      "winner": "ドラゴンテイル",
+      "before": {
+        "ドラゴンテイル": 2424.108,
+        "VisionStrikers": 2509.937
+      },
+      "after": {
+        "ドラゴンテイル": 2453.919,
+        "VisionStrikers": 2480.126
+      },
+      "delta": {
+        "ドラゴンテイル": 29.811,
+        "VisionStrikers": -29.811
+      },
+      "expected": {
+        "ドラゴンテイル": 0.3789,
+        "VisionStrikers": 0.6211
+      },
+      "margin_multiplier": 1.2
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2755.322,
+    "アイネクライネ": 2629.39,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2517.026,
+    "VisionStrikers": 2480.126,
+    "radiantdancer": 2474.556,
+    "ドラゴンテイル": 2453.919,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2331.137
+  }
+}

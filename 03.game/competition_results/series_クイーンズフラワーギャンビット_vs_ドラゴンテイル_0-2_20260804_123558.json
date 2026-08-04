@@ -1,0 +1,546 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "クイーンズフラワーギャンビット": "toru_ai_v3",
+    "ドラゴンテイル": "toru_ai_v3"
+  },
+  "team1": "クイーンズフラワーギャンビット",
+  "team2": "ドラゴンテイル",
+  "maps_to_win": 2,
+  "team1_wins": 0,
+  "team2_wins": 2,
+  "winner": "ドラゴンテイル",
+  "loser": "クイーンズフラワーギャンビット",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 1435140832,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "score1": 11,
+      "score2": 13,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Chronicle",
+        "kills": 25,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Canezerra",
+        "kills": 32,
+        "deaths": 15
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 14,
+          "deaths": 15
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 19,
+          "deaths": 14
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 11,
+          "deaths": 18
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 25,
+          "deaths": 9
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 9,
+          "deaths": 15
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 14,
+          "deaths": 17
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 14
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 32,
+          "deaths": 15
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 19
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 2505686406,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "score1": 10,
+      "score2": 13,
+      "winner": "ドラゴンテイル",
+      "mvp1": {
+        "name": "Chronicle",
+        "kills": 24,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 32,
+        "deaths": 13
+      },
+      "initial_attacker": "ドラゴンテイル",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 22,
+          "deaths": 13
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 17
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 7,
+          "deaths": 17
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 24,
+          "deaths": 11
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 16
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ドラゴンテイル",
+          "kills": 32,
+          "deaths": 13
+        },
+        {
+          "name": "Derke",
+          "team": "ドラゴンテイル",
+          "kills": 10,
+          "deaths": 14
+        },
+        {
+          "name": "Ethan",
+          "team": "ドラゴンテイル",
+          "kills": 10,
+          "deaths": 12
+        },
+        {
+          "name": "Canezerra",
+          "team": "ドラゴンテイル",
+          "kills": 9,
+          "deaths": 9
+        },
+        {
+          "name": "vo0kashu",
+          "team": "ドラゴンテイル",
+          "kills": 13,
+          "deaths": 14
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 49,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.45,
+        "kills_per_map": 24.5
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 41,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.708,
+        "kills_per_map": 20.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 46,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.533,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 36,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.286,
+        "kills_per_map": 18.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 25,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.806,
+        "kills_per_map": 12.5
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 49,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.45,
+        "kills_per_map": 24.5
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 41,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.708,
+        "kills_per_map": 20.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 46,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.533,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 36,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.286,
+        "kills_per_map": 18.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 25,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.806,
+        "kills_per_map": 12.5
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 49,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.45,
+        "kills_per_map": 24.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 46,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.533,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 41,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.708,
+        "kills_per_map": 20.5
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 36,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.286,
+        "kills_per_map": 18.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 25,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.806,
+        "kills_per_map": 12.5
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 49,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.45,
+        "kills_per_map": 24.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 46,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.533,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 41,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.708,
+        "kills_per_map": 20.5
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 36,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.286,
+        "kills_per_map": 18.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 25,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.806,
+        "kills_per_map": 12.5
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 49,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.45,
+        "kills_per_map": 24.5
+      },
+      {
+        "player": "Canezerra",
+        "team": "ドラゴンテイル",
+        "kills": 41,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.708,
+        "kills_per_map": 20.5
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ドラゴンテイル",
+        "kills": 46,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 1.533,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 36,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.286,
+        "kills_per_map": 18.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 25,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.806,
+        "kills_per_map": 12.5
+      },
+      {
+        "player": "Ethan",
+        "team": "ドラゴンテイル",
+        "kills": 17,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.68,
+        "kills_per_map": 8.5
+      },
+      {
+        "player": "Derke",
+        "team": "ドラゴンテイル",
+        "kills": 19,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.679,
+        "kills_per_map": 9.5
+      },
+      {
+        "player": "vo0kashu",
+        "team": "ドラゴンテイル",
+        "kills": 22,
+        "deaths": 33,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.667,
+        "kills_per_map": 11.0
+      },
+      {
+        "player": "nAts",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 18,
+        "deaths": 35,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.514,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Sayonara",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 12,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.387,
+        "kills_per_map": 6.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 68,
+      "timestamp": "2026-08-04T12:35:59",
+      "type": "series",
+      "competition_id": "series_20260804_122807",
+      "context": "SERIES",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "ドラゴンテイル",
+      "score1": 0,
+      "score2": 2,
+      "winner": "ドラゴンテイル",
+      "before": {
+        "クイーンズフラワーギャンビット": 2385.21,
+        "ドラゴンテイル": 2410.393
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2355.525,
+        "ドラゴンテイル": 2440.078
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -29.685,
+        "ドラゴンテイル": 29.685
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.4638,
+        "ドラゴンテイル": 0.5362
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2741.407,
+    "アイネクライネ": 2619.341,
+    "フリーナタルタリヤ": 2610.151,
+    "フリーナクラシック": 2554.223,
+    "EG2023": 2494.804,
+    "radiantdancer": 2459.905,
+    "Fnatic2023": 2455.285,
+    "VisionStrikers": 2443.527,
+    "ドラゴンテイル": 2440.078,
+    "Leo軸": 2436.014,
+    "日本代表": 2389.74,
+    "クイーンズフラワーギャンビット": 2355.525
+  }
+}

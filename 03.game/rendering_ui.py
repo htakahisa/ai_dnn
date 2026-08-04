@@ -378,10 +378,23 @@ class RenderingUIMixin:
                 text=f"キャラコン(回避) {dodge_pct}%   HS {hs_pct}%",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
+            condition_text = getattr(char, "condition_text", "普通")
+            condition_color = (
+                getattr(char, "condition_color", "#d6dde8")
+                if char.is_alive
+                else "#777b83"
+            )
+
             self.canvas.create_text(
                 x0 + 18, y + 77,
                 text=f"反応速度 {reaction_text}",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
+            )
+            self.canvas.create_text(
+                x0 + panel_w / 2, y + 77,
+                text=f"調子 {condition_text}",
+                anchor="center", fill=condition_color,
+                font=("Arial", 7, "bold")
             )
             self.canvas.create_text(
                 x0 + panel_w - 18, y + 77,

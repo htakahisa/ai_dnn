@@ -110,9 +110,42 @@ class IQPerceptionEngine:
         self._cache = {}
         self._last_tick = None
 
+        # ラウンド中に一度でもスパイク解除を開始した選手を記憶する。
+        # Character実体のidを使うため、同名選手がいても混同しない。
+        self._defuse_touched_viewers = set()
+        self._memory_round = None
+
     def clear_cache(self):
         self._cache.clear()
         self._last_tick = None
+        self._defuse_touched_viewers.clear()
+        self._memory_round = None
+
+    def _sync_round_memory(self, game):
+        """ラウンドが変わったら、解除位置記憶をリセットする。"""
+        current_round = int(getattr(game, "current_round", 0))
+        if self._memory_round != current_round:
+            self._defuse_touched_viewers.clear()
+            self._memory_round = current_round
+
+    def _update_defuse_touch_memory(self, viewer, game):
+        """解除ゲージが進んでいるなら、このラウンドの解除経験者として登録する。"""
+        self._sync_round_memory(game)
+        # Defenderが解除を1Tickでも開始した時点で記憶する。
+        # defuse_timerは解除中に正の値になる既存フィールド。
+        try:
+            defuse_progress = float(getattr(viewer, "defuse_timer", 0.0))
+        except (TypeError, ValueError):
+            defuse_progress = 0.0
+
+        is_defender = str(getattr(viewer, "team", "")) == "D"
+        if is_defender and defuse_progress > 0.0:
+            self._defuse_touched_viewers.add(id(viewer))
+
+    def has_started_defuse(self, viewer, game) -> bool:
+        """このラウンド中にviewerが一度でも解除を開始したか。"""
+        self._update_defuse_touch_memory(viewer, game)
+        return id(viewer) in self._defuse_touched_viewers
 
     def quality(self, viewer):
         return _quality(viewer)
@@ -201,6 +234,9 @@ class IQPerceptionEngine:
         )
 
     def build_game_view(self, *, viewer, game):
+        self._update_defuse_touch_memory(viewer, game)
+        started_defuse = id(viewer) in self._defuse_touched_viewers
+
         tick = self._tick_key(game)
         if tick != self._last_tick:
             self._cache.clear()
@@ -208,8 +244,10 @@ class IQPerceptionEngine:
         key = (
             id(game),
             tick,
+            id(viewer),
             getattr(viewer, "name", ""),
             round(_effective_iq(viewer), 3),
+            started_defuse,
         )
         if key in self._cache:
             return self._cache[key]
@@ -230,15 +268,39 @@ class IQPerceptionEngine:
             proxies.append(proxy)
             mapping[id(real)] = proxy
 
+        real_spike_pos = _pos(getattr(game, "spike_pos", None))
+        real_planted_pos = _pos(getattr(game, "planted_pos", None))
+
+        # 一度でもスパイク解除を開始したディフェンダーは、そのラウンド中、
+        # 設置済みスパイク位置をIQ誤差なしで正確に把握し続ける。
+        # 未設置で地面に落ちているspike_posは、解除経験とは無関係なので
+        # 従来どおりIQによる座標誤差を受ける。
+        perceived_spike_pos = self._blur_pos(
+            game,
+            viewer,
+            getattr(game, "spike_pos", None),
+            4,
+            "spike",
+            "drop",
+        )
+        perceived_planted_pos = (
+            [real_planted_pos[0], real_planted_pos[1]]
+            if started_defuse and real_planted_pos is not None
+            else self._blur_pos(
+                game,
+                viewer,
+                getattr(game, "planted_pos", None),
+                4,
+                "spike",
+                "plant",
+            )
+        )
+
         overrides = {
             "grid": game.grid,
             "chars": proxies,
-            "spike_pos": self._blur_pos(
-                game, viewer, getattr(game, "spike_pos", None), 4, "spike", "drop"
-            ),
-            "planted_pos": self._blur_pos(
-                game, viewer, getattr(game, "planted_pos", None), 4, "spike", "plant"
-            ),
+            "spike_pos": perceived_spike_pos,
+            "planted_pos": perceived_planted_pos,
             "target_plant_pos": self._blur_pos(
                 game,
                 viewer,

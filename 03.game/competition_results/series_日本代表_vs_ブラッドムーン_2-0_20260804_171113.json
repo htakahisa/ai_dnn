@@ -1,0 +1,546 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "ブラッドムーン": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "ブラッドムーン",
+  "maps_to_win": 2,
+  "team1_wins": 2,
+  "team2_wins": 0,
+  "winner": "日本代表",
+  "loser": "ブラッドムーン",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2900289858,
+      "team1": "日本代表",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 10,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 16,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 33,
+        "deaths": 10
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 13,
+          "deaths": 13
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 13
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 13,
+          "deaths": 14
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 11,
+          "deaths": 16
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 33,
+          "deaths": 10
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 7,
+          "deaths": 12
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 15
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 1,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 443775879,
+      "team1": "日本代表",
+      "team2": "ブラッドムーン",
+      "score1": 13,
+      "score2": 11,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 26,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Nanasaki",
+        "kills": 30,
+        "deaths": 15
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 17
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 10,
+          "deaths": 18
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 26,
+          "deaths": 15
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 14,
+          "deaths": 12
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 2,
+          "deaths": 19
+        },
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 30,
+          "deaths": 15
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 15
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 15
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 9
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 14
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 63,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.52,
+        "kills_per_map": 31.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.5,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 34,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.417,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 31,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.148,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 26,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.038,
+        "kills_per_map": 13.5
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 63,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.52,
+        "kills_per_map": 31.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.5,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 34,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.417,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 31,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.148,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 26,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.038,
+        "kills_per_map": 13.5
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 63,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.52,
+        "kills_per_map": 31.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.5,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 34,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.417,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 31,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.148,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 26,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.038,
+        "kills_per_map": 13.5
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 63,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.52,
+        "kills_per_map": 31.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.5,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 34,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.417,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 31,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.148,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 26,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.038,
+        "kills_per_map": 13.5
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 63,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 2.52,
+        "kills_per_map": 31.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 42,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.5,
+        "kills_per_map": 21.0
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 34,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.417,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 31,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.148,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 26,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.038,
+        "kills_per_map": 13.5
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.844,
+        "kills_per_map": 13.5
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 21,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.778,
+        "kills_per_map": 10.5
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 23,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.742,
+        "kills_per_map": 11.5
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 13,
+        "deaths": 35,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.371,
+        "kills_per_map": 6.5
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 3,
+        "deaths": 29,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.103,
+        "kills_per_map": 1.5
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 88,
+      "timestamp": "2026-08-04T17:11:13",
+      "type": "series",
+      "competition_id": "series_20260804_171041",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "ブラッドムーン",
+      "score1": 2,
+      "score2": 0,
+      "winner": "日本代表",
+      "before": {
+        "日本代表": 2502.15,
+        "ブラッドムーン": 2810.025
+      },
+      "after": {
+        "日本代表": 2556.853,
+        "ブラッドムーン": 2755.322
+      },
+      "delta": {
+        "日本代表": 54.703,
+        "ブラッドムーン": -54.703
+      },
+      "expected": {
+        "日本代表": 0.1453,
+        "ブラッドムーン": 0.8547
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2755.322,
+    "アイネクライネ": 2629.39,
+    "日本代表": 2556.853,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "radiantdancer": 2474.556,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2331.137
+  }
+}

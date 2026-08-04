@@ -1,0 +1,961 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "ブラッドムーン": "toru_ai_v3",
+    "radiantdancer": "toru_ai_v3"
+  },
+  "team1": "ブラッドムーン",
+  "team2": "radiantdancer",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 2,
+  "winner": "ブラッドムーン",
+  "loser": "radiantdancer",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 329068199,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 10,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 31,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "marteen",
+        "kills": 16,
+        "deaths": 17
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 31,
+          "deaths": 13
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 13
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 29,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 6
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 10
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 16
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 5,
+          "deaths": 20
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 8,
+          "deaths": 20
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 16,
+          "deaths": 17
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 16,
+          "deaths": 20
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 1092733384,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 12,
+      "score2": 14,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 30,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 18,
+        "deaths": 22
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 30,
+          "deaths": 17
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 24,
+          "deaths": 17
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 26,
+          "deaths": 15
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 10
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 6,
+          "deaths": 17
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 17,
+          "deaths": 19
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 17,
+          "deaths": 18
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 11,
+          "deaths": 19
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 13,
+          "deaths": 20
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 18,
+          "deaths": 22
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 3168538161,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 17,
+      "score2": 19,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 33,
+        "deaths": 23
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 29,
+        "deaths": 19
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 33,
+          "deaths": 24
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 28,
+          "deaths": 25
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 33,
+          "deaths": 23
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 20
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 20,
+          "deaths": 24
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 19,
+          "deaths": 26
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 17,
+          "deaths": 27
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 21,
+          "deaths": 19
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 29,
+          "deaths": 19
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 1135587111,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 14,
+      "score2": 12,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 43,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "marteen",
+        "kills": 31,
+        "deaths": 15
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 43,
+          "deaths": 15
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 16
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 25,
+          "deaths": 13
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 10,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 0,
+          "deaths": 17
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 16
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 19
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 21
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 31,
+          "deaths": 15
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 17,
+          "deaths": 22
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 66970719,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 0,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 28,
+        "deaths": 3
+      },
+      "mvp2": {
+        "name": "Derke",
+        "kills": 7,
+        "deaths": 13
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 28,
+          "deaths": 3
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 4
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 5
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 10,
+          "deaths": 5
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 0,
+          "deaths": 4
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 4,
+          "deaths": 13
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 1,
+          "deaths": 13
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 5,
+          "deaths": 10
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 4,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "seed": 39392375,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 9,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 26,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "something",
+        "kills": 16,
+        "deaths": 13
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 14
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 15
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 26,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 13
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 10,
+          "deaths": 15
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 10,
+          "deaths": 15
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 15,
+          "deaths": 14
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 15,
+          "deaths": 13
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 16,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "seed": 3865994436,
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 13,
+      "score2": 2,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 23,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "marteen",
+        "kills": 12,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 5
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 7
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 23,
+          "deaths": 7
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 8,
+          "deaths": 7
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 4,
+          "deaths": 7
+        },
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 2,
+          "deaths": 15
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 12,
+          "deaths": 12
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 12
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 199,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.187,
+        "kills_per_map": 28.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 174,
+        "deaths": 87,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.0,
+        "kills_per_map": 24.857
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 89,
+        "deaths": 66,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.348,
+        "kills_per_map": 12.714
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 118,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.216,
+        "kills_per_map": 16.857
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 113,
+        "deaths": 106,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 1.066,
+        "kills_per_map": 16.143
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 199,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.187,
+        "kills_per_map": 28.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 174,
+        "deaths": 87,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.0,
+        "kills_per_map": 24.857
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 113,
+        "deaths": 106,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 1.066,
+        "kills_per_map": 16.143
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 107,
+        "deaths": 120,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 0.892,
+        "kills_per_map": 15.286
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 77,
+        "deaths": 117,
+        "maps": 7,
+        "mvps": 1,
+        "kd": 0.658,
+        "kills_per_map": 11.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 199,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.187,
+        "kills_per_map": 28.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 174,
+        "deaths": 87,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.0,
+        "kills_per_map": 24.857
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 118,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.216,
+        "kills_per_map": 16.857
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 113,
+        "deaths": 106,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 1.066,
+        "kills_per_map": 16.143
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 107,
+        "deaths": 120,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 0.892,
+        "kills_per_map": 15.286
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 199,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.187,
+        "kills_per_map": 28.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 174,
+        "deaths": 87,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.0,
+        "kills_per_map": 24.857
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 118,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.216,
+        "kills_per_map": 16.857
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 113,
+        "deaths": 106,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 1.066,
+        "kills_per_map": 16.143
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 107,
+        "deaths": 120,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 0.892,
+        "kills_per_map": 15.286
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 199,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.187,
+        "kills_per_map": 28.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 174,
+        "deaths": 87,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.0,
+        "kills_per_map": 24.857
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 89,
+        "deaths": 66,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.348,
+        "kills_per_map": 12.714
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 118,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.216,
+        "kills_per_map": 16.857
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 113,
+        "deaths": 106,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 1.066,
+        "kills_per_map": 16.143
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 107,
+        "deaths": 120,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 0.892,
+        "kills_per_map": 15.286
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 77,
+        "deaths": 117,
+        "maps": 7,
+        "mvps": 1,
+        "kd": 0.658,
+        "kills_per_map": 11.0
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 69,
+        "deaths": 124,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.556,
+        "kills_per_map": 9.857
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 63,
+        "deaths": 129,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.488,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 16,
+        "deaths": 88,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.182,
+        "kills_per_map": 2.286
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 72,
+      "timestamp": "2026-08-04T15:43:35",
+      "type": "series",
+      "competition_id": "series_20260804_154136",
+      "context": "SERIES",
+      "team1": "ブラッドムーン",
+      "team2": "radiantdancer",
+      "score1": 5,
+      "score2": 2,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ブラッドムーン": 2780.56,
+        "radiantdancer": 2450.774
+      },
+      "after": {
+        "ブラッドムーン": 2787.112,
+        "radiantdancer": 2444.222
+      },
+      "delta": {
+        "ブラッドムーン": 6.552,
+        "radiantdancer": -6.552
+      },
+      "expected": {
+        "ブラッドムーン": 0.8697,
+        "radiantdancer": 0.1303
+      },
+      "margin_multiplier": 1.2571
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2787.112,
+    "フリーナタルタリヤ": 2610.151,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2554.223,
+    "EG2023": 2494.804,
+    "Fnatic2023": 2455.285,
+    "radiantdancer": 2444.222,
+    "VisionStrikers": 2443.527,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2430.478,
+    "日本代表": 2389.74,
+    "クイーンズフラワーギャンビット": 2355.525
+  }
+}

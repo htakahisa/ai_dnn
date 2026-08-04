@@ -1,0 +1,961 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "ブラッドムーン": "toru_ai_v3",
+    "クイーンズフラワーギャンビット": "toru_ai_v3"
+  },
+  "team1": "ブラッドムーン",
+  "team2": "クイーンズフラワーギャンビット",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 2,
+  "winner": "ブラッドムーン",
+  "loser": "クイーンズフラワーギャンビット",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 187432624,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 10,
+      "score2": 13,
+      "winner": "クイーンズフラワーギャンビット",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 30,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 24,
+        "deaths": 12
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 14
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 15
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 30,
+          "deaths": 16
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 10,
+          "deaths": 8
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 1,
+          "deaths": 15
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 18,
+          "deaths": 16
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 18
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 8,
+          "deaths": 18
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 24,
+          "deaths": 12
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 12,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 5315894,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 8,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 21,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 22,
+        "deaths": 9
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 21,
+          "deaths": 11
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 12
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 7,
+          "deaths": 5
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 11
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 7,
+          "deaths": 12
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 13,
+          "deaths": 13
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 22,
+          "deaths": 9
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 2407682902,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 11,
+      "score2": 13,
+      "winner": "クイーンズフラワーギャンビット",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 20,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 25,
+        "deaths": 13
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 16,
+          "deaths": 14
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 18,
+          "deaths": 14
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 20,
+          "deaths": 10
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 10
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 0,
+          "deaths": 12
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 12,
+          "deaths": 14
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 16
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 12,
+          "deaths": 16
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 25,
+          "deaths": 13
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 5,
+          "deaths": 14
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 1471581331,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 8,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Zest",
+        "kills": 23,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 16,
+        "deaths": 14
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 19,
+          "deaths": 12
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 22,
+          "deaths": 10
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 23,
+          "deaths": 9
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 12,
+          "deaths": 5
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 1,
+          "deaths": 9
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 1,
+          "deaths": 14
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 14,
+          "deaths": 16
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 16,
+          "deaths": 14
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 18
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 2933056031,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 1,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 22,
+        "deaths": 3
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 15,
+        "deaths": 9
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 22,
+          "deaths": 3
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 4,
+          "deaths": 7
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 17,
+          "deaths": 7
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 9,
+          "deaths": 2
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 3,
+          "deaths": 5
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 1,
+          "deaths": 11
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 0,
+          "deaths": 12
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 5,
+          "deaths": 11
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 15,
+          "deaths": 9
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "seed": 4093193450,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 6,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 28,
+        "deaths": 9
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 13,
+        "deaths": 10
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 28,
+          "deaths": 9
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 7
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 15,
+          "deaths": 7
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 2,
+          "deaths": 4
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 1,
+          "deaths": 7
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 7,
+          "deaths": 11
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 5,
+          "deaths": 13
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 14
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 13,
+          "deaths": 10
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "seed": 3131918403,
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 13,
+      "score2": 0,
+      "winner": "ブラッドムーン",
+      "mvp1": {
+        "name": "Nanasaki",
+        "kills": 26,
+        "deaths": 4
+      },
+      "mvp2": {
+        "name": "Chronicle",
+        "kills": 4,
+        "deaths": 10
+      },
+      "initial_attacker": "ブラッドムーン",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Nanasaki",
+          "team": "ブラッドムーン",
+          "kills": 26,
+          "deaths": 4
+        },
+        {
+          "name": "Meteor",
+          "team": "ブラッドムーン",
+          "kills": 6,
+          "deaths": 4
+        },
+        {
+          "name": "Zest",
+          "team": "ブラッドムーン",
+          "kills": 11,
+          "deaths": 4
+        },
+        {
+          "name": "WoohyuN",
+          "team": "ブラッドムーン",
+          "kills": 13,
+          "deaths": 1
+        },
+        {
+          "name": "FNS",
+          "team": "ブラッドムーン",
+          "kills": 0,
+          "deaths": 4
+        },
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 4,
+          "deaths": 11
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 11
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 4,
+          "deaths": 10
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 12
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 150,
+        "deaths": 67,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.239,
+        "kills_per_map": 21.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 134,
+        "deaths": 65,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.062,
+        "kills_per_map": 19.143
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 72,
+        "deaths": 35,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 2.057,
+        "kills_per_map": 10.286
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 119,
+        "deaths": 77,
+        "maps": 7,
+        "mvps": 7,
+        "kd": 1.545,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 70,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.386,
+        "kills_per_map": 13.857
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 119,
+        "deaths": 77,
+        "maps": 7,
+        "mvps": 7,
+        "kd": 1.545,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 150,
+        "deaths": 67,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.239,
+        "kills_per_map": 21.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 134,
+        "deaths": 65,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.062,
+        "kills_per_map": 19.143
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 72,
+        "deaths": 35,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 2.057,
+        "kills_per_map": 10.286
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 70,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.386,
+        "kills_per_map": 13.857
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 150,
+        "deaths": 67,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.239,
+        "kills_per_map": 21.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 134,
+        "deaths": 65,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.062,
+        "kills_per_map": 19.143
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 119,
+        "deaths": 77,
+        "maps": 7,
+        "mvps": 7,
+        "kd": 1.545,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 70,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.386,
+        "kills_per_map": 13.857
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 72,
+        "deaths": 35,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 2.057,
+        "kills_per_map": 10.286
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 150,
+        "deaths": 67,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.239,
+        "kills_per_map": 21.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 134,
+        "deaths": 65,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.062,
+        "kills_per_map": 19.143
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 119,
+        "deaths": 77,
+        "maps": 7,
+        "mvps": 7,
+        "kd": 1.545,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 70,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.386,
+        "kills_per_map": 13.857
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 72,
+        "deaths": 35,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 2.057,
+        "kills_per_map": 10.286
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Nanasaki",
+        "team": "ブラッドムーン",
+        "kills": 150,
+        "deaths": 67,
+        "maps": 7,
+        "mvps": 4,
+        "kd": 2.239,
+        "kills_per_map": 21.429
+      },
+      {
+        "player": "Zest",
+        "team": "ブラッドムーン",
+        "kills": 134,
+        "deaths": 65,
+        "maps": 7,
+        "mvps": 3,
+        "kd": 2.062,
+        "kills_per_map": 19.143
+      },
+      {
+        "player": "WoohyuN",
+        "team": "ブラッドムーン",
+        "kills": 72,
+        "deaths": 35,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 2.057,
+        "kills_per_map": 10.286
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 119,
+        "deaths": 77,
+        "maps": 7,
+        "mvps": 7,
+        "kd": 1.545,
+        "kills_per_map": 17.0
+      },
+      {
+        "player": "Meteor",
+        "team": "ブラッドムーン",
+        "kills": 97,
+        "deaths": 70,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 1.386,
+        "kills_per_map": 13.857
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 59,
+        "deaths": 91,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.648,
+        "kills_per_map": 8.429
+      },
+      {
+        "player": "nAts",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 58,
+        "deaths": 99,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.586,
+        "kills_per_map": 8.286
+      },
+      {
+        "player": "Sayonara",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 35,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.361,
+        "kills_per_map": 5.0
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 29,
+        "deaths": 97,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.299,
+        "kills_per_map": 4.143
+      },
+      {
+        "player": "FNS",
+        "team": "ブラッドムーン",
+        "kills": 8,
+        "deaths": 63,
+        "maps": 7,
+        "mvps": 0,
+        "kd": 0.127,
+        "kills_per_map": 1.143
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 74,
+      "timestamp": "2026-08-04T16:06:33",
+      "type": "series",
+      "competition_id": "series_20260804_160502",
+      "context": "SERIES",
+      "team1": "ブラッドムーン",
+      "team2": "クイーンズフラワーギャンビット",
+      "score1": 5,
+      "score2": 2,
+      "winner": "ブラッドムーン",
+      "before": {
+        "ブラッドムーン": 2793.482,
+        "クイーンズフラワーギャンビット": 2355.525
+      },
+      "after": {
+        "ブラッドムーン": 2797.223,
+        "クイーンズフラワーギャンビット": 2351.784
+      },
+      "delta": {
+        "ブラッドムーン": 3.741,
+        "クイーンズフラワーギャンビット": -3.741
+      },
+      "expected": {
+        "ブラッドムーン": 0.9256,
+        "クイーンズフラワーギャンビット": 0.0744
+      },
+      "margin_multiplier": 1.2571
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2797.223,
+    "フリーナタルタリヤ": 2610.151,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2554.223,
+    "EG2023": 2494.804,
+    "Fnatic2023": 2455.285,
+    "radiantdancer": 2444.222,
+    "VisionStrikers": 2443.527,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "日本代表": 2389.74,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}

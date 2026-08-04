@@ -1,0 +1,795 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "EG2023": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "EG2023",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 0,
+  "winner": "日本代表",
+  "loser": "EG2023",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3153232831,
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 1,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 26,
+        "deaths": 2
+      },
+      "mvp2": {
+        "name": "jawgemo",
+        "kills": 12,
+        "deaths": 12
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 26,
+          "deaths": 2
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 3
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 6
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 7
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 9
+        },
+        {
+          "name": "Demon1",
+          "team": "EG2023",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "jawgemo",
+          "team": "EG2023",
+          "kills": 12,
+          "deaths": 12
+        },
+        {
+          "name": "Ethan",
+          "team": "EG2023",
+          "kills": 4,
+          "deaths": 14
+        },
+        {
+          "name": "Boostio",
+          "team": "EG2023",
+          "kills": 1,
+          "deaths": 14
+        },
+        {
+          "name": "C0M",
+          "team": "EG2023",
+          "kills": 5,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 2882256862,
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 8,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 34,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 25,
+        "deaths": 16
+      },
+      "initial_attacker": "EG2023",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 34,
+          "deaths": 12
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 14
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 22,
+          "deaths": 13
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 10
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 12
+        },
+        {
+          "name": "Demon1",
+          "team": "EG2023",
+          "kills": 25,
+          "deaths": 16
+        },
+        {
+          "name": "jawgemo",
+          "team": "EG2023",
+          "kills": 13,
+          "deaths": 18
+        },
+        {
+          "name": "Ethan",
+          "team": "EG2023",
+          "kills": 8,
+          "deaths": 19
+        },
+        {
+          "name": "Boostio",
+          "team": "EG2023",
+          "kills": 7,
+          "deaths": 17
+        },
+        {
+          "name": "C0M",
+          "team": "EG2023",
+          "kills": 8,
+          "deaths": 18
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 4075316413,
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 5,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 22,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 12,
+        "deaths": 13
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 21,
+          "deaths": 10
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 6
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 22,
+          "deaths": 7
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 7
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 13,
+          "deaths": 9
+        },
+        {
+          "name": "Demon1",
+          "team": "EG2023",
+          "kills": 12,
+          "deaths": 13
+        },
+        {
+          "name": "jawgemo",
+          "team": "EG2023",
+          "kills": 10,
+          "deaths": 16
+        },
+        {
+          "name": "Ethan",
+          "team": "EG2023",
+          "kills": 6,
+          "deaths": 13
+        },
+        {
+          "name": "Boostio",
+          "team": "EG2023",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "C0M",
+          "team": "EG2023",
+          "kills": 6,
+          "deaths": 16
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 2392854693,
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 9,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 28,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Demon1",
+        "kills": 27,
+        "deaths": 14
+      },
+      "initial_attacker": "EG2023",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 28,
+          "deaths": 15
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 8,
+          "deaths": 11
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 9
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 17,
+          "deaths": 9
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 11
+        },
+        {
+          "name": "Demon1",
+          "team": "EG2023",
+          "kills": 27,
+          "deaths": 14
+        },
+        {
+          "name": "jawgemo",
+          "team": "EG2023",
+          "kills": 7,
+          "deaths": 18
+        },
+        {
+          "name": "Ethan",
+          "team": "EG2023",
+          "kills": 9,
+          "deaths": 16
+        },
+        {
+          "name": "Boostio",
+          "team": "EG2023",
+          "kills": 4,
+          "deaths": 16
+        },
+        {
+          "name": "C0M",
+          "team": "EG2023",
+          "kills": 8,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 371287619,
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 13,
+      "score2": 3,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 26,
+        "deaths": 5
+      },
+      "mvp2": {
+        "name": "Boostio",
+        "kills": 7,
+        "deaths": 10
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 26,
+          "deaths": 5
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 6
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 4
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 6
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 4
+        },
+        {
+          "name": "Demon1",
+          "team": "EG2023",
+          "kills": 3,
+          "deaths": 14
+        },
+        {
+          "name": "jawgemo",
+          "team": "EG2023",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "Ethan",
+          "team": "EG2023",
+          "kills": 4,
+          "deaths": 14
+        },
+        {
+          "name": "Boostio",
+          "team": "EG2023",
+          "kills": 7,
+          "deaths": 10
+        },
+        {
+          "name": "C0M",
+          "team": "EG2023",
+          "kills": 6,
+          "deaths": 13
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 135,
+        "deaths": 44,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 3.068,
+        "kills_per_map": 27.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 93,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 2.385,
+        "kills_per_map": 18.6
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 49,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.256,
+        "kills_per_map": 9.8
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.125,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Demon1",
+        "team": "EG2023",
+        "kills": 72,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.043,
+        "kills_per_map": 14.4
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 135,
+        "deaths": 44,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 3.068,
+        "kills_per_map": 27.0
+      },
+      {
+        "player": "Demon1",
+        "team": "EG2023",
+        "kills": 72,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.043,
+        "kills_per_map": 14.4
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 93,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 2.385,
+        "kills_per_map": 18.6
+      },
+      {
+        "player": "jawgemo",
+        "team": "EG2023",
+        "kills": 47,
+        "deaths": 78,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.603,
+        "kills_per_map": 9.4
+      },
+      {
+        "player": "Boostio",
+        "team": "EG2023",
+        "kills": 24,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.348,
+        "kills_per_map": 4.8
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 135,
+        "deaths": 44,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 3.068,
+        "kills_per_map": 27.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 93,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 2.385,
+        "kills_per_map": 18.6
+      },
+      {
+        "player": "Demon1",
+        "team": "EG2023",
+        "kills": 72,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.043,
+        "kills_per_map": 14.4
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 49,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.256,
+        "kills_per_map": 9.8
+      },
+      {
+        "player": "jawgemo",
+        "team": "EG2023",
+        "kills": 47,
+        "deaths": 78,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.603,
+        "kills_per_map": 9.4
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 135,
+        "deaths": 44,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 3.068,
+        "kills_per_map": 27.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 93,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 2.385,
+        "kills_per_map": 18.6
+      },
+      {
+        "player": "Demon1",
+        "team": "EG2023",
+        "kills": 72,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.043,
+        "kills_per_map": 14.4
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 49,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.256,
+        "kills_per_map": 9.8
+      },
+      {
+        "player": "jawgemo",
+        "team": "EG2023",
+        "kills": 47,
+        "deaths": 78,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.603,
+        "kills_per_map": 9.4
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 135,
+        "deaths": 44,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 3.068,
+        "kills_per_map": 27.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 93,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 2.385,
+        "kills_per_map": 18.6
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 49,
+        "deaths": 39,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.256,
+        "kills_per_map": 9.8
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 40,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.125,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Demon1",
+        "team": "EG2023",
+        "kills": 72,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.043,
+        "kills_per_map": 14.4
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 45,
+        "deaths": 45,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.0,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "jawgemo",
+        "team": "EG2023",
+        "kills": 47,
+        "deaths": 78,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.603,
+        "kills_per_map": 9.4
+      },
+      {
+        "player": "C0M",
+        "team": "EG2023",
+        "kills": 33,
+        "deaths": 75,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.44,
+        "kills_per_map": 6.6
+      },
+      {
+        "player": "Ethan",
+        "team": "EG2023",
+        "kills": 31,
+        "deaths": 76,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.408,
+        "kills_per_map": 6.2
+      },
+      {
+        "player": "Boostio",
+        "team": "EG2023",
+        "kills": 24,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 0.348,
+        "kills_per_map": 4.8
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 77,
+      "timestamp": "2026-08-04T16:20:31",
+      "type": "series",
+      "competition_id": "series_20260804_161928",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "EG2023",
+      "score1": 5,
+      "score2": 0,
+      "winner": "日本代表",
+      "before": {
+        "日本代表": 2357.563,
+        "EG2023": 2494.804
+      },
+      "after": {
+        "日本代表": 2401.585,
+        "EG2023": 2450.782
+      },
+      "delta": {
+        "日本代表": 44.022,
+        "EG2023": -44.022
+      },
+      "expected": {
+        "日本代表": 0.3122,
+        "EG2023": 0.6878
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2802.817,
+    "フリーナタルタリヤ": 2610.151,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2554.223,
+    "VisionStrikers": 2470.11,
+    "Fnatic2023": 2455.285,
+    "EG2023": 2450.782,
+    "radiantdancer": 2444.222,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "日本代表": 2401.585,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}

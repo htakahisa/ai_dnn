@@ -4,6 +4,7 @@ Generated from run_game(6).py without changing gameplay values.
 """
 
 import importlib.util
+import random
 from pathlib import Path
 
 # Gameplay configuration
@@ -173,6 +174,7 @@ def get_character_combat_stats(name):
         "reaction": 100,
         "role": "フラッシュ",
         "influence": 0.0,
+        "form_variance": 0.0,
     }
     if _character_stats is None:
         return defaults
@@ -248,6 +250,21 @@ def get_character_combat_stats(name):
         "influence": pick_number(
             ("influence", "influence_score", "impact", "影響度", "影響力"),
             defaults["influence"],
+        ),
+        "form_variance": max(
+            0.0,
+            min(
+                10.0,
+                pick_number(
+                    (
+                        "form_variance",
+                        "condition_variance",
+                        "consistency",
+                        "調子の波",
+                    ),
+                    defaults["form_variance"],
+                ),
+            ),
         ),
     }
 
@@ -357,6 +374,14 @@ class Character:
         self.is_igl = False
         self.reaction = stats.get("reaction", 100.0)
         self.influence = stats.get("influence", 0.0)
+
+        # スプレッドシートの「調子の波」。
+        # 0なら変動なし、10なら命中率・HS率が最大±30%の範囲で変動する。
+        self.form_variance = max(
+            0.0,
+            min(10.0, float(stats.get("form_variance", 0.0))),
+        )
+
         # タイガーの固有パッシブ「ハンター」：常時 Hit% を10ポイント、HS% を5ポイント上昇。
         self.hunter_active = self.role == "タイガー"
         if self.hunter_active:
@@ -364,6 +389,32 @@ class Character:
             # 100%を超えてもここではクランプしない。
             self.accuracy = max(0.0, self.accuracy + 0.10)
             self.hs_rate = min(1.0, self.hs_rate + 0.05)
+
+        # コンディションは、タイガーの常時パッシブを含めた現在値へ乗算する。
+        # 命中率とHS率には同じ係数を使用し、選手全体の調子として一貫させる。
+        self.base_accuracy_before_condition = self.accuracy
+        self.base_hs_rate_before_condition = self.hs_rate
+        self.max_condition_delta = (self.form_variance / 10.0) * 0.30
+        self.condition_modifier = (
+            random.uniform(
+                -self.max_condition_delta,
+                self.max_condition_delta,
+            )
+            if self.max_condition_delta > 0.0
+            else 0.0
+        )
+        condition_multiplier = 1.0 + self.condition_modifier
+        self.accuracy = max(
+            0.0,
+            self.base_accuracy_before_condition * condition_multiplier,
+        )
+        self.hs_rate = max(
+            0.0,
+            min(
+                1.0,
+                self.base_hs_rate_before_condition * condition_multiplier,
+            ),
+        )
         self.ability_name = {
             "フラッシュ": "FLASH",
             "スモーカー": "SMOKE",
@@ -384,6 +435,31 @@ class Character:
 
         # とるよう設定
         self.ability_type = "none"  # "flash" / "smoke" / "recon" / "none"
+
+    @property
+    def condition_text(self):
+        """現在のコンディションを5段階の日本語で返す。"""
+        modifier = float(getattr(self, "condition_modifier", 0.0))
+        if modifier >= 0.15:
+            return "絶好調"
+        if modifier >= 0.05:
+            return "好調"
+        if modifier > -0.05:
+            return "普通"
+        if modifier > -0.15:
+            return "不調"
+        return "絶不調"
+
+    @property
+    def condition_color(self):
+        """プレイヤーパネル表示用のコンディション色。"""
+        return {
+            "絶好調": "#ffd700",
+            "好調": "#6fd96f",
+            "普通": "#d6dde8",
+            "不調": "#ffb347",
+            "絶不調": "#ff5555",
+        }[self.condition_text]
 
     @property
     def combat_power(self):

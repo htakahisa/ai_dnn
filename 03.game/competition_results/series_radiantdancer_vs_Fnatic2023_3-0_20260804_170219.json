@@ -1,0 +1,629 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "radiantdancer": "toru_ai_v3",
+    "Fnatic2023": "toru_ai_v3"
+  },
+  "team1": "radiantdancer",
+  "team2": "Fnatic2023",
+  "maps_to_win": 3,
+  "team1_wins": 3,
+  "team2_wins": 0,
+  "winner": "radiantdancer",
+  "loser": "Fnatic2023",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3449573384,
+      "team1": "radiantdancer",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 0,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 18,
+        "deaths": 6
+      },
+      "mvp2": {
+        "name": "Alfajer",
+        "kills": 9,
+        "deaths": 12
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 5,
+          "deaths": 3
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 10,
+          "deaths": 4
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 6,
+          "deaths": 4
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 18,
+          "deaths": 6
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 11,
+          "deaths": 5
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 4,
+          "deaths": 12
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 4,
+          "deaths": 12
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 1,
+          "deaths": 12
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 4,
+          "deaths": 2
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 9,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 3446079090,
+      "team1": "radiantdancer",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 5,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "something",
+        "kills": 23,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Alfajer",
+        "kills": 13,
+        "deaths": 11
+      },
+      "initial_attacker": "Fnatic2023",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 7
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 8
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 9
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 12,
+          "deaths": 5
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 23,
+          "deaths": 7
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 7,
+          "deaths": 12
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 3,
+          "deaths": 15
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 8,
+          "deaths": 10
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 13,
+          "deaths": 11
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 1170973703,
+      "team1": "radiantdancer",
+      "team2": "Fnatic2023",
+      "score1": 13,
+      "score2": 4,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "something",
+        "kills": 15,
+        "deaths": 6
+      },
+      "mvp2": {
+        "name": "Leo",
+        "kills": 14,
+        "deaths": 10
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 8,
+          "deaths": 8
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 10,
+          "deaths": 7
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 10,
+          "deaths": 7
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 7
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 15,
+          "deaths": 6
+        },
+        {
+          "name": "Derke",
+          "team": "Fnatic2023",
+          "kills": 5,
+          "deaths": 13
+        },
+        {
+          "name": "Leo",
+          "team": "Fnatic2023",
+          "kills": 14,
+          "deaths": 10
+        },
+        {
+          "name": "Boaster",
+          "team": "Fnatic2023",
+          "kills": 3,
+          "deaths": 13
+        },
+        {
+          "name": "Chronicle",
+          "team": "Fnatic2023",
+          "kills": 4,
+          "deaths": 4
+        },
+        {
+          "name": "Alfajer",
+          "team": "Fnatic2023",
+          "kills": 9,
+          "deaths": 12
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 49,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.722,
+        "kills_per_map": 16.333
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 39,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.167,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 27,
+        "deaths": 19,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.421,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 25,
+        "deaths": 20,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.25,
+        "kills_per_map": 8.333
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 22,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.222,
+        "kills_per_map": 7.333
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 49,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.722,
+        "kills_per_map": 16.333
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 31,
+        "deaths": 35,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 0.886,
+        "kills_per_map": 10.333
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 39,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.167,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Leo",
+        "team": "Fnatic2023",
+        "kills": 23,
+        "deaths": 34,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 0.676,
+        "kills_per_map": 7.667
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 27,
+        "deaths": 19,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.421,
+        "kills_per_map": 9.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 49,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.722,
+        "kills_per_map": 16.333
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 39,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.167,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 31,
+        "deaths": 35,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 0.886,
+        "kills_per_map": 10.333
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 27,
+        "deaths": 19,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.421,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 25,
+        "deaths": 20,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.25,
+        "kills_per_map": 8.333
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 49,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.722,
+        "kills_per_map": 16.333
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 39,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.167,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 31,
+        "deaths": 35,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 0.886,
+        "kills_per_map": 10.333
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 27,
+        "deaths": 19,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.421,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 25,
+        "deaths": 20,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.25,
+        "kills_per_map": 8.333
+      }
+    ],
+    "all_players": [
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 49,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 2.722,
+        "kills_per_map": 16.333
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 39,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 2.167,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 27,
+        "deaths": 19,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.421,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 25,
+        "deaths": 20,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.25,
+        "kills_per_map": 8.333
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 22,
+        "deaths": 18,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.222,
+        "kills_per_map": 7.333
+      },
+      {
+        "player": "Chronicle",
+        "team": "Fnatic2023",
+        "kills": 16,
+        "deaths": 16,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 1.0,
+        "kills_per_map": 5.333
+      },
+      {
+        "player": "Alfajer",
+        "team": "Fnatic2023",
+        "kills": 31,
+        "deaths": 35,
+        "maps": 3,
+        "mvps": 2,
+        "kd": 0.886,
+        "kills_per_map": 10.333
+      },
+      {
+        "player": "Leo",
+        "team": "Fnatic2023",
+        "kills": 23,
+        "deaths": 34,
+        "maps": 3,
+        "mvps": 1,
+        "kd": 0.676,
+        "kills_per_map": 7.667
+      },
+      {
+        "player": "Derke",
+        "team": "Fnatic2023",
+        "kills": 16,
+        "deaths": 37,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.432,
+        "kills_per_map": 5.333
+      },
+      {
+        "player": "Boaster",
+        "team": "Fnatic2023",
+        "kills": 7,
+        "deaths": 40,
+        "maps": 3,
+        "mvps": 0,
+        "kd": 0.175,
+        "kills_per_map": 2.333
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 86,
+      "timestamp": "2026-08-04T17:02:19",
+      "type": "series",
+      "competition_id": "series_20260804_170143",
+      "context": "SERIES",
+      "team1": "radiantdancer",
+      "team2": "Fnatic2023",
+      "score1": 3,
+      "score2": 0,
+      "winner": "radiantdancer",
+      "before": {
+        "radiantdancer": 2445.004,
+        "Fnatic2023": 2418.378
+      },
+      "after": {
+        "radiantdancer": 2474.556,
+        "Fnatic2023": 2388.826
+      },
+      "delta": {
+        "radiantdancer": 29.552,
+        "Fnatic2023": -29.552
+      },
+      "expected": {
+        "radiantdancer": 0.5382,
+        "Fnatic2023": 0.4618
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2810.025,
+    "アイネクライネ": 2611.576,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2519.964,
+    "radiantdancer": 2474.556,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2331.137
+  }
+}
