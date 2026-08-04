@@ -22,7 +22,17 @@ from map_data import NEW_MAZE_STR
 from party_presets import all_preset_names, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 
-AI_KEY = "fnatic_v1"
+CONTROLLER_OPTIONS = {
+    "Fnatic v2": "fnatic_2",
+    "Fnatic v1": "fnatic_v1",
+    "Toru AI v3": "toru_ai_v3",
+    "AI v1": "learning_v1",
+    "ロジック": "default",
+    "ユーザー操作": "user",
+}
+CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
+DEFAULT_CONTROLLER_DISPLAY = "Fnatic v1"
+
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
 DEFAULT_TEAM_RATING = 2500.0
@@ -272,12 +282,14 @@ def build_player_leaderboards(
     players = []
     for base in totals.values():
         row = dict(base)
-        row["kd"] = round(
-            row["kills"] / row["deaths"], 3
-        ) if row["deaths"] else float(row["kills"])
-        row["kills_per_map"] = round(
-            row["kills"] / row["maps"], 3
-        ) if row["maps"] else 0.0
+        row["kd"] = (
+            round(row["kills"] / row["deaths"], 3)
+            if row["deaths"]
+            else float(row["kills"])
+        )
+        row["kills_per_map"] = (
+            round(row["kills"] / row["maps"], 3) if row["maps"] else 0.0
+        )
         players.append(row)
 
     return {
@@ -339,10 +351,19 @@ def play_map(
     map_number: int,
     seed: int,
     render: bool,
+    team1_controller_key: str = "fnatic_v1",
+    team2_controller_key: str = "fnatic_v1",
 ) -> MResult:
     seed_all(seed)
-    ai1 = _build_team_ai(AI_KEY)
-    ai2 = _build_team_ai(AI_KEY)
+
+    team1_controller_key = str(team1_controller_key or "fnatic_v1")
+    team2_controller_key = str(team2_controller_key or "fnatic_v1")
+
+    if "user" in {team1_controller_key, team2_controller_key} and not render:
+        raise ValueError("ユーザー操作を使う試合は描画が必要です")
+
+    ai1 = _build_team_ai(team1_controller_key)
+    ai2 = _build_team_ai(team2_controller_key)
 
     team1_keys = [TeamPlayerKey(name, f"team1:{team1.name}") for name in team1.players]
     team2_keys = [TeamPlayerKey(name, f"team2:{team2.name}") for name in team2.players]
@@ -386,7 +407,60 @@ def play_map(
             defender_igl_name=defender_igl,
             disable_side_swap=False,
         )
+
+        if render:
+            # 管理画面は隠さず、観戦画面と同時に表示する。
+            # VisualFPSBattle側のmainloopはネストされるが、
+            # 同じTkイベント系の管理画面も更新され続ける。
+            # destroy()で観戦用Tkを破棄すると、大会管理画面側の
+            # Tcl/Tkイベント処理まで止まる環境がある。
+            # quit()でこの観戦画面のmainloopだけを抜け、
+            # ウィンドウ自体はwithdraw()で非表示にする。
+            closing_started = False
+
+            def finish_rendered_match() -> None:
+                nonlocal closing_started
+                if closing_started:
+                    return
+                closing_started = True
+                try:
+                    game.root.withdraw()
+                except tk.TclError:
+                    pass
+                try:
+                    game.root.quit()
+                except tk.TclError:
+                    pass
+
+            def watch_match_end() -> None:
+                try:
+                    if bool(getattr(game, "match_over", False)):
+                        # 最終スコアを少し表示してから次のマップへ進む。
+                        game.root.after(
+                            1200,
+                            finish_rendered_match,
+                        )
+                        return
+                    game.root.after(100, watch_match_end)
+                except tk.TclError:
+                    return
+
+            # 手動で閉じた場合も大会自体は継続する。
+            game.root.protocol(
+                "WM_DELETE_WINDOW",
+                finish_rendered_match,
+            )
+            game.root.after(100, watch_match_end)
+
         game.run()
+
+        if render:
+            # run()内のmainloopから戻ったことを保証したうえで非表示化。
+            try:
+                game.root.withdraw()
+                game.root.update_idletasks()
+            except tk.TclError:
+                pass
 
     score1, score2 = original_scores(
         game,
@@ -408,12 +482,8 @@ def play_map(
         initial_attacker=attacker.name,
         overtime=bool(getattr(game, "overtime", False)),
         player_stats=(
-            player_stats_from_match_stats(
-                game.match_stats, team1_keys, team1.name
-            )
-            + player_stats_from_match_stats(
-                game.match_stats, team2_keys, team2.name
-            )
+            player_stats_from_match_stats(game.match_stats, team1_keys, team1.name)
+            + player_stats_from_match_stats(game.match_stats, team2_keys, team2.name)
         ),
     )
 
@@ -425,8 +495,9 @@ def run_series_core(
     seed_mode: str,
     base_seed: int | None,
     seed_offset: int,
-    render: bool,
+    render: bool | Callable[[], bool],
     emit: Callable[[tuple[Any, ...]], None],
+    team_controllers: dict[str, str] | None = None,
     context_label: str = "",
 ) -> SeriesResult:
     if team1_name == team2_name:
@@ -438,6 +509,10 @@ def run_series_core(
     team2 = get_preset(team2_name)
     validate_preset(team1)
     validate_preset(team2)
+
+    controller_map = team_controllers or {}
+    controller1 = str(controller_map.get(team1.name, "fnatic_v1"))
+    controller2 = str(controller_map.get(team2.name, "fnatic_v1"))
 
     wins1 = 0
     wins2 = 0
@@ -458,13 +533,49 @@ def run_series_core(
             seed_offset + map_number - 1,
         )
         emit(("log", f"{prefix}MAP {map_number} Seed: {map_seed}\n"))
-        result = play_map(
-            team1,
-            team2,
-            map_number,
-            map_seed,
-            render,
+        emit(
+            (
+                "log",
+                f"{prefix}Controller: "
+                f"{team1.name}="
+                f"{CONTROLLER_KEY_TO_DISPLAY.get(controller1, controller1)}"
+                f" / {team2.name}="
+                f"{CONTROLLER_KEY_TO_DISPLAY.get(controller2, controller2)}\n",
+            )
         )
+        user_match = "user" in {controller1, controller2}
+        current_render = bool(render()) if callable(render) else bool(render)
+        if user_match:
+            current_render = True
+
+        emit(
+            (
+                "log",
+                f"{prefix}Render: "
+                f"{'ON' if current_render else 'OFF'}"
+                + ("（ユーザー操作のため強制ON）" if user_match else "")
+                + "\n",
+            )
+        )
+        if hasattr(render, "play_map"):
+            result = render.play_map(
+                team1,
+                team2,
+                map_number,
+                map_seed,
+                controller1,
+                controller2,
+            )
+        else:
+            result = play_map(
+                team1,
+                team2,
+                map_number,
+                map_seed,
+                current_render,
+                controller1,
+                controller2,
+            )
         maps.append(result)
 
         if result.winner == team1.name:
@@ -543,13 +654,143 @@ def _pair_nodes(
     nodes: list[dict[str, Any]],
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     if len(nodes) % 2 != 0:
-        raise RuntimeError(
-            f"ブラケットノード数が偶数ではありません: {len(nodes)}"
+        raise RuntimeError(f"ブラケットノード数が偶数ではありません: {len(nodes)}")
+    return [(nodes[index], nodes[index + 1]) for index in range(0, len(nodes), 2)]
+
+
+def _spread_match_positions(
+    match_count: int,
+    count: int,
+) -> list[int]:
+    """指定数の位置をブラケット全体へできるだけ均等に分散する。"""
+    if count <= 0:
+        return []
+    if count >= match_count:
+        return list(range(match_count))
+    if count == 1:
+        return [0]
+
+    positions: list[int] = []
+    for index in range(count):
+        pos = round(index * (match_count - 1) / (count - 1))
+        while pos in positions and pos + 1 < match_count:
+            pos += 1
+        while pos in positions and pos - 1 >= 0:
+            pos -= 1
+        positions.append(pos)
+    return positions
+
+
+def build_seeded_bracket_slots(
+    team_names: list[str],
+    seed_count: int,
+    seed_method: str,
+    manual_seeds: list[str] | None,
+    rating_snapshot: dict[str, float] | None,
+) -> tuple[list[str | None], list[str]]:
+    """
+    シードを分散配置し、BYEを優先的にシードへ割り当てる。
+
+    12チームの場合:
+      bracket_size=16 / bye_count=4
+      seed_count=4なら、4シードすべてがRound 1 BYE。
+    """
+    if len(set(team_names)) != len(team_names):
+        raise ValueError("同じチームを複数設定できません")
+
+    allowed_counts = {0, 2, 4, 8}
+    if seed_count not in allowed_counts:
+        raise ValueError("シード数は0・2・4・8から選んでください")
+    if seed_count > len(team_names):
+        raise ValueError(
+            f"シード数{seed_count}は参加チーム数{len(team_names)}を超えています"
         )
-    return [
-        (nodes[index], nodes[index + 1])
-        for index in range(0, len(nodes), 2)
-    ]
+
+    method = str(seed_method).strip().lower()
+    if method not in {"rating", "manual", "random"}:
+        raise ValueError("シード決定方法はrating・manual・randomのいずれかです")
+
+    if seed_count == 0:
+        seeded_teams: list[str] = []
+    elif method == "rating":
+        ratings = rating_snapshot or {}
+        seeded_teams = sorted(
+            team_names,
+            key=lambda name: (
+                -float(ratings.get(name, DEFAULT_TEAM_RATING)),
+                team_names.index(name),
+            ),
+        )[:seed_count]
+    elif method == "manual":
+        candidates = [name for name in (manual_seeds or []) if name and name != UNUSED]
+        if len(candidates) != seed_count:
+            raise ValueError(f"手動シードを{seed_count}チームすべて設定してください")
+        if len(set(candidates)) != len(candidates):
+            raise ValueError("手動シードに同じチームが重複しています")
+        missing = [name for name in candidates if name not in team_names]
+        if missing:
+            raise ValueError(
+                "参加チームではない手動シードがあります: " + ", ".join(missing)
+            )
+        seeded_teams = candidates
+    else:
+        seeded_teams = secrets.SystemRandom().sample(
+            team_names,
+            seed_count,
+        )
+
+    bracket_size = _next_power_of_two(len(team_names))
+    match_count = bracket_size // 2
+    bye_count = bracket_size - len(team_names)
+
+    OPEN = object()
+    slots: list[Any] = [OPEN] * bracket_size
+
+    # シード同士が初戦で当たりにくいように、別々の試合へ均等配置。
+    seed_match_positions = _spread_match_positions(
+        match_count,
+        len(seeded_teams),
+    )
+
+    # BYEはシード位置へ優先配分し、残りもブラケット全体へ分散。
+    bye_match_positions: list[int] = []
+    for pos in seed_match_positions:
+        if len(bye_match_positions) >= bye_count:
+            break
+        bye_match_positions.append(pos)
+
+    if len(bye_match_positions) < bye_count:
+        for pos in _spread_match_positions(match_count, bye_count):
+            if pos not in bye_match_positions:
+                bye_match_positions.append(pos)
+            if len(bye_match_positions) >= bye_count:
+                break
+
+    for match_pos in bye_match_positions:
+        slots[match_pos * 2 + 1] = None
+
+    for team, match_pos in zip(seeded_teams, seed_match_positions):
+        preferred = match_pos * 2
+        alternate = preferred + 1
+        if slots[preferred] is OPEN:
+            slots[preferred] = team
+        elif slots[alternate] is OPEN:
+            slots[alternate] = team
+        else:
+            raise RuntimeError("シード配置先を確保できませんでした")
+
+    non_seeded = [team for team in team_names if team not in seeded_teams]
+    open_indices = [index for index, value in enumerate(slots) if value is OPEN]
+    if len(open_indices) != len(non_seeded):
+        raise RuntimeError(
+            "ブラケット空き枠数とノンシード数が一致しません: "
+            f"open={len(open_indices)} teams={len(non_seeded)}"
+        )
+
+    for index, team in zip(open_indices, non_seeded):
+        slots[index] = team
+
+    return list(slots), seeded_teams
 
 
 def run_double_elimination(
@@ -557,35 +798,65 @@ def run_double_elimination(
     normal_maps_to_win: int,
     lower_final_maps_to_win: int,
     grand_final_maps_to_win: int,
+    tournament_seed_config: dict[str, Any],
     seed_mode: str,
     base_seed: int | None,
-    render: bool,
+    render: bool | Callable[[], bool],
     emit: Callable[[tuple[Any, ...]], None],
+    team_controllers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """固定Slot式ダブルエリミネーション。"""
     if len(team_names) < 4:
-        raise ValueError(
-            "ダブルエリミネーションには4チーム以上必要です"
-        )
+        raise ValueError("ダブルエリミネーションには4チーム以上必要です")
     if len(set(team_names)) != len(team_names):
-        raise ValueError(
-            "同じチームを複数のSlotへ設定できません"
-        )
+        raise ValueError("同じチームを複数のSlotへ設定できません")
 
     for name in team_names:
         validate_preset(get_preset(name))
 
     normal_need = validate_maps_to_win(normal_maps_to_win)
-    lower_final_need = validate_maps_to_win(
-        lower_final_maps_to_win
-    )
-    grand_final_need = validate_maps_to_win(
-        grand_final_maps_to_win
-    )
+    lower_final_need = validate_maps_to_win(lower_final_maps_to_win)
+    grand_final_need = validate_maps_to_win(grand_final_maps_to_win)
 
-    bracket_size = _next_power_of_two(len(team_names))
-    slots: list[str | None] = list(team_names)
-    slots.extend([None] * (bracket_size - len(slots)))
+    seed_count = int(tournament_seed_config.get("seed_count", 0))
+    seed_method = str(tournament_seed_config.get("seed_method", "rating"))
+    manual_seeds = list(tournament_seed_config.get("manual_seeds", []))
+    rating_snapshot = {
+        str(name): float(value)
+        for name, value in tournament_seed_config.get(
+            "rating_snapshot",
+            {},
+        ).items()
+    }
+
+    slots, resolved_seeds = build_seeded_bracket_slots(
+        team_names,
+        seed_count,
+        seed_method,
+        manual_seeds,
+        rating_snapshot,
+    )
+    bracket_size = len(slots)
+
+    emit(
+        (
+            "log",
+            "  Resolved seeds: "
+            + (
+                " / ".join(
+                    f"{index + 1}.{name}" for index, name in enumerate(resolved_seeds)
+                )
+                if resolved_seeds
+                else "none"
+            )
+            + "\n"
+            + "  Initial bracket slots: "
+            + " | ".join(value if value is not None else "BYE" for value in slots)
+            + "\n"
+            + "-" * 78
+            + "\n",
+        )
+    )
 
     records = {
         name: {
@@ -673,15 +944,16 @@ def run_double_elimination(
         emit(("bracket_match", dict(pending)))
 
         series = run_series_core(
-            team1,
-            team2,
-            maps_to_win,
-            seed_mode,
-            base_seed,
-            series_counter * 100000,
-            render,
-            emit,
-            context,
+            team1_name=team1,
+            team2_name=team2,
+            maps_to_win=maps_to_win,
+            seed_mode=seed_mode,
+            base_seed=base_seed,
+            seed_offset=series_counter * 100000,
+            render=render,
+            emit=emit,
+            team_controllers=team_controllers,
+            context_label=context,
         )
         completed_series.append(series)
 
@@ -722,9 +994,7 @@ def run_double_elimination(
         next_winners: list[dict[str, Any]] = []
         current_losers: list[dict[str, Any]] = []
 
-        for match_number, (left, right) in enumerate(
-            _pair_nodes(winners_nodes), 1
-        ):
+        for match_number, (left, right) in enumerate(_pair_nodes(winners_nodes), 1):
             winner_node, loser_node = play_match(
                 f"W{winners_round}M{match_number}",
                 "W",
@@ -743,9 +1013,7 @@ def run_double_elimination(
             working = list(reversed(current_losers))
             if len(working) % 2 == 1:
                 lower_survivors.append(working.pop(0))
-            for match_number, pair in enumerate(
-                _pair_nodes(working), 1
-            ):
+            for match_number, pair in enumerate(_pair_nodes(working), 1):
                 winner_node, _ = play_match(
                     f"L{lower_round}M{match_number}",
                     "L",
@@ -757,15 +1025,24 @@ def run_double_elimination(
                 )
                 lower_survivors.append(winner_node)
         else:
-            while len(lower_survivors) > len(current_losers):
+            incoming = list(reversed(current_losers))
+
+            # BYEを含む12チーム大会などでは、Winners側から落ちる人数と
+            # Losers側の生存者数が一致しない場合がある。
+            #
+            # 既存Losers側が多い場合はLosers内で予備ラウンドを行い、
+            # Winners流入側が多い場合は流入チーム同士で予備ラウンドを
+            # 行ってから、両グループを同数にして合流させる。
+            while len(lower_survivors) > len(incoming):
                 lower_round += 1
                 reduced: list[dict[str, Any]] = []
                 working = list(lower_survivors)
+
+                # 奇数なら先頭をこの予備ラウンドのBYEとして残す。
                 if len(working) % 2 == 1:
                     reduced.append(working.pop(0))
-                for match_number, pair in enumerate(
-                    _pair_nodes(working), 1
-                ):
+
+                for match_number, pair in enumerate(_pair_nodes(working), 1):
                     winner_node, _ = play_match(
                         f"L{lower_round}M{match_number}",
                         "L",
@@ -776,24 +1053,48 @@ def run_double_elimination(
                         normal_need,
                     )
                     reduced.append(winner_node)
+
                 lower_survivors = reduced
 
-            lower_round += 1
-            merged: list[dict[str, Any]] = []
-            incoming = list(reversed(current_losers))
+            while len(incoming) > len(lower_survivors):
+                lower_round += 1
+                reduced_incoming: list[dict[str, Any]] = []
+                working = list(incoming)
+
+                # シードBYEによる人数差では、流入側にもBYEが必要になる。
+                # 末尾ではなく先頭を残し、毎回同じ側だけが有利に
+                # なりにくいよう、current_losersは事前にreverse済み。
+                if len(working) % 2 == 1:
+                    reduced_incoming.append(working.pop(0))
+
+                for match_number, pair in enumerate(_pair_nodes(working), 1):
+                    winner_node, _ = play_match(
+                        f"L{lower_round}M{match_number}",
+                        "L",
+                        lower_round,
+                        match_number,
+                        pair[0],
+                        pair[1],
+                        normal_need,
+                    )
+                    reduced_incoming.append(winner_node)
+
+                incoming = reduced_incoming
+
             if len(lower_survivors) != len(incoming):
                 raise RuntimeError(
-                    "Losersブラケットの人数対応に失敗しました: "
+                    "Losersブラケットの人数調整に失敗しました: "
                     f"survivors={len(lower_survivors)} "
                     f"incoming={len(incoming)}"
                 )
+
+            lower_round += 1
+            merged: list[dict[str, Any]] = []
+
             for match_number, (survivor, dropped) in enumerate(
                 zip(lower_survivors, incoming), 1
             ):
-                is_lower_final = (
-                    len(next_winners) == 1
-                    and len(lower_survivors) == 1
-                )
+                is_lower_final = len(next_winners) == 1 and len(lower_survivors) == 1
                 match_id = (
                     "LOWER_FINAL"
                     if is_lower_final
@@ -810,6 +1111,7 @@ def run_double_elimination(
                     "lower_final" if is_lower_final else "",
                 )
                 merged.append(winner_node)
+
             lower_survivors = merged
 
         winners_nodes = next_winners
@@ -823,11 +1125,7 @@ def run_double_elimination(
         pairs = _pair_nodes(lower_survivors)
         for match_number, pair in enumerate(pairs, 1):
             is_last = len(pairs) == 1
-            match_id = (
-                "LOWER_FINAL"
-                if is_last
-                else f"L{lower_round}M{match_number}"
-            )
+            match_id = "LOWER_FINAL" if is_last else f"L{lower_round}M{match_number}"
             winner_node, _ = play_match(
                 match_id,
                 "L",
@@ -875,6 +1173,20 @@ def run_double_elimination(
         "lower_final_maps_to_win": lower_final_need,
         "grand_final_maps_to_win": grand_final_need,
         "teams": team_names,
+        "team_controllers": {
+            name: (team_controllers or {}).get(
+                name,
+                "fnatic_v1",
+            )
+            for name in team_names
+        },
+        "tournament_seeding": {
+            "seed_count": seed_count,
+            "seed_method": seed_method,
+            "resolved_seeds": resolved_seeds,
+            "manual_seeds": (manual_seeds if seed_method == "manual" else []),
+            "rating_snapshot": (rating_snapshot if seed_method == "rating" else {}),
+        },
         "slots": slots,
         "bracket_size": bracket_size,
         "champion": champion,
@@ -882,14 +1194,11 @@ def run_double_elimination(
         "records": records,
         "ranking": ranking,
         "bracket_matches": bracket_matches,
-        "player_leaderboards": build_player_leaderboards(
-            completed_series
-        ),
+        "player_leaderboards": build_player_leaderboards(completed_series),
     }
     path = save_json(f"double_elimination_{champion}", data)
     emit(("competition_done", data, str(path)))
     return data
-
 
 
 def run_round_robin(
@@ -897,8 +1206,9 @@ def run_round_robin(
     maps_to_win: int,
     seed_mode: str,
     base_seed: int | None,
-    render: bool,
+    render: bool | Callable[[], bool],
     emit: Callable[[tuple[Any, ...]], None],
+    team_controllers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     if len(team_names) < 2:
         raise ValueError("総当たりリーグには2チーム以上必要です")
@@ -929,15 +1239,16 @@ def run_round_robin(
         team1, team2 = (left, right) if index % 2 == 1 else (right, left)
         context = f"LEAGUE {index}/{len(pair_list)}"
         series = run_series_core(
-            team1,
-            team2,
-            need,
-            seed_mode,
-            base_seed,
-            index * 100000,
-            render,
-            emit,
-            context,
+            team1_name=team1,
+            team2_name=team2,
+            maps_to_win=need,
+            seed_mode=seed_mode,
+            base_seed=base_seed,
+            seed_offset=index * 100000,
+            render=render,
+            emit=emit,
+            team_controllers=team_controllers,
+            context_label=context,
         )
         completed_series.append(series)
         matches.append(asdict(series))
@@ -973,6 +1284,13 @@ def run_round_robin(
         "base_seed": base_seed if seed_mode == "fixed" else None,
         "maps_to_win": need,
         "teams": team_names,
+        "team_controllers": {
+            name: (team_controllers or {}).get(
+                name,
+                "fnatic_v1",
+            )
+            for name in team_names
+        },
         "champion": ranking[0],
         "standings": table,
         "ranking": ranking,
@@ -1011,9 +1329,7 @@ class TeamRatingStore:
             return
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self.default_rating = float(
-                data.get("default_rating", DEFAULT_TEAM_RATING)
-            )
+            self.default_rating = float(data.get("default_rating", DEFAULT_TEAM_RATING))
             self.ratings = {
                 str(name): float(value)
                 for name, value in data.get("ratings", {}).items()
@@ -1031,8 +1347,7 @@ class TeamRatingStore:
             "default_rating": self.default_rating,
             "k_factor": RATING_K_FACTOR,
             "ratings": {
-                name: round(value, 3)
-                for name, value in sorted(self.ratings.items())
+                name: round(value, 3) for name, value in sorted(self.ratings.items())
             },
             "history": self.history,
         }
@@ -1071,9 +1386,7 @@ class TeamRatingStore:
 
     @staticmethod
     def expected_score(rating_a: float, rating_b: float) -> float:
-        return 1.0 / (
-            1.0 + 10.0 ** ((rating_b - rating_a) / 400.0)
-        )
+        return 1.0 / (1.0 + 10.0 ** ((rating_b - rating_a) / 400.0))
 
     @staticmethod
     def margin_multiplier(
@@ -1102,11 +1415,7 @@ class TeamRatingStore:
             series.team1_wins,
             series.team2_wins,
         )
-        delta1 = (
-            RATING_K_FACTOR
-            * multiplier
-            * (actual1 - expected1)
-        )
+        delta1 = RATING_K_FACTOR * multiplier * (actual1 - expected1)
         delta2 = -delta1
 
         after1 = max(0.0, before1 + delta1)
@@ -1184,10 +1493,7 @@ class TeamRatingStore:
                             ),
                         }
                     )
-            elif (
-                row.get("team") == team
-                and row.get("after") is not None
-            ):
+            elif row.get("team") == team and row.get("after") is not None:
                 current = float(row["after"])
                 points.append(
                     {
@@ -1202,8 +1508,6 @@ class TeamRatingStore:
         return points
 
 
-
-
 class TeamSlotEditor(tk.LabelFrame):
     def __init__(
         self, master: tk.Widget, names: list[str], title: str, initial_count: int = 8
@@ -1212,6 +1516,8 @@ class TeamSlotEditor(tk.LabelFrame):
         self.names = names
         self.slot_vars: list[tk.StringVar] = []
         self.slot_boxes: list[ttk.Combobox] = []
+        self.controller_vars: list[tk.StringVar] = []
+        self.controller_boxes: list[ttk.Combobox] = []
         self.count_var = tk.IntVar(value=max(2, min(MAX_TEAM_SLOTS, initial_count)))
 
         header = tk.Frame(self)
@@ -1249,12 +1555,16 @@ class TeamSlotEditor(tk.LabelFrame):
             self.count_var.set(count)
 
         previous = [var.get() for var in self.slot_vars]
+        previous_controllers = [var.get() for var in self.controller_vars]
         for child in self.inner.winfo_children():
             child.destroy()
         self.slot_vars.clear()
         self.slot_boxes.clear()
+        self.controller_vars.clear()
+        self.controller_boxes.clear()
 
         options = [UNUSED] + self.names
+        controller_options = list(CONTROLLER_OPTIONS.keys())
         for index in range(count):
             default = (
                 previous[index]
@@ -1269,19 +1579,284 @@ class TeamSlotEditor(tk.LabelFrame):
                 self.inner, text=f"Slot {index + 1:02d}", width=9, anchor="e"
             ).grid(row=index, column=0, padx=(0, 8), pady=3)
             box.grid(row=index, column=1, sticky="ew", pady=3)
+
+            controller_default = (
+                previous_controllers[index]
+                if index < len(previous_controllers)
+                else DEFAULT_CONTROLLER_DISPLAY
+            )
+            controller_var = tk.StringVar(value=controller_default)
+            controller_box = ttk.Combobox(
+                self.inner,
+                values=controller_options,
+                textvariable=controller_var,
+                state="readonly",
+                width=18,
+            )
+            tk.Label(
+                self.inner,
+                text="Controller",
+                width=10,
+                anchor="e",
+            ).grid(
+                row=index,
+                column=2,
+                padx=(12, 5),
+                pady=3,
+            )
+            controller_box.grid(
+                row=index,
+                column=3,
+                sticky="ew",
+                pady=3,
+            )
+
             self.slot_vars.append(var)
             self.slot_boxes.append(box)
+            self.controller_vars.append(controller_var)
+            self.controller_boxes.append(controller_box)
+
         self.inner.grid_columnconfigure(1, weight=1)
+        self.inner.grid_columnconfigure(3, weight=0)
 
     def selected_teams(self) -> list[str]:
         return [
             var.get() for var in self.slot_vars if var.get() and var.get() != UNUSED
         ]
 
+    def selected_team_controllers(self) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for team_var, controller_var in zip(
+            self.slot_vars,
+            self.controller_vars,
+        ):
+            team = team_var.get()
+            if not team or team == UNUSED:
+                continue
+            display = controller_var.get()
+            result[team] = CONTROLLER_OPTIONS.get(
+                display,
+                "fnatic_v1",
+            )
+        return result
+
     def set_enabled(self, enabled: bool) -> None:
         self.count_spin.config(state="normal" if enabled else "disabled")
         for box in self.slot_boxes:
             box.config(state="readonly" if enabled else "disabled")
+        for box in self.controller_boxes:
+            box.config(state="readonly" if enabled else "disabled")
+
+
+class TournamentSeedEditor(tk.LabelFrame):
+    """ダブルエリミネーション用のシード設定UI。"""
+
+    def __init__(
+        self,
+        master: tk.Widget,
+        names: list[str],
+        rating_store: TeamRatingStore,
+    ) -> None:
+        super().__init__(
+            master,
+            text="シード設定",
+            padx=8,
+            pady=7,
+        )
+        self.names = names
+        self.rating_store = rating_store
+
+        self.seed_count_var = tk.StringVar(value="4")
+        self.seed_method_var = tk.StringVar(value="rating")
+        self.manual_vars = [tk.StringVar(value=UNUSED) for _ in range(8)]
+        self.manual_boxes: list[ttk.Combobox] = []
+
+        top = tk.Frame(self)
+        top.pack(fill="x")
+
+        tk.Label(top, text="シード数").pack(side="left")
+        self.count_box = ttk.Combobox(
+            top,
+            values=["0", "2", "4", "8"],
+            textvariable=self.seed_count_var,
+            state="readonly",
+            width=5,
+        )
+        self.count_box.pack(side="left", padx=(6, 16))
+        self.count_box.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: self._refresh(),
+        )
+
+        tk.Label(top, text="決定方法").pack(side="left")
+        methods = [
+            ("レート順", "rating"),
+            ("手動", "manual"),
+            ("ランダム", "random"),
+        ]
+        for label, value in methods:
+            tk.Radiobutton(
+                top,
+                text=label,
+                variable=self.seed_method_var,
+                value=value,
+                command=self._refresh,
+            ).pack(side="left", padx=(8, 0))
+
+        self.fill_button = tk.Button(
+            top,
+            text="レート順を手動欄へ反映",
+            command=self.fill_manual_from_rating,
+        )
+        self.fill_button.pack(side="right")
+
+        self.preview_var = tk.StringVar()
+        tk.Label(
+            self,
+            textvariable=self.preview_var,
+            anchor="w",
+            justify="left",
+            fg="#334155",
+        ).pack(fill="x", pady=(7, 3))
+
+        self.manual_frame = tk.Frame(self)
+        self.manual_frame.pack(fill="x")
+        options = [UNUSED] + self.names
+        for index, var in enumerate(self.manual_vars):
+            tk.Label(
+                self.manual_frame,
+                text=f"Seed {index + 1}",
+                width=8,
+                anchor="e",
+            ).grid(
+                row=index // 4,
+                column=(index % 4) * 2,
+                padx=(0, 4),
+                pady=2,
+            )
+            box = ttk.Combobox(
+                self.manual_frame,
+                values=options,
+                textvariable=var,
+                state="readonly",
+                width=23,
+            )
+            box.grid(
+                row=index // 4,
+                column=(index % 4) * 2 + 1,
+                padx=(0, 10),
+                pady=2,
+            )
+            self.manual_boxes.append(box)
+
+        self._refresh()
+
+    def _seed_count(self) -> int:
+        try:
+            return int(self.seed_count_var.get())
+        except ValueError:
+            return 0
+
+    def _refresh(self) -> None:
+        count = self._seed_count()
+        method = self.seed_method_var.get()
+
+        rating_names = [name for name, _ in self.rating_store.ranking()][:count]
+        if method == "rating":
+            preview = "自動シード: " + (
+                " / ".join(
+                    f"{index + 1}.{name}" for index, name in enumerate(rating_names)
+                )
+                if rating_names
+                else "なし"
+            )
+        elif method == "manual":
+            preview = (
+                f"Seed 1～{count}を下の欄で指定してください" if count else "シードなし"
+            )
+        else:
+            preview = (
+                f"参加チームから{count}チームを大会開始時に抽選"
+                if count
+                else "シードなし"
+            )
+        self.preview_var.set(preview)
+
+        for index, box in enumerate(self.manual_boxes):
+            visible = index < count
+            if visible:
+                box.grid()
+            else:
+                box.grid_remove()
+            box.config(
+                state=("readonly" if method == "manual" and visible else "disabled")
+            )
+        self.fill_button.config(state="normal" if count > 0 else "disabled")
+
+    def fill_manual_from_rating(self) -> None:
+        count = self._seed_count()
+        names = [name for name, _ in self.rating_store.ranking()][:count]
+        for index, var in enumerate(self.manual_vars):
+            var.set(names[index] if index < len(names) else UNUSED)
+        self.seed_method_var.set("manual")
+        self._refresh()
+
+    def get_config(
+        self,
+        participants: list[str],
+    ) -> dict[str, Any]:
+        count = self._seed_count()
+        if count not in {0, 2, 4, 8}:
+            raise ValueError("シード数は0・2・4・8から選んでください")
+        if count > len(participants):
+            raise ValueError("シード数が参加チーム数を超えています")
+
+        method = self.seed_method_var.get()
+        manual = [var.get() for var in self.manual_vars[:count]]
+        rating_snapshot = {team: self.rating_store.get(team) for team in participants}
+
+        # 12チームの16枠大会ならBYEは4つ。
+        bye_count = _next_power_of_two(len(participants)) - len(participants)
+        if count != bye_count and bye_count > 0:
+            # 禁止はせず、BYE数との違いを開始ログで分かるよう保存。
+            pass
+
+        config = {
+            "seed_count": count,
+            "seed_method": method,
+            "manual_seeds": manual,
+            "rating_snapshot": rating_snapshot,
+            "bye_count": bye_count,
+        }
+
+        # 共通ロジックで事前検証。
+        build_seeded_bracket_slots(
+            participants,
+            count,
+            method,
+            manual,
+            rating_snapshot,
+        )
+        return config
+
+    def set_enabled(self, enabled: bool) -> None:
+        self.count_box.config(state="readonly" if enabled else "disabled")
+        for child in self.winfo_children():
+            if isinstance(child, tk.Frame):
+                for widget in child.winfo_children():
+                    try:
+                        if isinstance(widget, tk.Radiobutton):
+                            widget.config(state="normal" if enabled else "disabled")
+                    except tk.TclError:
+                        pass
+        self.fill_button.config(
+            state=("normal" if enabled and self._seed_count() > 0 else "disabled")
+        )
+        if enabled:
+            self._refresh()
+        else:
+            for box in self.manual_boxes:
+                box.config(state="disabled")
 
 
 class CompetitionApp:
@@ -1292,7 +1867,9 @@ class CompetitionApp:
         self.root.minsize(900, 680)
 
         self.events: queue.Queue = queue.Queue()
+        self.render_requests: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
+        self.live_render_enabled = False
         self.names = all_preset_names()
         if len(self.names) < 2:
             raise RuntimeError("party_presets.pyに2チーム以上必要です")
@@ -1389,8 +1966,9 @@ class CompetitionApp:
 
         self.render_check = tk.Checkbutton(
             frame,
-            text="描画",
+            text="描画（次マップから反映）",
             variable=self.render_var,
+            command=self._on_render_toggle,
         )
         self.render_check.grid(row=0, column=7, padx=(4, 0))
         self.start_button = tk.Button(
@@ -1410,6 +1988,14 @@ class CompetitionApp:
         frame.grid_columnconfigure(10, weight=1)
         self._update_seed_entry_state()
 
+    def _on_render_toggle(self) -> None:
+        self.live_render_enabled = bool(self.render_var.get())
+        state = "ON" if self.live_render_enabled else "OFF"
+        if self.worker is not None or self.start_button.cget("state") == "disabled":
+            self.status_var.set(
+                f"描画を{state}に変更しました。次のマップから反映されます"
+            )
+
     def _update_seed_entry_state(self) -> None:
         if hasattr(self, "seed_entry"):
             self.seed_entry.config(
@@ -1417,10 +2003,7 @@ class CompetitionApp:
             )
 
     def open_rating_window(self) -> None:
-        if (
-            self.rating_window is not None
-            and self.rating_window.winfo_exists()
-        ):
+        if self.rating_window is not None and self.rating_window.winfo_exists():
             self.rating_window.deiconify()
             self.rating_window.lift()
             self.refresh_rating_window()
@@ -1441,9 +2024,7 @@ class CompetitionApp:
             font=("Arial", 10, "bold"),
         ).pack(side="left")
 
-        self.rating_team_var = tk.StringVar(
-            value=self.rating_store.ranking()[0][0]
-        )
+        self.rating_team_var = tk.StringVar(value=self.rating_store.ranking()[0][0])
         team_box = ttk.Combobox(
             top,
             values=[name for name, _ in self.rating_store.ranking()],
@@ -1539,9 +2120,7 @@ class CompetitionApp:
         values = self.rating_tree.item(selected[0], "values")
         if len(values) >= 2:
             self.rating_team_var.set(str(values[1]))
-            self.rating_edit_var.set(
-                f"{self.rating_store.get(str(values[1])):.1f}"
-            )
+            self.rating_edit_var.set(f"{self.rating_store.get(str(values[1])):.1f}")
             self.refresh_rating_chart()
 
     def set_selected_team_rating(self) -> None:
@@ -1573,9 +2152,7 @@ class CompetitionApp:
             return
 
         current_team = (
-            self.rating_team_var.get()
-            if self.rating_team_var is not None
-            else ""
+            self.rating_team_var.get() if self.rating_team_var is not None else ""
         )
         for item in self.rating_tree.get_children():
             self.rating_tree.delete(item)
@@ -1602,11 +2179,7 @@ class CompetitionApp:
 
     def refresh_rating_chart(self) -> None:
         canvas = self.rating_chart
-        if (
-            canvas is None
-            or self.rating_team_var is None
-            or not canvas.winfo_exists()
-        ):
+        if canvas is None or self.rating_team_var is None or not canvas.winfo_exists():
             return
 
         canvas.delete("all")
@@ -1654,11 +2227,7 @@ class CompetitionApp:
             return margin_l + plot_w * index / (len(points) - 1)
 
         def y_at(rating: float) -> float:
-            return (
-                margin_t
-                + plot_h
-                - (rating - low) / (high - low) * plot_h
-            )
+            return margin_t + plot_h - (rating - low) / (high - low) * plot_h
 
         # Grid and labels
         for tick in range(6):
@@ -1699,9 +2268,7 @@ class CompetitionApp:
 
         coords = []
         for index, point in enumerate(points):
-            coords.extend(
-                [x_at(index), y_at(float(point["rating"]))]
-            )
+            coords.extend([x_at(index), y_at(float(point["rating"]))])
         if len(coords) >= 4:
             canvas.create_line(
                 *coords,
@@ -1801,6 +2368,51 @@ class CompetitionApp:
         )
         self.team2_box.grid(row=0, column=3, padx=8)
 
+        self.team1_controller_var = tk.StringVar(value=DEFAULT_CONTROLLER_DISPLAY)
+        self.team2_controller_var = tk.StringVar(value=DEFAULT_CONTROLLER_DISPLAY)
+        tk.Label(
+            series_box,
+            text="Team 1 Controller",
+        ).grid(row=1, column=0, sticky="w", pady=(10, 0))
+        self.team1_controller_box = ttk.Combobox(
+            series_box,
+            values=list(CONTROLLER_OPTIONS.keys()),
+            textvariable=self.team1_controller_var,
+            state="readonly",
+            width=20,
+        )
+        self.team1_controller_box.grid(
+            row=1,
+            column=1,
+            padx=8,
+            pady=(10, 0),
+            sticky="w",
+        )
+        tk.Label(
+            series_box,
+            text="Team 2 Controller",
+        ).grid(
+            row=1,
+            column=2,
+            sticky="w",
+            padx=(20, 0),
+            pady=(10, 0),
+        )
+        self.team2_controller_box = ttk.Combobox(
+            series_box,
+            values=list(CONTROLLER_OPTIONS.keys()),
+            textvariable=self.team2_controller_var,
+            state="readonly",
+            width=20,
+        )
+        self.team2_controller_box.grid(
+            row=1,
+            column=3,
+            padx=8,
+            pady=(10, 0),
+            sticky="w",
+        )
+
         swiss_note = tk.Label(
             self.swiss_tab,
             text="Slot順で初戦を固定し、Winners敗者はLosersへ移動します。Lower FinalとGrand Finalは上部で個別設定できます。",
@@ -1808,10 +2420,30 @@ class CompetitionApp:
             fg="#444",
         )
         swiss_note.pack(fill="x", padx=10, pady=(8, 0))
-        self.swiss_slots = TeamSlotEditor(
-            self.swiss_tab, self.names, "初期ブラケット配置（Slot順がそのまま初戦位置）", 8
+
+        self.tournament_seed_editor = TournamentSeedEditor(
+            self.swiss_tab,
+            self.names,
+            self.rating_store,
         )
-        self.swiss_slots.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tournament_seed_editor.pack(
+            fill="x",
+            padx=8,
+            pady=(8, 2),
+        )
+
+        self.swiss_slots = TeamSlotEditor(
+            self.swiss_tab,
+            self.names,
+            "参加チーム（Slot順はノンシード配置順として使用）",
+            12,
+        )
+        self.swiss_slots.pack(
+            fill="both",
+            expand=True,
+            padx=8,
+            pady=8,
+        )
 
         league_note = tk.Label(
             self.league_tab,
@@ -2032,13 +2664,10 @@ class CompetitionApp:
                         f"{map_data.get('team2')} MVP: "
                         f"{mvp2.get('name', '?')} "
                         f"{mvp2.get('kills', 0)}K/"
-                        f"{mvp2.get('deaths', 0)}D\n"
-                        + "-" * 70
-                        + "\n"
+                        f"{mvp2.get('deaths', 0)}D\n" + "-" * 70 + "\n"
                     ),
                 )
         body.config(state="disabled")
-
 
     def redraw_visual(self) -> None:
         if not hasattr(self, "visual_canvas"):
@@ -2366,9 +2995,7 @@ class CompetitionApp:
         # Grand FinalはUpper/Lowerの最終試合より右へ置く。
         if grands:
             grand = grands[-1]
-            max_round = max(
-                [int(m.get("round", 0)) for m in winners] + [0]
-            )
+            max_round = max([int(m.get("round", 0)) for m in winners] + [0])
             grand_x = 20 + max_round * (card_w + col_gap)
             grand_y = max(70.0, bottom - card_h - 25)
             draw_match(grand, grand_x, grand_y)
@@ -2430,9 +3057,7 @@ class CompetitionApp:
                 ex, ey = end
                 middle_x = sx + max(28, (ex - sx) * 0.52)
                 line_fill = (
-                    "#22c55e"
-                    if destination_team == match.get("winner")
-                    else "#6b7280"
+                    "#22c55e" if destination_team == match.get("winner") else "#6b7280"
                 )
                 self.visual_canvas.create_line(
                     sx,
@@ -2664,16 +3289,11 @@ class CompetitionApp:
         self,
     ) -> tuple[int, int, int, str, int | None, bool]:
         normal_need = validate_maps_to_win(self.maps_to_win_var.get())
-        lower_final_need = validate_maps_to_win(
-            self.lower_final_maps_to_win_var.get()
-        )
-        grand_final_need = validate_maps_to_win(
-            self.grand_final_maps_to_win_var.get()
-        )
+        lower_final_need = validate_maps_to_win(self.lower_final_maps_to_win_var.get())
+        grand_final_need = validate_maps_to_win(self.grand_final_maps_to_win_var.get())
         seed_mode = validate_seed_mode(self.seed_mode_var.get())
         base_seed = (
-            validate_base_seed(self.seed_var.get())
-            if seed_mode == "fixed" else None
+            validate_base_seed(self.seed_var.get()) if seed_mode == "fixed" else None
         )
         return (
             normal_need,
@@ -2695,28 +3315,58 @@ class CompetitionApp:
             self._update_seed_entry_state()
         else:
             self.seed_entry.config(state="disabled")
-        self.render_check.config(state=state)
+        # 描画ON/OFFは大会途中でも変更可能。
+        self.render_check.config(state="normal")
         self.start_button.config(state=state)
         self.rating_button.config(state="normal")
         self.team1_box.config(state="readonly" if enabled else "disabled")
         self.team2_box.config(state="readonly" if enabled else "disabled")
+        self.team1_controller_box.config(state="readonly" if enabled else "disabled")
+        self.team2_controller_box.config(state="readonly" if enabled else "disabled")
         self.swiss_slots.set_enabled(enabled)
+        self.tournament_seed_editor.set_enabled(enabled)
         self.league_slots.set_enabled(enabled)
 
     def start_current_mode(self) -> None:
         try:
-            (need, lower_final_need, grand_final_need, seed_mode, base_seed, render) = self.read_common()
+            team_controllers: dict[str, str] = {}
+            tournament_seed_config: dict[str, Any] = {
+                "seed_count": 0,
+                "seed_method": "rating",
+                "manual_seeds": [],
+                "rating_snapshot": {},
+            }
+            need, lower_final_need, grand_final_need, seed_mode, base_seed, render = (
+                self.read_common()
+            )
             tab = self.notebook.index(self.notebook.select())
             if tab == 0:
-                payload = ("series", [self.team1_var.get(), self.team2_var.get()])
+                payload = (
+                    "series",
+                    [self.team1_var.get(), self.team2_var.get()],
+                )
                 if payload[1][0] == payload[1][1]:
                     raise ValueError("異なる2チームを選んでください")
+                team_controllers = {
+                    payload[1][0]: CONTROLLER_OPTIONS.get(
+                        self.team1_controller_var.get(),
+                        "fnatic_v1",
+                    ),
+                    payload[1][1]: CONTROLLER_OPTIONS.get(
+                        self.team2_controller_var.get(),
+                        "fnatic_v1",
+                    ),
+                }
             elif tab == 1:
                 teams = self.swiss_slots.selected_teams()
                 if len(teams) < 4:
-                    raise ValueError("ダブルエリミネーションへ4チーム以上設定してください")
+                    raise ValueError(
+                        "ダブルエリミネーションへ4チーム以上設定してください"
+                    )
                 if len(teams) != len(set(teams)):
                     raise ValueError("同じチームを複数のSlotへ設定できません")
+                tournament_seed_config = self.tournament_seed_editor.get_config(teams)
+                team_controllers = self.swiss_slots.selected_team_controllers()
                 payload = ("swiss", teams)
             else:
                 teams = self.league_slots.selected_teams()
@@ -2724,16 +3374,30 @@ class CompetitionApp:
                     raise ValueError("総当たりリーグへ2チーム以上設定してください")
                 if len(teams) != len(set(teams)):
                     raise ValueError("同じチームを複数のSlotへ設定できません")
+                team_controllers = self.league_slots.selected_team_controllers()
                 payload = ("league", teams)
+
+            user_teams = [
+                team for team, key in team_controllers.items() if key == "user"
+            ]
+            if len(user_teams) > 1:
+                raise ValueError("ユーザー操作は1大会につき1チームまでです")
         except Exception as exc:
             messagebox.showerror("設定エラー", str(exc))
             return
 
         self.clear_output()
         self.series_score_var.set("-")
-        self.competition_id = (
-            f"{payload[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        self.append(
+            "描画設定は各マップ開始直前に読み込みます。"
+            "大会途中のON/OFF変更は次のマップから反映されます。\n"
         )
+        self.append("TEAM CONTROLLERS\n")
+        for team in payload[1]:
+            key = team_controllers.get(team, "fnatic_v1")
+            self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
+        self.append("-" * 78 + "\n")
+        self.competition_id = f"{payload[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.competition_rating_updates = []
 
         self.visual_mode = payload[0]
@@ -2748,20 +3412,106 @@ class CompetitionApp:
 
         self.set_enabled(False)
 
-        if render:
-            # Tkinterの試合画面はメインスレッドで動かす。
-            self.status_var.set("描画モードを開始します…")
-            self.root.after(
-                50,
-                lambda: self._execute_job(payload, need, lower_final_need, grand_final_need, seed_mode, base_seed, render),
+        # 大会計算はワーカースレッドで実行する。
+        # 描画が必要なマップだけrender_requests経由で
+        # Tkメインスレッドへ依頼する。
+        self.live_render_enabled = bool(self.render_var.get())
+        self.status_var.set("大会を開始します…")
+        self.worker = threading.Thread(
+            target=self._execute_job,
+            args=(
+                payload,
+                need,
+                lower_final_need,
+                grand_final_need,
+                tournament_seed_config,
+                team_controllers,
+                seed_mode,
+                base_seed,
+                self._render_controller,
+            ),
+            daemon=True,
+        )
+        self.worker.start()
+
+    class _RenderController:
+        def __init__(self, app: "CompetitionApp") -> None:
+            self.app = app
+
+        def __call__(self) -> bool:
+            return bool(self.app.live_render_enabled)
+
+        def play_map(
+            self,
+            team1: Any,
+            team2: Any,
+            map_number: int,
+            seed: int,
+            team1_controller_key: str,
+            team2_controller_key: str,
+        ) -> MResult:
+            user_match = "user" in {
+                team1_controller_key,
+                team2_controller_key,
+            }
+            if not self.app.live_render_enabled and not user_match:
+                return play_map(
+                    team1,
+                    team2,
+                    map_number,
+                    seed,
+                    False,
+                    team1_controller_key,
+                    team2_controller_key,
+                )
+
+            request = {
+                "team1": team1,
+                "team2": team2,
+                "map_number": map_number,
+                "seed": seed,
+                "team1_controller_key": team1_controller_key,
+                "team2_controller_key": team2_controller_key,
+                "done": threading.Event(),
+                "result": None,
+                "error": None,
+            }
+            self.app.render_requests.put(request)
+            request["done"].wait()
+
+            if request["error"] is not None:
+                raise request["error"]
+            return request["result"]
+
+    @property
+    def _render_controller(self) -> "_RenderController":
+        controller = getattr(self, "__render_controller", None)
+        if controller is None:
+            controller = self._RenderController(self)
+            self.__render_controller = controller
+        return controller
+
+    def _process_render_requests(self) -> None:
+        """描画マップをTkメインスレッドで1件ずつ実行する。"""
+        try:
+            request = self.render_requests.get_nowait()
+        except queue.Empty:
+            return
+
+        try:
+            request["result"] = play_map(
+                request["team1"],
+                request["team2"],
+                request["map_number"],
+                request["seed"],
+                True,
+                request["team1_controller_key"],
+                request["team2_controller_key"],
             )
-        else:
-            self.worker = threading.Thread(
-                target=self._execute_job,
-                args=(payload, need, lower_final_need, grand_final_need, seed_mode, base_seed, render),
-                daemon=True,
-            )
-            self.worker.start()
+        except BaseException as exc:
+            request["error"] = exc
+        finally:
+            request["done"].set()
 
     def _execute_job(
         self,
@@ -2769,30 +3519,32 @@ class CompetitionApp:
         need: int,
         lower_final_need: int,
         grand_final_need: int,
+        tournament_seed_config: dict[str, Any],
+        team_controllers: dict[str, str],
         seed_mode: str,
         base_seed: int | None,
-        render: bool,
+        render: bool | Callable[[], bool],
     ) -> None:
         try:
             mode, teams = payload
-            if render:
-                self.root.withdraw()
             if mode == "series":
                 series = run_series_core(
-                    teams[0],
-                    teams[1],
-                    need,
-                    seed_mode,
-                    base_seed,
-                    0,
-                    render,
-                    self.emit,
-                    "SERIES",
+                    team1_name=teams[0],
+                    team2_name=teams[1],
+                    maps_to_win=need,
+                    seed_mode=seed_mode,
+                    base_seed=base_seed,
+                    seed_offset=0,
+                    render=render,
+                    emit=self.emit,
+                    team_controllers=team_controllers,
+                    context_label="SERIES",
                 )
                 data = {
                     "mode": "series",
                     "seed_mode": seed_mode,
                     "base_seed": (base_seed if seed_mode == "fixed" else None),
+                    "team_controllers": dict(team_controllers),
                     **asdict(series),
                     "player_leaderboards": build_player_leaderboards([series]),
                 }
@@ -2803,18 +3555,49 @@ class CompetitionApp:
                 self.emit(("series_done", series, "SERIES"))
                 self.emit(("competition_done", data, str(path)))
             elif mode == "swiss":
-                run_double_elimination(teams, need, lower_final_need, grand_final_need, seed_mode, base_seed, render, self.emit)
+                config = dict(tournament_seed_config)
+                config["rating_snapshot"] = {
+                    team: self.rating_store.get(team) for team in teams
+                }
+                self.emit(
+                    (
+                        "log",
+                        "\nTOURNAMENT SEEDING\n"
+                        f"  Method: {config.get('seed_method')}\n"
+                        f"  Seed count: {config.get('seed_count')}\n"
+                        f"  BYE count: "
+                        f"{_next_power_of_two(len(teams)) - len(teams)}\n"
+                        + "-" * 78
+                        + "\n",
+                    )
+                )
+                run_double_elimination(
+                    teams,
+                    need,
+                    lower_final_need,
+                    grand_final_need,
+                    config,
+                    seed_mode,
+                    base_seed,
+                    render,
+                    self.emit,
+                    team_controllers,
+                )
             else:
-                run_round_robin(teams, need, seed_mode, base_seed, render, self.emit)
+                run_round_robin(
+                    teams,
+                    need,
+                    seed_mode,
+                    base_seed,
+                    render,
+                    self.emit,
+                    team_controllers,
+                )
         except Exception:
             self.emit(("error", traceback.format_exc()))
         finally:
-            if render:
-                try:
-                    self.root.deiconify()
-                    self.root.lift()
-                except tk.TclError:
-                    pass
+            # Tk操作は_poll_events側のメインスレッドだけで行う。
+            pass
 
     def format_standings(self, table: dict[str, dict[str, int]], mode: str) -> str:
         if mode == "swiss":
@@ -2905,6 +3688,9 @@ class CompetitionApp:
         return "\n".join(lines) + "\n"
 
     def _poll_events(self) -> None:
+        # 描画要求は必ずTkメインスレッドで処理する。
+        self._process_render_requests()
+
         try:
             while True:
                 event = self.events.get_nowait()
@@ -2946,9 +3732,7 @@ class CompetitionApp:
                         context,
                         self.competition_id,
                     )
-                    self.competition_rating_updates.append(
-                        rating_update
-                    )
+                    self.competition_rating_updates.append(rating_update)
                     d1 = rating_update["delta"][series.team1]
                     d2 = rating_update["delta"][series.team2]
                     a1 = rating_update["after"][series.team1]
@@ -3000,9 +3784,7 @@ class CompetitionApp:
                         "k_factor": RATING_K_FACTOR,
                         "persistent_file": str(RATING_FILE),
                     }
-                    data["rating_updates"] = list(
-                        self.competition_rating_updates
-                    )
+                    data["rating_updates"] = list(self.competition_rating_updates)
                     data["ratings_after_competition"] = {
                         name: round(value, 3)
                         for name, value in self.rating_store.ranking()
@@ -3017,14 +3799,11 @@ class CompetitionApp:
                             encoding="utf-8",
                         )
                     except Exception as exc:
-                        self.append(
-                            f"\n[WARN] 結果JSONへのRating追記失敗: {exc}\n"
-                        )
+                        self.append(f"\n[WARN] 結果JSONへのRating追記失敗: {exc}\n")
 
                     self.status_var.set(f"終了：{champion} WIN")
                     self.append(
-                        f"\n{'#' * 78}\nCOMPETITION FINISHED\n"
-                        f"WINNER: {champion}\n"
+                        f"\n{'#' * 78}\nCOMPETITION FINISHED\n" f"WINNER: {champion}\n"
                     )
                     self.append(
                         self.format_player_leaderboards(
@@ -3037,10 +3816,16 @@ class CompetitionApp:
                         f"大会結果保存先: {path}\n{'#' * 78}\n"
                     )
                     self.refresh_rating_window()
+                    self.worker = None
+                    self.root.deiconify()
+                    self.root.lift()
                     self.set_enabled(True)
                 elif kind == "error":
                     self.status_var.set("エラーが発生しました")
                     self.append("\nERROR\n" + event[1] + "\n")
+                    self.worker = None
+                    self.root.deiconify()
+                    self.root.lift()
                     self.set_enabled(True)
         except queue.Empty:
             pass

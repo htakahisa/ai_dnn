@@ -24,6 +24,7 @@ from learning_attacker_multi import LearningAttackerMultiController
 from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
 from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
 from policy_attacker_controller import PolicyAttackerController
+from policy_ppo_attacker_controller import PolicyPPOAttackerController
 from policy_defender_controller import PolicyDefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
@@ -48,6 +49,15 @@ ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
 FNATIC_V1_ATTACKER_MODEL_PATH = "policy_fnatic_attacker_dagger_final.pt"
 FNATIC_V1_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
+# Fnatic v2:
+# Attacker = PPO強化学習
+# Defender = 現在のDAgger模倣学習
+FNATIC_V2_ATTACKER_MODEL_PATH = (
+    "ppo_attacker_checkpoints/"
+    "policy_fnatic_attacker_ppo_best.pt"
+)
+FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
+
 
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
@@ -61,6 +71,24 @@ def _build_team_ai(key):
             ),
             defender_factory=lambda: PolicyDefenderController(
                 model_path=FNATIC_V1_DEFENDER_MODEL_PATH,
+                device="auto",
+            ),
+        )
+
+    if normalized in {
+        "fnatic_v2",
+        "fnatic_2",
+        "fnatic2",
+        "fnatic v2",
+    }:
+        return DualRoleTeamAI(
+            name="Fnatic v2",
+            attacker_factory=lambda: PolicyPPOAttackerController(
+                model_path=FNATIC_V2_ATTACKER_MODEL_PATH,
+                device="auto",
+            ),
+            defender_factory=lambda: PolicyDefenderController(
+                model_path=FNATIC_V2_DEFENDER_MODEL_PATH,
                 device="auto",
             ),
         )
@@ -115,7 +143,18 @@ def _build_attacker_controller(key):
         "fnatic",
     }:
         return PolicyAttackerController(
-            model_path=FNATIC_V1_MODEL_PATH,
+            model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
+            device="auto",
+        )
+
+    if normalized in {
+        "fnatic_v2",
+        "fnatic_2",
+        "fnatic2",
+        "fnatic v2",
+    }:
+        return PolicyPPOAttackerController(
+            model_path=FNATIC_V2_ATTACKER_MODEL_PATH,
             device="auto",
         )
 

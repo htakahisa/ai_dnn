@@ -12,7 +12,7 @@ AWAKENING_EVENTS = [
         "player": "Leo",
         "condition": "all_allies_dead",
         "rename": "-ラスボス-Leo",
-        "bonuses": {"accuracy": 0.15, "hs_rate": 0.1, "dodge_rate": 0.1},
+        "bonuses": {"accuracy": 0.15, "hs_rate": 0.2, "dodge_rate": 0.1},
     },
     {
         "name": "彼を起こしてはいけない",
@@ -79,14 +79,22 @@ AWAKENING_EVENTS = [
         "player": "Ethan",
         "condition": "overtime",
         "rename": "-老兵-Ethan",
-        "bonuses": {"accuracy": 0.3, "hs_rate": 0.1, "reaction": 40},
+        "bonuses": {"accuracy": 0.1, "hs_rate": 0.3, "reaction": 40},
     },
     {
         "name": "夜の始まり",
         "player": "Derke",
         "condition": "overtime",
-        "rename": "-ミッドナイトの怪け物-Derke",
+        "rename": "-ミッドナイトの化け物-Derke",
         "bonuses": {"hs_rate": 0.3, "reaction": 50},
+        "role": "フラッシュ",
+    },
+    {
+        "name": "もうあきた。",
+        "player": "Canezerra",
+        "condition": "overtime",
+        "rename": "-問題児-Canezerra",
+        "bonuses": {"hs_rate": 0.4, "reaction": 40},
     },
 ]
 

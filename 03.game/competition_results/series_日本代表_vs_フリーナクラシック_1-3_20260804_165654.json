@@ -1,0 +1,712 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "フリーナクラシック": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "フリーナクラシック",
+  "maps_to_win": 3,
+  "team1_wins": 1,
+  "team2_wins": 3,
+  "winner": "フリーナクラシック",
+  "loser": "日本代表",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3921090067,
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "score1": 12,
+      "score2": 14,
+      "winner": "フリーナクラシック",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 32,
+        "deaths": 18
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 24,
+        "deaths": 14
+      },
+      "initial_attacker": "日本代表",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 32,
+          "deaths": 18
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 18
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 18
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 16
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 19
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナクラシック",
+          "kills": 24,
+          "deaths": 14
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナクラシック",
+          "kills": 17,
+          "deaths": 18
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナクラシック",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "Jean",
+          "team": "フリーナクラシック",
+          "kills": 19,
+          "deaths": 10
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナクラシック",
+          "kills": 18,
+          "deaths": 15
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 1166966094,
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "score1": 13,
+      "score2": 15,
+      "winner": "フリーナクラシック",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 20,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 19,
+        "deaths": 10
+      },
+      "initial_attacker": "フリーナクラシック",
+      "overtime": true,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 13
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 15
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 10
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 10,
+          "deaths": 12
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナクラシック",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナクラシック",
+          "kills": 15,
+          "deaths": 14
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナクラシック",
+          "kills": 4,
+          "deaths": 10
+        },
+        {
+          "name": "Jean",
+          "team": "フリーナクラシック",
+          "kills": 13,
+          "deaths": 9
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナクラシック",
+          "kills": 19,
+          "deaths": 10
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 1167538004,
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "score1": 13,
+      "score2": 9,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 19,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "Jean",
+        "kills": 16,
+        "deaths": 9
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 19,
+          "deaths": 10
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 11
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 15,
+          "deaths": 9
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 8
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 13
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナクラシック",
+          "kills": 11,
+          "deaths": 9
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナクラシック",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナクラシック",
+          "kills": 7,
+          "deaths": 11
+        },
+        {
+          "name": "Jean",
+          "team": "フリーナクラシック",
+          "kills": 16,
+          "deaths": 9
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナクラシック",
+          "kills": 14,
+          "deaths": 11
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 2907381155,
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "score1": 11,
+      "score2": 13,
+      "winner": "フリーナクラシック",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 31,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 23,
+        "deaths": 12
+      },
+      "initial_attacker": "フリーナクラシック",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 31,
+          "deaths": 16
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 17
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 18,
+          "deaths": 15
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 11
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 10,
+          "deaths": 14
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナクラシック",
+          "kills": 13,
+          "deaths": 16
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナクラシック",
+          "kills": 7,
+          "deaths": 17
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナクラシック",
+          "kills": 17,
+          "deaths": 17
+        },
+        {
+          "name": "Jean",
+          "team": "フリーナクラシック",
+          "kills": 13,
+          "deaths": 9
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナクラシック",
+          "kills": 23,
+          "deaths": 12
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 102,
+        "deaths": 57,
+        "maps": 4,
+        "mvps": 4,
+        "kd": 1.789,
+        "kills_per_map": 25.5
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 61,
+        "deaths": 37,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.649,
+        "kills_per_map": 15.25
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 74,
+        "deaths": 48,
+        "maps": 4,
+        "mvps": 2,
+        "kd": 1.542,
+        "kills_per_map": 18.5
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 62,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.192,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 57,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 1.096,
+        "kills_per_map": 14.25
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 102,
+        "deaths": 57,
+        "maps": 4,
+        "mvps": 4,
+        "kd": 1.789,
+        "kills_per_map": 25.5
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 74,
+        "deaths": 48,
+        "maps": 4,
+        "mvps": 2,
+        "kd": 1.542,
+        "kills_per_map": 18.5
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 61,
+        "deaths": 37,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.649,
+        "kills_per_map": 15.25
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 62,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.192,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 57,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 1.096,
+        "kills_per_map": 14.25
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 102,
+        "deaths": 57,
+        "maps": 4,
+        "mvps": 4,
+        "kd": 1.789,
+        "kills_per_map": 25.5
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 74,
+        "deaths": 48,
+        "maps": 4,
+        "mvps": 2,
+        "kd": 1.542,
+        "kills_per_map": 18.5
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 62,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.192,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 61,
+        "deaths": 37,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.649,
+        "kills_per_map": 15.25
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 57,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 1.096,
+        "kills_per_map": 14.25
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 102,
+        "deaths": 57,
+        "maps": 4,
+        "mvps": 4,
+        "kd": 1.789,
+        "kills_per_map": 25.5
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 74,
+        "deaths": 48,
+        "maps": 4,
+        "mvps": 2,
+        "kd": 1.542,
+        "kills_per_map": 18.5
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 62,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.192,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 61,
+        "deaths": 37,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.649,
+        "kills_per_map": 15.25
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 57,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 1.096,
+        "kills_per_map": 14.25
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 102,
+        "deaths": 57,
+        "maps": 4,
+        "mvps": 4,
+        "kd": 1.789,
+        "kills_per_map": 25.5
+      },
+      {
+        "player": "Jean",
+        "team": "フリーナクラシック",
+        "kills": 61,
+        "deaths": 37,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.649,
+        "kills_per_map": 15.25
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナクラシック",
+        "kills": 74,
+        "deaths": 48,
+        "maps": 4,
+        "mvps": 2,
+        "kd": 1.542,
+        "kills_per_map": 18.5
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナクラシック",
+        "kills": 62,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 1,
+        "kd": 1.192,
+        "kills_per_map": 15.5
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 57,
+        "deaths": 52,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 1.096,
+        "kills_per_map": 14.25
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 50,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 0.78,
+        "kills_per_map": 9.75
+      },
+      {
+        "player": "Lisa",
+        "team": "フリーナクラシック",
+        "kills": 39,
+        "deaths": 53,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 0.736,
+        "kills_per_map": 9.75
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナクラシック",
+        "kills": 42,
+        "deaths": 61,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 0.689,
+        "kills_per_map": 10.5
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 36,
+        "deaths": 58,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 0.621,
+        "kills_per_map": 9.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 17,
+        "deaths": 61,
+        "maps": 4,
+        "mvps": 0,
+        "kd": 0.279,
+        "kills_per_map": 4.25
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 82,
+      "timestamp": "2026-08-04T16:56:55",
+      "type": "series",
+      "competition_id": "series_20260804_165542",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "フリーナクラシック",
+      "score1": 1,
+      "score2": 3,
+      "winner": "フリーナクラシック",
+      "before": {
+        "日本代表": 2548.385,
+        "フリーナクラシック": 2515.942
+      },
+      "after": {
+        "日本代表": 2519.964,
+        "フリーナクラシック": 2544.363
+      },
+      "delta": {
+        "日本代表": -28.421,
+        "フリーナクラシック": 28.421
+      },
+      "expected": {
+        "日本代表": 0.5466,
+        "フリーナクラシック": 0.4534
+      },
+      "margin_multiplier": 1.3
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2802.817,
+    "アイネクライネ": 2598.919,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2519.964,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "radiantdancer": 2444.222,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2418.378,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}

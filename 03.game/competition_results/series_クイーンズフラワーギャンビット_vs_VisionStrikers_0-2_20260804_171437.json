@@ -1,0 +1,546 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "クイーンズフラワーギャンビット": "toru_ai_v3",
+    "VisionStrikers": "toru_ai_v3"
+  },
+  "team1": "クイーンズフラワーギャンビット",
+  "team2": "VisionStrikers",
+  "maps_to_win": 2,
+  "team1_wins": 0,
+  "team2_wins": 2,
+  "winner": "VisionStrikers",
+  "loser": "クイーンズフラワーギャンビット",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2969979524,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "VisionStrikers",
+      "score1": 5,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Chronicle",
+        "kills": 22,
+        "deaths": 7
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 18,
+        "deaths": 7
+      },
+      "initial_attacker": "クイーンズフラワーギャンビット",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 4,
+          "deaths": 11
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 2,
+          "deaths": 12
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 5,
+          "deaths": 12
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 22,
+          "deaths": 7
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 3,
+          "deaths": 12
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 5,
+          "deaths": 9
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 8,
+          "deaths": 5
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 11,
+          "deaths": 9
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 12,
+          "deaths": 6
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 18,
+          "deaths": 7
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 2918036748,
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "VisionStrikers",
+      "score1": 10,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Chronicle",
+        "kills": 17,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 35,
+        "deaths": 8
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Lar0k",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 13,
+          "deaths": 16
+        },
+        {
+          "name": "leaf",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 16
+        },
+        {
+          "name": "nAts",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 6,
+          "deaths": 18
+        },
+        {
+          "name": "Chronicle",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 17,
+          "deaths": 17
+        },
+        {
+          "name": "Sayonara",
+          "team": "クイーンズフラワーギャンビット",
+          "kills": 8,
+          "deaths": 20
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 16,
+          "deaths": 11
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 9,
+          "deaths": 12
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 13,
+          "deaths": 11
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 14,
+          "deaths": 8
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 35,
+          "deaths": 8
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 15,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 3.533,
+        "kills_per_map": 26.5
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 26,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.857,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.625,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 24,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 15,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 3.533,
+        "kills_per_map": 26.5
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.625,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 26,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.857,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 24,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 15,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 3.533,
+        "kills_per_map": 26.5
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.625,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 26,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.857,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 24,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 15,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 3.533,
+        "kills_per_map": 26.5
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.625,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 26,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.857,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 24,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 53,
+        "deaths": 15,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 3.533,
+        "kills_per_map": 26.5
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 26,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.857,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "Chronicle",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 39,
+        "deaths": 24,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.625,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 24,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 12.0
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 17,
+        "deaths": 17,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.0,
+        "kills_per_map": 8.5
+      },
+      {
+        "player": "Lar0k",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 17,
+        "deaths": 27,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.63,
+        "kills_per_map": 8.5
+      },
+      {
+        "player": "nAts",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 11,
+        "deaths": 30,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.367,
+        "kills_per_map": 5.5
+      },
+      {
+        "player": "Sayonara",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 11,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.344,
+        "kills_per_map": 5.5
+      },
+      {
+        "player": "leaf",
+        "team": "クイーンズフラワーギャンビット",
+        "kills": 8,
+        "deaths": 28,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.286,
+        "kills_per_map": 4.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 92,
+      "timestamp": "2026-08-04T17:14:37",
+      "type": "series",
+      "competition_id": "series_20260804_171406",
+      "context": "SERIES",
+      "team1": "クイーンズフラワーギャンビット",
+      "team2": "VisionStrikers",
+      "score1": 0,
+      "score2": 2,
+      "winner": "VisionStrikers",
+      "before": {
+        "クイーンズフラワーギャンビット": 2331.137,
+        "VisionStrikers": 2509.43
+      },
+      "after": {
+        "クイーンズフラワーギャンビット": 2314.254,
+        "VisionStrikers": 2526.313
+      },
+      "delta": {
+        "クイーンズフラワーギャンビット": -16.883,
+        "VisionStrikers": 16.883
+      },
+      "expected": {
+        "クイーンズフラワーギャンビット": 0.2638,
+        "VisionStrikers": 0.7362
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2755.322,
+    "アイネクライネ": 2629.39,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "VisionStrikers": 2526.313,
+    "日本代表": 2517.026,
+    "radiantdancer": 2474.556,
+    "ドラゴンテイル": 2453.919,
+    "Leo軸": 2436.014,
+    "EG2023": 2421.478,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2314.254
+  }
+}

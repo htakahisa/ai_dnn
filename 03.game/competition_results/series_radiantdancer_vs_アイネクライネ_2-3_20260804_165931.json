@@ -1,0 +1,795 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "radiantdancer": "toru_ai_v3",
+    "アイネクライネ": "toru_ai_v3"
+  },
+  "team1": "radiantdancer",
+  "team2": "アイネクライネ",
+  "maps_to_win": 3,
+  "team1_wins": 2,
+  "team2_wins": 3,
+  "winner": "アイネクライネ",
+  "loser": "radiantdancer",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2114649762,
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 8,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 18,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 27,
+        "deaths": 10
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 11,
+          "deaths": 11
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 6,
+          "deaths": 14
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 13,
+          "deaths": 14
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 18,
+          "deaths": 16
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 15,
+          "deaths": 14
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 2,
+          "deaths": 13
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 14,
+          "deaths": 12
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 17,
+          "deaths": 16
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 27,
+          "deaths": 10
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 9,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 2570020013,
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 8,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 21,
+        "deaths": 16
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 34,
+        "deaths": 14
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 15
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 8,
+          "deaths": 18
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 21
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 21,
+          "deaths": 16
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 17,
+          "deaths": 19
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 16
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 14,
+          "deaths": 10
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 20,
+          "deaths": 11
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 34,
+          "deaths": 14
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 17,
+          "deaths": 13
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 3073940809,
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 13,
+      "score2": 10,
+      "winner": "radiantdancer",
+      "mvp1": {
+        "name": "something",
+        "kills": 31,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 30,
+        "deaths": 12
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 11,
+          "deaths": 14
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 13,
+          "deaths": 14
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 13,
+          "deaths": 16
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 14,
+          "deaths": 13
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 31,
+          "deaths": 12
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 19
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 7,
+          "deaths": 17
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 18,
+          "deaths": 18
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 30,
+          "deaths": 12
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 10,
+          "deaths": 16
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 452673414,
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 5,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "something",
+        "kills": 15,
+        "deaths": 10
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 26,
+        "deaths": 10
+      },
+      "initial_attacker": "アイネクライネ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 7,
+          "deaths": 13
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 4,
+          "deaths": 13
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 14
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 15,
+          "deaths": 10
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 4,
+          "deaths": 11
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 7,
+          "deaths": 4
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 16,
+          "deaths": 7
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 26,
+          "deaths": 10
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 11,
+          "deaths": 8
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 3039534445,
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 10,
+      "score2": 13,
+      "winner": "アイネクライネ",
+      "mvp1": {
+        "name": "marteen",
+        "kills": 21,
+        "deaths": 13
+      },
+      "mvp2": {
+        "name": "soulcas",
+        "kills": 26,
+        "deaths": 10
+      },
+      "initial_attacker": "radiantdancer",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Derke",
+          "team": "radiantdancer",
+          "kills": 8,
+          "deaths": 16
+        },
+        {
+          "name": "Sayonara",
+          "team": "radiantdancer",
+          "kills": 9,
+          "deaths": 16
+        },
+        {
+          "name": "Lar0k",
+          "team": "radiantdancer",
+          "kills": 11,
+          "deaths": 19
+        },
+        {
+          "name": "marteen",
+          "team": "radiantdancer",
+          "kills": 21,
+          "deaths": 13
+        },
+        {
+          "name": "something",
+          "team": "radiantdancer",
+          "kills": 13,
+          "deaths": 15
+        },
+        {
+          "name": "FNS",
+          "team": "アイネクライネ",
+          "kills": 3,
+          "deaths": 17
+        },
+        {
+          "name": "crashies",
+          "team": "アイネクライネ",
+          "kills": 6,
+          "deaths": 11
+        },
+        {
+          "name": "cNed",
+          "team": "アイネクライネ",
+          "kills": 26,
+          "deaths": 12
+        },
+        {
+          "name": "soulcas",
+          "team": "アイネクライネ",
+          "kills": 26,
+          "deaths": 10
+        },
+        {
+          "name": "trexx",
+          "team": "アイネクライネ",
+          "kills": 18,
+          "deaths": 12
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 143,
+        "deaths": 56,
+        "maps": 5,
+        "mvps": 5,
+        "kd": 2.554,
+        "kills_per_map": 28.6
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 97,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.516,
+        "kills_per_map": 19.4
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 91,
+        "deaths": 70,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.3,
+        "kills_per_map": 18.2
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 79,
+        "deaths": 72,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.097,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 65,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.066,
+        "kills_per_map": 13.0
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 143,
+        "deaths": 56,
+        "maps": 5,
+        "mvps": 5,
+        "kd": 2.554,
+        "kills_per_map": 28.6
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 79,
+        "deaths": 72,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.097,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 91,
+        "deaths": 70,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.3,
+        "kills_per_map": 18.2
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 97,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.516,
+        "kills_per_map": 19.4
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 65,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.066,
+        "kills_per_map": 13.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 143,
+        "deaths": 56,
+        "maps": 5,
+        "mvps": 5,
+        "kd": 2.554,
+        "kills_per_map": 28.6
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 97,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.516,
+        "kills_per_map": 19.4
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 91,
+        "deaths": 70,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.3,
+        "kills_per_map": 18.2
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 79,
+        "deaths": 72,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.097,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 65,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.066,
+        "kills_per_map": 13.0
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 143,
+        "deaths": 56,
+        "maps": 5,
+        "mvps": 5,
+        "kd": 2.554,
+        "kills_per_map": 28.6
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 97,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.516,
+        "kills_per_map": 19.4
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 91,
+        "deaths": 70,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.3,
+        "kills_per_map": 18.2
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 79,
+        "deaths": 72,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.097,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 65,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.066,
+        "kills_per_map": 13.0
+      }
+    ],
+    "all_players": [
+      {
+        "player": "soulcas",
+        "team": "アイネクライネ",
+        "kills": 143,
+        "deaths": 56,
+        "maps": 5,
+        "mvps": 5,
+        "kd": 2.554,
+        "kills_per_map": 28.6
+      },
+      {
+        "player": "cNed",
+        "team": "アイネクライネ",
+        "kills": 97,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.516,
+        "kills_per_map": 19.4
+      },
+      {
+        "player": "something",
+        "team": "radiantdancer",
+        "kills": 91,
+        "deaths": 70,
+        "maps": 5,
+        "mvps": 2,
+        "kd": 1.3,
+        "kills_per_map": 18.2
+      },
+      {
+        "player": "marteen",
+        "team": "radiantdancer",
+        "kills": 79,
+        "deaths": 72,
+        "maps": 5,
+        "mvps": 3,
+        "kd": 1.097,
+        "kills_per_map": 15.8
+      },
+      {
+        "player": "trexx",
+        "team": "アイネクライネ",
+        "kills": 65,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 1.066,
+        "kills_per_map": 13.0
+      },
+      {
+        "player": "crashies",
+        "team": "アイネクライネ",
+        "kills": 48,
+        "deaths": 54,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.889,
+        "kills_per_map": 9.6
+      },
+      {
+        "player": "Derke",
+        "team": "radiantdancer",
+        "kills": 46,
+        "deaths": 69,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.667,
+        "kills_per_map": 9.2
+      },
+      {
+        "player": "Lar0k",
+        "team": "radiantdancer",
+        "kills": 55,
+        "deaths": 84,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.655,
+        "kills_per_map": 11.0
+      },
+      {
+        "player": "Sayonara",
+        "team": "radiantdancer",
+        "kills": 40,
+        "deaths": 75,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.533,
+        "kills_per_map": 8.0
+      },
+      {
+        "player": "FNS",
+        "team": "アイネクライネ",
+        "kills": 17,
+        "deaths": 76,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.224,
+        "kills_per_map": 3.4
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 84,
+      "timestamp": "2026-08-04T16:59:31",
+      "type": "series",
+      "competition_id": "series_20260804_165822",
+      "context": "SERIES",
+      "team1": "radiantdancer",
+      "team2": "アイネクライネ",
+      "score1": 2,
+      "score2": 3,
+      "winner": "アイネクライネ",
+      "before": {
+        "radiantdancer": 2437.014,
+        "アイネクライネ": 2598.919
+      },
+      "after": {
+        "radiantdancer": 2424.357,
+        "アイネクライネ": 2611.576
+      },
+      "delta": {
+        "radiantdancer": -12.657,
+        "アイネクライネ": 12.657
+      },
+      "expected": {
+        "radiantdancer": 0.2825,
+        "アイネクライネ": 0.7175
+      },
+      "margin_multiplier": 1.12
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2810.025,
+    "アイネクライネ": 2611.576,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2519.964,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "radiantdancer": 2424.357,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2418.378,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}

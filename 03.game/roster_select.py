@@ -13,6 +13,7 @@ from party_presets import all_preset_names, get_preset
 MAX_ROSTER = 5
 
 TEAM_AI_OPTIONS = {
+    "Fnatic v2": "fnatic_v2",
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3": "toru_ai_v3",
     "AI v1": "learning_v1",

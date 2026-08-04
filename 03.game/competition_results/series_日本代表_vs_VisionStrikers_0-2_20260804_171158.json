@@ -1,0 +1,546 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "VisionStrikers": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "VisionStrikers",
+  "maps_to_win": 2,
+  "team1_wins": 0,
+  "team2_wins": 2,
+  "winner": "VisionStrikers",
+  "loser": "日本代表",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 3690465279,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 11,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 24,
+        "deaths": 17
+      },
+      "mvp2": {
+        "name": "Zest",
+        "kills": 29,
+        "deaths": 7
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 22,
+          "deaths": 19
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 22
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 24,
+          "deaths": 17
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 16
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 1,
+          "deaths": 20
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 11,
+          "deaths": 15
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 11,
+          "deaths": 11
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 16,
+          "deaths": 15
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 27,
+          "deaths": 8
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 29,
+          "deaths": 7
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 994028106,
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 5,
+      "score2": 13,
+      "winner": "VisionStrikers",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 15,
+        "deaths": 15
+      },
+      "mvp2": {
+        "name": "Buzz",
+        "kills": 23,
+        "deaths": 6
+      },
+      "initial_attacker": "VisionStrikers",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 14
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 12,
+          "deaths": 15
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 15,
+          "deaths": 15
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 2,
+          "deaths": 15
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 15
+        },
+        {
+          "name": "Mako",
+          "team": "VisionStrikers",
+          "kills": 10,
+          "deaths": 8
+        },
+        {
+          "name": "stax",
+          "team": "VisionStrikers",
+          "kills": 10,
+          "deaths": 9
+        },
+        {
+          "name": "Rb",
+          "team": "VisionStrikers",
+          "kills": 14,
+          "deaths": 10
+        },
+        {
+          "name": "Buzz",
+          "team": "VisionStrikers",
+          "kills": 23,
+          "deaths": 6
+        },
+        {
+          "name": "Zest",
+          "team": "VisionStrikers",
+          "kills": 17,
+          "deaths": 4
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 46,
+        "deaths": 11,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 4.182,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 50,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 3.571,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.219,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 30,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.219,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 46,
+        "deaths": 11,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 4.182,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 50,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 3.571,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 30,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 50,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 3.571,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 46,
+        "deaths": 11,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 4.182,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.219,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 30,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 33,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.818,
+        "kills_per_map": 13.5
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 50,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 3.571,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 46,
+        "deaths": 11,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 4.182,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.219,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 30,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 33,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.818,
+        "kills_per_map": 13.5
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Zest",
+        "team": "VisionStrikers",
+        "kills": 46,
+        "deaths": 11,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 4.182,
+        "kills_per_map": 23.0
+      },
+      {
+        "player": "Buzz",
+        "team": "VisionStrikers",
+        "kills": 50,
+        "deaths": 14,
+        "maps": 2,
+        "mvps": 1,
+        "kd": 3.571,
+        "kills_per_map": 25.0
+      },
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 39,
+        "deaths": 32,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 1.219,
+        "kills_per_map": 19.5
+      },
+      {
+        "player": "Rb",
+        "team": "VisionStrikers",
+        "kills": 30,
+        "deaths": 25,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.2,
+        "kills_per_map": 15.0
+      },
+      {
+        "player": "stax",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 20,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 1.05,
+        "kills_per_map": 10.5
+      },
+      {
+        "player": "Mako",
+        "team": "VisionStrikers",
+        "kills": 21,
+        "deaths": 23,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.913,
+        "kills_per_map": 10.5
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 27,
+        "deaths": 33,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.818,
+        "kills_per_map": 13.5
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 15,
+        "deaths": 37,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.405,
+        "kills_per_map": 7.5
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 8,
+        "deaths": 31,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.258,
+        "kills_per_map": 4.0
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 4,
+        "deaths": 35,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.114,
+        "kills_per_map": 2.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 89,
+      "timestamp": "2026-08-04T17:11:58",
+      "type": "series",
+      "competition_id": "series_20260804_171122",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "VisionStrikers",
+      "score1": 0,
+      "score2": 2,
+      "winner": "VisionStrikers",
+      "before": {
+        "日本代表": 2556.853,
+        "VisionStrikers": 2470.11
+      },
+      "after": {
+        "日本代表": 2517.026,
+        "VisionStrikers": 2509.937
+      },
+      "delta": {
+        "日本代表": -39.827,
+        "VisionStrikers": 39.827
+      },
+      "expected": {
+        "日本代表": 0.6223,
+        "VisionStrikers": 0.3777
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2755.322,
+    "アイネクライネ": 2629.39,
+    "フリーナクラシック": 2544.363,
+    "フリーナタルタリヤ": 2538.539,
+    "日本代表": 2517.026,
+    "VisionStrikers": 2509.937,
+    "radiantdancer": 2474.556,
+    "EG2023": 2450.782,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2388.826,
+    "クイーンズフラワーギャンビット": 2331.137
+  }
+}

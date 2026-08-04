@@ -1,0 +1,795 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "日本代表": "toru_ai_v3",
+    "フリーナタルタリヤ": "toru_ai_v3"
+  },
+  "team1": "日本代表",
+  "team2": "フリーナタルタリヤ",
+  "maps_to_win": 5,
+  "team1_wins": 5,
+  "team2_wins": 0,
+  "winner": "日本代表",
+  "loser": "フリーナタルタリヤ",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 2377732399,
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 7,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Laz",
+        "kills": 20,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Arlecchino",
+        "kills": 21,
+        "deaths": 12
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 11
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 10
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 20,
+          "deaths": 12
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 7
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 11
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナタルタリヤ",
+          "kills": 13,
+          "deaths": 13
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナタルタリヤ",
+          "kills": 9,
+          "deaths": 15
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナタルタリヤ",
+          "kills": 6,
+          "deaths": 14
+        },
+        {
+          "name": "Tartaglia",
+          "team": "フリーナタルタリヤ",
+          "kills": 2,
+          "deaths": 6
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナタルタリヤ",
+          "kills": 21,
+          "deaths": 12
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 4031390563,
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 10,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 16,
+        "deaths": 12
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 20,
+        "deaths": 12
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 10,
+          "deaths": 14
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 11
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 16,
+          "deaths": 12
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 12
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 14
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナタルタリヤ",
+          "kills": 20,
+          "deaths": 12
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナタルタリヤ",
+          "kills": 16,
+          "deaths": 11
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナタルタリヤ",
+          "kills": 9,
+          "deaths": 11
+        },
+        {
+          "name": "Tartaglia",
+          "team": "フリーナタルタリヤ",
+          "kills": 7,
+          "deaths": 5
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナタルタリヤ",
+          "kills": 11,
+          "deaths": 9
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "seed": 1383432149,
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 4,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 25,
+        "deaths": 3
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 15,
+        "deaths": 13
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 23,
+          "deaths": 8
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 7
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 25,
+          "deaths": 3
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 3,
+          "deaths": 7
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 6
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナタルタリヤ",
+          "kills": 15,
+          "deaths": 13
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナタルタリヤ",
+          "kills": 3,
+          "deaths": 13
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナタルタリヤ",
+          "kills": 2,
+          "deaths": 14
+        },
+        {
+          "name": "Tartaglia",
+          "team": "フリーナタルタリヤ",
+          "kills": 3,
+          "deaths": 7
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナタルタリヤ",
+          "kills": 8,
+          "deaths": 14
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "seed": 2707854176,
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 11,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 22,
+        "deaths": 11
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 20,
+        "deaths": 11
+      },
+      "initial_attacker": "フリーナタルタリヤ",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 15,
+          "deaths": 12
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 6,
+          "deaths": 13
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 22,
+          "deaths": 11
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 4,
+          "deaths": 13
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 9,
+          "deaths": 14
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナタルタリヤ",
+          "kills": 20,
+          "deaths": 11
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナタルタリヤ",
+          "kills": 9,
+          "deaths": 14
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナタルタリヤ",
+          "kills": 8,
+          "deaths": 14
+        },
+        {
+          "name": "Tartaglia",
+          "team": "フリーナタルタリヤ",
+          "kills": 13,
+          "deaths": 6
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナタルタリヤ",
+          "kills": 13,
+          "deaths": 11
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "seed": 1279934549,
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 13,
+      "score2": 3,
+      "winner": "日本代表",
+      "mvp1": {
+        "name": "Dep",
+        "kills": 27,
+        "deaths": 4
+      },
+      "mvp2": {
+        "name": "Lohen",
+        "kills": 13,
+        "deaths": 12
+      },
+      "initial_attacker": "日本代表",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Laz",
+          "team": "日本代表",
+          "kills": 13,
+          "deaths": 6
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "日本代表",
+          "kills": 7,
+          "deaths": 5
+        },
+        {
+          "name": "Dep",
+          "team": "日本代表",
+          "kills": 27,
+          "deaths": 4
+        },
+        {
+          "name": "Meiy",
+          "team": "日本代表",
+          "kills": 1,
+          "deaths": 8
+        },
+        {
+          "name": "IbarakiNinja",
+          "team": "日本代表",
+          "kills": 5,
+          "deaths": 6
+        },
+        {
+          "name": "Lohen",
+          "team": "フリーナタルタリヤ",
+          "kills": 13,
+          "deaths": 12
+        },
+        {
+          "name": "Furina",
+          "team": "フリーナタルタリヤ",
+          "kills": 0,
+          "deaths": 11
+        },
+        {
+          "name": "Lisa",
+          "team": "フリーナタルタリヤ",
+          "kills": 2,
+          "deaths": 12
+        },
+        {
+          "name": "Tartaglia",
+          "team": "フリーナタルタリヤ",
+          "kills": 5,
+          "deaths": 7
+        },
+        {
+          "name": "Arlecchino",
+          "team": "フリーナタルタリヤ",
+          "kills": 9,
+          "deaths": 11
+        }
+      ]
+    }
+  ],
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 110,
+        "deaths": 42,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 2.619,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 81,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.588,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 81,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 1.328,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 62,
+        "deaths": 57,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.088,
+        "kills_per_map": 12.4
+      },
+      {
+        "player": "Tartaglia",
+        "team": "フリーナタルタリヤ",
+        "kills": 30,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.968,
+        "kills_per_map": 6.0
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 110,
+        "deaths": 42,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 2.619,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 81,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 1.328,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 81,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.588,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 62,
+        "deaths": 57,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.088,
+        "kills_per_map": 12.4
+      },
+      {
+        "player": "Tartaglia",
+        "team": "フリーナタルタリヤ",
+        "kills": 30,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.968,
+        "kills_per_map": 6.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 110,
+        "deaths": 42,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 2.619,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 81,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.588,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 81,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 1.328,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 62,
+        "deaths": 57,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.088,
+        "kills_per_map": 12.4
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナタルタリヤ",
+        "kills": 37,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.578,
+        "kills_per_map": 7.4
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 110,
+        "deaths": 42,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 2.619,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 81,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.588,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 81,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 1.328,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 62,
+        "deaths": 57,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.088,
+        "kills_per_map": 12.4
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナタルタリヤ",
+        "kills": 37,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.578,
+        "kills_per_map": 7.4
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Dep",
+        "team": "日本代表",
+        "kills": 110,
+        "deaths": 42,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 2.619,
+        "kills_per_map": 22.0
+      },
+      {
+        "player": "Laz",
+        "team": "日本代表",
+        "kills": 81,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.588,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Lohen",
+        "team": "フリーナタルタリヤ",
+        "kills": 81,
+        "deaths": 61,
+        "maps": 5,
+        "mvps": 4,
+        "kd": 1.328,
+        "kills_per_map": 16.2
+      },
+      {
+        "player": "Arlecchino",
+        "team": "フリーナタルタリヤ",
+        "kills": 62,
+        "deaths": 57,
+        "maps": 5,
+        "mvps": 1,
+        "kd": 1.088,
+        "kills_per_map": 12.4
+      },
+      {
+        "player": "Tartaglia",
+        "team": "フリーナタルタリヤ",
+        "kills": 30,
+        "deaths": 31,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.968,
+        "kills_per_map": 6.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "日本代表",
+        "kills": 31,
+        "deaths": 46,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.674,
+        "kills_per_map": 6.2
+      },
+      {
+        "player": "IbarakiNinja",
+        "team": "日本代表",
+        "kills": 30,
+        "deaths": 51,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.588,
+        "kills_per_map": 6.0
+      },
+      {
+        "player": "Furina",
+        "team": "フリーナタルタリヤ",
+        "kills": 37,
+        "deaths": 64,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.578,
+        "kills_per_map": 7.4
+      },
+      {
+        "player": "Meiy",
+        "team": "日本代表",
+        "kills": 26,
+        "deaths": 47,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.553,
+        "kills_per_map": 5.2
+      },
+      {
+        "player": "Lisa",
+        "team": "フリーナタルタリヤ",
+        "kills": 27,
+        "deaths": 65,
+        "maps": 5,
+        "mvps": 0,
+        "kd": 0.415,
+        "kills_per_map": 5.4
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 2500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [
+    {
+      "event": 79,
+      "timestamp": "2026-08-04T16:23:40",
+      "type": "series",
+      "competition_id": "series_20260804_162219",
+      "context": "SERIES",
+      "team1": "日本代表",
+      "team2": "フリーナタルタリヤ",
+      "score1": 5,
+      "score2": 0,
+      "winner": "日本代表",
+      "before": {
+        "日本代表": 2438.492,
+        "フリーナタルタリヤ": 2610.151
+      },
+      "after": {
+        "日本代表": 2485.13,
+        "フリーナタルタリヤ": 2563.513
+      },
+      "delta": {
+        "日本代表": 46.638,
+        "フリーナタルタリヤ": -46.638
+      },
+      "expected": {
+        "日本代表": 0.2713,
+        "フリーナタルタリヤ": 0.7287
+      },
+      "margin_multiplier": 1.6
+    }
+  ],
+  "ratings_after_competition": {
+    "ブラッドムーン": 2802.817,
+    "アイネクライネ": 2598.919,
+    "フリーナタルタリヤ": 2563.513,
+    "フリーナクラシック": 2554.223,
+    "日本代表": 2485.13,
+    "VisionStrikers": 2470.11,
+    "EG2023": 2450.782,
+    "radiantdancer": 2444.222,
+    "Leo軸": 2436.014,
+    "ドラゴンテイル": 2424.108,
+    "Fnatic2023": 2418.378,
+    "クイーンズフラワーギャンビット": 2351.784
+  }
+}
