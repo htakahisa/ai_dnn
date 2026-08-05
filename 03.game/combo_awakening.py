@@ -1,5 +1,6 @@
 """Player combo, awakening, and announcement-queue behavior."""
 
+import random
 from game_core import (
     PLAYER_COMBOS,
     AWAKENING_EVENTS,
@@ -192,6 +193,8 @@ class ComboAwakeningMixin:
             覚醒者のチームのラウンド内合計キル数が condition_value 以上
         - enemy_count_at_or_below:
             生存している敵人数が condition_value 以下
+        - whathappend
+            覚醒者がラウンドでキルした時、味方より敵の人数が多い場合
         """
         condition = str(event.get("condition", "")).strip()
         value = event.get("condition_value")
@@ -201,7 +204,6 @@ class ComboAwakeningMixin:
             return (
                 char.is_alive and bool(allies) and all(not c.is_alive for c in allies)
             )
-
         if condition == "hp_at_or_below":
             try:
                 return char.is_alive and char.hp <= float(value)
@@ -281,6 +283,23 @@ class ComboAwakeningMixin:
             # OT中のラウンドでは、生存中の覚醒対象に対して成立する。
             return char.is_alive and bool(getattr(self, "overtime", False))
 
+        if condition == "whathappend":
+            try:
+                alive_ally = sum(
+                    1
+                    for candidate in self.chars
+                    if candidate.team == char.team and candidate.is_alive
+                )
+                alive_enemies = sum(
+                    1
+                    for candidate in self.chars
+                    if candidate.team != char.team and candidate.is_alive
+                )
+                return char.is_alive and int(getattr(char, "round_kills", 0)) >= 1 and alive_ally < alive_enemies
+            except (TypeError, ValueError):
+                return False
+
+        # end
         return False
 
     def _check_awakening_events(self):

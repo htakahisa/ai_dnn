@@ -20,6 +20,7 @@ CONDITION_LABELS = {
     "specific_player_killed": "{condition_player}を撃破",
     "team_kills_at_least": "チーム合計{condition_value}キル達成",
     "enemy_count_at_or_below": "生存している敵が{condition_value}人以下",
+    "whathappend": "急になにー!?",
 }
 
 

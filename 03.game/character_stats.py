@@ -143,6 +143,11 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "mindfreak": CharacterStats(
         "mindfreak", 0.3, 0.3, 140, 0.7, 100, "スモーカー", 50, 8
     ),
+    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10),
+    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,8),
+    "えんぺん": CharacterStats("えんぺん",0.5,0.17,85,0.75,125,"フラッシュ",65,7),
+    "イグルン": CharacterStats("イグルン",0.33,0.22,75,0.77,131,"シーカー",55,1),
+    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,4),
 }
 
 # 旧コードとの互換用エイリアス

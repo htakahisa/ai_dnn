@@ -138,6 +138,13 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="cNed",
         description="昔からの選手たちが集う知の巨人達",
     ),
+    "とうやまゲーミング": TeamPreset(
+        name="とうやまゲーミング",
+        players=("Tortlilyan", "ろびぃな", "えんぺん", "イグルン", "夢の街"),
+        igl="Tortlilyan",
+        spike_holder="ろびぃな",
+        description="とうやまのおうちゲーミングチーム",
+    ),
 }
 
 
