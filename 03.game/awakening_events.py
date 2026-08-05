@@ -96,6 +96,22 @@ AWAKENING_EVENTS = [
         "rename": "-問題児-Canezerra",
         "bonuses": {"hs_rate": 0.4, "reaction": 40},
     },
+    {
+        "name": "倒したで",
+        "player": "Tortlilyan",
+        "condition": "kills_at_least",
+        "condition_value": 1,
+        "rename": "-調子にのる-とうやま",
+        "bonuses": {"hs_rate": 0.20, "dodge_rate": 0.20},
+    },
+    {
+        "name": "急になにー!?",
+        "player": "Tortlilyan",
+        "condition": "whathappend",
+        "condition_value": 1,
+        "rename": "-焦る-とうやま",
+        "bonuses": {"hs_rate": 0.77, "dodge_rate": 0.77, "accuracy": 0.07, "reaction": 77},
+    },
 ]
 
 
