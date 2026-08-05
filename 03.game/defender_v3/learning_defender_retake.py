@@ -38,7 +38,9 @@ ACTION_DEFUSE = 5
 ACTION_ABILITY = 6
 
 SITE_ZONE_RADIUS = 6
+DEFUSE_SAFETY_MARGIN_TICKS = 4
 ENTRY_READY_RADIUS = 3
+ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2}
 
 DEFAULT_MODEL_PATH = "data/defender_retake_data/dqn_defender_retake_best.pt"
@@ -237,7 +239,6 @@ def _own_ability_charge(char):
         return char.recon_charges
     return 0
 
-
 # ---------------------------------------------------------------------------
 # 推論コントローラー
 # ---------------------------------------------------------------------------
@@ -421,6 +422,7 @@ class LearningDefenderRetakeController:
     def _action_mask(self, char, game_state, planted_pos, is_planted):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
+        detonate_timer = game_state.get("detonate_timer", SPIKE_DETONATION_TICKS)
         height, width = grid.shape
 
         mask = np.zeros(N_ACTIONS, dtype=bool)
@@ -440,6 +442,18 @@ class LearningDefenderRetakeController:
 
         has_charge = _own_ability_charge(char) > 0
         mask[ACTION_ABILITY] = bool(has_charge and not self._ally_ability_active(char, chars))
+
+        # 💡追加: train_defender_retake.py の action_mask と同一条件。
+        # 時間に余裕があり、敵が視認できている場合は移動をマスクして足を止めさせる。
+        time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
+        if not time_critical:
+            enemy_visible = any(
+                getattr(e, "is_alive", True)
+                and _has_los(grid, tuple(char.pos), tuple(e.pos), self._smoke_cells_cache)
+                for e in chars if e.team != char.team
+            )
+            if enemy_visible:
+                mask[0] = mask[1] = mask[2] = mask[3] = False
 
         return mask
 

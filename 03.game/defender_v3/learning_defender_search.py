@@ -40,7 +40,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 35  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ)
+OBS_DIM = 36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 
 SIGHTING_STALENESS_CAP = 30
@@ -202,13 +202,15 @@ def _ability_charge(char):
 class _TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.last_seen_enemy = None  # {"pos": (r, c), "tick_ago": int}
+        self.spike_held = False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
+        self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
         self.spike_pos = None
+        self.spike_held = False
         self.last_seen_enemy = None
 
-    def update(self, grid, my_team, chars):
+    def update(self, grid, my_team, chars, spike_ground_pos=None):
         defenders = [c for c in chars if c.team == my_team and c.is_alive]
         enemies = [c for c in chars if c.team != my_team]
 
@@ -225,9 +227,29 @@ class _TeamMemory:
         )
         if spike_holder is not None:
             self.spike_pos = tuple(spike_holder.pos)
+            self.spike_held = True
+        elif spike_ground_pos is not None and any(
+            _has_los(grid, tuple(d.pos), tuple(spike_ground_pos)) for d in defenders
+        ):
+            self.spike_pos = tuple(spike_ground_pos)
+            self.spike_held = False
 
         if visible_enemies:
-            self.last_seen_enemy = {"pos": tuple(visible_enemies[0].pos), "tick_ago": 0}
+            tracked = None
+            if self.last_seen_enemy is not None:
+                tracked_name = self.last_seen_enemy.get("name")
+                tracked = next((e for e in visible_enemies if e.name == tracked_name), None)
+            if tracked is None:
+                tracked = min(
+                    visible_enemies,
+                    key=lambda e: min(
+                        max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
+                        for d in defenders
+                    ) if defenders else 0,
+                )
+            self.last_seen_enemy = {
+                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
+            }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
             if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
@@ -265,8 +287,9 @@ class LearningDefenderSearchController:
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
         self._assigned_positions = {}       # char_name -> (r, c)
         self._assigned_dist_maps = {}       # char_name -> np.ndarray(BFS距離マップ)
-        self._prev_defense_bfs_dist = {}    # char_name -> float(未使用。観測のみのため不要だが
-                                             # デバッグ用に保持しておく)
+        self._prev_defense_bfs_dist = {}    # char_name -> float(未使用。観測のみのため不要だがデバッグ用に保持しておく)
+        self._debug_log_path = "defender_search_debug.log"
+
         self._assignment_done = False
         self._grid_cache = None
         self.spike_dist_map = None
@@ -287,12 +310,12 @@ class LearningDefenderSearchController:
         self._spike_dist_map_source = None
         self._sighting_dist_map_source = None
 
-    def _maybe_advance_tick(self, char, grid, chars):
+    def _maybe_advance_tick(self, char, grid, chars, spike_ground_pos):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
         チーム共有メモリを1回だけ更新する。"""
         if char.name in self._processed_this_tick:
             self._processed_this_tick.clear()
-            self.team_memory.update(grid, char.team, chars)
+            self.team_memory.update(grid, char.team, chars, spike_ground_pos)
         self._processed_this_tick.add(char.name)
 
     def _update_priority_dist_maps(self, grid):
@@ -350,7 +373,7 @@ class LearningDefenderSearchController:
         self._assignment_done = True
 
     # -- 観測構築 ----------------------------------------------------------
-    def _build_observation(self, char, game_state, site_positions):
+    def _build_observation(self, char, game_state, site_positions, unit_has_spike_los):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         height, width = grid.shape
@@ -436,8 +459,14 @@ class LearningDefenderSearchController:
         obs[30] = 0.0
 
         # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
-        # 変更後(r0, c0 は上の5.で既に定義済みなので再宣言不要)
-        dist_map = self._assigned_dist_maps.get(char.name)
+        # spike/sightingモードの間はこの情報を出さない。到着済みフラグが
+        # 「動くな」という学習済みバイアスとして誤って引き継がれ、緊急時の
+        # 移動を妨げるのを防ぐため。
+        in_position_mode = (
+            self.team_memory.spike_pos is None
+            and self.team_memory.last_seen_enemy is None
+        )
+        dist_map = self._assigned_dist_maps.get(char.name) if in_position_mode else None
         if dist_map is not None:
             bfs_dist = dist_map[r0, c0]
             if bfs_dist < 0:
@@ -448,6 +477,13 @@ class LearningDefenderSearchController:
             obs[32] = float(best_dr)
             obs[33] = float(best_dc)
             obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
+
+        # --- 落下中スパイクにLOSが通っており、待ち伏せすべき状態か ---
+        obs[35] = 1.0 if (
+            self.team_memory.spike_pos is not None
+            and not self.team_memory.spike_held
+            and unit_has_spike_los
+        ) else 0.0
 
         return obs, visible_enemies
 
@@ -503,11 +539,33 @@ class LearningDefenderSearchController:
                 self._site_positions_cache = [(grid.shape[0] / 2.0, grid.shape[1] / 2.0)]
 
         self._ensure_defense_assignment(char, grid, chars)
-        self._maybe_advance_tick(char, grid, chars)
+        self._maybe_advance_tick(char, grid, chars, game_state.get("spike_pos"))
         self._update_priority_dist_maps(grid)
 
-        obs, visible_enemies = self._build_observation(char, game_state, self._site_positions_cache)
+        unit_has_spike_los = (
+            self.team_memory.spike_pos is not None
+            and not self.team_memory.spike_held
+            and _has_los(grid, tuple(char.pos), self.team_memory.spike_pos)
+        )
+        obs, visible_enemies = self._build_observation(
+            char, game_state, self._site_positions_cache, unit_has_spike_los
+        )
         mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
+        
+        if self.verbose:
+            mode = (
+                "spike" if self.team_memory.spike_pos is not None
+                else "sighting" if self.team_memory.last_seen_enemy is not None
+                else "position"
+            )
+            with open(self._debug_log_path, "a", encoding="utf-8") as f:
+                f.write(
+                    f"{char.name},{tuple(char.pos)},{mode},"
+                    f"spike14={obs[14]:.2f},spike15={obs[15]:.1f},spike16={obs[16]:.1f},"
+                    f"sight17={obs[17]:.2f},sight18={obs[18]:.1f},sight19={obs[19]:.1f},"
+                    f"pos31={obs[31]:.2f},pos34={obs[34]:.1f},"
+                    f"spike_pos={self.team_memory.spike_pos}\n"
+                )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)
@@ -516,6 +574,11 @@ class LearningDefenderSearchController:
             q_values = self.model(obs_t).squeeze(0).clone()
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
+
+        if self.verbose:
+            with open(self._debug_log_path, "a", encoding="utf-8") as f:
+                masked_q = q_values.cpu().numpy()
+                f.write(f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n")
 
         move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)

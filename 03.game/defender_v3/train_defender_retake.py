@@ -492,6 +492,16 @@ class RetakeEnv:
 
         has_charge = char.own_ability_charge() > 0
         mask[ACTION_ABILITY] = bool(has_charge and not self.ally_ability_active(char))
+
+        # 💡追加: 時間に余裕があり(time_critical_for_entryでない)、かつ敵が視認できている場合、
+        # 移動action(0-3)をマスクして足を止めさせる(撃ち合い中の移動は不利なため)。
+        time_critical = self.detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
+        if not time_critical:
+            enemy_visible = any(
+                e.is_alive and self.check_line_of_sight(char, e) for e in self.attackers()
+            )
+            if enemy_visible:
+                mask[0] = mask[1] = mask[2] = mask[3] = False
         return mask
 
     # -- 観測 --------------------------------------------------------------

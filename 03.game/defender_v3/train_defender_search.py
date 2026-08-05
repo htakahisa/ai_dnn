@@ -59,7 +59,7 @@ from game_core import (
     PLANT_REQUIRED_TICKS,
 )
 
-EPISODE_COUNT = 5000
+EPISODE_COUNT = 8000
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -76,7 +76,7 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 35  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ)
+OBS_DIM = 36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
@@ -109,6 +109,8 @@ ABILITY_OVERLAP_PENALTY = -0.05
 DEBUFF_KILL_BONUS = 0.3
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
+SPIKE_WATCH_HOLD_BONUS = 0.02       # 落下中スパイクにLOSが通っている間、静止(待ち伏せ)
+SPIKE_WATCH_MOVE_PENALTY = -0.01    # 同上、無駄にうろつく
 KILL_REWARD = 0.5
 DEATH_PENALTY = -0.5
 ROUND_WIN_REWARD = 1.0          # 時間切れ・全滅によるDefender勝利
@@ -279,6 +281,7 @@ class UnitStub:
         # 揃えるためだけに使い、報酬は発生させない(_compute_rewards参照)。
         self.prev_priority_mode = None
         self.prev_priority_dist = None
+        self.prev_priority_target_key = None 
 
 
 # ============================================================================
@@ -288,17 +291,18 @@ class UnitStub:
 class TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.last_seen_enemy = None  # {"pos": (r, c), "tick_ago": int}
+        self.spike_held = False  # True: 保持者が移動中(緊急) / False: 地面に落下(待ち伏せ可)
+        self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
         self.spike_pos = None
+        self.spike_held = False
         self.last_seen_enemy = None
 
-    def update(self, defenders, attackers, smoke_cells):
+    def update(self, defenders, attackers, smoke_cells, spike_ground_pos=None):
+        alive_defenders = [d for d in defenders if d.is_alive]
         visible_enemies = []
-        for d in defenders:
-            if not d.is_alive:
-                continue
+        for d in alive_defenders:
             for a in attackers:
                 if not a.is_alive:
                     continue
@@ -308,9 +312,31 @@ class TeamMemory:
         spike_holder = next((a for a in visible_enemies if a.has_spike), None)
         if spike_holder is not None:
             self.spike_pos = tuple(spike_holder.pos)
+            self.spike_held = True
+        elif spike_ground_pos is not None and any(
+            has_los(d.pos, spike_ground_pos, smoke_cells) for d in alive_defenders
+        ):
+            self.spike_pos = tuple(spike_ground_pos)
+            self.spike_held = False
 
         if visible_enemies:
-            self.last_seen_enemy = {"pos": tuple(visible_enemies[0].pos), "tick_ago": 0}
+            # 追跡継続性: 直前と同じ敵がまだ見えていればその敵を追い続ける。
+            # 見えなくなっていた場合のみ、自チームから最も近い敵に切り替える。
+            tracked = None
+            if self.last_seen_enemy is not None:
+                tracked_name = self.last_seen_enemy.get("name")
+                tracked = next((a for a in visible_enemies if a.name == tracked_name), None)
+            if tracked is None:
+                tracked = min(
+                    visible_enemies,
+                    key=lambda a: min(
+                        max(abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1]))
+                        for d in alive_defenders
+                    ) if alive_defenders else 0,
+                )
+            self.last_seen_enemy = {
+                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
+            }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
             if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
@@ -362,7 +388,7 @@ class ReplayBuffer:
 
 def build_observation(
     unit, defenders, attackers, team_memory, smoke_cells, own_smoke_active, round_timer,
-    spike_dist_map, sighting_dist_map,
+    spike_dist_map, sighting_dist_map, unit_has_spike_los,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(unit.pos[0]), int(unit.pos[1])
@@ -431,8 +457,12 @@ def build_observation(
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 0.0  # 予備次元
 
-    # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
-    if unit.assigned_defense_pos is not None:
+     # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
+    # spike/sightingモードの間はこの情報を出さない。到着済みフラグが
+    # 「動くな」という学習済みバイアスとして誤って引き継がれ、緊急時の
+    # 移動を妨げるのを防ぐため。
+    in_position_mode = team_memory.spike_pos is None and team_memory.last_seen_enemy is None
+    if in_position_mode and unit.assigned_defense_pos is not None:
         dist_map = unit.assigned_defense_dist_map
         bfs_dist = dist_map[r0, c0]
         if bfs_dist < 0:
@@ -442,6 +472,13 @@ def build_observation(
         obs[32] = float(best_dr)
         obs[33] = float(best_dc)
         obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
+    
+    # --- 落下中スパイクにLOSが通っており、待ち伏せすべき状態か ---
+    obs[35] = 1.0 if (
+        team_memory.spike_pos is not None
+        and not team_memory.spike_held
+        and unit_has_spike_los
+    ) else 0.0
 
     return obs
 
@@ -514,6 +551,7 @@ class SearchEnv:
         self._prev_alive = {}
         self.spike_dist_map = None
         self.sighting_dist_map = None
+        self.spike_ground_pos = None
 
     # -- 初期化 --------------------------------------------------------
     def reset(self):
@@ -522,6 +560,7 @@ class SearchEnv:
         self.round_timer = MAX_TICKS
         self.planted = False
         self.match_over_reason = None
+        self.spike_ground_pos = None
 
         d_spawns = random.sample(DEFENDER_SPAWNS, min(N_DEFENDERS, len(DEFENDER_SPAWNS)))
         a_spawns = random.sample(ATTACKER_SPAWNS, min(N_ATTACKERS, len(ATTACKER_SPAWNS)))
@@ -541,7 +580,7 @@ class SearchEnv:
 
         self._assign_defense_positions()
 
-        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
+        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos)
         self._update_priority_dist_maps()
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
@@ -565,6 +604,7 @@ class SearchEnv:
             d.assigned_defense_dist_map = DEFENSE_POS_DIST_MAPS[DEFENSE_POSITIONS.index(pos)]
             d.prev_priority_mode = None
             d.prev_priority_dist = None
+            d.prev_priority_target_key = None
 
     def _update_priority_dist_maps(self):
         """team_memory更新の直後に呼び、スパイク確定位置・敵目撃位置への
@@ -599,10 +639,15 @@ class SearchEnv:
         for d in self.defenders:
             if not d.is_alive:
                 continue
+            unit_has_spike_los = (
+                self.team_memory.spike_pos is not None
+                and not self.team_memory.spike_held
+                and has_los(d.pos, self.team_memory.spike_pos, smoke_cells)
+            )
             obs_dict[d.name] = build_observation(
                 d, self.defenders, self.attackers, self.team_memory,
                 smoke_cells, self._own_smoke_active("D"), self.round_timer,
-                self.spike_dist_map, self.sighting_dist_map,
+                self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
             )
             own_occupied = occupied - {tuple(d.pos)}
             has_enemy_los = any(
@@ -729,6 +774,15 @@ class SearchEnv:
             if in_bounds and not is_wall and not occupied:
                 unit.pos = [nr, nc]
             unit.moved_this_tick = tuple(unit.pos) != old_pos
+        
+        if self.spike_ground_pos is not None:
+            picker = next(
+                (a for a in self.attackers if a.is_alive and tuple(a.pos) == self.spike_ground_pos),
+                None,
+            )
+            if picker is not None:
+                picker.has_spike = True
+                self.spike_ground_pos = None
 
         for unit, target_pos in ability_requests:
             unit.charges -= 1
@@ -757,9 +811,7 @@ class SearchEnv:
         if not any(a.is_alive and a.has_spike for a in self.attackers):
             dropped_holder = next((a for a in self.attackers if a.has_spike), None)
             if dropped_holder is not None:
-                nearest_alive = next((a for a in self.attackers if a.is_alive), None)
-                if nearest_alive is not None:
-                    nearest_alive.has_spike = True
+                self.spike_ground_pos = tuple(dropped_holder.pos)
                 dropped_holder.has_spike = False
 
         self._resolve_shots()
@@ -771,7 +823,7 @@ class SearchEnv:
             s["remaining_ticks"] -= 1
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
-        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells())
+        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos)
         self._update_priority_dist_maps()
         self.round_timer -= 1
 
@@ -879,17 +931,16 @@ class SearchEnv:
                 self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
 
     def _priority_mode_and_distmap(self, defender):
-        """このtickでdefenderが最優先すべき対象と、そのBFS距離マップを返す。
-
-        1. スパイク確定情報(全員共通のspike_dist_map)
-        2. 敵目撃情報(全員共通のsighting_dist_map)
-        3. 担当する有利ポジション(defenderごとに異なるassigned_defense_dist_map)
-        """
         if self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
-            return "spike", self.spike_dist_map
+            if self.team_memory.spike_held:
+                return "spike", self.spike_dist_map, "spike"
+            if has_los(defender.pos, self.team_memory.spike_pos, self._smoke_cells()):
+                return "spike_watch", self.spike_dist_map, "spike_watch"
+            return "spike_approach", self.spike_dist_map, "spike_approach"
         if self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
-            return "sighting", self.sighting_dist_map
-        return "position", defender.assigned_defense_dist_map
+            target_key = f"sighting:{self.team_memory.last_seen_enemy.get('name')}"
+            return "sighting", self.sighting_dist_map, target_key
+        return "position", defender.assigned_defense_dist_map, "position"
 
     def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle):
         rewards = {}
@@ -897,21 +948,25 @@ class SearchEnv:
             r = STEP_PENALTY
 
             # --- 優先度付きの寄せ先評価(ポテンシャルベース) ---
-            mode, dist_map = self._priority_mode_and_distmap(d)
+            mode, dist_map, target_key = self._priority_mode_and_distmap(d)
             r0, c0 = int(d.pos[0]), int(d.pos[1])
             bfs_dist = dist_map[r0, c0] if dist_map is not None else None
             if bfs_dist is not None and bfs_dist < 0:
-                bfs_dist = None  # 到達不能セル
+                bfs_dist = None
 
             if bfs_dist is None:
-                # 距離計算不可(到達不能等)。基準だけリセットし報酬は与えない。
                 d.prev_priority_mode = mode
+                d.prev_priority_target_key = target_key
                 d.prev_priority_dist = None
-            elif mode != d.prev_priority_mode or d.prev_priority_dist is None:
-                # モード切替直後(例: 待機中→スパイク確定)は基準値を
-                # そろえるだけにして、切替時に不自然な差分報酬が
-                # 発生しないようにする。
+            elif (
+                mode != d.prev_priority_mode
+                or target_key != d.prev_priority_target_key
+                or d.prev_priority_dist is None
+            ):
+                # モード切替 or 追跡対象そのものが変わった直後は基準値を
+                # そろえるだけにして、不自然な差分報酬を発生させない。
                 d.prev_priority_mode = mode
+                d.prev_priority_target_key = target_key
                 d.prev_priority_dist = bfs_dist
             else:
                 delta = d.prev_priority_dist - bfs_dist
@@ -919,9 +974,13 @@ class SearchEnv:
 
                 if mode == "spike":
                     r += SPIKE_PULL_REWARD * delta
+                elif mode == "spike_approach":
+                    r += SPIKE_PULL_REWARD * delta
+                elif mode == "spike_watch":
+                    r += SPIKE_WATCH_HOLD_BONUS if not d.moved_this_tick else SPIKE_WATCH_MOVE_PENALTY
                 elif mode == "sighting":
                     r += SIGHTING_PULL_REWARD * delta
-                else:  # position
+                else:
                     if bfs_dist > REACH_RADIUS:
                         r += DEFENSE_POSITION_PULL_REWARD * delta
                     else:
