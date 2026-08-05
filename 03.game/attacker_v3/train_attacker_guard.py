@@ -1063,7 +1063,7 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--eps-start", type=float, default=1.0)
     parser.add_argument("--eps-end", type=float, default=0.05)
-    parser.add_argument("--eps-decay-episodes", type=int, default=4000)
+    parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
     parser.add_argument("--target-update-every", type=int, default=800)
     parser.add_argument("--eval-every", type=int, default=200)
     parser.add_argument("--eval-episodes", type=int, default=20)
