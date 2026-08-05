@@ -374,7 +374,7 @@ COMBOS = [
     },
     {
         "name": "ふわんだりぃず",
-        "players": ("ろびぃな", "えんぺん", "イグルン"),
+        "players": ("ろびぃな", "えんぺん", "いぐるん"),
         "bonuses": {"accuracy": 0.15, "hs_rate": 0.1, "dodge_rate": 0.2, "reaction": 30},
         "renames": {},
     },
