@@ -44,6 +44,10 @@ from game_core import (
     DEFUSE_REQUIRED_TICKS,
     SPIKE_DETONATION_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

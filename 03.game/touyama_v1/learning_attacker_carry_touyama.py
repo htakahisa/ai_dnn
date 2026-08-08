@@ -45,6 +45,10 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -64,8 +68,6 @@ SITE_VALUES = frozenset({2, 5})
 
 ABILITY_RANGE = 8
 SIGHTING_STALENESS_CAP = 20
-
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
 
 
 # ============================================================================

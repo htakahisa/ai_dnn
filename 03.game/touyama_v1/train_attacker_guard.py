@@ -62,6 +62,10 @@ from game_core import (
     SPIKE_DETONATION_TICKS,
     DEFUSE_REQUIRED_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 

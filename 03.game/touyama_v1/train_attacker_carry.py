@@ -68,6 +68,10 @@ from game_core import (
     ROUND_DURATION_TICKS,
     PLANT_REQUIRED_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 

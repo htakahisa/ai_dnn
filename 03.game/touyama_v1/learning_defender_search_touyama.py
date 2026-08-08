@@ -37,13 +37,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import itertools
+
 from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
+from map_data import NEW_MAZE_STR
 from map_data_search import SEARCH_MAZE_STR
 
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
@@ -169,6 +178,69 @@ def _extract_defense_positions():
 
 
 _DEFENSE_POSITIONS_CACHE = _extract_defense_positions()
+
+
+def _parse_maze_grid(maze_str):
+    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+
+
+def _compute_touyama_fixed_defense_assignment():
+    """train_defender_search.py の _compute_optimal_defense_assignment と
+    完全に同一のロジック・同一のデータソースから、同じ固定割当を再現する。
+
+    学習時にモデルが学習した「担当地点への距離・方向」は、この固定割当を
+    前提とした観測であるため、推論側でも必ず同じ割当を使う必要がある。
+    (自己完結ルールにより、学習ファイルをimportせずロジックを複製する)
+    """
+    grid = _parse_maze_grid(NEW_MAZE_STR)
+    height, width = grid.shape
+    defender_spawns = [
+        (r, c) for r in range(height) for c in range(width) if grid[r, c] == 4
+    ]
+
+    if len(defender_spawns) < len(TOUYAMA_ROSTER_ORDER):
+        print(
+            "[WARN] DEFENDER_SPAWNSがtouyama_v1の人数に足りません。"
+            "固定割当の計算をスキップします。"
+        )
+        return {}
+
+    if not _DEFENSE_POSITIONS_CACHE:
+        return {}
+
+    dist_maps = [
+        _bfs_distance_map(grid, pos) for pos in _DEFENSE_POSITIONS_CACHE
+    ]
+
+    best_perm = None
+    best_cost = None
+    for perm in itertools.permutations(range(len(_DEFENSE_POSITIONS_CACHE))):
+        cost = 0
+        valid = True
+        for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
+            spawn = defender_spawns[i]
+            dist = dist_maps[perm[i]][spawn[0], spawn[1]]
+            if dist < 0:
+                valid = False
+                break
+            cost += int(dist)
+        if not valid:
+            continue
+        if best_cost is None or cost < best_cost:
+            best_cost = cost
+            best_perm = perm
+
+    if best_perm is None:
+        return {}
+
+    return {
+        name: _DEFENSE_POSITIONS_CACHE[best_perm[i]]
+        for i, name in enumerate(TOUYAMA_ROSTER_ORDER)
+    }
+
+
+_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT = _compute_touyama_fixed_defense_assignment()
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -349,23 +421,40 @@ class LearningDefenderSearchTouyamaController:
             self._sighting_dist_map_source = sighting_pos
 
     def _ensure_defense_assignment(self, char, grid, chars):
-        """ラウンド開始時、自チーム全員に7地点を貪欲割り当てし、
-        それぞれのBFS距離マップも同時に構築する。
-        フォールバック: 7地点が見つからない場合は自チームのスポーン
-        位置集合を代用する。"""
+        """touyama_v1固定チームは、学習時に一意に計算した固定割当
+        (_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT)をそのまま使う。スポーン位置・
+        担当地点候補が毎ラウンド同一である以上、動的な貪欲割当は不要かつ
+        学習時の割当とずれる原因になるため行わない。
+        フォールバック: 固定割当が計算できていない場合のみ、旧来の
+        名前順貪欲割当に切り替える。"""
         if self._assignment_done:
             return
 
+        teammates = [c for c in chars if c.team == char.team and c.is_alive]
+
+        if _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT:
+            for teammate in teammates:
+                pos = _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT.get(teammate.name)
+                if pos is None:
+                    continue
+                self._assigned_positions[teammate.name] = pos
+                dist_map = _bfs_distance_map(grid, pos)
+                self._assigned_dist_maps[teammate.name] = dist_map
+                self._prev_defense_bfs_dist[teammate.name] = float(
+                    dist_map[int(teammate.pos[0]), int(teammate.pos[1])]
+                )
+            self._assignment_done = True
+            return
+
+        # --- フォールバック: 固定割当が使えない場合のみ旧ロジック ---
         if not self._defense_positions:
-            teammates_now = [c for c in chars if c.team == char.team and c.is_alive]
+            teammates_now = teammates
             fallback = [tuple(c.pos) for c in teammates_now] or [
                 (grid.shape[0] // 2, grid.shape[1] // 2)
             ]
             self._defense_positions = fallback
 
-        teammates = [c for c in chars if c.team == char.team and c.is_alive]
         remaining = list(self._defense_positions)
-        # 名前順で安定させる(乱数を使わず決定的に割り当てる)
         for teammate in sorted(teammates, key=lambda c: c.name):
             if remaining:
                 pos = min(

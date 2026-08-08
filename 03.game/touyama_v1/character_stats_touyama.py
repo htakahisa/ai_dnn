@@ -14,6 +14,8 @@ class CharacterStats:
     influence: float
     # スプレッドシートの「調子の波」。0が最も安定、値が大きいほど波が大きい。
     form_variance: float = 0.0
+    # 0～10。高いほど逆境・長期戦・シリーズ劣勢の影響を受けにくい。
+    mental: float = 5.0
 
     @property
     def condition_variance(self) -> float:
@@ -22,12 +24,14 @@ class CharacterStats:
 
 
 CHARACTER_TABLE: Dict[str, CharacterStats] = {
-    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10),
-    "いぐるん": CharacterStats("いぐるん",0.33,0.22,75,0.77,131,"シーカー",55,1),
-    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,8),
-    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,4),
-    "えんぺん": CharacterStats("えんぺん",0.5,0.17,85,0.75,125,"フラッシュ",65,7),
+    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10,4),
+    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,5,8),
+    "えんぺん": CharacterStats("えんぺん",0.5,0.17,185,0.75,125,"フラッシュ",65,1,8),
+    "いぐるん": CharacterStats("いぐるん",0.33,0.22,75,0.77,131,"シーカー",55,4,8),
+    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,3,8),
 }
+
+TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
 
 # 旧コードとの互換用エイリアス
 CHARACTER_STATS = CHARACTER_TABLE

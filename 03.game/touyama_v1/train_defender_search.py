@@ -34,6 +34,13 @@ import random
 import math
 from collections import deque, namedtuple
 
+# 標準出力のバッファリングによってログ表示が遅延・停止して見える問題を防ぐため、
+# 実行時のコマンド(-uの有無)に依存せず、スクリプト側で明示的に行バッファリングへ切り替える。
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except AttributeError:
+    pass
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -44,7 +51,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
 from map_data_search import SEARCH_MAZE_STR
-from character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 from game_core import (
     MAX_HP,
@@ -99,7 +109,6 @@ DEFAULT_REACTION = 100.0
 # ---------------------------------------------------------------------------
 # touyama_v1 固定チーム定義
 # ---------------------------------------------------------------------------
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
 TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # このsearch phaseでは未使用。carry/guard学習用に保持。
 
 TOUYAMA_COMBO_NAME = "ふわんだりぃず"
@@ -216,13 +225,36 @@ if len(DEFENDER_SPAWNS) < len(TOUYAMA_ROSTER_ORDER):
     )
 
 _SEARCH_GRID = _parse_grid(SEARCH_MAZE_STR)
-DEFENSE_POSITIONS = [
-    (r, c) for r in range(_SEARCH_GRID.shape[0]) for c in range(_SEARCH_GRID.shape[1])
-    if _SEARCH_GRID[r, c] == 7
-]
-if not DEFENSE_POSITIONS:
-    print("[WARN] map_data_search.py に7のポジションが見つかりません。DEFENDER_SPAWNSで代用します。")
-    DEFENSE_POSITIONS = list(DEFENDER_SPAWNS) if DEFENDER_SPAWNS else [(HEIGHT // 2, WIDTH // 2)]
+
+# ロースター順(TOUYAMA_ROSTER_ORDER)に、マップ上の値 5,6,7,8,9 をそのまま
+# 1:1で対応させる。5=roster[0], 6=roster[1], 7=roster[2], 8=roster[3], 9=roster[4]。
+# 5人×5地点の総当たり最適化は不要で、マップ側で明示的に指定された担当地点へ
+# ロースター順のままそのまま割り当てるだけでよい。
+TOUYAMA_DEFENSE_POSITION_VALUES = {
+    name: 5 + i for i, name in enumerate(TOUYAMA_ROSTER_ORDER)
+}
+
+
+def _find_marker_position(grid, value):
+    hits = [
+        (r, c) for r in range(grid.shape[0]) for c in range(grid.shape[1])
+        if grid[r, c] == value
+    ]
+    if len(hits) != 1:
+        raise RuntimeError(
+            f"map_data_search.py の値{value}は1マスのみである必要がありますが、"
+            f"{len(hits)}マス見つかりました: {hits}"
+        )
+    return hits[0]
+
+
+TOUYAMA_DEFENSE_ASSIGNMENT = {
+    name: _find_marker_position(_SEARCH_GRID, value)
+    for name, value in TOUYAMA_DEFENSE_POSITION_VALUES.items()
+}
+
+# DEFENSE_POSITIONS はロースター順の担当地点リスト(既存コードとの互換用)。
+DEFENSE_POSITIONS = [TOUYAMA_DEFENSE_ASSIGNMENT[name] for name in TOUYAMA_ROSTER_ORDER]
 
 
 def _extract_site_positions(cells, max_sites=2):
@@ -325,6 +357,42 @@ def bfs_best_direction(dist_map, r0, c0):
 
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
 DEFENSE_POS_DIST_MAPS = [bfs_distance_map(pos) for pos in DEFENSE_POSITIONS]
+
+
+# TOUYAMA_DEFENSE_ASSIGNMENT はマップ読み込み時点(上のブロック)で
+# 5/6/7/8/9 とロースター順の対応から直接確定済みのため、ここでの
+# 総当たり最適化は不要。確認用のログのみ出力する。
+print("[touyama_v1] 固定 担当ポジション割り当て(マップ上の5/6/7/8/9をロースター順に直接対応):")
+for i, _name in enumerate(TOUYAMA_ROSTER_ORDER):
+    _pos = TOUYAMA_DEFENSE_ASSIGNMENT[_name]
+    _spawn = DEFENDER_SPAWNS[i]
+    _dist = DEFENSE_POS_DIST_MAPS[i][_spawn[0], _spawn[1]]
+    print(
+        f"  {_name}: spawn={_spawn} -> "
+        f"pos={_pos}(value={TOUYAMA_DEFENSE_POSITION_VALUES[_name]}) dist={_dist}"
+    )
+
+# --- 診断用: マップ構造そのものに起因する偏りが無いか確認する ---
+# 各キャラのスポーン地点から「最も近いdefense position」までの純粋なBFS距離
+# (貪欲割当・シャッフル順のバイアスを除いた理論上の最短値)を出力する。
+# もしこれ自体が上段/下段で大きく偏っていれば、マップ側(map_data_search.py の
+# 7の配置)がそもそも不公平であることが確定する。
+print("[touyama_v1][DIAG] DEFENSE_POSITIONS(ロースター順、値5-9) 座標一覧:", DEFENSE_POSITIONS)
+print("[touyama_v1][DIAG] DEFENDER_SPAWNS 座標一覧:", DEFENDER_SPAWNS)
+for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
+    spawn = DEFENDER_SPAWNS[i]
+    nearest_dist = min(
+        bfs_distance_map(spawn)[pos[0], pos[1]]
+        for pos in DEFENSE_POSITIONS
+    )
+    all_dists = sorted(
+        bfs_distance_map(spawn)[pos[0], pos[1]] for pos in DEFENSE_POSITIONS
+    )
+    print(
+        f"[touyama_v1][DIAG] {name} spawn={spawn} "
+        f"nearest_defense_dist={nearest_dist} "
+        f"all_defense_dists_sorted={all_dists}"
+    )
 
 
 # ============================================================================
@@ -651,6 +719,14 @@ class SearchEnv:
         self.sighting_dist_map = None
         self.spike_ground_pos = None
 
+        # --- 診断用: positionモード中(spike/sighting情報が無いとき)の
+        # キャラ別「平均BFS距離・到着率・移動率」を1エピソード分蓄積する。
+        # train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
+        self.position_mode_stats = {
+            name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            for name in TOUYAMA_ROSTER_ORDER
+        }
+
     # -- 初期化 --------------------------------------------------------
     def reset(self):
         self.team_memory.reset()
@@ -659,6 +735,12 @@ class SearchEnv:
         self.planted = False
         self.match_over_reason = None
         self.spike_ground_pos = None
+
+        # --- 診断用: 新しいエピソードの開始時に集計をリセット ---
+        self.position_mode_stats = {
+            name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            for name in TOUYAMA_ROSTER_ORDER
+        }
 
         self.defenders = _build_fixed_defenders()
         self.attackers = _build_attackers()
@@ -675,18 +757,13 @@ class SearchEnv:
         return self._collect_observations()
 
     def _assign_defense_positions(self):
-        remaining = list(DEFENSE_POSITIONS)
-        order = list(self.defenders)
-        random.shuffle(order)
-        for d in order:
-            if remaining:
-                pos = min(
-                    remaining,
-                    key=lambda p: max(abs(p[0] - d.pos[0]), abs(p[1] - d.pos[1])),
-                )
-                remaining.remove(pos)
-            else:
-                pos = random.choice(DEFENSE_POSITIONS)
+        """touyama_v1固定チームはスポーン位置が毎エピソード同一のため、
+        ランダムシャッフル+早い者勝ち貪欲法ではなく、事前に一意計算した
+        全組合せ最適解(TOUYAMA_DEFENSE_ASSIGNMENT)を毎回そのまま使う。
+        これにより、複数キャラが同じ近場ポジションを取り合い、その結果を
+        エピソードごとの運で分け合うという構造的な偏りを解消する。"""
+        for d in self.defenders:
+            pos = TOUYAMA_DEFENSE_ASSIGNMENT[d.name]
             d.assigned_defense_pos = pos
             d.assigned_defense_dist_map = DEFENSE_POS_DIST_MAPS[DEFENSE_POSITIONS.index(pos)]
             d.prev_priority_mode = None
@@ -1061,6 +1138,16 @@ class SearchEnv:
                     else:
                         r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
 
+                    # --- 診断用: positionモード時のみ、BFS距離・到着・移動を記録 ---
+                    stats = self.position_mode_stats.get(d.name)
+                    if stats is not None:
+                        stats["dist_sum"] += float(bfs_dist)
+                        stats["dist_count"] += 1
+                        if d.moved_this_tick:
+                            stats["moved_count"] += 1
+                        if bfs_dist <= REACH_RADIUS:
+                            stats["arrived_count"] += 1
+
             if ability_whiff.get(d.name):
                 r += ABILITY_WHIFF_PENALTY
             if ability_overlap.get(d.name):
@@ -1164,10 +1251,38 @@ def train(
     best_avg_reward = -float("inf")
     episode_reward_history = deque(maxlen=100)
 
+    # --- 診断用(1): キャラ別(ロール別)の直近100エピソード報酬履歴 ---
+    per_name_reward_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
+    per_name_episode_total = {name: 0.0 for name in TOUYAMA_ROSTER_ORDER}
+
+    # --- 診断用(3): 担当ポジション(7)への到達不能(BFS距離=-1)判定カウンタ ---
+    unreachable_position_counts = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
+    total_reset_counts = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
+
+    # --- 診断用(4): positionモード中の「平均BFS距離・到着率・移動率」履歴 ---
+    per_name_avg_dist_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
+    per_name_arrival_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
+    per_name_move_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
+
     for episode in range(1, episodes + 1):
         obs_dict, mask_dict = env.reset()
         episode_reward_total = 0.0
         epsilon = epsilon_by_episode(episode)
+
+        # --- 診断用(1): このエピソードのキャラ別累計報酬をリセット ---
+        for name in per_name_episode_total:
+            per_name_episode_total[name] = 0.0
+
+        # --- 診断用(3): 今回のラウンドで割り当てられた担当ポジションが、
+        # スポーン地点から壁越しに到達不能(BFS距離=-1)になっていないか記録する ---
+        for d in env.defenders:
+            total_reset_counts[d.name] = total_reset_counts.get(d.name, 0) + 1
+            if d.assigned_defense_dist_map is not None:
+                bfs_dist = d.assigned_defense_dist_map[int(d.pos[0]), int(d.pos[1])]
+                if bfs_dist < 0:
+                    unreachable_position_counts[d.name] = (
+                        unreachable_position_counts.get(d.name, 0) + 1
+                    )
 
         for tick in range(MAX_TICKS):
 
@@ -1182,6 +1297,8 @@ def train(
                 action = action_dict[name]
                 reward = rewards.get(name, 0.0)
                 episode_reward_total += reward
+                # --- 診断用(1): キャラ別に報酬を積算 ---
+                per_name_episode_total[name] = per_name_episode_total.get(name, 0.0) + reward
 
                 if name in next_obs_dict:
                     next_obs = next_obs_dict[name]
@@ -1205,8 +1322,24 @@ def train(
             if done or not obs_dict:
                 break
 
+        # --- 診断用(4): このエピソードのpositionモード統計を履歴に積算 ---
+        for name in TOUYAMA_ROSTER_ORDER:
+            stats = env.position_mode_stats.get(name, {})
+            dist_count = stats.get("dist_count", 0)
+            if dist_count > 0:
+                avg_dist = stats["dist_sum"] / dist_count
+                arrival_rate = stats["arrived_count"] / dist_count
+                move_rate = stats["moved_count"] / dist_count
+                per_name_avg_dist_history[name].append(avg_dist)
+                per_name_arrival_rate_history[name].append(arrival_rate)
+                per_name_move_rate_history[name].append(move_rate)
+
         episode_reward_history.append(episode_reward_total)
         avg_reward = sum(episode_reward_history) / len(episode_reward_history)
+
+        # --- 診断用(1): キャラ別報酬履歴に積算値を追加 ---
+        for name in per_name_reward_history:
+            per_name_reward_history[name].append(per_name_episode_total.get(name, 0.0))
 
         if episode % 20 == 0:
             print(
@@ -1214,6 +1347,34 @@ def train(
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
                 f"buffer={len(buffer)} reason={env.match_over_reason}"
             )
+            # --- 診断用(1): キャラ別(ロール別)の直近100エピソード平均報酬 ---
+            per_name_str = " / ".join(
+                f"{name}({TOUYAMA_EFFECTIVE_STATS[name]['ability']})="
+                f"{(sum(per_name_reward_history[name]) / len(per_name_reward_history[name])):.3f}"
+                for name in TOUYAMA_ROSTER_ORDER
+                if len(per_name_reward_history[name]) > 0
+            )
+            print(f"  [PER-CHAR avg100] {per_name_str}")
+
+            # --- 診断用(4): positionモード中の平均BFS距離・到着率・移動率 ---
+            position_diag_str = " / ".join(
+                f"{name}(dist={sum(per_name_avg_dist_history[name]) / len(per_name_avg_dist_history[name]):.2f},"
+                f"arrive={sum(per_name_arrival_rate_history[name]) / len(per_name_arrival_rate_history[name]) * 100:.1f}%,"
+                f"move={sum(per_name_move_rate_history[name]) / len(per_name_move_rate_history[name]) * 100:.1f}%)"
+                for name in TOUYAMA_ROSTER_ORDER
+                if len(per_name_avg_dist_history[name]) > 0
+            )
+            print(f"  [POSITION-MODE diag] {position_diag_str}")
+
+        # --- 診断用(3): 担当ポジションの到達不能率を100エピソードごとに出力 ---
+        if episode % 100 == 0:
+            unreachable_str = " / ".join(
+                f"{name}={unreachable_position_counts.get(name, 0)}/"
+                f"{total_reset_counts.get(name, 0)}"
+                f"({(unreachable_position_counts.get(name, 0) / max(1, total_reset_counts.get(name, 0)) * 100):.1f}%)"
+                for name in TOUYAMA_ROSTER_ORDER
+            )
+            print(f"  [UNREACHABLE POSITION rate] {unreachable_str}")
 
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward

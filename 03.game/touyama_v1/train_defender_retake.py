@@ -47,6 +47,11 @@ from game_core import (
     RECON_REVEAL_SIZE,
 )
 
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
+
 EPISODE_COUNT = 20000
 
 DEVICE = torch.device("cpu")
@@ -287,16 +292,6 @@ BASE_REACTION = 100.0
 # 自己完結ルールのため、character_stats_touyama.py を import せず
 # 生データをこのファイル内に直接複製する。
 # ============================================================
-
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
-
-TOUYAMA_RAW_STATS = {
-    "いぐるん":   {"hs_pct": 33, "dodge_pct": 22, "iq": 75,  "hit_pct": 77, "reaction": 131, "role": "シーカー"},
-    "夢の街":     {"hs_pct": 35, "dodge_pct": 23, "iq": 80,  "hit_pct": 76, "reaction": 115, "role": "フラッシュ"},
-    "ろびぃな":   {"hs_pct": 25, "dodge_pct": 55, "iq": 80,  "hit_pct": 65, "reaction": 122, "role": "スモーカー"},
-    "Tortlilyan": {"hs_pct": 23, "dodge_pct": 39, "iq": 123, "hit_pct": 90, "reaction": 156, "role": "タイガー"},
-    "えんぺん":   {"hs_pct": 50, "dodge_pct": 17, "iq": 85,  "hit_pct": 75, "reaction": 125, "role": "フラッシュ"},
-}
 
 # チームコンボ「ふわんだりぃず」(player_combos.py準拠)。固定5人ロースターのため毎ラウンド常時発動。
 TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}

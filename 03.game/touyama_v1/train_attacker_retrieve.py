@@ -61,6 +61,10 @@ from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 
