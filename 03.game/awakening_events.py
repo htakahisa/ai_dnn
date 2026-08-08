@@ -12,7 +12,7 @@ AWAKENING_EVENTS = [
         "player": "Leo",
         "condition": "all_allies_dead",
         "rename": "-ラスボス-Leo",
-        "bonuses": {"accuracy": 0.25, "hs_rate": 0.25, "dodge_rate": 0.15},
+        "bonuses": {"accuracy": 0.35, "hs_rate": 0.25, "dodge_rate": 0.15},
     },
     {
         "name": "彼を起こしてはいけない",
@@ -20,7 +20,7 @@ AWAKENING_EVENTS = [
         "condition": "hp_at_or_below",
         "condition_value": 30,
         "rename": "-地獄の王者-Demon1",
-        "bonuses": {"accuracy": 0.1, "hs_rate": 0.15, "reaction": 35},
+        "bonuses": {"accuracy": 0.1, "hs_rate": 0.15, "reaction": 40},
     },
     {
         "name": "楽になれると思うなよ",
