@@ -1,0 +1,43 @@
+{
+  "phase": "phase3_0_strategic_observation",
+  "obs_dim": 131,
+  "phase2_obs_dim": 125,
+  "phase3_extra_obs": 6,
+  "extra_observation_names": [
+    "round_time_remaining",
+    "spike_time_remaining",
+    "alive_defender_ratio",
+    "defuse_active",
+    "distance_to_spike",
+    "post_plant"
+  ],
+  "n_actions": 14,
+  "valid_phase1_actions": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "action_names": {
+    "0": "MOVE_UP",
+    "1": "MOVE_DOWN",
+    "2": "MOVE_LEFT",
+    "3": "MOVE_RIGHT",
+    "4": "WAIT",
+    "5": "PLANT",
+    "6": "ABILITY_UP_NEAR",
+    "7": "ABILITY_DOWN_NEAR",
+    "8": "ABILITY_LEFT_NEAR",
+    "9": "ABILITY_RIGHT_NEAR",
+    "10": "ABILITY_UP_FAR",
+    "11": "ABILITY_DOWN_FAR",
+    "12": "ABILITY_LEFT_FAR",
+    "13": "ABILITY_RIGHT_FAR"
+  },
+  "plant_required_ticks": 4,
+  "transfer_epsilon_start": 0.1,
+  "transfer_epsilon_end": 0.02,
+  "transfer_epsilon_decay_steps": 50000
+}

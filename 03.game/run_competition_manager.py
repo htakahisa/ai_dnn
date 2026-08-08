@@ -353,6 +353,9 @@ def play_map(
     render: bool,
     team1_controller_key: str = "fnatic_v1",
     team2_controller_key: str = "fnatic_v1",
+    team1_series_wins: int = 0,
+    team2_series_wins: int = 0,
+    series_maps_to_win: int = 1,
 ) -> MResult:
     seed_all(seed)
 
@@ -388,6 +391,26 @@ def play_map(
     attacker_igl = _key_for_name(attacker_keys, attacker.igl)
     defender_igl = _key_for_name(defender_keys, defender.igl)
 
+    if attacker is team1:
+        attacker_series_wins = int(team1_series_wins)
+        attacker_series_losses = int(team2_series_wins)
+        defender_series_wins = int(team2_series_wins)
+        defender_series_losses = int(team1_series_wins)
+    else:
+        attacker_series_wins = int(team2_series_wins)
+        attacker_series_losses = int(team1_series_wins)
+        defender_series_wins = int(team1_series_wins)
+        defender_series_losses = int(team2_series_wins)
+
+    series_context = {
+        "maps_played": max(0, int(map_number) - 1),
+        "maps_to_win": max(1, int(series_maps_to_win)),
+        "attacker_maps_won": attacker_series_wins,
+        "attacker_maps_lost": attacker_series_losses,
+        "defender_maps_won": defender_series_wins,
+        "defender_maps_lost": defender_series_losses,
+    }
+
     output_context = (
         contextlib.nullcontext()
         if render
@@ -406,6 +429,7 @@ def play_map(
             attacker_igl_name=attacker_igl,
             defender_igl_name=defender_igl,
             disable_side_swap=False,
+            series_context=series_context,
         )
 
         if render:
@@ -565,6 +589,9 @@ def run_series_core(
                 map_seed,
                 controller1,
                 controller2,
+                wins1,
+                wins2,
+                need,
             )
         else:
             result = play_map(
@@ -575,6 +602,9 @@ def run_series_core(
                 current_render,
                 controller1,
                 controller2,
+                wins1,
+                wins2,
+                need,
             )
         maps.append(result)
 
@@ -791,6 +821,70 @@ def build_seeded_bracket_slots(
         slots[index] = team
 
     return list(slots), seeded_teams
+
+
+
+def build_double_elimination_ranking(
+    team_names: list[str],
+    bracket_matches: list[dict[str, Any]],
+    champion: str,
+    runner_up: str,
+    records: dict[str, dict[str, int]],
+) -> list[str]:
+    """
+    ダブルエリミネーションの最終順位を実際の敗退順から作る。
+
+    1位はGrand Final勝者、2位はGrand Final敗者。
+    3位以下は、2敗目を喫して大会から脱落した時点が遅い順に並べる。
+    これによりLower Final敗者が必ず3位になる。
+    """
+    loss_counts = {name: 0 for name in team_names}
+    elimination_index: dict[str, int] = {}
+    latest_loss_index: dict[str, int] = {}
+
+    for index, match in enumerate(bracket_matches):
+        if match.get("status") != "finished":
+            continue
+
+        loser = match.get("loser")
+        if not loser or loser not in loss_counts:
+            continue
+
+        loss_counts[loser] += 1
+        latest_loss_index[loser] = index
+
+        if loss_counts[loser] >= 2:
+            elimination_index[loser] = index
+
+    fixed = [champion]
+    if runner_up and runner_up != champion:
+        fixed.append(runner_up)
+
+    remaining = [
+        name
+        for name in team_names
+        if name not in fixed
+    ]
+
+    # 原則は2敗目を喫した時点が遅い順。
+    # 万一2敗目が記録されていないチームがあれば、最後に敗れた時点、
+    # それもなければ従来の戦績を補助基準として使う。
+    remaining.sort(
+        key=lambda name: (
+            -elimination_index.get(
+                name,
+                latest_loss_index.get(name, -1),
+            ),
+            -int(records[name].get("wins", 0)),
+            -(
+                int(records[name].get("map_wins", 0))
+                - int(records[name].get("map_losses", 0))
+            ),
+            name.lower(),
+        )
+    )
+
+    return fixed + remaining
 
 
 def run_double_elimination(
@@ -1155,14 +1249,12 @@ def run_double_elimination(
 
     champion = grand_winner["team"]
     runner_up = grand_loser["team"]
-    ranking = sorted(
+    ranking = build_double_elimination_ranking(
         team_names,
-        key=lambda name: (
-            records[name]["losses"],
-            -records[name]["wins"],
-            -(records[name]["map_wins"] - records[name]["map_losses"]),
-            name.lower(),
-        ),
+        bracket_matches,
+        champion,
+        runner_up,
+        records,
     )
 
     data = {
@@ -3449,6 +3541,9 @@ class CompetitionApp:
             seed: int,
             team1_controller_key: str,
             team2_controller_key: str,
+            team1_series_wins: int,
+            team2_series_wins: int,
+            series_maps_to_win: int,
         ) -> MResult:
             user_match = "user" in {
                 team1_controller_key,
@@ -3463,6 +3558,9 @@ class CompetitionApp:
                     False,
                     team1_controller_key,
                     team2_controller_key,
+                    team1_series_wins,
+                    team2_series_wins,
+                    series_maps_to_win,
                 )
 
             request = {
@@ -3472,6 +3570,9 @@ class CompetitionApp:
                 "seed": seed,
                 "team1_controller_key": team1_controller_key,
                 "team2_controller_key": team2_controller_key,
+                "team1_series_wins": team1_series_wins,
+                "team2_series_wins": team2_series_wins,
+                "series_maps_to_win": series_maps_to_win,
                 "done": threading.Event(),
                 "result": None,
                 "error": None,
@@ -3507,6 +3608,9 @@ class CompetitionApp:
                 True,
                 request["team1_controller_key"],
                 request["team2_controller_key"],
+                request["team1_series_wins"],
+                request["team2_series_wins"],
+                request["series_maps_to_win"],
             )
         except BaseException as exc:
             request["error"] = exc

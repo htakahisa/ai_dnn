@@ -57,10 +57,6 @@ tensorboard/
 logs/
 data_temp/
 
-demos/
-tensorboard/
 
-logs
-data_temp/
 
 

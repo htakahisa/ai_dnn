@@ -7,6 +7,16 @@ import numpy as np
 
 IQ_CAP = 200.0
 
+# IQ情報誤差の調整値
+ALLY_POSITION_MAX_ERROR = 1
+ENEMY_POSITION_MAX_ERROR = 4
+DROPPED_SPIKE_MAX_ERROR = 2
+PLANTED_SPIKE_MAX_ERROR = 2
+TARGET_PLANT_MAX_ERROR = 1
+SPOTTED_POSITION_MAX_ERROR = 3
+ENEMY_OMISSION_MAX_RATE = 0.30
+SPOTTED_OMISSION_MAX_RATE = 0.20
+
 
 def _alive(c: Any) -> bool:
     return bool(getattr(c, "is_alive", True))
@@ -31,8 +41,9 @@ def _effective_iq(viewer: Any) -> float:
 
 
 def _quality(viewer: Any) -> float:
+    """IQ100前後でも試合が成立するよう、以前より緩やかな品質曲線を使う。"""
     x = max(0.0, min(1.0, _effective_iq(viewer) / IQ_CAP))
-    return x * x
+    return x ** 1.3
 
 
 def _seed(*parts: Any) -> int:
@@ -207,9 +218,9 @@ class IQPerceptionEngine:
         q = self.quality(viewer)
         if q >= 1.0:
             return hp
-        if q < 0.12:
-            return 100 if _alive(enemy) else 0
-        step = max(5, int(round(5 + (1.0 - q) * 20)))
+
+        # 低IQでも試合が破綻しないよう、敵HPは最大15刻みまでに抑える。
+        step = max(5, int(round(5 + (1.0 - q) * 10)))
         return int(round(hp / step) * step)
 
     def _timer(self, value, viewer):
@@ -218,7 +229,9 @@ class IQPerceptionEngine:
         except Exception:
             return 0.0
         q = self.quality(viewer)
-        step = max(1, int(round(1 + (1.0 - q) * 11)))
+
+        # 最大でも6刻みにし、低IQでも時間管理が完全には崩れないようにする。
+        step = max(1, int(round(1 + (1.0 - q) * 5)))
         return float(round(value / step) * step)
 
     def _omit_enemy(self, game, viewer, enemy):
@@ -230,7 +243,7 @@ class IQPerceptionEngine:
         q = self.quality(viewer)
         return (
             self._rng(game, viewer, "omit", getattr(enemy, "name", "")).random()
-            < (1.0 - q) * 0.55
+            < (1.0 - q) * ENEMY_OMISSION_MAX_RATE
         )
 
     def build_game_view(self, *, viewer, game):
@@ -257,10 +270,10 @@ class IQPerceptionEngine:
             if real is viewer:
                 pos, hp, alive = list(real.pos), int(real.hp), _alive(real)
             elif real.team == viewer.team:
-                pos = self._blur_pos(game, viewer, real.pos, 2, "ally", real.name)
+                pos = self._blur_pos(game, viewer, real.pos, ALLY_POSITION_MAX_ERROR, "ally", real.name)
                 hp, alive = int(real.hp), _alive(real)
             else:
-                pos = self._blur_pos(game, viewer, real.pos, 6, "enemy", real.name)
+                pos = self._blur_pos(game, viewer, real.pos, ENEMY_POSITION_MAX_ERROR, "enemy", real.name)
                 hp, alive = self._enemy_hp(game, viewer, real), _alive(real)
             proxy = PerceivedCharacter(real, pos=pos, hp=hp, is_alive=alive)
             if real.team != viewer.team and self._omit_enemy(game, viewer, real):
@@ -279,7 +292,7 @@ class IQPerceptionEngine:
             game,
             viewer,
             getattr(game, "spike_pos", None),
-            4,
+            DROPPED_SPIKE_MAX_ERROR,
             "spike",
             "drop",
         )
@@ -290,7 +303,7 @@ class IQPerceptionEngine:
                 game,
                 viewer,
                 getattr(game, "planted_pos", None),
-                4,
+                PLANTED_SPIKE_MAX_ERROR,
                 "spike",
                 "plant",
             )
@@ -305,7 +318,7 @@ class IQPerceptionEngine:
                 game,
                 viewer,
                 getattr(game, "target_plant_pos", None),
-                3,
+                TARGET_PLANT_MAX_ERROR,
                 "site",
                 "target",
             ),
@@ -334,7 +347,7 @@ class IQPerceptionEngine:
                 game_view.real_game,
                 viewer,
                 (spotted.get("site_r", 0), spotted.get("site_c", 0)),
-                6,
+                SPOTTED_POSITION_MAX_ERROR,
                 "spotted",
                 "holder",
             )
@@ -344,7 +357,7 @@ class IQPerceptionEngine:
                 )
             if (
                 self._rng(game_view.real_game, viewer, "spotted_miss").random()
-                < (1.0 - self.quality(viewer)) * 0.33
+                < (1.0 - self.quality(viewer)) * SPOTTED_OMISSION_MAX_RATE
             ):
                 spotted = {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0}
             state["spotted_info"] = spotted

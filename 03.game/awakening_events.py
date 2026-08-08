@@ -12,7 +12,7 @@ AWAKENING_EVENTS = [
         "player": "Leo",
         "condition": "all_allies_dead",
         "rename": "-ラスボス-Leo",
-        "bonuses": {"accuracy": 0.15, "hs_rate": 0.2, "dodge_rate": 0.1},
+        "bonuses": {"accuracy": 0.25, "hs_rate": 0.25, "dodge_rate": 0.15},
     },
     {
         "name": "彼を起こしてはいけない",
@@ -44,7 +44,7 @@ AWAKENING_EVENTS = [
         "condition": "specific_player_dead",
         "condition_player": "nAts",
         "rename": "-王子様-Chronicle",
-        "bonuses": {"hs_rate": 0.55, "reaction": 45, "accuracy": 0.3, "iq": -100},
+        "bonuses": {"hs_rate": 0.55, "reaction": 45, "accuracy": 0.35, "iq": -100},
     },
     {
         "name": "現実に目が覚めた",
@@ -52,7 +52,7 @@ AWAKENING_EVENTS = [
         "condition": "specific_player_dead",
         "condition_player": "Chronicle",
         "rename": "-裏切り者-nAts",
-        "bonuses": {"hs_rate": 0.25, "reaction": 35, "accuracy": 0.6, "iq": -100},
+        "bonuses": {"hs_rate": 0.25, "reaction": 35, "accuracy": 0.65, "iq": -100},
     },
     {
         "name": "気に入ってくれると嬉しいな",
@@ -97,6 +97,14 @@ AWAKENING_EVENTS = [
         "bonuses": {"hs_rate": 0.4, "reaction": 40},
     },
     {
+        "name": "ハゲが二人",
+        "player": "Sayonara",
+        "condition": "specific_player_dead",
+        "condition_player": "Derke",
+        "rename": "-トキシック-Sayonara",
+        "bonuses": {"hs_rate": 0.3, "accuracy": 0.3, "dodge_rate": 0.2},
+    },
+    {
         "name": "倒したで",
         "player": "Tortlilyan",
         "condition": "kills_at_least",
@@ -110,7 +118,12 @@ AWAKENING_EVENTS = [
         "condition": "whathappend",
         "condition_value": 1,
         "rename": "-焦る-とうやま",
-        "bonuses": {"hs_rate": 0.77, "dodge_rate": 0.77, "accuracy": 0.07, "reaction": 77},
+        "bonuses": {
+            "hs_rate": 0.77,
+            "dodge_rate": 0.77,
+            "accuracy": 0.07,
+            "reaction": 77,
+        },
     },
 ]
 

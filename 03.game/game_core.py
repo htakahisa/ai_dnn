@@ -175,6 +175,7 @@ def get_character_combat_stats(name):
         "role": "フラッシュ",
         "influence": 0.0,
         "form_variance": 0.0,
+        "mental": 5.0,
     }
     if _character_stats is None:
         return defaults
@@ -266,6 +267,16 @@ def get_character_combat_stats(name):
                 ),
             ),
         ),
+        "mental": max(
+            0.0,
+            min(
+                10.0,
+                pick_number(
+                    ("mental", "mentality", "メンタル"),
+                    defaults["mental"],
+                ),
+            ),
+        ),
     }
 
 
@@ -341,7 +352,16 @@ _print_data_diagnostics()
 
 class Character:
     def __init__(
-        self, name, team, pos, text_color, bg_color, has_spike=False, kills=0, deaths=0
+        self,
+        name,
+        team,
+        pos,
+        text_color,
+        bg_color,
+        has_spike=False,
+        kills=0,
+        deaths=0,
+        mental_pressure=0.0,
     ):
         self.name = name
         self.base_name = name
@@ -374,6 +394,8 @@ class Character:
         self.is_igl = False
         self.reaction = stats.get("reaction", 100.0)
         self.influence = stats.get("influence", 0.0)
+        self.mental = max(0.0, min(10.0, float(stats.get("mental", 5.0))))
+        self.mental_pressure = max(0.0, min(1.0, float(mental_pressure)))
 
         # スプレッドシートの「調子の波」。
         # 0なら変動なし、10なら命中率・HS率が最大±30%の範囲で変動する。
@@ -395,14 +417,23 @@ class Character:
         self.base_accuracy_before_condition = self.accuracy
         self.base_hs_rate_before_condition = self.hs_rate
         self.max_condition_delta = (self.form_variance / 10.0) * 0.30
-        self.condition_modifier = (
-            random.uniform(
+        if self.max_condition_delta > 0.0:
+            raw_condition = random.uniform(
                 -self.max_condition_delta,
                 self.max_condition_delta,
             )
-            if self.max_condition_delta > 0.0
-            else 0.0
-        )
+            # 精神が削られているほど、既存の調子抽選を悪い側へずらす。
+            # form_variance=0ならmax_condition_delta=0なので完全に無影響。
+            biased_condition = (
+                raw_condition
+                - self.mental_pressure * self.max_condition_delta
+            )
+            self.condition_modifier = max(
+                -self.max_condition_delta,
+                min(self.max_condition_delta, biased_condition),
+            )
+        else:
+            self.condition_modifier = 0.0
         condition_multiplier = 1.0 + self.condition_modifier
         self.accuracy = max(
             0.0,
@@ -504,6 +535,9 @@ def _canonical_combo_stat_key(key):
         "知能": "iq",
         "hp": "max_hp",
         "max_hp": "max_hp",
+        "mental": "mental",
+        "mentality": "mental",
+        "メンタル": "mental",
     }
     return aliases.get(normalized)
 
@@ -539,6 +573,14 @@ def _apply_combo_bonus(character, stat_key, value):
         updated_iq = max(0.0, current_iq + amount)
         character.iq = updated_iq
         character.effective_iq = updated_iq
+    elif attr == "mental":
+        character.mental = max(
+            0.0,
+            min(
+                10.0,
+                float(getattr(character, "mental", 5.0)) + amount,
+            ),
+        )
     elif attr == "max_hp":
         old_max = character.max_hp
         character.max_hp = max(1, int(round(character.max_hp + amount)))
