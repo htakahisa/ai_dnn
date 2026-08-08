@@ -15,10 +15,10 @@ for _p in (_THIS_DIR, _ROOT_DIR):
         sys.path.insert(0, str(_p))
 
 from controllers import BaseController, DefaultAttackerController
-from learning_attacker_carry import LearningAttackerCarryController
-from learning_attacker_escort import LearningAttackerEscortController
-from learning_attacker_retrieve import LearningAttackerRetrieveController
-from learning_attacker_guard import LearningAttackerGuardController
+from learning_attacker_carry_touyama import LearningAttackerCarryController
+from learning_attacker_escort_touyama import LearningAttackerEscortController
+from learning_attacker_retrieve_touyama import LearningAttackerRetrieveController
+from learning_attacker_guard_touyama import LearningAttackerGuardTouyamaController
 
 
 class MultiRoleAttackerController(BaseController):
@@ -28,17 +28,17 @@ class MultiRoleAttackerController(BaseController):
 
     def __init__(
         self,
-        carry_model_path="attacker_v3/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt",
-        escort_model_path="attacker_v3/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt",
-        retrieve_model_path="attacker_v3/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt",
-        guard_model_path="attacker_v3/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
+        carry_model_path="touyama_v1/data/attacker_carry_touyama_data/dqn_attacker_carry_touyama_best_by_eval.pt",
+        escort_model_path="touyama_v1/data/attacker_escort_touyama_data/dqn_attacker_escort_touyama_best_by_eval.pt",
+        retrieve_model_path="touyama_v1/data/attacker_retrieve_touyama_data/dqn_attacker_retrieve_touyama_best_by_eval.pt",
+        guard_model_path="touyama_v1/data/attacker_guard_touyama_data/dqn_attacker_guard_touyama_best_by_eval.pt",
         greedy=False,
     ):
         super().__init__()
-        self.carry_controller = LearningAttackerCarryController(model_path=carry_model_path, greedy=greedy)
-        self.escort_controller = LearningAttackerEscortController(model_path=escort_model_path, greedy=greedy)
-        self.retrieve_controller = LearningAttackerRetrieveController(model_path=retrieve_model_path, greedy=greedy)
-        self.guard_controller = LearningAttackerGuardController(model_path=guard_model_path, greedy=greedy)
+        self.carry_controller = LearningAttackerCarryTouyamaController(model_path=carry_model_path, greedy=greedy)
+        self.escort_controller = LearningAttackerEscortTouyamaController(model_path=escort_model_path, greedy=greedy)
+        self.retrieve_controller = LearningAttackerRetrieveTouyamaController(model_path=retrieve_model_path, greedy=greedy)
+        self.guard_controller = LearningAttackerGuardTouyamaController(model_path=guard_model_path, greedy=greedy)
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。

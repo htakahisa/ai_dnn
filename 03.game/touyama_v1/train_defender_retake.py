@@ -288,7 +288,7 @@ BASE_REACTION = 100.0
 # 生データをこのファイル内に直接複製する。
 # ============================================================
 
-TOUYAMA_ROSTER_ORDER = ["いぐるん", "夢の街", "ろびぃな", "Tortlilyan", "えんぺん"]
+TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
 
 TOUYAMA_RAW_STATS = {
     "いぐるん":   {"hs_pct": 33, "dodge_pct": 22, "iq": 75,  "hit_pct": 77, "reaction": 131, "role": "シーカー"},
@@ -1129,7 +1129,7 @@ def main():
             print(f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}")
             if eval_win_rate > best_win_rate:
                 best_win_rate = eval_win_rate
-                torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_best.pt"))
+                torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_best_by_eval.pt"))
                 print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
 
         # if episode % 2000 == 0:

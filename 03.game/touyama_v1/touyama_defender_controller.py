@@ -24,11 +24,11 @@ for _p in (_THIS_DIR, _ROOT_DIR):
         sys.path.insert(0, str(_p))
 
 from controllers import BaseController, DefaultDefenderController
-from learning_defender_search import LearningDefenderSearchTouyamaController
-from learning_defender_retake import LearningDefenderRetakeTouyamaController
+from learning_defender_retake_touyama import LearningDefenderRetakeTouyamaController
+from learning_defender_search_touyama import LearningDefenderSearchTouyamaController
 
 
-class MultiRoleDefenderController(BaseController):
+class TouyamaDefenderController(BaseController):
     """defender側の窓口となる単一コントローラー。
     内部でsearchモデル・retakeモデルを保持し、is_plantedに応じて使い分ける。
     run_game.py からは通常のコントローラー1つとして扱われる(isinstance判定にはこのクラスを追加する)。"""
@@ -40,10 +40,10 @@ class MultiRoleDefenderController(BaseController):
         greedy=True,
     ):
         super().__init__()
-        self.search_controller = LearningDefenderSearchController(
+        self.search_controller = LearningDefenderSearchTouyamaController(
             model_path=search_model_path, greedy=greedy
         )
-        self.retake_controller = LearningDefenderRetakeController(
+        self.retake_controller = LearningDefenderRetakeTouyamaController(
             model_path=retake_model_path, greedy=greedy
         )
 

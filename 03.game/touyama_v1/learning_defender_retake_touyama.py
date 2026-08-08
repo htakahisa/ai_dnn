@@ -1,4 +1,4 @@
-"""touyama_v1/learning_defender_retake.py
+"""touyama_v1/learning_defender_retake_touyama.py
 
 固定チーム(イグルン/夢の街/ろびぃな/Tortlilyan/えんぺん)専用の
 Defender「retake phase」推論コントローラー(プラント後限定)。
@@ -65,7 +65,7 @@ ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "�
 
 DEFAULT_MODEL_PATH = (
     "touyama_v1/data/defender_retake_touyama_data/"
-    "dqn_defender_retake_touyama_best.pt"
+    "dqn_defender_retake_touyama_best_by_eval.pt"
 )
 
 

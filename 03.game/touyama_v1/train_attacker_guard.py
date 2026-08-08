@@ -1,143 +1,263 @@
-"""train_attacker_guard.py
+"""touyama_v1/train_attacker_guard.py
 
-Attacker Guard Phase 専用の学習スクリプト（Dueling DQN、重み共有マルチエージェント）。
+固定チーム(いぐるん/夢の街/ろびぃな/Tortlilyan/えんぺん)専用の
+Attacker「guard phase」学習スクリプト(プラント後、解除阻止に特化)。
 
-【目的】
-スパイク設置後、生存している味方（最大5体）で設置地点周辺を防衛し、
-解除(DEFUSE)を阻止しながら起爆まで持ちこたえられるようになるまで学習する。
+train_defender_search.py(touyama_v1)をベースに、以下を置き換えた:
+  - このフェーズでは touyama_v1 固定チームは Attacker側(A)。
+    既にスパイクは設置済みという前提から開始する(プラント行動は扱わない)。
+  - 敵(Defender)側は当面ヒューリスティック(DEFENDER_SPAWNSから
+    プラント地点へBFS接近し、隣接したら解除する)。将来固定敵チームを
+    学習する場合は _build_defenders() だけを差し替えれば良い設計。
+  - 待機地点(guard position)は map_data_search.py のような専用マーカー
+    ファイルが存在しないため、プラント地点からLOSが通る候補マスを
+    走査し、farthest-point samplingで分散選出する方式をこのファイル内で
+    完結させている(モジュール読み込み時にサイトごと1回だけ事前計算)。
 
-【配置優先順位（ご要望通り）】
-  1. スパイク設置位置そのもの
-  2. 設置位置に隣接する8マス
-  3. map_data_guard.py に記載された「6」の位置（学習専用の推奨配置点）
-他の味方が既にそのマスを占有（または他の味方がより優先度の高いスロットへの
-割当を済ませている）場合は、優先順位を1→2→3の順に落として次の候補へ回す
-「近い順の貪欲割当」を毎tick計算し、各エージェントへの誘導目標(goal)として
-観測・報酬整形の両方に使う。実際にどう動くかは強化学習が決める
-（ハードコードで強制移動させるわけではない）。
+完全に自己完結。run_game.py / controllers.py / battle_logic.py /
+abilities_los.py などのfeatureモジュールは一切importしない。
+character_stats_touyama.py / game_core.py / map_data.py は定数専用
+ファイルとして参照する(import制限の対象外)。
 
-【重要：6は学習専用】
-map_data_guard.py の grid==6 は本番の map_data.py には存在しない。
-そのため、carryモデルの優先地点(5)と同じ設計判断で、6の座標を
-「gridの値」ではなく「座標のリスト」としてチェックポイントに保存し、
-推論側はその座標を直接BFSの目的地として使う（gridの値は見ない）。
+学習データ・チェックポイントは touyama_v1/data/attacker_guard_touyama_data/
+以下に保存する。
 
-【停止優先（無駄な移動をしない）】
-既に射線が通っている状態で「動かなかった」場合にボーナスを、
-既に射線が通っている状態で「動いた」場合に軽いペナルティを与える。
-これにより、良い位置を確保したら極力その場に留まる挙動を誘導する
-（射撃中の移動ペナルティは実ゲーム側のMOVING_ACCURACY等で
-既に不利になる設計だが、位置取りの学習自体もこれで後押しする）。
-
-【解除阻止の緊急対応】
-解除中の敵(active defuser)がいる場合、配置優先度(1〜3)よりも
-「解除者への接近・射線確保」を優先目標に切り替える。この間は
-停止ボーナスを一時停止し、積極的に動いて阻止に向かうよう誘導する。
-
-【アビリティ】
-train_attacker_escort.py と同じ設計を踏襲する：
-- 1ラウンドに1回だけ使用可能（使用済みなら選択不可）。
-- 有効な標的（視界内の敵）がいない状態での使用は罰則（無駄撃ち防止）。
-- 既に同種の効果（blind/reveal）がかかっている敵への重ねがけは罰則
-  （味方が既に使用済みで効果が残っている状況の重複使用を抑制）。
-- 敵がblind/reveal状態のときに撃破できたら、その効果をかけた本人に
-  ボーナス。
-- 追加：撃破した敵が「解除中(active defuser)」だった場合、
-  解除阻止ボーナスをチーム全体（生存中の全guard）に与える
-  （簡略化した集団戦闘モデルでは個々の射手を正確に特定できないため、
-  escortモデルのteam_progress報酬と同じ考え方でチーム共有とする）。
-
-【設計方針（既存ルールの継承）】
-- このファイルは完全に自己完結している（map_data_guard.py /
-  map_data.py 以外のゲーム本体コードに依存しない）。
-- run_game.py / controllers.py など既存の共有インフラは変更・複製しない。
-- obs_dim は静的に定義せず env.reset().shape[0] から動的に取得する
-  （train_attacker_escort.py で発生した次元不一致バグの再発防止）。
-
-【既知の簡略化】
-- 戦闘解決は escort と同じ汎用ステータス近似モデル（実キャラの
-  個体差は考慮しない）。
-- 敵(Defender)は簡易スクリプトAI（設置地点へBFSで直進、隣接したら解除）。
-- 「解除阻止ボーナス」は正確な射手を特定せずチーム全体に付与する。
+--------------------------------------------------------------------------
+優先順位ツリー(_compute_rewards / _priority_mode_and_distmap):
+    1. 解除進行中(defuse_alert)         -- 最優先。プラント地点へ強く詰め寄る。
+    2. 敵目撃情報(sighting)             -- 次点。視認した敵の方向へ寄る。
+    3. どちらも無い場合                 -- 担当ガードポジション(LOSが通る
+       分散地点)へ向かい、到着後は静止して警戒する。
+--------------------------------------------------------------------------
 """
 
-import argparse
 import os
-import random
 import sys
+import random
 from collections import deque, namedtuple
 
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
-EPISODE_COUNT = 12000
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# ---------------------------------------------------------------------------
-# map_data_guard.py（推奨配置点=6を含む学習専用マップ）を優先ロードし、
-# 無ければ map_data.py にフォールバックする（tier3は空になる）。
-# ---------------------------------------------------------------------------
-_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = (
-    os.path.dirname(_CURRENT_DIR)
-    if os.path.basename(_CURRENT_DIR) == "attacker_v3"
-    else _CURRENT_DIR
+from map_data import NEW_MAZE_STR
+from map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
+from character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
+
+from game_core import (
+    MAX_HP,
+    BODY_DAMAGE,
+    HEADSHOT_DAMAGE,
+    MOVING_ACCURACY,
+    MOVING_TARGET_HIT_MULTIPLIER,
+    BLIND_ACCURACY_MULTIPLIER,
+    REVEALED_DODGE_MULTIPLIER,
+    BLIND_DURATION_TICKS,
+    REVEAL_DURATION_TICKS,
+    SMOKE_DURATION_TICKS,
+    SPIKE_DETONATION_TICKS,
+    DEFUSE_REQUIRED_TICKS,
 )
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
 
-try:
-    from map_data_guard import NEW_MAZE_STR  # noqa: E402
-    print("[MAP] map_data_guard.py を使用します（推奨配置点=6対応・学習専用）")
-except ImportError:
-    from map_data import NEW_MAZE_STR  # noqa: E402
-    print("[MAP] map_data_guard.py が見つからないため map_data.py を使用します（tier3なし）")
-
-
-SITE_CELL_VALUE = 2
-ATTACKER_SPAWN_VALUE = 3
-DEFENDER_SPAWN_VALUE = 4
-FORMATION_CELL_VALUE = 6  # 学習専用マップにのみ存在する推奨配置点
-
-MAX_HP = 100
-HEADSHOT_DAMAGE = 160
-BODY_DAMAGE = 40
-
-BLIND_DURATION_TICKS = 3
-REVEAL_DURATION_TICKS = 5
-BLIND_ACCURACY_MULTIPLIER = 0.30
-REVEALED_DODGE_MULTIPLIER = 0.50
-SMOKE_DURATION_TICKS = 15
-DEFUSE_REQUIRED_TICKS = 6
-DETONATE_TICKS = 45  # game_core.py の SPIKE_DETONATION_TICKS と一致させる
-
-GENERIC_ACCURACY = 0.55
-GENERIC_DODGE = 0.18
-GENERIC_HS_RATE = 0.30
-
-ABILITY_TYPES = ("FLASH", "RECON", "SMOKE")
-ABILITY_RANGE = 6
-
-N_GUARDS = 5
-N_ENEMIES = 3
-
-DIST_NORM_MAX = 20.0
-
+EPISODE_COUNT = 8000
 
 # ---------------------------------------------------------------------------
-# 汎用ヘルパー
+# 保存先
 # ---------------------------------------------------------------------------
-def _cells_with_value(grid, value):
-    return list(zip(*np.where(grid == value)))
+DATA_DIR = "data/attacker_guard_touyama_data/"
+os.makedirs(DATA_DIR, exist_ok=True)
+MODEL_SAVE_PATH = os.path.join(DATA_DIR, "dqn_attacker_guard_touyama_best_by_eval.pt")
+MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_attacker_guard_touyama_latest.pt")
+
+# ---------------------------------------------------------------------------
+# 基本設定
+# ---------------------------------------------------------------------------
+DEVICE = torch.device("cpu")
+
+CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
+OBS_DIM = 34
+ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # 参考用(touyama側ロールはステータス表から決定)
+
+N_ATTACKERS = 5  # touyama固定チーム(このフェーズではAttacker)
+N_DEFENDERS = 5  # 敵(ヒューリスティック)
+MAX_TICKS = SPIKE_DETONATION_TICKS  # 55: プラント後の起爆までの時間と一致させる
+
+ABILITY_RANGE = 8            # FLASH/RECONを即時適用してよい最大距離(簡易化)
+GUARD_POS_REACH_RADIUS = 1   # 担当ガードポジションへ「到着した」とみなすBFS距離
+SIGHTING_STALENESS_CAP = 20
+
+# 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
+DEFAULT_ACCURACY = 0.50
+DEFAULT_DODGE = 0.12
+DEFAULT_HS_RATE = 0.20
+DEFAULT_REACTION = 100.0
+
+# ---------------------------------------------------------------------------
+# touyama_v1 固定チーム定義(train_defender_search.pyと同一)
+# ---------------------------------------------------------------------------
+TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # このフェーズでは既にプラント済みのため不使用(参照用)
+
+TOUYAMA_COMBO_NAME = "ふわんだりぃず"
+TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
+TOUYAMA_COMBO_BONUS = {
+    "accuracy": 0.15,
+    "hs_rate": 0.10,
+    "dodge_rate": 0.20,
+    "reaction": 30.0,
+}
+
+TOUYAMA_ROLE_TO_ABILITY = {
+    "フラッシュ": "FLASH",
+    "スモーカー": "SMOKE",
+    "シーカー": "RECON",
+    "タイガー": "HUNT",
+}
+TIGER_ACCURACY_BONUS = 0.10
+TIGER_HS_BONUS = 0.05
 
 
-def _line_cells(p1, p2):
+def _compute_touyama_effective_stats():
+    """character_stats_touyama.py の生値に、常時発動するチームコンボ
+    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
+    train_defender_search.pyと同一ロジック(A/D問わず同じ5人・同じ補正)。
+    """
+    effective = {}
+    for name in TOUYAMA_ROSTER_ORDER:
+        raw = TOUYAMA_STATS_TABLE[name]
+        accuracy = float(raw.hit_pct)
+        hs_rate = float(raw.hs_pct)
+        dodge_rate = float(raw.dodge_pct)
+        reaction = float(raw.reaction)
+
+        if raw.role == "タイガー":
+            accuracy += TIGER_ACCURACY_BONUS
+            hs_rate += TIGER_HS_BONUS
+
+        if name in TOUYAMA_COMBO_MEMBERS:
+            accuracy += TOUYAMA_COMBO_BONUS["accuracy"]
+            hs_rate += TOUYAMA_COMBO_BONUS["hs_rate"]
+            dodge_rate += TOUYAMA_COMBO_BONUS["dodge_rate"]
+            reaction += TOUYAMA_COMBO_BONUS["reaction"]
+
+        effective[name] = {
+            "accuracy": max(0.0, accuracy),
+            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
+            "reaction": max(0.0, reaction),
+            "ability": TOUYAMA_ROLE_TO_ABILITY[raw.role],
+        }
+    return effective
+
+
+TOUYAMA_EFFECTIVE_STATS = _compute_touyama_effective_stats()
+
+print("[touyama_v1] 固定チーム(Attacker/guard) 確定ステータス:")
+for _name in TOUYAMA_ROSTER_ORDER:
+    _s = TOUYAMA_EFFECTIVE_STATS[_name]
+    print(
+        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
+        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
+        f"ability={_s['ability']}"
+    )
+
+
+# 報酬パラメータ
+# 優先度: defuse_alert > sighting > position の順で明確に重みを引き離す。
+STEP_PENALTY = -0.001
+DEFUSE_PROGRESS_PENALTY = -0.05      # 敵の解除が1Tick進むごとのペナルティ(全員で共有)
+GUARD_POSITION_PULL_REWARD = 0.03    # 担当ガードポジション/解除地点へ近づく(ポテンシャル差分)
+HOLD_POSITION_BONUS = 0.04           # 到着後の静止をより強く優遇(射撃は静止側が有利なため)
+HOLD_POSITION_PENALTY = -0.02        # 到着後の無駄な動き回りを強めに抑制(ただし移動自体は禁止しない)
+ABILITY_WHIFF_PENALTY = -0.05
+ABILITY_OVERLAP_PENALTY = -0.05
+HOLD_ANGLE_BONUS = 0.02
+HOLD_ANGLE_PENALTY = -0.01
+SPIKE_WATCH_BONUS = 0.02     # プラント地点にLOSが通っている間、静止して警戒(引き上げ)
+KILL_REWARD = 0.5
+DEFUSER_KILL_BONUS = 0.4     # 解除中だった敵を倒した場合の追加ボーナス
+DEATH_PENALTY = -0.5
+ROUND_WIN_REWARD = 1.0       # 起爆 or 敵全滅によるAttacker勝利
+DEFUSE_LOSS_PENALTY = -1.0   # 解除完了によるDefender勝利
+WIPE_LOSS_PENALTY = -0.5     # 自チーム全滅(解除は時間の問題)による実質敗北
+
+
+# ============================================================================
+# マップ読み込み(map_data.NEW_MAZE_STRのみ参照。パース処理は自前で複製)
+# ============================================================================
+
+def _parse_grid(maze_str):
+    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+
+
+GRID = _parse_grid(NEW_MAZE_STR)
+HEIGHT, WIDTH = GRID.shape
+WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
+DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
+PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
+
+if len(DEFENDER_SPAWNS) < N_DEFENDERS:
+    raise RuntimeError(
+        f"DEFENDER_SPAWNSが{len(DEFENDER_SPAWNS)}マスしかなく、敵{N_DEFENDERS}人分を配置できません。"
+    )
+
+
+def _cluster_plant_cells(cells, max_sites=2, cluster_radius=6):
+    """プラント可能セル群を、単純な距離クラスタリングでサイトごとにまとめる。
+    (train_defender_search.py の _extract_site_positions と同じ考え方だが、
+    こちらは各クラスタの実セル一覧も保持する)。"""
+    if not cells:
+        return []
+    clusters = []
+    for cell in cells:
+        placed = False
+        for cluster in clusters:
+            cr, cc = cluster["centroid"]
+            if max(abs(cell[0] - cr), abs(cell[1] - cc)) <= cluster_radius:
+                cluster["cells"].append(cell)
+                rs = [c[0] for c in cluster["cells"]]
+                cs = [c[1] for c in cluster["cells"]]
+                cluster["centroid"] = (sum(rs) / len(rs), sum(cs) / len(cs))
+                placed = True
+                break
+        if not placed:
+            clusters.append({"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))})
+    clusters.sort(key=lambda c: -len(c["cells"]))
+    return clusters[:max_sites]
+
+
+SITE_CLUSTERS = _cluster_plant_cells(PLANT_CELLS, max_sites=2)
+if not SITE_CLUSTERS:
+    print("[WARN] map_data.py にプラント可能マス(2)が見つかりません。マップ中央で代用します。")
+    SITE_CLUSTERS = [{"cells": [(HEIGHT // 2, WIDTH // 2)], "centroid": (HEIGHT / 2.0, WIDTH / 2.0)}]
+
+
+def _pick_canonical_plant_cell(cluster):
+    """クラスタの重心に最も近い実セルを、そのサイトの代表プラント地点とする。"""
+    cr, cc = cluster["centroid"]
+    return min(cluster["cells"], key=lambda cell: (cell[0] - cr) ** 2 + (cell[1] - cc) ** 2)
+
+
+SITE_PLANT_POS = [_pick_canonical_plant_cell(cluster) for cluster in SITE_CLUSTERS]
+
+
+# ============================================================================
+# LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
+# ============================================================================
+
+def line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
     y1, x1 = int(p2[0]), int(p2[1])
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
     err = dx + dy
     cells = []
     while True:
@@ -153,10 +273,10 @@ def _line_cells(p1, p2):
             y0 += sy
 
 
-def _has_los(grid, smoke_cells, p1, p2):
-    cells = _line_cells(p1, p2)
+def has_los(p1, p2, smoke_cells=None):
+    cells = line_cells(p1, p2)
     for r, c in cells:
-        if grid[r, c] == 1:
+        if GRID[r, c] == 1:
             return False
     if smoke_cells and len(cells) > 2:
         if any(cell in smoke_cells for cell in cells):
@@ -164,795 +284,319 @@ def _has_los(grid, smoke_cells, p1, p2):
     return True
 
 
-def _chebyshev(p1, p2):
-    return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
-
-
-def _build_distance_map_from_coords(grid, source_cells):
-    height, width = grid.shape
-    dist = np.full((height, width), np.inf, dtype=np.float32)
-    q = deque()
-    for r, c in source_cells:
-        if 0 <= r < height and 0 <= c < width and grid[r, c] != 1:
-            dist[r, c] = 0.0
-            q.append((r, c))
-    while q:
-        r, c = q.popleft()
-        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+def bfs_distance_map(goal):
+    dist = np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
+    gr, gc = int(goal[0]), int(goal[1])
+    if GRID[gr, gc] == 1:
+        return dist
+    dist[gr, gc] = 0
+    queue = deque([(gr, gc)])
+    while queue:
+        r, c = queue.popleft()
+        for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
-                if dist[nr, nc] > dist[r, c] + 1:
-                    dist[nr, nc] = dist[r, c] + 1
-                    q.append((nr, nc))
+            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+                dist[nr, nc] = dist[r, c] + 1
+                queue.append((nr, nc))
     return dist
 
 
-def _neighbors8(pos, grid):
-    r, c = pos
-    height, width = grid.shape
-    out = []
-    for dr in (-1, 0, 1):
-        for dc in (-1, 0, 1):
-            if dr == 0 and dc == 0:
+def bfs_best_direction(dist_map, r0, c0):
+    if dist_map is None:
+        return 0, 0
+    cur = dist_map[r0, c0]
+    if cur < 0:
+        return 0, 0
+    best_dr, best_dc, best_d = 0, 0, cur
+    for dr, dc in CARDINAL:
+        nr, nc = r0 + dr, c0 + dc
+        if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and dist_map[nr, nc] >= 0:
+            if dist_map[nr, nc] < best_d:
+                best_d = dist_map[nr, nc]
+                best_dr, best_dc = dr, dc
+    return best_dr, best_dc
+
+
+SITE_SPIKE_DIST_MAPS = [bfs_distance_map(pos) for pos in SITE_PLANT_POS]
+
+
+def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
+    """敵(Defender)ヒューリスティック用。controllers.BaseController.move_towards_target
+    と同等のロジックをこのファイル内で複製したもの。"""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal:
+        return start
+
+    candidate_goals = []
+    if GRID[goal[0], goal[1]] != 1 and goal not in occupied:
+        candidate_goals.append(goal)
+    if allow_adjacent_goal or goal in occupied:
+        for dr, dc in CARDINAL:
+            adj = (goal[0] + dr, goal[1] + dc)
+            if (
+                0 <= adj[0] < HEIGHT and 0 <= adj[1] < WIDTH
+                and GRID[adj[0], adj[1]] != 1 and adj not in occupied
+            ):
+                candidate_goals.append(adj)
+    candidate_goals = list(dict.fromkeys(candidate_goals))
+    if not candidate_goals:
+        return _random_step(start, occupied)
+
+    candidate_set = set(candidate_goals)
+    queue = deque([start])
+    parent = {start: None}
+    reached = None
+    while queue:
+        cur = queue.popleft()
+        if cur in candidate_set:
+            reached = cur
+            break
+        r, c = cur
+        for dr, dc in CARDINAL:
+            nxt = (r + dr, c + dc)
+            if nxt in parent:
                 continue
+            if not (0 <= nxt[0] < HEIGHT and 0 <= nxt[1] < WIDTH):
+                continue
+            if GRID[nxt[0], nxt[1]] == 1 or nxt in occupied:
+                continue
+            parent[nxt] = cur
+            queue.append(nxt)
+
+    if reached is None:
+        return _random_step(start, occupied)
+
+    step = reached
+    while parent[step] is not None and parent[step] != start:
+        step = parent[step]
+    if parent[step] is None:
+        return start
+    return step
+
+
+def _random_step(pos, occupied):
+    r, c = pos
+    valid = [
+        (r + dr, c + dc) for dr, dc in CARDINAL
+        if 0 <= r + dr < HEIGHT and 0 <= c + dc < WIDTH
+        and GRID[r + dr, c + dc] != 1 and (r + dr, c + dc) not in occupied
+    ]
+    return random.choice(valid) if valid else pos
+
+
+# ============================================================================
+# ガードポジション生成(map_data_searchのような専用マーカーが無いため、
+# プラント地点からLOSが通る候補マスをこのファイル内で走査して決定する)
+# ============================================================================
+
+# ============================================================================
+# ガードポジション(map_data_guard.py の 6 マーカーをそのまま使用する。
+# NEW_MAZE_STRと同一サイズであることを前提に、プラント地点(SITE_PLANT_POS)
+# ごとに距離が近い順でN_ATTACKERS個を割り当てる)
+# ============================================================================
+
+_GUARD_GRID = _parse_grid(GUARD_MAZE_STR)
+if _GUARD_GRID.shape != GRID.shape:
+    raise RuntimeError(
+        f"map_data_guard.pyのマップサイズ{_GUARD_GRID.shape}が"
+        f"map_data.pyの{GRID.shape}と一致しません。"
+    )
+
+GUARD_POSITION_CELLS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if _GUARD_GRID[r, c] == 6
+]
+if len(GUARD_POSITION_CELLS) < N_ATTACKERS:
+    raise RuntimeError(
+        f"map_data_guard.pyの6(ガードポジション)が{len(GUARD_POSITION_CELLS)}個しかなく、"
+        f"固定チーム{N_ATTACKERS}人分を配置できません。"
+    )
+
+
+def _assign_guard_positions_for_site(plant_pos, num_positions=N_ATTACKERS):
+    """プラント地点にChebyshev距離が近い順でガードポジション(6)をnum_positions個選ぶ。"""
+    ordered = sorted(
+        GUARD_POSITION_CELLS,
+        key=lambda cell: max(abs(cell[0] - plant_pos[0]), abs(cell[1] - plant_pos[1])),
+    )
+    return ordered[:num_positions]
+
+
+SITE_GUARD_POSITIONS = [
+    _assign_guard_positions_for_site(pos, num_positions=N_ATTACKERS) for pos in SITE_PLANT_POS
+]
+SITE_GUARD_DIST_MAPS = [
+    [bfs_distance_map(gp) for gp in guard_positions]
+    for guard_positions in SITE_GUARD_POSITIONS
+]
+
+print("[touyama_v1] サイト別プラント地点・ガードポジション:")
+for _idx, _plant in enumerate(SITE_PLANT_POS):
+    print(f"  site{_idx}: plant={_plant} guard_positions={SITE_GUARD_POSITIONS[_idx]}")
+
+
+# ============================================================================
+# ユニットスタブ(game_core.Characterの必要最小限の複製。継承・importはしない)
+# ============================================================================
+
+class UnitStub:
+    def __init__(self, name, team, pos, role, has_spike=False):
+        self.name = name
+        self.team = team  # "A"(touyama/guard) or "D"(敵/解除側)
+        self.pos = list(pos)
+        self.hp = MAX_HP
+        self.max_hp = MAX_HP
+        self.is_alive = True
+        self.role = role
+        self.ability_name = role
+        self.charges = 0 if role in ("HUNT", "NONE") else 1
+        self.blind_remaining = 0
+        self.reveal_remaining = 0
+        self.moved_this_tick = False
+        self.has_spike = has_spike
+        self.kills = 0
+        self.accuracy = DEFAULT_ACCURACY
+        self.dodge_rate = DEFAULT_DODGE
+        self.hs_rate = DEFAULT_HS_RATE
+        self.reaction = DEFAULT_REACTION + random.uniform(-10, 10)
+
+        # Defender(敵)専用: 解除進捗Tick数
+        self.defuse_timer = 0
+
+        # Attacker(touyama/guard)専用: 割り当てられたガードポジションとBFS距離マップ
+        self.assigned_guard_pos = None
+        self.assigned_guard_dist_map = None
+
+        # 優先モード管理(報酬のポテンシャル差分計算用)
+        self.prev_priority_mode = None
+        self.prev_priority_dist = None
+        self.prev_priority_target_key = None
+
+
+def _resolve_spawn_collision(pos, occupied):
+    """ガードポジション候補が重複/壁だった場合に、BFSで最寄りの空きマスへ逃がす。"""
+    if pos not in occupied and GRID[pos[0], pos[1]] != 1:
+        return pos
+    visited = {pos}
+    queue = deque([pos])
+    while queue:
+        r, c = queue.popleft()
+        for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
-                out.append((nr, nc))
-    return out
+            if not (0 <= nr < HEIGHT and 0 <= nc < WIDTH):
+                continue
+            if (nr, nc) in visited:
+                continue
+            visited.add((nr, nc))
+            if GRID[nr, nc] == 1:
+                continue
+            if (nr, nc) not in occupied:
+                return (nr, nc)
+            queue.append((nr, nc))
+    return pos  # フォールバック(通常到達しない)
 
 
-def _build_candidate_tiers(grid, plant_pos, formation_cells):
-    """優先順位付きスロット候補を返す: (tier1, tier2, tier3)。"""
-    height, width = grid.shape
-    r, c = plant_pos
-    tier1 = [plant_pos] if grid[r, c] != 1 else []
-    tier2 = _neighbors8(plant_pos, grid)
-    tier3 = list(formation_cells)
-    return tier1, tier2, tier3
+def _build_fixed_attackers(site_idx, guard_positions):
+    """touyama_v1固定チーム(5人)をAttacker(guard側)として生成する。
+    ロースター順にガードポジションを1人ずつ割り当てる(重複時は隣接空きマスへ逃がす)。
+    ステータス・ロールは_compute_touyama_effective_statsで確定済みの値をそのまま使う。"""
+    attackers = []
+    occupied = set()
+    for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
+        stats = TOUYAMA_EFFECTIVE_STATS[name]
+        base_pos = guard_positions[i % len(guard_positions)]
+        spawn_pos = _resolve_spawn_collision(base_pos, occupied)
+        occupied.add(spawn_pos)
+
+        unit = UnitStub(name, "A", spawn_pos, stats["ability"])
+        unit.accuracy = stats["accuracy"]
+        unit.dodge_rate = stats["dodge_rate"]
+        unit.hs_rate = stats["hs_rate"]
+        unit.reaction = stats["reaction"]
+        unit.assigned_guard_pos = base_pos
+        unit.assigned_guard_dist_map = SITE_GUARD_DIST_MAPS[site_idx][i % len(guard_positions)]
+        attackers.append(unit)
+    return attackers
 
 
-def _assign_goals(grid, plant_pos, formation_cells, positions_ordered, cell_dist_maps):
-    """近い順（BFS実距離）の貪欲割当で、各エージェントの誘導目標(goal)とtier(0/1/2)を返す。
-
-    チェビシェフ距離（直線距離）ではなく、壁を考慮したBFS距離で「近い」を
-    判定する。直線距離だと壁の向こうのセルを「近い」と誤認し、
-    キャラクターが角で詰まる原因になるため。
-
-    positions_ordered: [(agent_index, current_pos), ...] のリスト。
-    cell_dist_maps: {cell(tuple): distance_map(np.ndarray)} のキャッシュ辞書。
-        呼び出し元が episode/round 単位で使い回すこと（毎回作り直すと重い）。
-    戻り値: {agent_index: (goal_pos, tier)}  tier: 0=設置位置, 1=隣接8マス, 2=map6
-    """
-    def _dist_map_for(cell):
-        dm = cell_dist_maps.get(cell)
-        if dm is None:
-            dm = _build_distance_map_from_coords(grid, [cell])
-            cell_dist_maps[cell] = dm
-        return dm
-
-    def _bfs_dist(pos, cell):
-        dm = _dist_map_for(cell)
-        d = dm[pos[0], pos[1]]
-        return float(d) if np.isfinite(d) else float("inf")
-
-    tier1, tier2, tier3 = _build_candidate_tiers(grid, plant_pos, formation_cells)
-    tiers = [tier1, tier2, tier3]
-    claimed = set()
-    result = {}
-    for agent_idx, pos in positions_ordered:
-        chosen, chosen_tier = None, None
-        for tier_idx, tier_cells in enumerate(tiers):
-            avail = [s for s in tier_cells if s not in claimed]
-            if avail:
-                chosen = min(avail, key=lambda s: _bfs_dist(pos, s))
-                chosen_tier = tier_idx
-                break
-        if chosen is None:
-            chosen, chosen_tier = plant_pos, 0
-        claimed.add(chosen)
-        result[agent_idx] = (chosen, chosen_tier)
-    return result
+def _build_defenders():
+    """敵(Defender)側は当面ヒューリスティック対応のため、DEFENDER_SPAWNSから
+    ランダムスポーンさせる。アビリティは使用しない(role="NONE")。
+    将来、敵専用の固定チームに差し替える場合はこの関数だけを変更すればよい。"""
+    d_spawns = random.sample(DEFENDER_SPAWNS, min(N_DEFENDERS, len(DEFENDER_SPAWNS)))
+    return [UnitStub(f"D{i+1}", "D", pos, "NONE") for i, pos in enumerate(d_spawns)]
 
 
-# ---------------------------------------------------------------------------
-# 環境
-# ---------------------------------------------------------------------------
-class GuardEnv:
-    """スパイク防衛（Guard）役を学習させる軽量マルチエージェント環境。"""
+# ============================================================================
+# チーム共有メモリ(touyama/Attacker視点。敵目撃情報のみ管理)
+# ============================================================================
 
-    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
-    N_ACTIONS = 6
-    _MOVE_DELTA = {
-        ACTION_UP: (-1, 0),
-        ACTION_DOWN: (1, 0),
-        ACTION_LEFT: (0, -1),
-        ACTION_RIGHT: (0, 1),
-        ACTION_STAY: (0, 0),
-    }
-
-    def __init__(
-        self,
-        maze_str=NEW_MAZE_STR,
-        max_ticks=DETONATE_TICKS + 20,
-        n_guards=N_GUARDS,
-        n_enemies=N_ENEMIES,
-        shaping_coef=0.15,
-        urgency_shaping_coef=0.30,
-        cover_stationary_bonus=0.10,
-        cover_move_penalty=0.08,
-        block_penalty=0.15,
-        ability_success_reward=2.0,
-        ability_redundant_penalty=1.0,
-        ability_waste_penalty=0.3,
-        kill_bonus=5.0,
-        defuse_stopped_bonus=6.0,
-        mission_success_reward=8.0,
-        mission_fail_penalty=8.0,
-        all_dead_penalty=4.0,
-        seed=None,
-    ):
-        lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
-        self.grid = np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
-        self.height, self.width = self.grid.shape
-
-        self.site_cells = _cells_with_value(self.grid, SITE_CELL_VALUE)
-        self.attacker_spawns = _cells_with_value(self.grid, ATTACKER_SPAWN_VALUE)
-        self.defender_spawns = _cells_with_value(self.grid, DEFENDER_SPAWN_VALUE)
-        self.formation_cells = _cells_with_value(self.grid, FORMATION_CELL_VALUE)
-        self.walkable_cells = list(zip(*np.where(self.grid != 1)))
-
-        self.max_ticks = max_ticks
-        self.n_guards = n_guards
-        self.n_enemies = n_enemies
-        self.shaping_coef = shaping_coef
-        self.urgency_shaping_coef = urgency_shaping_coef
-        self.cover_stationary_bonus = cover_stationary_bonus
-        self.cover_move_penalty = cover_move_penalty
-        self.block_penalty = block_penalty
-        self.ability_success_reward = ability_success_reward
-        self.ability_redundant_penalty = ability_redundant_penalty
-        self.ability_waste_penalty = ability_waste_penalty
-        self.kill_bonus = kill_bonus
-        self.defuse_stopped_bonus = defuse_stopped_bonus
-        self.mission_success_reward = mission_success_reward
-        self.mission_fail_penalty = mission_fail_penalty
-        self.all_dead_penalty = all_dead_penalty
-
-        self.rng = random.Random(seed)
-
-        # ラウンド内状態
-        self.tick = 0
-        self.plant_pos = (0, 0)
-        self.detonate_timer = DETONATE_TICKS
-
-        self.guard_pos = []
-        self.guard_hp = []
-        self.guard_alive = []
-        self.guard_ability_type = []
-        self.guard_ability_used = []
-        self.guard_last_delta = []
-        self.guard_stuck = []
-        self._prev_goal_dist = [0.0] * n_guards
-        self._prev_had_cover = [False] * n_guards
-
-        self.enemy_pos = []
-        self.enemy_hp = []
-        self.enemy_alive = []
-        self.enemy_defuse_timer = []
-        self.enemy_blind_remaining = []
-        self.enemy_blind_source = []
-        self.enemy_reveal_remaining = []
-        self.enemy_reveal_source = []
-        self.active_defuser_idx = None
-
-        self.smokes = []
-
-        self._enemy_goal_dist_map = None
-        self._cell_dist_maps = {}
-        self._blocking_guard_idx = None  # このtickで味方の移動を塞いだguardのindex
-        self._blocking_none = None  # 予約（互換のため）
-
-    # ------------------------------------------------------------------
-    def _random_walkable_near(self, center, max_dist, exclude=()):
-        exclude = set(exclude)
-        candidates = [
-            cell for cell in self.walkable_cells
-            if _chebyshev(cell, center) <= max_dist and cell not in exclude
-        ]
-        if not candidates:
-            candidates = [c for c in self.walkable_cells if c not in exclude]
-        return self.rng.choice(candidates) if candidates else center
+class GuardMemory:
+    def __init__(self):
+        self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
-        self.tick = 0
-        self.smokes = []
-        self.detonate_timer = DETONATE_TICKS
+        self.last_seen_enemy = None
 
-        self.plant_pos = self.rng.choice(self.site_cells) if self.site_cells else (0, 0)
-        self._enemy_goal_dist_map = _build_distance_map_from_coords(self.grid, [self.plant_pos])
-        self._cell_dist_maps = {}  # ラウンドが変わればplant_posも変わるためクリア
-
-        # --- Guard：設置直後を想定し、設置地点付近にランダム配置 ---
-        occupied = {self.plant_pos}
-        self.guard_pos = []
-        for _ in range(self.n_guards):
-            pos = self._random_walkable_near(self.plant_pos, max_dist=10, exclude=occupied)
-            occupied.add(pos)
-            self.guard_pos.append(pos)
-
-        self.guard_hp = [MAX_HP] * self.n_guards
-        self.guard_alive = [True] * self.n_guards
-        self.guard_ability_type = [self.rng.choice(ABILITY_TYPES) for _ in range(self.n_guards)]
-        self.guard_ability_used = [False] * self.n_guards
-        self.guard_last_delta = [(0.0, 0.0)] * self.n_guards
-        self.guard_stuck = [0] * self.n_guards
-
-        # --- 敵：守備側スポーンに配置 ---
-        self.enemy_pos = []
-        enemy_candidates = list(self.defender_spawns)
-        self.rng.shuffle(enemy_candidates)
-        for i in range(self.n_enemies):
-            if i < len(enemy_candidates):
-                pos = enemy_candidates[i]
-            else:
-                pos = self._random_walkable_near(self.plant_pos, max_dist=30, exclude=occupied)
-            self.enemy_pos.append(pos)
-
-        self.enemy_hp = [MAX_HP] * self.n_enemies
-        self.enemy_alive = [True] * self.n_enemies
-        self.enemy_defuse_timer = [0] * self.n_enemies
-        self.enemy_blind_remaining = [0] * self.n_enemies
-        self.enemy_blind_source = [None] * self.n_enemies
-        self.enemy_reveal_remaining = [0] * self.n_enemies
-        self.enemy_reveal_source = [None] * self.n_enemies
-        self.active_defuser_idx = None
-
-        goals = self._compute_goals()
-        for i in range(self.n_guards):
-            goal, _tier = goals[i]
-            self._prev_goal_dist[i] = self._goal_distance(self.guard_pos[i], goal)
-            self._prev_had_cover[i] = self._has_los_to_plant(self.guard_pos[i])
-
-        return [self._get_obs(i, goals) for i in range(self.n_guards)]
-
-    # ------------------------------------------------------------------
-    def _is_wall(self, r, c):
-        if not (0 <= r < self.height and 0 <= c < self.width):
-            return True
-        return self.grid[r, c] == 1
-
-    def _smoke_cell_set(self):
-        cells = set()
-        for smoke in self.smokes:
-            cells.update(smoke["cells"])
-        return cells
-
-    def _has_los_to_plant(self, pos):
-        smoke_cells = self._smoke_cell_set()
-        return _has_los(self.grid, smoke_cells, pos, self.plant_pos)
-
-    def _occupied_by_other_guards(self, exclude_idx):
-        return {
-            self.guard_pos[i] for i in range(self.n_guards)
-            if i != exclude_idx and self.guard_alive[i]
-        }
-
-    def _occupied_all(self, kind, idx):
-        occ = set()
-        for i in range(self.n_guards):
-            if kind == "guard" and i == idx:
-                continue
-            if self.guard_alive[i]:
-                occ.add(self.guard_pos[i])
-        for i in range(self.n_enemies):
-            if kind == "enemy" and i == idx:
-                continue
-            if self.enemy_alive[i]:
-                occ.add(self.enemy_pos[i])
-        return occ
-
-    def _nearest_visible_enemy(self, from_pos, max_range=None):
-        smoke_cells = self._smoke_cell_set()
-        best_idx, best_dist = None, None
-        for i in range(self.n_enemies):
-            if not self.enemy_alive[i]:
-                continue
-            dist = _chebyshev(from_pos, self.enemy_pos[i])
-            if max_range is not None and dist > max_range:
-                continue
-            if not _has_los(self.grid, smoke_cells, from_pos, self.enemy_pos[i]):
-                continue
-            if best_dist is None or dist < best_dist:
-                best_idx, best_dist = i, dist
-        return best_idx, best_dist
-
-    def _compute_goals(self):
-        """全guardの誘導目標を計算する。緊急時(誰かが解除中)は
-        解除者への接近を、それ以外は配置優先順位に基づく割当を返す。
-        戻り値: {agent_idx: (goal_pos, tier)}  tier: 0/1/2=配置スロット, -1=緊急対応
-        """
-        if self.active_defuser_idx is not None and self.enemy_alive[self.active_defuser_idx]:
-            defuser_pos = self.enemy_pos[self.active_defuser_idx]
-            return {i: (defuser_pos, -1) for i in range(self.n_guards)}
-
-        order = [(i, self.guard_pos[i]) for i in range(self.n_guards) if self.guard_alive[i]]
-        assigned = _assign_goals(
-            self.grid, self.plant_pos, self.formation_cells, order, self._cell_dist_maps
-        )
-        # 死亡中のguardにもダミー値を入れておく（インデックスアクセスを安全にするため）
-        for i in range(self.n_guards):
-            if i not in assigned:
-                assigned[i] = (self.plant_pos, 0)
-        return assigned
-
-    def _goal_distance(self, pos, goal):
-        """壁を考慮したBFS距離。ゴール（配置スロットや緊急時の解除者位置）
-        までの「実際に歩ける経路上の距離」を返す。チェビシェフ距離（直線）
-        を使うと壁の向こうを近いと誤認し、角で詰まる原因になるため。
-        """
-        dm = self._cell_dist_maps.get(goal)
-        if dm is None:
-            dm = _build_distance_map_from_coords(self.grid, [goal])
-            self._cell_dist_maps[goal] = dm
-        d = dm[pos[0], pos[1]]
-        return float(d) if np.isfinite(d) else DIST_NORM_MAX
-
-    # ------------------------------------------------------------------
-    def get_action_mask(self, i):
-        mask = np.ones(self.N_ACTIONS, dtype=bool)
-        if not self.guard_alive[i]:
-            mask[:] = False
-            mask[self.ACTION_STAY] = True
-            return mask
-
-        r, c = self.guard_pos[i]
-        for a, (dr, dc) in self._MOVE_DELTA.items():
-            if a == self.ACTION_STAY:
-                continue
-            if self._is_wall(r + dr, c + dc):
-                mask[a] = False
-
-        if self.guard_ability_used[i]:
-            mask[self.ACTION_ABILITY] = False
-
-        return mask
-
-    def _get_obs(self, i, goals):
-        if not self.guard_alive[i]:
-            return np.zeros(45, dtype=np.float32)
-
-        r, c = self.guard_pos[i]
-        pr, pc = self.plant_pos
-        goal, tier = goals[i]
-        gr, gc = goal
-        urgency = 1.0 if tier == -1 else 0.0
-
-        obs = []
-        obs.append(r / max(1, self.height - 1))
-        obs.append(c / max(1, self.width - 1))
-
-        dist_to_plant = _chebyshev((r, c), (pr, pc))
-        obs.append(min(1.0, dist_to_plant / DIST_NORM_MAX))
-        obs.append(max(-1.0, min(1.0, (pr - r) / DIST_NORM_MAX)))
-        obs.append(max(-1.0, min(1.0, (pc - c) / DIST_NORM_MAX)))
-
-        dist_to_goal = self._goal_distance((r, c), (gr, gc))
-        obs.append(min(1.0, dist_to_goal / DIST_NORM_MAX))
-        obs.append(max(-1.0, min(1.0, (gr - r) / DIST_NORM_MAX)))
-        obs.append(max(-1.0, min(1.0, (gc - c) / DIST_NORM_MAX)))
-
-        tier_onehot = [0.0, 0.0, 0.0]
-        if tier in (0, 1, 2):
-            tier_onehot[tier] = 1.0
-        obs.extend(tier_onehot)
-
-        obs.append(urgency)
-
-        if self.active_defuser_idx is not None and self.enemy_alive[self.active_defuser_idx]:
-            dpos = self.enemy_pos[self.active_defuser_idx]
-            ddist = _chebyshev((r, c), dpos)
-            obs.append(min(1.0, ddist / DIST_NORM_MAX))
-            obs.append(max(-1.0, min(1.0, (dpos[0] - r) / DIST_NORM_MAX)))
-            obs.append(max(-1.0, min(1.0, (dpos[1] - c) / DIST_NORM_MAX)))
-            has_los_defuser = 1.0 if self._has_los_to_plant((r, c)) and _has_los(
-                self.grid, self._smoke_cell_set(), (r, c), dpos
-            ) else 0.0
-            obs.append(has_los_defuser)
-        else:
-            obs.extend([1.0, 0.0, 0.0, 0.0])
-
-        obs.append(1.0 if self._has_los_to_plant((r, c)) else 0.0)
-
-        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
-
-        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            nr, nc = r + dr, c + dc
-            wall = self._is_wall(nr, nc)
-            gdist = self._goal_distance((nr, nc), (gr, gc))
-            obs.append(1.0 if wall else min(1.0, gdist / DIST_NORM_MAX))
-
-        for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
-            obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
-
-        enemy_idx, enemy_dist = self._nearest_visible_enemy((r, c))
-        if enemy_idx is not None:
-            er, ec = self.enemy_pos[enemy_idx]
-            obs.append(1.0)
-            obs.append(max(-1.0, min(1.0, (er - r) / DIST_NORM_MAX)))
-            obs.append(max(-1.0, min(1.0, (ec - c) / DIST_NORM_MAX)))
-            obs.append(min(1.0, enemy_dist / DIST_NORM_MAX))
-            obs.append(self.enemy_blind_remaining[enemy_idx] / max(1, BLIND_DURATION_TICKS))
-            obs.append(self.enemy_reveal_remaining[enemy_idx] / max(1, REVEAL_DURATION_TICKS))
-        else:
-            obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
-
-        obs.append(0.0 if self.guard_ability_used[i] else 1.0)
-        for ability in ABILITY_TYPES:
-            obs.append(1.0 if self.guard_ability_type[i] == ability else 0.0)
-
-        team_effect_active = any(v > 0 for v in self.enemy_blind_remaining) or any(
-            v > 0 for v in self.enemy_reveal_remaining
-        )
-        obs.append(1.0 if team_effect_active else 0.0)
-
-        obs.append(self.guard_last_delta[i][0])
-        obs.append(self.guard_last_delta[i][1])
-        obs.append(min(1.0, self.guard_stuck[i] / 10.0))
-        obs.append(1.0 - min(1.0, self.detonate_timer / max(1, DETONATE_TICKS)))
-        obs.append(0.0 if self.guard_last_delta[i] == (0.0, 0.0) else 1.0)  # moved_this_tick
-
-        return np.array(obs, dtype=np.float32)
-
-    # ------------------------------------------------------------------
-    def _apply_ability(self, i):
-        ability = self.guard_ability_type[i]
-        pos = self.guard_pos[i]
-        self.guard_ability_used[i] = True
-
-        if ability in ("FLASH", "RECON"):
-            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
-            if enemy_idx is None:
-                return -self.ability_waste_penalty
-            if ability == "FLASH":
-                already = self.enemy_blind_remaining[enemy_idx] > 0
-                self.enemy_blind_remaining[enemy_idx] = BLIND_DURATION_TICKS
-                self.enemy_blind_source[enemy_idx] = i
-            else:
-                already = self.enemy_reveal_remaining[enemy_idx] > 0
-                self.enemy_reveal_remaining[enemy_idx] = REVEAL_DURATION_TICKS
-                self.enemy_reveal_source[enemy_idx] = i
-            return -self.ability_redundant_penalty if already else self.ability_success_reward
-
-        enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
-        if enemy_idx is None:
-            return -self.ability_waste_penalty
-
-        target_pos = self.enemy_pos[enemy_idx]
-        smoke_cells = self._smoke_cell_set()
-        enemy_had_los_to_plant = _has_los(self.grid, smoke_cells, target_pos, self.plant_pos)
-
-        cells = {
-            (rr, cc)
-            for rr in range(target_pos[0] - 1, target_pos[0] + 2)
-            for cc in range(target_pos[1] - 1, target_pos[1] + 2)
-            if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1
-        }
-        self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS})
-
-        return self.ability_success_reward if enemy_had_los_to_plant else -self.ability_waste_penalty
-
-    # ------------------------------------------------------------------
-    def _resolve_combat(self):
-        smoke_cells = self._smoke_cell_set()
-
-        guards = [("guard", i, self.guard_pos[i]) for i in range(self.n_guards) if self.guard_alive[i]]
-        enemies = [("enemy", i, self.enemy_pos[i]) for i in range(self.n_enemies) if self.enemy_alive[i]]
-
-        shooters = []
-        for kind, idx, pos in guards:
-            e_idx, _ = self._nearest_visible_enemy(pos, max_range=None)
-            if e_idx is not None:
-                shooters.append((kind, idx, "enemy", e_idx))
-        for kind, idx, pos in enemies:
-            best_idx, best_dist = None, None
-            for gkind, gidx, gpos in guards:
-                if not _has_los(self.grid, smoke_cells, pos, gpos):
+    def update(self, attackers, defenders, smoke_cells):
+        alive_attackers = [a for a in attackers if a.is_alive]
+        visible_enemies = []
+        for a in alive_attackers:
+            for d in defenders:
+                if not d.is_alive:
                     continue
-                d = _chebyshev(pos, gpos)
-                if best_dist is None or d < best_dist:
-                    best_idx, best_dist = (gkind, gidx), d
-            if best_idx is not None:
-                shooters.append((kind, idx, best_idx[0], best_idx[1]))
+                if has_los(a.pos, d.pos, smoke_cells) and d not in visible_enemies:
+                    visible_enemies.append(d)
 
-        self.rng.shuffle(shooters)
-
-        kill_bonus_targets = []
-        defuse_stopped = False
-
-        for shooter_kind, shooter_idx, target_kind, target_idx in shooters:
-            shooter_alive = (
-                self.guard_alive[shooter_idx] if shooter_kind == "guard"
-                else self.enemy_alive[shooter_idx]
-            )
-            target_alive = (
-                self.guard_alive[target_idx] if target_kind == "guard"
-                else self.enemy_alive[target_idx]
-            )
-            if not shooter_alive or not target_alive:
-                continue
-
-            accuracy = GENERIC_ACCURACY
-            if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
-                accuracy *= BLIND_ACCURACY_MULTIPLIER
-
-            dodge = GENERIC_DODGE
-            if target_kind == "enemy" and self.enemy_reveal_remaining[target_idx] > 0:
-                dodge *= REVEALED_DODGE_MULTIPLIER
-
-            hit_chance = max(0.0, min(1.0, accuracy * (1.0 - dodge)))
-            if self.rng.random() >= hit_chance:
-                continue
-
-            damage = HEADSHOT_DAMAGE if self.rng.random() < GENERIC_HS_RATE else BODY_DAMAGE
-
-            if target_kind == "guard":
-                self.guard_hp[target_idx] = max(0, self.guard_hp[target_idx] - damage)
-                if self.guard_hp[target_idx] <= 0:
-                    self.guard_alive[target_idx] = False
-            else:
-                was_blind = self.enemy_blind_remaining[target_idx] > 0
-                was_revealed = self.enemy_reveal_remaining[target_idx] > 0
-                blind_src = self.enemy_blind_source[target_idx]
-                reveal_src = self.enemy_reveal_source[target_idx]
-                was_defuser = self.active_defuser_idx == target_idx
-
-                self.enemy_hp[target_idx] = max(0, self.enemy_hp[target_idx] - damage)
-                if self.enemy_hp[target_idx] <= 0:
-                    self.enemy_alive[target_idx] = False
-                    if was_blind and blind_src is not None:
-                        kill_bonus_targets.append(blind_src)
-                    if was_revealed and reveal_src is not None:
-                        kill_bonus_targets.append(reveal_src)
-                    if was_defuser:
-                        defuse_stopped = True
-                        self.active_defuser_idx = None
-
-        return kill_bonus_targets, defuse_stopped
-
-    # ------------------------------------------------------------------
-    def _advance_enemies(self):
-        """敵の簡易スクリプトAI：設置地点へBFS直進、隣接したら解除を試みる。"""
-        for i in range(self.n_enemies):
-            if not self.enemy_alive[i]:
-                continue
-            r, c = self.enemy_pos[i]
-            dist = _chebyshev((r, c), self.plant_pos)
-
-            if dist > 1:
-                best_cell, best_d = (r, c), self._enemy_goal_dist_map[r, c]
-                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                    nr, nc = r + dr, c + dc
-                    if self._is_wall(nr, nc):
-                        continue
-                    occ = self._occupied_all("enemy", i)
-                    if (nr, nc) in occ:
-                        continue
-                    d = self._enemy_goal_dist_map[nr, nc]
-                    if np.isfinite(d) and d < best_d:
-                        best_d, best_cell = d, (nr, nc)
-                self.enemy_pos[i] = best_cell
-                self.enemy_defuse_timer[i] = 0
-                if self.active_defuser_idx == i:
-                    self.active_defuser_idx = None
-                continue
-
-            # 隣接している：解除を試みる（既に他の敵が解除中でなければ自分が担当）
-            if self.active_defuser_idx is None:
-                self.active_defuser_idx = i
-            if self.active_defuser_idx == i:
-                self.enemy_defuse_timer[i] += 1
-
-    # ------------------------------------------------------------------
-    def step(self, actions):
-        self.tick += 1
-        rewards = [0.0] * self.n_guards
-        info = {"success": False, "defused": False, "all_dead": False}
-
-        for i in range(self.n_enemies):
-            self.enemy_blind_remaining[i] = max(0, self.enemy_blind_remaining[i] - 1)
-            self.enemy_reveal_remaining[i] = max(0, self.enemy_reveal_remaining[i] - 1)
-        for smoke in self.smokes:
-            smoke["remaining"] -= 1
-        self.smokes = [s for s in self.smokes if s["remaining"] > 0]
-
-        for i in range(self.n_guards):
-            rewards[i] -= 0.01
-
-        used_ability_this_tick = set()
-        for i in range(self.n_guards):
-            if not self.guard_alive[i] or actions[i] is None:
-                continue
-            if actions[i] == self.ACTION_ABILITY:
-                rewards[i] += self._apply_ability(i)
-                used_ability_this_tick.add(i)
-                self.guard_last_delta[i] = (0.0, 0.0)
-                self.guard_stuck[i] += 1
-
-        self._advance_enemies()
-
-        self._blocking_guard_idx = {}  # {塞がれたguard_idx: 塞いだguard_idx}
-
-        move_order = [
-            i for i in range(self.n_guards)
-            if self.guard_alive[i] and i not in used_ability_this_tick and actions[i] is not None
-        ]
-        self.rng.shuffle(move_order)
-        for i in move_order:
-            action = actions[i]
-            r, c = self.guard_pos[i]
-
-            if action == self.ACTION_STAY or action not in self._MOVE_DELTA:
-                self.guard_last_delta[i] = (0.0, 0.0)
-                self.guard_stuck[i] += 1
-                continue
-
-            dr, dc = self._MOVE_DELTA[action]
-            nr, nc = r + dr, c + dc
-
-            if self._is_wall(nr, nc):
-                self.guard_last_delta[i] = (0.0, 0.0)
-                self.guard_stuck[i] += 1
-                continue
-
-            occ = self._occupied_all("guard", i)
-            if (nr, nc) in occ:
-                # 誰が塞いでいるかを記録する（後段でその塞いだ本人に
-                # 「まだ自分のゴールに未到達なのに居座っている」場合のみ罰する）
-                blocker_idx = next(
-                    (j for j in range(self.n_guards) if self.guard_alive[j] and self.guard_pos[j] == (nr, nc)),
-                    None,
+        if visible_enemies:
+            tracked = None
+            if self.last_seen_enemy is not None:
+                tracked_name = self.last_seen_enemy.get("name")
+                tracked = next((d for d in visible_enemies if d.name == tracked_name), None)
+            if tracked is None:
+                # 解除中の敵がいれば最優先、いなければ最も近い敵を追跡する
+                defusing = [d for d in visible_enemies if d.defuse_timer > 0]
+                pool = defusing if defusing else visible_enemies
+                tracked = min(
+                    pool,
+                    key=lambda d: min(
+                        max(abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1]))
+                        for a in alive_attackers
+                    ) if alive_attackers else 0,
                 )
-                if blocker_idx is not None:
-                    self._blocking_guard_idx[i] = blocker_idx
-                self.guard_last_delta[i] = (0.0, 0.0)
-                self.guard_stuck[i] += 1
-                continue
-
-            self.guard_pos[i] = (nr, nc)
-            self.guard_last_delta[i] = (float(dr), float(dc))
-            self.guard_stuck[i] = 0
-
-        goals_after = self._compute_goals()
-
-        # このtickで誰かを塞いだguardのうち、まだ自分のゴールに
-        # 到達していない者だけをペナルティ対象にする。
-        blocker_penalty_targets = set()
-        for blocked_idx, blocker_idx in self._blocking_guard_idx.items():
-            blocker_goal, _blocker_tier = goals_after[blocker_idx]
-            blocker_dist = self._goal_distance(self.guard_pos[blocker_idx], blocker_goal)
-            if blocker_dist > 0.0:
-                blocker_penalty_targets.add(blocker_idx)
-
-        for i in range(self.n_guards):
-            if not self.guard_alive[i]:
-                continue
-            goal, tier = goals_after[i]
-            urgency = tier == -1
-            new_dist = self._goal_distance(self.guard_pos[i], goal)
-            coef = self.urgency_shaping_coef if urgency else self.shaping_coef
-            rewards[i] += (self._prev_goal_dist[i] - new_dist) * coef
-            self._prev_goal_dist[i] = new_dist
-
-            moved = self.guard_last_delta[i] != (0.0, 0.0)
-            has_cover_now = self._has_los_to_plant(self.guard_pos[i])
-            # 「割り当てられたゴールに実際に到達しているか」で判定する。
-            # これが無いと、通路の途中でたまたま射線が通った時点で
-            # stationary_bonusが発生し続け、本来のゴールまで進まずに
-            # 居座ってしまい、後続の味方の通路を塞ぐ原因になる。
-            at_goal = new_dist <= 0.0
-            if not urgency:
-                if not moved and has_cover_now and at_goal:
-                    rewards[i] += self.cover_stationary_bonus
-                elif moved and self._prev_had_cover[i] and at_goal:
-                    rewards[i] -= self.cover_move_penalty
-            self._prev_had_cover[i] = has_cover_now
-
-            # ゴール未到達なのに味方の移動を塞いでいる場合はペナルティ。
-            # 既にゴールに到達済みの味方が結果的に他の味方の通路上にいるのは
-            # 正当な位置取りなので罰しない（狭い通路自体の構造的制約は
-            # マップ側／配置スロット設計の問題であり、ここでは「まだ
-            # 到達していないのに居座る」個体だけを是正する）。
-            if i in blocker_penalty_targets:
-                rewards[i] -= self.block_penalty
-
-        kill_bonus_targets, defuse_stopped = self._resolve_combat()
-        for guard_idx in kill_bonus_targets:
-            if 0 <= guard_idx < self.n_guards:
-                rewards[guard_idx] += self.kill_bonus
-        if defuse_stopped:
-            for i in range(self.n_guards):
-                if self.guard_alive[i]:
-                    rewards[i] += self.defuse_stopped_bonus
-
-        done = False
-        is_defused = any(
-            self.enemy_alive[i] and self.enemy_defuse_timer[i] >= DEFUSE_REQUIRED_TICKS
-            for i in range(self.n_enemies)
-        )
-        no_guards_alive = not any(self.guard_alive)
-        no_enemies_alive = not any(self.enemy_alive)
-
-        if is_defused:
-            done = True
-            info["defused"] = True
-            for i in range(self.n_guards):
-                if self.guard_alive[i]:
-                    rewards[i] -= self.mission_fail_penalty
-        elif no_guards_alive:
-            done = True
-            info["all_dead"] = True
-            # 生存者がいないので追加ペナルティは付与できない（既に死亡報酬計算対象なし）
-        elif no_enemies_alive:
-            done = True
-            info["success"] = True
-            for i in range(self.n_guards):
-                if self.guard_alive[i]:
-                    rewards[i] += self.mission_success_reward
-        else:
-            self.detonate_timer -= 1
-            if self.detonate_timer <= 0:
-                done = True
-                info["success"] = True
-                for i in range(self.n_guards):
-                    if self.guard_alive[i]:
-                        rewards[i] += self.mission_success_reward
-            elif self.tick >= self.max_ticks:
-                done = True
-                info["success"] = False
-                for i in range(self.n_guards):
-                    if self.guard_alive[i]:
-                        rewards[i] -= self.mission_fail_penalty
-
-        next_obs = [self._get_obs(i, goals_after) for i in range(self.n_guards)]
-        return next_obs, rewards, done, info
+            self.last_seen_enemy = {"pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0}
+        elif self.last_seen_enemy is not None:
+            self.last_seen_enemy["tick_ago"] += 1
+            if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
+                self.last_seen_enemy = None
 
 
-# ---------------------------------------------------------------------------
-# Dueling DQN
-# ---------------------------------------------------------------------------
-class DuelingQNetwork(nn.Module):
-    def __init__(self, obs_dim, n_actions, hidden=128):
+# ============================================================================
+# ネットワーク
+# ============================================================================
+
+class AttackerGuardDuelingDQN(nn.Module):
+    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden),
-            nn.ReLU(),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(),
+            nn.Linear(obs_dim, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
         )
-        self.value_head = nn.Sequential(
-            nn.Linear(hidden, hidden // 2),
-            nn.ReLU(),
-            nn.Linear(hidden // 2, 1),
-        )
-        self.advantage_head = nn.Sequential(
-            nn.Linear(hidden, hidden // 2),
-            nn.ReLU(),
-            nn.Linear(hidden // 2, n_actions),
-        )
+        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
+        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
 
     def forward(self, x):
-        feat = self.feature(x)
-        value = self.value_head(feat)
-        advantage = self.advantage_head(feat)
-        return value + (advantage - advantage.mean(dim=1, keepdim=True))
+        f = self.feature(x)
+        v = self.value_head(f)
+        a = self.advantage_head(f)
+        return v + (a - a.mean(dim=1, keepdim=True))
 
 
-Transition = namedtuple("Transition", ("state", "action", "reward", "next_state", "next_mask", "done"))
+Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done"))
 
 
 class ReplayBuffer:
-    def __init__(self, capacity):
+    def __init__(self, capacity=200_000):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, *args):
@@ -966,251 +610,700 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-def select_action(net, state, mask, epsilon, device):
+# ============================================================================
+# 観測構築
+# ============================================================================
+
+def build_observation(
+    unit, attackers, defenders, guard_memory, smoke_cells, own_smoke_active,
+    detonate_timer, spike_dist_map, sighting_dist_map, unit_has_spike_los,
+    active_defuse_info,
+):
+    obs = np.zeros(OBS_DIM, dtype=np.float32)
+    r0, c0 = int(unit.pos[0]), int(unit.pos[1])
+
+    obs[0] = unit.pos[0] / HEIGHT
+    obs[1] = unit.pos[1] / WIDTH
+    obs[2] = unit.hp / unit.max_hp if unit.max_hp else 0.0
+    obs[3] = 1.0 if unit.moved_this_tick else 0.0
+
+    ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}[unit.role]
+    obs[ability_index] = 1.0
+    obs[8] = 1.0 if unit.charges > 0 else 0.0
+
+    visible_enemies = [
+        d for d in defenders if d.is_alive and has_los(unit.pos, d.pos, smoke_cells)
+    ]
+    obs[9] = 1.0 if visible_enemies else 0.0
+
+    teammates = [a for a in attackers if a is not unit and a.is_alive]
+    obs[10] = len(teammates) / 4.0
+    if teammates:
+        nearest_d = min(
+            max(abs(t.pos[0] - unit.pos[0]), abs(t.pos[1] - unit.pos[1])) for t in teammates
+        )
+        obs[11] = min(nearest_d, HEIGHT) / HEIGHT
+
+    obs[12] = 1.0 if any(
+        d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0) for d in defenders
+    ) else 0.0
+    obs[13] = 1.0 if own_smoke_active else 0.0
+
+    # プラント地点(常時既知)への距離・方向・LOS
+    dist_here = spike_dist_map[r0, c0]
+    obs[14] = min(dist_here if dist_here >= 0 else HEIGHT + WIDTH, HEIGHT + WIDTH) / (HEIGHT + WIDTH)
+    best_dr, best_dc = bfs_best_direction(spike_dist_map, r0, c0)
+    obs[15] = float(best_dr)
+    obs[16] = float(best_dc)
+    obs[17] = 1.0 if unit_has_spike_los else 0.0
+
+    if guard_memory.last_seen_enemy is not None:
+        ls = guard_memory.last_seen_enemy
+        obs[18] = 1.0
+        best_dr, best_dc = bfs_best_direction(sighting_dist_map, r0, c0)
+        obs[19] = float(best_dr)
+        obs[20] = float(best_dc)
+        obs[21] = min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
+
+    obs[22] = len(visible_enemies) / 5.0
+    if visible_enemies:
+        nearest_enemy = min(
+            visible_enemies,
+            key=lambda d: max(abs(d.pos[0] - unit.pos[0]), abs(d.pos[1] - unit.pos[1])),
+        )
+        obs[23] = (nearest_enemy.pos[0] - unit.pos[0]) / HEIGHT
+        obs[24] = (nearest_enemy.pos[1] - unit.pos[1]) / WIDTH
+        dist = max(abs(nearest_enemy.pos[0] - unit.pos[0]), abs(nearest_enemy.pos[1] - unit.pos[1]))
+        obs[25] = min(dist, HEIGHT) / HEIGHT
+
+    # 現在進行中の解除情報(LOS不要、常時把握できる仕様。battle_logic.pyの
+    # defender_defuse_infoに準拠)
+    if active_defuse_info is not None:
+        obs[26] = 1.0
+        obs[27] = active_defuse_info["progress_ratio"]
+    obs[28] = min(detonate_timer, MAX_TICKS) / MAX_TICKS
+
+    # 担当ガードポジションへの距離・方向
+    dist_map = unit.assigned_guard_dist_map
+    bfs_dist = dist_map[r0, c0] if dist_map is not None else -1
+    if bfs_dist < 0:
+        bfs_dist = HEIGHT + WIDTH
+    obs[29] = min(bfs_dist, HEIGHT + WIDTH) / (HEIGHT + WIDTH)
+    best_dr, best_dc = bfs_best_direction(dist_map, r0, c0)
+    obs[30] = float(best_dr)
+    obs[31] = float(best_dc)
+    obs[32] = 1.0 if bfs_dist <= GUARD_POS_REACH_RADIUS else 0.0
+
+    obs[33] = 0.0  # 予備次元
+
+    return obs
+
+
+def decode_action(action_idx):
+    move_idx, use_ability = divmod(int(action_idx), 2)
+    return MOVES[move_idx], bool(use_ability)
+
+
+def build_action_mask(unit, occupied, lock_movement=False):
+    """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
+    敵を視認している間は静止させ、射撃の当たりやすさを優先する。"""
+    mask = np.ones(ACTION_DIM, dtype=bool)
+    r, c = int(unit.pos[0]), int(unit.pos[1])
+    for move_idx, (dr, dc) in enumerate(MOVES):
+        if lock_movement and move_idx != 0:
+            mask[move_idx * 2] = False
+            mask[move_idx * 2 + 1] = False
+            continue
+        nr, nc = r + dr, c + dc
+        walkable = (
+            0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            and GRID[nr, nc] != 1
+            and (nr, nc) not in occupied
+        )
+        if not walkable:
+            mask[move_idx * 2] = False
+            mask[move_idx * 2 + 1] = False
+
+    if unit.charges <= 0 or unit.role in ("HUNT", "NONE"):
+        for move_idx in range(5):
+            mask[move_idx * 2 + 1] = False
+
+    return mask
+
+
+# ============================================================================
+# 環境本体
+# ============================================================================
+
+class GuardEnv:
+    """プラント後フェーズを模した簡易マルチエージェント環境。
+
+    Attacker = touyama_v1固定チーム(5人、固定ステータス・固定ロール、
+    プラント地点周辺のガードポジションに配置)。Defender(敵)側は本物の
+    controllers.pyロジックではなく、このファイル内に複製した簡易
+    ヒューリスティック(BFSでプラント地点へ接近→隣接で解除)で動かす。
+    """
+
+    def __init__(self):
+        self.guard_memory = GuardMemory()
+        self.attackers = []
+        self.defenders = []
+        self.smokes = []  # [{"cells": set, "remaining_ticks": int, "team": str}]
+        self.detonate_timer = MAX_TICKS
+        self.site_idx = 0
+        self.planted_pos = None
+        self.match_over_reason = None
+        self._prev_kills = {}
+        self._prev_alive = {}
+        self.spike_dist_map = None
+        self.sighting_dist_map = None
+        self.active_defuser_name = None
+        self.last_shots = []
+
+    # -- 初期化 --------------------------------------------------------
+    def reset(self):
+        self.guard_memory.reset()
+        self.smokes = []
+        self.detonate_timer = MAX_TICKS
+        self.match_over_reason = None
+        self.active_defuser_name = None
+
+        self.site_idx = random.randrange(len(SITE_PLANT_POS))
+        self.planted_pos = SITE_PLANT_POS[self.site_idx]
+        self.spike_dist_map = SITE_SPIKE_DIST_MAPS[self.site_idx]
+        guard_positions = SITE_GUARD_POSITIONS[self.site_idx]
+
+        self.attackers = _build_fixed_attackers(self.site_idx, guard_positions)
+        self.defenders = _build_defenders()
+
+        self.guard_memory.update(self.attackers, self.defenders, self._smoke_cells())
+        self._update_sighting_dist_map()
+
+        self._prev_kills = {u.name: u.kills for u in self.attackers + self.defenders}
+        self._prev_alive = {u.name: u.is_alive for u in self.attackers + self.defenders}
+
+        for a in self.attackers:
+            a.prev_priority_mode = None
+            a.prev_priority_dist = None
+            a.prev_priority_target_key = None
+
+        return self._collect_observations()
+
+    def _update_sighting_dist_map(self):
+        self.sighting_dist_map = (
+            bfs_distance_map(self.guard_memory.last_seen_enemy["pos"])
+            if self.guard_memory.last_seen_enemy is not None else None
+        )
+
+    def _smoke_cells(self):
+        cells = set()
+        for s in self.smokes:
+            if s["remaining_ticks"] > 0:
+                cells.update(s["cells"])
+        return cells
+
+    def _own_smoke_active(self, team):
+        return any(s["team"] == team and s["remaining_ticks"] > 0 for s in self.smokes)
+
+    def _active_defuse_info(self):
+        defuser = next((d for d in self.defenders if d.is_alive and d.defuse_timer > 0), None)
+        if defuser is None:
+            return None
+        return {
+            "defuser": defuser,
+            "progress_ratio": min(defuser.defuse_timer / DEFUSE_REQUIRED_TICKS, 1.0),
+        }
+
+    def _collect_observations(self):
+        smoke_cells = self._smoke_cells()
+        occupied = {tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive}
+        active_defuse = self._active_defuse_info()
+        obs_dict, mask_dict = {}, {}
+        for a in self.attackers:
+            if not a.is_alive:
+                continue
+            unit_has_spike_los = has_los(a.pos, self.planted_pos, smoke_cells)
+            obs_dict[a.name] = build_observation(
+                a, self.attackers, self.defenders, self.guard_memory,
+                smoke_cells, self._own_smoke_active("A"), self.detonate_timer,
+                self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
+                active_defuse,
+            )
+            own_occupied = occupied - {tuple(a.pos)}
+            has_enemy_los = any(
+                d.is_alive and has_los(a.pos, d.pos, smoke_cells) for d in self.defenders
+            )
+            mask_dict[a.name] = build_action_mask(a, own_occupied, lock_movement=has_enemy_los)
+        return obs_dict, mask_dict
+
+    # -- メインステップ ---------------------------------------------------
+    def step(self, action_dict):
+        for u in self.attackers + self.defenders:
+            u.moved_this_tick = False
+
+        pre_tick_flash_recon_active = any(
+            d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0)
+            for d in self.defenders
+        )
+        pre_tick_defuse_timers = {d.name: d.defuse_timer for d in self.defenders}
+
+        smoke_cells = self._smoke_cells()
+        occupied = {tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive}
+
+        move_plans = []
+        ability_requests = []
+        ability_whiff = {}
+        ability_overlap = {}
+        held_angle = {}
+
+        # --- 敵(Defender)側: プラント地点へBFSで接近し、隣接したら解除する ---
+        for d in self.defenders:
+            if not d.is_alive:
+                continue
+            dist_to_spike = max(
+                abs(d.pos[0] - self.planted_pos[0]), abs(d.pos[1] - self.planted_pos[1])
+            )
+            if dist_to_spike <= 1:
+                if self.active_defuser_name in (None, d.name):
+                    self.active_defuser_name = d.name
+                    d.defuse_timer += 1
+                else:
+                    d.defuse_timer = 0
+                move_plans.append((d, (0, 0)))
+                continue
+
+            if self.active_defuser_name == d.name:
+                self.active_defuser_name = None
+            d.defuse_timer = 0
+
+            own_occupied = occupied - {tuple(d.pos)}
+            if random.random() < 0.1:
+                nxt = _random_step(tuple(d.pos), own_occupied)
+            else:
+                nxt = _bfs_next_step(tuple(d.pos), self.planted_pos, own_occupied, allow_adjacent_goal=True)
+            dr, dc = nxt[0] - d.pos[0], nxt[1] - d.pos[1]
+            move_plans.append((d, (dr, dc)))
+
+        # --- 味方(touyama Attacker)側: DQNの行動を反映 ---
+        for a in self.attackers:
+            if not a.is_alive or a.name not in action_dict:
+                continue
+            (dr, dc), use_ability = decode_action(action_dict[a.name])
+            move_plans.append((a, (dr, dc)))
+
+            visible_enemies = [
+                d for d in self.defenders if d.is_alive and has_los(a.pos, d.pos, smoke_cells)
+            ]
+            has_enemy_los = bool(visible_enemies)
+
+            if has_enemy_los and (dr, dc) == (0, 0):
+                held_angle[a.name] = "held_with_los"
+            elif has_enemy_los:
+                held_angle[a.name] = "moved_with_los"
+            else:
+                held_angle[a.name] = "no_los"
+
+            if use_ability:
+                ability_whiff[a.name] = not has_enemy_los
+                ability_overlap[a.name] = (
+                    pre_tick_flash_recon_active and a.role in ("FLASH", "RECON")
+                )
+                if a.charges > 0:
+                    if visible_enemies:
+                        nearest = min(
+                            visible_enemies,
+                            key=lambda d: max(abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1])),
+                        )
+                        dist = max(abs(nearest.pos[0] - a.pos[0]), abs(nearest.pos[1] - a.pos[1]))
+                        if dist <= ABILITY_RANGE:
+                            ability_requests.append((a, tuple(nearest.pos)))
+                    elif self.guard_memory.last_seen_enemy is not None:
+                        ability_requests.append((a, self.guard_memory.last_seen_enemy["pos"]))
+                    else:
+                        # 視認情報が全く無い場合はプラント地点周辺を予防的に牽制する
+                        ability_requests.append((a, self.planted_pos))
+
+        # --- 移動の適用(壁・マップ外・他ユニット占有マスを回避) ---
+        for unit, (dr, dc) in move_plans:
+            if not unit.is_alive or (dr, dc) == (0, 0):
+                continue
+            old_pos = tuple(unit.pos)
+            nr, nc = unit.pos[0] + dr, unit.pos[1] + dc
+            in_bounds = 0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            is_wall = in_bounds and GRID[nr, nc] == 1
+            occ = any(
+                other is not unit and other.is_alive and tuple(other.pos) == (nr, nc)
+                for other in self.attackers + self.defenders
+            )
+            if in_bounds and not is_wall and not occ:
+                unit.pos = [nr, nc]
+            unit.moved_this_tick = tuple(unit.pos) != old_pos
+
+        # --- アビリティの適用 ---
+        for unit, target_pos in ability_requests:
+            unit.charges -= 1
+            if unit.role == "SMOKE":
+                tr, tc = int(target_pos[0]), int(target_pos[1])
+                cells = {
+                    (rr, cc)
+                    for rr in range(tr - 1, tr + 2)
+                    for cc in range(tc - 1, tc + 2)
+                    if 0 <= rr < HEIGHT and 0 <= cc < WIDTH and GRID[rr, cc] != 1
+                }
+                self.smokes.append({
+                    "cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "team": unit.team,
+                })
+            elif unit.role == "FLASH":
+                for d in self.defenders:
+                    if d.is_alive and has_los(target_pos, d.pos, smoke_cells):
+                        d.blind_remaining = max(d.blind_remaining, BLIND_DURATION_TICKS)
+            elif unit.role == "RECON":
+                for d in self.defenders:
+                    if d.is_alive and has_los(target_pos, d.pos, smoke_cells):
+                        d.reveal_remaining = max(d.reveal_remaining, REVEAL_DURATION_TICKS)
+
+        self._resolve_shots()
+
+        # 解除者が死亡していたらロックを解放する(射撃解決後に判定)
+        if self.active_defuser_name is not None:
+            active = next((d for d in self.defenders if d.name == self.active_defuser_name), None)
+            if active is None or not active.is_alive:
+                self.active_defuser_name = None
+
+        for u in self.attackers + self.defenders:
+            u.blind_remaining = max(0, u.blind_remaining - 1)
+            u.reveal_remaining = max(0, u.reveal_remaining - 1)
+        for s in self.smokes:
+            s["remaining_ticks"] -= 1
+        self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
+
+        self.guard_memory.update(self.attackers, self.defenders, self._smoke_cells())
+        self._update_sighting_dist_map()
+        self.detonate_timer -= 1
+
+        defuse_completed = any(
+            d.is_alive and d.defuse_timer >= DEFUSE_REQUIRED_TICKS for d in self.defenders
+        )
+
+        rewards = self._compute_rewards(
+            pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle
+        )
+
+        self._prev_kills = {u.name: u.kills for u in self.attackers + self.defenders}
+        self._prev_alive = {u.name: u.is_alive for u in self.attackers + self.defenders}
+
+        attackers_alive = any(a.is_alive for a in self.attackers)
+        defenders_alive = any(d.is_alive for d in self.defenders)
+
+        done = (
+            defuse_completed
+            or self.detonate_timer <= 0
+            or not attackers_alive
+            or not defenders_alive
+        )
+
+        if done:
+            if defuse_completed:
+                self.match_over_reason = "defused"
+                for a in self.attackers:
+                    rewards[a.name] = rewards.get(a.name, 0.0) + DEFUSE_LOSS_PENALTY
+            elif not defenders_alive:
+                self.match_over_reason = "attacker_win_wipe"
+                for a in self.attackers:
+                    rewards[a.name] = rewards.get(a.name, 0.0) + ROUND_WIN_REWARD
+            elif self.detonate_timer <= 0:
+                self.match_over_reason = "attacker_win_detonate"
+                for a in self.attackers:
+                    rewards[a.name] = rewards.get(a.name, 0.0) + ROUND_WIN_REWARD
+            elif not attackers_alive:
+                self.match_over_reason = "attacker_wipe"
+                for a in self.attackers:
+                    rewards[a.name] = rewards.get(a.name, 0.0) + WIPE_LOSS_PENALTY
+
+        obs_dict, mask_dict = self._collect_observations()
+        return obs_dict, mask_dict, rewards, done
+
+    def _resolve_shots(self):
+        alive = [u for u in self.attackers + self.defenders if u.is_alive]
+        smoke_cells = self._smoke_cells()
+        shot_intents = []
+
+        for shooter in alive:
+            targets = [
+                t for t in alive
+                if t.team != shooter.team and has_los(shooter.pos, t.pos, smoke_cells)
+            ]
+            if not targets:
+                continue
+            target = min(
+                targets,
+                key=lambda t: (
+                    max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])),
+                    t.hp, t.name,
+                ),
+            )
+            shot_intents.append((shooter, target))
+
+        random.shuffle(shot_intents)
+        shot_intents.sort(key=lambda pair: pair[0].reaction, reverse=True)
+
+        self.last_shots = []
+        for shooter, target in shot_intents:
+            if not shooter.is_alive or not target.is_alive:
+                continue
+
+            accuracy = MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
+            if shooter.blind_remaining > 0:
+                accuracy *= BLIND_ACCURACY_MULTIPLIER
+
+            debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0
+            effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
+            hit_chance = accuracy * (1.0 - effective_dodge)
+            if target.moved_this_tick:
+                hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+            hit_chance = max(0.0, min(1.0, hit_chance))
+
+            hit = random.random() < hit_chance
+            if hit:
+                headshot = random.random() < shooter.hs_rate
+                damage = HEADSHOT_DAMAGE if headshot else BODY_DAMAGE
+                target.hp = max(0, target.hp - damage)
+                self.last_shots.append({"shooter": shooter, "target": target, "hit": True})
+                if target.hp <= 0:
+                    target.is_alive = False
+                    shooter.kills += 1
+                    if target.defuse_timer > 0:
+                        target.defuse_timer = 0
+                        if self.active_defuser_name == target.name:
+                            self.active_defuser_name = None
+            else:
+                self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
+
+    def _priority_mode_and_distmap(self, attacker):
+        active_defuse = self._active_defuse_info()
+        if active_defuse is not None:
+            # 解除中は最優先でプラント地点(=解除者の隣接マス)へ詰め寄る
+            return "defuse_alert", self.spike_dist_map, "defuse_alert"
+        if self.guard_memory.last_seen_enemy is not None:
+            target_key = f"sighting:{self.guard_memory.last_seen_enemy.get('name')}"
+            return "sighting", self.sighting_dist_map, target_key
+        return "position", attacker.assigned_guard_dist_map, "position"
+
+    def _compute_rewards(self, pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle):
+        rewards = {}
+        smoke_cells = self._smoke_cells()
+
+        for a in self.attackers:
+            r = STEP_PENALTY
+
+            mode, dist_map, target_key = self._priority_mode_and_distmap(a)
+            r0, c0 = int(a.pos[0]), int(a.pos[1])
+            bfs_dist = dist_map[r0, c0] if dist_map is not None else None
+            if bfs_dist is not None and bfs_dist < 0:
+                bfs_dist = None
+
+            if bfs_dist is None:
+                a.prev_priority_mode = mode
+                a.prev_priority_target_key = target_key
+                a.prev_priority_dist = None
+            elif (
+                mode != a.prev_priority_mode
+                or target_key != a.prev_priority_target_key
+                or a.prev_priority_dist is None
+            ):
+                a.prev_priority_mode = mode
+                a.prev_priority_target_key = target_key
+                a.prev_priority_dist = bfs_dist
+            else:
+                delta = a.prev_priority_dist - bfs_dist
+                a.prev_priority_dist = bfs_dist
+
+                if mode == "defuse_alert":
+                    r += GUARD_POSITION_PULL_REWARD * delta * 2.0  # 解除中は接近を強く促す
+                elif mode == "sighting":
+                    r += GUARD_POSITION_PULL_REWARD * delta
+                else:
+                    if bfs_dist > GUARD_POS_REACH_RADIUS:
+                        r += GUARD_POSITION_PULL_REWARD * delta
+                    else:
+                        r += HOLD_POSITION_BONUS if not a.moved_this_tick else HOLD_POSITION_PENALTY
+
+            # プラント地点にLOSが通っている間、静止していれば常時警戒ボーナス
+            if not a.moved_this_tick and has_los(a.pos, self.planted_pos, smoke_cells):
+                r += SPIKE_WATCH_BONUS
+
+            if ability_whiff.get(a.name):
+                r += ABILITY_WHIFF_PENALTY
+            if ability_overlap.get(a.name):
+                r += ABILITY_OVERLAP_PENALTY
+
+            angle_state = held_angle.get(a.name)
+            if angle_state == "held_with_los":
+                r += HOLD_ANGLE_BONUS
+            elif angle_state == "moved_with_los":
+                r += HOLD_ANGLE_PENALTY
+
+            new_kills = a.kills - self._prev_kills.get(a.name, a.kills)
+            if new_kills > 0:
+                r += KILL_REWARD * new_kills
+                for shot in self.last_shots:
+                    if (
+                        shot["shooter"] is a
+                        and shot["hit"]
+                        and not shot["target"].is_alive
+                        and pre_tick_defuse_timers.get(shot["target"].name, 0) > 0
+                    ):
+                        r += DEFUSER_KILL_BONUS
+
+            was_alive = self._prev_alive.get(a.name, True)
+            if was_alive and not a.is_alive:
+                r += DEATH_PENALTY
+
+            rewards[a.name] = r
+
+        # 解除進捗ペナルティ(全員で共有、ポテンシャル差分)
+        for d in self.defenders:
+            prev = pre_tick_defuse_timers.get(d.name, 0)
+            if d.is_alive and d.defuse_timer > prev:
+                for a in self.attackers:
+                    rewards[a.name] = rewards.get(a.name, 0.0) + DEFUSE_PROGRESS_PENALTY
+
+        return rewards
+
+
+# ============================================================================
+# 学習ループ
+# ============================================================================
+
+def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8):
+    decay_episodes = total_episodes * decay_ratio
+    return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
+
+
+def select_action(policy_net, obs, mask, epsilon):
     if random.random() < epsilon:
-        valid_actions = np.flatnonzero(mask)
-        return int(random.choice(valid_actions))
+        valid_indices = np.flatnonzero(mask)
+        if len(valid_indices) == 0:
+            return 0
+        return int(np.random.choice(valid_indices))
     with torch.no_grad():
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-        q = net(state_t).squeeze(0).cpu().numpy()
-    q = np.where(mask, q, -1e9)
-    return int(np.argmax(q))
+        obs_t = torch.as_tensor(obs, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+        q_values = policy_net(obs_t).squeeze(0).cpu().numpy()
+        q_values = np.where(mask, q_values, -np.inf)
+        return int(np.argmax(q_values))
 
 
-def optimize_model(policy_net, target_net, optimizer, buffer, batch_size, gamma, device):
+def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
     if len(buffer) < batch_size:
         return None
 
     batch = buffer.sample(batch_size)
+    obs_batch = torch.as_tensor(np.array(batch.obs), dtype=torch.float32, device=DEVICE)
+    action_batch = torch.as_tensor(batch.action, dtype=torch.int64, device=DEVICE).unsqueeze(1)
+    reward_batch = torch.as_tensor(batch.reward, dtype=torch.float32, device=DEVICE)
+    next_obs_batch = torch.as_tensor(np.array(batch.next_obs), dtype=torch.float32, device=DEVICE)
+    next_mask_batch = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=DEVICE)
+    done_batch = torch.as_tensor(batch.done, dtype=torch.float32, device=DEVICE)
 
-    states = torch.as_tensor(np.array(batch.state), dtype=torch.float32, device=device)
-    actions = torch.as_tensor(batch.action, dtype=torch.int64, device=device).unsqueeze(1)
-    rewards = torch.as_tensor(batch.reward, dtype=torch.float32, device=device).unsqueeze(1)
-    next_states = torch.as_tensor(np.array(batch.next_state), dtype=torch.float32, device=device)
-    dones = torch.as_tensor(batch.done, dtype=torch.float32, device=device).unsqueeze(1)
-    next_masks = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=device)
-
-    q_values = policy_net(states).gather(1, actions)
+    q_values = policy_net(obs_batch).gather(1, action_batch).squeeze(1)
 
     with torch.no_grad():
-        next_q_policy = policy_net(next_states)
-        next_q_policy = next_q_policy.masked_fill(~next_masks, -1e9)
+        next_q_policy = policy_net(next_obs_batch)
+        next_q_policy = next_q_policy.masked_fill(~next_mask_batch, -float("inf"))
         next_actions = next_q_policy.argmax(dim=1, keepdim=True)
-        next_q_target = target_net(next_states).gather(1, next_actions)
-        target = rewards + gamma * next_q_target * (1.0 - dones)
+        next_q_target = target_net(next_obs_batch).gather(1, next_actions).squeeze(1)
+        target = reward_batch + gamma * next_q_target * (1.0 - done_batch)
 
-    loss = F.smooth_l1_loss(q_values, target)
-
+    loss = nn.functional.smooth_l1_loss(q_values, target)
     optimizer.zero_grad()
     loss.backward()
-    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), max_norm=10.0)
+    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), 10.0)
     optimizer.step()
-
-    return float(loss.item())
-
-
-def evaluate(env, policy_net, device, episodes=20):
-    successes = 0
-    total_reward = 0.0
-    defused_count = 0
-    all_dead_count = 0
-
-    for _ in range(episodes):
-        obs_list = env.reset()
-        done = False
-        episode_reward = 0.0
-        info = {"success": False}
-
-        while not done:
-            actions = []
-            for i in range(env.n_guards):
-                if not env.guard_alive[i]:
-                    actions.append(None)
-                    continue
-                mask = env.get_action_mask(i)
-                with torch.no_grad():
-                    state_t = torch.as_tensor(obs_list[i], dtype=torch.float32, device=device).unsqueeze(0)
-                    q = policy_net(state_t).squeeze(0).cpu().numpy()
-                q = np.where(mask, q, -1e9)
-                actions.append(int(np.argmax(q)))
-
-            next_obs_list, rewards, done, info = env.step(actions)
-            episode_reward += sum(rewards)
-            obs_list = next_obs_list
-
-        total_reward += episode_reward
-        if info.get("success"):
-            successes += 1
-        if info.get("defused"):
-            defused_count += 1
-        if info.get("all_dead"):
-            all_dead_count += 1
-
-    success_rate = successes / episodes
-    avg_reward = total_reward / episodes
-    defused_rate = defused_count / episodes
-    all_dead_rate = all_dead_count / episodes
-    return success_rate, avg_reward, defused_rate, all_dead_rate
+    return loss.item()
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Attacker Guard Phase 学習スクリプト")
-    parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
-    parser.add_argument("--max-ticks", type=int, default=DETONATE_TICKS + 20)
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--buffer-size", type=int, default=200_000)
-    parser.add_argument("--gamma", type=float, default=0.98)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--eps-start", type=float, default=1.0)
-    parser.add_argument("--eps-end", type=float, default=0.05)
-    parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
-    parser.add_argument("--target-update-every", type=int, default=800)
-    parser.add_argument("--eval-every", type=int, default=200)
-    parser.add_argument("--eval-episodes", type=int, default=20)
-    parser.add_argument("--warmup-steps", type=int, default=3000)
-    parser.add_argument(
-        "--save-dir",
-        type=str,
-        default=os.path.join(_PROJECT_ROOT, "attacker_v3", "data", "attacker_guard_data"),
-    )
-    parser.add_argument("--seed", type=int, default=0)
-    args = parser.parse_args()
-
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-
-    device = torch.device("cpu")
-    os.makedirs(args.save_dir, exist_ok=True)
-
-    env = GuardEnv(max_ticks=args.max_ticks, seed=args.seed)
-    eval_env = GuardEnv(max_ticks=args.max_ticks, seed=args.seed + 1)
-
-    print(f"[INFO] formation_cells(tier3)={env.formation_cells}")
-
-    # obs_dim は静的に固定せず、実際の reset() の出力形状から動的に取得する
-    # （train_attacker_escort.py で発生した次元不一致バグの再発防止）。
-    obs_list = env.reset()
-    obs_dim = obs_list[0].shape[0]
-    n_actions = env.N_ACTIONS
-    print(f"[INFO] obs_dim={obs_dim} n_actions={n_actions} n_guards={env.n_guards} device={device}")
-
-    policy_net = DuelingQNetwork(obs_dim, n_actions).to(device)
-    target_net = DuelingQNetwork(obs_dim, n_actions).to(device)
+def train(
+    episodes=EPISODE_COUNT,
+    batch_size=128,
+    gamma=0.99,
+    lr=1e-4,
+    buffer_size=200_000,
+    target_update_every=1000,
+):
+    policy_net = AttackerGuardDuelingDQN().to(DEVICE)
+    target_net = AttackerGuardDuelingDQN().to(DEVICE)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
-    optimizer = optim.Adam(policy_net.parameters(), lr=args.lr)
-    buffer = ReplayBuffer(args.buffer_size)
+    optimizer = optim.Adam(policy_net.parameters(), lr=lr)
+    buffer = ReplayBuffer(capacity=buffer_size)
+    env = GuardEnv()
 
-    best_success_rate = -1.0
-    best_eval_reward = float("-inf")
     global_step = 0
+    best_avg_reward = -float("inf")
+    episode_reward_history = deque(maxlen=100)
 
-    def _make_checkpoint(episode, success_rate, avg_reward, defused_rate, all_dead_rate):
-        return {
-            "model_state_dict": policy_net.state_dict(),
-            "obs_dim": obs_dim,
-            "n_actions": n_actions,
-            "episode": episode,
-            "success_rate": success_rate,
-            "avg_reward": avg_reward,
-            "defused_rate": defused_rate,
-            "all_dead_rate": all_dead_rate,
-            # 本番マップ(map_data.py)には grid==6 は存在しない。
-            # 推論側はこの座標リストを固定の目的地候補として使う。
-            "formation_cells": [(int(r), int(c)) for r, c in env.formation_cells],
-        }
+    for episode in range(1, episodes + 1):
+        obs_dict, mask_dict = env.reset()
+        episode_reward_total = 0.0
+        epsilon = epsilon_by_episode(episode)
 
-    for episode in range(1, args.episodes + 1):
-        progress = min(1.0, episode / args.eps_decay_episodes)
-        epsilon = args.eps_start + (args.eps_end - args.eps_start) * progress
+        for tick in range(MAX_TICKS):
 
-        obs_list = env.reset()
-        done = False
-        episode_reward = 0.0
-        info = {"success": False}
+            action_dict = {
+                name: select_action(policy_net, obs, mask_dict[name], epsilon)
+                for name, obs in obs_dict.items()
+            }
 
-        while not done:
-            actions = []
-            masks = []
-            for i in range(env.n_guards):
-                if not env.guard_alive[i]:
-                    actions.append(None)
-                    masks.append(None)
-                    continue
-                mask = env.get_action_mask(i)
-                action = select_action(policy_net, obs_list[i], mask, epsilon, device)
-                actions.append(action)
-                masks.append(mask)
+            next_obs_dict, next_mask_dict, rewards, done = env.step(action_dict)
 
-            next_obs_list, rewards, done, info = env.step(actions)
+            for name, obs in obs_dict.items():
+                action = action_dict[name]
+                reward = rewards.get(name, 0.0)
+                episode_reward_total += reward
 
-            for i in range(env.n_guards):
-                if masks[i] is None:
-                    continue
-                next_mask = env.get_action_mask(i)
-                agent_done = done or not env.guard_alive[i]
-                buffer.push(obs_list[i], actions[i], rewards[i], next_obs_list[i], next_mask, agent_done)
+                if name in next_obs_dict:
+                    next_obs = next_obs_dict[name]
+                    next_mask = next_mask_dict[name]
+                    step_done = done
+                else:
+                    next_obs = obs
+                    next_mask = mask_dict[name]
+                    step_done = True
 
-            obs_list = next_obs_list
-            episode_reward += sum(rewards)
+                buffer.push(obs, action, reward, next_obs, next_mask, float(step_done))
+
+            obs_dict, mask_dict = next_obs_dict, next_mask_dict
             global_step += 1
 
-            if len(buffer) >= max(args.batch_size, args.warmup_steps):
-                optimize_model(
-                    policy_net, target_net, optimizer, buffer,
-                    args.batch_size, args.gamma, device,
-                )
+            optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma)
 
-            if global_step % args.target_update_every == 0:
+            if global_step % target_update_every == 0:
                 target_net.load_state_dict(policy_net.state_dict())
 
-        if episode % 50 == 0:
+            if done or not obs_dict:
+                break
+
+        episode_reward_history.append(episode_reward_total)
+        avg_reward = sum(episode_reward_history) / len(episode_reward_history)
+
+        if episode % 20 == 0:
             print(
-                f"[EP {episode}/{EPISODE_COUNT}] reward={episode_reward:.2f} eps={epsilon:.3f} "
-                f"success={info.get('success')} defused={info.get('defused')} "
-                f"all_dead={info.get('all_dead')} ticks={env.tick}"
+                f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
+                f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
+                f"buffer={len(buffer)} reason={env.match_over_reason}"
             )
 
-        if episode % args.eval_every == 0:
-            success_rate, avg_reward, defused_rate, all_dead_rate = evaluate(
-                eval_env, policy_net, device, args.eval_episodes
-            )
-            print(
-                f"[EVAL @ EP {episode}/{EPISODE_COUNT}] success_rate={success_rate:.2%} "
-                f"avg_reward={avg_reward:.2f} defused_rate={defused_rate:.2%} "
-                f"all_dead_rate={all_dead_rate:.2%}"
-            )
+        if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
+            best_avg_reward = avg_reward
+            torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
+            print(f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}")
 
-            latest_path = os.path.join(args.save_dir, "dqn_attacker_guard_latest.pt")
-            torch.save(
-                _make_checkpoint(episode, success_rate, avg_reward, defused_rate, all_dead_rate),
-                latest_path,
-            )
+        if episode % 100 == 0:
+            torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
 
-            is_better = (
-                success_rate > best_success_rate + 1e-9
-                or (
-                    success_rate >= best_success_rate - 1e-9
-                    and avg_reward > best_eval_reward
-                )
-            )
-            if is_better:
-                best_success_rate = max(best_success_rate, success_rate)
-                best_eval_reward = avg_reward
-                best_path = os.path.join(args.save_dir, "dqn_attacker_guard_best_by_eval.pt")
-                torch.save(
-                    _make_checkpoint(episode, success_rate, avg_reward, defused_rate, all_dead_rate),
-                    best_path,
-                )
-                print(
-                    f"[SAVE] 新しいベストモデルを保存: {best_path} "
-                    f"(success_rate={success_rate:.2%}, avg_reward={avg_reward:.2f})"
-                )
-
-    print("[DONE] 学習が完了しました。")
+    print("[DONE] training finished.")
 
 
 if __name__ == "__main__":
-    main()
+    train()

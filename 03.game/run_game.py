@@ -26,6 +26,7 @@ from defender_v3.multi_role_defender_controller import MultiRoleDefenderControll
 from policy_attacker_controller import PolicyAttackerController
 from policy_ppo_attacker_controller import PolicyPPOAttackerController
 from policy_defender_controller import PolicyDefenderController
+from touyama_v1.touyama_defender_controller import TouyamaDefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
@@ -100,6 +101,13 @@ def _build_team_ai(key):
             defender_factory=lambda: MultiRoleDefenderController(),
         )
 
+    if normalized == "touyama_gaming_v1":
+        return DualRoleTeamAI(
+            name="Touyama Gaming v1",
+            attacker_factory=lambda: MultiRoleAttackerController(),
+            defender_factory=lambda: TouyamaDefenderController(),
+        )
+
     if normalized == "learning_v1":
         return DualRoleTeamAI(
             name="AI v1",
@@ -127,83 +135,6 @@ def _build_team_ai(key):
         )
 
     raise ValueError(f"不明なTeam AIです: {key}")
-
-
-def _build_attacker_controller(key):
-    normalized = str(key or "default").strip().lower()
-
-    if normalized in {"default", "logic"}:
-        return DefaultAttackerController()
-
-    if normalized == "user":
-        return UserInputController()
-
-    if normalized in {
-        "fnatic_v1",
-        "fnatic",
-    }:
-        return PolicyAttackerController(
-            model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
-            device="auto",
-        )
-
-    if normalized in {
-        "fnatic_v2",
-        "fnatic_2",
-        "fnatic2",
-        "fnatic v2",
-    }:
-        return PolicyPPOAttackerController(
-            model_path=FNATIC_V2_ATTACKER_MODEL_PATH,
-            device="auto",
-        )
-
-    if normalized in {
-        "learning",
-        "learning_multi",
-        "learning_v1",
-        "ai_v1",
-        "v1",
-        "aiv1",
-    }:
-        return LearningAttackerController(
-            model_path=ATTACKER_MODEL_PATH,
-            greedy=True,
-        )
-
-    if normalized in {
-        "toru_attacker_v3",
-    }:
-        return MultiRoleAttackerController()
-
-    if normalized in {
-        "learning_v4",
-        "ai_v4",
-        "v4",
-        "aiv4",
-    }:
-        return LearningAttackerAIv4Controller(
-            model_path=ATTACKER_AI_V4_MODEL_PATH,
-            greedy=True,
-            enable_abilities=False,
-            verbose=False,
-        )
-
-    raise ValueError(f"不明なAttackerコントローラーです: {key}")
-
-
-def _build_defender_controller(key):
-    if key == "default":
-        return DefaultDefenderController()
-    if key == "user":
-        return UserInputController()
-
-    if key == "toru_defender_v3":
-        return MultiRoleDefenderController()
-
-    # "learning_all" またはそれ以外は統合学習済みAIをデフォルトとする
-    return LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-
 
 class VisualFPSBattle(
     ComboAwakeningMixin,

@@ -99,7 +99,7 @@ DEFAULT_REACTION = 100.0
 # ---------------------------------------------------------------------------
 # touyama_v1 固定チーム定義
 # ---------------------------------------------------------------------------
-TOUYAMA_ROSTER_ORDER = ["いぐるん", "夢の街", "ろびぃな", "Tortlilyan", "えんぺん"]
+TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
 TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # このsearch phaseでは未使用。carry/guard学習用に保持。
 
 TOUYAMA_COMBO_NAME = "ふわんだりぃず"

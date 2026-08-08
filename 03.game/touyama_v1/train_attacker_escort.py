@@ -1,45 +1,72 @@
-"""train_attacker_escort.py
+"""touyama_v1/train_attacker_escort.py
 
-Attacker Carry Phase のうち、Escort（護衛）役 4体を学習するスクリプト（Dueling DQN）。
+固定チーム(Tortlilyan/いぐるん/ろびぃな/夢の街/えんぺん)専用の
+Attacker Carry Phase「escort(護衛)」学習スクリプト(Dueling DQN)。
 
 【目的】
-キャリアー（スパイク運搬役）の周囲2〜7マス程度を維持しつつ、
-キャリアーとプラントサイトの間の経路を塞がないように動き、
-敵を見つけたらアビリティ（FLASH/RECON/SMOKE）を適切なタイミングで
-使用できるようになるまで学習する。
+キャリアー(スパイク運搬役)の周囲2〜7マス程度を維持しつつ、キャリアーと
+プラントサイトの間の経路を塞がないように動き、敵を見つけたらアビリティ
+(FLASH/RECON/SMOKE)を適切なタイミングで使用できるようになるまで学習する。
 
-【重要な設計判断】
-1. マルチエージェント・重み共有方式
-   4体のescortは全員「同じDueling DQNの重み」を共有して行動する
-   （train_attacker_guard.py 系と同じ「パラメータ共有」方式の踏襲）。
-   観測はエージェントごとに自分中心の相対座標系で構築するため、
-   同じネットワークをどのescortにも使い回せる。
+【汎用版(train_attacker_escort.py)からの主な変更点】
+1. キャラクター別の固定ステータス・固定アビリティ
+   汎用版はGENERIC_ACCURACY等の汎用値とABILITY_TYPESのランダム割当を
+   使っていたが、本版はcharacter_stats_touyama.py + コンボ(ふわんだりぃず)
+   + タイガーパッシブで確定した実効ステータスを、キャリアー・エスコート
+   それぞれに適用する(train_attacker_carry.py / train_attacker_guard.py と
+   同一の_compute_touyama_effective_stats()を使用)。
 
-2. キャリアーは学習対象ではなくスクリプトAI
-   キャリアーはエピソード開始時に決めたプラントサイトへ、
-   固定のBFS最短経路を1tickごとに1マスずつ進む。
-   経路上の次のマスが（escortまたは敵に）占有されている場合、
-   実際のゲーム（battle_logic.move_character）と同じく「移動できず
-   その場に留まる」。この「キャリアーが実際に進んだ距離」を
-   escort全員の共有報酬にすることで、道を塞ぐと損、というシグナルを
-   ハードコードせずに学習させる（横に空きがあれば避ける／一本道なら
-   先に進む、のどちらもこの報酬設計から自然に導かれる）。
+2. HUNT(タイガー/Tortlilyan)対応
+   アビリティonehotにHUNTを追加(3種→4種、OBS_DIM=40→41)。
+   HUNTはアビリティチャージ0として初期化し、常にアビリティ行動を
+   マスクする(タイガーはパッシブのみで使用アビリティを持たないため)。
 
-3. 敵はスクリプトAI（簡易ランダム待機・徘徊）
-   本格的なDefenderAIの学習は別スクリプトの範囲。ここでは
-   「視界に入る・アビリティで状態異常にできる・撃ち合いが発生する」
-   という最低限の相互作用だけを簡易シミュレーションする。
+3. キャリアー役の可変化(ハンドオフ想定)
+   train_attacker_carry.pyと同じHANDOFF_AUGMENT_PROBパターンを導入。
+   通常は「ろびぃな」がキャリアーだが、一定確率で他のロースター
+   メンバーがキャリアーとして開始し、残り4人がエスコートを担当する
+   (retrieveフェーズからの引き継ぎ・キャリア交代に一般化するため)。
 
-4. 戦闘解決は簡略化モデル
-   実際のキャラクター別ステータス（命中率・回避率等）は使わず、
-   汎用的な固定値で近似する。escortの「立ち回り」と「アビリティ判断」
-   を学習させることが目的であり、精密な戦闘バランス自体は
-   Defender/Guardモデル側の学習範囲とする。
+4. 戦闘解決の精度向上
+   battle_logic.pyと同じ「反応速度降順での逐次解決」「移動中射撃精度
+   低下(MOVING_ACCURACY)」「移動中被弾しやすさ(MOVING_TARGET_HIT_MULTIPLIER)」
+   を追加。汎用版にはこれらがなく、キャラクター間の反応速度差が
+   全く反映されない設計だった。
 
-【設計方針（既存ルールの継承）】
-- このファイルは完全に自己完結している（map_data.py以外の
-  ゲーム本体コードに依存しない）。
-- run_game.py / controllers.py など既存の共有インフラは変更・複製しない。
+5. game_core.pyの定数を正式にimport
+   汎用版はゲーム定数(MAX_HP等)をこのファイル内に再定義していたが、
+   他のtouyama_v1ファイルの慣習(定数専用ファイルとして参照)に合わせた。
+
+【design方針(既存ルールの継承)】
+- 完全に自己完結: run_game.py / controllers.py / battle_logic.py /
+  abilities_los.py は一切importしない。必要なロジックはすべてこのファイル
+  内に複製する。map_data.py / character_stats_touyama.py / game_core.py は
+  定数専用ファイルとして参照する(import制限の対象外)。
+- run_game.py / controllers.py は変更しない。
+
+【マルチエージェント方式(汎用版から継承)】
+4体のescortは全員「同じDueling DQNの重み」を共有して行動する
+(train_attacker_guard.py系と同じ「パラメータ共有」方式)。観測は
+エージェントごとに自分中心の相対座標系で構築するため、同じネットワークを
+どのescortにも使い回せる。
+
+【キャリアーはスクリプトAI】
+キャリアーは学習対象ではない。エピソード開始時に決めたプラントサイトへ、
+固定のBFS最短経路を1tickごとに1マスずつ進む。経路上の次のマスが
+(escortまたは敵に)占有されている場合、実際のゲーム(battle_logic.py
+move_character)と同じく「移動できずその場に留まる」。この「キャリアーが
+実際に進んだ距離」をescort全員の共有報酬にすることで、道を塞ぐと損、
+というシグナルをハードコードせずに学習させる。
+
+【敵はスクリプトAI】
+本格的なDefenderAIの学習は別スクリプトの範囲。ここでは「視界に入る・
+アビリティで状態異常にできる・撃ち合いが発生する」という最低限の
+相互作用だけを簡易シミュレーションする(N_ENEMIES=2、簡易ランダム徘徊)。
+
+保存先: touyama_v1/data/attacker_escort_touyama_data/
+チェックポイントは{"model_state_dict","obs_dim","n_actions","episode",
+"success_rate","avg_reward","avg_block_events","roster_order",
+"spike_holder_default"} を含むdict形式で保存する。
 """
 
 import argparse
@@ -54,63 +81,128 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from map_data import NEW_MAZE_STR
+from character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
+
+from game_core import (
+    MAX_HP,
+    HEADSHOT_DAMAGE,
+    BODY_DAMAGE,
+    MOVING_ACCURACY,
+    MOVING_TARGET_HIT_MULTIPLIER,
+    BLIND_ACCURACY_MULTIPLIER,
+    REVEALED_DODGE_MULTIPLIER,
+    BLIND_DURATION_TICKS,
+    REVEAL_DURATION_TICKS,
+    SMOKE_DURATION_TICKS,
+)
+
 EPISODE_COUNT = 9000
 
 # ---------------------------------------------------------------------------
-# map_data.py の解決（attacker_v3/ 配下・プロジェクト直下のどちらでも動く）
-# ---------------------------------------------------------------------------
-_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = (
-    os.path.dirname(_CURRENT_DIR)
-    if os.path.basename(_CURRENT_DIR) == "attacker_v3"
-    else _CURRENT_DIR
-)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-
-from map_data import NEW_MAZE_STR  # noqa: E402
-
-
-# ---------------------------------------------------------------------------
-# ゲームバランス定数（簡略化モデル用。本番の game_core.py / abilities_los.py
-# の値を踏襲しつつ、escort訓練用に必要な部分だけ再現する）
+# マップ上の意味付け(map_data.py準拠)
 # ---------------------------------------------------------------------------
 SITE_CELL_VALUE = 2
 ATTACKER_SPAWN_VALUE = 3
 DEFENDER_SPAWN_VALUE = 4
 
-MAX_HP = 100
-HEADSHOT_DAMAGE = 160
-BODY_DAMAGE = 40
+ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")  # HUNTはアビリティ行動を持たない(常にマスク)
+ABILITY_RANGE = 6  # アビリティが届く最大距離(チェビシェフ距離で判定)
 
-BLIND_DURATION_TICKS = 3
-REVEAL_DURATION_TICKS = 5
-BLIND_ACCURACY_MULTIPLIER = 0.30
-REVEALED_DODGE_MULTIPLIER = 0.50
-SMOKE_DURATION_TICKS = 15
-
-# 簡略化モデル用の汎用戦闘ステータス（実キャラの個体差は考慮しない近似値）
-GENERIC_ACCURACY = 0.55
-GENERIC_DODGE = 0.18
-GENERIC_HS_RATE = 0.30
-
-ABILITY_TYPES = ("FLASH", "RECON", "SMOKE")
-ABILITY_RANGE = 6  # アビリティが届く最大距離（マンハッタン近似ではなくチェビシェフ距離で判定）
-
-N_ESCORTS = 4
-N_ENEMIES = 2
+N_ESCORTS = 4  # touyama固定チーム5人からキャリアー1人を除いた人数
+N_ENEMIES = 2  # 敵はこのフェーズでは簡易スクリプトAI(本格学習は別スクリプトの範囲)
 
 DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0  # 観測正規化用の上限距離
 
 STALL_THRESHOLD_TICKS = 3       # これを超えて無進捗が続いたら混雑ペナルティ開始
-STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限（無限にエスカレートさせない）
+STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限(無限にエスカレートさせない)
 CONGESTION_RADIUS = 2           # carryからこの距離以内のescortを「渋滞に関与」とみなす
+
+HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
+
+# 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
+# train_attacker_carry.py / train_attacker_guard.py と同一値)
+DEFAULT_ACCURACY = 0.50
+DEFAULT_DODGE = 0.12
+DEFAULT_HS_RATE = 0.20
+DEFAULT_REACTION = 100.0
+
+# ---------------------------------------------------------------------------
+# touyama_v1 固定チーム定義(他のtouyama_v1学習ファイルと同一)
+# ---------------------------------------------------------------------------
+TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # 通常ラウンド開始時の既定キャリア
+
+TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
+TOUYAMA_COMBO_BONUS = {
+    "accuracy": 0.15,
+    "hs_rate": 0.10,
+    "dodge_rate": 0.20,
+    "reaction": 30.0,
+}
+
+TOUYAMA_ROLE_TO_ABILITY = {
+    "フラッシュ": "FLASH",
+    "スモーカー": "SMOKE",
+    "シーカー": "RECON",
+    "タイガー": "HUNT",
+}
+TIGER_ACCURACY_BONUS = 0.10
+TIGER_HS_BONUS = 0.05
+
+
+def _compute_touyama_effective_stats():
+    """character_stats_touyama.py の生値に、常時発動するチームコンボ
+    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
+    他のtouyama_v1学習ファイルと同一ロジック。"""
+    effective = {}
+    for name in TOUYAMA_ROSTER_ORDER:
+        raw = TOUYAMA_STATS_TABLE[name]
+        accuracy = float(raw.hit_pct)
+        hs_rate = float(raw.hs_pct)
+        dodge_rate = float(raw.dodge_pct)
+        reaction = float(raw.reaction)
+
+        if raw.role == "タイガー":
+            accuracy += TIGER_ACCURACY_BONUS
+            hs_rate += TIGER_HS_BONUS
+
+        if name in TOUYAMA_COMBO_MEMBERS:
+            accuracy += TOUYAMA_COMBO_BONUS["accuracy"]
+            hs_rate += TOUYAMA_COMBO_BONUS["hs_rate"]
+            dodge_rate += TOUYAMA_COMBO_BONUS["dodge_rate"]
+            reaction += TOUYAMA_COMBO_BONUS["reaction"]
+
+        effective[name] = {
+            "accuracy": max(0.0, accuracy),
+            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
+            "reaction": max(0.0, reaction),
+            "ability": TOUYAMA_ROLE_TO_ABILITY[raw.role],
+        }
+    return effective
+
+
+TOUYAMA_EFFECTIVE_STATS = _compute_touyama_effective_stats()
+
+print("[touyama_v1] 固定チーム(Attacker/escort) 確定ステータス:")
+for _name in TOUYAMA_ROSTER_ORDER:
+    _s = TOUYAMA_EFFECTIVE_STATS[_name]
+    print(
+        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
+        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
+        f"ability={_s['ability']}"
+    )
 
 
 # ---------------------------------------------------------------------------
-# 汎用ヘルパー：BFS最短経路・射線判定
+# 汎用ヘルパー: BFS最短経路・射線判定(abilities_los.py / controllers.py
+# と同等のロジックをこのファイル内に複製)
 # ---------------------------------------------------------------------------
 def _bfs_shortest_path(grid, start, goal):
     """壁(1)だけを障害物としたBFS最短経路。start→goalのセル列を返す。"""
@@ -147,7 +239,7 @@ def _bfs_shortest_path(grid, start, goal):
 
 
 def _line_cells(p1, p2):
-    """Bresenham法で2点間のセル列を返す（abilities_los.py と同一ロジック）。"""
+    """Bresenham法で2点間のセル列を返す(abilities_los.py と同一ロジック)。"""
     y0, x0 = int(p1[0]), int(p1[1])
     y1, x1 = int(p2[0]), int(p2[1])
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
@@ -168,7 +260,7 @@ def _line_cells(p1, p2):
 
 
 def _has_los(grid, smoke_cells, p1, p2):
-    """壁とスモークを考慮した射線判定（abilities_los.pyの簡略版）。"""
+    """壁とスモークを考慮した射線判定(abilities_los.pyの簡略版)。"""
     cells = _line_cells(p1, p2)
     for r, c in cells:
         if grid[r, c] == 1:
@@ -186,7 +278,7 @@ def _chebyshev(p1, p2):
 def _build_distance_map_walls_only(grid, source_cells):
     """指定座標群を始点とした、壁のみを障害物としたマルチソースBFS距離マップ。
     キャラクター同士の占有は考慮しない
-    （推論側 learning_attacker_escort.py と同一ロジック）。"""
+    (推論側 learning_attacker_escort.py と同一ロジックにする想定)。"""
     height, width = grid.shape
     dist = np.full((height, width), np.inf, dtype=np.float32)
     q = deque()
@@ -210,7 +302,8 @@ def _build_distance_map_walls_only(grid, source_cells):
 # 環境
 # ---------------------------------------------------------------------------
 class EscortEnv:
-    """キャリアー護衛4体（重み共有）を学習させる軽量マルチエージェント環境。"""
+    """touyama_v1固定チームのキャリアー護衛4体(重み共有)を学習させる
+    軽量マルチエージェント環境。"""
 
     ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
     N_ACTIONS = 6
@@ -245,6 +338,7 @@ class EscortEnv:
         mission_success_reward=5.0,
         mission_fail_penalty=5.0,
         enemy_move_prob=0.2,
+        handoff_augment_prob=HANDOFF_AUGMENT_PROB,
         seed=None,
     ):
         lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -271,6 +365,7 @@ class EscortEnv:
         self.mission_success_reward = mission_success_reward
         self.mission_fail_penalty = mission_fail_penalty
         self.enemy_move_prob = enemy_move_prob
+        self.handoff_augment_prob = handoff_augment_prob
 
         self.site_cells = list(zip(*np.where(self.grid == SITE_CELL_VALUE)))
         self.attacker_spawns = list(zip(*np.where(self.grid == ATTACKER_SPAWN_VALUE)))
@@ -279,25 +374,42 @@ class EscortEnv:
 
         self.rng = random.Random(seed)
 
-        # ラウンド内状態（reset()で初期化）
+        # ラウンド内状態(reset()で初期化)
         self.tick = 0
         self.carry_pos = (0, 0)
         self.carry_hp = MAX_HP
         self.carry_alive = True
+        self.carry_name = TOUYAMA_SPIKE_HOLDER
+        self.carry_accuracy = 0.0
+        self.carry_dodge = 0.0
+        self.carry_hs_rate = 0.0
+        self.carry_reaction = 0.0
+        self.carry_moved = False
         self.carry_path = [(0, 0)]
         self.carry_path_index = 0
 
         self.escort_pos = []
         self.escort_hp = []
         self.escort_alive = []
+        self.escort_name = []
         self.escort_ability_type = []
         self.escort_ability_used = []
+        self.escort_accuracy = []
+        self.escort_dodge = []
+        self.escort_hs_rate = []
+        self.escort_reaction = []
+        self.escort_moved = []
         self.escort_last_delta = []
         self.escort_stuck = []
 
         self.enemy_pos = []
         self.enemy_hp = []
         self.enemy_alive = []
+        self.enemy_accuracy = []
+        self.enemy_dodge = []
+        self.enemy_hs_rate = []
+        self.enemy_reaction = []
+        self.enemy_moved = []
         self.enemy_blind_remaining = []
         self.enemy_blind_source = []
         self.enemy_reveal_remaining = []
@@ -320,41 +432,105 @@ class EscortEnv:
                 return cell
         return self.rng.choice(self.walkable_cells)
 
+    def _resolve_spawn_collision(self, pos, occupied):
+        """スポーン候補が重複/壁だった場合に、BFSで最寄りの空きマスへ逃がす
+        (train_attacker_carry.py / train_attacker_guard.py と同一ロジック)。"""
+        if pos not in occupied and self.grid[pos[0], pos[1]] != 1:
+            return pos
+        visited = {pos}
+        queue = deque([pos])
+        while queue:
+            r, c = queue.popleft()
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nr, nc = r + dr, c + dc
+                if not (0 <= nr < self.height and 0 <= nc < self.width):
+                    continue
+                if (nr, nc) in visited:
+                    continue
+                visited.add((nr, nc))
+                if self.grid[nr, nc] == 1:
+                    continue
+                if (nr, nc) not in occupied:
+                    return (nr, nc)
+                queue.append((nr, nc))
+        return pos
+
     def reset(self):
         self.tick = 0
         self.smokes = []
 
-        # --- キャリアー：スポーンからサイトのどれか1点へ固定経路 ---
-        carry_spawn = self.rng.choice(self.attacker_spawns) if self.attacker_spawns else self._random_walkable()
-        target = self.rng.choice(self.site_cells) if self.site_cells else carry_spawn
-        self.carry_path = _bfs_shortest_path(self.grid, carry_spawn, target)
-        self.carry_path_index = 0
-        self.carry_pos = self.carry_path[0]
-        self.carry_hp = MAX_HP
-        self.carry_alive = True
-        self._refresh_carry_dist_map()
+        # --- キャリアー役を決定(train_attacker_carry.pyと同一のハンドオフ方針) ---
+        handoff = self.rng.random() < self.handoff_augment_prob
+        if handoff:
+            carrier_name = self.rng.choice(TOUYAMA_ROSTER_ORDER)
+        else:
+            carrier_name = TOUYAMA_SPIKE_HOLDER
+        self.carry_name = carrier_name
 
-        # --- Escort：残りの攻撃側スポーンに配置（不足時はランダム） ---
-        occupied = {self.carry_pos}
+        carrier_stats = TOUYAMA_EFFECTIVE_STATS[carrier_name]
+        self.carry_accuracy = carrier_stats["accuracy"]
+        self.carry_dodge = carrier_stats["dodge_rate"]
+        self.carry_hs_rate = carrier_stats["hs_rate"]
+        self.carry_reaction = carrier_stats["reaction"] + self.rng.uniform(-10, 10)
+
+        # --- キャリアーとescort4人のスポーン位置を決定 ---
+        occupied = set()
+        if handoff:
+            spawn_positions = self.rng.sample(self.walkable_cells, min(5, len(self.walkable_cells)))
+        else:
+            spawn_positions = list(self.attacker_spawns[:5]) if len(self.attacker_spawns) >= 5 else list(self.attacker_spawns)
+            while len(spawn_positions) < 5:
+                spawn_positions.append(self._random_walkable(exclude=occupied))
+
+        carry_base_pos = spawn_positions[TOUYAMA_ROSTER_ORDER.index(carrier_name) % len(spawn_positions)]
+        self.carry_pos = self._resolve_spawn_collision(carry_base_pos, occupied)
+        occupied.add(self.carry_pos)
+
+        # --- escort名(ロースター順、キャリアーを除いた4人) ---
+        escort_names = [name for name in TOUYAMA_ROSTER_ORDER if name != carrier_name]
+
         self.escort_pos = []
-        candidates = [c for c in self.attacker_spawns if c != self.carry_pos]
-        self.rng.shuffle(candidates)
-        for i in range(self.n_escorts):
-            if i < len(candidates):
-                pos = candidates[i]
-            else:
-                pos = self._random_walkable(exclude=occupied)
+        self.escort_name = []
+        self.escort_ability_type = []
+        self.escort_ability_used = []
+        self.escort_accuracy = []
+        self.escort_dodge = []
+        self.escort_hs_rate = []
+        self.escort_reaction = []
+        for i, name in enumerate(escort_names):
+            stats = TOUYAMA_EFFECTIVE_STATS[name]
+            base_pos = spawn_positions[TOUYAMA_ROSTER_ORDER.index(name) % len(spawn_positions)]
+            pos = self._resolve_spawn_collision(base_pos, occupied)
             occupied.add(pos)
-            self.escort_pos.append(pos)
 
+            self.escort_pos.append(pos)
+            self.escort_name.append(name)
+            self.escort_ability_type.append(stats["ability"])
+            self.escort_accuracy.append(stats["accuracy"])
+            self.escort_dodge.append(stats["dodge_rate"])
+            self.escort_hs_rate.append(stats["hs_rate"])
+            self.escort_reaction.append(stats["reaction"] + self.rng.uniform(-10, 10))
+            # HUNT(タイガー)はアビリティを持たないため、最初から「使用済み」扱いにして
+            # get_action_mask()が常にACTION_ABILITYを弾くようにする。
+            self.escort_ability_used.append(stats["ability"] == "HUNT")
+
+        self.n_escorts = len(escort_names)
         self.escort_hp = [MAX_HP] * self.n_escorts
         self.escort_alive = [True] * self.n_escorts
-        self.escort_ability_type = [self.rng.choice(ABILITY_TYPES) for _ in range(self.n_escorts)]
-        self.escort_ability_used = [False] * self.n_escorts
+        self.escort_moved = [False] * self.n_escorts
         self.escort_last_delta = [(0.0, 0.0)] * self.n_escorts
         self.escort_stuck = [0] * self.n_escorts
 
-        # --- 敵：守備側スポーンに配置 ---
+        # --- キャリアー：スポーンからサイトのどれか1点へ固定経路 ---
+        target = self.rng.choice(self.site_cells) if self.site_cells else self.carry_pos
+        self.carry_path = _bfs_shortest_path(self.grid, self.carry_pos, target)
+        self.carry_path_index = 0
+        self.carry_hp = MAX_HP
+        self.carry_alive = True
+        self.carry_moved = False
+        self._refresh_carry_dist_map()
+
+        # --- 敵：守備側スポーンに配置(当面ヒューリスティック) ---
         self.enemy_pos = []
         enemy_candidates = list(self.defender_spawns)
         self.rng.shuffle(enemy_candidates)
@@ -367,6 +543,11 @@ class EscortEnv:
 
         self.enemy_hp = [MAX_HP] * self.n_enemies
         self.enemy_alive = [True] * self.n_enemies
+        self.enemy_accuracy = [DEFAULT_ACCURACY] * self.n_enemies
+        self.enemy_dodge = [DEFAULT_DODGE] * self.n_enemies
+        self.enemy_hs_rate = [DEFAULT_HS_RATE] * self.n_enemies
+        self.enemy_reaction = [DEFAULT_REACTION + self.rng.uniform(-10, 10) for _ in range(self.n_enemies)]
+        self.enemy_moved = [False] * self.n_enemies
         self.enemy_blind_remaining = [0] * self.n_enemies
         self.enemy_blind_source = [None] * self.n_enemies
         self.enemy_reveal_remaining = [0] * self.n_enemies
@@ -448,15 +629,11 @@ class EscortEnv:
             if self._is_wall(r + dr, c + dc):
                 mask[a] = False
 
-        # アビリティは1ラウンドに1回。使用済みなら選択不可にする。
+        # アビリティは1ラウンドに1回。使用済み(HUNTは常時この扱い)なら選択不可にする。
         if self.escort_ability_used[i]:
             mask[self.ACTION_ABILITY] = False
         else:
-            # 射程内に有効な標的（視認可能な敵）がいない場合もマスクする。
-            # マスクしないと「常にwaste_penaltyを受けるだけの無意味な
-            # ABILITY選択」がQ値の学習対象に残り続け、推論側で
-            # 標的なしのままABILITYを選び続けて実質STAY＝ブロック、
-            # という状態を誘発しうる。
+            # 射程内に有効な標的(視認可能な敵)がいない場合もマスクする。
             enemy_idx, _ = self._nearest_visible_enemy((r, c), max_range=ABILITY_RANGE)
             if enemy_idx is None:
                 mask[self.ACTION_ABILITY] = False
@@ -478,8 +655,6 @@ class EscortEnv:
         obs.append(c / max(1, self.width - 1))
 
         # escort自身からキャリアーまでの距離・方向はBFS実距離ベース
-        # （チェビシェフ距離は壁を無視するため、曲がった通路で
-        # 実際の経路と逆方向を指してしまうことがある）
         raw_dist = dist_map[r, c]
         dist_to_carry = float(raw_dist) if np.isfinite(raw_dist) else DIST_NORM_MAX
         obs.append(min(1.0, dist_to_carry / DIST_NORM_MAX))
@@ -496,13 +671,13 @@ class EscortEnv:
         obs.append(float(best_dr))
         obs.append(float(best_dc))
 
-        # キャリアーの進行方向（次の経路セルへの差分）
+        # キャリアーの進行方向(次の経路セルへの差分)
         next_idx = min(self.carry_path_index + 1, len(self.carry_path) - 1)
         nxt = self.carry_path[next_idx]
         obs.append(float(np.sign(nxt[0] - cr)))
         obs.append(float(np.sign(nxt[1] - cc)))
 
-        # 壁フラグ（4方向）
+        # 壁フラグ(4方向)
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
 
@@ -521,7 +696,7 @@ class EscortEnv:
         for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
 
-        # 隣接4方向に生存中の味方escortがいるか（衝突・団子状態の回避用）
+        # 隣接4方向に生存中の味方escortがいるか(衝突・団子状態の回避用)
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
             occupied_by_ally = any(
@@ -530,7 +705,7 @@ class EscortEnv:
             )
             obs.append(1.0 if occupied_by_ally else 0.0)
 
-        # 距離帯の逸脱量（負=近すぎ、正=遠すぎ、0=適正）
+        # 距離帯の逸脱量(負=近すぎ、正=遠すぎ、0=適正)
         if dist_to_carry < self.dist_band_min:
             band_dev = (dist_to_carry - self.dist_band_min) / DIST_NORM_MAX
         elif dist_to_carry > self.dist_band_max:
@@ -552,12 +727,12 @@ class EscortEnv:
         else:
             obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
 
-        # 自分のアビリティ状態
+        # 自分のアビリティ状態(未使用フラグ + 種別onehot。HUNTを含め4種)
         obs.append(0.0 if self.escort_ability_used[i] else 1.0)
         for ability in ABILITY_TYPES:
             obs.append(1.0 if self.escort_ability_type[i] == ability else 0.0)
 
-        # チーム状況：誰かの効果（blind/reveal/smoke）が現在有効か
+        # チーム状況：誰かの効果(blind/reveal/smoke)が現在有効か
         team_effect_active = any(v > 0 for v in self.enemy_blind_remaining) or any(
             v > 0 for v in self.enemy_reveal_remaining
         ) or len(self.smokes) > 0
@@ -573,13 +748,14 @@ class EscortEnv:
 
     @staticmethod
     def _obs_dim():
-        # _get_obs() の要素数と一致させる（固定値なのでズレたら即バグに気づけるようassert）
+        # _get_obs() の要素数と一致させる(固定値なのでズレたら即バグに気づけるようassert)
         # 内訳: 自己座標2 + キャリアーBFS距離/方向3 + キャリアー進行方向2
         #      + 壁フラグ4 + BFS距離勾配4 + 斜め壁フラグ4 + 味方隣接フラグ4
-        #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot3)
+        #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot4)
         #      + チーム効果1 + 直前移動2 + stuck1 + 残り時間1 + 被ブロック1
-        # = 2+3+2+4+4+4+4+1+6+4+1+2+1+1+1 = 40
-        return 40
+        # = 2+3+2+4+4+4+4+1+6+5+1+2+1+1+1 = 41
+        # (汎用版からの変更点: アビリティ種別onehotが3種→4種(HUNT追加)になり40→41)
+        return 41
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -606,33 +782,62 @@ class EscortEnv:
 
             return -self.ability_redundant_penalty if already else self.ability_success_reward
 
-        # SMOKE: 「敵が味方(キャリアー)へ射線を持っている」状況を遮断できたら成功
-        enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
-        if enemy_idx is None:
-            return -self.ability_waste_penalty
+        if ability == "SMOKE":
+            # 「敵が味方(キャリアー)へ射線を持っている」状況を遮断できたら成功
+            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
+            if enemy_idx is None:
+                return -self.ability_waste_penalty
 
-        target_pos = self.enemy_pos[enemy_idx]
-        smoke_cells = self._smoke_cell_set()
-        enemy_had_los_to_carry = self.carry_alive and _has_los(
-            self.grid, smoke_cells, target_pos, self.carry_pos
-        )
+            target_pos = self.enemy_pos[enemy_idx]
+            smoke_cells = self._smoke_cell_set()
+            enemy_had_los_to_carry = self.carry_alive and _has_los(
+                self.grid, smoke_cells, target_pos, self.carry_pos
+            )
 
-        cells = {
-            (rr, cc)
-            for rr in range(target_pos[0] - 1, target_pos[0] + 2)
-            for cc in range(target_pos[1] - 1, target_pos[1] + 2)
-            if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1
-        }
-        self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS})
+            cells = {
+                (rr, cc)
+                for rr in range(target_pos[0] - 1, target_pos[0] + 2)
+                for cc in range(target_pos[1] - 1, target_pos[1] + 2)
+                if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1
+            }
+            self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS})
 
-        return self.ability_success_reward if enemy_had_los_to_carry else -self.ability_waste_penalty
+            return self.ability_success_reward if enemy_had_los_to_carry else -self.ability_waste_penalty
+
+        # HUNT(タイガー)はここに到達しない(常にマスクされているため)。保険としてwasteを返す。
+        return -self.ability_waste_penalty
 
     # ------------------------------------------------------------------
-    # 戦闘解決（簡略化モデル）
+    # 戦闘解決
     # ------------------------------------------------------------------
     def _resolve_combat(self):
-        """1tick分の簡易戦闘解決。kill発生時のボーナス対象escort集合を返す。"""
+        """1tick分の戦闘解決。kill発生時のボーナス対象escort集合を返す。
+
+        battle_logic.py _resolve_all_shots と同じく、反応速度の高い順に
+        逐次解決する(同値はシャッフルでランダム順)。移動中の射撃精度低下
+        (MOVING_ACCURACY)・移動中の被弾しやすさ(MOVING_TARGET_HIT_MULTIPLIER)
+        も反映する(汎用版train_attacker_escort.pyにはこれらがなかった)。
+        """
         smoke_cells = self._smoke_cell_set()
+
+        def _stats_for(kind, idx):
+            if kind == "carry":
+                return {
+                    "accuracy": self.carry_accuracy, "dodge": self.carry_dodge,
+                    "hs_rate": self.carry_hs_rate, "reaction": self.carry_reaction,
+                    "moved": self.carry_moved,
+                }
+            if kind == "escort":
+                return {
+                    "accuracy": self.escort_accuracy[idx], "dodge": self.escort_dodge[idx],
+                    "hs_rate": self.escort_hs_rate[idx], "reaction": self.escort_reaction[idx],
+                    "moved": self.escort_moved[idx],
+                }
+            return {
+                "accuracy": self.enemy_accuracy[idx], "dodge": self.enemy_dodge[idx],
+                "hs_rate": self.enemy_hs_rate[idx], "reaction": self.enemy_reaction[idx],
+                "moved": self.enemy_moved[idx],
+            }
 
         allies = [("carry", 0, self.carry_pos)] if self.carry_alive else []
         allies += [("escort", i, self.escort_pos[i]) for i in range(self.n_escorts) if self.escort_alive[i]]
@@ -654,7 +859,10 @@ class EscortEnv:
             if best_idx is not None:
                 shooters.append((kind, idx, best_idx[0], best_idx[1]))
 
+        # シャッフル後に反応速度降順で安定ソート(同値だけランダム順になる。
+        # battle_logic.py _resolve_all_shots と同一方針)
         self.rng.shuffle(shooters)
+        shooters.sort(key=lambda s: _stats_for(s[0], s[1])["reaction"], reverse=True)
 
         kill_bonus_targets = []  # escort index のリスト
 
@@ -672,19 +880,26 @@ class EscortEnv:
             if not shooter_alive or not target_alive:
                 continue
 
-            accuracy = GENERIC_ACCURACY
+            shooter_stats = _stats_for(shooter_kind, shooter_idx)
+            target_stats = _stats_for(target_kind, target_idx)
+
+            accuracy = MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
             if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
 
-            dodge = GENERIC_DODGE
+            dodge = target_stats["dodge"]
             if target_kind == "enemy" and self.enemy_reveal_remaining[target_idx] > 0:
                 dodge *= REVEALED_DODGE_MULTIPLIER
 
-            hit_chance = max(0.0, min(1.0, accuracy * (1.0 - dodge)))
+            hit_chance = accuracy * (1.0 - dodge)
+            if target_stats["moved"]:
+                hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+            hit_chance = max(0.0, min(1.0, hit_chance))
+
             if self.rng.random() >= hit_chance:
                 continue
 
-            damage = HEADSHOT_DAMAGE if self.rng.random() < GENERIC_HS_RATE else BODY_DAMAGE
+            damage = HEADSHOT_DAMAGE if self.rng.random() < shooter_stats["hs_rate"] else BODY_DAMAGE
 
             if target_kind == "carry":
                 self.carry_hp = max(0, self.carry_hp - damage)
@@ -714,12 +929,17 @@ class EscortEnv:
     # step
     # ------------------------------------------------------------------
     def step(self, actions):
-        """actions: 長さ n_escorts のリスト（死亡中のescortはNone扱いでもよい）。
+        """actions: 長さ n_escorts のリスト(死亡中のescortはNone扱いでもよい)。
         戻り値: (next_obs_list, rewards, done, info)
         """
         self.tick += 1
         rewards = [0.0] * self.n_escorts
         info = {"success": False, "carry_died": False}
+
+        # 0. moved_this_tickフラグをリセット(このtickの実移動でのみTrueにする)
+        self.carry_moved = False
+        self.escort_moved = [False] * self.n_escorts
+        self.enemy_moved = [False] * self.n_enemies
 
         # 1. タイマー減衰
         for i in range(self.n_enemies):
@@ -732,7 +952,7 @@ class EscortEnv:
         for i in range(self.n_escorts):
             rewards[i] -= 0.01  # 時間経過ペナルティ
 
-        # 2. アビリティ行動を先に解決（アビリティ使用者はこのtick移動しない）
+        # 2. アビリティ行動を先に解決(アビリティ使用者はこのtick移動しない)
         used_ability_this_tick = set()
         for i in range(self.n_escorts):
             if not self.escort_alive[i] or actions[i] is None:
@@ -743,7 +963,7 @@ class EscortEnv:
                 self.escort_last_delta[i] = (0.0, 0.0)
                 self.escort_stuck[i] += 1
 
-        # 3. 敵の簡易移動（衝突は考慮しない簡略化スクリプトAI）
+        # 3. 敵の簡易移動(衝突は考慮しない簡略化スクリプトAI)
         for i in range(self.n_enemies):
             if not self.enemy_alive[i]:
                 continue
@@ -755,9 +975,12 @@ class EscortEnv:
                     if not self._is_wall(r + dr, c + dc)
                 ]
                 if candidates:
-                    self.enemy_pos[i] = self.rng.choice(candidates)
+                    new_pos = self.rng.choice(candidates)
+                    if new_pos != self.enemy_pos[i]:
+                        self.enemy_moved[i] = True
+                    self.enemy_pos[i] = new_pos
 
-        # 4. キャリアーの移動（塞がれていれば進めない）
+        # 4. キャリアーの移動(塞がれていれば進めない)
         self._blocking_escort_idx = None
         prev_path_index = self.carry_path_index
         if self.carry_alive and self.carry_path_index < len(self.carry_path) - 1:
@@ -766,6 +989,7 @@ class EscortEnv:
             if next_cell not in occupied:
                 self.carry_path_index += 1
                 self.carry_pos = self.carry_path[self.carry_path_index]
+                self.carry_moved = True
                 self._refresh_carry_dist_map()
             else:
                 for i in range(self.n_escorts):
@@ -781,9 +1005,7 @@ class EscortEnv:
             rewards[self._blocking_escort_idx] -= self.block_penalty
 
         # --- stall検知：直接の1体だけでなく、carry周辺で団子状態を
-        # 作っている全escortに圧力をかける。escort同士の衝突で誰も
-        # 動けなくなるジャムは「直前セルを塞ぐ1体」だけでは説明できない
-        # ため、進捗ゼロが続くこと自体を検知して対処する。 ---
+        # 作っている全escortに圧力をかける。---
         carry_reached_goal = self.carry_path_index >= len(self.carry_path) - 1
         if team_progress > 0 or not self.carry_alive or carry_reached_goal:
             self._stall_ticks = 0
@@ -802,7 +1024,7 @@ class EscortEnv:
                 if _chebyshev(self.escort_pos[i], self.carry_pos) <= self.congestion_radius:
                     rewards[i] -= congestion_penalty
 
-        # 5. Escortの移動（アビリティ使用者・死亡者を除く、ランダム順で逐次解決）
+        # 5. Escortの移動(アビリティ使用者・死亡者を除く、ランダム順で逐次解決)
         move_order = [
             i for i in range(self.n_escorts)
             if self.escort_alive[i] and i not in used_ability_this_tick and actions[i] is not None
@@ -832,10 +1054,11 @@ class EscortEnv:
                 continue
 
             self.escort_pos[i] = (nr, nc)
+            self.escort_moved[i] = True
             self.escort_last_delta[i] = (float(dr), float(dc))
             self.escort_stuck[i] = 0
 
-        # 6. 距離帯報酬（移動後の位置で評価）
+        # 6. 距離帯報酬(移動後の位置で評価)
         for i in range(self.n_escorts):
             if not self.escort_alive[i]:
                 continue
@@ -850,14 +1073,6 @@ class EscortEnv:
         for escort_idx in kill_bonus_targets:
             if 0 <= escort_idx < self.n_escorts:
                 rewards[escort_idx] += self.kill_bonus
-
-        # このtickで死亡したescortに死亡ペナルティ（HPが尽きて alive が False になった直後）
-        for i in range(self.n_escorts):
-            if not self.escort_alive[i] and self.escort_hp[i] <= 0:
-                # 既に前tickで死亡済みの場合も含め毎tick引かれないよう、
-                # HP==0確認はここでは簡略化し、死亡直後の1回だけ与えたいので
-                # escort_hpを直後にNoneマーキングする代わりに簡易フラグで対応。
-                pass
 
         done = False
         if not self.carry_alive:
@@ -884,7 +1099,7 @@ class EscortEnv:
 
 
 # ---------------------------------------------------------------------------
-# Dueling DQN（重み共有。train_attacker_carry.py と同一アーキテクチャ）
+# Dueling DQN(重み共有。他のtouyama_v1学習ファイルと同一アーキテクチャ)
 # ---------------------------------------------------------------------------
 class DuelingQNetwork(nn.Module):
     def __init__(self, obs_dim, n_actions, hidden=128):
@@ -977,7 +1192,6 @@ def optimize_model(policy_net, target_net, optimizer, buffer, batch_size, gamma,
 def evaluate(env, policy_net, device, episodes=20):
     successes = 0
     total_reward = 0.0
-    total_kill_bonus_events = 0
     total_block_events = 0
 
     for _ in range(episodes):
@@ -1018,7 +1232,7 @@ def evaluate(env, policy_net, device, episodes=20):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Attacker Escort Phase 学習スクリプト")
+    parser = argparse.ArgumentParser(description="touyama_v1 Attacker Escort Phase 学習スクリプト")
     parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
     parser.add_argument("--max-ticks", type=int, default=90)
     parser.add_argument("--batch-size", type=int, default=256)
@@ -1035,7 +1249,7 @@ def main():
     parser.add_argument(
         "--save-dir",
         type=str,
-        default=os.path.join(_PROJECT_ROOT, "attacker_v3", "data", "attacker_escort_data"),
+        default="data/attacker_escort_touyama_data/",
     )
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -1075,6 +1289,8 @@ def main():
             "success_rate": success_rate,
             "avg_reward": avg_reward,
             "avg_block_events": avg_block_events,
+            "roster_order": list(TOUYAMA_ROSTER_ORDER),
+            "spike_holder_default": TOUYAMA_SPIKE_HOLDER,
         }
 
     for episode in range(1, args.episodes + 1):
@@ -1123,8 +1339,9 @@ def main():
 
         if episode % 50 == 0:
             print(
-                f"[EP {episode}/{EPISODE_COUNT}] reward={episode_reward:.2f} "
-                f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick}"
+                f"[EP {episode}/{args.episodes}] reward={episode_reward:.2f} "
+                f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick} "
+                f"carrier={env.carry_name}"
             )
 
         if episode % args.eval_every == 0:
@@ -1132,11 +1349,11 @@ def main():
                 eval_env, policy_net, device, args.eval_episodes
             )
             print(
-                f"[EVAL @ EP {episode}/{EPISODE_COUNT}] success_rate={success_rate:.2%} "
+                f"[EVAL @ EP {episode}/{args.episodes}] success_rate={success_rate:.2%} "
                 f"avg_reward={avg_reward:.2f} avg_block_events={avg_block_events:.2f}"
             )
 
-            latest_path = os.path.join(args.save_dir, "dqn_attacker_escort_latest.pt")
+            latest_path = os.path.join(args.save_dir, "dqn_attacker_escort_touyama_latest.pt")
             torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), latest_path)
 
             is_better = (
@@ -1149,7 +1366,7 @@ def main():
             if is_better:
                 best_success_rate = max(best_success_rate, success_rate)
                 best_eval_reward = avg_reward
-                best_path = os.path.join(args.save_dir, "dqn_attacker_escort_best_by_eval.pt")
+                best_path = os.path.join(args.save_dir, "dqn_attacker_escort_touyama_best_by_eval.pt")
                 torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), best_path)
                 print(
                     f"[SAVE] 新しいベストモデルを保存: {best_path} "

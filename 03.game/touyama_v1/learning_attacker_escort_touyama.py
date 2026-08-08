@@ -1,44 +1,55 @@
-"""learning_attacker_escort.py
+"""touyama_v1/learning_attacker_escort_touyama.py
 
-train_attacker_escort.py で学習した Escort（護衛）役 4体用の
-Dueling DQN モデルを使い、各escortキャラクターの移動・アビリティ判断を行う
-推論用コントローラー。
+固定チーム(Tortlilyan/いぐるん/ろびぃな/夢の街/えんぺん)専用の
+Attacker Carry Phase「escort(護衛)」推論コントローラー。
 
-【重要】4体は重み共有】
-train_attacker_escort.py 側は4体のescortが同一ネットワークの重みを
-共有して学習している（パラメータ共有方式）。そのため、run_game.py側でも
-carry以外の4キャラクターすべてに「同じ LearningAttackerEscortController
-インスタンス」を割り当てる想定である（インスタンスは1つ、
-decide_move はキャラクターごとに呼ばれる）。
+train_attacker_escort.py(touyama_v1版)で学習した、Escort役4体用の
+Dueling DQNモデル(dict形式チェックポイント)を使い、各escortキャラクターの
+移動・アビリティ判断を行う。
 
-【観測ベクトルは train_attacker_escort.py の EscortEnv._get_obs() と
-完全に一致させる必要がある（36次元）。ここがズレると学習結果が
-正しく反映されない。
+【4体は重み共有】
+train_attacker_escort.py側は4体のescortが同一ネットワークの重みを
+共有して学習している(パラメータ共有方式)。そのため、run_game.py側でも
+carry以外の4キャラクターすべてに「同じLearningAttackerEscortTouyamaController
+インスタンス」を割り当てる想定である(インスタンスは1つ、decide_moveは
+キャラクターごとに呼ばれる)。
+
+completely self-contained: run_game.py / controllers.py / battle_logic.py /
+abilities_los.py は一切importしない。必要なロジックはすべてこのファイル内に
+複製する。run_game.py / controllers.py は変更しない。
+
+【観測ベクトルはtrain_attacker_escort.py(touyama_v1版)のEscortEnv._get_obs()と
+完全に一致させる必要がある(全41次元)。ここがズレると学習結果が正しく
+反映されない。汎用版(旧learning_attacker_escort.py)からの変更点は、
+ABILITY_TYPESに"HUNT"(タイガー/Tortlilyan)が加わったことによる
+アビリティonehotの3種→4種化(OBS_DIM: 36→41)のみ。】
 
 【本番環境との差異・既知の制約】
 1. キャリアーの「進むべき方向」予測
    学習環境では、キャラクター同士の衝突を考慮しない固定BFS経路
-   （壁のみを障害物とした経路）をキャリアーの行動基準にしていた。
+   (壁のみを障害物とした経路)をキャリアーの行動基準にしていた。
    推論側もこれに合わせ、味方・敵の位置を無視した「壁のみのBFS勾配」で
    キャリアーの理想進行方向を毎tick再計算する。これにより
    「自分がその理想進行方向のマスに立っているかどうか」を
    ブロック中フラグとして使える。
 
 2. スモークによる射線遮蔽は考慮できない
-   battle_logic.py の move_character が渡す game_state には、
-   現在有効なスモークの情報が含まれていないため、視界判定は
-   壁のみを考慮したBresenham判定になる（学習環境よりやや楽観的）。
+   battle_logic.pyのmove_characterが渡すgame_stateには、現在有効な
+   スモークの情報が含まれていないため、視界判定は壁のみを考慮した
+   Bresenham判定になる(学習環境よりやや楽観的)。
 
 3. アビリティの発動判定
    char.ability_name / char.flash_charges / char.smoke_charges /
-   char.recon_charges など、実際の Character オブジェクトが持つ値を
-   そのまま使う（学習側のような内部トラッキングは不要で、
-   むしろ実データの方が正確）。射程内に有効な標的がいない場合は、
-   実際のアビリティチャージを無駄撃ちしないよう STAY にフォールバックする。
+   char.recon_chargesなど、実際のCharacterオブジェクトが持つ値を
+   そのまま使う。HUNT(タイガー)役はgame_core.pyの仕様上これらが
+   全て0で初期化されるため、total_charges<=0判定で自動的に
+   アビリティ行動がマスクされる(追加分岐は不要)。射程内に有効な
+   標的がいない場合は、実際のアビリティチャージを無駄撃ちしないよう
+   STAYにフォールバックする。
 
-run_game.py からは他の learning_attacker_*.py 系コントローラーと同様の
-インターフェース（decide_move(char, game_state) -> next_pos または
-(next_pos, {"ability": ..., "target": (r, c)})）で呼び出される想定。
+run_game.pyからは他のlearning_attacker_*.py系コントローラーと同様の
+インターフェース(decide_move(char, game_state) -> next_pos または
+(next_pos, {"ability": ..., "target": (r, c)}))で呼び出される想定。
 """
 
 import os
@@ -48,11 +59,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from controllers import BaseController
-
 
 # ---------------------------------------------------------------------------
-# 行動定義（train_attacker_escort.py の EscortEnv と同一でなければならない）
+# 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)
 # ---------------------------------------------------------------------------
 ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
 N_ACTIONS = 6
@@ -66,23 +75,28 @@ _MOVE_DELTA = {
 
 BLIND_DURATION_TICKS = 3
 REVEAL_DURATION_TICKS = 5
-ABILITY_TYPES = ("FLASH", "RECON", "SMOKE")
+# HUNT(タイガー/Tortlilyan)を含む4種。HUNTはアビリティ行動を持たないため
+# total_charges<=0判定で自動的にマスクされる(game_core.pyの仕様上、
+# タイガー役はflash/smoke/recon_chargesが全て0で初期化されるため)。
+ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")
 ABILITY_RANGE = 6
 
 DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0
 
+OBS_DIM = 41  # train_attacker_escort.py(touyama_v1版) EscortEnv._obs_dim() と一致
+
 
 # ---------------------------------------------------------------------------
-# 汎用ヘルパー（train_attacker_escort.py と同一ロジック）
+# 汎用ヘルパー(train_attacker_escort.py と同一ロジック)
 # ---------------------------------------------------------------------------
 def _chebyshev(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
 
 
 def _line_cells(p1, p2):
-    """Bresenham法で2点間のセル列を返す（abilities_los.py と同一ロジック）。"""
+    """Bresenham法で2点間のセル列を返す(abilities_los.py と同一ロジック)。"""
     y0, x0 = int(p1[0]), int(p1[1])
     y1, x1 = int(p2[0]), int(p2[1])
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
@@ -103,8 +117,8 @@ def _line_cells(p1, p2):
 
 
 def _has_los_walls_only(grid, p1, p2):
-    """壁のみを考慮した射線判定。スモークは game_state から参照できないため
-    考慮しない（既知の制約。学習環境よりやや楽観的な視界判定になる）。"""
+    """壁のみを考慮した射線判定。スモークはgame_stateから参照できないため
+    考慮しない(既知の制約。学習環境よりやや楽観的な視界判定になる)。"""
     for r, c in _line_cells(p1, p2):
         if grid[r, c] == 1:
             return False
@@ -113,7 +127,7 @@ def _has_los_walls_only(grid, p1, p2):
 
 def _build_distance_map_walls_only(grid, source_cells):
     """指定座標群を始点とした、壁のみを障害物としたマルチソースBFS距離マップ。
-    キャラクター同士の占有は考慮しない（学習環境の固定経路と同じ前提）。
+    キャラクター同士の占有は考慮しない(学習環境の固定経路と同じ前提)。
     """
     height, width = grid.shape
     dist = np.full((height, width), np.inf, dtype=np.float32)
@@ -135,7 +149,7 @@ def _build_distance_map_walls_only(grid, source_cells):
 
 
 # ---------------------------------------------------------------------------
-# Dueling DQN（train_attacker_escort.py と同一アーキテクチャ）
+# Dueling DQN(train_attacker_escort.py と同一アーキテクチャ)
 # ---------------------------------------------------------------------------
 class DuelingQNetwork(nn.Module):
     def __init__(self, obs_dim, n_actions, hidden=128):
@@ -164,10 +178,10 @@ class DuelingQNetwork(nn.Module):
         return value + (advantage - advantage.mean(dim=1, keepdim=True))
 
 
-class LearningAttackerEscortController(BaseController):
-    """Escort Phaseの学習済みモデルで、護衛キャラクター4体の移動・
-    アビリティ使用を決定する。4体は同一インスタンス（同一ネットワーク）を
-    共有する想定。
+class LearningAttackerEscortTouyamaController:
+    """Escort Phase(touyama_v1固定チーム版)の学習済みモデルで、護衛
+    キャラクター4体の移動・アビリティ使用を決定する。4体は同一インスタンス
+    (同一ネットワーク)を共有する想定。
     """
 
     def __init__(
@@ -179,7 +193,6 @@ class LearningAttackerEscortController(BaseController):
         max_ticks=90,
         verbose=False,
     ):
-        super().__init__()
         self.device = device or torch.device("cpu")
         self.greedy = greedy
         self.epsilon = epsilon
@@ -190,8 +203,15 @@ class LearningAttackerEscortController(BaseController):
             raise FileNotFoundError(f"Escortモデルが見つかりません: {model_path}")
 
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
-        obs_dim = checkpoint["obs_dim"]
-        n_actions = checkpoint.get("n_actions", N_ACTIONS)
+        obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
+        n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
+
+        if obs_dim != OBS_DIM or n_actions != N_ACTIONS:
+            raise ValueError(
+                f"チェックポイントの観測/行動空間がこのコントローラーと不一致です: "
+                f"obs_dim={obs_dim}(期待値{OBS_DIM}) n_actions={n_actions}(期待値{N_ACTIONS})。"
+                f"train_attacker_escort.pyのバージョンが古い可能性があります。"
+            )
 
         self.policy_net = DuelingQNetwork(obs_dim, n_actions).to(self.device)
         self.policy_net.load_state_dict(checkpoint["model_state_dict"])
@@ -199,21 +219,23 @@ class LearningAttackerEscortController(BaseController):
 
         if self.verbose:
             print(
-                f"[LearningAttackerEscortController] モデル読込完了: {model_path} "
+                f"[LearningAttackerEscortTouyamaController] モデル読込完了: {model_path} "
                 f"(obs_dim={obs_dim}, episode={checkpoint.get('episode')}, "
-                f"success_rate={checkpoint.get('success_rate')})"
+                f"success_rate={checkpoint.get('success_rate')}, "
+                f"roster_order={checkpoint.get('roster_order')}, "
+                f"spike_holder_default={checkpoint.get('spike_holder_default')})"
             )
 
         # goal座標(r, c) -> 壁のみBFS距離マップ のキャッシュ
         self._goal_dist_cache = {}
         # carry_pos(r, c) -> 壁のみBFS距離マップ のキャッシュ
-        # （escort自身からキャリアーまでの距離・方向をBFSベースで測るため）
+        # (escort自身からキャリアーまでの距離・方向をBFSベースで測るため)
         self._carry_dist_cache = {}
-        # キャラクター名ごとの episode 内状態（tick数・移動履歴・停滞カウント）
+        # キャラクター名ごとのラウンド内状態(tick数・移動履歴・停滞カウント)
         self._char_state = {}
 
     # ------------------------------------------------------------------
-    # ラウンド開始時にrun_game.pyから呼ばれる（hasattr判定で自動検出される）
+    # ラウンド開始時にrun_game.pyから呼ばれる(hasattr判定で自動検出される)
     # ------------------------------------------------------------------
     def reset_round(self):
         self._char_state.clear()
@@ -241,9 +263,9 @@ class LearningAttackerEscortController(BaseController):
             cached = _build_distance_map_walls_only(grid, [tuple(goal)])
             self._goal_dist_cache[key] = cached
         return cached
-    
+
     def _get_carry_dist_map(self, grid, carry_pos):
-        """carry_posを起点とした壁のみBFS距離マップ（キャッシュ付き）。
+        """carry_posを起点とした壁のみBFS距離マップ(キャッシュ付き)。
         escort自身からキャリアーまでの距離・方向はチェビシェフ距離ではなく
         こちらを使う。"""
         key = (grid.tobytes(), tuple(carry_pos))
@@ -254,17 +276,17 @@ class LearningAttackerEscortController(BaseController):
         return cached
 
     def _resolve_carry_and_goal(self, char, game_state):
-        """護衛対象（キャリアー）の位置と、その目的地(goal)を決める。
+        """護衛対象(キャリアー)の位置と、その目的地(goal)を決める。
 
         優先順位:
           1. 生存している味方でスパイクを持っている者 -> その位置。
-             goalは is_planted なら planted_pos、そうでなければ target_plant_pos。
-          2. 誰もスパイクを持っていない場合（設置済み） -> planted_pos を
-             疑似的なキャリアー位置として扱う（サイト周辺の護衛に切り替わる）。
-          3. スパイクが地面に落ちている場合 -> spike_pos を疑似的な
-             キャリアー位置として扱う（回収を待つ形で近くに集まる）。
+             goalはis_plantedならplanted_pos、そうでなければtarget_plant_pos。
+          2. 誰もスパイクを持っていない場合(設置済み) -> planted_posを
+             疑似的なキャリアー位置として扱う(サイト周辺の護衛に切り替わる)。
+          3. スパイクが地面に落ちている場合 -> spike_posを疑似的な
+             キャリアー位置として扱う(回収を待つ形で近くに集まる)。
           4. どれも取得できない場合 -> target_plant_pos、それも無ければ
-             自分自身の位置（実質、何もしない）。
+             自分自身の位置(実質、何もしない)。
         """
         chars = game_state.get("chars", [])
         is_planted = bool(game_state.get("is_planted", False))
@@ -305,8 +327,8 @@ class LearningAttackerEscortController(BaseController):
         return pos, pos
 
     def _predict_carry_next_step(self, grid, carry_pos, goal):
-        """キャリアーの理想進行方向（他キャラクターの占有を無視した、
-        壁のみのBFS勾配）を予測する。他エージェントを避けないため、
+        """キャリアーの理想進行方向(他キャラクターの占有を無視した、
+        壁のみのBFS勾配)を予測する。他エージェントを避けないため、
         「今このマスに立っていたらキャリアーの進路を塞いでいる」
         という判定にそのまま使える。
         """
@@ -348,9 +370,9 @@ class LearningAttackerEscortController(BaseController):
         return best_char, best_dist
 
     def _team_effect_active(self, chars, my_team):
-        """味方の誰かが敵にかけた blind/reveal が現在有効かどうか。
-        スモークの有無は game_state から取得できないため考慮しない
-        （既知の制約）。
+        """味方の誰かが敵にかけたblind/revealが現在有効かどうか。
+        スモークの有無はgame_stateから取得できないため考慮しない
+        (既知の制約)。
         """
         for c in chars:
             if getattr(c, "team", None) == my_team or not getattr(c, "is_alive", True):
@@ -360,8 +382,8 @@ class LearningAttackerEscortController(BaseController):
         return False
 
     # ------------------------------------------------------------------
-    # 観測構築（train_attacker_escort.py の EscortEnv._get_obs() と
-    # 要素の順序・個数を完全一致させること。全36次元。）
+    # 観測構築(train_attacker_escort.py(touyama_v1版)の
+    # EscortEnv._get_obs()と要素の順序・個数を完全一致させること。全41次元。)
     # ------------------------------------------------------------------
     def _build_obs(self, char, game_state, st):
         grid = game_state["grid"]
@@ -379,14 +401,13 @@ class LearningAttackerEscortController(BaseController):
         obs.append(c / max(1, width - 1))
 
         # escort自身からキャリアーまでの距離・方向はBFS実距離ベース
-        # （チェビシェフ距離は壁を無視するため、曲がった通路で
-        # 実際の経路と逆方向を指してしまうことがある）
+        # (チェビシェフ距離は壁を無視するため、曲がった通路で
+        # 実際の経路と逆方向を指してしまうことがある)
         raw_dist = carry_dist_map[r, c]
         dist_to_carry = raw_dist if np.isfinite(raw_dist) else DIST_NORM_MAX
         obs.append(min(1.0, dist_to_carry / DIST_NORM_MAX))
 
-        # 方向成分も座標の単純差分ではなく、BFS距離を最も縮める方向を
-        # 使う（隣接4マスのうち距離が最小のセルへの差分を方向ベクトルとみなす）
+        # 方向成分も座標の単純差分ではなく、BFS距離を最も縮める方向を使う
         best_dr, best_dc, best_d = 0, 0, dist_to_carry
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
@@ -398,11 +419,11 @@ class LearningAttackerEscortController(BaseController):
         obs.append(float(best_dr))
         obs.append(float(best_dc))
 
-        # キャリアーの進行方向（次の理想セルへの差分）
+        # キャリアーの進行方向(次の理想セルへの差分)
         obs.append(float(np.sign(next_step[0] - cr)))
         obs.append(float(np.sign(next_step[1] - cc)))
 
-        # 壁フラグ（4方向）
+        # 壁フラグ(4方向)
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             obs.append(1.0 if self._is_wall(grid, r + dr, c + dc) else 0.0)
 
@@ -421,7 +442,7 @@ class LearningAttackerEscortController(BaseController):
         for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             obs.append(1.0 if self._is_wall(grid, r + dr, c + dc) else 0.0)
 
-        # 隣接4方向に生存中の味方escortがいるか（train_attacker_escort.py と一致させる）
+        # 隣接4方向に生存中の味方escortがいるか(train_attacker_escort.pyと一致させる)
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nr, nc = r + dr, c + dc
             occupied_by_ally = any(
@@ -456,7 +477,11 @@ class LearningAttackerEscortController(BaseController):
         else:
             obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
 
-        # 自分のアビリティ状態（実際のCharacterオブジェクトの値をそのまま使う）
+        # 自分のアビリティ状態(実際のCharacterオブジェクトの値をそのまま使う)。
+        # HUNT(タイガー)役はflash/smoke/recon_chargesが常に0なので、
+        # total_charges<=0となり自然に「未使用フラグ=0」相当の扱いになる
+        # (train_attacker_escort.py側でescort_ability_used初期値をTrue相当に
+        # している挙動と一致する)。
         total_charges = (
             getattr(char, "flash_charges", 0)
             + getattr(char, "smoke_charges", 0)
@@ -473,10 +498,15 @@ class LearningAttackerEscortController(BaseController):
         obs.append(st["last_delta"][1])
         obs.append(min(1.0, st["stuck"] / 10.0))
         obs.append(1.0 - min(1.0, st["tick"] / max(1, self.max_ticks)))
-        # 自分が現在、キャリアーの理想進行先セルに立っているか（＝塞いでいるか）
+        # 自分が現在、キャリアーの理想進行先セルに立っているか(＝塞いでいるか)
         obs.append(1.0 if (r, c) == next_step and (r, c) != (cr, cc) else 0.0)
 
-        return np.array(obs, dtype=np.float32)
+        obs_arr = np.array(obs, dtype=np.float32)
+        assert obs_arr.shape[0] == OBS_DIM, (
+            f"観測次元がOBS_DIM({OBS_DIM})と不一致: {obs_arr.shape[0]}。"
+            f"train_attacker_escort.pyとのズレを確認してください。"
+        )
+        return obs_arr
 
     def _action_mask(self, char, grid, chars):
         r, c = int(char.pos[0]), int(char.pos[1])
@@ -493,6 +523,7 @@ class LearningAttackerEscortController(BaseController):
             + getattr(char, "recon_charges", 0)
         )
         if total_charges <= 0:
+            # HUNT(タイガー)役もここで自動的にマスクされる(常にtotal_charges==0のため)。
             mask[ACTION_ABILITY] = False
         else:
             # チャージがあっても、射程内に有効な標的がいなければABILITYは
@@ -539,7 +570,7 @@ class LearningAttackerEscortController(BaseController):
                 target = (int(enemy_char.pos[0]), int(enemy_char.pos[1]))
                 return list(char.pos), {"ability": char.ability_name, "target": target}
             # 射程内に有効な標的がいない場合、実チャージを無駄撃ちしないよう
-            # STAY にフォールバックする。
+            # STAYにフォールバックする。
             st["last_delta"] = (0.0, 0.0)
             st["stuck"] += 1
             return [r, c]
