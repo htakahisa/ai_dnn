@@ -41,7 +41,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Boaster": CharacterStats(
         "Boaster", 0.2, 0.12, 175, 0.62, 96, "スモーカー", 50, 5, 10
     ),
-    "Aspas": CharacterStats("Aspas", 0.4, 0.24, 90, 0.87, 120, "タイガー", 130, 10, 10),
+    "Aspas": CharacterStats("Aspas", 0.4, 0.24, 90, 0.87, 120, "タイガー", 150, 10, 10),
     "F0rsakeN": CharacterStats(
         "F0rsakeN", 0.27, 0.14, 125, 0.69, 95, "スモーカー", 50, 3, 6
     ),
@@ -95,7 +95,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "trent": CharacterStats("trent", 0.3, 0.18, 120, 0.71, 85, "シーカー", 40, 5, 5),
     "leaf": CharacterStats("leaf", 0.38, 0.17, 89, 0.74, 80, "フラッシュ", 40, 5, 3),
-    "keiko": CharacterStats("keiko", 0.31, 0.19, 89, 0.72, 90, "スモーカー", 70, 8, 7),
+    "keiko": CharacterStats("keiko", 0.31, 0.19, 95, 0.72, 90, "スモーカー", 70, 8, 7),
     "Rb": CharacterStats("Rb", 0.29, 0.23, 110, 0.69, 80, "スモーカー", 40, 4, 5),
     "stax": CharacterStats("stax", 0.29, 0.15, 130, 0.69, 80, "フラッシュ", 70, 4, 5),
     "tex": CharacterStats("tex", 0.35, 0.19, 85, 0.74, 95, "フラッシュ", 60, 7, 8),
@@ -110,10 +110,10 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "Dep": CharacterStats("Dep", 0.33, 0.22, 75, 0.73, 100, "タイガー", 50, 5, 6),
     "SugarZ3ro": CharacterStats(
-        "SugarZ3ro", 0.29, 0.18, 120, 0.65, 93, "スモーカー", 40, 5, 5
+        "SugarZ3ro", 0.29, 0.18, 120, 0.67, 93, "スモーカー", 40, 5, 5
     ),
     "Buzz": CharacterStats("Buzz", 0.3, 0.23, 80, 0.72, 100, "タイガー", 60, 5, 5),
-    "TenZ": CharacterStats("TenZ", 0.38, 0.23, 105, 0.76, 120, "スモーカー", 170, 9, 9),
+    "TenZ": CharacterStats("TenZ", 0.38, 0.23, 103, 0.77, 137, "スモーカー", 170, 9, 9),
     "eggsterr": CharacterStats(
         "eggsterr", 0.3, 0.22, 88, 0.7, 95, "フラッシュ", 50, 10, 3
     ),
@@ -132,7 +132,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "crashies", 0.28, 0.17, 140, 0.68, 80, "シーカー", 45, 0, 3
     ),
     "FNS": CharacterStats("FNS", 0.17, 0.13, 190, 0.63, 70, "スモーカー", 10, 0, 7),
-    "nAts": CharacterStats("nAts", 0.29, 0.18, 130, 0.72, 88, "スモーカー", 50, 9, 9),
+    "nAts": CharacterStats("nAts", 0.29, 0.18, 140, 0.72, 88, "スモーカー", 50, 9, 9),
     "Lar0k": CharacterStats("Lar0k", 0.34, 0.18, 85, 0.73, 123, "タイガー", 50, 4, 5),
     "skuba": CharacterStats(
         "skuba", 0.31, 0.17, 105, 0.71, 100, "スモーカー", 50, 6, 8
@@ -151,7 +151,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "IbarakiNinja", 0.28, 0.16, 110, 0.75, 115, "シーカー", 50, 10, 5
     ),
     "Canezerra": CharacterStats(
-        "Canezerra", 0.45, 0.17, 85, 0.8, 147, "タイガー", 80, 7, 8
+        "Canezerra", 0.45, 0.17, 85, 0.8, 147, "タイガー", 90, 7, 6
     ),
     "Arlecchino": CharacterStats(
         "Arlecchino", 0.47, 0.19, 135, 0.6, 125, "タイガー", 100, 1, 8
@@ -199,11 +199,53 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "lovers rock": CharacterStats(
         "lovers rock", 0.29, 0.2, 95, 0.77, 90, "タイガー", 55, 6, 6
     ),
-    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10),
-    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,5),
-    "えんぺん": CharacterStats("えんぺん",0.5,0.17,185,0.75,125,"フラッシュ",65,1),
-    "いぐるん": CharacterStats("いぐるん",0.33,0.22,75,0.77,131,"シーカー",55,4),
-    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,3),
+    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10,4),
+    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,5, 8),
+    "えんぺん": CharacterStats("えんぺん",0.5,0.17,185,0.75,125,"フラッシュ",65,1, 8),
+    "いぐるん": CharacterStats("いぐるん",0.33,0.22,75,0.77,131,"シーカー",55,4, 8),
+    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,3, 8),
+    "Retloff": CharacterStats(
+        "Retloff", 0.23, 0.2, 158, 0.69, 98, "フラッシュ", 50, 3, 3
+    ),
+    "alecks": CharacterStats(
+        "alecks", 0.38, 0.13, 145, 0.7, 115, "タイガー", 115, 9, 9
+    ),
+    "icy": CharacterStats("icy", 0.26, 0.21, 75, 0.78, 95, "タイガー", 35, 5, 9),
+    "yay": CharacterStats("yay", 0.41, 0.14, 70, 0.8, 100, "フラッシュ", 90, 9, 4),
+    "ろびぃな": CharacterStats(
+        "ろびぃな", 0.25, 0.55, 80, 0.65, 122, "スモーカー", 50, 5, 8
+    ),
+    "えんぺん": CharacterStats(
+        "えんぺん", 0.5, 0.17, 185, 0.75, 125, "フラッシュ", 65, 1, 8
+    ),
+    "いぐるん": CharacterStats(
+        "いぐるん", 0.33, 0.22, 75, 0.77, 131, "シーカー", 55, 4, 8
+    ),
+    "夢の街": CharacterStats(
+        "夢の街", 0.35, 0.23, 80, 0.76, 115, "フラッシュ", 50, 3, 8
+    ),
+    "eeiu": CharacterStats("eeiu", 0.27, 0.22, 85, 0.76, 100, "シーカー", 45, 8, 7),
+    "Munchkin": CharacterStats(
+        "Munchkin", 0.28, 0.17, 135, 0.75, 85, "シーカー", 75, 8, 3
+    ),
+    "Foxy9": CharacterStats("Foxy9", 0.31, 0.18, 85, 0.79, 100, "タイガー", 65, 5, 4),
+    "benjyfishy": CharacterStats(
+        "benjyfishy", 0.34, 0.18, 95, 0.78, 150, "スモーカー", 70, 9, 7
+    ),
+    "RieNs": CharacterStats("RieNs", 0.25, 0.16, 125, 0.76, 100, "シーカー", 75, 3, 8),
+    "Kr1stal": CharacterStats(
+        "Kr1stal", 0.4, 0.16, 115, 0.81, 120, "シーカー", 80, 8, 5
+    ),
+    "Xdll": CharacterStats("Xdll", 0.23, 0.24, 125, 0.78, 140, "シーカー", 45, 7, 4),
+    "Syouta": CharacterStats("Syouta", 0.45, 0.2, 90, 0.75, 140, "タイガー", 95, 8, 9),
+    "S1Mon": CharacterStats(
+        "S1Mon", 0.35, 0.15, 95, 0.8, 135, "フラッシュ", 110, 10, 10
+    ),
+    "koldamenta": CharacterStats(
+        "koldamenta", 0.2, 0.25, 105, 0.75, 115, "シーカー", 50, 9, 7
+    ),
+    "PatMen": CharacterStats("PatMen", 0.33, 0.2, 80, 0.8, 125, "スモーカー", 55, 5, 8),
+    "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "タイガー", 60, 5, 8),
 }
 
 

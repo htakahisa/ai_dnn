@@ -11,7 +11,7 @@ COMBOS = [
     {
         "name": "天才と悪魔",
         "players": ("jawgemo", "Demon1"),
-        "bonuses": {"hs_rate": 0.15},
+        "bonuses": {"hs_rate": 0.2},
         "renames": {},
     },
     {
@@ -35,7 +35,7 @@ COMBOS = [
     {
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
-        "bonuses": {"hs_rate": 0.05, "accuracy": 0.4, "iq": 20},
+        "bonuses": {"hs_rate": 0.05, "accuracy": 0.45, "iq": 20, "mental": 4},
         "renames": {},
     },
     {
@@ -125,25 +125,25 @@ COMBOS = [
     {
         "name": "クロネコのドラゴンテイル",
         "players": ("vo0kashu", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.35, "reaction": 35},
+        "bonuses": {"hs_rate": 0.3, "reaction": 35},
         "renames": {},
     },
     {
         "name": "生意気なドラゴンテイル",
         "players": ("Canezerra", "Nanasaki"),
-        "bonuses": {"accuracy": 0.15, "hs_rate": 0.25, "reaction": 30},
+        "bonuses": {"accuracy": 0.15, "hs_rate": 0.2, "reaction": 30},
         "renames": {},
     },
     {
         "name": "北欧仕立てのドラゴンテイル",
         "players": ("Derke", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.1, "accuracy": 0.35, "iq": 10},
+        "bonuses": {"dodge_rate": 0.1, "accuracy": 0.3, "iq": 10},
         "renames": {},
     },
     {
         "name": "朽ち果てたドラゴンテイル",
         "players": ("Ethan", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.35, "mental": 5},
+        "bonuses": {"dodge_rate": 0.3, "mental": 5},
         "renames": {},
     },
     {
@@ -168,15 +168,15 @@ COMBOS = [
         "name": "夜逃げした裏切者たち",
         "players": ("Derke", "Sayonara"),
         "player_bonuses": {
-            "Derke": {"dodge_rate": 0.15, "accuracy": 0.1, "reaction": 10},
-            "Sayonara": {"accuracy": 0.2, "reaction": 15},
+            "Derke": {"dodge_rate": 0.1, "reaction": 5},
+            "Sayonara": {"accuracy": 0.1, "reaction": 5},
         },
         "renames": {},
     },
     {
         "name": "何者である必要もないこの夜に踊る",
         "players": ("Derke", "Sayonara", "Lar0k", "marteen", "something"),
-        "bonuses": {"dodge_rate": 0.55, "iq": 20, "reaction": 40},
+        "bonuses": {"dodge_rate": 0.55, "iq": 5, "reaction": 30},
         "renames": {},
     },
     {
@@ -304,7 +304,7 @@ COMBOS = [
         "name": "寒色の三角関係",
         "players": ("Lisa", "Lohen", "Furina"),
         "player_bonuses": {
-            "Furina": {"hs_rate": 0.1},
+            "Furina": {"hs_rate": 0.05},
             "Lisa": {"dodge_rate": 0.25},
             "Lohen": {"hs_rate": 0.25},
         },
@@ -394,7 +394,7 @@ COMBOS = [
         "players": ("Lar0k",),
         "bonuses": {
             "hs_rate": 0.1,
-            "reaction": 30,
+            "reaction": 20,
         },
         "renames": {},
     },
@@ -435,9 +435,21 @@ COMBOS = [
         "renames": {},
     },
     {
-        "name": "BBL's everything gonna turn into a souvenir for king Lar0k",
+        "name": "All for Lar0k",
         "players": ("Lar0k", "lovers rock", "Loita", "Crewn", "Rosé"),
         "player_bonuses": {"Lar0k": {"hs_rate": 0.3, "reaction": 30}},
+        "renames": {},
+    },
+    {
+        "name": "幽霊部員de廃部待ったなし",
+        "players": ("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        "player_bonuses": {
+            "Xdll": {"dodge_rate": 0.37},
+            "Syouta": {"reaction": 37},
+            "Absol": {"dodge_rate": 0.37},
+            "eKo": {"hs_rate": 0.37},
+            "SugarZ3ro": {"iq": 37},
+        },
         "renames": {},
     },
 ]

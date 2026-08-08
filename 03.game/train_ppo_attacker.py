@@ -898,6 +898,7 @@ def main() -> None:
 
     update_reward_breakdown: dict[str, float] = defaultdict(float)
     update_reward_episode_count = 0
+    update_episode_reward_total = 0.0
 
     current_total_episode = previous_episodes
     interrupted = False
@@ -920,6 +921,12 @@ def main() -> None:
             game.run_headless_loop()
             controller.finish_episode()
             rollout.extend(controller.rollout)
+
+            # 各エピソードの報酬内訳を次のUPDATEまで累積する。
+            for reward_name, reward_value in controller.reward_breakdown.items():
+                update_reward_breakdown[reward_name] += float(reward_value)
+            update_reward_episode_count += 1
+            update_episode_reward_total += float(controller.episode_reward)
     
             if episode % args.episodes_per_update == 0:
                 update_number += 1
@@ -938,12 +945,17 @@ def main() -> None:
                 # 更新が終わったら、次のrollout前にevalへ戻す。
                 model.eval()
     
+                update_reward_avg = (
+                    update_episode_reward_total
+                    / max(1, update_reward_episode_count)
+                )
+
                 print(
                     f"[UPDATE {update_number:04d}] "
                     f"ep={total_episode} "
                     f"steps={len(rollout)} "
                     f"trajectories={batch['trajectory_count']} "
-                    f"reward={controller.episode_reward:.2f} "
+                    f"reward_avg={update_reward_avg:.2f} "
                     f"policy={metrics['policy_loss']:.4f} "
                     f"value={metrics['value_loss']:.4f} "
                     f"KL={metrics['reference_kl']:.5f} "
@@ -980,6 +992,7 @@ def main() -> None:
                         "steps": len(rollout),
                         "trajectories": batch["trajectory_count"],
                         "episode_reward": controller.episode_reward,
+                        "update_reward_avg": update_reward_avg,
                         "reward_breakdown_avg": reward_breakdown_avg,
                         "reward_breakdown_episodes": update_reward_episode_count,
                         **metrics,
@@ -988,6 +1001,7 @@ def main() -> None:
                 rollout.clear()
                 update_reward_breakdown.clear()
                 update_reward_episode_count = 0
+                update_episode_reward_total = 0.0
     
             if episode % args.eval_every == 0:
                 result = evaluate(

@@ -136,7 +136,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         players=("FNS", "crashies", "cNed", "soulcas", "trexx"),
         igl="FNS",
         spike_holder="cNed",
-        description="昔からの選手たちが集う知の巨人達",
+        description="昔からの選手たちが集う知の巨人集団",
     ),
     "とうやまゲーミング": TeamPreset(
         name="とうやまゲーミング",
@@ -151,6 +151,20 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         igl="Rosé",
         spike_holder="Lar0k",
         description="Lar0kにすべてを捧げるワンマンチーム",
+    ),
+    "個人能力パ": TeamPreset(
+        name="個人能力パ",
+        players=("Tortlilyan", "まーやまくん", "おもこ", "Demon1", "Aspas"),
+        igl="Tortlilyan",
+        spike_holder="おもこ",
+        description="個人技の高い選手を集めたグッドスタッフチーム",
+    ),
+    "Ghost Champions": TeamPreset(
+        name="Ghost Champions",
+        players=("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        igl="SugarZ3ro",
+        spike_holder="Absol",
+        description="個人技とマクロのバランス",
     ),
 }
 
