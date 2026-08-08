@@ -24,6 +24,48 @@ from game_core import (
 
 class BattleLogicMixin:
 
+    def _build_occupancy_counts(self):
+        """現在生存中のキャラクター位置を数える。移動フェーズ中だけ使用する。"""
+        counts = {}
+        for char in self.chars:
+            if not char.is_alive:
+                continue
+            pos = (int(char.pos[0]), int(char.pos[1]))
+            counts[pos] = counts.get(pos, 0) + 1
+        self._movement_occupancy_counts = counts
+
+    def _clear_occupancy_counts(self):
+        self._movement_occupancy_counts = None
+
+    def _is_position_occupied(self, char, position, old_position):
+        """既存のany走査と同じ判定を、位置カウントからO(1)で返す。"""
+        counts = getattr(self, "_movement_occupancy_counts", None)
+        if counts is None:
+            return any(
+                other is not char
+                and other.is_alive
+                and tuple(other.pos) == position
+                for other in self.chars
+            )
+
+        occupied_count = int(counts.get(position, 0))
+        if position == old_position:
+            occupied_count -= 1
+        return occupied_count > 0
+
+    def _update_occupancy_after_move(self, old_position, new_position):
+        counts = getattr(self, "_movement_occupancy_counts", None)
+        if counts is None or old_position == new_position:
+            return
+
+        old_count = int(counts.get(old_position, 0))
+        if old_count <= 1:
+            counts.pop(old_position, None)
+        else:
+            counts[old_position] = old_count - 1
+
+        counts[new_position] = int(counts.get(new_position, 0)) + 1
+
     def move_character(self, char):
         r, c = char.pos
         old_pos = tuple(char.pos)
@@ -47,7 +89,10 @@ class BattleLogicMixin:
             site_c = float(self.target_plant_pos[1]) if self.target_plant_pos else 0.0
 
         defender_defuse_info = {
-            d.name: (d.defuse_timer, DEFUSE_REQUIRED)  # 6 = DEFUSE_REQUIRED (learning_attacker_multi.py の DEFUSE_REQUIRED と一致させる)
+            d.name: (
+                d.defuse_timer,
+                DEFUSE_REQUIRED,
+            )  # 6 = DEFUSE_REQUIRED (learning_attacker_multi.py の DEFUSE_REQUIRED と一致させる)
             for d in self.chars
             if d.team == "D" and d.is_alive
         }
@@ -59,11 +104,11 @@ class BattleLogicMixin:
             "planted_pos": self.planted_pos,
             "target_plant_pos": self.target_plant_pos,
             "chars": self.chars,
-            "spotted_info": self.get_spotted_info() if not self.is_planted else {
-                'spotted': 1.0,
-                'site_r': site_r,
-                'site_c': site_c
-            },
+            "spotted_info": (
+                self.get_spotted_info()
+                if not self.is_planted
+                else {"spotted": 1.0, "site_r": site_r, "site_c": site_c}
+            ),
             "defender_defuse_info": defender_defuse_info,
             "detonate_timer": self.detonate_timer,
         }
@@ -75,11 +120,11 @@ class BattleLogicMixin:
             # 3. レガシー: (座標, "MOVE"/"PLANT") ← 既存モデル対応
             result = self.attacker_controller.decide_move(char, game_state)
             ability_payload = None
-            
+
             if isinstance(result, tuple) and len(result) >= 2:
                 next_pos = result[0]
                 second_elem = result[1]
-                
+
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
@@ -105,26 +150,26 @@ class BattleLogicMixin:
                 next_pos = char.pos
                 action_type = "PLANT"
 
-            print(
-                "[ATTACKER DEBUG]",
-                "controller=",
-                self.attacker_controller.__class__.__name__,
-                "pos=",
-                tuple(char.pos),
-                "action=",
-                action_type,
-                "result=",
-                result,
-            )
+            # print(
+            #     "[ATTACKER DEBUG]",
+            #     "controller=",
+            #     self.attacker_controller.__class__.__name__,
+            #     "pos=",
+            #     tuple(char.pos),
+            #     "action=",
+            #     action_type,
+            #     "result=",
+            #     result,
+            # )
         else:
             # ディフェンダー側も同様に自動判別する。
             result = self.defender_controller.decide_move(char, game_state)
             ability_payload = None
-            
+
             if isinstance(result, tuple) and len(result) >= 2:
                 next_pos = result[0]
                 second_elem = result[1]
-                
+
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
@@ -221,30 +266,34 @@ class BattleLogicMixin:
         if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
             nr, nc = int(next_pos[0]), int(next_pos[1])
             in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
-            occupied = any(
-                other is not char
-                and other.is_alive
-                and tuple(other.pos) == (nr, nc)
-                for other in self.chars
+            target_pos = (nr, nc)
+            occupied = self._is_position_occupied(
+                char,
+                target_pos,
+                old_pos,
             )
             is_wall = in_bounds and self.grid[nr, nc] == 1
 
-            print(
-                "[MOVE DEBUG]",
-                "from=",
-                old_pos,
-                "to=",
-                (nr, nc),
-                "in_bounds=",
-                in_bounds,
-                "wall=",
-                is_wall,
-                "occupied=",
-                occupied,
-            )
+            # print(
+            #     "[MOVE DEBUG]",
+            #     "from=",
+            #     old_pos,
+            #     "to=",
+            #     (nr, nc),
+            #     "in_bounds=",
+            #     in_bounds,
+            #     "wall=",
+            #     is_wall,
+            #     "occupied=",
+            #     occupied,
+            # )
 
             if in_bounds and not is_wall and not occupied:
                 char.pos = [nr, nc]
+                self._update_occupancy_after_move(
+                    old_pos,
+                    (nr, nc),
+                )
 
         char.moved_this_tick = tuple(char.pos) != old_pos
 
@@ -373,12 +422,20 @@ class BattleLogicMixin:
             if shooter.plant_timer > 0 or shooter.defuse_timer > 0:
                 continue
 
-            possible_targets = [
-                target
-                for target in alive_at_tick_start
-                if target.team != shooter.team
-                and self.check_line_of_sight(shooter, target)
-            ]
+            if engagements is not None:
+                possible_targets = []
+                for first, second in engagements:
+                    if first is shooter and second.is_alive:
+                        possible_targets.append(second)
+                    elif second is shooter and first.is_alive:
+                        possible_targets.append(first)
+            else:
+                possible_targets = [
+                    target
+                    for target in alive_at_tick_start
+                    if target.team != shooter.team
+                    and self.check_line_of_sight(shooter, target)
+                ]
             if not possible_targets:
                 continue
 
@@ -534,6 +591,7 @@ class BattleLogicMixin:
 
         if self.is_defused:
             self.defender_wins += 1
+            self._record_round_mental_result("D")
             if not self.headless:
                 self.label.config(
                     text=f"⚙️ Spike Defused! Defender WIN Round {self.current_round}! {score_text}",
@@ -545,6 +603,7 @@ class BattleLogicMixin:
             self.detonate_timer -= 1
             if self.detonate_timer <= 0:
                 self.attacker_wins += 1
+                self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
                         text=f"💥 Spike Detonated! Attacker WIN Round {self.current_round}! {score_text}",
@@ -554,6 +613,7 @@ class BattleLogicMixin:
                 self.check_match_winner()
             elif not alive_D:
                 self.attacker_wins += 1
+                self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 Defender Annihilated! Attacker WIN Round {self.current_round}! {score_text}",
@@ -598,6 +658,7 @@ class BattleLogicMixin:
             self.round_timer -= 1
             if self.round_timer <= 0:
                 self.defender_wins += 1
+                self._record_round_mental_result("D")
                 if not self.headless:
                     self.label.config(
                         text=f"⏰ Time Expired! Defender WIN Round {self.current_round}! {score_text}",
@@ -607,6 +668,7 @@ class BattleLogicMixin:
                 self.check_match_winner()
             elif not alive_A:
                 self.defender_wins += 1
+                self._record_round_mental_result("D")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 Attacker Annihilated! Defender WIN Round {self.current_round}! {score_text}",
@@ -616,6 +678,7 @@ class BattleLogicMixin:
                 self.check_match_winner()
             elif not alive_D:
                 self.attacker_wins += 1
+                self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 Defender Annihilated! Attacker WIN Round {self.current_round}! {score_text}",
@@ -634,7 +697,7 @@ class BattleLogicMixin:
                     text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick | {score_text}",
                     fg="black",
                 )
-    
+
     def _move_order(self):
         """スパイク保持者(carry)を最優先で処理する。
         先に動いた者勝ちの衝突判定のため、carryの移動先を先に確定させることで
@@ -645,9 +708,13 @@ class BattleLogicMixin:
 
     def loop(self):
         if not self.round_over and not self.match_over:
-            for c in self._move_order():
-                if c.is_alive:
-                    self.move_character(c)
+            self._build_occupancy_counts()
+            try:
+                for c in self._move_order():
+                    if c.is_alive:
+                        self.move_character(c)
+            finally:
+                self._clear_occupancy_counts()
             self.process_battle()
             self.draw()
             self._advance_combo_announcement()
@@ -655,11 +722,14 @@ class BattleLogicMixin:
 
     def run_headless_loop(self):
         """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
-        print("💡 Headless Mode: シミュレーションをバックグラウンドで高速実行中...")
         while not self.match_over:
             if not self.round_over:
-                for c in self._move_order():
-                    if c.is_alive:
-                        self.move_character(c)
+                self._build_occupancy_counts()
+                try:
+                    for c in self._move_order():
+                        if c.is_alive:
+                            self.move_character(c)
+                finally:
+                    self._clear_occupancy_counts()
                 self.process_battle()
                 self._advance_combo_announcement()

@@ -10,6 +10,7 @@ STAT_LABELS = {
     "dodge_rate": "回避率",
     "max_hp": "最大HP",
     "reaction": "反応速度",
+    "mental": "メンタル",
 }
 
 CONDITION_LABELS = {

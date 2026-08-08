@@ -26,6 +26,7 @@ from defender_v3.multi_role_defender_controller import MultiRoleDefenderControll
 from policy_attacker_controller import PolicyAttackerController
 from policy_ppo_attacker_controller import PolicyPPOAttackerController
 from policy_defender_controller import PolicyDefenderController
+from touyama_v1.touyama_defender_controller import TouyamaDefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
@@ -33,6 +34,7 @@ from team_ai import DualRoleTeamAI
 from game_core import (
     Character,
     get_all_character_names,
+    get_character_combat_stats,
     SIDE_PANEL_WIDTH,
     COMBO_BANNER_HEIGHT,
     TICK_TIME,
@@ -100,6 +102,13 @@ def _build_team_ai(key):
             defender_factory=lambda: MultiRoleDefenderController(),
         )
 
+    if normalized == "touyama_gaming_v1":
+        return DualRoleTeamAI(
+            name="Touyama Gaming v1",
+            attacker_factory=lambda: MultiRoleAttackerController(),
+            defender_factory=lambda: TouyamaDefenderController(),
+        )
+
     if normalized == "learning_v1":
         return DualRoleTeamAI(
             name="AI v1",
@@ -127,83 +136,6 @@ def _build_team_ai(key):
         )
 
     raise ValueError(f"不明なTeam AIです: {key}")
-
-
-def _build_attacker_controller(key):
-    normalized = str(key or "default").strip().lower()
-
-    if normalized in {"default", "logic"}:
-        return DefaultAttackerController()
-
-    if normalized == "user":
-        return UserInputController()
-
-    if normalized in {
-        "fnatic_v1",
-        "fnatic",
-    }:
-        return PolicyAttackerController(
-            model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
-            device="auto",
-        )
-
-    if normalized in {
-        "fnatic_v2",
-        "fnatic_2",
-        "fnatic2",
-        "fnatic v2",
-    }:
-        return PolicyPPOAttackerController(
-            model_path=FNATIC_V2_ATTACKER_MODEL_PATH,
-            device="auto",
-        )
-
-    if normalized in {
-        "learning",
-        "learning_multi",
-        "learning_v1",
-        "ai_v1",
-        "v1",
-        "aiv1",
-    }:
-        return LearningAttackerController(
-            model_path=ATTACKER_MODEL_PATH,
-            greedy=True,
-        )
-
-    if normalized in {
-        "toru_attacker_v3",
-    }:
-        return MultiRoleAttackerController()
-
-    if normalized in {
-        "learning_v4",
-        "ai_v4",
-        "v4",
-        "aiv4",
-    }:
-        return LearningAttackerAIv4Controller(
-            model_path=ATTACKER_AI_V4_MODEL_PATH,
-            greedy=True,
-            enable_abilities=False,
-            verbose=False,
-        )
-
-    raise ValueError(f"不明なAttackerコントローラーです: {key}")
-
-
-def _build_defender_controller(key):
-    if key == "default":
-        return DefaultDefenderController()
-    if key == "user":
-        return UserInputController()
-
-    if key == "toru_defender_v3":
-        return MultiRoleDefenderController()
-
-    # "learning_all" またはそれ以外は統合学習済みAIをデフォルトとする
-    return LearningDefenderAllAIController(model_path="dqn_defender_combined_best.pt")
-
 
 class VisualFPSBattle(
     ComboAwakeningMixin,
@@ -239,10 +171,14 @@ class VisualFPSBattle(
         attacker_igl_name=None,
         defender_igl_name=None,
         disable_side_swap=False,
+        series_context=None,
     ):
         self.maze_str = maze_str
         self.headless = headless
         self.disable_side_swap = disable_side_swap
+        self.series_context = dict(series_context or {})
+        self.player_mental_fatigue = {}
+        self.team_round_loss_streak = {}
         self.attacker_roster = list(attacker_roster) if attacker_roster else None
         self.defender_roster = list(defender_roster) if defender_roster else None
         self.spike_holder_name = spike_holder_name
@@ -410,6 +346,111 @@ class VisualFPSBattle(
             self._swap_sides()
             self.last_overtime_swap_round = self.current_round
 
+    @staticmethod
+    def _mental_player_key(name, fallback_team=""):
+        return (
+            str(getattr(name, "team_id", fallback_team)),
+            str(name),
+        )
+
+    def _series_pressure_for_side(self, side):
+        prefix = "attacker" if side == "A" else "defender"
+        maps_won = int(self.series_context.get(f"{prefix}_maps_won", 0))
+        maps_lost = int(self.series_context.get(f"{prefix}_maps_lost", 0))
+        maps_played = int(self.series_context.get("maps_played", 0))
+        maps_to_win = int(self.series_context.get("maps_to_win", 1))
+
+        deficit = max(0, maps_lost - maps_won)
+        pressure = 0.10 * deficit
+        pressure += 0.035 * max(0, maps_played - 1)
+
+        # BO5相当ではMap3以降の長期シリーズ負荷を少し強める。
+        if maps_to_win >= 3 and maps_played >= 2:
+            pressure += 0.03 * (maps_played - 1)
+        return min(0.45, pressure)
+
+    def _long_map_pressure(self):
+        completed_rounds = max(0, int(self.current_round) - 1)
+        pressure = 0.0
+        if completed_rounds >= 20:
+            pressure += (completed_rounds - 19) * 0.012
+        if completed_rounds >= 26:
+            pressure += (completed_rounds - 25) * 0.018
+        return min(0.40, pressure)
+
+    def _mental_pressure_for_player(self, name, side):
+        stats = get_character_combat_stats(name)
+        form_variance = float(stats.get("form_variance", 0.0))
+        if form_variance <= 0.0:
+            return 0.0
+
+        mental = max(0.0, min(10.0, float(stats.get("mental", 5.0))))
+        vulnerability = 1.0 - mental / 10.0
+        key = self._mental_player_key(name, side)
+
+        accumulated = float(self.player_mental_fatigue.get(key, 0.0))
+        situational = (
+            self._series_pressure_for_side(side)
+            + self._long_map_pressure()
+        ) * vulnerability
+        return max(0.0, min(1.0, accumulated + situational))
+
+    def _record_round_mental_result(self, winning_side):
+        losing_side = "D" if winning_side == "A" else "A"
+
+        winner_key = next(
+            (
+                str(getattr(char.name, "team_id", winning_side))
+                for char in self.chars
+                if char.team == winning_side
+            ),
+            winning_side,
+        )
+        loser_key = next(
+            (
+                str(getattr(char.name, "team_id", losing_side))
+                for char in self.chars
+                if char.team == losing_side
+            ),
+            losing_side,
+        )
+
+        self.team_round_loss_streak[winner_key] = 0
+        loser_streak = int(self.team_round_loss_streak.get(loser_key, 0)) + 1
+        self.team_round_loss_streak[loser_key] = loser_streak
+
+        # 1敗目は小さく、2～4連敗から明確に増える。
+        base_damage = min(
+            0.18,
+            0.025 + 0.035 * max(0, loser_streak - 1),
+        )
+
+        for char in self.chars:
+            stats = get_character_combat_stats(char.name)
+            form_variance = float(stats.get("form_variance", 0.0))
+            key = self._mental_player_key(char.name, char.team)
+
+            if form_variance <= 0.0:
+                self.player_mental_fatigue[key] = 0.0
+                continue
+
+            mental = max(
+                0.0,
+                min(10.0, float(stats.get("mental", 5.0))),
+            )
+            vulnerability = 1.0 - mental / 10.0
+            current = float(self.player_mental_fatigue.get(key, 0.0))
+
+            if char.team == losing_side:
+                current += base_damage * vulnerability
+            else:
+                current -= 0.055
+
+            self.player_mental_fatigue[key] = max(
+                0.0,
+                min(0.75, current),
+            )
+
     def init_round(self):
         self._swap_sides_if_needed()
         self.round_over = False
@@ -439,6 +480,7 @@ class VisualFPSBattle(
                     has_spike=has_spike,
                     kills=saved["kills"],
                     deaths=saved["deaths"],
+                    mental_pressure=self._mental_pressure_for_player(name, "A"),
                 )
             )
         if self.defender_roster is None:
@@ -474,6 +516,7 @@ class VisualFPSBattle(
                     "#27ae60",
                     kills=saved["kills"],
                     deaths=saved["deaths"],
+                    mental_pressure=self._mental_pressure_for_player(name, "D"),
                 )
             )
 
