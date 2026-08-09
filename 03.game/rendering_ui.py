@@ -8,6 +8,11 @@ from game_core import (
     COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS, SMOKE_WARNING_TICKS,
 )
 
+# サイドパネル上部のヘッダー高さ。ここを変えると _draw_team_panel と
+# _handle_team_panel_click 両方のクリック判定に反映される。
+PANEL_HEADER_H = 54
+PANEL_ROWS_TOP = PANEL_HEADER_H + 6
+
 class RenderingUIMixin:
     def get_user_controllers(self):
         """ユーザー操作のコントローラーとそのチームのペアを返す"""
@@ -79,7 +84,7 @@ class RenderingUIMixin:
         card_h = 100
 
         for index, character in enumerate(chars):
-            y1 = 48 + index * row_h
+            y1 = PANEL_ROWS_TOP + index * row_h
             y2 = y1 + card_h
             if y1 <= y <= y2:
                 self._set_active_user_character(team, character.name)
@@ -290,27 +295,42 @@ class RenderingUIMixin:
         else:  # HUNT
             self.canvas.create_text(cx, cy, text="H", fill=fill, font=("Arial", 10, "bold"))
 
+    def _draw_team_panel(self, team, x0, team_name, role_label, accent):
+        """左右パネルへチーム名・役割・HP・K/D・アビリティ・現在の戦闘ステータスを表示する。
 
-    def _draw_team_panel(self, team, x0, title, accent):
-        """左右パネルへHP・K/D・アビリティ・現在の戦闘ステータスを表示する。"""
+        team_name がrole_label（"ATTACKERS"/"DEFENDERS"）と異なる場合のみ、
+        1段目にチーム名、2段目に役割ラベルの2行表示にする。
+        TeamPreset未使用時（team_name==role_label）は従来通り1行のみ表示する。
+        """
         panel_w = SIDE_PANEL_WIDTH
         panel_h = self.map_pixel_height + self.ability_area_height
         self.canvas.create_rectangle(
             x0, 0, x0 + panel_w, panel_h,
             fill="#111722", outline="#2a3444"
         )
-        self.canvas.create_rectangle(x0, 0, x0 + panel_w, 42, fill=accent, outline="")
-        self.canvas.create_text(
-            x0 + panel_w / 2, 21,
-            text=title, fill="white", font=("Arial", 13, "bold")
-        )
+        self.canvas.create_rectangle(x0, 0, x0 + panel_w, PANEL_HEADER_H, fill=accent, outline="")
+
+        if team_name and team_name != role_label:
+            self.canvas.create_text(
+                x0 + panel_w / 2, 20,
+                text=team_name, fill="white", font=("Arial", 13, "bold")
+            )
+            self.canvas.create_text(
+                x0 + panel_w / 2, 40,
+                text=role_label, fill="#e8ecf2", font=("Arial", 9, "bold")
+            )
+        else:
+            self.canvas.create_text(
+                x0 + panel_w / 2, PANEL_HEADER_H / 2,
+                text=role_label, fill="white", font=("Arial", 13, "bold")
+            )
 
         chars = [c for c in self.chars if c.team == team][:5]
         row_h = 108
         card_h = 100
 
         for i, char in enumerate(chars):
-            y = 48 + i * row_h
+            y = PANEL_ROWS_TOP + i * row_h
             row_fill = "#1b2432" if char.is_alive else "#17191e"
             muted = "#aeb8c6" if char.is_alive else "#666b73"
             name_fill = "white" if char.is_alive else "#777b83"
@@ -426,8 +446,11 @@ class RenderingUIMixin:
         if self.headless:
             return
         self.canvas.delete("all")
-        self._draw_team_panel("A", 0, "ATTACKERS", "#c0392b")
-        self._draw_team_panel("D", self.map_offset_x + self.map_pixel_width, "DEFENDERS", "#27ae60")
+        self._draw_team_panel("A", 0, self.attacker_team_name, "ATTACKERS", "#c0392b")
+        self._draw_team_panel(
+            "D", self.map_offset_x + self.map_pixel_width,
+            self.defender_team_name, "DEFENDERS", "#27ae60",
+        )
 
         color_map = {"0":"white", "1":"#34495e", "2":"#fff9c4", "3":"#ffcccc", "4":"#ccffcc"}
         for r in range(self.height):

@@ -50,7 +50,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
-from map_data_search import SEARCH_MAZE_STR
+from map_data_search_touyama import SEARCH_MAZE_STR
 from character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
     TOUYAMA_ROSTER_ORDER,
@@ -664,6 +664,11 @@ def decode_action(action_idx):
     return MOVES[move_idx], bool(use_ability)
 
 
+def encode_action(move, use_ability):
+    move_idx = MOVES.index(move)
+    return move_idx * 2 + (1 if use_ability else 0)
+
+
 def build_action_mask(unit, occupied, lock_movement=False):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
     交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。"""
@@ -718,6 +723,11 @@ class SearchEnv:
         self.spike_dist_map = None
         self.sighting_dist_map = None
         self.spike_ground_pos = None
+
+        # --- 一時デバッグ用: 特定キャラの毎tick実況トレース。
+        # train()側で特定エピソードだけTrueにする。
+        self.debug_trace = False
+        self.debug_trace_name = "ろびぃな"
 
         # --- 診断用: positionモード中(spike/sighting情報が無いとき)の
         # キャラ別「平均BFS距離・到着率・移動率」を1エピソード分蓄積する。
@@ -880,10 +890,28 @@ class SearchEnv:
             dr, dc = self._attacker_decide_move(unit)
             move_plans.append((unit, (dr, dc)))
 
+        # position mode(スパイク情報も敵目撃情報も無い状態)かつ担当地点未到着の
+        # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
+        # RLに手探りさせる意味がない。既知のBFS最短方向をそのまま強制適用する。
+        in_position_phase = (
+            self.team_memory.spike_pos is None
+            and self.team_memory.last_seen_enemy is None
+        )
+
+        actual_action_dict = {}
+
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
             (dr, dc), use_ability = decode_action(action_dict[d.name])
+
+            if in_position_phase and d.assigned_defense_dist_map is not None:
+                r0, c0 = int(d.pos[0]), int(d.pos[1])
+                cur_dist = d.assigned_defense_dist_map[r0, c0]
+                if cur_dist > REACH_RADIUS:
+                    dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
+
+            actual_action_dict[d.name] = encode_action((dr, dc), use_ability)
             move_plans.append((d, (dr, dc)))
 
             visible_enemies = [
@@ -1028,7 +1056,7 @@ class SearchEnv:
                 self.match_over_reason = "defender_wipe"
 
         obs_dict, mask_dict = self._collect_observations()
-        return obs_dict, mask_dict, rewards, done
+        return obs_dict, mask_dict, rewards, done, actual_action_dict
 
     def _resolve_shots(self):
         alive = [u for u in self.defenders + self.attackers if u.is_alive]
@@ -1255,16 +1283,15 @@ def train(
     per_name_reward_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
     per_name_episode_total = {name: 0.0 for name in TOUYAMA_ROSTER_ORDER}
 
-    # --- 診断用(3): 担当ポジション(7)への到達不能(BFS距離=-1)判定カウンタ ---
-    unreachable_position_counts = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
-    total_reset_counts = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
-
     # --- 診断用(4): positionモード中の「平均BFS距離・到着率・移動率」履歴 ---
     per_name_avg_dist_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
     per_name_arrival_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
     per_name_move_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
 
     for episode in range(1, episodes + 1):
+        # --- 一時デバッグ用: 500エピソードごとに1エピソードだけ実況トレースON ---
+        env.debug_trace = (episode % 500 == 0)
+
         obs_dict, mask_dict = env.reset()
         episode_reward_total = 0.0
         epsilon = epsilon_by_episode(episode)
@@ -1291,10 +1318,13 @@ def train(
                 for name, obs in obs_dict.items()
             }
 
-            next_obs_dict, next_mask_dict, rewards, done = env.step(action_dict)
+            next_obs_dict, next_mask_dict, rewards, done, actual_action_dict = env.step(action_dict)
 
             for name, obs in obs_dict.items():
-                action = action_dict[name]
+                # position mode強制上書きにより、ネットワークが選んだ行動と
+                # 実際に反映された行動がズレる場合があるため、学習用には
+                # 実際に反映された方(actual_action_dict)を使う。
+                action = actual_action_dict.get(name, action_dict[name])
                 reward = rewards.get(name, 0.0)
                 episode_reward_total += reward
                 # --- 診断用(1): キャラ別に報酬を積算 ---
@@ -1341,7 +1371,7 @@ def train(
         for name in per_name_reward_history:
             per_name_reward_history[name].append(per_name_episode_total.get(name, 0.0))
 
-        if episode % 20 == 0:
+        if episode % 200 == 0:
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
@@ -1366,16 +1396,6 @@ def train(
             )
             print(f"  [POSITION-MODE diag] {position_diag_str}")
 
-        # --- 診断用(3): 担当ポジションの到達不能率を100エピソードごとに出力 ---
-        if episode % 100 == 0:
-            unreachable_str = " / ".join(
-                f"{name}={unreachable_position_counts.get(name, 0)}/"
-                f"{total_reset_counts.get(name, 0)}"
-                f"({(unreachable_position_counts.get(name, 0) / max(1, total_reset_counts.get(name, 0)) * 100):.1f}%)"
-                for name in TOUYAMA_ROSTER_ORDER
-            )
-            print(f"  [UNREACHABLE POSITION rate] {unreachable_str}")
-
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward
             torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
@@ -1383,6 +1403,12 @@ def train(
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
+        
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     print("[DONE] training finished.")
 

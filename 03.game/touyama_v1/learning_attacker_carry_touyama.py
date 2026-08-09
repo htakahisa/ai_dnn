@@ -58,12 +58,12 @@ DEBUG_LOG_PATH = "attacker_carry_touyama_debug.log"
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 28
+OBS_DIM = 29
 ACTION_DIM = 11
 PLANT_ACTION_INDEX = 10
 
-# 本番map_data.pyには5は存在しないが、train_attacker_carry.pyとの対称性のため
-# 同じ集合定義を維持する(5判定は常にFalseになるだけで実害はない)。
+# 本番map_data.pyには5/6/7は存在しないが、train_attacker_carry.pyとの対称性のため
+# 同じ集合定義を維持する(判定は常にFalseになるだけで実害はない)。
 SITE_VALUES = frozenset({2, 5})
 
 ABILITY_RANGE = 8
@@ -292,10 +292,19 @@ class LearningAttackerCarryTouyamaController:
         self.priority_cells = [tuple(map(int, cell)) for cell in (checkpoint.get("priority_cells") or [])]
         self.has_priority_cells = bool(checkpoint.get("has_priority_cells", False)) and bool(self.priority_cells)
 
+        # サイト別ウェイポイント(右=6/左=7相当)もチェックポイントに座標として保存されている。
+        # 本番map_data.pyにはgrid==6/7が存在しないため、gridの値には一切依存しない。
+        # 未保存(旧チェックポイント)の場合は空dictとなり、常に「通過済み」扱いで従来挙動になる。
+        raw_waypoint_cells = checkpoint.get("waypoint_cells") or {}
+        self.waypoint_cells = {
+            str(site): (int(cell[0]), int(cell[1])) for site, cell in raw_waypoint_cells.items()
+        }
+
         self._log(
             f"[LOAD] model={model_path} episode={checkpoint.get('episode')} "
             f"success_rate={checkpoint.get('success_rate')} "
-            f"has_priority_cells={self.has_priority_cells} priority_cells={self.priority_cells}"
+            f"has_priority_cells={self.has_priority_cells} priority_cells={self.priority_cells} "
+            f"waypoint_cells={self.waypoint_cells}"
         )
 
         self.game = None
@@ -303,12 +312,15 @@ class LearningAttackerCarryTouyamaController:
         # gridごとにキャッシュ(通常は試合中一度だけ計算される)
         self._priority_dist_map = None
         self._priority_max_dist = None
+        self._waypoint_dist_maps = {}     # site -> dist_map(waypoint_cells由来)
 
         # ラウンド単位の状態(target_plant_posはラウンド中固定なのでキャッシュしてよい)
         self._sighting = None
         self._plant_cells = None          # このラウンドの target_plant_pos への距離マップキャッシュ用キー
         self._target_dist_map = None
         self._cached_target_pos = None
+        self._active_waypoint_site = None
+        self._reached_waypoint = True
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
@@ -327,10 +339,17 @@ class LearningAttackerCarryTouyamaController:
         finite = self._priority_dist_map[self._priority_dist_map >= 0]
         self._priority_max_dist = int(finite.max()) if finite.size else (grid.shape[0] + grid.shape[1])
 
+        # サイト別ウェイポイントへの距離マップ(waypoint_cellsに存在するサイトのみ構築)。
+        self._waypoint_dist_maps = {
+            site: _bfs_distance_map(grid, cell) for site, cell in self.waypoint_cells.items()
+        }
+
     def reset_round(self):
         self._sighting = None
         self._target_dist_map = None
         self._cached_target_pos = None
+        self._active_waypoint_site = None
+        self._reached_waypoint = True
 
     # -- ログ ---------------------------------------------------------
     def _log(self, message):
@@ -378,7 +397,7 @@ class LearningAttackerCarryTouyamaController:
                 self._sighting = None
 
     # -- 観測構築(train_attacker_carry.py の build_observation と同一構造) --
-    def _build_observation(self, char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks):
+    def _build_observation(self, char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks, reached_waypoint):
         obs = np.zeros(OBS_DIM, dtype=np.float32)
         grid = self.game.grid
         height, width = grid.shape
@@ -460,6 +479,9 @@ class LearningAttackerCarryTouyamaController:
         p_best_dr, p_best_dc = _bfs_best_direction(self._priority_dist_map, r0, c0)
         obs[26] = float(p_best_dr)
         obs[27] = float(p_best_dc)
+
+        # サイト別ウェイポイント通過済みフラグ(train_attacker_carry.pyのobs[28]と同一)。
+        obs[28] = 1.0 if reached_waypoint else 0.0
 
         return obs
 
@@ -583,8 +605,33 @@ class LearningAttackerCarryTouyamaController:
         if target_plant_pos is None:
             # 実ゲームでは通常発生しないが、念のためのフォールバック。
             target_plant_pos = self._plant_cells[0] if self._plant_cells else (r, c)
+        target_plant_pos = (int(target_plant_pos[0]), int(target_plant_pos[1]))
 
-        dist_map = self._get_target_dist_map(target_plant_pos)
+        # ラウンド開始時(_active_waypoint_site未設定)にサイトを判定し、
+        # 対応するウェイポイントが存在すればまずそこへの距離マップを使う。
+        # train_attacker_carry.py CarryEnv.reset()と同一の判定基準(列がwidth//2未満=左)。
+        if self._active_waypoint_site is None:
+            width = grid.shape[1]
+            self._active_waypoint_site = "left" if target_plant_pos[1] < width // 2 else "right"
+            if self._active_waypoint_site in self._waypoint_dist_maps:
+                self._reached_waypoint = False
+            else:
+                self._reached_waypoint = True
+
+        if not self._reached_waypoint:
+            waypoint_cell = self.waypoint_cells[self._active_waypoint_site]
+            waypoint_dist = max(abs(r - waypoint_cell[0]), abs(c - waypoint_cell[1]))
+            if waypoint_dist <= 1:
+                self._reached_waypoint = True
+                # 通過した瞬間だけ切り替える。以降はtarget_plant_pos向けのキャッシュ
+                # (_get_target_dist_map)をそのまま使う。
+                self._cached_target_pos = None
+
+        if self._reached_waypoint:
+            dist_map = self._get_target_dist_map(target_plant_pos)
+        else:
+            dist_map = self._waypoint_dist_maps[self._active_waypoint_site]
+
         on_site = int(grid[r, c]) in SITE_VALUES
 
         self._update_sighting(char, chars, smoke_cells)
@@ -592,7 +639,9 @@ class LearningAttackerCarryTouyamaController:
         max_ticks = getattr(self.game, "round_timer", 100) + elapsed_ticks  # 概算(観測は正規化用途のみ)
         max_ticks = max(max_ticks, 1)
 
-        obs = self._build_observation(char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks)
+        obs = self._build_observation(
+            char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks, self._reached_waypoint
+        )
         mask = self._build_mask(char, chars, on_site)
         action_idx = self._select_action(obs, mask)
         decoded = self._decode_action(action_idx)

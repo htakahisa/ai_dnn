@@ -31,7 +31,8 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,3,8),
 }
 
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+#TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+TOUYAMA_ROSTER_ORDER = ["ろびぃな", "Tortlilyan", "えんぺん", "夢の街", "いぐるん"]
 
 # 旧コードとの互換用エイリアス
 CHARACTER_STATS = CHARACTER_TABLE

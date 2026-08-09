@@ -1127,8 +1127,11 @@ def main():
                 torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_best_by_eval.pt"))
                 print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
 
-        # if episode % 2000 == 0:
-        #     torch.save(net.state_dict(), os.path.join(SAVE_DIR, f"dqn_defender_retake_ep{episode}.pt"))
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_final.pt"))
     print("[DONE] training finished.")

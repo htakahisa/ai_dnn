@@ -34,6 +34,8 @@ class RosterSelectScreen:
         self.count_labels = {}
         self.roster_labels = {}
         self.team_summary_labels = {}
+        self.attacker_team_name = None
+        self.defender_team_name = None
 
         self.root = tk.Tk()
         self.root.title("キャラクター編成")
@@ -494,6 +496,13 @@ class RosterSelectScreen:
     def _other_roster_for(self, team):
         return self.defender_roster if team == "A" else self.attacker_roster
 
+    def _clear_team_name(self, team):
+        """プリセットと異なる手動編集が入ったら、チーム名表示を既定へ戻す。"""
+        if team == "A":
+            self.attacker_team_name = None
+        else:
+            self.defender_team_name = None
+
     def apply_preset(self, team, preset_name):
         """指定したプリセットを片方のチームへ一括適用する。"""
         preset = get_preset(preset_name)
@@ -517,6 +526,11 @@ class RosterSelectScreen:
         roster = self._roster_for(team)
         roster.clear()
         roster.extend(preset.players)
+
+        if team == "A":
+            self.attacker_team_name = preset.name
+        else:
+            self.defender_team_name = preset.name
 
         selected_spike_holder = (
             preset.spike_holder
@@ -557,6 +571,7 @@ class RosterSelectScreen:
             return
 
         roster.append(name)
+        self._clear_team_name(team)
         self.update_all_ui()
 
     def remove_last(self, team):
@@ -565,6 +580,7 @@ class RosterSelectScreen:
             return
 
         removed = roster.pop()
+        self._clear_team_name(team)
         if team == "A":
             if self.attacker_spike_var.get() == removed:
                 self.attacker_spike_var.set("")
@@ -580,6 +596,7 @@ class RosterSelectScreen:
 
     def reset_roster(self, team):
         self._roster_for(team).clear()
+        self._clear_team_name(team)
         if team == "A":
             self.attacker_spike_var.set("")
             self.attacker_igl_var.set("")
@@ -859,6 +876,8 @@ class RosterSelectScreen:
             defender_ctrl_key,
             self.attacker_igl_var.get(),
             self.defender_igl_var.get(),
+            self.attacker_team_name,
+            self.defender_team_name,
         )
 
         self.root.destroy()

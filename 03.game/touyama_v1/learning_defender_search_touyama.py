@@ -37,14 +37,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-import itertools
-
 from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
 from map_data import NEW_MAZE_STR
-from map_data_search import SEARCH_MAZE_STR
+from map_data_search_touyama import SEARCH_MAZE_STR
 
 from character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
@@ -166,81 +164,45 @@ def _parse_search_grid(maze_str):
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
 
 
-def _extract_defense_positions():
-    """map_data_search.SEARCH_MAZE_STR から7のセルを抽出する。
-    見つからない場合は空リストを返す(呼び出し側でフォールバックする)。"""
-    grid = _parse_search_grid(SEARCH_MAZE_STR)
-    positions = [
-        (r, c) for r in range(grid.shape[0]) for c in range(grid.shape[1])
-        if grid[r, c] == 7
-    ]
-    return positions
-
-
-_DEFENSE_POSITIONS_CACHE = _extract_defense_positions()
-
-
 def _parse_maze_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
 
 
-def _compute_touyama_fixed_defense_assignment():
-    """train_defender_search.py の _compute_optimal_defense_assignment と
-    完全に同一のロジック・同一のデータソースから、同じ固定割当を再現する。
+def _find_marker_position(grid, value):
+    """train_defender_search.py の _find_marker_position と同一ロジック。
+    値が1マスのみである前提(そうでなければ学習時と食い違うため例外にする)。"""
+    hits = [
+        (r, c) for r in range(grid.shape[0]) for c in range(grid.shape[1])
+        if grid[r, c] == value
+    ]
+    if len(hits) != 1:
+        raise RuntimeError(
+            f"map_data_search.py の値{value}は1マスのみである必要がありますが、"
+            f"{len(hits)}マス見つかりました: {hits}"
+        )
+    return hits[0]
 
-    学習時にモデルが学習した「担当地点への距離・方向」は、この固定割当を
+
+def _compute_touyama_fixed_defense_assignment():
+    """train_defender_search.py と完全に同一のロジックで固定割当を再現する。
+
+    マップ上の値5,6,7,8,9を TOUYAMA_ROSTER_ORDER のインデックス順に
+    そのまま1:1対応させる(5=roster[0], 6=roster[1], ...)。総当たり最適化は
+    行わない(学習側で廃止されたのに合わせる)。
+    学習時にモデルが学習した「担当地点への距離・方向」はこの固定割当を
     前提とした観測であるため、推論側でも必ず同じ割当を使う必要がある。
     (自己完結ルールにより、学習ファイルをimportせずロジックを複製する)
     """
-    grid = _parse_maze_grid(NEW_MAZE_STR)
-    height, width = grid.shape
-    defender_spawns = [
-        (r, c) for r in range(height) for c in range(width) if grid[r, c] == 4
-    ]
-
-    if len(defender_spawns) < len(TOUYAMA_ROSTER_ORDER):
-        print(
-            "[WARN] DEFENDER_SPAWNSがtouyama_v1の人数に足りません。"
-            "固定割当の計算をスキップします。"
-        )
-        return {}
-
-    if not _DEFENSE_POSITIONS_CACHE:
-        return {}
-
-    dist_maps = [
-        _bfs_distance_map(grid, pos) for pos in _DEFENSE_POSITIONS_CACHE
-    ]
-
-    best_perm = None
-    best_cost = None
-    for perm in itertools.permutations(range(len(_DEFENSE_POSITIONS_CACHE))):
-        cost = 0
-        valid = True
-        for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
-            spawn = defender_spawns[i]
-            dist = dist_maps[perm[i]][spawn[0], spawn[1]]
-            if dist < 0:
-                valid = False
-                break
-            cost += int(dist)
-        if not valid:
-            continue
-        if best_cost is None or cost < best_cost:
-            best_cost = cost
-            best_perm = perm
-
-    if best_perm is None:
-        return {}
-
+    search_grid = _parse_search_grid(SEARCH_MAZE_STR)
     return {
-        name: _DEFENSE_POSITIONS_CACHE[best_perm[i]]
+        name: _find_marker_position(search_grid, 5 + i)
         for i, name in enumerate(TOUYAMA_ROSTER_ORDER)
     }
 
 
 _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT = _compute_touyama_fixed_defense_assignment()
+_DEFENSE_POSITIONS_CACHE = list(_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT.values())
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -685,6 +647,24 @@ class LearningDefenderSearchTouyamaController:
         move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+
+        # train_defender_search.py と挙動を一致させる: position mode
+        # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、
+        # スポーン・担当地点が毎ラウンド固定である以上、ネットワークの
+        # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
+        # 上書き後の行動で作られているため、推論側もこれに合わせないと
+        # 学習内容とズレる。
+        in_position_mode = (
+            self.team_memory.spike_pos is None
+            and self.team_memory.last_seen_enemy is None
+        )
+        if in_position_mode:
+            dist_map = self._assigned_dist_maps.get(char.name)
+            if dist_map is not None:
+                r0, c0 = int(char.pos[0]), int(char.pos[1])
+                cur_dist = dist_map[r0, c0]
+                if cur_dist > REACH_RADIUS:
+                    move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
 
         if self.verbose:
             print(

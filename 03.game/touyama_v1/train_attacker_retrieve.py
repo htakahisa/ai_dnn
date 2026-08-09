@@ -874,6 +874,12 @@ def train(
                 best_success_rate = success_rate
                 _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
                 print(f"  -> best model saved (success_rate={success_rate:.2%})")
+        
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     _save_checkpoint(policy_net, MODEL_FINAL_PATH, episodes, best_success_rate)
     print("Training complete.")
