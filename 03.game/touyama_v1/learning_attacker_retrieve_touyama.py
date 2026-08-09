@@ -86,7 +86,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
 
-OBS_DIM = 24
+OBS_DIM = 21
 N_ACTIONS = 6
 ACTION_ABILITY = 5
 
@@ -173,29 +173,6 @@ def _bfs_distance_map(grid, goal):
                 queue.append((nr, nc))
     return dist
 
-
-def _bfs_best_step(dist_map, pos, grid):
-    """dist_map上で(pos)から見て最も距離が縮む隣接マスの座標を返す。
-    改善できる隣接マスが無ければNoneを返す(既に到達済み/経路不明)。
-    train_attacker_retrieve.py の bfs_best_step と同一ロジック。
-    「リトリーバーが次に進みたいマス」を、非リトリーバーが判定するために使う。"""
-    if dist_map is None:
-        return None
-    height, width = grid.shape
-    r, c = int(pos[0]), int(pos[1])
-    cur = dist_map[r, c]
-    if cur < 0:
-        return None
-    best_cell, best_d = None, cur
-    for dr, dc in CARDINAL:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < height and 0 <= nc < width and dist_map[nr, nc] >= 0:
-            if dist_map[nr, nc] < best_d:
-                best_d = dist_map[nr, nc]
-                best_cell = (nr, nc)
-    return best_cell
-
-
 def _ability_charge(char):
     """ロールに対応する残チャージ数を取得する。HUNT(アビリティ無し)は常に0。"""
     return {
@@ -251,17 +228,12 @@ class LearningAttackerRetrieveTouyamaController:
         self._dist_map = None
         self._dist_map_source = None  # 再計算要否判定用: 直前のspike_pos
 
-        # リトリーバー役の選出はsticky方式(一度選ばれたら、生存かつ
-        # スパイク未保持である限り同一キャラを維持する)。
-        self._retriever_name = None
-
         self._debug_log_path = "attacker_retrieve_touyama_debug.log"
 
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
         self._dist_map = None
         self._dist_map_source = None
-        self._retriever_name = None
 
     def _ensure_dist_map(self, grid, spike_pos):
         spike_pos = (int(spike_pos[0]), int(spike_pos[1]))
@@ -269,54 +241,11 @@ class LearningAttackerRetrieveTouyamaController:
             return
         self._dist_map = _bfs_distance_map(grid, spike_pos)
         self._dist_map_source = spike_pos
-        # スパイク位置が変わった(=新たに落下した)ら、リトリーバー選出もやり直す。
-        self._retriever_name = None
-
-    # -- リトリーバー選出 ---------------------------------------------------
-    def _select_retriever(self, char, chars):
-        """スパイク未保持の生存アタッカーのうち、落下スパイクへのBFS距離が
-        最も近い1人を選ぶ(sticky: 既存のリトリーバーが引き続き有効なら維持)。"""
-        if self._dist_map is None:
-            return None
-
-        if self._retriever_name is not None:
-            current = next(
-                (
-                    c for c in chars
-                    if c.team == char.team
-                    and c.is_alive
-                    and c.name == self._retriever_name
-                    and not getattr(c, "has_spike", False)
-                ),
-                None,
-            )
-            if current is not None:
-                return current
-            self._retriever_name = None
-
-        candidates = [
-            c for c in chars
-            if c.team == char.team and c.is_alive and not getattr(c, "has_spike", False)
-        ]
-        if not candidates:
-            return None
-
-        fallback = self._dist_map.shape[0] + self._dist_map.shape[1]
-
-        def _key(c):
-            rr, cc = int(c.pos[0]), int(c.pos[1])
-            d = self._dist_map[rr, cc]
-            d = d if d >= 0 else fallback
-            return (d, c.name)
-
-        retriever = min(candidates, key=_key)
-        self._retriever_name = retriever.name
-        return retriever
 
     # -- 観測構築 ----------------------------------------------------------
     # train_attacker_retrieve.py の RetrieveEnv._build_obs() と要素・並び順を
     # 完全一致させること。
-    def _build_observation(self, char, grid, chars, visible_enemies, is_retriever, retriever):
+    def _build_observation(self, char, grid, chars, visible_enemies):
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
 
@@ -370,27 +299,6 @@ class LearningAttackerRetrieveTouyamaController:
                 getattr(nearest, "reveal_remaining", 0) > 0 or getattr(nearest, "los_revealed", False)
             ) else 0.0
 
-        obs[21] = 1.0 if is_retriever else 0.0
-
-        # [22] blocking_flag: 自分の現在マスが、リトリーバーが次に進みたい
-        # マスと一致するか。リトリーバー自身にとっては常に0になる
-        # (自分の現在マスへ進みたがることはないため。学習環境と同じ)。
-        if retriever is not None and retriever.is_alive:
-            retriever_next_cell = _bfs_best_step(self._dist_map, tuple(retriever.pos), grid)
-            obs[22] = (
-                1.0
-                if retriever_next_cell is not None and (r, c) == retriever_next_cell
-                else 0.0
-            )
-            raw_retriever_dist = (
-                self._dist_map[int(retriever.pos[0]), int(retriever.pos[1])]
-                if self._dist_map is not None else -1
-            )
-            obs[23] = min(1.0, raw_retriever_dist / max_dist_scale) if raw_retriever_dist >= 0 else 1.0
-        else:
-            obs[22] = 0.0
-            obs[23] = 1.0
-
         return obs
 
     # -- 行動マスク ---------------------------------------------------------
@@ -438,19 +346,14 @@ class LearningAttackerRetrieveTouyamaController:
 
         self._ensure_dist_map(grid, spike_pos)
 
-        retriever = self._select_retriever(char, chars)
-        is_retriever = retriever is not None and retriever.name == char.name
-
         enemies = [e for e in chars if e.team != char.team]
         visible_enemies = [
             e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
-        # 💡変更点: 以前はここで「自分がリトリーバーでなければ待機」して
-        # 即returnしていたが、学習側がリトリーバー+ブロッキング役の
-        # マルチエージェント構成になったことに合わせ、非リトリーバーも
-        # 同じモデルの判断に従わせる(is_retrieverフラグで区別する)。
-        obs = self._build_observation(char, grid, chars, visible_enemies, is_retriever, retriever)
+        # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
+        # なので、呼ばれたキャラは役割区分なくそのままモデルの判断に従う。
+        obs = self._build_observation(char, grid, chars, visible_enemies)
         mask = self._action_mask(char, grid, chars)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
@@ -465,7 +368,7 @@ class LearningAttackerRetrieveTouyamaController:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 f.write(
                     f"{char.name},{tuple(char.pos)},spike={tuple(spike_pos)},"
-                    f"is_retriever={is_retriever},action={action_idx},"
+                    f"action={action_idx},"
                     f"Qvals={np.round(q_values.cpu().numpy(), 4).tolist()}\n"
                 )
 

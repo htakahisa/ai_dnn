@@ -20,6 +20,7 @@ import random
 import sys
 import os
 from collections import deque, namedtuple
+import time
 
 import numpy as np
 import torch
@@ -1107,6 +1108,7 @@ def main():
     win_history = deque(maxlen=200)
     best_win_rate = -1.0
 
+    start_time = time.perf_counter()
     for episode in range(1, num_episodes + 1):
         epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(0.0, 1.0 - episode / epsilon_decay_episodes)
 
@@ -1121,17 +1123,16 @@ def main():
 
         if episode % 500 == 0:
             eval_win_rate, eval_entered_rate = evaluate_greedy(env, net, obs_dim, num_eval_episodes=200)
-            print(f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}")
+
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            start_time = time.perf_counter();
+
+            print(f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}" elapse={elapsed_time:.1f})
             if eval_win_rate > best_win_rate:
                 best_win_rate = eval_win_rate
                 torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_best_by_eval.pt"))
                 print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
-
-        if episode % 100 == 0:
-            end_time = time.perf_counter()
-            elapsed_time = end_time - start_time
-            print(f"かかった時間: {elapsed_time} 秒/100 episode")
-            start_time = time.perf_counter();
 
     torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_touyama_final.pt"))
     print("[DONE] training finished.")

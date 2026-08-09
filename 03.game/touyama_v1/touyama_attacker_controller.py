@@ -30,7 +30,7 @@ class MultiRoleAttackerController(BaseController):
         self,
         carry_model_path="touyama_v1/data/attacker_carry_touyama_data/dqn_attacker_carry_touyama_best_by_eval.pt",
         escort_model_path="touyama_v1/data/attacker_escort_touyama_data/dqn_attacker_escort_touyama_best_by_eval.pt",
-        retrieve_model_path="touyama_v1/data/attacker_retrieve_touyama_data/dqn_attacker_retrieve_touyama_best_by_eval.pt",
+        retrieve_model_path="touyama_v1/data/attacker_retrieve_touyama_data/dqn_attacker_retrieve_touyama_final.pt",
         guard_model_path="touyama_v1/data/attacker_guard_touyama_data/dqn_attacker_guard_touyama_best_by_eval.pt",
         greedy=False,
     ):

@@ -74,6 +74,7 @@ import os
 import random
 import sys
 from collections import deque, namedtuple
+import time
 
 import numpy as np
 import torch
@@ -1297,6 +1298,7 @@ def main():
             "spike_holder_default": TOUYAMA_SPIKE_HOLDER,
         }
 
+    start_time = time.perf_counter()
     for episode in range(1, args.episodes + 1):
         progress = min(1.0, episode / args.eps_decay_episodes)
         epsilon = args.eps_start + (args.eps_end - args.eps_start) * progress
@@ -1342,18 +1344,15 @@ def main():
                 target_net.load_state_dict(policy_net.state_dict())
 
         if episode % 50 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            start_time = time.perf_counter();
             print(
-                f"[EP {episode}/{args.episodes}] reward={episode_reward:.2f} "
+                f"[EP {episode}/{args.episodes}] reward={episode_reward:.2f} elapse={elapsed_time:.1f} "
                 f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick} "
                 f"carrier={env.carry_name}"
             )
         
-        if episode % 100 == 0:
-            end_time = time.perf_counter()
-            elapsed_time = end_time - start_time
-            print(f"かかった時間: {elapsed_time} 秒/100 episode")
-            start_time = time.perf_counter();
-
         if episode % args.eval_every == 0:
             success_rate, avg_reward, avg_block_events = evaluate(
                 eval_env, policy_net, device, args.eval_episodes

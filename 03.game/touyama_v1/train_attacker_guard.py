@@ -35,6 +35,7 @@ import os
 import sys
 import random
 from collections import deque, namedtuple
+import time
 
 import numpy as np
 import torch
@@ -1247,6 +1248,7 @@ def train(
     best_avg_reward = -float("inf")
     episode_reward_history = deque(maxlen=100)
 
+    start_time = time.perf_counter()
     for episode in range(1, episodes + 1):
         obs_dict, mask_dict = env.reset()
         episode_reward_total = 0.0
@@ -1292,8 +1294,11 @@ def train(
         avg_reward = sum(episode_reward_history) / len(episode_reward_history)
 
         if episode % 20 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            start_time = time.perf_counter();
             print(
-                f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
+                f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} elapse={elapsed_time:.1f} "
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
                 f"buffer={len(buffer)} reason={env.match_over_reason}"
             )
@@ -1305,12 +1310,6 @@ def train(
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
-
-        if episode % 100 == 0:
-            end_time = time.perf_counter()
-            elapsed_time = end_time - start_time
-            print(f"かかった時間: {elapsed_time} 秒/100 episode")
-            start_time = time.perf_counter();
 
     print("[DONE] training finished.")
 
