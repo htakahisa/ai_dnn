@@ -1302,17 +1302,6 @@ def train(
         for name in per_name_episode_total:
             per_name_episode_total[name] = 0.0
 
-        # --- 診断用(3): 今回のラウンドで割り当てられた担当ポジションが、
-        # スポーン地点から壁越しに到達不能(BFS距離=-1)になっていないか記録する ---
-        for d in env.defenders:
-            total_reset_counts[d.name] = total_reset_counts.get(d.name, 0) + 1
-            if d.assigned_defense_dist_map is not None:
-                bfs_dist = d.assigned_defense_dist_map[int(d.pos[0]), int(d.pos[1])]
-                if bfs_dist < 0:
-                    unreachable_position_counts[d.name] = (
-                        unreachable_position_counts.get(d.name, 0) + 1
-                    )
-
         for tick in range(MAX_TICKS):
 
             action_dict = {
