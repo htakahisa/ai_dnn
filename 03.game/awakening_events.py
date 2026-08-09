@@ -15,6 +15,13 @@ AWAKENING_EVENTS = [
         "bonuses": {"accuracy": 0.35, "hs_rate": 0.25, "dodge_rate": 0.15},
     },
     {
+        "name": "世界一のセンチネル",
+        "player": "Alfajer",
+        "condition": "all_allies_dead",
+        "rename": "-世界一のエイマー-Alfajer",
+        "bonuses": {"accuracy": 0.2, "hs_rate": 0.4, "reaction": 10},
+    },
+    {
         "name": "彼を起こしてはいけない",
         "player": "Demon1",
         "condition": "hp_at_or_below",

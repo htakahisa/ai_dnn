@@ -33,9 +33,21 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "寡黙な羊たちの晩餐",
+        "players": ("Alfajer", "Leo"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
-        "bonuses": {"hs_rate": 0.05, "accuracy": 0.45, "iq": 20, "mental": 4},
+        "bonuses": {
+            "hs_rate": 0.15,
+            "accuracy": 0.35,
+            "iq": 20,
+            "dodge_rate": 0.15,
+            "mental": 4,
+        },
         "renames": {},
     },
     {
@@ -110,15 +122,15 @@ COMBOS = [
     {
         "name": "隕石の流血事件",
         "players": ("Meteor", "Zest"),
-        "bonuses": {"hs_rate": 0.3, "accuracy": 0.1},
+        "bonuses": {"hs_rate": 0.2},
         "renames": {},
     },
     {
         "name": "クソガキ老兵",
         "players": ("Canezerra", "Ethan"),
         "player_bonuses": {
-            "Canezerra": {"hs_rate": 0.1, "reaction": 20},
-            "Ethan": {"accuracy": 0.1, "dodge_rate": 0.2},
+            "Canezerra": {"hs_rate": 0.1, "reaction": 10},
+            "Ethan": {"accuracy": 0.1, "dodge_rate": 0.1},
         },
         "renames": {},
     },
@@ -153,18 +165,6 @@ COMBOS = [
         "renames": {},
     },
     {
-        "name": "モーツァルト～アイネクライネ～",
-        "players": ("FNS", "crashies", "cNed", "soulcas", "trexx"),
-        "player_bonuses": {
-            "FNS": {"dodge_rate": 0.1, "accuracy": 0.1, "reaction": 10},
-            "crashies": {"accuracy": 0.15, "reaction": 15},
-            "cNed": {"hs_rate": 0.15, "dodge_rate": 0.15},
-            "crashies": {"dodge_rate": 0.3},
-            "soulcas": {"accuracy": 0.3},
-        },
-        "renames": {},
-    },
-    {
         "name": "夜逃げした裏切者たち",
         "players": ("Derke", "Sayonara"),
         "player_bonuses": {
@@ -176,14 +176,14 @@ COMBOS = [
     {
         "name": "何者である必要もないこの夜に踊る",
         "players": ("Derke", "Sayonara", "Lar0k", "marteen", "something"),
-        "bonuses": {"dodge_rate": 0.55, "iq": 5, "reaction": 30},
+        "bonuses": {"dodge_rate": 0.5, "reaction": 20},
         "renames": {},
     },
     {
         "name": "モーツァルト～アイネクライネ～",
         "players": ("FNS", "crashies", "cNed", "soulcas", "trexx"),
         "player_bonuses": {
-            "FNS": {"iq": 30},
+            "FNS": {"reaction": 30},
             "crashies": {"accuracy": 0.15, "reaction": 15},
             "cNed": {"hs_rate": 0.15, "dodge_rate": 0.15},
             "crashies": {"dodge_rate": 0.3},
@@ -195,8 +195,8 @@ COMBOS = [
         "name": "ヴェートーベン～エリーゼのために～",
         "players": ("FNS", "crashies"),
         "player_bonuses": {
-            "FNS": {"iq": 20},
-            "crashies": {"accuracy": 0.1, "hs_rate": 0.1},
+            "crashies": {"accuracy": 0.2},
+            "FNS": {"accuracy": 0.1, "hs_rate": 0.1},
         },
         "renames": {},
     },
@@ -204,8 +204,8 @@ COMBOS = [
         "name": "サリエリ～ファルスタッフ～",
         "players": ("FNS", "cNed"),
         "player_bonuses": {
-            "FNS": {"iq": 20},
-            "cNed": {"dodge_rate": 0.1, "hs_rate": 0.1},
+            "cNed": {"dodge_rate": 0.2},
+            "FNS": {"dodge_rate": 0.1, "hs_rate": 0.1},
         },
         "renames": {},
     },
@@ -213,8 +213,8 @@ COMBOS = [
         "name": "バッハ～G線上のアリア～",
         "players": ("FNS", "soulcas"),
         "player_bonuses": {
-            "FNS": {"iq": 20},
             "soulcas": {"hs_rate": 0.2},
+            "FNS": {"hs_rate": 0.2},
         },
         "renames": {},
     },
@@ -222,8 +222,8 @@ COMBOS = [
         "name": "ラヴェル～ボレロ～",
         "players": ("FNS", "trexx"),
         "player_bonuses": {
-            "FNS": {"iq": 20},
             "trexx": {"hs_rate": 0.2},
+            "FNS": {"hs_rate": 0.2},
         },
         "renames": {},
     },
@@ -444,11 +444,11 @@ COMBOS = [
         "name": "幽霊部員de廃部待ったなし",
         "players": ("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
         "player_bonuses": {
-            "Xdll": {"dodge_rate": 0.37},
-            "Syouta": {"reaction": 37},
-            "Absol": {"dodge_rate": 0.37},
-            "eKo": {"hs_rate": 0.37},
-            "SugarZ3ro": {"iq": 37},
+            "Xdll": {"dodge_rate": 0.4, "mental": 3},
+            "Syouta": {"reaction": 40, "mental": 3},
+            "Absol": {"dodge_rate": 0.4, "mental": 3},
+            "eKo": {"hs_rate": 0.4, "mental": 3},
+            "SugarZ3ro": {"iq": 40, "mental": 3},
         },
         "renames": {},
     },
