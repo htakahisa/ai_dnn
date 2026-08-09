@@ -47,6 +47,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import time
 
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -68,6 +69,10 @@ from game_core import (
     ROUND_DURATION_TICKS,
     PLANT_REQUIRED_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 
@@ -86,9 +91,13 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 28
+OBS_DIM = 29
 ACTION_DIM = 11  # move_idx(0-4)*2 + use_ability_flag(0/1) の10種類 + 明示PLANT(index=10)
 PLANT_ACTION_INDEX = 10
+
+# サイト別ウェイポイント: 右サイト=6, 左サイト=7。
+# map_data_carry.py上に各1マスだけ配置する想定(未配置の場合はWARNのみでフォールバック)。
+WAYPOINT_VALUE_BY_SITE = {"right": 6, "left": 7}
 
 # map_data_carry.py上で、通常のプラント可能マス(2)と優先(代表)地点マーカー(5)の
 # 両方をプラント可能マスとして扱う。5は本番map_data.py上では2として存在するマスに
@@ -190,6 +199,7 @@ PLANT_TICK_BONUS = 0.05         # 明示PLANT行動が1Tick成功して進むご
 PLANT_SUCCESS_REWARD = 1.5      # プラント完了(このフェーズのゴール)
 TIME_EXPIRE_PENALTY = -0.5      # ラウンド時間切れ(未設置=Defender有利)
 TEAM_WIPE_PENALTY = -0.2        # 味方(エスコート込み)全滅だがキャリアは生存継続中
+WAYPOINT_REACHED_REWARD = 0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
 
 
 # ============================================================================
@@ -212,6 +222,25 @@ PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r
 # 学習済みチェックポイントには座標として保存し、本番実行時はgridの値に依存せず
 # その座標リストをそのまま使う(learning_attacker_carry.py側で対応予定)。
 PRIORITY_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == 5]
+
+# サイト別ウェイポイント(右=6/左=7)。各サイト1マスのみ許可。
+# 未配置のサイトはWARNのみ出し、そのサイトはウェイポイント経由の強制をせず
+# 従来通りtarget_plant_posへ直接誘導する(段階的なマップ更新に対応するため)。
+WAYPOINT_CELLS = {}
+for _site, _value in WAYPOINT_VALUE_BY_SITE.items():
+    _cells = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == _value]
+    if len(_cells) == 1:
+        WAYPOINT_CELLS[_site] = _cells[0]
+    elif len(_cells) > 1:
+        raise RuntimeError(
+            f"map_data_carry.py にサイト別ウェイポイント(値={_value}, site={_site})が"
+            f"{len(_cells)}個あります。1個だけにしてください。"
+        )
+    else:
+        print(
+            f"[WARN] map_data_carry.py にサイト別ウェイポイント(値={_value}, site={_site})が"
+            f"見つかりません。このサイトは経路強制なしの従来挙動になります。"
+        )
 
 if len(ATTACKER_SPAWNS) < N_ATTACKERS:
     raise RuntimeError(
@@ -301,6 +330,9 @@ def bfs_best_direction(dist_map, r0, c0):
 # 固定して使う(実ゲームのinit_round()と同じ考え方。毎tick再計算による目標の
 # すり替わり・ジグザグ移動を防止する)。
 PLANT_DIST_MAPS = {cell: bfs_distance_map(cell) for cell in PLANT_CELLS}
+
+# サイト別ウェイポイントへのBFS距離マップ(WAYPOINT_CELLSに存在するサイトのみ)。
+WAYPOINT_DIST_MAPS = {site: bfs_distance_map(cell) for site, cell in WAYPOINT_CELLS.items()}
 
 
 def bfs_distance_map_multi(sources):
@@ -650,7 +682,7 @@ class ReplayBuffer:
 
 def build_observation(
     carrier, attackers, defenders, sighting, smoke_cells, own_smoke_active,
-    elapsed_ticks, dist_map,
+    elapsed_ticks, dist_map, reached_waypoint=True,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(carrier.pos[0]), int(carrier.pos[1])
@@ -708,6 +740,10 @@ def build_observation(
     p_best_dr, p_best_dc = bfs_best_direction(PRIORITY_DIST_MAP, r0, c0)
     obs[26] = float(p_best_dr)
     obs[27] = float(p_best_dc)
+
+    # サイト別ウェイポイント(6/7)を通過済みかどうか。dist_mapがウェイポイント向けか
+    # target_plant_pos向けかを区別するためのフラグ(未配置サイトは常に1.0)。
+    obs[28] = 1.0 if reached_waypoint else 0.0
 
     return obs
 
@@ -768,6 +804,8 @@ class CarryEnv:
         self._prev_kills = {}
         self._prev_alive = {}
         self._prev_hp = {}
+        self.active_waypoint_site = None
+        self.reached_waypoint = True
 
     def reset(self):
         self.sighting.reset()
@@ -794,7 +832,19 @@ class CarryEnv:
         # 実ゲームのinit_round()と同じ考え方: ラウンド開始時に1点だけ選んで固定する。
         # 以降このエピソード中は目標がすり替わらない(target_plant_posに対応)。
         self.target_plant_pos = random.choice(PLANT_CELLS)
-        self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
+
+        # サイト(左/右)を判定し、対応するウェイポイントが存在すれば
+        # まずそこへの距離マップを使う(通過後にstep()側でplant距離マップへ切り替え)。
+        # ウェイポイント未配置のサイトは従来通りtarget_plant_posへ直接誘導する。
+        self.active_waypoint_site = (
+            "left" if self.target_plant_pos[1] < WIDTH // 2 else "right"
+        )
+        if self.active_waypoint_site in WAYPOINT_DIST_MAPS:
+            self.reached_waypoint = False
+            self.dist_map = WAYPOINT_DIST_MAPS[self.active_waypoint_site]
+        else:
+            self.reached_waypoint = True
+            self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
 
         self.sighting.update(self.carrier, self.defenders, self._smoke_cells())
 
@@ -820,6 +870,7 @@ class CarryEnv:
         obs = build_observation(
             self.carrier, self.attackers, self.defenders, self.sighting,
             smoke_cells, self._own_smoke_active(), self.elapsed_ticks, self.dist_map,
+            self.reached_waypoint,
         )
         occupied = {tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive} - {tuple(self.carrier.pos)}
         on_site = (
@@ -962,11 +1013,26 @@ class CarryEnv:
             self.plant_progress = 0
 
         self.sighting.update(self.carrier, self.defenders, self._smoke_cells())
-        # dist_mapはtarget_plant_pos固定のため、ここでの再計算は行わない。
+
+        # ウェイポイント通過判定(未通過の場合のみ)。通過したらdist_mapを
+        # target_plant_pos向けのBFSへ切り替える。_prev_distは切り替え直後の
+        # 距離で上書きし、マップ切り替えによる急激な差分報酬(スパイク)を防ぐ。
+        waypoint_bonus = 0.0
+        if self.carrier.is_alive and not self.reached_waypoint:
+            wr, wc = int(self.carrier.pos[0]), int(self.carrier.pos[1])
+            waypoint_cell = WAYPOINT_CELLS[self.active_waypoint_site]
+            waypoint_dist = max(abs(wr - waypoint_cell[0]), abs(wc - waypoint_cell[1]))
+            if waypoint_dist <= 1:
+                self.reached_waypoint = True
+                waypoint_bonus = WAYPOINT_REACHED_REWARD
+                self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
+                self._prev_dist = self.dist_map[wr, wc]
+        # dist_mapはウェイポイント通過時にのみ切り替わる。それ以外は固定のため、
+        # ここでの再計算は行わない。
 
         reward, done = self._compute_reward(
             ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
-            plant_action_chosen, on_site_before_action,
+            plant_action_chosen, on_site_before_action, waypoint_bonus,
         )
 
         all_units = self.attackers + self.defenders
@@ -1027,9 +1093,9 @@ class CarryEnv:
 
     def _compute_reward(
         self, ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
-        plant_action_chosen, on_site_before_action,
+        plant_action_chosen, on_site_before_action, waypoint_bonus=0.0,
     ):
-        reward = STEP_PENALTY
+        reward = STEP_PENALTY + waypoint_bonus
 
         was_alive = self._prev_alive.get(self.carrier.name, True)
 
@@ -1178,9 +1244,12 @@ def train(
                 "success_rate": success_rate_value,
                 "priority_cells": list(PRIORITY_CELLS),
                 "has_priority_cells": bool(PRIORITY_CELLS),
+                "waypoint_cells": {site: tuple(cell) for site, cell in WAYPOINT_CELLS.items()},
             },
             path,
         )
+    
+    start_time = time.perf_counter()
 
     for episode in range(1, episodes + 1):
         obs, mask = env.reset()
@@ -1225,6 +1294,12 @@ def train(
 
         if episode % 100 == 0:
             _save_checkpoint(MODEL_LATEST_PATH, episode, success_rate)
+
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     print("[DONE] training finished.")
 

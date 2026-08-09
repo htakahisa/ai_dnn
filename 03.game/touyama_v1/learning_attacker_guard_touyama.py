@@ -62,6 +62,10 @@ from game_core import (
     SPIKE_DETONATION_TICKS,
     DEFUSE_REQUIRED_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 from map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

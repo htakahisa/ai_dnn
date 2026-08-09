@@ -58,7 +58,10 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
-
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 # ---------------------------------------------------------------------------
 # 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)

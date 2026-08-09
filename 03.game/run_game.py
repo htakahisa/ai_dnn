@@ -170,6 +170,8 @@ class VisualFPSBattle(
         defender_spike_holder_name=None,
         attacker_igl_name=None,
         defender_igl_name=None,
+        attacker_team_name=None,
+        defender_team_name=None,
         disable_side_swap=False,
         series_context=None,
     ):
@@ -185,6 +187,8 @@ class VisualFPSBattle(
         self.defender_spike_holder_name = defender_spike_holder_name
         self.attacker_igl_name = attacker_igl_name
         self.defender_igl_name = defender_igl_name
+        self.attacker_team_name = attacker_team_name or "ATTACKERS"
+        self.defender_team_name = defender_team_name or "DEFENDERS"
 
         lines = [
             line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()
@@ -301,6 +305,10 @@ class VisualFPSBattle(
         self.attacker_roster, self.defender_roster = (
             self.defender_roster,
             self.attacker_roster,
+        )
+        self.attacker_team_name, self.defender_team_name = (
+            self.defender_team_name,
+            self.attacker_team_name,
         )
         self.attacker_igl_name, self.defender_igl_name = (
             self.defender_igl_name,
@@ -578,6 +586,8 @@ if __name__ == "__main__":
         initial_defender_team_ai_key="default",
         attacker_igl_name=None,
         defender_igl_name=None,
+        attacker_team_name=None,
+        defender_team_name=None,
     ):
         initial_attacker_team_ai = _build_team_ai(initial_attacker_team_ai_key)
         initial_defender_team_ai = _build_team_ai(initial_defender_team_ai_key)
@@ -593,6 +603,8 @@ if __name__ == "__main__":
             defender_spike_holder_name=defender_spike_holder_name,
             attacker_igl_name=attacker_igl_name,
             defender_igl_name=defender_igl_name,
+            attacker_team_name=attacker_team_name,
+            defender_team_name=defender_team_name,
         )
         game.run()
 

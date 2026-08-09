@@ -61,6 +61,10 @@ from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 
@@ -870,6 +874,12 @@ def train(
                 best_success_rate = success_rate
                 _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
                 print(f"  -> best model saved (success_rate={success_rate:.2%})")
+        
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     _save_checkpoint(policy_net, MODEL_FINAL_PATH, episodes, best_success_rate)
     print("Training complete.")

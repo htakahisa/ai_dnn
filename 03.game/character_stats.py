@@ -71,9 +71,6 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Primmie": CharacterStats(
         "Primmie", 0.47, 0.24, 59, 0.79, 98, "タイガー", 90, 5, 2
     ),
-    "Tortlilyan": CharacterStats(
-        "Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10, 4
-    ),
     "まーやまくん": CharacterStats(
         "まーやまくん", 0.75, 0.21, 90, 0.8, 140, "シーカー", 50, 1, 7
     ),
@@ -202,6 +199,11 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "lovers rock": CharacterStats(
         "lovers rock", 0.29, 0.2, 95, 0.77, 90, "タイガー", 55, 6, 6
     ),
+    "Tortlilyan": CharacterStats("Tortlilyan", 0.23, 0.39, 123, 0.9, 156, "タイガー", 50, 10,4),
+    "ろびぃな": CharacterStats("ろびぃな",0.25,0.55,80,0.65,122,"スモーカー",50,5, 8),
+    "えんぺん": CharacterStats("えんぺん",0.5,0.17,185,0.75,125,"フラッシュ",65,1, 8),
+    "いぐるん": CharacterStats("いぐるん",0.33,0.22,75,0.77,131,"シーカー",55,4, 8),
+    "夢の街": CharacterStats("夢の街",0.35,0.23,80,0.76,115,"フラッシュ",50,3, 8),
     "Retloff": CharacterStats(
         "Retloff", 0.23, 0.2, 158, 0.69, 98, "フラッシュ", 50, 3, 3
     ),

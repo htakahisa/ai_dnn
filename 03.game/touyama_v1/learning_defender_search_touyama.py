@@ -41,9 +41,16 @@ from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
-from map_data_search import SEARCH_MAZE_STR
+from map_data import NEW_MAZE_STR
+from map_data_search_touyama import SEARCH_MAZE_STR
+
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
@@ -157,18 +164,45 @@ def _parse_search_grid(maze_str):
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
 
 
-def _extract_defense_positions():
-    """map_data_search.SEARCH_MAZE_STR から7のセルを抽出する。
-    見つからない場合は空リストを返す(呼び出し側でフォールバックする)。"""
-    grid = _parse_search_grid(SEARCH_MAZE_STR)
-    positions = [
+def _parse_maze_grid(maze_str):
+    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+
+
+def _find_marker_position(grid, value):
+    """train_defender_search.py の _find_marker_position と同一ロジック。
+    値が1マスのみである前提(そうでなければ学習時と食い違うため例外にする)。"""
+    hits = [
         (r, c) for r in range(grid.shape[0]) for c in range(grid.shape[1])
-        if grid[r, c] == 7
+        if grid[r, c] == value
     ]
-    return positions
+    if len(hits) != 1:
+        raise RuntimeError(
+            f"map_data_search.py の値{value}は1マスのみである必要がありますが、"
+            f"{len(hits)}マス見つかりました: {hits}"
+        )
+    return hits[0]
 
 
-_DEFENSE_POSITIONS_CACHE = _extract_defense_positions()
+def _compute_touyama_fixed_defense_assignment():
+    """train_defender_search.py と完全に同一のロジックで固定割当を再現する。
+
+    マップ上の値5,6,7,8,9を TOUYAMA_ROSTER_ORDER のインデックス順に
+    そのまま1:1対応させる(5=roster[0], 6=roster[1], ...)。総当たり最適化は
+    行わない(学習側で廃止されたのに合わせる)。
+    学習時にモデルが学習した「担当地点への距離・方向」はこの固定割当を
+    前提とした観測であるため、推論側でも必ず同じ割当を使う必要がある。
+    (自己完結ルールにより、学習ファイルをimportせずロジックを複製する)
+    """
+    search_grid = _parse_search_grid(SEARCH_MAZE_STR)
+    return {
+        name: _find_marker_position(search_grid, 5 + i)
+        for i, name in enumerate(TOUYAMA_ROSTER_ORDER)
+    }
+
+
+_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT = _compute_touyama_fixed_defense_assignment()
+_DEFENSE_POSITIONS_CACHE = list(_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT.values())
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -349,23 +383,40 @@ class LearningDefenderSearchTouyamaController:
             self._sighting_dist_map_source = sighting_pos
 
     def _ensure_defense_assignment(self, char, grid, chars):
-        """ラウンド開始時、自チーム全員に7地点を貪欲割り当てし、
-        それぞれのBFS距離マップも同時に構築する。
-        フォールバック: 7地点が見つからない場合は自チームのスポーン
-        位置集合を代用する。"""
+        """touyama_v1固定チームは、学習時に一意に計算した固定割当
+        (_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT)をそのまま使う。スポーン位置・
+        担当地点候補が毎ラウンド同一である以上、動的な貪欲割当は不要かつ
+        学習時の割当とずれる原因になるため行わない。
+        フォールバック: 固定割当が計算できていない場合のみ、旧来の
+        名前順貪欲割当に切り替える。"""
         if self._assignment_done:
             return
 
+        teammates = [c for c in chars if c.team == char.team and c.is_alive]
+
+        if _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT:
+            for teammate in teammates:
+                pos = _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT.get(teammate.name)
+                if pos is None:
+                    continue
+                self._assigned_positions[teammate.name] = pos
+                dist_map = _bfs_distance_map(grid, pos)
+                self._assigned_dist_maps[teammate.name] = dist_map
+                self._prev_defense_bfs_dist[teammate.name] = float(
+                    dist_map[int(teammate.pos[0]), int(teammate.pos[1])]
+                )
+            self._assignment_done = True
+            return
+
+        # --- フォールバック: 固定割当が使えない場合のみ旧ロジック ---
         if not self._defense_positions:
-            teammates_now = [c for c in chars if c.team == char.team and c.is_alive]
+            teammates_now = teammates
             fallback = [tuple(c.pos) for c in teammates_now] or [
                 (grid.shape[0] // 2, grid.shape[1] // 2)
             ]
             self._defense_positions = fallback
 
-        teammates = [c for c in chars if c.team == char.team and c.is_alive]
         remaining = list(self._defense_positions)
-        # 名前順で安定させる(乱数を使わず決定的に割り当てる)
         for teammate in sorted(teammates, key=lambda c: c.name):
             if remaining:
                 pos = min(
@@ -596,6 +647,24 @@ class LearningDefenderSearchTouyamaController:
         move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+
+        # train_defender_search.py と挙動を一致させる: position mode
+        # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、
+        # スポーン・担当地点が毎ラウンド固定である以上、ネットワークの
+        # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
+        # 上書き後の行動で作られているため、推論側もこれに合わせないと
+        # 学習内容とズレる。
+        in_position_mode = (
+            self.team_memory.spike_pos is None
+            and self.team_memory.last_seen_enemy is None
+        )
+        if in_position_mode:
+            dist_map = self._assigned_dist_maps.get(char.name)
+            if dist_map is not None:
+                r0, c0 = int(char.pos[0]), int(char.pos[1])
+                cur_dist = dist_map[r0, c0]
+                if cur_dist > REACH_RADIUS:
+                    move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
 
         if self.verbose:
             print(

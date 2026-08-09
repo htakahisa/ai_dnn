@@ -62,6 +62,10 @@ from game_core import (
     SPIKE_DETONATION_TICKS,
     DEFUSE_REQUIRED_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 8000
 
@@ -1301,6 +1305,12 @@ def train(
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
+
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
     print("[DONE] training finished.")
 

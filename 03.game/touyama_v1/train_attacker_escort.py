@@ -99,6 +99,10 @@ from game_core import (
     REVEAL_DURATION_TICKS,
     SMOKE_DURATION_TICKS,
 )
+from character_stats_touyama import (
+    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+    TOUYAMA_ROSTER_ORDER,
+)
 
 EPISODE_COUNT = 9000
 
@@ -1343,6 +1347,12 @@ def main():
                 f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick} "
                 f"carrier={env.carry_name}"
             )
+        
+        if episode % 100 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"かかった時間: {elapsed_time} 秒/100 episode")
+            start_time = time.perf_counter();
 
         if episode % args.eval_every == 0:
             success_rate, avg_reward, avg_block_events = evaluate(
