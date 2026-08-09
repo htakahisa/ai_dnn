@@ -140,7 +140,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "とうやまゲーミング": TeamPreset(
         name="とうやまゲーミング",
-        players=("ろびぃな", "Tortlilyan", "えんぺん", "夢の街", "いぐるん"),
+        players=("Tortlilyan", "夢の街", "えんぺん", "いぐるん", "ろびぃな"),
         igl="えんぺん",
         spike_holder="ろびぃな",
         description="とうやまのおうちゲーミングチーム",

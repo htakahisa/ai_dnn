@@ -665,7 +665,7 @@ def train(
     step_count = 0
 
     best_success_rate = 0
-    best_eval_reward = 0
+    best_eps = 1
 
     zero_obs = np.zeros(RetrieveEnv.OBS_DIM, dtype=np.float32)
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
@@ -757,9 +757,9 @@ def train(
             
             print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
                 f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%} elapse={elapsed_time:.1f}")
-            if success_rate > best_success_rate or (success_rate == best_success_rate and eval_reward > best_eval_reward):
+            if success_rate > best_success_rate or (success_rate == best_success_rate and eps < best_eps):
                 best_success_rate = success_rate
-                best_eval_reward = eval_reward
+                best_eps = eps
                 _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
                 print(f"  -> best model saved (success_rate={success_rate:.2%})")
 
