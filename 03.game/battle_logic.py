@@ -339,7 +339,7 @@ class BattleLogicMixin:
 
         if match_finished:
             attacker_won = self.attacker_wins > self.defender_wins
-            winner_name = "Attacker" if attacker_won else "Defender"
+            winner_name = self.attacker_team_name if attacker_won else self.defender_team_name
             winner_score = self.attacker_wins if attacker_won else self.defender_wins
             loser_score = self.defender_wins if attacker_won else self.attacker_wins
             winner_color = "#c0392b" if attacker_won else "#27ae60"
@@ -587,14 +587,17 @@ class BattleLogicMixin:
         alive_A = any(c.is_alive for c in self.chars if c.team == "A")
         alive_D = any(c.is_alive for c in self.chars if c.team == "D")
         overtime_text = " [OT]" if self.overtime else ""
-        score_text = f" [Score: Att {self.attacker_wins} - {self.defender_wins} Def]{overtime_text}"
+        score_text = (
+            f" [Score: {self.attacker_team_name} {self.attacker_wins} - "
+            f"{self.defender_wins} {self.defender_team_name}]{overtime_text}"
+        )
 
         if self.is_defused:
             self.defender_wins += 1
             self._record_round_mental_result("D")
             if not self.headless:
                 self.label.config(
-                    text=f"⚙️ Spike Defused! Defender WIN Round {self.current_round}! {score_text}",
+                    text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
                     fg="green",
                 )
             self.round_over = True
@@ -606,7 +609,7 @@ class BattleLogicMixin:
                 self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"💥 Spike Detonated! Attacker WIN Round {self.current_round}! {score_text}",
+                        text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
                         fg="red",
                     )
                 self.round_over = True
@@ -616,7 +619,7 @@ class BattleLogicMixin:
                 self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 Defender Annihilated! Attacker WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
                         fg="#c0392b",
                     )
                 self.round_over = True
@@ -637,7 +640,7 @@ class BattleLogicMixin:
                         else ""
                     )
                     self.label.config(
-                        text=f"💀 Attacker Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
+                        text=f"💀 {self.attacker_team_name} Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
                         fg="#27ae60",
                     )
             elif not self.headless:
@@ -661,7 +664,7 @@ class BattleLogicMixin:
                 self._record_round_mental_result("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"⏰ Time Expired! Defender WIN Round {self.current_round}! {score_text}",
+                        text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -671,7 +674,7 @@ class BattleLogicMixin:
                 self._record_round_mental_result("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 Attacker Annihilated! Defender WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -681,7 +684,7 @@ class BattleLogicMixin:
                 self._record_round_mental_result("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 Defender Annihilated! Attacker WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
                         fg="#c0392b",
                     )
                 self.round_over = True
