@@ -3,12 +3,14 @@
 固定チーム(Tortlilyan/いぐるん/ろびぃな/夢の街/えんぺん)専用の
 Attacker「retrieve phase」学習スクリプト(落下スパイク回収)。
 
-【リトリーバー役はロースター5人からエピソードごとに抽選】
+【全員対称設計への変更】
 retrieveフェーズは「キャリアーが死亡してスパイクが地面に落ちた後、
-生存している誰か1人がそれを拾いに行く」状況で発生する。特定の
-キャラクターに固定する意味がないため、train_attacker_carry.pyの
-ハンドオフ拡張と同じ考え方で、エピソードごとにTOUYAMA_ROSTER_ORDERから
-1人ランダムに選び、そのキャラの実効ステータス・アビリティ種別
+生存している誰かがそれを拾いに行く」状況で発生する。1マス1キャラの
+衝突ルールはstep()側の移動解決(シャッフル順で早い者勝ち)が既に
+担保しているため、特定の1人を「リトリーバー」役として選出する必要は
+ないと判断し、全員が対称に「スパイクへのBFS距離を縮める」ことを
+学習する設計に変更した。エピソードごとにTOUYAMA_ROSTER_ORDERから
+1〜5人をランダムに抽選し、各キャラの実効ステータス・アビリティ種別
 (character_stats_touyama.py + コンボ「ふわんだりぃず」+ タイガーパッシブ)
 を適用する。
 
@@ -43,6 +45,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import time
 
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -66,7 +69,7 @@ from character_stats_touyama import (
     TOUYAMA_ROSTER_ORDER,
 )
 
-EPISODE_COUNT = 8000
+EPISODE_COUNT = 4000
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -99,15 +102,16 @@ DEFAULT_DODGE = 0.12
 DEFAULT_HS_RATE = 0.20
 DEFAULT_REACTION = 100.0
 
-# ブロッキング役(味方)。以前は固定tickで自動的に道が空くスタブだったが、
-# 実ゲームでは他フェーズのAIが動かす味方が永久にどかない可能性があるため、
-# このユニットも同じ共有ネットワークで制御し、「塞いでいたらどく」ことを
-# 報酬で学習させる(自動クリアタイマーは廃止)。
-ALLY_BLOCK_PROB = 0.5           # このエピソードでブロッキング役を配置する確率
-STALL_TICKS_PENALTY = -0.05     # 同じマスに留まり続けている場合の追加ペナルティ(リトリーバー用)
+# 全員が対称に「スパイクへの最短距離を縮める」ことを学習する設計に変更。
+# 1マス1キャラの衝突ルールはstep()側の移動解決(シャッフル順で早い者勝ち)が
+# 既に担保しているため、役割分担(retriever/blocker)は不要と判断し廃止した。
+# T字路等で複数人が同時に同じマスへ進もうとしても、片方だけが進み、
+# 残りは次tickで自分のBFS距離マップに従って別ルート・再試行するだけで
+# 詰まりが解消される想定。
+STALL_TICKS_PENALTY = -0.05     # 同じマスに留まり続けている場合の追加ペナルティ
 STALL_TICKS_THRESHOLD = 3       # 何tick同じ位置に留まったらペナルティを課すか
 
-# 報酬(リトリーバー用)
+# 報酬(全エージェント共通)
 STEP_PENALTY = -0.02
 GOAL_REWARD = 12.0
 TIMEOUT_PENALTY = -4.0
@@ -117,14 +121,6 @@ ABILITY_EMPTY_FIRE = -1.2        # 敵が見えないのに撃った(空撃ち)
 ABILITY_WASTED_ON_AFFECTED = -0.8  # すでに炙り出されている敵に撃った(重複)
 KILL_REWARD = 3.0
 KILL_WHILE_DEBUFFED_BONUS = 1.5  # フラッシュ/リコン状態の敵を倒した追加ボーナス
-
-# 報酬(ブロッキング役用)。リトリーバーの次の一歩マスを塞ぎ続けると
-# エスカレーションするペナルティを課し、どいたら一度きりの報酬を与える。
-BLOCKER_STEP_PENALTY = -0.01
-BLOCKING_PENALTY = -0.15
-BLOCKING_ESCALATION_CAP = 5      # 塞ぎ続けたtick数でペナルティを最大何倍まで強めるか
-YIELD_BONUS = 0.6
-BLOCKER_DEATH_PENALTY = -4.0
 
 
 Transition = namedtuple("Transition", ["s", "a", "r", "s2", "done", "mask2"])
@@ -229,25 +225,6 @@ def bfs_distance_map(goal):
                 queue.append((nr, nc))
     return dist
 
-
-def bfs_best_step(dist_map, pos):
-    """dist_map上で(pos)から見て最も距離が縮む隣接マスの座標を返す。
-    改善できる隣接マスが無ければNoneを返す(既に到達済み/経路不明)。
-    「リトリーバーが次に進みたいマス」を、ブロッキング役が判定するために使う。"""
-    r, c = pos
-    cur = dist_map[r, c]
-    if cur < 0:
-        return None
-    best_cell, best_d = None, cur
-    for dr, dc in CARDINAL:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and dist_map[nr, nc] >= 0:
-            if dist_map[nr, nc] < best_d:
-                best_d = dist_map[nr, nc]
-                best_cell = (nr, nc)
-    return best_cell
-
-
 def line_cells(p1, p2):
     y0, x0 = p1
     y1, x1 = p2
@@ -280,19 +257,20 @@ def has_los(p1, p2):
 # 環境
 # ---------------------------------------------------------------------------
 class AgentState:
-    """retriever または blocker、1体分の軽量な状態表現。
-    game_core.Character非依存の自前実装(SimChar/UnitStubと同じ方針)。"""
+    """retrieve phase候補のアタッカー1体分の軽量な状態表現。
+    全員が対称に「スパイクへ向かう」ため、retriever/blockerのような
+    役割区分は持たない。game_core.Character非依存の自前実装。"""
 
-    def __init__(self, name, pos, role, is_retriever):
+    def __init__(self, name, pos, role):
         self.name = name
         self.pos = list(pos)
-        self.is_retriever = is_retriever
         self.role = role
         # HUNT(タイガー)はアビリティを持たないため、最初からチャージ0にする。
         self.charge = 0 if role == "HUNT" else 1
         self.hp = MAX_HP
         self.alive = True
         self.moved_this_tick = False
+        self.stall_ticks = 0  # 足踏み判定は個体ごとに独立して持つ
 
         stats = TOUYAMA_EFFECTIVE_STATS[name]
         self.accuracy = stats["accuracy"]
@@ -305,16 +283,17 @@ ACTION_ABILITY = 5
 
 
 class RetrieveEnv:
-    """1体のリトリーブ役アタッカー(touyama_v1ロースターから毎エピソード
-    抽選)+ 0〜1体のブロッキング役の味方(同じ共有ネットワークで制御) +
-    0〜1体の簡易敵スタブ。
+    """touyama_v1ロースターから毎エピソード1〜5人を抽選し、全員が対称に
+    「落下スパイクへの最短距離を縮める」ことを学習する環境。
+    + 0〜1体の簡易敵スタブ。
 
-    ブロッキング役は狭い通路の実際のチョークポイント(開口部が2以下の
-    セル)へ配置し、以降は自律的に行動を選ぶ。以前のような固定tickの
-    自動クリアは行わない(実ゲームで永久に道を空けない味方が存在しうる
-    ことに対応するため)。"""
+    retriever/blockerのような役割分担は廃止した。1マス1キャラの
+    衝突は移動解決(シャッフル順で早い者勝ち)で担保されるため、
+    全員が同じ目的地(スパイク)へ貪欲に向かっても、通路の奥で
+    詰まった側が単に「先に入った方を待つ」だけで自然に解消される
+    という想定。"""
 
-    OBS_DIM = 24
+    OBS_DIM = 21
     # [0-1]座標 [2-5]壁 [6-9]隣接BFS距離 [10]自己BFS距離
     # [11-14]ロールonehot [15]アビリティ残チャージ
     # [16]視認中敵有無 [17-18]視認中敵相対方向 [19]敵blind [20]敵reveal
@@ -324,30 +303,26 @@ class RetrieveEnv:
     def reset(self):
         self.tick = 0
 
-        retriever_name = random.choice(TOUYAMA_ROSTER_ORDER)
         self.spike_pos = random.choice(WALKABLE)
         self.dist_map = bfs_distance_map(self.spike_pos)
 
+        # 実戦では「キャリアーが死亡した後の生存アタッカー」が対象なので
+        # 最大4人程度が典型だが、学習分布を広めに取るため1〜ロースター全員
+        # (5人)の範囲でランダムに人数・メンバーを抽選する。
+        num_agents = random.randint(1, len(TOUYAMA_ROSTER_ORDER))
+        agent_names = random.sample(TOUYAMA_ROSTER_ORDER, num_agents)
+
         reachable = [p for p in WALKABLE if self.dist_map[p] > 0]
-        retriever_start = random.choice(reachable) if reachable else self.spike_pos
-        retriever_role = TOUYAMA_EFFECTIVE_STATS[retriever_name]["ability"]
-        self.retriever = AgentState(retriever_name, retriever_start, retriever_role, is_retriever=True)
+        starts_pool = reachable if reachable else WALKABLE
+        start_positions = random.sample(starts_pool, min(num_agents, len(starts_pool)))
+        while len(start_positions) < num_agents:
+            # 開始候補が足りない極端なケースのフォールバック(重複開始位置を許容)
+            start_positions.append(random.choice(starts_pool))
 
-        start_dist = self.dist_map[tuple(self.retriever.pos)]
-
-        # --- ブロッキング役(味方)の配置 ---
-        self.blocker = None
-        self._block_stall_ticks = 0
-        self._blocker_death_reported = False
-        if random.random() < ALLY_BLOCK_PROB and start_dist > 1:
-            chokepoints = self._find_chokepoints_on_path(retriever_start)
-            if chokepoints:
-                blocker_pos = random.choice(chokepoints)
-                blocker_name = random.choice(
-                    [n for n in TOUYAMA_ROSTER_ORDER if n != retriever_name]
-                )
-                blocker_role = TOUYAMA_EFFECTIVE_STATS[blocker_name]["ability"]
-                self.blocker = AgentState(blocker_name, blocker_pos, blocker_role, is_retriever=False)
+        self.agents = [
+            AgentState(name, pos, TOUYAMA_EFFECTIVE_STATS[name]["ability"])
+            for name, pos in zip(agent_names, start_positions)
+        ]
 
         # 敵スタブ
         self.enemy_alive = random.random() < ENEMY_SPAWN_PROB
@@ -356,9 +331,7 @@ class RetrieveEnv:
         self.enemy_blind = 0
         self.enemy_reveal = 0
         if self.enemy_alive:
-            occupied_start = {tuple(self.retriever.pos), tuple(self.spike_pos)}
-            if self.blocker is not None:
-                occupied_start.add(tuple(self.blocker.pos))
+            occupied_start = {tuple(a.pos) for a in self.agents} | {tuple(self.spike_pos)}
             candidates = [p for p in WALKABLE if p not in occupied_start]
             self.enemy_pos = list(random.choice(candidates))
             if random.random() < ENEMY_PRE_AFFECTED_PROB:
@@ -367,55 +340,17 @@ class RetrieveEnv:
                 else:
                     self.enemy_reveal = REVEAL_DURATION_TICKS
 
-        self.stall_ticks = 0
-
         return self._collect_observations(), self._collect_masks()
 
-    def _find_chokepoints_on_path(self, start):
-        """retrieverの開始地点からスパイクへのBFS最短経路上にある、
-        開口部(壁でない隣接マス数)が2以下の「本物の通路」セルを抽出する。
-        ランダムな位置にブロッキング役を置くのではなく、実際に詰まりうる
-        地点にのみ配置することで、学習シナリオを現実的にする。"""
-        path = []
-        cur = tuple(start)
-        visited = {cur}
-        for _ in range(HEIGHT + WIDTH):
-            nxt = bfs_best_step(self.dist_map, cur)
-            if nxt is None or nxt in visited:
-                break
-            path.append(nxt)
-            visited.add(nxt)
-            cur = nxt
-            if cur == tuple(self.spike_pos):
-                break
-
-        chokepoints = []
-        for cell in path[:-1] if path else []:
-            r, c = cell
-            open_neighbors = sum(
-                1
-                for dr, dc in CARDINAL
-                if 0 <= r + dr < HEIGHT and 0 <= c + dc < WIDTH and GRID[r + dr, c + dc] != 1
-            )
-            if open_neighbors <= 2:
-                chokepoints.append(cell)
-        return chokepoints
-
     def _occupied_cells(self, exclude=None):
-        cells = set()
-        for u in (self.retriever, self.blocker):
-            if u is None or u is exclude or not u.alive:
-                continue
-            cells.add(tuple(u.pos))
-        return cells
+        return {
+            tuple(a.pos) for a in self.agents if a is not exclude and a.alive
+        }
 
     def _visible_enemy_for(self, unit):
         if not self.enemy_alive or not unit.alive:
             return False
         return has_los(tuple(unit.pos), tuple(self.enemy_pos))
-
-    def _agent_key(self, unit):
-        return "retriever" if unit.is_retriever else "blocker"
 
     # -- 観測 --------------------------------------------------------------
     def _build_obs(self, unit):
@@ -457,23 +392,6 @@ class RetrieveEnv:
             edr = edc = 0.0
             e_present = e_blind = e_reveal = 0.0
 
-        is_retriever = 1.0 if unit.is_retriever else 0.0
-
-        # 自分の現在マスが、リトリーバーが次に進みたいマスと一致するか
-        # (=自分が塞いでいるか)。リトリーバー自身にとってこの値は
-        # 常に0になる(自分の現在マスへ進みたがることはないため)。
-        retriever_next_cell = bfs_best_step(self.dist_map, tuple(self.retriever.pos))
-        blocking_flag = (
-            1.0
-            if retriever_next_cell is not None and tuple(unit.pos) == retriever_next_cell
-            else 0.0
-        )
-
-        raw_retriever_dist = self.dist_map[tuple(self.retriever.pos)]
-        retriever_dist_norm = (
-            min(1.0, raw_retriever_dist / max_dist_scale) if raw_retriever_dist >= 0 else 1.0
-        )
-
         obs = [
             r / HEIGHT, c / WIDTH,
             wall_up, wall_down, wall_left, wall_right,
@@ -482,7 +400,6 @@ class RetrieveEnv:
             *role_onehot,
             float(unit.charge),
             e_present, edr, edc, e_blind, e_reveal,
-            is_retriever, blocking_flag, retriever_dist_norm,
         ]
         obs_arr = np.array(obs, dtype=np.float32)
         assert obs_arr.shape[0] == self.OBS_DIM, (
@@ -509,42 +426,31 @@ class RetrieveEnv:
         return np.array(mask, dtype=bool)
 
     def _collect_observations(self):
-        obs = {"retriever": self._build_obs(self.retriever)}
-        if self.blocker is not None and self.blocker.alive:
-            obs["blocker"] = self._build_obs(self.blocker)
-        return obs
+        return {a.name: self._build_obs(a) for a in self.agents if a.alive}
 
     def _collect_masks(self):
-        masks = {"retriever": self._action_mask_for(self.retriever)}
-        if self.blocker is not None and self.blocker.alive:
-            masks["blocker"] = self._action_mask_for(self.blocker)
-        return masks
+        return {a.name: self._action_mask_for(a) for a in self.agents if a.alive}
 
     # -- ステップ ------------------------------------------------------------
     def step(self, action_dict):
         self.tick += 1
         info = {}
 
-        for u in (self.retriever, self.blocker):
-            if u is not None:
-                u.moved_this_tick = False
+        alive_agents = [a for a in self.agents if a.alive]
+        for u in alive_agents:
+            u.moved_this_tick = False
 
-        retriever_next_cell_before = bfs_best_step(self.dist_map, tuple(self.retriever.pos))
-        was_blocking = (
-            self.blocker is not None
-            and self.blocker.alive
-            and retriever_next_cell_before is not None
-            and tuple(self.blocker.pos) == retriever_next_cell_before
-        )
-
-        old_dist = self.dist_map[tuple(self.retriever.pos)]
+        old_dist = {u.name: self.dist_map[tuple(u.pos)] for u in alive_agents}
 
         # --- 移動の適用(占有マス回避。マスクで既に禁止されているが、
-        # 同時移動の衝突を避けるため念のため二重チェックする) ---
-        move_order = [u for u in (self.retriever, self.blocker) if u is not None and u.alive]
+        # 同時移動の衝突を避けるため念のため二重チェックする)。
+        # シャッフル順で解決することで「同じマスを複数人が狙った場合、
+        # そのtickで先に処理された1人だけが進み、残りはその場に留まる」
+        # という早い者勝ちルールになる。これがT字路等の衝突を自然に解消する。 ---
+        move_order = list(alive_agents)
         random.shuffle(move_order)
         for u in move_order:
-            action = action_dict.get(self._agent_key(u))
+            action = action_dict.get(u.name)
             if action is None or action >= 4:
                 continue
             dr, dc = CARDINAL[action]
@@ -553,7 +459,7 @@ class RetrieveEnv:
             is_wall = in_bounds and GRID[nr, nc] == 1
             occupied_now = any(
                 other is not u and other.alive and tuple(other.pos) == (nr, nc)
-                for other in (self.retriever, self.blocker) if other is not None
+                for other in self.agents
             )
             if in_bounds and not is_wall and not occupied_now:
                 u.pos = [nr, nc]
@@ -561,82 +467,58 @@ class RetrieveEnv:
 
         # --- アビリティ ---
         ability_rewards = {}
-        for u in (self.retriever, self.blocker):
-            if u is None or not u.alive:
-                continue
-            if action_dict.get(self._agent_key(u)) == ACTION_ABILITY:
-                ability_rewards[self._agent_key(u)] = self._resolve_ability(u)
+        for u in alive_agents:
+            if action_dict.get(u.name) == ACTION_ABILITY:
+                ability_rewards[u.name] = self._resolve_ability(u)
 
-        # --- 足踏み(リトリーバーのみ既存ロジックを維持) ---
-        if self.retriever.moved_this_tick:
-            self.stall_ticks = 0
-        else:
-            self.stall_ticks += 1
-        stall_penalty = STALL_TICKS_PENALTY if self.stall_ticks > STALL_TICKS_THRESHOLD else 0.0
+        # --- 足踏み・接近報酬(全エージェント共通) ---
+        rewards = {}
+        reached_name = None
+        for u in alive_agents:
+            if u.moved_this_tick:
+                u.stall_ticks = 0
+            else:
+                u.stall_ticks += 1
+            stall_penalty = STALL_TICKS_PENALTY if u.stall_ticks > STALL_TICKS_THRESHOLD else 0.0
 
-        new_dist = self.dist_map[tuple(self.retriever.pos)]
-        approach_reward = 0.3 * (old_dist - new_dist) if old_dist >= 0 and new_dist >= 0 else 0.0
+            new_dist = self.dist_map[tuple(u.pos)]
+            od = old_dist[u.name]
+            approach_reward = 0.3 * (od - new_dist) if od >= 0 and new_dist >= 0 else 0.0
 
-        retriever_reward = STEP_PENALTY + approach_reward + stall_penalty + ability_rewards.get("retriever", 0.0)
+            reward = STEP_PENALTY + approach_reward + stall_penalty + ability_rewards.get(u.name, 0.0)
 
-        done = False
-        goal_reached = tuple(self.retriever.pos) == tuple(self.spike_pos)
-        if goal_reached:
-            retriever_reward += GOAL_REWARD
-            done = True
+            if tuple(u.pos) == tuple(self.spike_pos):
+                reward += GOAL_REWARD
+                reached_name = u.name
+
+            rewards[u.name] = reward
+
+        done = reached_name is not None
+        if done:
             info["result"] = "reached"
+            info["reached_by"] = reached_name
 
-        combat_rewards = {}
+        # --- 戦闘解決(誰かが既にスパイクへ到達していれば戦闘は発生させない) ---
         if not done and self.enemy_alive:
             combat_rewards = self._resolve_combat()
-            retriever_reward += combat_rewards.get("retriever", 0.0)
-            if not self.retriever.alive:
-                retriever_reward += DEATH_PENALTY
-                done = True
-                info["result"] = "died"
+            for name, r in combat_rewards.items():
+                rewards[name] = rewards.get(name, 0.0) + r
+
+        # このtickで死亡したエージェントに死亡ペナルティを付与
+        for u in alive_agents:
+            if not u.alive:
+                rewards[u.name] = rewards.get(u.name, 0.0) + DEATH_PENALTY
+
+        if not done and all(not a.alive for a in self.agents):
+            done = True
+            info["result"] = "died"
 
         if not done and self.tick >= MAX_TICKS:
-            retriever_reward += TIMEOUT_PENALTY
+            for u in self.agents:
+                if u.alive:
+                    rewards[u.name] = rewards.get(u.name, 0.0) + TIMEOUT_PENALTY
             done = True
             info["result"] = "timeout"
-
-        rewards = {"retriever": retriever_reward}
-
-        # --- ブロッキング/イールド報酬 ---
-        if self.blocker is not None and self.blocker.alive:
-            blocker_reward = (
-                BLOCKER_STEP_PENALTY
-                + ability_rewards.get("blocker", 0.0)
-                + combat_rewards.get("blocker", 0.0)
-            )
-
-            retriever_next_cell_after = bfs_best_step(self.dist_map, tuple(self.retriever.pos))
-            is_blocking_now = (
-                retriever_next_cell_after is not None
-                and tuple(self.blocker.pos) == retriever_next_cell_after
-            )
-
-            if is_blocking_now:
-                self._block_stall_ticks += 1
-                scale = min(self._block_stall_ticks, BLOCKING_ESCALATION_CAP)
-                blocker_reward += BLOCKING_PENALTY * scale
-            else:
-                if was_blocking and self._block_stall_ticks > 0:
-                    blocker_reward += YIELD_BONUS
-                self._block_stall_ticks = 0
-
-            if not self.blocker.alive:
-                blocker_reward += BLOCKER_DEATH_PENALTY
-
-            rewards["blocker"] = blocker_reward
-        elif (
-            self.blocker is not None
-            and not self.blocker.alive
-            and not self._blocker_death_reported
-        ):
-            # ブロッキング役がちょうどこのtickで死亡した場合、1回だけ終端報酬を返す。
-            rewards["blocker"] = BLOCKER_DEATH_PENALTY
-            self._blocker_death_reported = True
 
         # 効果減衰
         self.enemy_blind = max(0, self.enemy_blind - 1)
@@ -669,10 +551,9 @@ class RetrieveEnv:
         return ABILITY_GOOD_FIRE
 
     def _resolve_combat(self):
-        """retriever・blocker(生存中)と敵スタブとの撃ち合いを解決する。
-        味方最大2体 vs 敵1体という前提で、既存の1v1ロジックを一般化したもの。"""
+        """生存中の全エージェント(最大5体)と敵スタブとの撃ち合いを解決する。"""
         rewards = {}
-        units = [u for u in (self.retriever, self.blocker) if u is not None and u.alive]
+        units = [a for a in self.agents if a.alive]
         debuffed = self.enemy_blind > 0 or self.enemy_reveal > 0
 
         visible_units = [u for u in units if has_los(tuple(u.pos), tuple(self.enemy_pos))]
@@ -685,7 +566,6 @@ class RetrieveEnv:
 
         # 味方 -> 敵(視認していれば全員が同時に撃つ)
         for u in visible_units:
-            key = self._agent_key(u)
             accuracy = MOVING_ACCURACY if u.moved_this_tick else u.accuracy
             hit_chance = accuracy * (1.0 - DEFAULT_DODGE)
             if debuffed:
@@ -696,12 +576,11 @@ class RetrieveEnv:
                 if self.enemy_hp <= 0 and self.enemy_alive:
                     self.enemy_alive = False
                     reward = KILL_REWARD + (KILL_WHILE_DEBUFFED_BONUS if debuffed else 0.0)
-                    rewards[key] = rewards.get(key, 0.0) + reward
+                    rewards[u.name] = rewards.get(u.name, 0.0) + reward
 
         # 敵 -> 味方(視認できている最も近いユニット1体を狙う)
         if enemy_target is not None and self.enemy_alive:
             u = enemy_target
-            key = self._agent_key(u)
             my_effective_dodge = u.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
             enemy_hit_chance = DEFAULT_ACCURACY * (1.0 - my_effective_dodge) * MOVING_TARGET_HIT_MULTIPLIER
             if debuffed and self.enemy_blind > 0:
@@ -772,8 +651,8 @@ def train(
     eps_decay_episodes=int(EPISODE_COUNT * 0.8),
     warmup_steps=2000,
 ):
-    """retriever・blocker(存在する場合)は同一の重み共有ネットワークで
-    制御し、各tickで両者ぶんの遷移を同じリプレイバッファへ積む
+    """生存中の全エージェント(1〜5人)は同一の重み共有ネットワークで
+    制御し、各tickで全員ぶんの遷移を同じリプレイバッファへ積む
     (パラメータ共有マルチエージェント学習)。"""
     env = RetrieveEnv()
     policy_net = DuelingQNet(RetrieveEnv.OBS_DIM, N_ACTIONS).to(DEVICE)
@@ -784,7 +663,10 @@ def train(
     replay = deque(maxlen=buffer_size)
     recent_rewards = deque(maxlen=200)
     step_count = 0
+
     best_success_rate = 0
+    best_eval_reward = 0
+
     zero_obs = np.zeros(RetrieveEnv.OBS_DIM, dtype=np.float32)
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
 
@@ -823,6 +705,7 @@ def train(
         nn.utils.clip_grad_norm_(policy_net.parameters(), 10.0)
         optimizer.step()
 
+    start_time = time.perf_counter()
     for ep in range(episodes):
         obs_dict, mask_dict = env.reset()
         done = False
@@ -840,8 +723,7 @@ def train(
             for key, obs in prev_obs_dict.items():
                 action = action_dict[key]
                 reward = rewards.get(key, 0.0)
-                if key == "retriever":
-                    ep_reward += reward
+                ep_reward += reward
 
                 if key in next_obs_dict:
                     next_obs = next_obs_dict[key]
@@ -849,8 +731,8 @@ def train(
                     step_done = done
                 else:
                     # このtickでエピソード終了、またはこのエージェント自身が
-                    # 死亡して脱落した(retrieverはdone=Trueで揃うが、
-                    # blockerは単独で死亡しうる)。
+                    # 死亡して脱落した(誰か1人がゴールすればdone=Trueで
+                    # 全員揃うが、それ以外の死亡は単独で起こりうる)。
                     next_obs = zero_obs
                     next_mask = zero_mask
                     step_done = True
@@ -868,25 +750,26 @@ def train(
         recent_rewards.append(ep_reward)
         if ep % 200 == 0:
             eval_reward, success_rate, death_rate = evaluate_greedy(policy_net, episodes=100)
-            print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
-                f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%}")
-            if success_rate > best_success_rate:
-                best_success_rate = success_rate
-                _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
-                print(f"  -> best model saved (success_rate={success_rate:.2%})")
-        
-        if episode % 100 == 0:
+            
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            print(f"かかった時間: {elapsed_time} 秒/100 episode")
             start_time = time.perf_counter();
+            
+            print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
+                f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%} elapse={elapsed_time:.1f}")
+            if success_rate > best_success_rate or (success_rate == best_success_rate and eval_reward > best_eval_reward):
+                best_success_rate = success_rate
+                best_eval_reward = eval_reward
+                _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
+                print(f"  -> best model saved (success_rate={success_rate:.2%})")
+
 
     _save_checkpoint(policy_net, MODEL_FINAL_PATH, episodes, best_success_rate)
     print("Training complete.")
 
 
 def evaluate_greedy(policy_net, episodes=100):
-    """探索なし(eps=0)でN episode実行し、成功率・死亡率・平均報酬(retriever分)を計測する。"""
+    """探索なし(eps=0)でN episode実行し、成功率・死亡率・平均報酬(全エージェント合算)を計測する。"""
     env = RetrieveEnv()
     total_reward = 0.0
     reached = 0
@@ -905,7 +788,7 @@ def evaluate_greedy(policy_net, episodes=100):
                     q_values = policy_net(state_t).squeeze(0)
                     action_dict[key] = masked_argmax(q_values, mask_t)
             obs_dict, mask_dict, rewards, done, info = env.step(action_dict)
-            ep_reward += rewards.get("retriever", 0.0)
+            ep_reward += sum(rewards.values())
         total_reward += ep_reward
         if info.get("result") == "reached":
             reached += 1

@@ -1280,8 +1280,11 @@ def train(
         success_rate = sum(episode_success_history) / len(episode_success_history)
 
         if episode % 20 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            start_time = time.perf_counter();
             print(
-                f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
+                f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} elapse={elapsed_time:.1f} "
                 f"avg100={avg_reward:.3f} success100={success_rate:.3f} "
                 f"epsilon={epsilon_by_episode(episode):.3f} "
                 f"buffer={len(buffer)} reason={env.match_over_reason}"
@@ -1294,12 +1297,6 @@ def train(
 
         if episode % 100 == 0:
             _save_checkpoint(MODEL_LATEST_PATH, episode, success_rate)
-
-        if episode % 100 == 0:
-            end_time = time.perf_counter()
-            elapsed_time = end_time - start_time
-            print(f"かかった時間: {elapsed_time} 秒/100 episode")
-            start_time = time.perf_counter();
 
     print("[DONE] training finished.")
 

@@ -428,6 +428,8 @@ def play_map(
             defender_spike_holder_name=defender_spike,
             attacker_igl_name=attacker_igl,
             defender_igl_name=defender_igl,
+            attacker_team_name=attacker.name,
+            defender_team_name=defender.name,
             disable_side_swap=False,
             series_context=series_context,
         )
