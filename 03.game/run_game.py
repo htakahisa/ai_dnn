@@ -27,6 +27,7 @@ from policy_attacker_controller import PolicyAttackerController
 from policy_ppo_attacker_controller import PolicyPPOAttackerController
 from policy_defender_controller import PolicyDefenderController
 from touyama_v1.touyama_defender_controller import TouyamaDefenderController
+from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
@@ -105,7 +106,7 @@ def _build_team_ai(key):
     if normalized == "touyama_gaming_v1":
         return DualRoleTeamAI(
             name="Touyama Gaming v1",
-            attacker_factory=lambda: MultiRoleAttackerController(),
+            attacker_factory=lambda: TouyamaAttackerController(),
             defender_factory=lambda: TouyamaDefenderController(),
         )
 
@@ -247,13 +248,18 @@ class VisualFPSBattle(
 
         self.match_over = False
 
+        # set_game()呼び出し前に実際のコントローラーインスタンスを
+        # self.attacker_controller / self.defender_controllerへ反映させる必要がある。
+        # (以前はここが self.attacker_controller=None のままset_game判定をしていたため、
+        # TouyamaAttackerController.set_game() が一度も呼ばれずAI側のサイト選択上書きが
+        # 常にスキップされていた。)
+        self._refresh_active_controllers()
+
         if hasattr(self.attacker_controller, "set_game"):
             self.attacker_controller.set_game(self)
 
         if hasattr(self.defender_controller, "set_game"):
             self.defender_controller.set_game(self)
-
-        self._refresh_active_controllers()
 
         self.init_round()
 

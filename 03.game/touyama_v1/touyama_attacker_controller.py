@@ -15,13 +15,13 @@ for _p in (_THIS_DIR, _ROOT_DIR):
         sys.path.insert(0, str(_p))
 
 from controllers import BaseController, DefaultAttackerController
-from learning_attacker_carry_touyama import LearningAttackerCarryController
-from learning_attacker_escort_touyama import LearningAttackerEscortController
-from learning_attacker_retrieve_touyama import LearningAttackerRetrieveController
+from learning_attacker_carry_touyama import LearningAttackerCarryTouyamaController
+from learning_attacker_escort_touyama import LearningAttackerEscortTouyamaController
+from learning_attacker_retrieve_touyama import LearningAttackerRetrieveTouyamaController
 from learning_attacker_guard_touyama import LearningAttackerGuardTouyamaController
 
 
-class MultiRoleAttackerController(BaseController):
+class TouyamaAttackerController(BaseController):
     """attacker側の窓口となる単一コントローラー。
     内部でキャリアーモデル・護衛モデルを保持し、キャラごとに使い分ける。
     run_game.py からは通常のコントローラー1つとして扱われる(isinstance判定にはこのクラスを追加する)。"""
@@ -48,6 +48,17 @@ class MultiRoleAttackerController(BaseController):
         if model_path is not None:
             raise NotImplementedError(f"{param_name} に対応するモデルは未実装です。Noneのままにしてください。")
         return DefaultAttackerController()
+
+    def set_game(self, game):
+        """run_game.py init_round()より前に一度だけ呼ばれる。
+        自分自身のgame参照に加え、各サブコントローラーにも転送する。
+        これが無いとcarry/escort/retrieve/guardの各コントローラーは
+        self.game=Noneのままとなり、gridアクセスやtarget_plant_pos参照が
+        すべて機能しない(サイト選択の上書きも黙ってスキップされる)。"""
+        self.game = game
+        for ctrl in (self.carry_controller, self.escort_controller, self.retrieve_controller, self.guard_controller):
+            if hasattr(ctrl, "set_game"):
+                ctrl.set_game(game)
 
     def reset_round(self):
         for ctrl in (self.carry_controller, self.escort_controller, self.retrieve_controller, self.guard_controller):

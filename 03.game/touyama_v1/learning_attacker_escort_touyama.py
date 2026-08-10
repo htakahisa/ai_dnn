@@ -88,7 +88,12 @@ DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0
 
-OBS_DIM = 41  # train_attacker_escort.py(touyama_v1版) EscortEnv._obs_dim() と一致
+OBS_DIM = 44  # train_attacker_escort.py(touyama_v1版) EscortEnv._obs_dim() と一致
+
+PATH_EQUALITY_TOL = 0.5  # train_attacker_escort.pyと同一の許容誤差
+
+ESCORT_HOLD_TICKS_DEFAULT = 3  # train_attacker_escort.pyのESCORT_HOLD_TICKSと同値。
+                                 # チェックポイントにhold_ticksが保存されていればそちらを優先する。
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +225,8 @@ class LearningAttackerEscortTouyamaController:
         self.policy_net.load_state_dict(checkpoint["model_state_dict"])
         self.policy_net.eval()
 
+        self.hold_ticks = int(checkpoint.get("hold_ticks", ESCORT_HOLD_TICKS_DEFAULT))
+
         if self.verbose:
             print(
                 f"[LearningAttackerEscortTouyamaController] モデル読込完了: {model_path} "
@@ -277,6 +284,34 @@ class LearningAttackerEscortTouyamaController:
             cached = _build_distance_map_walls_only(grid, [tuple(carry_pos)])
             self._carry_dist_cache[key] = cached
         return cached
+
+    def _path_status(self, grid, escort_pos, carry_pos, carry_dist_map, goal_dist_map):
+        """train_attacker_escort.py EscortEnv._path_status() と同一ロジック。
+        escort_posがキャリアーの最短経路上か、退避先(経路上でない隣接マス)が
+        あるかを判定する。"""
+        r, c = escort_pos
+        cr, cc = carry_pos
+        total = goal_dist_map[cr, cc]
+        if not np.isfinite(total):
+            return False, False
+
+        def _on_path(rr, cc_):
+            d1 = carry_dist_map[rr, cc_]
+            d2 = goal_dist_map[rr, cc_]
+            if not (np.isfinite(d1) and np.isfinite(d2)):
+                return False
+            return abs(d1 + d2 - total) < PATH_EQUALITY_TOL
+
+        on_path = _on_path(r, c)
+        escape_available = False
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if self._is_wall(grid, nr, nc):
+                continue
+            if not _on_path(nr, nc):
+                escape_available = True
+                break
+        return on_path, escape_available
 
     def _resolve_carry_and_goal(self, char, game_state):
         """護衛対象(キャリアー)の位置と、その目的地(goal)を決める。
@@ -504,6 +539,21 @@ class LearningAttackerEscortTouyamaController:
         # 自分が現在、キャリアーの理想進行先セルに立っているか(＝塞いでいるか)
         obs.append(1.0 if (r, c) == next_step and (r, c) != (cr, cc) else 0.0)
 
+        # 「サイト-エスコート-キャリアー」順(自分がキャリアーより前に出ているか)判定用。
+        goal_dist_map = self._get_goal_dist_map(grid, goal)
+        escort_goal_d = goal_dist_map[r, c]
+        carry_goal_d = goal_dist_map[cr, cc]
+        ahead = (
+            np.isfinite(escort_goal_d) and np.isfinite(carry_goal_d)
+            and escort_goal_d < carry_goal_d
+        )
+        on_path, escape_available = self._path_status(
+            grid, (r, c), carry_pos, carry_dist_map, goal_dist_map
+        )
+        obs.append(1.0 if ahead else 0.0)
+        obs.append(1.0 if on_path else 0.0)
+        obs.append(1.0 if escape_available else 0.0)
+
         obs_arr = np.array(obs, dtype=np.float32)
         assert obs_arr.shape[0] == OBS_DIM, (
             f"観測次元がOBS_DIM({OBS_DIM})と不一致: {obs_arr.shape[0]}。"
@@ -518,6 +568,13 @@ class LearningAttackerEscortTouyamaController:
             if a == ACTION_STAY:
                 continue
             if self._is_wall(grid, r + dr, c + dc):
+                mask[a] = False
+
+        # 開始直後hold_ticks分は移動を禁止し、キャリアーが先に動き出すまで待つ
+        # (train_attacker_escort.pyのget_action_mask()と同一ロジック)。
+        st = self._get_char_state(char)
+        if st["tick"] <= self.hold_ticks:
+            for a in (ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT):
                 mask[a] = False
 
         total_charges = (
