@@ -49,6 +49,10 @@ from character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
     TOUYAMA_ROSTER_ORDER,
 )
+# train_attacker_carry.pyと同様、game_core.pyは定数専用ファイルとして参照する
+# (完全self-contained方針における import制限の対象外)。時間不足フォールバック
+# 判定(残りtick数 < BFS距離 + PLANT_REQUIRED_TICKS)にのみ使用する。
+from game_core import PLANT_REQUIRED_TICKS
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -62,12 +66,26 @@ OBS_DIM = 29
 ACTION_DIM = 11
 PLANT_ACTION_INDEX = 10
 
+# train_attacker_carry.pyのFORCED_FIRST_STEP_ACTION_INDEXと同じ意図。
+# ラウンド最初の1手は、スポーン地点(横一列33333)の都合でキャリアの真横に
+# エスコートが立っているため、DQNの選択に関わらず強制的に上移動させる。
+FORCED_FIRST_STEP_MOVE = (-1, 0)
+
 # 本番map_data.pyには5/6/7は存在しないが、train_attacker_carry.pyとの対称性のため
 # 同じ集合定義を維持する(判定は常にFalseになるだけで実害はない)。
 SITE_VALUES = frozenset({2, 5})
 
 ABILITY_RANGE = 8
 SIGHTING_STALENESS_CAP = 20
+
+# --- 本番プレイ時のサイト選択をAI側に委ねるかどうか -------------------------
+# False(既定)の場合: run_game.py の init_round() が選んだtarget_plant_posを
+#   そのまま使う(従来通りの挙動。左右ほぼ50/50のランダム)。
+# True の場合: reset_round()フック内でself.game.target_plant_posを
+#   SITE_SELECTION_WEIGHTSの比率に従ってこのコントローラー自身が上書きする。
+#   run_game.py 自体は一切変更しない(既存のreset_round()フック経由の上書きのみ)。
+AI_CONTROLLED_SITE_SELECTION = True    # 左右どちらのサイトに攻めるかはAIが決める
+SITE_SELECTION_WEIGHTS = {"left": 0.9, "right": 0.1}
 
 
 # ============================================================================
@@ -308,6 +326,11 @@ class LearningAttackerCarryTouyamaController:
         )
 
         self.game = None
+        # IQAwareController経由だと毎tick set_game() が呼ばれ、self.gameは
+        # 使い捨てのview用オブジェクトに上書きされ続ける。target_plant_posの
+        # 上書き(reset_round())は本物のgameに対して行う必要があるため、
+        # 最初に渡された(=起動時の本物の)gameだけを別途保持する。
+        self._real_game = None
 
         # gridごとにキャッシュ(通常は試合中一度だけ計算される)
         self._priority_dist_map = None
@@ -321,9 +344,36 @@ class LearningAttackerCarryTouyamaController:
         self._cached_target_pos = None
         self._active_waypoint_site = None
         self._reached_waypoint = True
+        self._carrier_first_step_pending = True
+
+        # AI_CONTROLLED_SITE_SELECTION=True時に使う、サイト別のプラント可能マス一覧。
+        # set_game()で本番マップのgridから構築する(map_data.pyには5/6/7は無いが、
+        # 値2のプラント可能マスをサイト別に分けるだけなので本番でも問題なく機能する)。
+        self._plant_cells_by_site = {"left": [], "right": []}
+
+        # train_attacker_carry.pyのPRIORITY_CELLS_BY_SITE / PLAIN_PLANT_CELLS_BY_SITEと
+        # 同一方針。優先設置場所(priority_cells)をサイト別に分割したもの、および
+        # 優先設置場所を除いた通常のプラント可能マス(時間不足フォールバック候補)。
+        # set_game()で構築する。
+        self._priority_cells_by_site = {"left": [], "right": []}
+        self._plain_cells_by_site = {"left": [], "right": []}
+
+        # このラウンドで実際にナビゲーション目標としている座標が優先設置場所かどうか、
+        # および時間不足フォールバックを既に発動済みかどうか(ラウンド中一度きり)。
+        self._target_is_priority = True
+        self._time_fallback_triggered = False
+        # フォールバック発動後、game_state["target_plant_pos"](game.target_plant_pos)は
+        # 変更しないため、以後はこちらの値を優先して使う。
+        self._target_plant_pos_override = None
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
+        # IQAwareController.decide_move()は毎tickこのset_game()を「知覚view」付きで
+        # 呼び出すため、self.gameは以後見かけ上の使い捨てオブジェクトに上書きされ続ける。
+        # target_plant_posの上書き(reset_round())は本物のgameに対して行う必要がある
+        # ため、最初に渡された(=run_game.py起動時の本物の)gameだけを別途保持する。
+        if self._real_game is None:
+            self._real_game = game
         self.game = game
         grid = game.grid
         self._plant_cells = [
@@ -344,12 +394,91 @@ class LearningAttackerCarryTouyamaController:
             site: _bfs_distance_map(grid, cell) for site, cell in self.waypoint_cells.items()
         }
 
+        # AI_CONTROLLED_SITE_SELECTION用: プラント可能マスをサイト別(左/右)に分割する。
+        # 判定基準はCarryEnv/battle_logic.pyの実況テキストと同一(列がwidth//2未満なら左)。
+        width = grid.shape[1]
+        self._plant_cells_by_site = {"left": [], "right": []}
+        for cell in self._plant_cells:
+            site_key = "left" if cell[1] < width // 2 else "right"
+            self._plant_cells_by_site[site_key].append(cell)
+
+        # 優先設置場所(priority_cells)をサイト別に分割。本番map_data.pyには
+        # grid==5が存在しないため、gridの値ではなくpriority_cells(座標リスト)から
+        # 直接分割する。
+        self._priority_cells_by_site = {"left": [], "right": []}
+        if self.has_priority_cells:
+            for cell in self.priority_cells:
+                site_key = "left" if cell[1] < width // 2 else "right"
+                self._priority_cells_by_site[site_key].append(cell)
+
+        # 通常のプラント可能マス(優先設置場所を除く)。時間不足フォールバック候補。
+        priority_set = set(self.priority_cells) if self.has_priority_cells else set()
+        self._plain_cells_by_site = {"left": [], "right": []}
+        for cell in self._plant_cells:
+            if cell in priority_set:
+                continue
+            site_key = "left" if cell[1] < width // 2 else "right"
+            self._plain_cells_by_site[site_key].append(cell)
+
     def reset_round(self):
         self._sighting = None
         self._target_dist_map = None
         self._cached_target_pos = None
         self._active_waypoint_site = None
         self._reached_waypoint = True
+        self._carrier_first_step_pending = True
+
+        # run_game.py の init_round() は、このreset_round()を呼び出す直前に
+        # self.game.target_plant_posをランダムに確定させている。
+        # AI_CONTROLLED_SITE_SELECTION=Trueの場合はここでその値をAI自身の判断
+        # (SITE_SELECTION_WEIGHTS)で上書きする。run_game.pyのコードは変更しない
+        # ( 既に持っているself.gameへの参照を使うだけ )。
+        # このラウンドの動的フォールバック状態をリセット(target_is_priorityは
+        # 下の選定処理内で確定させる)。
+        self._time_fallback_triggered = False
+        self._target_plant_pos_override = None
+
+        if AI_CONTROLLED_SITE_SELECTION and self._real_game is not None:
+            chosen_site = self._choose_weighted_site()
+
+            # 優先設置場所(priority_cells)を最優先でtargetにする。そのサイトに
+            # 優先設置場所が1つも無ければ通常のプラント可能マスから選ぶ
+            # (train_attacker_carry.py CarryEnv.reset()と同一方針)。
+            candidates = self._priority_cells_by_site.get(chosen_site) or []
+            if candidates:
+                is_priority = True
+            else:
+                candidates = self._plant_cells_by_site.get(chosen_site) or []
+                is_priority = False
+
+            if not candidates:
+                fallback_site = "right" if chosen_site == "left" else "left"
+                candidates = self._priority_cells_by_site.get(fallback_site) or []
+                if candidates:
+                    is_priority = True
+                else:
+                    candidates = self._plant_cells_by_site.get(fallback_site) or self._plant_cells
+                    is_priority = False
+                chosen_site = fallback_site
+
+            if candidates:
+                self._real_game.target_plant_pos = random.choice(candidates)
+                self._target_is_priority = is_priority
+                self._log(
+                    f"[SITE OVERRIDE] chosen_site={chosen_site} is_priority={is_priority} "
+                    f"target_plant_pos={self.game.target_plant_pos}"
+                )
+
+    @staticmethod
+    def _choose_weighted_site():
+        """SITE_SELECTION_WEIGHTSに従って左/右サイトを確率選択する。
+        重みの合計が1.0でなくても比率のまま正規化して扱う。"""
+        left_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("left", 0.0)))
+        right_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("right", 0.0)))
+        total = left_w + right_w
+        if total <= 0.0:
+            return random.choice(["left", "right"])
+        return "left" if random.random() < (left_w / total) else "right"
 
     # -- ログ ---------------------------------------------------------
     def _log(self, message):
@@ -601,11 +730,49 @@ class LearningAttackerCarryTouyamaController:
             return next_pos
 
         # --- ここからキャリア(DQN) ---
-        target_plant_pos = game_state.get("target_plant_pos")
-        if target_plant_pos is None:
-            # 実ゲームでは通常発生しないが、念のためのフォールバック。
-            target_plant_pos = self._plant_cells[0] if self._plant_cells else (r, c)
-        target_plant_pos = (int(target_plant_pos[0]), int(target_plant_pos[1]))
+        # ラウンド最初の1手は、DQNの推論結果を待たずに強制的に上移動を返す。
+        # train_attacker_carry.py CarryEnv.step()のFORCED_FIRST_STEP_ACTION_INDEXと
+        # 同一の意図・同一の方向(上)。PLANTがtick0で成立することは実質無いため、
+        # PLANT分岐との衝突は考慮不要。
+        if self._carrier_first_step_pending:
+            self._carrier_first_step_pending = False
+            return [r + FORCED_FIRST_STEP_MOVE[0], c + FORCED_FIRST_STEP_MOVE[1]]
+
+        if self._target_plant_pos_override is not None:
+            # 時間不足フォールバック発動後はgame_state側(game.target_plant_pos)を
+            # 無視し、こちらの上書き座標を使い続ける。
+            target_plant_pos = self._target_plant_pos_override
+        else:
+            target_plant_pos = game_state.get("target_plant_pos")
+            if target_plant_pos is None:
+                # 実ゲームでは通常発生しないが、念のためのフォールバック。
+                target_plant_pos = self._plant_cells[0] if self._plant_cells else (r, c)
+            target_plant_pos = (int(target_plant_pos[0]), int(target_plant_pos[1]))
+
+        # 優先設置場所へ向かっている間、時間的に間に合わなくなった場合は
+        # 通常のプラント可能マスへ動的にフォールバックする(ラウンド中一度きり。
+        # train_attacker_carry.pyの動的フォールバックと同一判定式)。
+        if self._target_is_priority and not self._time_fallback_triggered:
+            target_dist_map = self._get_target_dist_map(target_plant_pos)
+            dist_to_target = target_dist_map[r, c]
+            remaining_ticks = getattr(self.game, "round_timer", 0)
+            if dist_to_target < 0 or remaining_ticks < dist_to_target + PLANT_REQUIRED_TICKS:
+                site_key = self._active_waypoint_site or (
+                    "left" if target_plant_pos[1] < grid.shape[1] // 2 else "right"
+                )
+                fallback_candidates = self._plain_cells_by_site.get(site_key) or self._plant_cells
+                pos_dist_map = _bfs_distance_map(grid, (r, c))
+                reachable = [cell for cell in fallback_candidates if pos_dist_map[cell[0], cell[1]] >= 0]
+                if reachable:
+                    best_cell = min(reachable, key=lambda cell: pos_dist_map[cell[0], cell[1]])
+                    target_plant_pos = best_cell
+                    self._target_plant_pos_override = best_cell
+                    self._target_is_priority = False
+                    self._time_fallback_triggered = True
+                    self._log(
+                        f"[TIME FALLBACK] remaining_ticks={remaining_ticks} "
+                        f"dist_to_priority={dist_to_target} new_target={best_cell}"
+                    )
 
         # ラウンド開始時(_active_waypoint_site未設定)にサイトを判定し、
         # 対応するウェイポイントが存在すればまずそこへの距離マップを使う。

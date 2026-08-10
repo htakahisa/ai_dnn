@@ -23,15 +23,16 @@ from party_presets import all_preset_names, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 
 CONTROLLER_OPTIONS = {
+    "Toru AI v3": "toru_ai_v3",
+    "Touyama Gaming v1": "touyama_gaming_v1",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
-    "Toru AI v3": "toru_ai_v3",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
 }
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
-DEFAULT_CONTROLLER_DISPLAY = "Fnatic v1"
+DEFAULT_CONTROLLER_DISPLAY = "Toru AI v3"
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"

@@ -74,7 +74,7 @@ from character_stats_touyama import (
     TOUYAMA_ROSTER_ORDER,
 )
 
-EPISODE_COUNT = 8000
+EPISODE_COUNT = 5000
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -95,9 +95,19 @@ OBS_DIM = 29
 ACTION_DIM = 11  # move_idx(0-4)*2 + use_ability_flag(0/1) の10種類 + 明示PLANT(index=10)
 PLANT_ACTION_INDEX = 10
 
+# キャリアのエピソード最初の1手を強制的に「上移動・アビリティなし」にするための
+# action_idx。MOVES[1]==(-1,0)(上)なので、move_idx=1, use_ability=0 → 1*2+0=2。
+# スポーン地点(横一列33333)の真ん中にキャリアが立つ都合上、tick0はエスコートに
+# 左右を塞がれているため、まず確実に縦方向へ抜けさせる目的の強制行動。
+FORCED_FIRST_STEP_ACTION_INDEX = 2
+
 # サイト別ウェイポイント: 右サイト=6, 左サイト=7。
 # map_data_carry.py上に各1マスだけ配置する想定(未配置の場合はWARNのみでフォールバック)。
 WAYPOINT_VALUE_BY_SITE = {"right": 6, "left": 7}
+
+# target_plant_pos抽選時のサイト選択確率(左/右の合計は1.0にすること)。
+# 例: 左サイトを重点的に学習させたい場合は {"left": 0.9, "right": 0.1} のように調整する。
+SITE_SELECTION_WEIGHTS = {"left": 0.5, "right": 0.5}
 
 # map_data_carry.py上で、通常のプラント可能マス(2)と優先(代表)地点マーカー(5)の
 # 両方をプラント可能マスとして扱う。5は本番map_data.py上では2として存在するマスに
@@ -196,10 +206,15 @@ ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 PLANT_WHIFF_PENALTY = -0.05     # サイト外でPLANTを選んだ場合(マスクが機能していれば理論上到達しない保険)
 PLANT_TICK_BONUS = 0.05         # 明示PLANT行動が1Tick成功して進むごとのボーナス
-PLANT_SUCCESS_REWARD = 1.5      # プラント完了(このフェーズのゴール)
-TIME_EXPIRE_PENALTY = -0.5      # ラウンド時間切れ(未設置=Defender有利)
+PLANT_SUCCESS_REWARD_PRIORITY = 1.5   # 優先設置場所(5)でプラント完了(満額)
+PLANT_SUCCESS_REWARD_FALLBACK = 0.75  # 時間不足によるフォールバック先(通常の2マス)で完了(減額)
+ON_SITE_TARGET_NON_PLANT_PENALTY = -0.05  # 目標マスちょうどにいるのにPLANT以外を選んだ場合の毎tickペナルティ(往復対策)
+TIME_EXPIRE_PENALTY = -2.0      # ラウンド時間切れ(未設置)。全ペナルティ中で最も重くする
 TEAM_WIPE_PENALTY = -0.2        # 味方(エスコート込み)全滅だがキャリアは生存継続中
 WAYPOINT_REACHED_REWARD = 0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
+ESCORT_DISTANCE_THRESHOLD = 4   # このChebyshev距離を超えたら「エスコートと離れすぎ」とみなす(中継地点到達前のみ判定)
+ESCORT_TOO_FAR_PENALTY = -0.02  # 離れすぎ、かつ時間に余裕がある場合の毎tickペナルティ
+TIME_SAFETY_MARGIN_TICKS = 3    # フォールバック切替・エスコート待機判定に使う安全マージン(tick数)
 
 
 # ============================================================================
@@ -254,6 +269,50 @@ if not PLANT_CELLS:
     raise RuntimeError("map_data_carry.py にプラント可能マス(2 または 5)が見つかりません。")
 if not PRIORITY_CELLS:
     print("[WARN] map_data_carry.py に優先地点マーカー(5)が見つかりません。優先地点ガイダンス特徴量は常に0になります。")
+
+# PLANT_CELLSをサイト別(左/右)に分割する。サイト判定基準はbattle_logic.pyの
+# 実況テキスト判定・CarryEnv内のウェイポイント判定と同一(列がWIDTH//2未満なら左)。
+PLANT_CELLS_BY_SITE = {"left": [], "right": []}
+
+# 優先設置場所(5)をサイト別(左/右)に分割する。空の場合はreset()内で通常の
+# プラント可能マス(2)にフォールバックする。
+PRIORITY_CELLS_BY_SITE = {"left": [], "right": []}
+for _cell in PRIORITY_CELLS:
+    _site_key = "left" if _cell[1] < WIDTH // 2 else "right"
+    PRIORITY_CELLS_BY_SITE[_site_key].append(_cell)
+
+for _site_key in ("left", "right"):
+    if not PRIORITY_CELLS_BY_SITE[_site_key]:
+        print(
+            f"[WARN] map_data_carry.py に{_site_key}サイトの優先設置場所(5)が見つかりません。"
+            f"このサイトが選ばれた場合、通常のプラント可能マス(2)からtargetを選びます。"
+        )
+
+# 通常のプラント可能マス(2のみ、5は含まない)をサイト別に分割する。
+# 時間不足による動的フォールバック先の候補として使う(優先設置場所へは戻さない)。
+PLAIN_PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == 2]
+PLAIN_PLANT_CELLS_BY_SITE = {"left": [], "right": []}
+for _cell in PLAIN_PLANT_CELLS:
+    _site_key = "left" if _cell[1] < WIDTH // 2 else "right"
+    PLAIN_PLANT_CELLS_BY_SITE[_site_key].append(_cell)
+
+for _cell in PLANT_CELLS:
+    _site_key = "left" if _cell[1] < WIDTH // 2 else "right"
+    PLANT_CELLS_BY_SITE[_site_key].append(_cell)
+
+for _site_key in ("left", "right"):
+    if not PLANT_CELLS_BY_SITE[_site_key]:
+        print(
+            f"[WARN] map_data_carry.py に{_site_key}サイトのプラント可能マスが見つかりません。"
+            f"SITE_SELECTION_WEIGHTSでこのサイトの確率を設定していても選択されません。"
+        )
+
+_site_weight_sum = sum(SITE_SELECTION_WEIGHTS.get(s, 0.0) for s in ("left", "right"))
+if abs(_site_weight_sum - 1.0) > 1e-6:
+    print(
+        f"[WARN] SITE_SELECTION_WEIGHTSの合計が1.0ではありません(現在: {_site_weight_sum})。"
+        f"そのままの比率で正規化して使用します。"
+    )
 
 
 # ============================================================================
@@ -324,6 +383,15 @@ def bfs_best_direction(dist_map, r0, c0):
                 best_dr, best_dc = dr, dc
     return best_dr, best_dc
 
+def _choose_weighted_site():
+    """SITE_SELECTION_WEIGHTSに従って左/右サイトを確率選択する。
+    重みの合計が1.0でなくても比率のまま正規化して扱う。"""
+    left_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("left", 0.0)))
+    right_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("right", 0.0)))
+    total = left_w + right_w
+    if total <= 0.0:
+        return random.choice(["left", "right"])
+    return "left" if random.random() < (left_w / total) else "right"
 
 # 各PLANT_CELLへの個別BFS距離マップ(target_plant_pos固定用)。
 # エピソード開始時にどれか1つをtarget_plant_posとして選び、以降このエピソード中は
@@ -806,6 +874,9 @@ class CarryEnv:
         self._prev_hp = {}
         self.active_waypoint_site = None
         self.reached_waypoint = True
+        self._first_step_pending = True
+        self.target_is_priority = True
+        self.time_fallback_triggered = False
 
     def reset(self):
         self.sighting.reset()
@@ -813,6 +884,7 @@ class CarryEnv:
         self.elapsed_ticks = 0
         self.plant_progress = 0
         self.match_over_reason = None
+        self._first_step_pending = True
         # 意図的に_prev_distを初期化しない。_compute_reward側のgetattr(self,"_prev_dist",cur_dist)
         # が「属性が存在しない場合のみ」cur_distへフォールバックする仕様を利用し、
         # 最初のtickではprev_dist==cur_distとなってdelta=0(報酬なし)になるようにする。
@@ -829,16 +901,34 @@ class CarryEnv:
         self.defenders = _build_defenders()
         self.carrier = next(a for a in self.attackers if a.name == carrier_name)
 
-        # 実ゲームのinit_round()と同じ考え方: ラウンド開始時に1点だけ選んで固定する。
-        # 以降このエピソード中は目標がすり替わらない(target_plant_posに対応)。
-        self.target_plant_pos = random.choice(PLANT_CELLS)
+        # 実ゲームのinit_round()と異なり、まず「サイト」をSITE_SELECTION_WEIGHTSの
+        # 確率で選び、そのサイト内のPLANT_CELLSからランダムに1点を選ぶ2段階抽選にする。
+        # これにより左右均等ではなく、任意の比率(例: 左90%/右10%)で学習頻度を偏らせられる。
+        # 選ばれたサイトにプラント可能マスが1つも無い場合は、存在する側へフォールバックする。
+        self.active_waypoint_site = _choose_weighted_site()
 
-        # サイト(左/右)を判定し、対応するウェイポイントが存在すれば
-        # まずそこへの距離マップを使う(通過後にstep()側でplant距離マップへ切り替え)。
-        # ウェイポイント未配置のサイトは従来通りtarget_plant_posへ直接誘導する。
-        self.active_waypoint_site = (
-            "left" if self.target_plant_pos[1] < WIDTH // 2 else "right"
-        )
+        # 優先設置場所(5)を最優先でtargetにする。そのサイトに優先設置場所が
+        # 1つも無ければ、通常のプラント可能マス(2)から選ぶ(構造的フォールバック。
+        # 時間不足による動的フォールバックとは別物)。
+        candidate_cells = PRIORITY_CELLS_BY_SITE[self.active_waypoint_site]
+        if candidate_cells:
+            self.target_is_priority = True
+        else:
+            candidate_cells = PLANT_CELLS_BY_SITE[self.active_waypoint_site]
+            self.target_is_priority = False
+        if not candidate_cells:
+            fallback_site = "right" if self.active_waypoint_site == "left" else "left"
+            candidate_cells = PRIORITY_CELLS_BY_SITE[fallback_site]
+            if candidate_cells:
+                self.target_is_priority = True
+            else:
+                candidate_cells = PLANT_CELLS_BY_SITE[fallback_site]
+                self.target_is_priority = False
+            self.active_waypoint_site = fallback_site
+
+        self.target_plant_pos = random.choice(candidate_cells)
+        self.time_fallback_triggered = False
+
         if self.active_waypoint_site in WAYPOINT_DIST_MAPS:
             self.reached_waypoint = False
             self.dist_map = WAYPOINT_DIST_MAPS[self.active_waypoint_site]
@@ -881,6 +971,13 @@ class CarryEnv:
         return obs, mask
 
     def step(self, action_idx):
+        # キャリアのエピソード最初の1手は、DQNの選択に関わらず強制的に上移動へ
+        # 上書きする(PLANT選択時は上書きしない: 理論上tick0でon_siteになることは
+        # ほぼ無いが、念のため明示PLANTだけは尊重する)。
+        if self._first_step_pending and int(action_idx) != PLANT_ACTION_INDEX:
+            action_idx = FORCED_FIRST_STEP_ACTION_INDEX
+        self._first_step_pending = False
+
         self.elapsed_ticks += 1
         for u in self.attackers + self.defenders:
             u.moved_this_tick = False
@@ -900,6 +997,21 @@ class CarryEnv:
         on_site_before_action = (
             carrier_alive
             and int(GRID[int(self.carrier.pos[0]), int(self.carrier.pos[1])]) in SITE_VALUES
+        )
+        # target_plant_posちょうどに立っているか(grid==2はどこでもPLANTが成立する
+        # 本番仕様のため、on_site_before_actionだけでは「目標地点そのもの」かは
+        # 判定できない。座標一致で厳密に判定する)。
+        on_target_before_action = (
+            carrier_alive
+            and tuple(self.carrier.pos) == self.target_plant_pos
+        )
+        target_was_priority = self.target_is_priority
+        # target_plant_posちょうどに立っているか(=BFS距離0)。grid==2はどこでもPLANTが
+        # 成立する本番仕様のため、on_site_before_actionだけでは「目標地点そのもの」かは
+        # 判定できない。座標一致で厳密に判定する。
+        on_target_before_action = (
+            carrier_alive
+            and tuple(self.carrier.pos) == self.target_plant_pos
         )
 
         # --- 敵(Defender)側: ランダム移動+近接ヒューリスティックアビリティ ---
@@ -975,7 +1087,14 @@ class CarryEnv:
                                 self.smokes, self.attackers + self.defenders, smoke_cells,
                             )
 
-        # --- 移動の適用 ---
+        # --- 移動の適用: battle_logic.py の _move_order() と同じ優先順位にする。
+        # スパイク保持者(キャリア)を最優先で適用することで、キャリアが先に
+        # 目的マスを確定させ、エスコート/敵が自然とそのマスを避けるようにする
+        # (本番はcarrier→othersの順で1体ずつ適用・都度occupancyを更新する)。
+        # move_plansの構築順(敵→エスコート→キャリア)とapply順は独立しているため、
+        # ここで明示的に並べ替える。
+        move_plans.sort(key=lambda pair: 0 if pair[0] is self.carrier else 1)
+
         for unit, target_pos in move_plans:
             if not unit.is_alive:
                 continue
@@ -1030,9 +1149,29 @@ class CarryEnv:
         # dist_mapはウェイポイント通過時にのみ切り替わる。それ以外は固定のため、
         # ここでの再計算は行わない。
 
+        # 優先設置場所(5)への到達が時間的に間に合わなくなった場合、通常の
+        # プラント可能マス(2)へ動的にフォールバックする(ラウンド中一度きり。
+        # 一度切り替えたら優先地点には戻さない)。次tick以降の観測・報酬に反映される。
+        if self.target_is_priority and not self.time_fallback_triggered and self.carrier.is_alive:
+            fr, fc = int(self.carrier.pos[0]), int(self.carrier.pos[1])
+            dist_to_target = PLANT_DIST_MAPS[self.target_plant_pos][fr, fc]
+            remaining_ticks = MAX_TICKS - self.elapsed_ticks
+            if dist_to_target < 0 or remaining_ticks < dist_to_target + PLANT_REQUIRED_TICKS:
+                fallback_cells = PLAIN_PLANT_CELLS_BY_SITE.get(self.active_waypoint_site) or PLANT_CELLS
+                reachable = [cell for cell in fallback_cells if PLANT_DIST_MAPS[cell][fr, fc] >= 0]
+                if reachable:
+                    best_cell = min(reachable, key=lambda cell: PLANT_DIST_MAPS[cell][fr, fc])
+                    self.target_plant_pos = best_cell
+                    self.target_is_priority = False
+                    self.time_fallback_triggered = True
+                    if self.reached_waypoint:
+                        self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
+                        self._prev_dist = self.dist_map[fr, fc]
+
         reward, done = self._compute_reward(
             ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
             plant_action_chosen, on_site_before_action, waypoint_bonus,
+            on_target_before_action, target_was_priority,
         )
 
         all_units = self.attackers + self.defenders
@@ -1094,6 +1233,7 @@ class CarryEnv:
     def _compute_reward(
         self, ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
         plant_action_chosen, on_site_before_action, waypoint_bonus=0.0,
+        on_target_before_action=False, target_was_priority=True,
     ):
         reward = STEP_PENALTY + waypoint_bonus
 
@@ -1132,19 +1272,47 @@ class CarryEnv:
         if new_kills > 0:
             reward += KILL_REWARD * new_kills
 
+        # 中継地点未通過の間だけ: エスコートと離れすぎているのに、まだ時間に
+        # 余裕がある場合はペナルティを与え、待つ動きを誘導する。時間が無ければ
+        # このペナルティは科さず、設置優先の行動を妨げない。
+        if not self.reached_waypoint:
+            teammates_alive = [a for a in self.attackers if a is not self.carrier and a.is_alive]
+            if teammates_alive:
+                nearest_escort_dist = min(
+                    max(abs(t.pos[0] - r0), abs(t.pos[1] - c0)) for t in teammates_alive
+                )
+                dist_to_target = PLANT_DIST_MAPS[self.target_plant_pos][r0, c0]
+                remaining_ticks = MAX_TICKS - self.elapsed_ticks
+                time_spare = (
+                    remaining_ticks - (dist_to_target + PLANT_REQUIRED_TICKS)
+                    if dist_to_target >= 0 else 0
+                )
+                if nearest_escort_dist > ESCORT_DISTANCE_THRESHOLD and time_spare > TIME_SAFETY_MARGIN_TICKS:
+                    reward += ESCORT_TOO_FAR_PENALTY
+
         if plant_action_chosen and not on_site_before_action:
             # マスクが正しく機能していれば理論上到達しないが、保険としてペナルティを設ける
             reward += PLANT_WHIFF_PENALTY
+
+        # 目標マス(target_plant_pos)ちょうどに到達しているのにPLANTを選ばず
+        # 足踏み/往復する(=時間切れまでうろついて報酬を稼ぐ)ことを防ぐための
+        # 毎tickペナルティ。
+        if on_target_before_action and not plant_action_chosen:
+            reward += ON_SITE_TARGET_NON_PLANT_PENALTY
 
         if plant_tick_progress:
             reward += PLANT_TICK_BONUS
 
         if plant_completed:
-            reward += PLANT_SUCCESS_REWARD
+            # 優先設置場所(5)での完了は満額。時間不足によるフォールバック先
+            # (通常の2マス)での完了は減額し、「妥協設置」より「優先地点到達」を
+            # 優先させる。
+            reward += PLANT_SUCCESS_REWARD_PRIORITY if target_was_priority else PLANT_SUCCESS_REWARD_FALLBACK
             self.match_over_reason = "planted"
             return reward, True
 
         if self.elapsed_ticks >= MAX_TICKS:
+            # 未設置のままの時間切れは全ペナルティ中で最も重くする。
             reward += TIME_EXPIRE_PENALTY
             self.match_over_reason = "time_expired"
             return reward, True

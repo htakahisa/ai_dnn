@@ -105,7 +105,7 @@ from character_stats_touyama import (
     TOUYAMA_ROSTER_ORDER,
 )
 
-EPISODE_COUNT = 9000
+EPISODE_COUNT = 5000
 
 # ---------------------------------------------------------------------------
 # マップ上の意味付け(map_data.py準拠)
@@ -128,7 +128,18 @@ STALL_THRESHOLD_TICKS = 3       # これを超えて無進捗が続いたら混�
 STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限(無限にエスカレートさせない)
 CONGESTION_RADIUS = 2           # carryからこの距離以内のescortを「渋滞に関与」とみなす
 
+AHEAD_BLOCK_PENALTY_COEF = 0.2  # 「サイト-エスコート-キャリアー」順で、退避可能なのに
+                                 # キャリアーの最短経路を塞いでいる場合の追加ペナルティ係数
+PATH_EQUALITY_TOL = 0.5         # BFS距離の等価判定の許容誤差(float32のBFS距離用)
+
+ESCORT_HOLD_TICKS = 3           # 開始直後この tick 数だけ移動アクションをマスクし、
+                                 # キャリアーが先に動き出すまで待たせる(初動ブロック対策)
+
 HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
+
+BEST_MODEL_EPS_THRESHOLD = 0.15   # epsilonがこの値以下に下がるまではbest候補として扱わない
+                                   # (探索が多い段階のたまたま良いevalで固定されるのを防ぐ)
+BEST_MODEL_SMOOTH_WINDOW = 5      # 直近何回分のeval結果を平均してbest判定に使うか
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
 # train_attacker_carry.py / train_attacker_guard.py と同一値)
@@ -335,6 +346,7 @@ class EscortEnv:
         stall_penalty_cap_ticks=STALL_PENALTY_CAP_TICKS,
         congestion_radius=CONGESTION_RADIUS,
         congestion_penalty_coef=0.15,
+        ahead_block_penalty_coef=AHEAD_BLOCK_PENALTY_COEF,
         ability_success_reward=2.0,
         ability_redundant_penalty=1.0,
         ability_waste_penalty=0.3,
@@ -344,6 +356,7 @@ class EscortEnv:
         mission_fail_penalty=5.0,
         enemy_move_prob=0.2,
         handoff_augment_prob=HANDOFF_AUGMENT_PROB,
+        hold_ticks=ESCORT_HOLD_TICKS,
         seed=None,
     ):
         lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -362,6 +375,7 @@ class EscortEnv:
         self.stall_penalty_cap_ticks = stall_penalty_cap_ticks
         self.congestion_radius = congestion_radius
         self.congestion_penalty_coef = congestion_penalty_coef
+        self.ahead_block_penalty_coef = ahead_block_penalty_coef
         self.ability_success_reward = ability_success_reward
         self.ability_redundant_penalty = ability_redundant_penalty
         self.ability_waste_penalty = ability_waste_penalty
@@ -371,6 +385,7 @@ class EscortEnv:
         self.mission_fail_penalty = mission_fail_penalty
         self.enemy_move_prob = enemy_move_prob
         self.handoff_augment_prob = handoff_augment_prob
+        self.hold_ticks = hold_ticks
 
         self.site_cells = list(zip(*np.where(self.grid == SITE_CELL_VALUE)))
         self.attacker_spawns = list(zip(*np.where(self.grid == ATTACKER_SPAWN_VALUE)))
@@ -424,6 +439,8 @@ class EscortEnv:
 
         self._blocking_escort_idx = None  # このtickでキャリアーを塞いだescort index
         self._carry_dist_map = None
+        self._goal_dist_map = None  # 設置目標地点からの壁のみBFS距離マップ(reset()で1回だけ計算)
+        self.goal_pos = None
         self._stall_ticks = 0  # キャリアーが連続で進めていないtick数
 
     # ------------------------------------------------------------------
@@ -533,6 +550,9 @@ class EscortEnv:
         self.carry_hp = MAX_HP
         self.carry_alive = True
         self.carry_moved = False
+        self.goal_pos = target
+        # goal(設置目標地点)は1ラウンド中固定なので、reset時に1回だけ計算する。
+        self._goal_dist_map = _build_distance_map_walls_only(self.grid, [target])
         self._refresh_carry_dist_map()
 
         # --- 敵：守備側スポーンに配置(当面ヒューリスティック) ---
@@ -617,6 +637,60 @@ class EscortEnv:
         """carry_pos が変化した際に呼び、BFS距離マップを更新する。"""
         self._carry_dist_map = _build_distance_map_walls_only(self.grid, [self.carry_pos])
 
+    def _carry_bfs_dist(self, pos):
+        """posからcarry_posまでの壁のみBFS実距離。_get_obs()と同じ計算元
+        (self._carry_dist_map)を使うことで、報酬とobsの距離定義を一致させる。
+        到達不能な場合はグリッドサイズ相当の大きな値にフォールバックする。"""
+        if self._carry_dist_map is None:
+            return float(self.height + self.width)
+        r, c = pos
+        d = self._carry_dist_map[r, c]
+        return float(d) if np.isfinite(d) else float(self.height + self.width)
+
+    def _ahead_of_carry(self, pos):
+        """posがキャリアーよりgoalに近いか(=キャリアーより前に出ているか)。"""
+        if self._goal_dist_map is None:
+            return False
+        pr, pc = pos
+        cr, cc = self.carry_pos
+        pd, cd = self._goal_dist_map[pr, pc], self._goal_dist_map[cr, cc]
+        if not (np.isfinite(pd) and np.isfinite(cd)):
+            return False
+        return pd < cd
+
+    def _path_status(self, pos):
+        """posが「キャリアーの最短経路上(のいずれか)」かどうか、および
+        経路上でない隣接マス(退避先)が存在するかを判定する。
+        carry_dist_map(始点=carry_pos)とgoal_dist_map(始点=goal)の和が
+        carry→goalの最短距離と一致するセル = 最短経路上、という判定を使う。
+        (特定の1本の経路だけでなく、同じ長さの全最短経路をカバーできる)
+        """
+        if self._carry_dist_map is None or self._goal_dist_map is None:
+            return False, False
+        r, c = pos
+        cr, cc = self.carry_pos
+        total = self._goal_dist_map[cr, cc]
+        if not np.isfinite(total):
+            return False, False
+
+        def _on_path(rr, cc_):
+            d1 = self._carry_dist_map[rr, cc_]
+            d2 = self._goal_dist_map[rr, cc_]
+            if not (np.isfinite(d1) and np.isfinite(d2)):
+                return False
+            return abs(d1 + d2 - total) < PATH_EQUALITY_TOL
+
+        on_path = _on_path(r, c)
+        escape_available = False
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if self._is_wall(nr, nc):
+                continue
+            if not _on_path(nr, nc):
+                escape_available = True
+                break
+        return on_path, escape_available
+
     # ------------------------------------------------------------------
     # 観測
     # ------------------------------------------------------------------
@@ -632,6 +706,12 @@ class EscortEnv:
             if a == self.ACTION_STAY:
                 continue
             if self._is_wall(r + dr, c + dc):
+                mask[a] = False
+
+        # 開始直後hold_ticks分は移動を禁止し、キャリアーが先に動き出すまで待つ。
+        # (STAYは常に許可のまま。アビリティは対象がいれば通常通り使用可能)
+        if self.tick < self.hold_ticks:
+            for a in (self.ACTION_UP, self.ACTION_DOWN, self.ACTION_LEFT, self.ACTION_RIGHT):
                 mask[a] = False
 
         # アビリティは1ラウンドに1回。使用済み(HUNTは常時この扱い)なら選択不可にする。
@@ -749,6 +829,13 @@ class EscortEnv:
         obs.append(1.0 - min(1.0, self.tick / max(1, self.max_ticks)))
         obs.append(1.0 if self._blocking_escort_idx == i else 0.0)
 
+        # 「サイト-エスコート-キャリアー」順(自分がキャリアーより前に出ているか)判定用。
+        ahead = self._ahead_of_carry((r, c))
+        on_path, escape_available = self._path_status((r, c))
+        obs.append(1.0 if ahead else 0.0)
+        obs.append(1.0 if on_path else 0.0)
+        obs.append(1.0 if escape_available else 0.0)
+
         return np.array(obs, dtype=np.float32)
 
     @staticmethod
@@ -758,9 +845,10 @@ class EscortEnv:
         #      + 壁フラグ4 + BFS距離勾配4 + 斜め壁フラグ4 + 味方隣接フラグ4
         #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot4)
         #      + チーム効果1 + 直前移動2 + stuck1 + 残り時間1 + 被ブロック1
-        # = 2+3+2+4+4+4+4+1+6+5+1+2+1+1+1 = 41
-        # (汎用版からの変更点: アビリティ種別onehotが3種→4種(HUNT追加)になり40→41)
-        return 41
+        #      + 前方判定(ahead/on_path/escape_available)3
+        # = 2+3+2+4+4+4+4+1+6+5+1+2+1+1+1+3 = 44
+        # (41→44: 「サイト-エスコート-キャリアー」順での道譲り判定用に3次元追加)
+        return 44
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -1026,7 +1114,13 @@ class EscortEnv:
             for i in range(self.n_escorts):
                 if not self.escort_alive[i]:
                     continue
-                if _chebyshev(self.escort_pos[i], self.carry_pos) <= self.congestion_radius:
+                if self._carry_bfs_dist(self.escort_pos[i]) <= self.congestion_radius:
+                    # 前に出ていて、かつ退避不可能(狭い通路など)な場合は、
+                    # 進むしかない状況なのでcongestion_penaltyの対象から除外する。
+                    if self._ahead_of_carry(self.escort_pos[i]):
+                        _, escape_available = self._path_status(self.escort_pos[i])
+                        if not escape_available:
+                            continue
                     rewards[i] -= congestion_penalty
 
         # 5. Escortの移動(アビリティ使用者・死亡者を除く、ランダム順で逐次解決)
@@ -1063,15 +1157,31 @@ class EscortEnv:
             self.escort_last_delta[i] = (float(dr), float(dc))
             self.escort_stuck[i] = 0
 
-        # 6. 距離帯報酬(移動後の位置で評価)
+        # 6. 距離帯報酬(移動後の位置で評価)。obsのescort→carry距離と同じく
+        # BFS実距離を使う(Chebyshevだと曲がった通路で「壁越しに近い」を
+        # 「実際に近い」と誤判定し、中継点付近で追従圧力が消えてしまうため)。
         for i in range(self.n_escorts):
             if not self.escort_alive[i]:
                 continue
-            dist = _chebyshev(self.escort_pos[i], self.carry_pos)
+            dist = self._carry_bfs_dist(self.escort_pos[i])
             if dist < self.dist_band_min:
                 rewards[i] -= (self.dist_band_min - dist) * self.dist_penalty_coef
             elif dist > self.dist_band_max:
                 rewards[i] -= (dist - self.dist_band_max) * self.dist_penalty_coef
+
+        # 6.5 「サイト-エスコート-キャリアー」順での道譲りペナルティ。
+        #     退避可能(=道を空けられる)なのに、キャリアーの最短経路上に留まって
+        #     前に出ている場合のみ罰する。退避不可能な狭い通路では罰さず、
+        #     そのまま進ませる(先に進む方の挙動を許容する)。
+        for i in range(self.n_escorts):
+            if not self.escort_alive[i]:
+                continue
+            pos = self.escort_pos[i]
+            if not self._ahead_of_carry(pos):
+                continue
+            on_path, escape_available = self._path_status(pos)
+            if on_path and escape_available and self._carry_bfs_dist(pos) <= self.congestion_radius:
+                rewards[i] -= self.ahead_block_penalty_coef
 
         # 7. 戦闘解決
         kill_bonus_targets = self._resolve_combat()
@@ -1249,8 +1359,12 @@ def main():
     parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
     parser.add_argument("--target-update-every", type=int, default=800)
     parser.add_argument("--eval-every", type=int, default=200)
-    parser.add_argument("--eval-episodes", type=int, default=20)
+    parser.add_argument("--eval-episodes", type=int, default=50)  # 20だと分散が大きいため引き上げ
     parser.add_argument("--warmup-steps", type=int, default=3000)
+    parser.add_argument("--hold-ticks", type=int, default=ESCORT_HOLD_TICKS)
+    parser.add_argument("--best-model-eps-threshold", type=float, default=BEST_MODEL_EPS_THRESHOLD)
+    parser.add_argument("--best-model-smooth-window", type=int, default=BEST_MODEL_SMOOTH_WINDOW)
+    parser.add_argument("--ahead-block-penalty-coef", type=float, default=AHEAD_BLOCK_PENALTY_COEF)
     parser.add_argument(
         "--save-dir",
         type=str,
@@ -1266,8 +1380,14 @@ def main():
     device = torch.device("cpu")
     os.makedirs(args.save_dir, exist_ok=True)
 
-    env = EscortEnv(max_ticks=args.max_ticks, seed=args.seed)
-    eval_env = EscortEnv(max_ticks=args.max_ticks, seed=args.seed + 1)
+    env = EscortEnv(
+        max_ticks=args.max_ticks, hold_ticks=args.hold_ticks,
+        ahead_block_penalty_coef=args.ahead_block_penalty_coef, seed=args.seed,
+    )
+    eval_env = EscortEnv(
+        max_ticks=args.max_ticks, hold_ticks=args.hold_ticks,
+        ahead_block_penalty_coef=args.ahead_block_penalty_coef, seed=args.seed + 1,
+    )
 
     obs_dim = env._obs_dim()
     n_actions = env.N_ACTIONS
@@ -1284,6 +1404,7 @@ def main():
     best_success_rate = -1.0
     best_eval_reward = float("-inf")
     global_step = 0
+    eval_history = deque(maxlen=args.best_model_smooth_window)  # 直近evalのsuccess_rate/avg_reward
 
     def _make_checkpoint(episode, success_rate, avg_reward, avg_block_events):
         return {
@@ -1296,6 +1417,7 @@ def main():
             "avg_block_events": avg_block_events,
             "roster_order": list(TOUYAMA_ROSTER_ORDER),
             "spike_holder_default": TOUYAMA_SPIKE_HOLDER,
+            "hold_ticks": args.hold_ticks,
         }
 
     start_time = time.perf_counter()
@@ -1357,29 +1479,43 @@ def main():
             success_rate, avg_reward, avg_block_events = evaluate(
                 eval_env, policy_net, device, args.eval_episodes
             )
+            eval_history.append((success_rate, avg_reward))
+            smoothed_success_rate = sum(s for s, _ in eval_history) / len(eval_history)
+            smoothed_avg_reward = sum(r for _, r in eval_history) / len(eval_history)
+
             print(
                 f"[EVAL @ EP {episode}/{args.episodes}] success_rate={success_rate:.2%} "
-                f"avg_reward={avg_reward:.2f} avg_block_events={avg_block_events:.2f}"
+                f"avg_reward={avg_reward:.2f} avg_block_events={avg_block_events:.2f} "
+                f"eps={epsilon:.3f} smoothed_success_rate={smoothed_success_rate:.2%} "
+                f"smoothed_avg_reward={smoothed_avg_reward:.2f}"
             )
 
             latest_path = os.path.join(args.save_dir, "dqn_attacker_escort_touyama_latest.pt")
             torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), latest_path)
 
+            # epsilonがまだ閾値より高い(=探索が多く方策が未収束)間はbest候補から除外し、
+            # 直近best_model_smooth_window回のeval平均(smoothed_*)で比較することで、
+            # 1回だけたまたま良かったevalがbestとして固定されるのを防ぐ。
+            eligible_for_best = epsilon <= args.best_model_eps_threshold
             is_better = (
-                success_rate > best_success_rate + 1e-9
-                or (
-                    success_rate >= best_success_rate - 1e-9
-                    and avg_reward > best_eval_reward
+                eligible_for_best
+                and (
+                    smoothed_success_rate > best_success_rate + 1e-9
+                    or (
+                        smoothed_success_rate >= best_success_rate - 1e-9
+                        and smoothed_avg_reward > best_eval_reward
+                    )
                 )
             )
             if is_better:
-                best_success_rate = max(best_success_rate, success_rate)
-                best_eval_reward = avg_reward
+                best_success_rate = max(best_success_rate, smoothed_success_rate)
+                best_eval_reward = smoothed_avg_reward
                 best_path = os.path.join(args.save_dir, "dqn_attacker_escort_touyama_best_by_eval.pt")
                 torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), best_path)
                 print(
                     f"[SAVE] 新しいベストモデルを保存: {best_path} "
                     f"(success_rate={success_rate:.2%}, avg_reward={avg_reward:.2f}, "
+                    f"smoothed_success_rate={smoothed_success_rate:.2%}, "
                     f"avg_block_events={avg_block_events:.2f})"
                 )
 
