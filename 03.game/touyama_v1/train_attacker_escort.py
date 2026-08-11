@@ -100,9 +100,18 @@ from game_core import (
     REVEAL_DURATION_TICKS,
     SMOKE_DURATION_TICKS,
 )
-from character_stats_touyama import (
-    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+
+import common_rl
+from common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from common_attacker import (
     TOUYAMA_ROSTER_ORDER,
+    TOUYAMA_SPIKE_HOLDER,
+    DEFAULT_ACCURACY,
+    DEFAULT_DODGE,
+    DEFAULT_HS_RATE,
+    DEFAULT_REACTION,
+    compute_touyama_effective_stats,
+    print_effective_stats,
 )
 
 EPISODE_COUNT = 5000
@@ -141,79 +150,10 @@ BEST_MODEL_EPS_THRESHOLD = 0.15   # epsilonがこの値以下に下がるまで�
                                    # (探索が多い段階のたまたま良いevalで固定されるのを防ぐ)
 BEST_MODEL_SMOOTH_WINDOW = 5      # 直近何回分のeval結果を平均してbest判定に使うか
 
-# 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
-# train_attacker_carry.py / train_attacker_guard.py と同一値)
-DEFAULT_ACCURACY = 0.50
-DEFAULT_DODGE = 0.12
-DEFAULT_HS_RATE = 0.20
-DEFAULT_REACTION = 100.0
+# (common_attackerからimport済みのため削除)
 
-# ---------------------------------------------------------------------------
-# touyama_v1 固定チーム定義(他のtouyama_v1学習ファイルと同一)
-# ---------------------------------------------------------------------------
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
-TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # 通常ラウンド開始時の既定キャリア
-
-TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
-TOUYAMA_COMBO_BONUS = {
-    "accuracy": 0.15,
-    "hs_rate": 0.10,
-    "dodge_rate": 0.20,
-    "reaction": 30.0,
-}
-
-TOUYAMA_ROLE_TO_ABILITY = {
-    "フラッシュ": "FLASH",
-    "スモーカー": "SMOKE",
-    "シーカー": "RECON",
-    "タイガー": "HUNT",
-}
-TIGER_ACCURACY_BONUS = 0.10
-TIGER_HS_BONUS = 0.05
-
-
-def _compute_touyama_effective_stats():
-    """character_stats_touyama.py の生値に、常時発動するチームコンボ
-    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
-    他のtouyama_v1学習ファイルと同一ロジック。"""
-    effective = {}
-    for name in TOUYAMA_ROSTER_ORDER:
-        raw = TOUYAMA_STATS_TABLE[name]
-        accuracy = float(raw.hit_pct)
-        hs_rate = float(raw.hs_pct)
-        dodge_rate = float(raw.dodge_pct)
-        reaction = float(raw.reaction)
-
-        if raw.role == "タイガー":
-            accuracy += TIGER_ACCURACY_BONUS
-            hs_rate += TIGER_HS_BONUS
-
-        if name in TOUYAMA_COMBO_MEMBERS:
-            accuracy += TOUYAMA_COMBO_BONUS["accuracy"]
-            hs_rate += TOUYAMA_COMBO_BONUS["hs_rate"]
-            dodge_rate += TOUYAMA_COMBO_BONUS["dodge_rate"]
-            reaction += TOUYAMA_COMBO_BONUS["reaction"]
-
-        effective[name] = {
-            "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
-            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
-            "reaction": max(0.0, reaction),
-            "ability": TOUYAMA_ROLE_TO_ABILITY[raw.role],
-        }
-    return effective
-
-
-TOUYAMA_EFFECTIVE_STATS = _compute_touyama_effective_stats()
-
-print("[touyama_v1] 固定チーム(Attacker/escort) 確定ステータス:")
-for _name in TOUYAMA_ROSTER_ORDER:
-    _s = TOUYAMA_EFFECTIVE_STATS[_name]
-    print(
-        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
-        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
-        f"ability={_s['ability']}"
-    )
+TOUYAMA_EFFECTIVE_STATS = compute_touyama_effective_stats(TOUYAMA_STATS_TABLE)
+print_effective_stats(TOUYAMA_EFFECTIVE_STATS, "Attacker/escort")
 
 
 # ---------------------------------------------------------------------------
@@ -254,38 +194,10 @@ def _bfs_shortest_path(grid, start, goal):
     return path
 
 
-def _line_cells(p1, p2):
-    """Bresenham法で2点間のセル列を返す(abilities_los.py と同一ロジック)。"""
-    y0, x0 = int(p1[0]), int(p1[1])
-    y1, x1 = int(p2[0]), int(p2[1])
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
-    err = dx + dy
-    cells = []
-    while True:
-        cells.append((y0, x0))
-        if x0 == x1 and y0 == y1:
-            return cells
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
-
 def _has_los(grid, smoke_cells, p1, p2):
-    """壁とスモークを考慮した射線判定(abilities_los.pyの簡略版)。"""
-    cells = _line_cells(p1, p2)
-    for r, c in cells:
-        if grid[r, c] == 1:
-            return False
-    if smoke_cells and len(cells) > 2:
-        if any(cell in smoke_cells for cell in cells):
-            return False
-    return True
-
+    """壁とスモークを考慮した射線判定(common_rl.has_los利用。引数順序が
+    異なる点に注意: このファイルはgrid, smoke_cells, p1, p2の順)。"""
+    return common_rl.has_los(grid, p1, p2, smoke_cells)
 
 def _chebyshev(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
@@ -360,8 +272,7 @@ class EscortEnv:
         hold_ticks=ESCORT_HOLD_TICKS,
         seed=None,
     ):
-        lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
-        self.grid = np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+        self.grid = common_rl.parse_grid(maze_str)
         self.height, self.width = self.grid.shape
 
         self.max_ticks = max_ticks
@@ -458,26 +369,8 @@ class EscortEnv:
 
     def _resolve_spawn_collision(self, pos, occupied):
         """スポーン候補が重複/壁だった場合に、BFSで最寄りの空きマスへ逃がす
-        (train_attacker_carry.py / train_attacker_guard.py と同一ロジック)。"""
-        if pos not in occupied and self.grid[pos[0], pos[1]] != 1:
-            return pos
-        visited = {pos}
-        queue = deque([pos])
-        while queue:
-            r, c = queue.popleft()
-            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                nr, nc = r + dr, c + dc
-                if not (0 <= nr < self.height and 0 <= nc < self.width):
-                    continue
-                if (nr, nc) in visited:
-                    continue
-                visited.add((nr, nc))
-                if self.grid[nr, nc] == 1:
-                    continue
-                if (nr, nc) not in occupied:
-                    return (nr, nc)
-                queue.append((nr, nc))
-        return pos
+        (common_rl.resolve_spawn_collision使用)。"""
+        return common_rl.resolve_spawn_collision(self.grid, pos, occupied)
 
     def reset(self):
         self.tick = 0
@@ -1248,93 +1141,12 @@ class EscortEnv:
 # ---------------------------------------------------------------------------
 # Dueling DQN(重み共有。他のtouyama_v1学習ファイルと同一アーキテクチャ)
 # ---------------------------------------------------------------------------
-class DuelingQNetwork(nn.Module):
-    def __init__(self, obs_dim, n_actions, hidden=128):
-        super().__init__()
-        self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden),
-            nn.ReLU(),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(),
-        )
-        self.value_head = nn.Sequential(
-            nn.Linear(hidden, hidden // 2),
-            nn.ReLU(),
-            nn.Linear(hidden // 2, 1),
-        )
-        self.advantage_head = nn.Sequential(
-            nn.Linear(hidden, hidden // 2),
-            nn.ReLU(),
-            nn.Linear(hidden // 2, n_actions),
-        )
-
-    def forward(self, x):
-        feat = self.feature(x)
-        value = self.value_head(feat)
-        advantage = self.advantage_head(feat)
-        return value + (advantage - advantage.mean(dim=1, keepdim=True))
-
-
 Transition = namedtuple("Transition", ("state", "action", "reward", "next_state", "next_mask", "done"))
-
-
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def push(self, *args):
-        self.buffer.append(Transition(*args))
-
-    def sample(self, batch_size):
-        batch = random.sample(self.buffer, batch_size)
-        return Transition(*zip(*batch))
-
-    def __len__(self):
-        return len(self.buffer)
-
-
-def select_action(net, state, mask, epsilon, device):
-    if random.random() < epsilon:
-        valid_actions = np.flatnonzero(mask)
-        return int(random.choice(valid_actions))
-    with torch.no_grad():
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-        q = net(state_t).squeeze(0).cpu().numpy()
-    q = np.where(mask, q, -1e9)
-    return int(np.argmax(q))
-
-
-def optimize_model(policy_net, target_net, optimizer, buffer, batch_size, gamma, device):
-    if len(buffer) < batch_size:
-        return None
-
-    batch = buffer.sample(batch_size)
-
-    states = torch.as_tensor(np.array(batch.state), dtype=torch.float32, device=device)
-    actions = torch.as_tensor(batch.action, dtype=torch.int64, device=device).unsqueeze(1)
-    rewards = torch.as_tensor(batch.reward, dtype=torch.float32, device=device).unsqueeze(1)
-    next_states = torch.as_tensor(np.array(batch.next_state), dtype=torch.float32, device=device)
-    dones = torch.as_tensor(batch.done, dtype=torch.float32, device=device).unsqueeze(1)
-    next_masks = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=device)
-
-    q_values = policy_net(states).gather(1, actions)
-
-    with torch.no_grad():
-        next_q_policy = policy_net(next_states)
-        next_q_policy = next_q_policy.masked_fill(~next_masks, -1e9)
-        next_actions = next_q_policy.argmax(dim=1, keepdim=True)
-        next_q_target = target_net(next_states).gather(1, next_actions)
-        target = rewards + gamma * next_q_target * (1.0 - dones)
-
-    loss = F.smooth_l1_loss(q_values, target)
-
-    optimizer.zero_grad()
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), max_norm=10.0)
-    optimizer.step()
-
-    return float(loss.item())
-
+# DuelingQNetwork(hidden=128) は common_rl.DuelingQNet と層構成が完全一致。
+# ReplayBuffer / select_action / optimize_model は common_rl に統合。
+# 注意: 元のselect_actionはマスク全滅を想定していなかった(ACTION_STAYが
+# 常にTrueのため)。common_rl.select_actionはfallback_action引数を持つが、
+# デフォルト0でも実質未使用となる想定。
 
 def evaluate(env, policy_net, device, episodes=20):
     successes = 0
@@ -1428,13 +1240,13 @@ def main():
     n_actions = env.N_ACTIONS
     print(f"[INFO] obs_dim={obs_dim} n_actions={n_actions} n_escorts={env.n_escorts} device={device}")
 
-    policy_net = DuelingQNetwork(obs_dim, n_actions).to(device)
-    target_net = DuelingQNetwork(obs_dim, n_actions).to(device)
+    policy_net = DuelingQNet(obs_dim, n_actions).to(device)
+    target_net = DuelingQNet(obs_dim, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
     optimizer = optim.Adam(policy_net.parameters(), lr=args.lr)
-    buffer = ReplayBuffer(args.buffer_size)
+    buffer = ReplayBuffer(Transition, args.buffer_size)
 
     best_success_rate = -1.0
     best_eval_reward = float("-inf")
@@ -1474,7 +1286,10 @@ def main():
                     masks.append(None)
                     continue
                 mask = env.get_action_mask(i)
-                action = select_action(policy_net, obs_list[i], mask, epsilon, device)
+                action = select_action(
+                    policy_net, obs_list[i], mask, epsilon,
+                    device=device, fallback_action=EscortEnv.ACTION_STAY,
+                )
                 actions.append(action)
                 masks.append(mask)
 
@@ -1492,9 +1307,12 @@ def main():
             global_step += 1
 
             if len(buffer) >= max(args.batch_size, args.warmup_steps):
-                optimize_model(
-                    policy_net, target_net, optimizer, buffer,
-                    args.batch_size, args.gamma, device,
+                batch = buffer.sample(args.batch_size)
+                optimize_double_dqn_step(
+                    policy_net, target_net, optimizer,
+                    batch.state, batch.action, batch.reward,
+                    batch.next_state, batch.done, batch.next_mask,
+                    args.gamma, device=device,
                 )
 
             if global_step % args.target_update_every == 0:

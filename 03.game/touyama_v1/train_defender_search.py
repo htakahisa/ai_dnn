@@ -52,9 +52,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
 from map_data_search_touyama import SEARCH_MAZE_STR
-from character_stats_touyama import (
-    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+from character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
+
+import common_rl
+from common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from common_defender import (
     TOUYAMA_ROSTER_ORDER,
+    compute_touyama_effective_stats,
+    print_effective_stats,
 )
 
 from game_core import (
@@ -85,9 +90,8 @@ MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_defender_search_touyama_latest.p
 # ---------------------------------------------------------------------------
 # 基本設定
 # ---------------------------------------------------------------------------
-DEVICE = torch.device("cpu")
 
-CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+CARDINAL = common_rl.CARDINAL_MOVES
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
@@ -112,72 +116,10 @@ DEFAULT_REACTION = 100.0
 # ---------------------------------------------------------------------------
 TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # このsearch phaseでは未使用。carry/guard学習用に保持。
 
-TOUYAMA_COMBO_NAME = "ふわんだりぃず"
-TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
-TOUYAMA_COMBO_BONUS = {
-    "accuracy": 0.15,
-    "hs_rate": 0.10,
-    "dodge_rate": 0.20,
-    "reaction": 30.0,
-}
-# ロースター5人が固定で揃っている前提のため、このコンボは毎ラウンド常時発動する。
-
-TOUYAMA_ROLE_TO_ABILITY = {
-    "フラッシュ": "FLASH",
-    "スモーカー": "SMOKE",
-    "シーカー": "RECON",
-    "タイガー": "HUNT",
-}
-# タイガーの固有パッシブ(game_core.Character 準拠): 常時 Hit%+10pt, HS%+5pt
-TIGER_ACCURACY_BONUS = 0.10
-TIGER_HS_BONUS = 0.05
-
-
-def _compute_touyama_effective_stats():
-    """character_stats_touyama.py の生値に、常時発動するチームコンボ
-    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
-
-    「調子の波」(form_variance)によるラウンド毎の変動はここでは含めない
-    (固定ステータスとしての再現性を優先する意図的な仕様)。
-    """
-    effective = {}
-    for name in TOUYAMA_ROSTER_ORDER:
-        raw = TOUYAMA_STATS_TABLE[name]
-        accuracy = float(raw.hit_pct)
-        hs_rate = float(raw.hs_pct)
-        dodge_rate = float(raw.dodge_pct)
-        reaction = float(raw.reaction)
-
-        if raw.role == "タイガー":
-            accuracy += TIGER_ACCURACY_BONUS
-            hs_rate += TIGER_HS_BONUS
-
-        if name in TOUYAMA_COMBO_MEMBERS:
-            accuracy += TOUYAMA_COMBO_BONUS["accuracy"]
-            hs_rate += TOUYAMA_COMBO_BONUS["hs_rate"]
-            dodge_rate += TOUYAMA_COMBO_BONUS["dodge_rate"]
-            reaction += TOUYAMA_COMBO_BONUS["reaction"]
-
-        effective[name] = {
-            "accuracy": max(0.0, accuracy),  # 命中率は100%超を保持(game_core準拠)
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
-            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
-            "reaction": max(0.0, reaction),
-            "ability": TOUYAMA_ROLE_TO_ABILITY[raw.role],
-        }
-    return effective
-
-
-TOUYAMA_EFFECTIVE_STATS = _compute_touyama_effective_stats()
-
-print("[touyama_v1] 固定チーム 確定ステータス:")
-for _name in TOUYAMA_ROSTER_ORDER:
-    _s = TOUYAMA_EFFECTIVE_STATS[_name]
-    print(
-        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
-        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
-        f"ability={_s['ability']}"
-    )
+# 💡注意: accuracy/hs_rate/dodge_rateのスケールが0-100→0-1に変わる
+# (common_defender.compute_touyama_effective_stats に統一。合意事項)。
+TOUYAMA_EFFECTIVE_STATS = compute_touyama_effective_stats(TOUYAMA_STATS_TABLE)
+print_effective_stats(TOUYAMA_EFFECTIVE_STATS, "Defender/search")
 
 
 # 報酬パラメータ
@@ -207,12 +149,7 @@ PLANT_PENALTY = -0.5            # このフェーズの範囲外(プラント成
 # のみ参照。パース処理は自前で複製)
 # ============================================================================
 
-def _parse_grid(maze_str):
-    lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
-    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
-
-
-GRID = _parse_grid(NEW_MAZE_STR)
+GRID = common_rl.parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
 ATTACKER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3]
@@ -225,7 +162,7 @@ if len(DEFENDER_SPAWNS) < len(TOUYAMA_ROSTER_ORDER):
         f"固定ロースター{len(TOUYAMA_ROSTER_ORDER)}人分を配置できません。"
     )
 
-_SEARCH_GRID = _parse_grid(SEARCH_MAZE_STR)
+_SEARCH_GRID = common_rl.parse_grid(SEARCH_MAZE_STR)
 
 # ロースター順(TOUYAMA_ROSTER_ORDER)に、マップ上の値 5,6,7,8,9 をそのまま
 # 1:1で対応させる。5=roster[0], 6=roster[1], 7=roster[2], 8=roster[3], 9=roster[4]。
@@ -289,54 +226,15 @@ if not SITE_POSITIONS:
 # LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
 # ============================================================================
 
-def line_cells(p1, p2):
-    y0, x0 = int(p1[0]), int(p1[1])
-    y1, x1 = int(p2[0]), int(p2[1])
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx + dy
-    cells = []
-    while True:
-        cells.append((y0, x0))
-        if x0 == x1 and y0 == y1:
-            return cells
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
-
 def has_los(p1, p2, smoke_cells=None):
-    cells = line_cells(p1, p2)
-    for r, c in cells:
-        if GRID[r, c] == 1:
-            return False
-    if smoke_cells and len(cells) > 2:
-        if any(cell in smoke_cells for cell in cells):
-            return False
-    return True
+    return common_rl.has_los(GRID, p1, p2, smoke_cells)
 
 
 def bfs_distance_map(goal):
-    dist = np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
-    gr, gc = int(goal[0]), int(goal[1])
-    if GRID[gr, gc] == 1:
-        return dist
-    dist[gr, gc] = 0
-    queue = deque([(gr, gc)])
-    while queue:
-        r, c = queue.popleft()
-        for dr, dc in CARDINAL:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
-                dist[nr, nc] = dist[r, c] + 1
-                queue.append((nr, nc))
-    return dist
+    return common_rl.bfs_distance_map(GRID, goal)
 
+
+bfs_best_direction = common_rl.bfs_best_direction
 
 def bfs_best_direction(dist_map, r0, c0):
     """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
@@ -531,40 +429,8 @@ class TeamMemory:
 # ネットワーク
 # ============================================================================
 
-class DefenderSearchDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
-        super().__init__()
-        self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
-        )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
-
-    def forward(self, x):
-        f = self.feature(x)
-        v = self.value_head(f)
-        a = self.advantage_head(f)
-        return v + (a - a.mean(dim=1, keepdim=True))
-
-
 Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done"))
-
-
-class ReplayBuffer:
-    def __init__(self, capacity=200_000):
-        self.buffer = deque(maxlen=capacity)
-
-    def push(self, *args):
-        self.buffer.append(Transition(*args))
-
-    def sample(self, batch_size):
-        batch = random.sample(self.buffer, batch_size)
-        return Transition(*zip(*batch))
-
-    def __len__(self):
-        return len(self.buffer)
-
+# ネットワーク(旧DefenderSearchDuelingDQN)・ReplayBufferは common_rl に統合。
 
 # ============================================================================
 # 観測構築
@@ -1217,47 +1083,8 @@ def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps
     return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
 
 
-def select_action(policy_net, obs, mask, epsilon):
-    if random.random() < epsilon:
-        valid_indices = np.flatnonzero(mask)
-        if len(valid_indices) == 0:
-            return 0
-        return int(np.random.choice(valid_indices))
-    with torch.no_grad():
-        obs_t = torch.as_tensor(obs, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-        q_values = policy_net(obs_t).squeeze(0).cpu().numpy()
-        q_values = np.where(mask, q_values, -np.inf)
-        return int(np.argmax(q_values))
-
-
-def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
-    if len(buffer) < batch_size:
-        return None
-
-    batch = buffer.sample(batch_size)
-    obs_batch = torch.as_tensor(np.array(batch.obs), dtype=torch.float32, device=DEVICE)
-    action_batch = torch.as_tensor(batch.action, dtype=torch.int64, device=DEVICE).unsqueeze(1)
-    reward_batch = torch.as_tensor(batch.reward, dtype=torch.float32, device=DEVICE)
-    next_obs_batch = torch.as_tensor(np.array(batch.next_obs), dtype=torch.float32, device=DEVICE)
-    next_mask_batch = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=DEVICE)
-    done_batch = torch.as_tensor(batch.done, dtype=torch.float32, device=DEVICE)
-
-    q_values = policy_net(obs_batch).gather(1, action_batch).squeeze(1)
-
-    with torch.no_grad():
-        next_q_policy = policy_net(next_obs_batch)
-        next_q_policy = next_q_policy.masked_fill(~next_mask_batch, -float("inf"))
-        next_actions = next_q_policy.argmax(dim=1, keepdim=True)
-        next_q_target = target_net(next_obs_batch).gather(1, next_actions).squeeze(1)
-        target = reward_batch + gamma * next_q_target * (1.0 - done_batch)
-
-    loss = nn.functional.smooth_l1_loss(q_values, target)
-    optimizer.zero_grad()
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), 10.0)
-    optimizer.step()
-    return loss.item()
-
+# select_action / optimize は common_rl.select_action /
+# common_rl.optimize_double_dqn_step を直接使用(呼び出し側train()を参照)。
 
 def train(
     episodes=EPISODE_COUNT,
@@ -1267,13 +1094,13 @@ def train(
     buffer_size=200_000,
     target_update_every=1000,
 ):
-    policy_net = DefenderSearchDuelingDQN().to(DEVICE)
-    target_net = DefenderSearchDuelingDQN().to(DEVICE)
+    policy_net = DuelingQNet(OBS_DIM, ACTION_DIM).to(DEVICE)
+    target_net = DuelingQNet(OBS_DIM, ACTION_DIM).to(DEVICE)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
     optimizer = optim.Adam(policy_net.parameters(), lr=lr)
-    buffer = ReplayBuffer(capacity=buffer_size)
+    buffer = ReplayBuffer(Transition, capacity=buffer_size)
     env = SearchEnv()
 
     global_step = 0
@@ -1335,7 +1162,14 @@ def train(
             obs_dict, mask_dict = next_obs_dict, next_mask_dict
             global_step += 1
 
-            optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma)
+            if len(buffer) >= batch_size:
+                batch = buffer.sample(batch_size)
+                optimize_double_dqn_step(
+                    policy_net, target_net, optimizer,
+                    batch.obs, batch.action, batch.reward,
+                    batch.next_obs, batch.done, batch.next_mask,
+                    gamma,
+                )
 
             if global_step % target_update_every == 0:
                 target_net.load_state_dict(policy_net.state_dict())
