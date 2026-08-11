@@ -334,7 +334,7 @@ class EscortEnv:
     def __init__(
         self,
         maze_str=NEW_MAZE_STR,
-        max_ticks=90,
+        max_ticks=100,
         n_escorts=N_ESCORTS,
         n_enemies=N_ENEMIES,
         dist_band_min=DIST_BAND_MIN,
@@ -342,6 +342,7 @@ class EscortEnv:
         team_progress_coef=1.0,
         block_penalty=1.0,
         dist_penalty_coef=0.08,
+        potential_coef=0.15,  # 常時距離短縮shaping: バンド内でも近づけば得、離れれば損にする
         stall_threshold_ticks=STALL_THRESHOLD_TICKS,
         stall_penalty_cap_ticks=STALL_PENALTY_CAP_TICKS,
         congestion_radius=CONGESTION_RADIUS,
@@ -371,6 +372,7 @@ class EscortEnv:
         self.team_progress_coef = team_progress_coef
         self.block_penalty = block_penalty
         self.dist_penalty_coef = dist_penalty_coef
+        self.potential_coef = potential_coef
         self.stall_threshold_ticks = stall_threshold_ticks
         self.stall_penalty_cap_ticks = stall_penalty_cap_ticks
         self.congestion_radius = congestion_radius
@@ -554,6 +556,8 @@ class EscortEnv:
         # goal(設置目標地点)は1ラウンド中固定なので、reset時に1回だけ計算する。
         self._goal_dist_map = _build_distance_map_walls_only(self.grid, [target])
         self._refresh_carry_dist_map()
+        # 常時距離短縮shaping用: 各escortの直前tickでのcarryまでのBFS距離を記録しておく
+        self.escort_prev_dist = [self._carry_bfs_dist(pos) for pos in self.escort_pos]
 
         # --- 敵：守備側スポーンに配置(当面ヒューリスティック) ---
         self.enemy_pos = []
@@ -1169,6 +1173,18 @@ class EscortEnv:
             elif dist > self.dist_band_max:
                 rewards[i] -= (dist - self.dist_band_max) * self.dist_penalty_coef
 
+        # 6.1 常時距離短縮のポテンシャルベース報酬。
+        #     バンド内(dist_band_min〜dist_band_max)ではdist_penaltyが0になり
+        #     「これ以上近づく理由がない」状態になるため、バンド内外を問わず
+        #     毎tick「前tickよりcarryに近づいたか」だけで加減点する。
+        #     これによりcarryが既に静止していても、遠いescortは接近を続ける。
+        for i in range(self.n_escorts):
+            if not self.escort_alive[i]:
+                continue
+            cur_dist = self._carry_bfs_dist(self.escort_pos[i])
+            rewards[i] += (self.escort_prev_dist[i] - cur_dist) * self.potential_coef
+            self.escort_prev_dist[i] = cur_dist
+
         # 6.5 「サイト-エスコート-キャリアー」順での道譲りペナルティ。
         #     退避可能(=道を空けられる)なのに、キャリアーの最短経路上に留まって
         #     前に出ている場合のみ罰する。退避不可能な狭い通路では罰さず、
@@ -1196,12 +1212,28 @@ class EscortEnv:
             for i in range(self.n_escorts):
                 if self.escort_alive[i]:
                     rewards[i] -= self.mission_fail_penalty
-        elif self.carry_path_index >= len(self.carry_path) - 1:
-            done = True
-            info["success"] = True
-            for i in range(self.n_escorts):
-                if self.escort_alive[i]:
-                    rewards[i] += self.mission_success_reward
+        elif carry_reached_goal:
+            # carryが到着済みでも、escort全員がdist_band_max以内に収まるまでは
+            # doneにしない(=接近行動そのものを学習対象に含める)。
+            # carry_reached_goalは5.の停滞検知セクションで既に計算済みの値を再利用する。
+            all_escorts_settled = all(
+                (not self.escort_alive[i])
+                or self._carry_bfs_dist(self.escort_pos[i]) <= self.dist_band_max
+                for i in range(self.n_escorts)
+            )
+            if all_escorts_settled:
+                done = True
+                info["success"] = True
+                for i in range(self.n_escorts):
+                    if self.escort_alive[i]:
+                        rewards[i] += self.mission_success_reward
+            elif self.tick >= self.max_ticks:
+                done = True
+                info["success"] = False
+                for i in range(self.n_escorts):
+                    if self.escort_alive[i]:
+                        rewards[i] -= self.mission_fail_penalty
+            # else: 継続。ポテンシャルshaping(6.1)がこの間の接近を評価する。
         elif self.tick >= self.max_ticks:
             done = True
             info["success"] = False
@@ -1365,6 +1397,7 @@ def main():
     parser.add_argument("--best-model-eps-threshold", type=float, default=BEST_MODEL_EPS_THRESHOLD)
     parser.add_argument("--best-model-smooth-window", type=int, default=BEST_MODEL_SMOOTH_WINDOW)
     parser.add_argument("--ahead-block-penalty-coef", type=float, default=AHEAD_BLOCK_PENALTY_COEF)
+    parser.add_argument("--potential-coef", type=float, default=0.15)
     parser.add_argument(
         "--save-dir",
         type=str,
@@ -1382,11 +1415,13 @@ def main():
 
     env = EscortEnv(
         max_ticks=args.max_ticks, hold_ticks=args.hold_ticks,
-        ahead_block_penalty_coef=args.ahead_block_penalty_coef, seed=args.seed,
+        ahead_block_penalty_coef=args.ahead_block_penalty_coef,
+        potential_coef=args.potential_coef, seed=args.seed,
     )
     eval_env = EscortEnv(
         max_ticks=args.max_ticks, hold_ticks=args.hold_ticks,
-        ahead_block_penalty_coef=args.ahead_block_penalty_coef, seed=args.seed + 1,
+        ahead_block_penalty_coef=args.ahead_block_penalty_coef,
+        potential_coef=args.potential_coef, seed=args.seed + 1,
     )
 
     obs_dim = env._obs_dim()

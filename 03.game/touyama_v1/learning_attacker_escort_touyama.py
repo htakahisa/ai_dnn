@@ -198,7 +198,7 @@ class LearningAttackerEscortTouyamaController:
         device=None,
         greedy=True,
         epsilon=0.0,
-        max_ticks=90,
+        max_ticks=100,
         verbose=False,
     ):
         self.device = device or torch.device("cpu")

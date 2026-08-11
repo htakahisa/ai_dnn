@@ -1,41 +1,33 @@
 """touyama_v1/learning_attacker_carry_touyama.py
 
 固定チーム(Tortlilyan/いぐるん/ろびぃな/夢の街/えんぺん)専用の
-Attacker「carry phase」推論コントローラー。
+Attacker「carry phase」推論コントローラー(簡略版)。
 
-train_attacker_carry.py で学習したDQNモデル(dict形式チェックポイント)をロードし、
-スパイク保持者(has_spike==Trueのキャラ)の移動・アビリティ・明示PLANT判断を担当する。
-エスコート4人はヒューリスティックで動かす(将来escortモデルに差し替え可能)。
+train_attacker_carry.py で学習したDQNモデルをロードし、スパイク保持者
+(has_spike==Trueのキャラ)のアビリティ使用判断・明示PLANT判断のみを担当する。
+移動は決定的BFS経路探索(中継地点→優先設置場所)で処理し、DQNの行動空間には
+含まれない。エスコート4人はヒューリスティックで動かす。
 
 completely self-contained: run_game.py / controllers.py / battle_logic.py /
-abilities_los.py は一切importしない。必要なロジックはすべてこのファイル内に
-複製する。run_game.py / controllers.py は変更しない。
+abilities_los.py は一切importしない。run_game.py / controllers.py は変更しない。
 
-【重要: target_plant_pos】
-実ゲームのrun_game.py init_round()は、ラウンド開始時にgrid==2のマスから
-1点だけランダムに選び、それをself.target_plant_posとしてラウンド中固定する。
-これはtrain_attacker_carry.pyのCarryEnv.reset()が行っている
-「エピソード開始時に1点だけ選んで固定する」設計と完全に一致するため、
-このコントローラーはgame_state["target_plant_pos"]をそのまま距離計算に使う
-だけでよい(独自に最寄り地点を再計算しない)。
+【重要: サイト選択・target】
+AI_CONTROLLED_SITE_SELECTION=True の場合、run_game.py init_round()が決めた
+target_plant_pos(オレンジマス)は無視し、このコントローラー自身が
+SITE_SELECTION_WEIGHTSの比率で左右サイトを選び、そのサイトの優先設置場所
+(priority_cells)からtargetを選ぶ。選んだtargetはself._active_target として
+保持し(game_state["target_plant_pos"]は参照しない)、表示整合のため
+game.target_plant_posへも書き込む。
 
-【重要: 優先(代表)地点は本番マップに存在しない】
-学習はmap_data_carry.py(grid==5あり)で行うが、本番のmap_data.pyには
-grid==5は存在しない。そのため優先地点は「gridの値」ではなく、
-チェックポイントに保存された「座標のリスト(priority_cells)」として扱う。
-本番マップ上でその座標までのマルチソースBFS距離を計算するだけで、
-gridの値そのものには一切依存しない。
-
-【重要: PLANTは明示行動】
-train_attacker_carry.py側でPLANTはACTION_DIM上の独立したインデックス
-(PLANT_ACTION_INDEX)として学習されている。battle_logic.pyの仕様上、
-PLANT以外の行動を選んだ瞬間にchar.plant_timerは即0へリセットされるため、
-このコントローラーは学習済みモデルが選んだ行動をそのまま尊重し、
-旧バージョンのような「サイトに乗ったら強制PLANT」の上書きは行わない。
+【重要: IQAwareControllerとの相性】
+team_ai.py の IQAwareController.decide_move() は毎tick set_game(view) を
+呼び出すため、self.gameは使い捨てのview用オブジェクトに上書きされ続ける。
+target_plant_posの上書き(reset_round())は本物のgameに対して行う必要が
+あるため、最初に渡された(=起動時の本物の)gameだけを self._real_game に
+別途保持する。
 
 観測ベクトル・行動空間はtrain_attacker_carry.pyのbuild_observation() /
 decode_action() / build_action_mask()と完全に一致させる必要がある。
-ここがズレると学習結果が正しく反映されない。
 """
 
 import os
@@ -45,14 +37,6 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
-from character_stats_touyama import (
-    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
-    TOUYAMA_ROSTER_ORDER,
-)
-# train_attacker_carry.pyと同様、game_core.pyは定数専用ファイルとして参照する
-# (完全self-contained方針における import制限の対象外)。時間不足フォールバック
-# 判定(残りtick数 < BFS距離 + PLANT_REQUIRED_TICKS)にのみ使用する。
-from game_core import PLANT_REQUIRED_TICKS
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -61,46 +45,39 @@ DEFAULT_MODEL_PATH = "touyama_v1/data/attacker_carry_touyama_data/dqn_attacker_c
 DEBUG_LOG_PATH = "attacker_carry_touyama_debug.log"
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 29
-ACTION_DIM = 11
-PLANT_ACTION_INDEX = 10
+OBS_DIM = 21
+ACTION_DIM = 3
+ACTION_NONE = 0
+ACTION_ABILITY = 1
+ACTION_PLANT = 2
 
-# train_attacker_carry.pyのFORCED_FIRST_STEP_ACTION_INDEXと同じ意図。
-# ラウンド最初の1手は、スポーン地点(横一列33333)の都合でキャリアの真横に
-# エスコートが立っているため、DQNの選択に関わらず強制的に上移動させる。
-FORCED_FIRST_STEP_MOVE = (-1, 0)
-
-# 本番map_data.pyには5/6/7は存在しないが、train_attacker_carry.pyとの対称性のため
-# 同じ集合定義を維持する(判定は常にFalseになるだけで実害はない)。
 SITE_VALUES = frozenset({2, 5})
 
 ABILITY_RANGE = 8
 SIGHTING_STALENESS_CAP = 20
 
-# --- 本番プレイ時のサイト選択をAI側に委ねるかどうか -------------------------
-# False(既定)の場合: run_game.py の init_round() が選んだtarget_plant_posを
-#   そのまま使う(従来通りの挙動。左右ほぼ50/50のランダム)。
-# True の場合: reset_round()フック内でself.game.target_plant_posを
-#   SITE_SELECTION_WEIGHTSの比率に従ってこのコントローラー自身が上書きする。
-#   run_game.py 自体は一切変更しない(既存のreset_round()フック経由の上書きのみ)。
+# train_attacker_carry.py の game_core定数と一致させる(自己完結ルールのため複製)
+ROUND_DURATION_TICKS = 100
+PLANT_REQUIRED_TICKS = 4
+
+# --- 本番プレイ時のサイト選択・target選定をAI側に委ねる ---------------------
 AI_CONTROLLED_SITE_SELECTION = True    # 左右どちらのサイトに攻めるかはAIが決める
 SITE_SELECTION_WEIGHTS = {"left": 0.9, "right": 0.1}
 
 
 # ============================================================================
-# ネットワーク(train_attacker_carry.py の AttackerCarryDuelingDQN と同一構造)
+# ネットワーク(train_attacker_carry.py と同一構造)
 # ============================================================================
 
 class AttackerCarryDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=64):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden), nn.ReLU(),
             nn.Linear(hidden, hidden), nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
+        self.value_head = nn.Sequential(nn.Linear(hidden, 32), nn.ReLU(), nn.Linear(32, 1))
+        self.advantage_head = nn.Sequential(nn.Linear(hidden, 32), nn.ReLU(), nn.Linear(32, action_dim))
 
     def forward(self, x):
         f = self.feature(x)
@@ -110,7 +87,7 @@ class AttackerCarryDuelingDQN(nn.Module):
 
 
 # ============================================================================
-# LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
+# LOS・BFS
 # ============================================================================
 
 def _line_cells(p1, p2):
@@ -161,47 +138,6 @@ def _bfs_distance_map(grid, goal):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
-
-
-def _bfs_distance_map_multi(grid, sources):
-    """複数始点からのマルチソースBFS距離マップ。優先(代表)地点への
-    ガイダンス特徴量計算に使う(train_attacker_carry.pyと同一ロジック)。"""
-    height, width = grid.shape
-    dist = np.full((height, width), -1, dtype=np.int32)
-    queue = deque()
-    for gr, gc in sources:
-        if not (0 <= gr < height and 0 <= gc < width):
-            continue
-        if grid[gr, gc] == 1:
-            continue
-        if dist[gr, gc] == -1:
-            dist[gr, gc] = 0
-            queue.append((gr, gc))
-    while queue:
-        r, c = queue.popleft()
-        for dr, dc in CARDINAL:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
-                dist[nr, nc] = dist[r, c] + 1
-                queue.append((nr, nc))
-    return dist
-
-
-def _bfs_best_direction(dist_map, r0, c0):
-    if dist_map is None:
-        return 0, 0
-    height, width = dist_map.shape
-    cur = dist_map[r0, c0]
-    if cur < 0:
-        return 0, 0
-    best_dr, best_dc, best_d = 0, 0, cur
-    for dr, dc in CARDINAL:
-        nr, nc = r0 + dr, c0 + dc
-        if 0 <= nr < height and 0 <= nc < width and dist_map[nr, nc] >= 0:
-            if dist_map[nr, nc] < best_d:
-                best_d = dist_map[nr, nc]
-                best_dr, best_dc = dr, dc
-    return best_dr, best_dc
 
 
 def _bfs_next_step(grid, start, goal, occupied, allow_adjacent_goal=True):
@@ -271,7 +207,7 @@ def _random_step(grid, pos, occupied):
 # ============================================================================
 
 class LearningAttackerCarryTouyamaController:
-    """スパイク保持者(has_spike==True)のみDQNで操作する。
+    """スパイク保持者(has_spike==True)のみDQNで操作する(アビリティ/PLANTのみ)。
     それ以外のtouyama_v1メンバー(エスコート)はヒューリスティックで動かす。
     """
 
@@ -288,8 +224,6 @@ class LearningAttackerCarryTouyamaController:
         if not model_path or not os.path.isfile(model_path):
             raise FileNotFoundError(f"Carryモデルが見つかりません: {model_path}")
 
-        # train_attacker_carry.pyが生成した信頼済みチェックポイントなので
-        # weights_only=False で読み込む(PyTorch 2.6+のデフォルト変更対応)。
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
 
         ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
@@ -305,14 +239,9 @@ class LearningAttackerCarryTouyamaController:
         self.policy_net.load_state_dict(checkpoint["model_state_dict"])
         self.policy_net.eval()
 
-        # 優先(代表)地点はチェックポイントに座標として保存されている。
-        # 本番map_data.pyにはgrid==5が存在しないため、gridの値には一切依存しない。
         self.priority_cells = [tuple(map(int, cell)) for cell in (checkpoint.get("priority_cells") or [])]
         self.has_priority_cells = bool(checkpoint.get("has_priority_cells", False)) and bool(self.priority_cells)
 
-        # サイト別ウェイポイント(右=6/左=7相当)もチェックポイントに座標として保存されている。
-        # 本番map_data.pyにはgrid==6/7が存在しないため、gridの値には一切依存しない。
-        # 未保存(旧チェックポイント)の場合は空dictとなり、常に「通過済み」扱いで従来挙動になる。
         raw_waypoint_cells = checkpoint.get("waypoint_cells") or {}
         self.waypoint_cells = {
             str(site): (int(cell[0]), int(cell[1])) for site, cell in raw_waypoint_cells.items()
@@ -332,147 +261,89 @@ class LearningAttackerCarryTouyamaController:
         # 最初に渡された(=起動時の本物の)gameだけを別途保持する。
         self._real_game = None
 
-        # gridごとにキャッシュ(通常は試合中一度だけ計算される)
-        self._priority_dist_map = None
-        self._priority_max_dist = None
         self._waypoint_dist_maps = {}     # site -> dist_map(waypoint_cells由来)
+        self._plant_cells = None          # SITE_VALUESの全マス(アビリティ目標フォールバック用)
+        self._priority_cells_by_site = {"left": [], "right": []}
+        self._plant_cells_by_site = {"left": [], "right": []}   # 構造的フォールバック用
 
-        # ラウンド単位の状態(target_plant_posはラウンド中固定なのでキャッシュしてよい)
+        # ラウンド単位の状態
         self._sighting = None
-        self._plant_cells = None          # このラウンドの target_plant_pos への距離マップキャッシュ用キー
+        self._active_site = None
+        self._active_target = None        # このラウンドのナビゲーション最終目標(優先設置場所)
+        self._reached_waypoint = True
         self._target_dist_map = None
         self._cached_target_pos = None
-        self._active_waypoint_site = None
-        self._reached_waypoint = True
-        self._carrier_first_step_pending = True
-
-        # AI_CONTROLLED_SITE_SELECTION=True時に使う、サイト別のプラント可能マス一覧。
-        # set_game()で本番マップのgridから構築する(map_data.pyには5/6/7は無いが、
-        # 値2のプラント可能マスをサイト別に分けるだけなので本番でも問題なく機能する)。
-        self._plant_cells_by_site = {"left": [], "right": []}
-
-        # train_attacker_carry.pyのPRIORITY_CELLS_BY_SITE / PLAIN_PLANT_CELLS_BY_SITEと
-        # 同一方針。優先設置場所(priority_cells)をサイト別に分割したもの、および
-        # 優先設置場所を除いた通常のプラント可能マス(時間不足フォールバック候補)。
-        # set_game()で構築する。
-        self._priority_cells_by_site = {"left": [], "right": []}
-        self._plain_cells_by_site = {"left": [], "right": []}
-
-        # このラウンドで実際にナビゲーション目標としている座標が優先設置場所かどうか、
-        # および時間不足フォールバックを既に発動済みかどうか(ラウンド中一度きり)。
-        self._target_is_priority = True
-        self._time_fallback_triggered = False
-        # フォールバック発動後、game_state["target_plant_pos"](game.target_plant_pos)は
-        # 変更しないため、以後はこちらの値を優先して使う。
-        self._target_plant_pos_override = None
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
-        # IQAwareController.decide_move()は毎tickこのset_game()を「知覚view」付きで
-        # 呼び出すため、self.gameは以後見かけ上の使い捨てオブジェクトに上書きされ続ける。
-        # target_plant_posの上書き(reset_round())は本物のgameに対して行う必要がある
-        # ため、最初に渡された(=run_game.py起動時の本物の)gameだけを別途保持する。
         if self._real_game is None:
             self._real_game = game
         self.game = game
         grid = game.grid
+
         self._plant_cells = [
             (r, c)
             for r in range(grid.shape[0])
             for c in range(grid.shape[1])
             if int(grid[r, c]) in SITE_VALUES
         ]
-        if self.has_priority_cells:
-            self._priority_dist_map = _bfs_distance_map_multi(grid, self.priority_cells)
-        else:
-            self._priority_dist_map = _bfs_distance_map_multi(grid, self._plant_cells)
-        finite = self._priority_dist_map[self._priority_dist_map >= 0]
-        self._priority_max_dist = int(finite.max()) if finite.size else (grid.shape[0] + grid.shape[1])
 
-        # サイト別ウェイポイントへの距離マップ(waypoint_cellsに存在するサイトのみ構築)。
         self._waypoint_dist_maps = {
             site: _bfs_distance_map(grid, cell) for site, cell in self.waypoint_cells.items()
         }
 
-        # AI_CONTROLLED_SITE_SELECTION用: プラント可能マスをサイト別(左/右)に分割する。
-        # 判定基準はCarryEnv/battle_logic.pyの実況テキストと同一(列がwidth//2未満なら左)。
         width = grid.shape[1]
         self._plant_cells_by_site = {"left": [], "right": []}
         for cell in self._plant_cells:
             site_key = "left" if cell[1] < width // 2 else "right"
             self._plant_cells_by_site[site_key].append(cell)
 
-        # 優先設置場所(priority_cells)をサイト別に分割。本番map_data.pyには
-        # grid==5が存在しないため、gridの値ではなくpriority_cells(座標リスト)から
-        # 直接分割する。
         self._priority_cells_by_site = {"left": [], "right": []}
         if self.has_priority_cells:
             for cell in self.priority_cells:
                 site_key = "left" if cell[1] < width // 2 else "right"
                 self._priority_cells_by_site[site_key].append(cell)
 
-        # 通常のプラント可能マス(優先設置場所を除く)。時間不足フォールバック候補。
-        priority_set = set(self.priority_cells) if self.has_priority_cells else set()
-        self._plain_cells_by_site = {"left": [], "right": []}
-        for cell in self._plant_cells:
-            if cell in priority_set:
-                continue
-            site_key = "left" if cell[1] < width // 2 else "right"
-            self._plain_cells_by_site[site_key].append(cell)
-
     def reset_round(self):
         self._sighting = None
+        self._active_site = None
+        self._active_target = None
+        self._reached_waypoint = True
         self._target_dist_map = None
         self._cached_target_pos = None
-        self._active_waypoint_site = None
-        self._reached_waypoint = True
-        self._carrier_first_step_pending = True
-
-        # run_game.py の init_round() は、このreset_round()を呼び出す直前に
-        # self.game.target_plant_posをランダムに確定させている。
-        # AI_CONTROLLED_SITE_SELECTION=Trueの場合はここでその値をAI自身の判断
-        # (SITE_SELECTION_WEIGHTS)で上書きする。run_game.pyのコードは変更しない
-        # ( 既に持っているself.gameへの参照を使うだけ )。
-        # このラウンドの動的フォールバック状態をリセット(target_is_priorityは
-        # 下の選定処理内で確定させる)。
-        self._time_fallback_triggered = False
-        self._target_plant_pos_override = None
 
         if AI_CONTROLLED_SITE_SELECTION and self._real_game is not None:
             chosen_site = self._choose_weighted_site()
 
-            # 優先設置場所(priority_cells)を最優先でtargetにする。そのサイトに
-            # 優先設置場所が1つも無ければ通常のプラント可能マスから選ぶ
-            # (train_attacker_carry.py CarryEnv.reset()と同一方針)。
             candidates = self._priority_cells_by_site.get(chosen_site) or []
-            if candidates:
-                is_priority = True
-            else:
+            if not candidates:
                 candidates = self._plant_cells_by_site.get(chosen_site) or []
-                is_priority = False
-
             if not candidates:
                 fallback_site = "right" if chosen_site == "left" else "left"
-                candidates = self._priority_cells_by_site.get(fallback_site) or []
-                if candidates:
-                    is_priority = True
-                else:
-                    candidates = self._plant_cells_by_site.get(fallback_site) or self._plant_cells
-                    is_priority = False
+                candidates = (
+                    self._priority_cells_by_site.get(fallback_site)
+                    or self._plant_cells_by_site.get(fallback_site)
+                    or self._plant_cells
+                )
                 chosen_site = fallback_site
 
             if candidates:
-                self._real_game.target_plant_pos = random.choice(candidates)
-                self._target_is_priority = is_priority
+                target = random.choice(candidates)
+                self._active_site = chosen_site
+                self._active_target = target
+                # 表示整合のため本物のgameにも書き込む(内部ロジックはself._active_target
+                # を直接参照するため、これ自体は必須ではない)。
+                self._real_game.target_plant_pos = target
+                if chosen_site in self._waypoint_dist_maps:
+                    self._reached_waypoint = False
+                else:
+                    self._reached_waypoint = True
                 self._log(
-                    f"[SITE OVERRIDE] chosen_site={chosen_site} is_priority={is_priority} "
-                    f"target_plant_pos={self.game.target_plant_pos}"
+                    f"[SITE OVERRIDE] chosen_site={chosen_site} target={target}"
                 )
 
     @staticmethod
     def _choose_weighted_site():
-        """SITE_SELECTION_WEIGHTSに従って左/右サイトを確率選択する。
-        重みの合計が1.0でなくても比率のまま正規化して扱う。"""
         left_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("left", 0.0)))
         right_w = max(0.0, float(SITE_SELECTION_WEIGHTS.get("right", 0.0)))
         total = left_w + right_w
@@ -498,13 +369,35 @@ class LearningAttackerCarryTouyamaController:
         return cells
 
     def _get_target_dist_map(self, target_pos):
-        """target_plant_posはラウンド中固定のはずなので、同じ座標が来る限り
-        再計算せずキャッシュを使い回す(実ゲームのinit_round()仕様に依拠)。"""
         target_pos = (int(target_pos[0]), int(target_pos[1]))
         if target_pos != self._cached_target_pos:
             self._target_dist_map = _bfs_distance_map(self.game.grid, target_pos)
             self._cached_target_pos = target_pos
         return self._target_dist_map
+
+    def _time_critical(self, pos):
+        """優先設置場所への到達+設置完了(PLANT_REQUIRED_TICKS)が、残りTickでは
+        間に合わない場合True。間に合わない場合のみ通常マスでの妥協設置を許可する。"""
+        dist_map = self._get_target_dist_map(self._active_target)
+        r, c = int(pos[0]), int(pos[1])
+        dist_to_priority = dist_map[r, c]
+        if dist_to_priority < 0:
+            return True  # 経路が無い(通常起こらないが保険)
+        elapsed_ticks = getattr(self.game, "battle_tick", 0)
+        remaining_ticks = ROUND_DURATION_TICKS - elapsed_ticks
+        ticks_needed = dist_to_priority + PLANT_REQUIRED_TICKS
+        return remaining_ticks < ticks_needed
+
+    def _plantable_cell(self, pos):
+        """このマスでPLANTを許可するか。優先設置場所は常に許可。通常のプラント
+        可能マス(2)は、優先設置場所への到達が時間的に間に合わない場合のみ
+        妥協的に許可する。"""
+        pos_t = (int(pos[0]), int(pos[1]))
+        if pos_t == self._active_target:
+            return True
+        if pos_t in self._plant_cells_by_site.get(self._active_site, ()):
+            return self._time_critical(pos_t)
+        return False
 
     def _update_sighting(self, char, chars, smoke_cells):
         grid = self.game.grid
@@ -526,7 +419,7 @@ class LearningAttackerCarryTouyamaController:
                 self._sighting = None
 
     # -- 観測構築(train_attacker_carry.py の build_observation と同一構造) --
-    def _build_observation(self, char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks, reached_waypoint):
+    def _build_observation(self, char, chars, smoke_cells, dist_map, elapsed_ticks, reached_waypoint, on_target):
         obs = np.zeros(OBS_DIM, dtype=np.float32)
         grid = self.game.grid
         height, width = grid.shape
@@ -549,29 +442,27 @@ class LearningAttackerCarryTouyamaController:
         if bfs_dist < 0:
             bfs_dist = height + width
         obs[9] = min(bfs_dist, height + width) / (height + width)
-        best_dr, best_dc = _bfs_best_direction(dist_map, r0, c0)
-        obs[10] = float(best_dr)
-        obs[11] = float(best_dc)
-        obs[12] = 1.0 if int(grid[r0, c0]) in SITE_VALUES else 0.0
+        obs[10] = 1.0 if reached_waypoint else 0.0
+        obs[11] = 1.0 if on_target else 0.0
 
         visible_enemies = [
             o for o in chars
             if getattr(o, "is_alive", True) and o.team != char.team
             and _has_los(grid, char.pos, o.pos, smoke_cells)
         ]
-        obs[13] = 1.0 if visible_enemies else 0.0
-        obs[14] = len(visible_enemies) / 5.0
+        obs[12] = 1.0 if visible_enemies else 0.0
+        obs[13] = len(visible_enemies) / 5.0
         if visible_enemies:
             nearest = min(
                 visible_enemies,
                 key=lambda o: max(abs(o.pos[0] - r0), abs(o.pos[1] - c0)),
             )
-            obs[15] = (nearest.pos[0] - r0) / height
-            obs[16] = (nearest.pos[1] - c0) / width
+            obs[14] = (nearest.pos[0] - r0) / height
+            obs[15] = (nearest.pos[1] - c0) / width
             dist = max(abs(nearest.pos[0] - r0), abs(nearest.pos[1] - c0))
-            obs[17] = min(dist, height) / height
+            obs[16] = min(dist, height) / height
 
-        obs[18] = 1.0 if any(
+        obs[17] = 1.0 if any(
             getattr(o, "is_alive", True) and o.team != char.team
             and (getattr(o, "blind_remaining", 0) > 0 or getattr(o, "reveal_remaining", 0) > 0)
             for o in chars
@@ -582,66 +473,22 @@ class LearningAttackerCarryTouyamaController:
             and any(c.name == s.get("owner") and c.team == char.team for c in chars)
             for s in getattr(self.game, "smokes", [])
         )
-        obs[19] = 1.0 if own_smoke_active else 0.0
-
-        teammates = [
-            o for o in chars
-            if o is not char and getattr(o, "is_alive", True) and o.team == char.team
-        ]
-        obs[20] = len(teammates) / 4.0
-        if teammates:
-            nearest_d = min(max(abs(t.pos[0] - r0), abs(t.pos[1] - c0)) for t in teammates)
-            obs[21] = min(nearest_d, height) / height
-        obs[22] = 1.0  # is_carrier
-        obs[23] = min(elapsed_ticks, max_ticks) / max_ticks
-        obs[24] = sum(
+        obs[18] = 1.0 if own_smoke_active else 0.0
+        obs[19] = min(elapsed_ticks, 100) / 100.0
+        obs[20] = sum(
             1 for o in chars if getattr(o, "is_alive", True) and o.team != char.team
         ) / 5.0
 
-        # --- 優先(代表)地点への誘導特徴量。checkpointのpriority_cells由来の
-        # マルチソースBFS(self._priority_dist_map)を参照する。target_plant_pos
-        # (dist_map)とは独立した、常時提供される追加ガイダンス。---
-        p_dist = self._priority_dist_map[r0, c0] if self._priority_dist_map is not None else -1
-        if p_dist < 0:
-            p_dist = self._priority_max_dist
-        obs[25] = min(p_dist, self._priority_max_dist) / max(1, self._priority_max_dist)
-        p_best_dr, p_best_dc = _bfs_best_direction(self._priority_dist_map, r0, c0)
-        obs[26] = float(p_best_dr)
-        obs[27] = float(p_best_dc)
-
-        # サイト別ウェイポイント通過済みフラグ(train_attacker_carry.pyのobs[28]と同一)。
-        obs[28] = 1.0 if reached_waypoint else 0.0
-
         return obs
 
-    def _build_mask(self, char, chars, on_site):
-        grid = self.game.grid
-        height, width = grid.shape
-        occupied = {
-            tuple(o.pos) for o in chars
-            if o is not char and getattr(o, "is_alive", True)
-        }
+    def _build_mask(self, char, on_target):
         mask = np.ones(ACTION_DIM, dtype=bool)
-        r, c = int(char.pos[0]), int(char.pos[1])
-        for move_idx, (dr, dc) in enumerate(MOVES):
-            nr, nc = r + dr, c + dc
-            walkable = (
-                0 <= nr < height and 0 <= nc < width
-                and grid[nr, nc] != 1 and (nr, nc) not in occupied
-            )
-            if not walkable:
-                mask[move_idx * 2] = False
-                mask[move_idx * 2 + 1] = False
-
         charges = {
             "SMOKE": char.smoke_charges, "FLASH": char.flash_charges, "RECON": char.recon_charges,
         }.get(char.ability_name, 0)
         if charges <= 0 or char.ability_name == "HUNT":
-            for move_idx in range(5):
-                mask[move_idx * 2 + 1] = False
-
-        mask[PLANT_ACTION_INDEX] = bool(on_site)
-
+            mask[ACTION_ABILITY] = False
+        mask[ACTION_PLANT] = bool(on_target)
         return mask
 
     def _select_action(self, obs, mask):
@@ -656,13 +503,14 @@ class LearningAttackerCarryTouyamaController:
 
     @staticmethod
     def _decode_action(action_idx):
-        """train_attacker_carry.py の decode_action と同一。"""
-        if int(action_idx) == PLANT_ACTION_INDEX:
+        idx = int(action_idx)
+        if idx == ACTION_PLANT:
             return "PLANT"
-        move_idx, use_ability = divmod(int(action_idx), 2)
-        return MOVES[move_idx], bool(use_ability)
+        if idx == ACTION_ABILITY:
+            return "ABILITY"
+        return "NONE"
 
-    # -- エスコート・ヒューリスティック(train_attacker_carry.pyと同一方針) --
+    # -- エスコート・ヒューリスティック -----------------------------------
     def _escort_ability_action(self, char, visible_enemies):
         charges = {
             "SMOKE": char.smoke_charges, "FLASH": char.flash_charges, "RECON": char.recon_charges,
@@ -729,98 +577,54 @@ class LearningAttackerCarryTouyamaController:
             next_pos = self._decide_escort_move(char, carrier, occupied)
             return next_pos
 
-        # --- ここからキャリア(DQN) ---
-        # ラウンド最初の1手は、DQNの推論結果を待たずに強制的に上移動を返す。
-        # train_attacker_carry.py CarryEnv.step()のFORCED_FIRST_STEP_ACTION_INDEXと
-        # 同一の意図・同一の方向(上)。PLANTがtick0で成立することは実質無いため、
-        # PLANT分岐との衝突は考慮不要。
-        if self._carrier_first_step_pending:
-            self._carrier_first_step_pending = False
-            return [r + FORCED_FIRST_STEP_MOVE[0], c + FORCED_FIRST_STEP_MOVE[1]]
-
-        if self._target_plant_pos_override is not None:
-            # 時間不足フォールバック発動後はgame_state側(game.target_plant_pos)を
-            # 無視し、こちらの上書き座標を使い続ける。
-            target_plant_pos = self._target_plant_pos_override
-        else:
-            target_plant_pos = game_state.get("target_plant_pos")
-            if target_plant_pos is None:
-                # 実ゲームでは通常発生しないが、念のためのフォールバック。
-                target_plant_pos = self._plant_cells[0] if self._plant_cells else (r, c)
-            target_plant_pos = (int(target_plant_pos[0]), int(target_plant_pos[1]))
-
-        # 優先設置場所へ向かっている間、時間的に間に合わなくなった場合は
-        # 通常のプラント可能マスへ動的にフォールバックする(ラウンド中一度きり。
-        # train_attacker_carry.pyの動的フォールバックと同一判定式)。
-        if self._target_is_priority and not self._time_fallback_triggered:
-            target_dist_map = self._get_target_dist_map(target_plant_pos)
-            dist_to_target = target_dist_map[r, c]
-            remaining_ticks = getattr(self.game, "round_timer", 0)
-            if dist_to_target < 0 or remaining_ticks < dist_to_target + PLANT_REQUIRED_TICKS:
-                site_key = self._active_waypoint_site or (
-                    "left" if target_plant_pos[1] < grid.shape[1] // 2 else "right"
-                )
-                fallback_candidates = self._plain_cells_by_site.get(site_key) or self._plant_cells
-                pos_dist_map = _bfs_distance_map(grid, (r, c))
-                reachable = [cell for cell in fallback_candidates if pos_dist_map[cell[0], cell[1]] >= 0]
-                if reachable:
-                    best_cell = min(reachable, key=lambda cell: pos_dist_map[cell[0], cell[1]])
-                    target_plant_pos = best_cell
-                    self._target_plant_pos_override = best_cell
-                    self._target_is_priority = False
-                    self._time_fallback_triggered = True
-                    self._log(
-                        f"[TIME FALLBACK] remaining_ticks={remaining_ticks} "
-                        f"dist_to_priority={dist_to_target} new_target={best_cell}"
-                    )
-
-        # ラウンド開始時(_active_waypoint_site未設定)にサイトを判定し、
-        # 対応するウェイポイントが存在すればまずそこへの距離マップを使う。
-        # train_attacker_carry.py CarryEnv.reset()と同一の判定基準(列がwidth//2未満=左)。
-        if self._active_waypoint_site is None:
+        # --- ここからキャリア ---
+        if self._active_target is None:
+            # AI_CONTROLLED_SITE_SELECTION=Falseの場合などのフォールバック。
+            fallback = game_state.get("target_plant_pos")
+            self._active_target = (
+                (int(fallback[0]), int(fallback[1])) if fallback is not None
+                else (self._plant_cells[0] if self._plant_cells else (r, c))
+            )
             width = grid.shape[1]
-            self._active_waypoint_site = "left" if target_plant_pos[1] < width // 2 else "right"
-            if self._active_waypoint_site in self._waypoint_dist_maps:
-                self._reached_waypoint = False
-            else:
-                self._reached_waypoint = True
+            self._active_site = "left" if self._active_target[1] < width // 2 else "right"
+            self._reached_waypoint = self._active_site not in self._waypoint_dist_maps
 
+        # 中継地点通過判定(未通過の場合のみ)。
         if not self._reached_waypoint:
-            waypoint_cell = self.waypoint_cells[self._active_waypoint_site]
+            waypoint_cell = self.waypoint_cells[self._active_site]
             waypoint_dist = max(abs(r - waypoint_cell[0]), abs(c - waypoint_cell[1]))
             if waypoint_dist <= 1:
                 self._reached_waypoint = True
-                # 通過した瞬間だけ切り替える。以降はtarget_plant_pos向けのキャッシュ
-                # (_get_target_dist_map)をそのまま使う。
-                self._cached_target_pos = None
+
+        goal = self.waypoint_cells[self._active_site] if not self._reached_waypoint else self._active_target
+        on_target = self._plantable_cell((r, c))
 
         if self._reached_waypoint:
-            dist_map = self._get_target_dist_map(target_plant_pos)
+            dist_map = self._get_target_dist_map(self._active_target)
         else:
-            dist_map = self._waypoint_dist_maps[self._active_waypoint_site]
-
-        on_site = int(grid[r, c]) in SITE_VALUES
+            dist_map = self._waypoint_dist_maps[self._active_site]
 
         self._update_sighting(char, chars, smoke_cells)
         elapsed_ticks = getattr(self.game, "battle_tick", 0)
-        max_ticks = getattr(self.game, "round_timer", 100) + elapsed_ticks  # 概算(観測は正規化用途のみ)
-        max_ticks = max(max_ticks, 1)
 
-        obs = self._build_observation(
-            char, chars, smoke_cells, dist_map, elapsed_ticks, max_ticks, self._reached_waypoint
-        )
-        mask = self._build_mask(char, chars, on_site)
+        obs = self._build_observation(char, chars, smoke_cells, dist_map, elapsed_ticks, self._reached_waypoint, on_target)
+        mask = self._build_mask(char, on_target)
         action_idx = self._select_action(obs, mask)
         decoded = self._decode_action(action_idx)
 
         if decoded == "PLANT":
-            # PLANTはマスク上、on_site==Trueの時のみ選択され得る。
-            # 移動・アビリティ使用は行わない(battle_logic.pyのPLANT分岐と同一仕様)。
             return list(char.pos), "PLANT"
 
-        (dr, dc), use_ability = decoded
+        # 移動は決定的BFS経路探索(占有マスは自分以外の全キャラ)。
+        # 中継地点は隣接到達でOK(waypoint_dist<=1で別途判定済み)だが、最終
+        # プラント目標は正確な到達が必須(隣接停止のままだとon_targetが
+        # 永久にFalseになりPLANTを一切選べなくなる)。
+        own_occupied = occupied
+        allow_adjacent = not self._reached_waypoint
+        nxt = _bfs_next_step(grid, (r, c), goal, own_occupied, allow_adjacent_goal=allow_adjacent)
+        next_pos = [int(nxt[0]), int(nxt[1])]
 
-        if use_ability:
+        if decoded == "ABILITY":
             charges = {
                 "SMOKE": char.smoke_charges, "FLASH": char.flash_charges, "RECON": char.recon_charges,
             }.get(char.ability_name, 0)
@@ -845,7 +649,6 @@ class LearningAttackerCarryTouyamaController:
                     target_pos = random.choice(self._plant_cells)
 
                 if target_pos is not None:
-                    return list(char.pos), {"ability": char.ability_name, "target": target_pos}
+                    return next_pos, {"ability": char.ability_name, "target": target_pos}
 
-        next_pos = [r + dr, c + dc]
         return next_pos

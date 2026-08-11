@@ -97,6 +97,7 @@ DEFAULT_MODEL_PATH = (
     "dqn_attacker_retrieve_touyama_best_by_eval.pt"
 )
 
+VERBOSE_LOG = False
 
 # ---------------------------------------------------------------------------
 # Dueling DQN (touyama_v1/train_attacker_retrieve.py と同一構造。
@@ -197,7 +198,7 @@ class LearningAttackerRetrieveTouyamaController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE_LOG):
         self.greedy = greedy
         self.verbose = verbose
         self.model = DuelingQNet(OBS_DIM, N_ACTIONS).to(DEVICE)

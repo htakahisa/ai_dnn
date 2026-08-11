@@ -212,18 +212,6 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "icy": CharacterStats("icy", 0.26, 0.21, 75, 0.78, 95, "タイガー", 35, 5, 9),
     "yay": CharacterStats("yay", 0.41, 0.14, 70, 0.8, 100, "フラッシュ", 90, 9, 4),
-    "ろびぃな": CharacterStats(
-        "ろびぃな", 0.25, 0.55, 80, 0.65, 122, "スモーカー", 50, 5, 8
-    ),
-    "えんぺん": CharacterStats(
-        "えんぺん", 0.5, 0.17, 185, 0.75, 125, "フラッシュ", 65, 1, 8
-    ),
-    "いぐるん": CharacterStats(
-        "いぐるん", 0.33, 0.22, 75, 0.77, 131, "シーカー", 55, 4, 8
-    ),
-    "夢の街": CharacterStats(
-        "夢の街", 0.35, 0.23, 80, 0.76, 115, "フラッシュ", 50, 3, 8
-    ),
     "eeiu": CharacterStats("eeiu", 0.27, 0.22, 85, 0.76, 100, "シーカー", 45, 8, 7),
     "Munchkin": CharacterStats(
         "Munchkin", 0.28, 0.17, 135, 0.75, 85, "シーカー", 75, 8, 3
