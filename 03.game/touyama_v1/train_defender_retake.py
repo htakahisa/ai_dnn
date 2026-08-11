@@ -426,7 +426,7 @@ ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
 class RetakeEnv:
     def __init__(self, min_detonate_ticks=15, max_detonate_ticks=SPIKE_DETONATION_TICKS,
-                 attacker_hold_radius=4, max_ticks=90):
+                 attacker_hold_radius=4, max_ticks=100):
         self.min_detonate_ticks = min_detonate_ticks
         self.max_detonate_ticks = max_detonate_ticks
         self.attacker_stub = AttackerStub(hold_radius=attacker_hold_radius)

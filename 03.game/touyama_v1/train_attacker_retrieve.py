@@ -483,7 +483,7 @@ class RetrieveEnv:
 
             new_dist = self.dist_map[tuple(u.pos)]
             od = old_dist[u.name]
-            approach_reward = 0.3 * (od - new_dist) if od >= 0 and new_dist >= 0 else 0.0
+            approach_reward = 0.6 * (od - new_dist) if od >= 0 and new_dist >= 0 else 0.0
 
             reward = STEP_PENALTY + approach_reward + stall_penalty + ability_rewards.get(u.name, 0.0)
 
