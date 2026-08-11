@@ -1,0 +1,1393 @@
+"""gc_v1/train_attacker_escort.py
+
+固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+Attacker Carry Phase「escort(護衛)」学習スクリプト(Dueling DQN)。
+
+【目的】
+キャリアー(スパイク運搬役)の周囲2〜7マス程度を維持しつつ、キャリアーと
+プラントサイトの間の経路を塞がないように動き、敵を見つけたらアビリティ
+(FLASH/RECON/SMOKE)を適切なタイミングで使用できるようになるまで学習する。
+
+【汎用版(train_attacker_escort.py)からの主な変更点】
+1. キャラクター別の固定ステータス・固定アビリティ
+   汎用版はGENERIC_ACCURACY等の汎用値とABILITY_TYPESのランダム割当を
+   使っていたが、本版はcharacter_stats_gc.py + コンボ(ふわんだりぃず)
+   + タイガーパッシブで確定した実効ステータスを、キャリアー・エスコート
+   それぞれに適用する(train_attacker_carry.py / train_attacker_guard.py と
+   同一の_compute_gc_effective_stats()を使用)。
+
+2. HUNT(タイガー役)対応
+   アビリティonehotにHUNTを追加(3種→4種、OBS_DIM=40→41)。
+   HUNTはアビリティチャージ0として初期化し、常にアビリティ行動を
+   マスクする(タイガーはパッシブのみで使用アビリティを持たないため)。
+
+3. キャリアー役の可変化(ハンドオフ想定)
+   train_attacker_carry.pyと同じHANDOFF_AUGMENT_PROBパターンを導入。
+   通常はAbsolがキャリアーだが、一定確率で他のロースター
+   メンバーがキャリアーとして開始し、残り4人がエスコートを担当する
+   (retrieveフェーズからの引き継ぎ・キャリア交代に一般化するため)。
+
+4. 戦闘解決の精度向上
+   battle_logic.pyと同じ「反応速度降順での逐次解決」「移動中射撃精度
+   低下(MOVING_ACCURACY)」「移動中被弾しやすさ(MOVING_TARGET_HIT_MULTIPLIER)」
+   を追加。汎用版にはこれらがなく、キャラクター間の反応速度差が
+   全く反映されない設計だった。
+
+5. game_core.pyの定数を正式にimport
+   汎用版はゲーム定数(MAX_HP等)をこのファイル内に再定義していたが、
+   他のgc_v1ファイルの慣習(定数専用ファイルとして参照)に合わせた。
+
+【design方針(既存ルールの継承)】
+- 完全に自己完結: run_game.py / controllers.py / battle_logic.py /
+  abilities_los.py は一切importしない。必要なロジックはすべてこのファイル
+  内に複製する。map_data.py / character_stats_gc.py / game_core.py は
+  定数専用ファイルとして参照する(import制限の対象外)。
+- run_game.py / controllers.py は変更しない。
+
+【マルチエージェント方式(汎用版から継承)】
+4体のescortは全員「同じDueling DQNの重み」を共有して行動する
+(train_attacker_guard.py系と同じ「パラメータ共有」方式)。観測は
+エージェントごとに自分中心の相対座標系で構築するため、同じネットワークを
+どのescortにも使い回せる。
+
+【キャリアーはスクリプトAI】
+キャリアーは学習対象ではない。エピソード開始時に決めたプラントサイトへ、
+固定のBFS最短経路を1tickごとに1マスずつ進む。経路上の次のマスが
+(escortまたは敵に)占有されている場合、実際のゲーム(battle_logic.py
+move_character)と同じく「移動できずその場に留まる」。この「キャリアーが
+実際に進んだ距離」をescort全員の共有報酬にすることで、道を塞ぐと損、
+というシグナルをハードコードせずに学習させる。
+
+【敵はスクリプトAI】
+本格的なDefenderAIの学習は別スクリプトの範囲。ここでは「視界に入る・
+アビリティで状態異常にできる・撃ち合いが発生する」という最低限の
+相互作用だけを簡易シミュレーションする(N_ENEMIES=2、簡易ランダム徘徊)。
+
+保存先: gc_v1/data/attacker_escort_gc_data/
+チェックポイントは{"model_state_dict","obs_dim","n_actions","episode",
+"success_rate","avg_reward","avg_block_events","roster_order",
+"spike_holder_default"} を含むdict形式で保存する。
+"""
+
+import argparse
+import os
+import random
+import sys
+from collections import deque, namedtuple
+import time
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from map_data import NEW_MAZE_STR
+from character_stats_gc import CHARACTER_TABLE as GC_STATS_TABLE
+
+from game_core import (
+    MAX_HP,
+    HEADSHOT_DAMAGE,
+    BODY_DAMAGE,
+    MOVING_ACCURACY,
+    MOVING_TARGET_HIT_MULTIPLIER,
+    BLIND_ACCURACY_MULTIPLIER,
+    REVEALED_DODGE_MULTIPLIER,
+    BLIND_DURATION_TICKS,
+    REVEAL_DURATION_TICKS,
+    SMOKE_DURATION_TICKS,
+)
+from character_stats_gc import (
+    CHARACTER_TABLE as GC_STATS_TABLE,
+    GC_ROSTER_ORDER,
+)
+
+EPISODE_COUNT = 9000
+
+# ---------------------------------------------------------------------------
+# マップ上の意味付け(map_data.py準拠)
+# ---------------------------------------------------------------------------
+SITE_CELL_VALUE = 2
+ATTACKER_SPAWN_VALUE = 3
+DEFENDER_SPAWN_VALUE = 4
+
+ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")  # HUNTはアビリティ行動を持たない(常にマスク)
+ABILITY_RANGE = 6  # アビリティが届く最大距離(チェビシェフ距離で判定)
+
+N_ESCORTS = 4  # gc固定チーム5人からキャリアー1人を除いた人数
+N_ENEMIES = 2  # 敵はこのフェーズでは簡易スクリプトAI(本格学習は別スクリプトの範囲)
+
+DIST_BAND_MIN = 2
+DIST_BAND_MAX = 7
+DIST_NORM_MAX = 15.0  # 観測正規化用の上限距離
+
+STALL_THRESHOLD_TICKS = 3       # これを超えて無進捗が続いたら混雑ペナルティ開始
+STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限(無限にエスカレートさせない)
+CONGESTION_RADIUS = 2           # carryからこの距離以内のescortを「渋滞に関与」とみなす
+
+HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
+
+# 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
+# train_attacker_carry.py / train_attacker_guard.py と同一値)
+DEFAULT_ACCURACY = 0.50
+DEFAULT_DODGE = 0.12
+DEFAULT_HS_RATE = 0.20
+DEFAULT_REACTION = 100.0
+
+# ---------------------------------------------------------------------------
+# gc_v1 固定チーム定義(他のgc_v1学習ファイルと同一)
+# ---------------------------------------------------------------------------
+# GC_ROSTER_ORDER は character_stats_gc.py から読み込む
+GC_SPIKE_HOLDER = "Absol"  # GC既定キャリア
+
+
+GC_ROLE_TO_ABILITY = {
+    "フラッシュ": "FLASH",
+    "スモーカー": "SMOKE",
+    "シーカー": "RECON",
+    "タイガー": "HUNT",
+}
+TIGER_ACCURACY_BONUS = 0.10
+TIGER_HS_BONUS = 0.05
+
+
+GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
+GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
+GC_PLAYER_BONUSES = {
+    "Xdll": {"dodge_rate": 0.4, "mental": 3},
+    "Syouta": {"reaction": 40, "mental": 3},
+    "Absol": {"dodge_rate": 0.4, "mental": 3},
+    "eKo": {"hs_rate": 0.4, "mental": 3},
+    "SugarZ3ro": {"iq": 40, "mental": 3},
+}
+
+def _compute_gc_effective_stats():
+    """character_stats_gc.py の生値に、常時発動するチームコンボ
+    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
+    他のgc_v1学習ファイルと同一ロジック。"""
+    effective = {}
+    for name in GC_ROSTER_ORDER:
+        raw = GC_STATS_TABLE[name]
+        accuracy = float(raw.hit_pct)
+        hs_rate = float(raw.hs_pct)
+        dodge_rate = float(raw.dodge_pct)
+        reaction = float(raw.reaction)
+
+        if raw.role == "タイガー":
+            accuracy += TIGER_ACCURACY_BONUS
+            hs_rate += TIGER_HS_BONUS
+
+        if name in GC_COMBO_MEMBERS:
+            accuracy += GC_PLAYER_BONUSES.get(name, {}).get("accuracy", 0.0)
+            hs_rate += GC_PLAYER_BONUSES.get(name, {}).get("hs_rate", 0.0)
+            dodge_rate += GC_PLAYER_BONUSES.get(name, {}).get("dodge_rate", 0.0)
+            reaction += GC_PLAYER_BONUSES.get(name, {}).get("reaction", 0.0)
+
+        effective[name] = {
+            "accuracy": max(0.0, accuracy),
+            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
+            "reaction": max(0.0, reaction),
+            "ability": GC_ROLE_TO_ABILITY[raw.role],
+        }
+    return effective
+
+
+GC_EFFECTIVE_STATS = _compute_gc_effective_stats()
+
+print("[gc_v1] 固定チーム(Attacker/escort) 確定ステータス:")
+for _name in GC_ROSTER_ORDER:
+    _s = GC_EFFECTIVE_STATS[_name]
+    print(
+        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
+        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
+        f"ability={_s['ability']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 汎用ヘルパー: BFS最短経路・射線判定(abilities_los.py / controllers.py
+# と同等のロジックをこのファイル内に複製)
+# ---------------------------------------------------------------------------
+def _bfs_shortest_path(grid, start, goal):
+    """壁(1)だけを障害物としたBFS最短経路。start→goalのセル列を返す。"""
+    height, width = grid.shape
+    start, goal = tuple(start), tuple(goal)
+    if start == goal:
+        return [start]
+
+    q = deque([start])
+    parent = {start: None}
+    while q:
+        cur = q.popleft()
+        if cur == goal:
+            break
+        r, c = cur
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nxt = (r + dr, c + dc)
+            nr, nc = nxt
+            if not (0 <= nr < height and 0 <= nc < width):
+                continue
+            if grid[nr, nc] == 1 or nxt in parent:
+                continue
+            parent[nxt] = cur
+            q.append(nxt)
+
+    if goal not in parent:
+        return [start]
+
+    path = [goal]
+    while parent[path[-1]] is not None:
+        path.append(parent[path[-1]])
+    path.reverse()
+    return path
+
+
+def _line_cells(p1, p2):
+    """Bresenham法で2点間のセル列を返す(abilities_los.py と同一ロジック)。"""
+    y0, x0 = int(p1[0]), int(p1[1])
+    y1, x1 = int(p2[0]), int(p2[1])
+    dx, dy = abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    err = dx + dy
+    cells = []
+    while True:
+        cells.append((y0, x0))
+        if x0 == x1 and y0 == y1:
+            return cells
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
+
+
+def _has_los(grid, smoke_cells, p1, p2):
+    """壁とスモークを考慮した射線判定(abilities_los.pyの簡略版)。"""
+    cells = _line_cells(p1, p2)
+    for r, c in cells:
+        if grid[r, c] == 1:
+            return False
+    if smoke_cells and len(cells) > 2:
+        if any(cell in smoke_cells for cell in cells):
+            return False
+    return True
+
+
+def _chebyshev(p1, p2):
+    return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
+
+
+def _build_distance_map_walls_only(grid, source_cells):
+    """指定座標群を始点とした、壁のみを障害物としたマルチソースBFS距離マップ。
+    キャラクター同士の占有は考慮しない
+    (推論側 learning_attacker_escort.py と同一ロジックにする想定)。"""
+    height, width = grid.shape
+    dist = np.full((height, width), np.inf, dtype=np.float32)
+    q = deque()
+    for r, c in source_cells:
+        if 0 <= r < height and 0 <= c < width and grid[r, c] != 1:
+            dist[r, c] = 0.0
+            q.append((r, c))
+
+    while q:
+        r, c = q.popleft()
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1:
+                if dist[nr, nc] > dist[r, c] + 1:
+                    dist[nr, nc] = dist[r, c] + 1
+                    q.append((nr, nc))
+    return dist
+
+
+# ---------------------------------------------------------------------------
+# 環境
+# ---------------------------------------------------------------------------
+class EscortEnv:
+    """gc_v1固定チームのキャリアー護衛4体(重み共有)を学習させる
+    軽量マルチエージェント環境。"""
+
+    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
+    N_ACTIONS = 6
+    _MOVE_DELTA = {
+        ACTION_UP: (-1, 0),
+        ACTION_DOWN: (1, 0),
+        ACTION_LEFT: (0, -1),
+        ACTION_RIGHT: (0, 1),
+        ACTION_STAY: (0, 0),
+    }
+
+    def __init__(
+        self,
+        maze_str=NEW_MAZE_STR,
+        max_ticks=90,
+        n_escorts=N_ESCORTS,
+        n_enemies=N_ENEMIES,
+        dist_band_min=DIST_BAND_MIN,
+        dist_band_max=DIST_BAND_MAX,
+        team_progress_coef=1.0,
+        block_penalty=1.0,
+        dist_penalty_coef=0.08,
+        stall_threshold_ticks=STALL_THRESHOLD_TICKS,
+        stall_penalty_cap_ticks=STALL_PENALTY_CAP_TICKS,
+        congestion_radius=CONGESTION_RADIUS,
+        congestion_penalty_coef=0.15,
+        ability_success_reward=2.0,
+        ability_redundant_penalty=1.0,
+        ability_waste_penalty=0.3,
+        kill_bonus=5.0,
+        death_penalty=3.0,
+        mission_success_reward=5.0,
+        mission_fail_penalty=5.0,
+        enemy_move_prob=0.2,
+        handoff_augment_prob=HANDOFF_AUGMENT_PROB,
+        seed=None,
+    ):
+        lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
+        self.grid = np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+        self.height, self.width = self.grid.shape
+
+        self.max_ticks = max_ticks
+        self.n_escorts = n_escorts
+        self.n_enemies = n_enemies
+        self.dist_band_min = dist_band_min
+        self.dist_band_max = dist_band_max
+        self.team_progress_coef = team_progress_coef
+        self.block_penalty = block_penalty
+        self.dist_penalty_coef = dist_penalty_coef
+        self.stall_threshold_ticks = stall_threshold_ticks
+        self.stall_penalty_cap_ticks = stall_penalty_cap_ticks
+        self.congestion_radius = congestion_radius
+        self.congestion_penalty_coef = congestion_penalty_coef
+        self.ability_success_reward = ability_success_reward
+        self.ability_redundant_penalty = ability_redundant_penalty
+        self.ability_waste_penalty = ability_waste_penalty
+        self.kill_bonus = kill_bonus
+        self.death_penalty = death_penalty
+        self.mission_success_reward = mission_success_reward
+        self.mission_fail_penalty = mission_fail_penalty
+        self.enemy_move_prob = enemy_move_prob
+        self.handoff_augment_prob = handoff_augment_prob
+
+        self.site_cells = list(zip(*np.where(self.grid == SITE_CELL_VALUE)))
+        self.attacker_spawns = list(zip(*np.where(self.grid == ATTACKER_SPAWN_VALUE)))
+        self.defender_spawns = list(zip(*np.where(self.grid == DEFENDER_SPAWN_VALUE)))
+        self.walkable_cells = list(zip(*np.where(self.grid != 1)))
+
+        self.rng = random.Random(seed)
+
+        # ラウンド内状態(reset()で初期化)
+        self.tick = 0
+        self.carry_pos = (0, 0)
+        self.carry_hp = MAX_HP
+        self.carry_alive = True
+        self.carry_name = GC_SPIKE_HOLDER
+        self.carry_accuracy = 0.0
+        self.carry_dodge = 0.0
+        self.carry_hs_rate = 0.0
+        self.carry_reaction = 0.0
+        self.carry_moved = False
+        self.carry_path = [(0, 0)]
+        self.carry_path_index = 0
+
+        self.escort_pos = []
+        self.escort_hp = []
+        self.escort_alive = []
+        self.escort_name = []
+        self.escort_ability_type = []
+        self.escort_ability_used = []
+        self.escort_accuracy = []
+        self.escort_dodge = []
+        self.escort_hs_rate = []
+        self.escort_reaction = []
+        self.escort_moved = []
+        self.escort_last_delta = []
+        self.escort_stuck = []
+
+        self.enemy_pos = []
+        self.enemy_hp = []
+        self.enemy_alive = []
+        self.enemy_accuracy = []
+        self.enemy_dodge = []
+        self.enemy_hs_rate = []
+        self.enemy_reaction = []
+        self.enemy_moved = []
+        self.enemy_blind_remaining = []
+        self.enemy_blind_source = []
+        self.enemy_reveal_remaining = []
+        self.enemy_reveal_source = []
+
+        self.smokes = []  # [{"cells": set, "remaining": int}]
+
+        self._blocking_escort_idx = None  # このtickでキャリアーを塞いだescort index
+        self._carry_dist_map = None
+        self._stall_ticks = 0  # キャリアーが連続で進めていないtick数
+
+    # ------------------------------------------------------------------
+    # 初期化
+    # ------------------------------------------------------------------
+    def _random_walkable(self, exclude=()):
+        exclude = set(exclude)
+        for _ in range(200):
+            cell = self.rng.choice(self.walkable_cells)
+            if cell not in exclude:
+                return cell
+        return self.rng.choice(self.walkable_cells)
+
+    def _resolve_spawn_collision(self, pos, occupied):
+        """スポーン候補が重複/壁だった場合に、BFSで最寄りの空きマスへ逃がす
+        (train_attacker_carry.py / train_attacker_guard.py と同一ロジック)。"""
+        if pos not in occupied and self.grid[pos[0], pos[1]] != 1:
+            return pos
+        visited = {pos}
+        queue = deque([pos])
+        while queue:
+            r, c = queue.popleft()
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nr, nc = r + dr, c + dc
+                if not (0 <= nr < self.height and 0 <= nc < self.width):
+                    continue
+                if (nr, nc) in visited:
+                    continue
+                visited.add((nr, nc))
+                if self.grid[nr, nc] == 1:
+                    continue
+                if (nr, nc) not in occupied:
+                    return (nr, nc)
+                queue.append((nr, nc))
+        return pos
+
+    def reset(self):
+        self.tick = 0
+        self.smokes = []
+
+        # --- キャリアー役を決定(train_attacker_carry.pyと同一のハンドオフ方針) ---
+        handoff = self.rng.random() < self.handoff_augment_prob
+        if handoff:
+            carrier_name = self.rng.choice(GC_ROSTER_ORDER)
+        else:
+            carrier_name = GC_SPIKE_HOLDER
+        self.carry_name = carrier_name
+
+        carrier_stats = GC_EFFECTIVE_STATS[carrier_name]
+        self.carry_accuracy = carrier_stats["accuracy"]
+        self.carry_dodge = carrier_stats["dodge_rate"]
+        self.carry_hs_rate = carrier_stats["hs_rate"]
+        self.carry_reaction = carrier_stats["reaction"] + self.rng.uniform(-10, 10)
+
+        # --- キャリアーとescort4人のスポーン位置を決定 ---
+        occupied = set()
+        if handoff:
+            spawn_positions = self.rng.sample(self.walkable_cells, min(5, len(self.walkable_cells)))
+        else:
+            spawn_positions = list(self.attacker_spawns[:5]) if len(self.attacker_spawns) >= 5 else list(self.attacker_spawns)
+            while len(spawn_positions) < 5:
+                spawn_positions.append(self._random_walkable(exclude=occupied))
+
+        carry_base_pos = spawn_positions[GC_ROSTER_ORDER.index(carrier_name) % len(spawn_positions)]
+        self.carry_pos = self._resolve_spawn_collision(carry_base_pos, occupied)
+        occupied.add(self.carry_pos)
+
+        # --- escort名(ロースター順、キャリアーを除いた4人) ---
+        escort_names = [name for name in GC_ROSTER_ORDER if name != carrier_name]
+
+        self.escort_pos = []
+        self.escort_name = []
+        self.escort_ability_type = []
+        self.escort_ability_used = []
+        self.escort_accuracy = []
+        self.escort_dodge = []
+        self.escort_hs_rate = []
+        self.escort_reaction = []
+        for i, name in enumerate(escort_names):
+            stats = GC_EFFECTIVE_STATS[name]
+            base_pos = spawn_positions[GC_ROSTER_ORDER.index(name) % len(spawn_positions)]
+            pos = self._resolve_spawn_collision(base_pos, occupied)
+            occupied.add(pos)
+
+            self.escort_pos.append(pos)
+            self.escort_name.append(name)
+            self.escort_ability_type.append(stats["ability"])
+            self.escort_accuracy.append(stats["accuracy"])
+            self.escort_dodge.append(stats["dodge_rate"])
+            self.escort_hs_rate.append(stats["hs_rate"])
+            self.escort_reaction.append(stats["reaction"] + self.rng.uniform(-10, 10))
+            # HUNT(タイガー)はアビリティを持たないため、最初から「使用済み」扱いにして
+            # get_action_mask()が常にACTION_ABILITYを弾くようにする。
+            self.escort_ability_used.append(stats["ability"] == "HUNT")
+
+        self.n_escorts = len(escort_names)
+        self.escort_hp = [MAX_HP] * self.n_escorts
+        self.escort_alive = [True] * self.n_escorts
+        self.escort_moved = [False] * self.n_escorts
+        self.escort_last_delta = [(0.0, 0.0)] * self.n_escorts
+        self.escort_stuck = [0] * self.n_escorts
+
+        # --- キャリアー：スポーンからサイトのどれか1点へ固定経路 ---
+        target = self.rng.choice(self.site_cells) if self.site_cells else self.carry_pos
+        self.carry_path = _bfs_shortest_path(self.grid, self.carry_pos, target)
+        self.carry_path_index = 0
+        self.carry_hp = MAX_HP
+        self.carry_alive = True
+        self.carry_moved = False
+        self._refresh_carry_dist_map()
+
+        # --- 敵：守備側スポーンに配置(当面ヒューリスティック) ---
+        self.enemy_pos = []
+        enemy_candidates = list(self.defender_spawns)
+        self.rng.shuffle(enemy_candidates)
+        for i in range(self.n_enemies):
+            if i < len(enemy_candidates):
+                pos = enemy_candidates[i]
+            else:
+                pos = self._random_walkable(exclude=occupied)
+            self.enemy_pos.append(pos)
+
+        self.enemy_hp = [MAX_HP] * self.n_enemies
+        self.enemy_alive = [True] * self.n_enemies
+        self.enemy_accuracy = [DEFAULT_ACCURACY] * self.n_enemies
+        self.enemy_dodge = [DEFAULT_DODGE] * self.n_enemies
+        self.enemy_hs_rate = [DEFAULT_HS_RATE] * self.n_enemies
+        self.enemy_reaction = [DEFAULT_REACTION + self.rng.uniform(-10, 10) for _ in range(self.n_enemies)]
+        self.enemy_moved = [False] * self.n_enemies
+        self.enemy_blind_remaining = [0] * self.n_enemies
+        self.enemy_blind_source = [None] * self.n_enemies
+        self.enemy_reveal_remaining = [0] * self.n_enemies
+        self.enemy_reveal_source = [None] * self.n_enemies
+
+        self._blocking_escort_idx = None
+        self._prev_carry_path_index = 0
+        self._stall_ticks = 0
+
+        return [self._get_obs(i) for i in range(self.n_escorts)]
+
+    # ------------------------------------------------------------------
+    # 補助
+    # ------------------------------------------------------------------
+    def _is_wall(self, r, c):
+        if not (0 <= r < self.height and 0 <= c < self.width):
+            return True
+        return self.grid[r, c] == 1
+
+    def _smoke_cell_set(self):
+        cells = set()
+        for smoke in self.smokes:
+            cells.update(smoke["cells"])
+        return cells
+
+    def _occupied_by_others(self, exclude_kind, exclude_idx):
+        """(kind, idx) を除いた、生存中の全キャラクターの現在位置集合。
+        kind: 'carry' | 'escort' | 'enemy'
+        """
+        occ = set()
+        if not (exclude_kind == "carry"):
+            if self.carry_alive:
+                occ.add(self.carry_pos)
+        for i in range(self.n_escorts):
+            if exclude_kind == "escort" and i == exclude_idx:
+                continue
+            if self.escort_alive[i]:
+                occ.add(self.escort_pos[i])
+        for i in range(self.n_enemies):
+            if exclude_kind == "enemy" and i == exclude_idx:
+                continue
+            if self.enemy_alive[i]:
+                occ.add(self.enemy_pos[i])
+        return occ
+
+    def _nearest_visible_enemy(self, from_pos, max_range=None):
+        smoke_cells = self._smoke_cell_set()
+        best_idx, best_dist = None, None
+        for i in range(self.n_enemies):
+            if not self.enemy_alive[i]:
+                continue
+            dist = _chebyshev(from_pos, self.enemy_pos[i])
+            if max_range is not None and dist > max_range:
+                continue
+            if not _has_los(self.grid, smoke_cells, from_pos, self.enemy_pos[i]):
+                continue
+            if best_dist is None or dist < best_dist:
+                best_idx, best_dist = i, dist
+        return best_idx, best_dist
+
+    def _refresh_carry_dist_map(self):
+        """carry_pos が変化した際に呼び、BFS距離マップを更新する。"""
+        self._carry_dist_map = _build_distance_map_walls_only(self.grid, [self.carry_pos])
+
+    # ------------------------------------------------------------------
+    # 観測
+    # ------------------------------------------------------------------
+    def get_action_mask(self, i):
+        mask = np.ones(self.N_ACTIONS, dtype=bool)
+        if not self.escort_alive[i]:
+            mask[:] = False
+            mask[self.ACTION_STAY] = True
+            return mask
+
+        r, c = self.escort_pos[i]
+        for a, (dr, dc) in self._MOVE_DELTA.items():
+            if a == self.ACTION_STAY:
+                continue
+            if self._is_wall(r + dr, c + dc):
+                mask[a] = False
+
+        # アビリティは1ラウンドに1回。使用済み(HUNTは常時この扱い)なら選択不可にする。
+        if self.escort_ability_used[i]:
+            mask[self.ACTION_ABILITY] = False
+        else:
+            # 射程内に有効な標的(視認可能な敵)がいない場合もマスクする。
+            enemy_idx, _ = self._nearest_visible_enemy((r, c), max_range=ABILITY_RANGE)
+            if enemy_idx is None:
+                mask[self.ACTION_ABILITY] = False
+
+        return mask
+
+    def _get_obs(self, i):
+        if not self.escort_alive[i]:
+            return np.zeros(self._obs_dim(), dtype=np.float32)
+
+        r, c = self.escort_pos[i]
+        cr, cc = self.carry_pos
+        if self._carry_dist_map is None:
+            self._refresh_carry_dist_map()
+        dist_map = self._carry_dist_map
+
+        obs = []
+        obs.append(r / max(1, self.height - 1))
+        obs.append(c / max(1, self.width - 1))
+
+        # escort自身からキャリアーまでの距離・方向はBFS実距離ベース
+        raw_dist = dist_map[r, c]
+        dist_to_carry = float(raw_dist) if np.isfinite(raw_dist) else DIST_NORM_MAX
+        obs.append(min(1.0, dist_to_carry / DIST_NORM_MAX))
+
+        # 方向成分は、隣接4マスのうちBFS距離を最も縮める方向を使う
+        best_dr, best_dc, best_d = 0, 0, dist_to_carry
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if not self._is_wall(nr, nc):
+                nd = dist_map[nr, nc]
+                if np.isfinite(nd) and nd < best_d:
+                    best_d = nd
+                    best_dr, best_dc = dr, dc
+        obs.append(float(best_dr))
+        obs.append(float(best_dc))
+
+        # キャリアーの進行方向(次の経路セルへの差分)
+        next_idx = min(self.carry_path_index + 1, len(self.carry_path) - 1)
+        nxt = self.carry_path[next_idx]
+        obs.append(float(np.sign(nxt[0] - cr)))
+        obs.append(float(np.sign(nxt[1] - cc)))
+
+        # 壁フラグ(4方向)
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
+
+        # 各方向に動いた場合のキャリアーまでのBFS距離勾配
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            wall = self._is_wall(nr, nc)
+            if wall:
+                obs.append(1.0)
+            else:
+                gdist = dist_map[nr, nc]
+                gdist = float(gdist) if np.isfinite(gdist) else DIST_NORM_MAX
+                obs.append(min(1.0, gdist / DIST_NORM_MAX))
+
+        # 斜め壁フラグ
+        for dr, dc in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
+            obs.append(1.0 if self._is_wall(r + dr, c + dc) else 0.0)
+
+        # 隣接4方向に生存中の味方escortがいるか(衝突・団子状態の回避用)
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            occupied_by_ally = any(
+                j != i and self.escort_alive[j] and self.escort_pos[j] == (nr, nc)
+                for j in range(self.n_escorts)
+            )
+            obs.append(1.0 if occupied_by_ally else 0.0)
+
+        # 距離帯の逸脱量(負=近すぎ、正=遠すぎ、0=適正)
+        if dist_to_carry < self.dist_band_min:
+            band_dev = (dist_to_carry - self.dist_band_min) / DIST_NORM_MAX
+        elif dist_to_carry > self.dist_band_max:
+            band_dev = (dist_to_carry - self.dist_band_max) / DIST_NORM_MAX
+        else:
+            band_dev = 0.0
+        obs.append(band_dev)
+
+        # 最寄りの視認可能な敵
+        enemy_idx, enemy_dist = self._nearest_visible_enemy((r, c), max_range=None)
+        if enemy_idx is not None:
+            er, ec = self.enemy_pos[enemy_idx]
+            obs.append(1.0)
+            obs.append(max(-1.0, min(1.0, (er - r) / DIST_NORM_MAX)))
+            obs.append(max(-1.0, min(1.0, (ec - c) / DIST_NORM_MAX)))
+            obs.append(min(1.0, enemy_dist / DIST_NORM_MAX))
+            obs.append(self.enemy_blind_remaining[enemy_idx] / max(1, BLIND_DURATION_TICKS))
+            obs.append(self.enemy_reveal_remaining[enemy_idx] / max(1, REVEAL_DURATION_TICKS))
+        else:
+            obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+
+        # 自分のアビリティ状態(未使用フラグ + 種別onehot。HUNTを含め4種)
+        obs.append(0.0 if self.escort_ability_used[i] else 1.0)
+        for ability in ABILITY_TYPES:
+            obs.append(1.0 if self.escort_ability_type[i] == ability else 0.0)
+
+        # チーム状況：誰かの効果(blind/reveal/smoke)が現在有効か
+        team_effect_active = any(v > 0 for v in self.enemy_blind_remaining) or any(
+            v > 0 for v in self.enemy_reveal_remaining
+        ) or len(self.smokes) > 0
+        obs.append(1.0 if team_effect_active else 0.0)
+
+        obs.append(self.escort_last_delta[i][0])
+        obs.append(self.escort_last_delta[i][1])
+        obs.append(min(1.0, self.escort_stuck[i] / 10.0))
+        obs.append(1.0 - min(1.0, self.tick / max(1, self.max_ticks)))
+        obs.append(1.0 if self._blocking_escort_idx == i else 0.0)
+
+        return np.array(obs, dtype=np.float32)
+
+    @staticmethod
+    def _obs_dim():
+        # _get_obs() の要素数と一致させる(固定値なのでズレたら即バグに気づけるようassert)
+        # 内訳: 自己座標2 + キャリアーBFS距離/方向3 + キャリアー進行方向2
+        #      + 壁フラグ4 + BFS距離勾配4 + 斜め壁フラグ4 + 味方隣接フラグ4
+        #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot4)
+        #      + チーム効果1 + 直前移動2 + stuck1 + 残り時間1 + 被ブロック1
+        # = 2+3+2+4+4+4+4+1+6+5+1+2+1+1+1 = 41
+        # (汎用版からの変更点: アビリティ種別onehotが3種→4種(HUNT追加)になり40→41)
+        return 41
+
+    # ------------------------------------------------------------------
+    # アビリティ処理
+    # ------------------------------------------------------------------
+    def _apply_ability(self, i):
+        """escort i のアビリティ使用を解決し、報酬(float)を返す。"""
+        ability = self.escort_ability_type[i]
+        pos = self.escort_pos[i]
+        self.escort_ability_used[i] = True  # 成否に関わらず1ラウンド1回を消費
+
+        if ability in ("FLASH", "RECON"):
+            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
+            if enemy_idx is None:
+                return -self.ability_waste_penalty
+
+            if ability == "FLASH":
+                already = self.enemy_blind_remaining[enemy_idx] > 0
+                self.enemy_blind_remaining[enemy_idx] = BLIND_DURATION_TICKS
+                self.enemy_blind_source[enemy_idx] = i
+            else:  # RECON
+                already = self.enemy_reveal_remaining[enemy_idx] > 0
+                self.enemy_reveal_remaining[enemy_idx] = REVEAL_DURATION_TICKS
+                self.enemy_reveal_source[enemy_idx] = i
+
+            return -self.ability_redundant_penalty if already else self.ability_success_reward
+
+        if ability == "SMOKE":
+            # 「敵が味方(キャリアー)へ射線を持っている」状況を遮断できたら成功
+            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
+            if enemy_idx is None:
+                return -self.ability_waste_penalty
+
+            target_pos = self.enemy_pos[enemy_idx]
+            smoke_cells = self._smoke_cell_set()
+            enemy_had_los_to_carry = self.carry_alive and _has_los(
+                self.grid, smoke_cells, target_pos, self.carry_pos
+            )
+
+            cells = {
+                (rr, cc)
+                for rr in range(target_pos[0] - 1, target_pos[0] + 2)
+                for cc in range(target_pos[1] - 1, target_pos[1] + 2)
+                if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1
+            }
+            self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS})
+
+            return self.ability_success_reward if enemy_had_los_to_carry else -self.ability_waste_penalty
+
+        # HUNT(タイガー)はここに到達しない(常にマスクされているため)。保険としてwasteを返す。
+        return -self.ability_waste_penalty
+
+    # ------------------------------------------------------------------
+    # 戦闘解決
+    # ------------------------------------------------------------------
+    def _resolve_combat(self):
+        """1tick分の戦闘解決。kill発生時のボーナス対象escort集合を返す。
+
+        battle_logic.py _resolve_all_shots と同じく、反応速度の高い順に
+        逐次解決する(同値はシャッフルでランダム順)。移動中の射撃精度低下
+        (MOVING_ACCURACY)・移動中の被弾しやすさ(MOVING_TARGET_HIT_MULTIPLIER)
+        も反映する(汎用版train_attacker_escort.pyにはこれらがなかった)。
+        """
+        smoke_cells = self._smoke_cell_set()
+
+        def _stats_for(kind, idx):
+            if kind == "carry":
+                return {
+                    "accuracy": self.carry_accuracy, "dodge": self.carry_dodge,
+                    "hs_rate": self.carry_hs_rate, "reaction": self.carry_reaction,
+                    "moved": self.carry_moved,
+                }
+            if kind == "escort":
+                return {
+                    "accuracy": self.escort_accuracy[idx], "dodge": self.escort_dodge[idx],
+                    "hs_rate": self.escort_hs_rate[idx], "reaction": self.escort_reaction[idx],
+                    "moved": self.escort_moved[idx],
+                }
+            return {
+                "accuracy": self.enemy_accuracy[idx], "dodge": self.enemy_dodge[idx],
+                "hs_rate": self.enemy_hs_rate[idx], "reaction": self.enemy_reaction[idx],
+                "moved": self.enemy_moved[idx],
+            }
+
+        allies = [("carry", 0, self.carry_pos)] if self.carry_alive else []
+        allies += [("escort", i, self.escort_pos[i]) for i in range(self.n_escorts) if self.escort_alive[i]]
+        enemies = [("enemy", i, self.enemy_pos[i]) for i in range(self.n_enemies) if self.enemy_alive[i]]
+
+        shooters = []
+        for kind, idx, pos in allies:
+            e_idx, _ = self._nearest_visible_enemy(pos, max_range=None)
+            if e_idx is not None:
+                shooters.append((kind, idx, "enemy", e_idx))
+        for kind, idx, pos in enemies:
+            best_idx, best_dist = None, None
+            for akind, aidx, apos in allies:
+                if not _has_los(self.grid, smoke_cells, pos, apos):
+                    continue
+                d = _chebyshev(pos, apos)
+                if best_dist is None or d < best_dist:
+                    best_idx, best_dist = (akind, aidx), d
+            if best_idx is not None:
+                shooters.append((kind, idx, best_idx[0], best_idx[1]))
+
+        # シャッフル後に反応速度降順で安定ソート(同値だけランダム順になる。
+        # battle_logic.py _resolve_all_shots と同一方針)
+        self.rng.shuffle(shooters)
+        shooters.sort(key=lambda s: _stats_for(s[0], s[1])["reaction"], reverse=True)
+
+        kill_bonus_targets = []  # escort index のリスト
+
+        for shooter_kind, shooter_idx, target_kind, target_idx in shooters:
+            shooter_alive = (
+                self.carry_alive if shooter_kind == "carry"
+                else self.escort_alive[shooter_idx] if shooter_kind == "escort"
+                else self.enemy_alive[shooter_idx]
+            )
+            target_alive = (
+                self.carry_alive if target_kind == "carry"
+                else self.escort_alive[target_idx] if target_kind == "escort"
+                else self.enemy_alive[target_idx]
+            )
+            if not shooter_alive or not target_alive:
+                continue
+
+            shooter_stats = _stats_for(shooter_kind, shooter_idx)
+            target_stats = _stats_for(target_kind, target_idx)
+
+            accuracy = MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
+            if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
+                accuracy *= BLIND_ACCURACY_MULTIPLIER
+
+            dodge = target_stats["dodge"]
+            if target_kind == "enemy" and self.enemy_reveal_remaining[target_idx] > 0:
+                dodge *= REVEALED_DODGE_MULTIPLIER
+
+            hit_chance = accuracy * (1.0 - dodge)
+            if target_stats["moved"]:
+                hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+            hit_chance = max(0.0, min(1.0, hit_chance))
+
+            if self.rng.random() >= hit_chance:
+                continue
+
+            damage = HEADSHOT_DAMAGE if self.rng.random() < shooter_stats["hs_rate"] else BODY_DAMAGE
+
+            if target_kind == "carry":
+                self.carry_hp = max(0, self.carry_hp - damage)
+                if self.carry_hp <= 0:
+                    self.carry_alive = False
+            elif target_kind == "escort":
+                self.escort_hp[target_idx] = max(0, self.escort_hp[target_idx] - damage)
+                if self.escort_hp[target_idx] <= 0:
+                    self.escort_alive[target_idx] = False
+            else:  # enemy
+                was_blind = self.enemy_blind_remaining[target_idx] > 0
+                was_revealed = self.enemy_reveal_remaining[target_idx] > 0
+                blind_src = self.enemy_blind_source[target_idx]
+                reveal_src = self.enemy_reveal_source[target_idx]
+
+                self.enemy_hp[target_idx] = max(0, self.enemy_hp[target_idx] - damage)
+                if self.enemy_hp[target_idx] <= 0:
+                    self.enemy_alive[target_idx] = False
+                    if was_blind and blind_src is not None:
+                        kill_bonus_targets.append(blind_src)
+                    if was_revealed and reveal_src is not None:
+                        kill_bonus_targets.append(reveal_src)
+
+        return kill_bonus_targets
+
+    # ------------------------------------------------------------------
+    # step
+    # ------------------------------------------------------------------
+    def step(self, actions):
+        """actions: 長さ n_escorts のリスト(死亡中のescortはNone扱いでもよい)。
+        戻り値: (next_obs_list, rewards, done, info)
+        """
+        self.tick += 1
+        rewards = [0.0] * self.n_escorts
+        info = {"success": False, "carry_died": False}
+
+        # 0. moved_this_tickフラグをリセット(このtickの実移動でのみTrueにする)
+        self.carry_moved = False
+        self.escort_moved = [False] * self.n_escorts
+        self.enemy_moved = [False] * self.n_enemies
+
+        # 1. タイマー減衰
+        for i in range(self.n_enemies):
+            self.enemy_blind_remaining[i] = max(0, self.enemy_blind_remaining[i] - 1)
+            self.enemy_reveal_remaining[i] = max(0, self.enemy_reveal_remaining[i] - 1)
+        for smoke in self.smokes:
+            smoke["remaining"] -= 1
+        self.smokes = [s for s in self.smokes if s["remaining"] > 0]
+
+        for i in range(self.n_escorts):
+            rewards[i] -= 0.01  # 時間経過ペナルティ
+
+        # 2. アビリティ行動を先に解決(アビリティ使用者はこのtick移動しない)
+        used_ability_this_tick = set()
+        for i in range(self.n_escorts):
+            if not self.escort_alive[i] or actions[i] is None:
+                continue
+            if actions[i] == self.ACTION_ABILITY:
+                rewards[i] += self._apply_ability(i)
+                used_ability_this_tick.add(i)
+                self.escort_last_delta[i] = (0.0, 0.0)
+                self.escort_stuck[i] += 1
+
+        # 3. 敵の簡易移動(衝突は考慮しない簡略化スクリプトAI)
+        for i in range(self.n_enemies):
+            if not self.enemy_alive[i]:
+                continue
+            if self.rng.random() < self.enemy_move_prob:
+                r, c = self.enemy_pos[i]
+                candidates = [
+                    (r + dr, c + dc)
+                    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1))
+                    if not self._is_wall(r + dr, c + dc)
+                ]
+                if candidates:
+                    new_pos = self.rng.choice(candidates)
+                    if new_pos != self.enemy_pos[i]:
+                        self.enemy_moved[i] = True
+                    self.enemy_pos[i] = new_pos
+
+        # 4. キャリアーの移動(塞がれていれば進めない)
+        self._blocking_escort_idx = None
+        prev_path_index = self.carry_path_index
+        if self.carry_alive and self.carry_path_index < len(self.carry_path) - 1:
+            next_cell = self.carry_path[self.carry_path_index + 1]
+            occupied = self._occupied_by_others("carry", None)
+            if next_cell not in occupied:
+                self.carry_path_index += 1
+                self.carry_pos = self.carry_path[self.carry_path_index]
+                self.carry_moved = True
+                self._refresh_carry_dist_map()
+            else:
+                for i in range(self.n_escorts):
+                    if self.escort_alive[i] and self.escort_pos[i] == next_cell:
+                        self._blocking_escort_idx = i
+                        break
+
+        team_progress = self.carry_path_index - prev_path_index
+        for i in range(self.n_escorts):
+            if self.escort_alive[i]:
+                rewards[i] += team_progress * self.team_progress_coef
+        if self._blocking_escort_idx is not None:
+            rewards[self._blocking_escort_idx] -= self.block_penalty
+
+        # --- stall検知：直接の1体だけでなく、carry周辺で団子状態を
+        # 作っている全escortに圧力をかける。---
+        carry_reached_goal = self.carry_path_index >= len(self.carry_path) - 1
+        if team_progress > 0 or not self.carry_alive or carry_reached_goal:
+            self._stall_ticks = 0
+        else:
+            self._stall_ticks += 1
+
+        if self._stall_ticks > self.stall_threshold_ticks:
+            overflow = min(
+                self._stall_ticks - self.stall_threshold_ticks,
+                self.stall_penalty_cap_ticks,
+            )
+            congestion_penalty = overflow * self.congestion_penalty_coef
+            for i in range(self.n_escorts):
+                if not self.escort_alive[i]:
+                    continue
+                if _chebyshev(self.escort_pos[i], self.carry_pos) <= self.congestion_radius:
+                    rewards[i] -= congestion_penalty
+
+        # 5. Escortの移動(アビリティ使用者・死亡者を除く、ランダム順で逐次解決)
+        move_order = [
+            i for i in range(self.n_escorts)
+            if self.escort_alive[i] and i not in used_ability_this_tick and actions[i] is not None
+        ]
+        self.rng.shuffle(move_order)
+        for i in move_order:
+            action = actions[i]
+            r, c = self.escort_pos[i]
+
+            if action == self.ACTION_STAY or action not in self._MOVE_DELTA:
+                self.escort_last_delta[i] = (0.0, 0.0)
+                self.escort_stuck[i] += 1
+                continue
+
+            dr, dc = self._MOVE_DELTA[action]
+            nr, nc = r + dr, c + dc
+
+            if self._is_wall(nr, nc):
+                self.escort_last_delta[i] = (0.0, 0.0)
+                self.escort_stuck[i] += 1
+                continue
+
+            occupied = self._occupied_by_others("escort", i)
+            if (nr, nc) in occupied:
+                self.escort_last_delta[i] = (0.0, 0.0)
+                self.escort_stuck[i] += 1
+                continue
+
+            self.escort_pos[i] = (nr, nc)
+            self.escort_moved[i] = True
+            self.escort_last_delta[i] = (float(dr), float(dc))
+            self.escort_stuck[i] = 0
+
+        # 6. 距離帯報酬(移動後の位置で評価)
+        for i in range(self.n_escorts):
+            if not self.escort_alive[i]:
+                continue
+            dist = _chebyshev(self.escort_pos[i], self.carry_pos)
+            if dist < self.dist_band_min:
+                rewards[i] -= (self.dist_band_min - dist) * self.dist_penalty_coef
+            elif dist > self.dist_band_max:
+                rewards[i] -= (dist - self.dist_band_max) * self.dist_penalty_coef
+
+        # 7. 戦闘解決
+        kill_bonus_targets = self._resolve_combat()
+        for escort_idx in kill_bonus_targets:
+            if 0 <= escort_idx < self.n_escorts:
+                rewards[escort_idx] += self.kill_bonus
+
+        done = False
+        if not self.carry_alive:
+            done = True
+            info["carry_died"] = True
+            for i in range(self.n_escorts):
+                if self.escort_alive[i]:
+                    rewards[i] -= self.mission_fail_penalty
+        elif self.carry_path_index >= len(self.carry_path) - 1:
+            done = True
+            info["success"] = True
+            for i in range(self.n_escorts):
+                if self.escort_alive[i]:
+                    rewards[i] += self.mission_success_reward
+        elif self.tick >= self.max_ticks:
+            done = True
+            info["success"] = False
+            for i in range(self.n_escorts):
+                if self.escort_alive[i]:
+                    rewards[i] -= self.mission_fail_penalty
+
+        next_obs = [self._get_obs(i) for i in range(self.n_escorts)]
+        return next_obs, rewards, done, info
+
+
+# ---------------------------------------------------------------------------
+# Dueling DQN(重み共有。他のgc_v1学習ファイルと同一アーキテクチャ)
+# ---------------------------------------------------------------------------
+class DuelingQNetwork(nn.Module):
+    def __init__(self, obs_dim, n_actions, hidden=128):
+        super().__init__()
+        self.feature = nn.Sequential(
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+        )
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2),
+            nn.ReLU(),
+            nn.Linear(hidden // 2, 1),
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2),
+            nn.ReLU(),
+            nn.Linear(hidden // 2, n_actions),
+        )
+
+    def forward(self, x):
+        feat = self.feature(x)
+        value = self.value_head(feat)
+        advantage = self.advantage_head(feat)
+        return value + (advantage - advantage.mean(dim=1, keepdim=True))
+
+
+Transition = namedtuple("Transition", ("state", "action", "reward", "next_state", "next_mask", "done"))
+
+
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.buffer = deque(maxlen=capacity)
+
+    def push(self, *args):
+        self.buffer.append(Transition(*args))
+
+    def sample(self, batch_size):
+        batch = random.sample(self.buffer, batch_size)
+        return Transition(*zip(*batch))
+
+    def __len__(self):
+        return len(self.buffer)
+
+
+def select_action(net, state, mask, epsilon, device):
+    if random.random() < epsilon:
+        valid_actions = np.flatnonzero(mask)
+        return int(random.choice(valid_actions))
+    with torch.no_grad():
+        state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+        q = net(state_t).squeeze(0).cpu().numpy()
+    q = np.where(mask, q, -1e9)
+    return int(np.argmax(q))
+
+
+def optimize_model(policy_net, target_net, optimizer, buffer, batch_size, gamma, device):
+    if len(buffer) < batch_size:
+        return None
+
+    batch = buffer.sample(batch_size)
+
+    states = torch.as_tensor(np.array(batch.state), dtype=torch.float32, device=device)
+    actions = torch.as_tensor(batch.action, dtype=torch.int64, device=device).unsqueeze(1)
+    rewards = torch.as_tensor(batch.reward, dtype=torch.float32, device=device).unsqueeze(1)
+    next_states = torch.as_tensor(np.array(batch.next_state), dtype=torch.float32, device=device)
+    dones = torch.as_tensor(batch.done, dtype=torch.float32, device=device).unsqueeze(1)
+    next_masks = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=device)
+
+    q_values = policy_net(states).gather(1, actions)
+
+    with torch.no_grad():
+        next_q_policy = policy_net(next_states)
+        next_q_policy = next_q_policy.masked_fill(~next_masks, -1e9)
+        next_actions = next_q_policy.argmax(dim=1, keepdim=True)
+        next_q_target = target_net(next_states).gather(1, next_actions)
+        target = rewards + gamma * next_q_target * (1.0 - dones)
+
+    loss = F.smooth_l1_loss(q_values, target)
+
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), max_norm=10.0)
+    optimizer.step()
+
+    return float(loss.item())
+
+
+def evaluate(env, policy_net, device, episodes=20):
+    successes = 0
+    total_reward = 0.0
+    total_block_events = 0
+
+    for _ in range(episodes):
+        obs_list = env.reset()
+        done = False
+        episode_reward = 0.0
+        block_events = 0
+        info = {"success": False}
+
+        while not done:
+            actions = []
+            for i in range(env.n_escorts):
+                if not env.escort_alive[i]:
+                    actions.append(None)
+                    continue
+                mask = env.get_action_mask(i)
+                with torch.no_grad():
+                    state_t = torch.as_tensor(obs_list[i], dtype=torch.float32, device=device).unsqueeze(0)
+                    q = policy_net(state_t).squeeze(0).cpu().numpy()
+                q = np.where(mask, q, -1e9)
+                actions.append(int(np.argmax(q)))
+
+            next_obs_list, rewards, done, info = env.step(actions)
+            if env._blocking_escort_idx is not None:
+                block_events += 1
+            episode_reward += sum(rewards)
+            obs_list = next_obs_list
+
+        total_reward += episode_reward
+        total_block_events += block_events
+        if info.get("success"):
+            successes += 1
+
+    success_rate = successes / episodes
+    avg_reward = total_reward / episodes
+    avg_block_events = total_block_events / episodes
+    return success_rate, avg_reward, avg_block_events
+
+
+def main():
+    parser = argparse.ArgumentParser(description="gc_v1 Attacker Escort Phase 学習スクリプト")
+    parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
+    parser.add_argument("--max-ticks", type=int, default=90)
+    parser.add_argument("--batch-size", type=int, default=256)
+    parser.add_argument("--buffer-size", type=int, default=200_000)
+    parser.add_argument("--gamma", type=float, default=0.98)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--eps-start", type=float, default=1.0)
+    parser.add_argument("--eps-end", type=float, default=0.05)
+    parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
+    parser.add_argument("--target-update-every", type=int, default=800)
+    parser.add_argument("--eval-every", type=int, default=200)
+    parser.add_argument("--eval-episodes", type=int, default=20)
+    parser.add_argument("--warmup-steps", type=int, default=3000)
+    parser.add_argument(
+        "--save-dir",
+        type=str,
+        default="data/attacker_escort_gc_data/",
+    )
+    parser.add_argument("--seed", type=int, default=0)
+    args = parser.parse_args()
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    device = torch.device("cpu")
+    os.makedirs(args.save_dir, exist_ok=True)
+
+    env = EscortEnv(max_ticks=args.max_ticks, seed=args.seed)
+    eval_env = EscortEnv(max_ticks=args.max_ticks, seed=args.seed + 1)
+
+    obs_dim = env._obs_dim()
+    n_actions = env.N_ACTIONS
+    print(f"[INFO] obs_dim={obs_dim} n_actions={n_actions} n_escorts={env.n_escorts} device={device}")
+
+    policy_net = DuelingQNetwork(obs_dim, n_actions).to(device)
+    target_net = DuelingQNetwork(obs_dim, n_actions).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
+    target_net.eval()
+
+    optimizer = optim.Adam(policy_net.parameters(), lr=args.lr)
+    buffer = ReplayBuffer(args.buffer_size)
+
+    best_success_rate = -1.0
+    best_eval_reward = float("-inf")
+    global_step = 0
+
+    def _make_checkpoint(episode, success_rate, avg_reward, avg_block_events):
+        return {
+            "model_state_dict": policy_net.state_dict(),
+            "obs_dim": obs_dim,
+            "n_actions": n_actions,
+            "episode": episode,
+            "success_rate": success_rate,
+            "avg_reward": avg_reward,
+            "avg_block_events": avg_block_events,
+            "roster_order": list(GC_ROSTER_ORDER),
+            "spike_holder_default": GC_SPIKE_HOLDER,
+        }
+
+    start_time = time.perf_counter()
+    for episode in range(1, args.episodes + 1):
+        progress = min(1.0, episode / args.eps_decay_episodes)
+        epsilon = args.eps_start + (args.eps_end - args.eps_start) * progress
+
+        obs_list = env.reset()
+        done = False
+        episode_reward = 0.0
+        info = {"success": False}
+
+        while not done:
+            actions = []
+            masks = []
+            for i in range(env.n_escorts):
+                if not env.escort_alive[i]:
+                    actions.append(None)
+                    masks.append(None)
+                    continue
+                mask = env.get_action_mask(i)
+                action = select_action(policy_net, obs_list[i], mask, epsilon, device)
+                actions.append(action)
+                masks.append(mask)
+
+            next_obs_list, rewards, done, info = env.step(actions)
+
+            for i in range(env.n_escorts):
+                if masks[i] is None:
+                    continue
+                next_mask = env.get_action_mask(i)
+                agent_done = done or not env.escort_alive[i]
+                buffer.push(obs_list[i], actions[i], rewards[i], next_obs_list[i], next_mask, agent_done)
+
+            obs_list = next_obs_list
+            episode_reward += sum(rewards)
+            global_step += 1
+
+            if len(buffer) >= max(args.batch_size, args.warmup_steps):
+                optimize_model(
+                    policy_net, target_net, optimizer, buffer,
+                    args.batch_size, args.gamma, device,
+                )
+
+            if global_step % args.target_update_every == 0:
+                target_net.load_state_dict(policy_net.state_dict())
+
+        if episode % 50 == 0:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            start_time = time.perf_counter();
+            print(
+                f"[EP {episode}/{args.episodes}] reward={episode_reward:.2f} elapse={elapsed_time:.1f} "
+                f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick} "
+                f"carrier={env.carry_name}"
+            )
+        
+        if episode % args.eval_every == 0:
+            success_rate, avg_reward, avg_block_events = evaluate(
+                eval_env, policy_net, device, args.eval_episodes
+            )
+            print(
+                f"[EVAL @ EP {episode}/{args.episodes}] success_rate={success_rate:.2%} "
+                f"avg_reward={avg_reward:.2f} avg_block_events={avg_block_events:.2f}"
+            )
+
+            latest_path = os.path.join(args.save_dir, "dqn_attacker_escort_gc_latest.pt")
+            torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), latest_path)
+
+            is_better = (
+                success_rate > best_success_rate + 1e-9
+                or (
+                    success_rate >= best_success_rate - 1e-9
+                    and avg_reward > best_eval_reward
+                )
+            )
+            if is_better:
+                best_success_rate = max(best_success_rate, success_rate)
+                best_eval_reward = avg_reward
+                best_path = os.path.join(args.save_dir, "dqn_attacker_escort_gc_best_by_eval.pt")
+                torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), best_path)
+                print(
+                    f"[SAVE] 新しいベストモデルを保存: {best_path} "
+                    f"(success_rate={success_rate:.2%}, avg_reward={avg_reward:.2f}, "
+                    f"avg_block_events={avg_block_events:.2f})"
+                )
+
+    print("[DONE] 学習が完了しました。")
+
+
+if __name__ == "__main__":
+    main()

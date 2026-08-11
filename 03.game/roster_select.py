@@ -17,6 +17,7 @@ TEAM_AI_OPTIONS = {
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3": "toru_ai_v3",
     "Touyama Gaming v1": "touyama_gaming_v1",
+    "Ghost Champions v1": "ghost_champions_v1",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
