@@ -199,8 +199,11 @@ DEATH_PENALTY = -1.0            # キャリア死亡=スパイクドロップ(re
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 PLANT_WHIFF_PENALTY = -0.05     # サイト外でPLANTを選んだ場合(マスクが機能していれば理論上到達しない保険)
-PLANT_TICK_BONUS = 0.05         # 明示PLANT行動が1Tick成功して進むごとのボーナス
-PLANT_SUCCESS_REWARD = 1.5      # プラント完了(このフェーズのゴール)
+PLANT_TICK_BONUS = 0.15         # PLANT進行1Tickごと。迅速な設置を強く評価
+PLANT_SUCCESS_REWARD = 2.5      # プラント完了
+PLANTABLE_WAIT_PENALTY = -0.08  # 設置可能なのにPLANTしないTick
+PLANTABLE_WAIT_GROWTH = -0.025  # 待つほど追加で悪化（2Tick目以降）
+MAX_PLANTABLE_WAIT_PENALTY = -0.30
 TIME_EXPIRE_PENALTY = -0.5      # ラウンド時間切れ(未設置=Defender有利)
 TEAM_WIPE_PENALTY = -0.2        # 味方(エスコート込み)全滅だがキャリアは生存継続中
 WAYPOINT_REACHED_REWARD = 0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
@@ -821,12 +824,15 @@ class CarryEnv:
         self._prev_hp = {}
         self.active_waypoint_site = None
         self.reached_waypoint = True
+        # 設置可能マス上でPLANTせず待った連続Tick数
+        self.plantable_wait_ticks = 0
 
     def reset(self):
         self.sighting.reset()
         self.smokes = []
         self.elapsed_ticks = 0
         self.plant_progress = 0
+        self.plantable_wait_ticks = 0
         self.match_over_reason = None
         # 意図的に_prev_distを初期化しない。_compute_reward側のgetattr(self,"_prev_dist",cur_dist)
         # が「属性が存在しない場合のみ」cur_distへフォールバックする仕様を利用し、
@@ -1153,6 +1159,20 @@ class CarryEnv:
         if plant_action_chosen and not on_site_before_action:
             # マスクが正しく機能していれば理論上到達しないが、保険としてペナルティを設ける
             reward += PLANT_WHIFF_PENALTY
+
+        # 設置可能マスに立っているのにPLANTしない行動を明確に罰する。
+        # これにより「サイトで時間を使ってから最後に設置」のQ値局所解を抑える。
+        if on_site_before_action and not plant_action_chosen:
+            self.plantable_wait_ticks += 1
+            wait_penalty = (
+                PLANTABLE_WAIT_PENALTY
+                + PLANTABLE_WAIT_GROWTH * max(0, self.plantable_wait_ticks - 1)
+            )
+            reward += max(MAX_PLANTABLE_WAIT_PENALTY, wait_penalty)
+        elif plant_action_chosen:
+            self.plantable_wait_ticks = 0
+        else:
+            self.plantable_wait_ticks = 0
 
         if plant_tick_progress:
             reward += PLANT_TICK_BONUS
