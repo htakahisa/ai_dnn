@@ -64,9 +64,17 @@ from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
-from character_stats_touyama import (
-    CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
+
+import common_rl
+from common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from common_attacker import (
     TOUYAMA_ROSTER_ORDER,
+    DEFAULT_ACCURACY,
+    DEFAULT_DODGE,
+    DEFAULT_HS_RATE,
+    DEFAULT_REACTION,
+    compute_touyama_effective_stats,
+    print_effective_stats,
 )
 
 EPISODE_COUNT = 4000
@@ -86,7 +94,7 @@ MODEL_FINAL_PATH = os.path.join(DATA_DIR, "dqn_attacker_retrieve_touyama_final.p
 DEVICE = torch.device("cpu")
 
 MAX_TICKS = 70
-CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+CARDINAL = common_rl.CARDINAL_MOVES
 ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY"]
 N_ACTIONS = len(ACTIONS)
 # HUNT(タイガー/Tortlilyan)を含む4種。HUNTはチャージ0で初期化されるため
@@ -97,10 +105,7 @@ ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 # 共通のDEFAULT_*値に統一(汎用版はこのファイル固有の値を使っていた)。
 ENEMY_SPAWN_PROB = 0.6          # そのエピソードで敵が出現するか
 ENEMY_PRE_AFFECTED_PROB = 0.3   # 出現時、すでに味方が炙り出し済みという想定
-DEFAULT_ACCURACY = 0.50
-DEFAULT_DODGE = 0.12
-DEFAULT_HS_RATE = 0.20
-DEFAULT_REACTION = 100.0
+# DEFAULT_ACCURACY等はcommon_attackerからimport済みのため削除
 
 # 全員が対称に「スパイクへの最短距離を縮める」ことを学習する設計に変更。
 # 1マス1キャラの衝突ルールはstep()側の移動解決(シャッフル順で早い者勝ち)が
@@ -126,82 +131,14 @@ KILL_WHILE_DEBUFFED_BONUS = 1.5  # フラッシュ/リコン状態の敵を倒�
 Transition = namedtuple("Transition", ["s", "a", "r", "s2", "done", "mask2"])
 
 
-# ---------------------------------------------------------------------------
-# touyama_v1 固定チーム定義(他のtouyama_v1学習ファイルと同一)
-# ---------------------------------------------------------------------------
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
-
-TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
-TOUYAMA_COMBO_BONUS = {
-    "accuracy": 0.15,
-    "hs_rate": 0.10,
-    "dodge_rate": 0.20,
-    "reaction": 30.0,
-}
-
-TOUYAMA_ROLE_TO_ABILITY = {
-    "フラッシュ": "FLASH",
-    "スモーカー": "SMOKE",
-    "シーカー": "RECON",
-    "タイガー": "HUNT",
-}
-TIGER_ACCURACY_BONUS = 0.10
-TIGER_HS_BONUS = 0.05
-
-
-def _compute_touyama_effective_stats():
-    """character_stats_touyama.py の生値に、常時発動するチームコンボ
-    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
-    他のtouyama_v1学習ファイルと同一ロジック。"""
-    effective = {}
-    for name in TOUYAMA_ROSTER_ORDER:
-        raw = TOUYAMA_STATS_TABLE[name]
-        accuracy = float(raw.hit_pct)
-        hs_rate = float(raw.hs_pct)
-        dodge_rate = float(raw.dodge_pct)
-        reaction = float(raw.reaction)
-
-        if raw.role == "タイガー":
-            accuracy += TIGER_ACCURACY_BONUS
-            hs_rate += TIGER_HS_BONUS
-
-        if name in TOUYAMA_COMBO_MEMBERS:
-            accuracy += TOUYAMA_COMBO_BONUS["accuracy"]
-            hs_rate += TOUYAMA_COMBO_BONUS["hs_rate"]
-            dodge_rate += TOUYAMA_COMBO_BONUS["dodge_rate"]
-            reaction += TOUYAMA_COMBO_BONUS["reaction"]
-
-        effective[name] = {
-            "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
-            "dodge_rate": max(0.0, min(1.0, dodge_rate)),
-            "reaction": max(0.0, reaction),
-            "ability": TOUYAMA_ROLE_TO_ABILITY[raw.role],
-        }
-    return effective
-
-
-TOUYAMA_EFFECTIVE_STATS = _compute_touyama_effective_stats()
-
-print("[touyama_v1] 固定チーム(Attacker/retrieve) 確定ステータス:")
-for _name in TOUYAMA_ROSTER_ORDER:
-    _s = TOUYAMA_EFFECTIVE_STATS[_name]
-    print(
-        f"  {_name}: acc={_s['accuracy']:.2f} hs={_s['hs_rate']:.2f} "
-        f"dodge={_s['dodge_rate']:.2f} reaction={_s['reaction']:.0f} "
-        f"ability={_s['ability']}"
-    )
+TOUYAMA_EFFECTIVE_STATS = compute_touyama_effective_stats(TOUYAMA_STATS_TABLE)
+print_effective_stats(TOUYAMA_EFFECTIVE_STATS, "Attacker/retrieve")
 
 
 # ---------------------------------------------------------------------------
 # マップ読み込み・BFS距離
 # ---------------------------------------------------------------------------
-def load_grid():
-    lines = [l.strip() for l in NEW_MAZE_STR.strip("\n").split("\n") if l.strip()]
-    return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
-
-
-GRID = load_grid()
+GRID = common_rl.parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [
     (r, c)
@@ -213,45 +150,11 @@ WALKABLE = [
 
 def bfs_distance_map(goal):
     """goalから各セルへの最短距離マップ(壁越え不可)。"""
-    dist = np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
-    dist[goal[0], goal[1]] = 0
-    queue = deque([goal])
-    while queue:
-        r, c = queue.popleft()
-        for dr, dc in CARDINAL:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
-                dist[nr, nc] = dist[r, c] + 1
-                queue.append((nr, nc))
-    return dist
-
-def line_cells(p1, p2):
-    y0, x0 = p1
-    y1, x1 = p2
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx + dy
-    cells = []
-    while True:
-        cells.append((y0, x0))
-        if x0 == x1 and y0 == y1:
-            return cells
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
+    return common_rl.bfs_distance_map(GRID, goal)
 
 
 def has_los(p1, p2):
-    for r, c in line_cells(p1, p2):
-        if GRID[r, c] == 1:
-            return False
-    return True
-
+    return common_rl.has_los(GRID, p1, p2)
 
 # ---------------------------------------------------------------------------
 # 環境
@@ -597,28 +500,11 @@ class RetrieveEnv:
 # ---------------------------------------------------------------------------
 # Dueling DQN
 # ---------------------------------------------------------------------------
-class DuelingQNet(nn.Module):
-    def __init__(self, obs_dim, n_actions, hidden=128):
-        super().__init__()
-        self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
-        )
-        self.value = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, n_actions))
-
-    def forward(self, x):
-        feat = self.feature(x)
-        v = self.value(feat)
-        a = self.advantage(feat)
-        return v + (a - a.mean(dim=1, keepdim=True))
-
-
+# DuelingQNet(hidden=128) は common_rl.DuelingQNet と層構成が完全一致。
 def masked_argmax(q_values, mask):
     q = q_values.clone()
     q[~mask] = -1e9
     return int(torch.argmax(q).item())
-
 
 # ---------------------------------------------------------------------------
 # 学習ループ
@@ -660,7 +546,7 @@ def train(
     target_net.load_state_dict(policy_net.state_dict())
     optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 
-    replay = deque(maxlen=buffer_size)
+    replay = ReplayBuffer(Transition, capacity=buffer_size)
     recent_rewards = deque(maxlen=200)
     step_count = 0
 
@@ -671,39 +557,17 @@ def train(
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
 
     def _select_action(obs, mask, eps):
-        if random.random() < eps:
-            valid_actions = np.where(mask)[0]
-            return int(random.choice(valid_actions))
-        state_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
-        with torch.no_grad():
-            q_values = policy_net(state_t).squeeze(0)
-            return masked_argmax(q_values, mask_t)
+        return select_action(policy_net, obs, mask, eps)
 
     def _optimize():
         if len(replay) < batch_size:
             return
-        batch = random.sample(replay, batch_size)
-        s = torch.from_numpy(np.stack([t.s for t in batch])).float().to(DEVICE)
-        a = torch.tensor([t.a for t in batch], device=DEVICE).unsqueeze(1)
-        r = torch.tensor([t.r for t in batch], device=DEVICE, dtype=torch.float32).unsqueeze(1)
-        s2 = torch.from_numpy(np.stack([t.s2 for t in batch])).float().to(DEVICE)
-        d = torch.tensor([t.done for t in batch], device=DEVICE, dtype=torch.float32).unsqueeze(1)
-        mask2 = torch.from_numpy(np.stack([t.mask2 for t in batch])).to(DEVICE)
-
-        q_sa = policy_net(s).gather(1, a)
-        with torch.no_grad():
-            next_q_policy = policy_net(s2)
-            next_q_policy_masked = next_q_policy.masked_fill(~mask2, -1e9)
-            next_actions = next_q_policy_masked.argmax(dim=1, keepdim=True)
-            next_q_target = target_net(s2).gather(1, next_actions)
-            y = r + gamma * (1 - d) * next_q_target
-
-        loss = nn.functional.smooth_l1_loss(q_sa, y)
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(policy_net.parameters(), 10.0)
-        optimizer.step()
+        batch = replay.sample(batch_size)
+        optimize_double_dqn_step(
+            policy_net, target_net, optimizer,
+            batch.s, batch.a, batch.r, batch.s2, batch.done, batch.mask2,
+            gamma,
+        )
 
     start_time = time.perf_counter()
     for ep in range(episodes):
@@ -737,7 +601,7 @@ def train(
                     next_mask = zero_mask
                     step_done = True
 
-                replay.append(Transition(obs, action, reward, next_obs, step_done, next_mask))
+                replay.push(obs, action, reward, next_obs, step_done, next_mask)
                 step_count += 1
 
                 _optimize()

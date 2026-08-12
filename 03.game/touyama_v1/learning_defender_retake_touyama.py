@@ -86,14 +86,17 @@ class DefenderRetakeDuelingDQN(nn.Module):
         self.value_head = nn.Sequential(
             nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, 1)
         )
-        self.adv_head = nn.Sequential(
+        # 💡修正: common_rl.DuelingQNet(学習側)の層名は advantage_head。
+        # 名前が異なるだけで構造は同一だったため state_dict のキーが
+        # 一致せずロードエラーになっていた。学習側に合わせて改名する。
+        self.advantage_head = nn.Sequential(
             nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, n_actions)
         )
 
     def forward(self, x):
         feat = self.feature(x)
         value = self.value_head(feat)
-        adv = self.adv_head(feat)
+        adv = self.advantage_head(feat)
         return value + adv - adv.mean(dim=1, keepdim=True)
 
 
@@ -322,8 +325,9 @@ class LearningDefenderRetakeTouyamaController:
         return obs
 
     # -- 行動マスク ---------------------------------------------------------
-    # train_defender_retake.py の action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement):
+    # train_defender_retake.py の action_mask() と同一ロジック
+    # (敵視認による移動禁止は撤廃済み。学習側と一致させる)。
+    def _action_mask(self, char, grid, chars):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -338,7 +342,7 @@ class LearningDefenderRetakeTouyamaController:
                 and grid[nr, nc] != 1
                 and (nr, nc) not in occupied
             )
-            mask[a] = walkable and not lock_movement
+            mask[a] = walkable
         mask[4] = True  # stay は常に許可
 
         pr = self._dist_map_source[0] if self._dist_map_source else r
@@ -376,14 +380,8 @@ class LearningDefenderRetakeTouyamaController:
             e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
-        # 💡train_defender_retake.py の action_mask() と同一条件:
-        # 時間に余裕があり(time_criticalでない)、かつ敵が視認できている
-        # 場合は移動をマスクして足を止めさせる。
-        time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
-        lock_movement = (not time_critical) and bool(visible_enemies)
-
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
-        mask = self._action_mask(char, grid, chars, lock_movement)
+        mask = self._action_mask(char, grid, chars)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)
