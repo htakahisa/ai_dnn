@@ -690,7 +690,10 @@ class SearchEnv:
             has_enemy_los = any(
                 a.is_alive and has_los(d.pos, a.pos, smoke_cells) for a in self.attackers
             )
-            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=has_enemy_los)
+            # スパイク(地面)に射線が通った時点で、それ以上通路を進ませず
+            # その場で待ち伏せさせる(敵が拾いに来るところを迎撃する方が有利なため)。
+            lock_movement = has_enemy_los or unit_has_spike_los
+            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=lock_movement)
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
