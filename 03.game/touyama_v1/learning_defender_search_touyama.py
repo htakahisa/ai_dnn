@@ -66,6 +66,7 @@ DEFAULT_MODEL_PATH = (
     "dqn_defender_search_touyama_best_by_eval.pt"
 )
 
+VERBOSE = False
 
 # ---------------------------------------------------------------------------
 # Dueling DQN (touyama_v1/train_defender_search.py と同一構造)
@@ -314,7 +315,7 @@ class LearningDefenderSearchTouyamaController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE):
         self.greedy = greedy
         self.verbose = verbose
         self.model = DefenderSearchDuelingDQN().to(DEVICE)
@@ -616,6 +617,7 @@ class LearningDefenderSearchTouyamaController:
         )
         mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
 
+        # After
         if self.verbose:
             mode = (
                 "spike" if self.team_memory.spike_pos is not None
@@ -625,9 +627,11 @@ class LearningDefenderSearchTouyamaController:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 f.write(
                     f"{char.name},{tuple(char.pos)},{mode},"
+                    f"visible={bool(visible_enemies)},charges={_ability_charge(char)},"
+                    f"ability={char.ability_name},"
                     f"spike14={obs[14]:.2f},spike15={obs[15]:.1f},spike16={obs[16]:.1f},"
                     f"sight17={obs[17]:.2f},sight18={obs[18]:.1f},sight19={obs[19]:.1f},"
-                    f"pos31={obs[31]:.2f},pos34={obs[34]:.1f},"
+                    f"pos31={obs[31]:.2f},pos34={obs[34]:.1f},obs9={obs[9]:.1f},"
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
@@ -665,6 +669,17 @@ class LearningDefenderSearchTouyamaController:
                 cur_dist = dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
                     move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
+        elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
+            r0, c0 = int(char.pos[0]), int(char.pos[1])
+            already_watching = (
+                not self.team_memory.spike_held
+                and _has_los(grid, tuple(char.pos), self.team_memory.spike_pos)
+            )
+            if not already_watching:
+                move_offset = _bfs_best_direction(self.spike_dist_map, grid, r0, c0)
+        elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
+            r0, c0 = int(char.pos[0]), int(char.pos[1])
+            move_offset = _bfs_best_direction(self.sighting_dist_map, grid, r0, c0)
 
         if self.verbose:
             print(

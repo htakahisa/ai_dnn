@@ -133,6 +133,8 @@ HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
 HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
+ABILITY_AIMED_REWARD = 0.03      # 視認あり・射程内で使用(外れても付与、whiffとは排他)
+ABILITY_HIT_BONUS = 0.10         # 上記に加え、実際に命中/デバフ成立した場合に追加
 DEBUFF_KILL_BONUS = 0.3
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
@@ -536,9 +538,13 @@ def encode_action(move, use_ability):
     return move_idx * 2 + (1 if use_ability else 0)
 
 
-def build_action_mask(unit, occupied, lock_movement=False):
+def build_action_mask(unit, occupied, lock_movement=False, has_target_info=True):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
-    交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。"""
+    交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。
+    has_target_info=False(敵の視認情報も直近の目撃情報も一切無い)の場合、
+    use_ability action自体を選択肢から除外する。敵情報が無い状態での使用は
+    ability_requestsに追加されず常に無意味(空撃ち)なため、探索でこの選択肢に
+    ランダムにチャージを浪費させないための措置(2026-08-12 合意)。"""
     mask = np.ones(ACTION_DIM, dtype=bool)
     r, c = int(unit.pos[0]), int(unit.pos[1])
     for move_idx, (dr, dc) in enumerate(MOVES):
@@ -556,7 +562,7 @@ def build_action_mask(unit, occupied, lock_movement=False):
             mask[move_idx * 2] = False
             mask[move_idx * 2 + 1] = False
 
-    if unit.charges <= 0 or unit.role == "HUNT":
+    if unit.charges <= 0 or unit.role == "HUNT" or not has_target_info:
         for move_idx in range(5):
             mask[move_idx * 2 + 1] = False
 
@@ -599,8 +605,16 @@ class SearchEnv:
         # --- 診断用: positionモード中(spike/sighting情報が無いとき)の
         # キャラ別「平均BFS距離・到着率・移動率」を1エピソード分蓄積する。
         # train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
+        
         self.position_mode_stats = {
             name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            for name in TOUYAMA_ROSTER_ORDER
+        }
+
+        # --- 診断用: アビリティ使用の内訳(視認あり使用/命中/外れ/whiff/overlap/debuffキル)を
+        # 1エピソード分蓄積する。train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
+        self.ability_diag_stats = {
+            name: {"aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0, "debuff_kill": 0}
             for name in TOUYAMA_ROSTER_ORDER
         }
 
@@ -614,8 +628,13 @@ class SearchEnv:
         self.spike_ground_pos = None
 
         # --- 診断用: 新しいエピソードの開始時に集計をリセット ---
+        
         self.position_mode_stats = {
             name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            for name in TOUYAMA_ROSTER_ORDER
+        }
+        self.ability_diag_stats = {
+            name: {"aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0, "debuff_kill": 0}
             for name in TOUYAMA_ROSTER_ORDER
         }
 
@@ -693,7 +712,13 @@ class SearchEnv:
             # スパイク(地面)に射線が通った時点で、それ以上通路を進ませず
             # その場で待ち伏せさせる(敵が拾いに来るところを迎撃する方が有利なため)。
             lock_movement = has_enemy_los or unit_has_spike_los
-            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=lock_movement)
+            # 敵の視認情報も直近の目撃情報も一切無い場合、use_abilityは常に無意味
+            # (ability_requestsに追加されない空撃ち)になるため、探索での浪費を防ぐ
+            # ためマスクの時点で選択肢から除外する。
+            has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+            mask_dict[d.name] = build_action_mask(
+                d, own_occupied, lock_movement=lock_movement, has_target_info=has_target_info
+            )
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
@@ -780,6 +805,21 @@ class SearchEnv:
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
                     dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
+            elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
+                # spike確定 or 接近中(spike_watchは除く): 目標座標は既知なので、
+                # 移動方向はBFS最短方向を強制し、ネットワークにはアビリティ使用の
+                # 判断のみ委ねる。spike_watch(既にLOSが通っている)は対象外。
+                r0, c0 = int(d.pos[0]), int(d.pos[1])
+                already_watching = (
+                    not self.team_memory.spike_held
+                    and has_los(d.pos, self.team_memory.spike_pos, smoke_cells)
+                )
+                if not already_watching:
+                    dr, dc = bfs_best_direction(self.spike_dist_map, r0, c0)
+            elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
+                # sighting(目撃情報ベース追跡): 同様にBFS最短方向を強制する。
+                r0, c0 = int(d.pos[0]), int(d.pos[1])
+                dr, dc = bfs_best_direction(self.sighting_dist_map, r0, c0)
 
             actual_action_dict[d.name] = encode_action((dr, dc), use_ability)
             move_plans.append((d, (dr, dc)))
@@ -788,6 +828,11 @@ class SearchEnv:
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+            # use_abilityのマスク許可条件(has_target_info)と、実際にability_requestsへ
+            # 追加されるかどうかの条件は一致している必要がある。以前はwhiff判定に
+            # has_enemy_los(直接視認のみ)を使っており、sightingモード(記憶ベース)での
+            # 正しい使用まで誤ってwhiff扱いしていた。
+            has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
 
             if has_enemy_los and (dr, dc) == (0, 0):
                 held_angle[d.name] = "held_with_los"
@@ -797,11 +842,15 @@ class SearchEnv:
                 held_angle[d.name] = "no_los"
 
             if use_ability:
-                ability_whiff[d.name] = not has_enemy_los
+                ability_whiff[d.name] = not has_target_info
                 ability_overlap[d.name] = (
                     pre_tick_flash_recon_active and d.role in ("FLASH", "RECON")
                 )
                 if d.charges > 0:
+                    # 狙う相手の有無にかかわらず、use_ability選択時点でチャージを消費する。
+                    # 以前はここで消費しておらず、狙う対象が無い場合にチャージが無限に温存され、
+                    # 同じユニットが毎tickwhiffを繰り返し選べてしまっていた。
+                    d.charges -= 1
                     if visible_enemies:
                         nearest = min(
                             visible_enemies,
@@ -839,8 +888,10 @@ class SearchEnv:
                 picker.has_spike = True
                 self.spike_ground_pos = None
 
+        ability_hit = {}
         for unit, target_pos in ability_requests:
-            unit.charges -= 1
+            # チャージは選択時点(上のforループ内)で既に消費済みのためここでは減算しない。
+            hit_any = False
             if unit.role == "SMOKE":
                 tr, tc = int(target_pos[0]), int(target_pos[1])
                 cells = {
@@ -854,14 +905,35 @@ class SearchEnv:
                     "remaining_ticks": SMOKE_DURATION_TICKS,
                     "team": unit.team,
                 })
+                # 診断用: SMOKEの「命中」= 展開セルが敵の現在地を実際に覆っているか
+                hit_any = any(a.is_alive and tuple(a.pos) in cells for a in self.attackers)
             elif unit.role == "FLASH":
                 for a in self.attackers:
                     if a.is_alive and has_los(target_pos, a.pos, smoke_cells):
                         a.blind_remaining = max(a.blind_remaining, BLIND_DURATION_TICKS)
+                        hit_any = True
             elif unit.role == "RECON":
                 for a in self.attackers:
                     if a.is_alive and has_los(target_pos, a.pos, smoke_cells):
                         a.reveal_remaining = max(a.reveal_remaining, REVEAL_DURATION_TICKS)
+                        hit_any = True
+            ability_hit[unit.name] = hit_any
+
+        # 診断用: aimed(視認ありで使用)/hit/miss/whiff/overlap を集計
+        for name, whiffed in ability_whiff.items():
+            stats = self.ability_diag_stats.get(name)
+            if stats is None:
+                continue
+            if whiffed:
+                stats["whiff"] += 1
+            else:
+                stats["aimed"] += 1
+                if ability_hit.get(name):
+                    stats["hit"] += 1
+                else:
+                    stats["miss"] += 1
+            if ability_overlap.get(name):
+                stats["overlap"] += 1
 
         if not any(a.is_alive and a.has_spike for a in self.attackers):
             dropped_holder = next((a for a in self.attackers if a.has_spike), None)
@@ -898,7 +970,7 @@ class SearchEnv:
             self._plant_progress = 0
 
         rewards = self._compute_rewards(
-            pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle
+            pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit
         )
 
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
@@ -995,7 +1067,8 @@ class SearchEnv:
             return "sighting", self.sighting_dist_map, target_key
         return "position", defender.assigned_defense_dist_map, "position"
 
-    def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle):
+    def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit=None):
+        ability_hit = ability_hit or {}
         rewards = {}
         for d in self.defenders:
             r = STEP_PENALTY
@@ -1046,8 +1119,15 @@ class SearchEnv:
                         if bfs_dist <= REACH_RADIUS:
                             stats["arrived_count"] += 1
 
-            if ability_whiff.get(d.name):
-                r += ABILITY_WHIFF_PENALTY
+            if d.name in ability_whiff:
+                if ability_whiff[d.name]:
+                    # 視認情報が無い状態での使用(既存のまま)
+                    r += ABILITY_WHIFF_PENALTY
+                else:
+                    # 視認あり・射程内で使用(外れてもここまでは付与)
+                    r += ABILITY_AIMED_REWARD
+                    if ability_hit.get(d.name):
+                        r += ABILITY_HIT_BONUS
             if ability_overlap.get(d.name):
                 r += ABILITY_OVERLAP_PENALTY
 
@@ -1060,6 +1140,7 @@ class SearchEnv:
             new_kills = d.kills - self._prev_kills.get(d.name, d.kills)
             if new_kills > 0:
                 r += KILL_REWARD * new_kills
+                
                 for shot in getattr(self, "last_shots", []):
                     if (
                         shot["shooter"] is d
@@ -1068,6 +1149,9 @@ class SearchEnv:
                         and pre_tick_enemy_debuffed.get(shot["target"].name, False)
                     ):
                         r += DEBUFF_KILL_BONUS
+                        stats = self.ability_diag_stats.get(d.name)
+                        if stats is not None:
+                            stats["debuff_kill"] += 1
 
             was_alive = self._prev_alive.get(d.name, True)
             if was_alive and not d.is_alive:
@@ -1118,6 +1202,13 @@ def train(
     per_name_avg_dist_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
     per_name_arrival_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
     per_name_move_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
+
+    # --- 診断用(5): アビリティ使用内訳(aimed/hit/miss/whiff/overlap/debuff_kill)の直近100エピソード履歴 ---
+    ABILITY_DIAG_KEYS = ("aimed", "hit", "miss", "whiff", "overlap", "debuff_kill")
+    per_name_ability_history = {
+        name: {key: deque(maxlen=100) for key in ABILITY_DIAG_KEYS}
+        for name in TOUYAMA_ROSTER_ORDER
+    }
 
     start_time = time.perf_counter()
     for episode in range(1, episodes + 1):
@@ -1195,6 +1286,12 @@ def train(
         episode_reward_history.append(episode_reward_total)
         avg_reward = sum(episode_reward_history) / len(episode_reward_history)
 
+        # --- 診断用(5): このエピソードのアビリティ使用内訳を履歴に積算 ---
+        for name in TOUYAMA_ROSTER_ORDER:
+            stats = env.ability_diag_stats.get(name, {})
+            for key in ABILITY_DIAG_KEYS:
+                per_name_ability_history[name][key].append(stats.get(key, 0))
+
         # --- 診断用(1): キャラ別報酬履歴に積算値を追加 ---
         for name in per_name_reward_history:
             per_name_reward_history[name].append(per_name_episode_total.get(name, 0.0))
@@ -1226,7 +1323,20 @@ def train(
                 for name in TOUYAMA_ROSTER_ORDER
                 if len(per_name_avg_dist_history[name]) > 0
             )
+            
             print(f"  [POSITION-MODE diag] {position_diag_str}")
+
+            # --- 診断用(5): 直近<=100エピソード合計でのアビリティ使用内訳 ---
+            ability_diag_str = " / ".join(
+                f"{name}(aimed={sum(per_name_ability_history[name]['aimed'])},"
+                f"hit={sum(per_name_ability_history[name]['hit'])},"
+                f"miss={sum(per_name_ability_history[name]['miss'])},"
+                f"whiff={sum(per_name_ability_history[name]['whiff'])},"
+                f"overlap={sum(per_name_ability_history[name]['overlap'])},"
+                f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])})"
+                for name in TOUYAMA_ROSTER_ORDER
+            )
+            print(f"  [ABILITY diag, sum over last<=100 eps] {ability_diag_str}")
 
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward
