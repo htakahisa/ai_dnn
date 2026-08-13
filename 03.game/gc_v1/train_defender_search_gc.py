@@ -1,6 +1,6 @@
 """gc_v1/train_defender_search.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Defender「search phase」学習スクリプト（プラント前限定）。
 
 train_defender_search.py(root/defender_v3)をベースに、以下を固定化した:
@@ -48,6 +48,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
@@ -91,7 +92,9 @@ DEVICE = torch.device("cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
+OBS_DIM = (
+    36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
+)
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # Attacker(敵)側の簡易ヒューリスティック用
 
@@ -99,9 +102,9 @@ N_DEFENDERS = 5
 N_ATTACKERS = 5
 MAX_TICKS = ROUND_DURATION_TICKS  # 90
 
-ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
+ABILITY_RANGE = 8  # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30
-REACH_RADIUS = 1        # 担当ポジションへ「到着した」とみなすBFS距離
+REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすBFS距離
 
 # 敵(Attacker)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
 DEFAULT_ACCURACY = 0.50
@@ -131,11 +134,12 @@ GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
 
 def _compute_gc_effective_stats():
     """character_stats_gc.py の生値に、常時発動するチームコンボ
@@ -188,28 +192,29 @@ for _name in GC_ROSTER_ORDER:
 # 優先度: SPIKE > SIGHTING > DEFENSE_POSITION > HOLD_POSITION
 # の順で明確に重みを引き離し、「待機の方が得」という学習結果を防ぐ。
 STEP_PENALTY = -0.001
-SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(ポテンシャル差分)
-SIGHTING_PULL_REWARD = 0.05      # 敵目撃方向へ近づく(ポテンシャル差分)
-DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
-HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
-HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
+SPIKE_PULL_REWARD = 0.08  # スパイク確定方向へ近づく(ポテンシャル差分)
+SIGHTING_PULL_REWARD = 0.05  # 敵目撃方向へ近づく(ポテンシャル差分)
+DEFENSE_POSITION_PULL_REWARD = 0.03  # 平常時、担当7地点へ寄る(ポテンシャル差分)
+HOLD_POSITION_BONUS = 0.02  # 担当地点到着後、静止
+HOLD_POSITION_PENALTY = -0.01  # 担当地点到着後、無駄にうろつく
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 DEBUFF_KILL_BONUS = 0.3
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
-SPIKE_WATCH_HOLD_BONUS = 0.02       # 落下中スパイクにLOSが通っている間、静止(待ち伏せ)
-SPIKE_WATCH_MOVE_PENALTY = -0.01    # 同上、無駄にうろつく
+SPIKE_WATCH_HOLD_BONUS = 0.02  # 落下中スパイクにLOSが通っている間、静止(待ち伏せ)
+SPIKE_WATCH_MOVE_PENALTY = -0.01  # 同上、無駄にうろつく
 KILL_REWARD = 0.5
 DEATH_PENALTY = -0.5
-ROUND_WIN_REWARD = 1.0          # 時間切れ・全滅によるDefender勝利
-PLANT_PENALTY = -0.5            # このフェーズの範囲外(プラント成立)に至った場合
+ROUND_WIN_REWARD = 1.0  # 時間切れ・全滅によるDefender勝利
+PLANT_PENALTY = -0.5  # このフェーズの範囲外(プラント成立)に至った場合
 
 
 # ============================================================================
 # マップ読み込み(map_data.NEW_MAZE_STR / map_data_search.SEARCH_MAZE_STR
 # のみ参照。パース処理は自前で複製)
 # ============================================================================
+
 
 def _parse_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -219,8 +224,12 @@ def _parse_grid(maze_str):
 GRID = _parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
-ATTACKER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3]
-DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
+ATTACKER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3
+]
+DEFENDER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4
+]
 PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
 
 if len(DEFENDER_SPAWNS) < len(GC_ROSTER_ORDER):
@@ -235,9 +244,7 @@ _SEARCH_GRID = _parse_grid(SEARCH_MAZE_STR)
 # 1:1で対応させる。5=roster[0], 6=roster[1], 7=roster[2], 8=roster[3], 9=roster[4]。
 # 5人×5地点の総当たり最適化は不要で、マップ側で明示的に指定された担当地点へ
 # ロースター順のままそのまま割り当てるだけでよい。
-GC_DEFENSE_POSITION_VALUES = {
-    name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)
-}
+GC_DEFENSE_POSITION_VALUES = {name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)}
 
 
 def _find_marker_positions(grid, value):
@@ -257,9 +264,7 @@ def _find_marker_positions(grid, value):
 
 # ロースター順に 5,6,7,8,9 を担当。
 # 各値は複数マス置けて、そのプレイヤーは候補群のどこか1つに入れば配置完了。
-GC_DEFENSE_POSITION_VALUES = {
-    name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)
-}
+GC_DEFENSE_POSITION_VALUES = {name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)}
 
 GC_DEFENSE_POSITION_GROUPS = {
     name: _find_marker_positions(_SEARCH_GRID, value)
@@ -268,9 +273,7 @@ GC_DEFENSE_POSITION_GROUPS = {
 
 # 互換用。全候補をまとめた一覧。
 DEFENSE_POSITIONS = [
-    pos
-    for name in GC_ROSTER_ORDER
-    for pos in GC_DEFENSE_POSITION_GROUPS[name]
+    pos for name in GC_ROSTER_ORDER for pos in GC_DEFENSE_POSITION_GROUPS[name]
 ]
 
 
@@ -291,7 +294,9 @@ def _extract_site_positions(cells, max_sites=2):
                 placed = True
                 break
         if not placed:
-            clusters.append({"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))})
+            clusters.append(
+                {"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))}
+            )
     clusters.sort(key=lambda c: -len(c["cells"]))
     return [c["centroid"] for c in clusters[:max_sites]]
 
@@ -304,6 +309,7 @@ if not SITE_POSITIONS:
 # ============================================================================
 # LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
 # ============================================================================
+
 
 def line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
@@ -348,7 +354,12 @@ def bfs_distance_map(goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
@@ -419,14 +430,8 @@ def _choose_defense_position_for_round(name, start_pos):
         return random.choice(ordered)
 
     # rank_score: -1(最も引き目) ～ +1(最も前目)
-    rank_scores = [
-        -1.0 + 2.0 * i / (n - 1)
-        for i in range(n)
-    ]
-    weights = [
-        float(np.exp(bias * score))
-        for score in rank_scores
-    ]
+    rank_scores = [-1.0 + 2.0 * i / (n - 1) for i in range(n)]
+    weights = [float(np.exp(bias * score)) for score in rank_scores]
     return random.choices(ordered, weights=weights, k=1)[0]
 
 
@@ -474,6 +479,7 @@ for i, _name in enumerate(GC_ROSTER_ORDER):
 # ============================================================================
 # ユニットスタブ(game_core.Characterの必要最小限の複製。継承・importはしない)
 # ============================================================================
+
 
 class UnitStub:
     def __init__(self, name, team, pos, role, has_spike=False):
@@ -549,10 +555,13 @@ def _build_attackers():
 # チーム共有メモリ(Defender視点。スパイク確定情報 / 敵目撃情報)
 # ============================================================================
 
+
 class TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.spike_held = False  # True: 保持者が移動中(緊急) / False: 地面に落下(待ち伏せ可)
+        self.spike_held = (
+            False  # True: 保持者が移動中(緊急) / False: 地面に落下(待ち伏せ可)
+        )
         self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
@@ -584,17 +593,25 @@ class TeamMemory:
             tracked = None
             if self.last_seen_enemy is not None:
                 tracked_name = self.last_seen_enemy.get("name")
-                tracked = next((a for a in visible_enemies if a.name == tracked_name), None)
+                tracked = next(
+                    (a for a in visible_enemies if a.name == tracked_name), None
+                )
             if tracked is None:
                 tracked = min(
                     visible_enemies,
-                    key=lambda a: min(
-                        max(abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1]))
-                        for d in alive_defenders
-                    ) if alive_defenders else 0,
+                    key=lambda a: (
+                        min(
+                            max(abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1]))
+                            for d in alive_defenders
+                        )
+                        if alive_defenders
+                        else 0
+                    ),
                 )
             self.last_seen_enemy = {
-                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
+                "pos": tuple(tracked.pos),
+                "name": tracked.name,
+                "tick_ago": 0,
             }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
@@ -606,15 +623,22 @@ class TeamMemory:
 # ネットワーク
 # ============================================================================
 
+
 class DefenderSearchDuelingDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1)
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
+        )
 
     def forward(self, x):
         f = self.feature(x)
@@ -623,7 +647,9 @@ class DefenderSearchDuelingDQN(nn.Module):
         return v + (a - a.mean(dim=1, keepdim=True))
 
 
-Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done"))
+Transition = namedtuple(
+    "Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done")
+)
 
 
 class ReplayBuffer:
@@ -645,9 +671,18 @@ class ReplayBuffer:
 # 観測構築
 # ============================================================================
 
+
 def build_observation(
-    unit, defenders, attackers, team_memory, smoke_cells, own_smoke_active, round_timer,
-    spike_dist_map, sighting_dist_map, unit_has_spike_los,
+    unit,
+    defenders,
+    attackers,
+    team_memory,
+    smoke_cells,
+    own_smoke_active,
+    round_timer,
+    spike_dist_map,
+    sighting_dist_map,
+    unit_has_spike_los,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(unit.pos[0]), int(unit.pos[1])
@@ -670,13 +705,19 @@ def build_observation(
     obs[10] = len(teammates) / 4.0
     if teammates:
         nearest_d = min(
-            max(abs(t.pos[0] - unit.pos[0]), abs(t.pos[1] - unit.pos[1])) for t in teammates
+            max(abs(t.pos[0] - unit.pos[0]), abs(t.pos[1] - unit.pos[1]))
+            for t in teammates
         )
         obs[11] = min(nearest_d, HEIGHT) / HEIGHT
 
-    obs[12] = 1.0 if any(
-        a.is_alive and (a.blind_remaining > 0 or a.reveal_remaining > 0) for a in attackers
-    ) else 0.0
+    obs[12] = (
+        1.0
+        if any(
+            a.is_alive and (a.blind_remaining > 0 or a.reveal_remaining > 0)
+            for a in attackers
+        )
+        else 0.0
+    )
     obs[13] = 1.0 if own_smoke_active else 0.0
 
     if team_memory.spike_pos is not None:
@@ -701,7 +742,10 @@ def build_observation(
         )
         obs[22] = (nearest_enemy.pos[0] - unit.pos[0]) / HEIGHT
         obs[23] = (nearest_enemy.pos[1] - unit.pos[1]) / WIDTH
-        dist = max(abs(nearest_enemy.pos[0] - unit.pos[0]), abs(nearest_enemy.pos[1] - unit.pos[1]))
+        dist = max(
+            abs(nearest_enemy.pos[0] - unit.pos[0]),
+            abs(nearest_enemy.pos[1] - unit.pos[1]),
+        )
         obs[24] = min(dist, HEIGHT) / HEIGHT
 
     if len(SITE_POSITIONS) >= 1:
@@ -714,7 +758,9 @@ def build_observation(
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 0.0  # 予備次元
 
-    in_position_mode = team_memory.spike_pos is None and team_memory.last_seen_enemy is None
+    in_position_mode = (
+        team_memory.spike_pos is None and team_memory.last_seen_enemy is None
+    )
     if in_position_mode and unit.assigned_defense_pos is not None:
         dist_map = unit.assigned_defense_dist_map
         bfs_dist = dist_map[r0, c0]
@@ -726,11 +772,15 @@ def build_observation(
         obs[33] = float(best_dc)
         obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
 
-    obs[35] = 1.0 if (
-        team_memory.spike_pos is not None
-        and not team_memory.spike_held
-        and unit_has_spike_los
-    ) else 0.0
+    obs[35] = (
+        1.0
+        if (
+            team_memory.spike_pos is not None
+            and not team_memory.spike_held
+            and unit_has_spike_los
+        )
+        else 0.0
+    )
 
     return obs
 
@@ -757,7 +807,8 @@ def build_action_mask(unit, occupied, lock_movement=False):
             continue
         nr, nc = r + dr, c + dc
         walkable = (
-            0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            0 <= nr < HEIGHT
+            and 0 <= nc < WIDTH
             and GRID[nr, nc] != 1
             and (nr, nc) not in occupied
         )
@@ -775,6 +826,7 @@ def build_action_mask(unit, occupied, lock_movement=False):
 # ============================================================================
 # 環境本体
 # ============================================================================
+
 
 class SearchEnv:
     """プラント前フェーズを模した簡易マルチエージェント環境。
@@ -809,7 +861,12 @@ class SearchEnv:
         # キャラ別「平均BFS距離・到着率・移動率」を1エピソード分蓄積する。
         # train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
         self.position_mode_stats = {
-            name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            name: {
+                "dist_sum": 0.0,
+                "dist_count": 0,
+                "moved_count": 0,
+                "arrived_count": 0,
+            }
             for name in GC_ROSTER_ORDER
         }
 
@@ -824,7 +881,12 @@ class SearchEnv:
 
         # --- 診断用: 新しいエピソードの開始時に集計をリセット ---
         self.position_mode_stats = {
-            name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
+            name: {
+                "dist_sum": 0.0,
+                "dist_count": 0,
+                "moved_count": 0,
+                "arrived_count": 0,
+            }
             for name in GC_ROSTER_ORDER
         }
 
@@ -835,7 +897,9 @@ class SearchEnv:
 
         self._assign_defense_positions()
 
-        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos)
+        self.team_memory.update(
+            self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos
+        )
         self._update_priority_dist_maps()
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
@@ -859,11 +923,13 @@ class SearchEnv:
     def _update_priority_dist_maps(self):
         self.spike_dist_map = (
             bfs_distance_map(self.team_memory.spike_pos)
-            if self.team_memory.spike_pos is not None else None
+            if self.team_memory.spike_pos is not None
+            else None
         )
         self.sighting_dist_map = (
             bfs_distance_map(self.team_memory.last_seen_enemy["pos"])
-            if self.team_memory.last_seen_enemy is not None else None
+            if self.team_memory.last_seen_enemy is not None
+            else None
         )
 
     def _smoke_cells(self):
@@ -878,9 +944,7 @@ class SearchEnv:
 
     def _collect_observations(self):
         smoke_cells = self._smoke_cells()
-        occupied = {
-            tuple(u.pos) for u in self.defenders + self.attackers if u.is_alive
-        }
+        occupied = {tuple(u.pos) for u in self.defenders + self.attackers if u.is_alive}
         obs_dict, mask_dict = {}, {}
         for d in self.defenders:
             if not d.is_alive:
@@ -891,15 +955,25 @@ class SearchEnv:
                 and has_los(d.pos, self.team_memory.spike_pos, smoke_cells)
             )
             obs_dict[d.name] = build_observation(
-                d, self.defenders, self.attackers, self.team_memory,
-                smoke_cells, self._own_smoke_active("D"), self.round_timer,
-                self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
+                d,
+                self.defenders,
+                self.attackers,
+                self.team_memory,
+                smoke_cells,
+                self._own_smoke_active("D"),
+                self.round_timer,
+                self.spike_dist_map,
+                self.sighting_dist_map,
+                unit_has_spike_los,
             )
             own_occupied = occupied - {tuple(d.pos)}
             has_enemy_los = any(
-                a.is_alive and has_los(d.pos, a.pos, smoke_cells) for a in self.attackers
+                a.is_alive and has_los(d.pos, a.pos, smoke_cells)
+                for a in self.attackers
             )
-            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=has_enemy_los)
+            mask_dict[d.name] = build_action_mask(
+                d, own_occupied, lock_movement=has_enemy_los
+            )
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
@@ -933,8 +1007,11 @@ class SearchEnv:
                     return (mdr, mdc)
 
         valid = [
-            (dr, dc) for dr, dc in CARDINAL
-            if 0 <= r + dr < HEIGHT and 0 <= c + dc < WIDTH and GRID[r + dr, c + dc] != 1
+            (dr, dc)
+            for dr, dc in CARDINAL
+            if 0 <= r + dr < HEIGHT
+            and 0 <= c + dc < WIDTH
+            and GRID[r + dr, c + dc] != 1
         ]
         return random.choice(valid) if valid else (0, 0)
 
@@ -945,7 +1022,8 @@ class SearchEnv:
 
         pre_tick_enemy_debuffed = {
             a.name: (a.blind_remaining > 0 or a.reveal_remaining > 0)
-            for a in self.attackers if a.is_alive
+            for a in self.attackers
+            if a.is_alive
         }
         pre_tick_flash_recon_active = any(
             a.is_alive and (a.blind_remaining > 0 or a.reveal_remaining > 0)
@@ -991,7 +1069,9 @@ class SearchEnv:
             move_plans.append((d, (dr, dc)))
 
             visible_enemies = [
-                a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
+                a
+                for a in self.attackers
+                if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
 
@@ -1004,20 +1084,28 @@ class SearchEnv:
 
             if use_ability:
                 ability_whiff[d.name] = not has_enemy_los
-                ability_overlap[d.name] = (
-                    pre_tick_flash_recon_active and d.role in ("FLASH", "RECON")
+                ability_overlap[d.name] = pre_tick_flash_recon_active and d.role in (
+                    "FLASH",
+                    "RECON",
                 )
                 if d.charges > 0:
                     if visible_enemies:
                         nearest = min(
                             visible_enemies,
-                            key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
+                            key=lambda a: max(
+                                abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1])
+                            ),
                         )
-                        dist = max(abs(nearest.pos[0]-d.pos[0]), abs(nearest.pos[1]-d.pos[1]))
+                        dist = max(
+                            abs(nearest.pos[0] - d.pos[0]),
+                            abs(nearest.pos[1] - d.pos[1]),
+                        )
                         if dist <= ABILITY_RANGE:
                             ability_requests.append((d, tuple(nearest.pos)))
                     elif self.team_memory.last_seen_enemy is not None:
-                        ability_requests.append((d, self.team_memory.last_seen_enemy["pos"]))
+                        ability_requests.append(
+                            (d, self.team_memory.last_seen_enemy["pos"])
+                        )
 
         for unit, (dr, dc) in move_plans:
             if not unit.is_alive:
@@ -1038,7 +1126,11 @@ class SearchEnv:
 
         if self.spike_ground_pos is not None:
             picker = next(
-                (a for a in self.attackers if a.is_alive and tuple(a.pos) == self.spike_ground_pos),
+                (
+                    a
+                    for a in self.attackers
+                    if a.is_alive and tuple(a.pos) == self.spike_ground_pos
+                ),
                 None,
             )
             if picker is not None:
@@ -1055,11 +1147,13 @@ class SearchEnv:
                     for cc in range(tc - 1, tc + 2)
                     if 0 <= rr < HEIGHT and 0 <= cc < WIDTH and GRID[rr, cc] != 1
                 }
-                self.smokes.append({
-                    "cells": cells,
-                    "remaining_ticks": SMOKE_DURATION_TICKS,
-                    "team": unit.team,
-                })
+                self.smokes.append(
+                    {
+                        "cells": cells,
+                        "remaining_ticks": SMOKE_DURATION_TICKS,
+                        "team": unit.team,
+                    }
+                )
             elif unit.role == "FLASH":
                 for a in self.attackers:
                     if a.is_alive and has_los(target_pos, a.pos, smoke_cells):
@@ -1067,7 +1161,9 @@ class SearchEnv:
             elif unit.role == "RECON":
                 for a in self.attackers:
                     if a.is_alive and has_los(target_pos, a.pos, smoke_cells):
-                        a.reveal_remaining = max(a.reveal_remaining, REVEAL_DURATION_TICKS)
+                        a.reveal_remaining = max(
+                            a.reveal_remaining, REVEAL_DURATION_TICKS
+                        )
 
         if not any(a.is_alive and a.has_spike for a in self.attackers):
             dropped_holder = next((a for a in self.attackers if a.has_spike), None)
@@ -1084,14 +1180,18 @@ class SearchEnv:
             s["remaining_ticks"] -= 1
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
-        self.team_memory.update(self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos)
+        self.team_memory.update(
+            self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos
+        )
         self._update_priority_dist_maps()
         self.round_timer -= 1
 
         carrier = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
         if carrier is not None:
             site = SITE_POSITIONS[self.carrier_target_site_idx]
-            dist_to_site = max(abs(carrier.pos[0]-site[0]), abs(carrier.pos[1]-site[1]))
+            dist_to_site = max(
+                abs(carrier.pos[0] - site[0]), abs(carrier.pos[1] - site[1])
+            )
             if dist_to_site <= 1:
                 if not hasattr(self, "_plant_progress"):
                     self._plant_progress = 0
@@ -1141,7 +1241,8 @@ class SearchEnv:
 
         for shooter in alive:
             targets = [
-                t for t in alive
+                t
+                for t in alive
                 if t.team != shooter.team and has_los(shooter.pos, t.pos, smoke_cells)
             ]
             if not targets:
@@ -1149,7 +1250,7 @@ class SearchEnv:
             target = min(
                 targets,
                 key=lambda t: (
-                    max(abs(t.pos[0]-shooter.pos[0]), abs(t.pos[1]-shooter.pos[1])),
+                    max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])),
                     t.hp,
                     t.name,
                 ),
@@ -1169,7 +1270,9 @@ class SearchEnv:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
 
             debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0
-            effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
+            effective_dodge = target.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER if debuffed else 1.0
+            )
             hit_chance = accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
@@ -1180,14 +1283,18 @@ class SearchEnv:
                 headshot = random.random() < shooter.hs_rate
                 damage = HEADSHOT_DAMAGE if headshot else BODY_DAMAGE
                 target.hp = max(0, target.hp - damage)
-                self.last_shots.append({"shooter": shooter, "target": target, "hit": True})
+                self.last_shots.append(
+                    {"shooter": shooter, "target": target, "hit": True}
+                )
                 if target.hp <= 0:
                     target.is_alive = False
                     shooter.kills += 1
                     if target.has_spike:
                         target.has_spike = False
             else:
-                self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
+                self.last_shots.append(
+                    {"shooter": shooter, "target": target, "hit": False}
+                )
 
     def _priority_mode_and_distmap(self, defender):
         if self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
@@ -1196,12 +1303,17 @@ class SearchEnv:
             if has_los(defender.pos, self.team_memory.spike_pos, self._smoke_cells()):
                 return "spike_watch", self.spike_dist_map, "spike_watch"
             return "spike_approach", self.spike_dist_map, "spike_approach"
-        if self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
+        if (
+            self.team_memory.last_seen_enemy is not None
+            and self.sighting_dist_map is not None
+        ):
             target_key = f"sighting:{self.team_memory.last_seen_enemy.get('name')}"
             return "sighting", self.sighting_dist_map, target_key
         return "position", defender.assigned_defense_dist_map, "position"
 
-    def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle):
+    def _compute_rewards(
+        self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle
+    ):
         rewards = {}
         for d in self.defenders:
             r = STEP_PENALTY
@@ -1233,14 +1345,22 @@ class SearchEnv:
                 elif mode == "spike_approach":
                     r += SPIKE_PULL_REWARD * delta
                 elif mode == "spike_watch":
-                    r += SPIKE_WATCH_HOLD_BONUS if not d.moved_this_tick else SPIKE_WATCH_MOVE_PENALTY
+                    r += (
+                        SPIKE_WATCH_HOLD_BONUS
+                        if not d.moved_this_tick
+                        else SPIKE_WATCH_MOVE_PENALTY
+                    )
                 elif mode == "sighting":
                     r += SIGHTING_PULL_REWARD * delta
                 else:
                     if bfs_dist > REACH_RADIUS:
                         r += DEFENSE_POSITION_PULL_REWARD * delta
                     else:
-                        r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
+                        r += (
+                            HOLD_POSITION_BONUS
+                            if not d.moved_this_tick
+                            else HOLD_POSITION_PENALTY
+                        )
 
                     # --- 診断用: positionモード時のみ、BFS距離・到着・移動を記録 ---
                     stats = self.position_mode_stats.get(d.name)
@@ -1287,7 +1407,10 @@ class SearchEnv:
 # 学習ループ
 # ============================================================================
 
-def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8):
+
+def epsilon_by_episode(
+    episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8
+):
     decay_episodes = total_episodes * decay_ratio
     return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
 
@@ -1311,10 +1434,16 @@ def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
 
     batch = buffer.sample(batch_size)
     obs_batch = torch.as_tensor(np.array(batch.obs), dtype=torch.float32, device=DEVICE)
-    action_batch = torch.as_tensor(batch.action, dtype=torch.int64, device=DEVICE).unsqueeze(1)
+    action_batch = torch.as_tensor(
+        batch.action, dtype=torch.int64, device=DEVICE
+    ).unsqueeze(1)
     reward_batch = torch.as_tensor(batch.reward, dtype=torch.float32, device=DEVICE)
-    next_obs_batch = torch.as_tensor(np.array(batch.next_obs), dtype=torch.float32, device=DEVICE)
-    next_mask_batch = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=DEVICE)
+    next_obs_batch = torch.as_tensor(
+        np.array(batch.next_obs), dtype=torch.float32, device=DEVICE
+    )
+    next_mask_batch = torch.as_tensor(
+        np.array(batch.next_mask), dtype=torch.bool, device=DEVICE
+    )
     done_batch = torch.as_tensor(batch.done, dtype=torch.float32, device=DEVICE)
 
     q_values = policy_net(obs_batch).gather(1, action_batch).squeeze(1)
@@ -1361,13 +1490,15 @@ def train(
 
     # --- 診断用(4): positionモード中の「平均BFS距離・到着率・移動率」履歴 ---
     per_name_avg_dist_history = {name: deque(maxlen=100) for name in GC_ROSTER_ORDER}
-    per_name_arrival_rate_history = {name: deque(maxlen=100) for name in GC_ROSTER_ORDER}
+    per_name_arrival_rate_history = {
+        name: deque(maxlen=100) for name in GC_ROSTER_ORDER
+    }
     per_name_move_rate_history = {name: deque(maxlen=100) for name in GC_ROSTER_ORDER}
 
     start_time = time.perf_counter()
     for episode in range(1, episodes + 1):
         # --- 一時デバッグ用: 500エピソードごとに1エピソードだけ実況トレースON ---
-        env.debug_trace = (episode % 500 == 0)
+        env.debug_trace = episode % 500 == 0
 
         obs_dict, mask_dict = env.reset()
         episode_reward_total = 0.0
@@ -1384,7 +1515,9 @@ def train(
                 for name, obs in obs_dict.items()
             }
 
-            next_obs_dict, next_mask_dict, rewards, done, actual_action_dict = env.step(action_dict)
+            next_obs_dict, next_mask_dict, rewards, done, actual_action_dict = env.step(
+                action_dict
+            )
 
             for name, obs in obs_dict.items():
                 # position mode強制上書きにより、ネットワークが選んだ行動と
@@ -1394,7 +1527,9 @@ def train(
                 reward = rewards.get(name, 0.0)
                 episode_reward_total += reward
                 # --- 診断用(1): キャラ別に報酬を積算 ---
-                per_name_episode_total[name] = per_name_episode_total.get(name, 0.0) + reward
+                per_name_episode_total[name] = (
+                    per_name_episode_total.get(name, 0.0) + reward
+                )
 
                 if name in next_obs_dict:
                     next_obs = next_obs_dict[name]
@@ -1440,7 +1575,7 @@ def train(
         if episode % 200 == 0:
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
+            start_time = time.perf_counter()
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
@@ -1469,7 +1604,9 @@ def train(
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward
             torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
-            print(f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}")
+            print(
+                f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}"
+            )
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)

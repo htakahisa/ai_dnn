@@ -11,7 +11,7 @@ COMBOS = [
     {
         "name": "天才と悪魔",
         "players": ("jawgemo", "Demon1"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.15},
         "renames": {},
     },
     {
@@ -33,21 +33,9 @@ COMBOS = [
         "renames": {},
     },
     {
-        "name": "寡黙な羊たちの晩餐",
-        "players": ("Alfajer", "Leo"),
-        "bonuses": {"hs_rate": 0.2},
-        "renames": {},
-    },
-    {
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
-        "bonuses": {
-            "hs_rate": 0.15,
-            "accuracy": 0.35,
-            "iq": 20,
-            "dodge_rate": 0.15,
-            "mental": 4,
-        },
+        "bonuses": {"hs_rate": 0.05, "accuracy": 0.4, "iq": 20},
         "renames": {},
     },
     {
@@ -104,58 +92,52 @@ COMBOS = [
     {
         "name": "黒い破片飛び散る夜空",
         "players": ("Meteor", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.15, "reaction": 30},
+        "bonuses": {"hs_rate": 0.25, "reaction": 30},
         "renames": {},
     },
     {
         "name": "赤い果実迫りゆく森林",
         "players": ("Zest", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.25, "reaction": 20},
+        "bonuses": {"hs_rate": 0.25, "dodge_rate": 0.1, "reaction": 20},
         "renames": {},
     },
     {
         "name": "白き珊瑚浮かれ揺られ海洋",
         "players": ("WoohyuN", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.35, "reaction": 10},
+        "bonuses": {"hs_rate": 0.25, "dodge_rate": 0.2, "reaction": 10},
         "renames": {},
     },
     {
         "name": "隕石の流血事件",
         "players": ("Meteor", "Zest"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.2, "accuracy": 0.1},
         "renames": {},
     },
     {
         "name": "クソガキ老兵",
         "players": ("Canezerra", "Ethan"),
         "player_bonuses": {
-            "Canezerra": {"hs_rate": 0.1, "reaction": 10},
-            "Ethan": {"accuracy": 0.1, "dodge_rate": 0.1},
+            "Canezerra": {"hs_rate": 0.1, "reaction": 20},
+            "Ethan": {"accuracy": 0.1, "dodge_rate": 0.2},
         },
         "renames": {},
     },
     {
         "name": "クロネコのドラゴンテイル",
         "players": ("vo0kashu", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.3, "reaction": 35},
+        "bonuses": {"hs_rate": 0.15, "reaction": 35},
         "renames": {},
     },
     {
         "name": "生意気なドラゴンテイル",
         "players": ("Canezerra", "Nanasaki"),
-        "bonuses": {"accuracy": 0.15, "hs_rate": 0.2, "reaction": 30},
+        "bonuses": {"accuracy": 0.15, "hs_rate": 0.25, "reaction": 10},
         "renames": {},
     },
     {
         "name": "北欧仕立てのドラゴンテイル",
         "players": ("Derke", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.1, "accuracy": 0.3, "iq": 10},
-        "renames": {},
-    },
-    {
-        "name": "朽ち果てたドラゴンテイル",
-        "players": ("Ethan", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.3, "mental": 5},
+        "bonuses": {"dodge_rate": 0.15, "accuracy": 0.25, "reaction": 10},
         "renames": {},
     },
     {
@@ -165,25 +147,37 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "モーツァルト～アイネクライネ～",
+        "players": ("FNS", "crashies", "cNed", "soulcas", "trexx"),
+        "player_bonuses": {
+            "FNS": {"dodge_rate": 0.1, "accuracy": 0.1, "reaction": 10},
+            "crashies": {"accuracy": 0.15, "reaction": 15},
+            "cNed": {"hs_rate": 0.15, "dodge_rate": 0.15},
+            "crashies": {"dodge_rate": 0.3},
+            "soulcas": {"accuracy": 0.3},
+        },
+        "renames": {},
+    },
+    {
         "name": "夜逃げした裏切者たち",
         "players": ("Derke", "Sayonara"),
         "player_bonuses": {
-            "Derke": {"dodge_rate": 0.1, "reaction": 5},
-            "Sayonara": {"accuracy": 0.1, "reaction": 5},
+            "Derke": {"dodge_rate": 0.1, "accuracy": 0.1, "reaction": 10},
+            "Sayonara": {"accuracy": 0.15, "reaction": 15},
         },
         "renames": {},
     },
     {
         "name": "何者である必要もないこの夜に踊る",
         "players": ("Derke", "Sayonara", "Lar0k", "marteen", "something"),
-        "bonuses": {"dodge_rate": 0.5, "reaction": 20},
+        "bonuses": {"dodge_rate": 0.4, "iq": 30},
         "renames": {},
     },
     {
         "name": "モーツァルト～アイネクライネ～",
         "players": ("FNS", "crashies", "cNed", "soulcas", "trexx"),
         "player_bonuses": {
-            "FNS": {"reaction": 30},
+            "FNS": {"iq": 30},
             "crashies": {"accuracy": 0.15, "reaction": 15},
             "cNed": {"hs_rate": 0.15, "dodge_rate": 0.15},
             "crashies": {"dodge_rate": 0.3},
@@ -195,8 +189,8 @@ COMBOS = [
         "name": "ヴェートーベン～エリーゼのために～",
         "players": ("FNS", "crashies"),
         "player_bonuses": {
-            "crashies": {"accuracy": 0.2},
-            "FNS": {"accuracy": 0.1, "hs_rate": 0.1},
+            "FNS": {"iq": 20},
+            "crashies": {"accuracy": 0.1, "hs_rate": 0.1},
         },
         "renames": {},
     },
@@ -204,8 +198,8 @@ COMBOS = [
         "name": "サリエリ～ファルスタッフ～",
         "players": ("FNS", "cNed"),
         "player_bonuses": {
-            "cNed": {"dodge_rate": 0.2},
-            "FNS": {"dodge_rate": 0.1, "hs_rate": 0.1},
+            "FNS": {"iq": 20},
+            "cNed": {"dodge_rate": 0.1, "hs_rate": 0.1},
         },
         "renames": {},
     },
@@ -213,8 +207,8 @@ COMBOS = [
         "name": "バッハ～G線上のアリア～",
         "players": ("FNS", "soulcas"),
         "player_bonuses": {
+            "FNS": {"iq": 20},
             "soulcas": {"hs_rate": 0.2},
-            "FNS": {"hs_rate": 0.2},
         },
         "renames": {},
     },
@@ -222,8 +216,8 @@ COMBOS = [
         "name": "ラヴェル～ボレロ～",
         "players": ("FNS", "trexx"),
         "player_bonuses": {
+            "FNS": {"iq": 20},
             "trexx": {"hs_rate": 0.2},
-            "FNS": {"hs_rate": 0.2},
         },
         "renames": {},
     },
@@ -259,7 +253,7 @@ COMBOS = [
     {
         "name": "フラッシュバックするトラウマ",
         "players": ("Flashback", "Demon1", "Leo"),
-        "bonuses": {"hs_rate": 0.25},
+        "bonuses": {"accuracy": 0.2},
         "renames": {},
     },
     {
@@ -278,20 +272,20 @@ COMBOS = [
         "name": "花と剣",
         "players": ("Furina", "Lohen"),
         "player_bonuses": {
-            "Lohen": {"hs_rate": 0.2, "accuracy": 0.2, "dodge_rate": -0.1}
+            "Lohen": {"hs_rate": 0.15, "accuracy": 0.25, "dodge_rate": -0.1}
         },
         "renames": {},
     },
     {
         "name": "戦況は傾いている",
         "players": ("Furina", "Kachina"),
-        "player_bonuses": {"Kachina": {"reaction": 20, "hs_rate": 0.2, "iq": -10}},
+        "player_bonuses": {"Kachina": {"reaction": 25, "hs_rate": 0.15, "iq": -10}},
         "renames": {},
     },
     {
         "name": "意外な関係値",
         "players": ("Furina", "Jean"),
-        "player_bonuses": {"Furina": {"dodge_rate": 0.1}, "Jean": {"hs_rate": 0.2}},
+        "player_bonuses": {"Furina": {"dodge_rate": 0.15}, "Jean": {"hs_rate": 0.15}},
         "renames": {},
     },
     {
@@ -352,7 +346,7 @@ COMBOS = [
         "name": "VisionStrikers",
         "players": ("stax", "Mako", "Buzz", "Rb", "Zest"),
         "bonuses": {
-            "accuracy": 0.65,
+            "accuracy": 0.55,
             "reaction": 30,
             "dodge_rate": 0.1,
             "iq": -20,
@@ -380,75 +374,12 @@ COMBOS = [
     },
     {
         "name": "ふわんだりぃず",
-        "players": ("ろびぃな", "えんぺん", "いぐるん"),
+        "players": ("ろびぃな", "えんぺん", "イグルン"),
         "bonuses": {
             "accuracy": 0.15,
             "hs_rate": 0.1,
             "dodge_rate": 0.2,
             "reaction": 30,
-        },
-        "renames": {},
-    },
-    {
-        "name": "1st contact",
-        "players": ("Lar0k",),
-        "bonuses": {
-            "hs_rate": 0.1,
-            "reaction": 20,
-        },
-        "renames": {},
-    },
-    {
-        "name": "2nd cover",
-        "players": ("Lar0k", "lovers rock"),
-        "bonuses": {
-            "accuracy": 0.3,
-            "dodge_rate": 0.1,
-        },
-        "renames": {},
-    },
-    {
-        "name": "3rd place",
-        "players": ("Lar0k", "Loita"),
-        "bonuses": {
-            "accuracy": 0.1,
-            "dodge_rate": 0.3,
-        },
-        "renames": {},
-    },
-    {
-        "name": "4th discover",
-        "players": ("Lar0k", "Crewn"),
-        "bonuses": {
-            "dodge_rate": 0.1,
-            "iq": 30,
-        },
-        "renames": {},
-    },
-    {
-        "name": "5th counterattack",
-        "players": ("Lar0k", "Rosé"),
-        "bonuses": {
-            "hs_rate": 0.3,
-            "iq": 10,
-        },
-        "renames": {},
-    },
-    {
-        "name": "All for Lar0k",
-        "players": ("Lar0k", "lovers rock", "Loita", "Crewn", "Rosé"),
-        "player_bonuses": {"Lar0k": {"hs_rate": 0.3, "reaction": 30}},
-        "renames": {},
-    },
-    {
-        "name": "幽霊部員de廃部待ったなし",
-        "players": ("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
-        "player_bonuses": {
-            "Xdll": {"dodge_rate": 0.4, "mental": 3},
-            "Syouta": {"reaction": 40, "mental": 3},
-            "Absol": {"dodge_rate": 0.4, "mental": 3},
-            "eKo": {"hs_rate": 0.4, "mental": 3},
-            "SugarZ3ro": {"iq": 40, "mental": 3},
         },
         "renames": {},
     },

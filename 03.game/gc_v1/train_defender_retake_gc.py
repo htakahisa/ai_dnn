@@ -28,6 +28,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
@@ -62,6 +63,7 @@ SAVE_DIR = "data/defender_retake_gc_data"
 # マップ読み込み
 # ============================================================
 
+
 def load_grid():
     lines = [l.strip() for l in NEW_MAZE_STR.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
@@ -70,7 +72,9 @@ def load_grid():
 GRID = load_grid()
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
-DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
+DEFENDER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4
+]
 PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
 
 
@@ -78,13 +82,20 @@ PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c]
 # 移動・LOS等の共通ロジック(controllers.py非依存の自前実装)
 # ============================================================
 
-CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
+CARDINAL_MOVES = [
+    (-1, 0),
+    (1, 0),
+    (0, -1),
+    (0, 1),
+]  # up, down, left, right (行動ID 0-3と対応)
 
 TAU = 0.005
+
 
 def soft_update(target_net, net, tau=TAU):
     for t_param, param in zip(target_net.parameters(), net.parameters()):
         t_param.data.copy_(tau * param.data + (1.0 - tau) * t_param.data)
+
 
 def _alive_occupied_positions(chars, moving_char=None):
     occupied = set()
@@ -93,6 +104,7 @@ def _alive_occupied_positions(chars, moving_char=None):
             continue
         occupied.add((int(other.pos[0]), int(other.pos[1])))
     return occupied
+
 
 def _in_bounds(pos):
     r, c = pos
@@ -127,6 +139,7 @@ def _candidate_goals(goal, blocked, allow_adjacent_goal):
                 candidates.append(adj)
     return list(dict.fromkeys(candidates))
 
+
 def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
     wins = 0
     entered_site_count = 0
@@ -160,7 +173,10 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
     print(f"    breakdown: {reason_counts}")
     return wins / num_eval_episodes, entered_site_count / num_eval_episodes
 
-def move_towards_target(pos, target, chars, moving_char=None, allow_adjacent_goal=False):
+
+def move_towards_target(
+    pos, target, chars, moving_char=None, allow_adjacent_goal=False
+):
     """BFSで壁・生存キャラクターを避けながらtargetへ1マス進む(controllers.py複製版)。"""
     start = (int(pos[0]), int(pos[1]))
     goal = (int(target[0]), int(target[1]))
@@ -251,7 +267,12 @@ def bfs_distance_map(goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL_MOVES:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
@@ -300,16 +321,17 @@ BASE_REACTION = 100.0
 GC_TIGER_BONUS = {"accuracy": 0.10, "hs_rate": 0.05}
 
 
-
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
+
 def _compute_gc_effective_stats():
     """GC固定ロスターの実効ステータスを算出する。
 
@@ -399,6 +421,7 @@ class SimChar:
 # Attacker側 固定AI(簡易・非学習)
 # ============================================================
 
+
 class AttackerStub:
     """サイト付近を保持する固定ロジック。アビリティは使用しない。"""
 
@@ -409,7 +432,9 @@ class AttackerStub:
         r, c = int(char.pos[0]), int(char.pos[1])
         dist = max(abs(plant_pos[0] - r), abs(plant_pos[1] - c))
         if dist > self.hold_radius:
-            return move_towards_target(char.pos, plant_pos, chars, char, allow_adjacent_goal=True)
+            return move_towards_target(
+                char.pos, plant_pos, chars, char, allow_adjacent_goal=True
+            )
         if random.random() < 0.5:
             return list(char.pos)
         return get_next_pos_random(char.pos, chars, char)
@@ -439,9 +464,15 @@ ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 # Retake 環境
 # ============================================================
 
+
 class RetakeEnv:
-    def __init__(self, min_detonate_ticks=15, max_detonate_ticks=SPIKE_DETONATION_TICKS,
-                 attacker_hold_radius=4, max_ticks=90):
+    def __init__(
+        self,
+        min_detonate_ticks=15,
+        max_detonate_ticks=SPIKE_DETONATION_TICKS,
+        attacker_hold_radius=4,
+        max_ticks=90,
+    ):
         self.min_detonate_ticks = min_detonate_ticks
         self.max_detonate_ticks = max_detonate_ticks
         self.attacker_stub = AttackerStub(hold_radius=attacker_hold_radius)
@@ -453,7 +484,9 @@ class RetakeEnv:
         self.is_defused = False
         self.active_defuser_name = None
 
-        self.planted_pos = random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
+        self.planted_pos = (
+            random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
+        )
 
         # 💡修正: プラント地点からの全マスBFS距離を1回だけ計算し、
         # site_zoneも観測・報酬の距離計算もすべてこれに基づかせる。
@@ -465,7 +498,9 @@ class RetakeEnv:
             if 0 <= self.dist_map[r, c] <= SITE_ZONE_RADIUS
         }
 
-        self.detonate_timer = random.randint(self.min_detonate_ticks, self.max_detonate_ticks)
+        self.detonate_timer = random.randint(
+            self.min_detonate_ticks, self.max_detonate_ticks
+        )
         self.smokes = []  # list of {"cells": set, "remaining_ticks": int, "owner": str}
 
         used = set()
@@ -477,7 +512,11 @@ class RetakeEnv:
         """gc_v1固定ロースターをDEFENDER_SPAWNS順に固定配置し、実効ステータスをセットする。
         ランダム生成は行わない(run_game.pyのarea_4スキャン順と対応させるため)。"""
         effective_stats = _compute_gc_effective_stats()
-        spawn_pool = DEFENDER_SPAWNS if len(DEFENDER_SPAWNS) >= len(GC_ROSTER_ORDER) else WALKABLE
+        spawn_pool = (
+            DEFENDER_SPAWNS
+            if len(DEFENDER_SPAWNS) >= len(GC_ROSTER_ORDER)
+            else WALKABLE
+        )
         for i, name in enumerate(GC_ROSTER_ORDER):
             pos = spawn_pool[i]
             used.add(pos)
@@ -489,8 +528,14 @@ class RetakeEnv:
     def _build_attackers(self, used):
         """敵(Attacker)側は従来通りランダムスポーン・既定値のまま
         (将来ここだけ差し替え可能な設計)。"""
-        hold_candidates = [p for p in self.site_zone if GRID[p[0], p[1]] != 2 and p not in used]
-        pool = hold_candidates if hold_candidates else [p for p in WALKABLE if p not in used]
+        hold_candidates = [
+            p for p in self.site_zone if GRID[p[0], p[1]] != 2 and p not in used
+        ]
+        pool = (
+            hold_candidates
+            if hold_candidates
+            else [p for p in WALKABLE if p not in used]
+        )
 
         candidates = list(pool)
         random.shuffle(candidates)
@@ -530,7 +575,9 @@ class RetakeEnv:
             for enemy in self.chars:
                 if enemy.team != char.team and enemy.is_alive:
                     if has_los((pr, pc), tuple(enemy.pos), self.smoke_cells()):
-                        enemy.blind_remaining = max(enemy.blind_remaining, BLIND_DURATION_TICKS)
+                        enemy.blind_remaining = max(
+                            enemy.blind_remaining, BLIND_DURATION_TICKS
+                        )
 
         elif ability == "RECON":
             char.recon_charges -= 1
@@ -539,7 +586,9 @@ class RetakeEnv:
                 if enemy.team != char.team and enemy.is_alive:
                     er, ec = enemy.pos
                     if max(abs(er - pr), abs(ec - pc)) <= radius:
-                        enemy.reveal_remaining = max(enemy.reveal_remaining, REVEAL_DURATION_TICKS)
+                        enemy.reveal_remaining = max(
+                            enemy.reveal_remaining, REVEAL_DURATION_TICKS
+                        )
 
         elif ability == "SMOKE":
             char.smoke_charges -= 1
@@ -549,7 +598,13 @@ class RetakeEnv:
                 for cc in range(pc - 1, pc + 2)
                 if _in_bounds((rr, cc)) and GRID[rr, cc] != 1
             }
-            self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "owner": char.name})
+            self.smokes.append(
+                {
+                    "cells": cells,
+                    "remaining_ticks": SMOKE_DURATION_TICKS,
+                    "owner": char.name,
+                }
+            )
 
     def ally_ability_active(self, char):
         for enemy in self.chars:
@@ -587,7 +642,8 @@ class RetakeEnv:
         time_critical = self.detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
         if not time_critical:
             enemy_visible = any(
-                e.is_alive and self.check_line_of_sight(char, e) for e in self.attackers()
+                e.is_alive and self.check_line_of_sight(char, e)
+                for e in self.attackers()
             )
             if enemy_visible:
                 mask[0] = mask[1] = mask[2] = mask[3] = False
@@ -609,7 +665,9 @@ class RetakeEnv:
         adjacent_to_plant = 1.0 if max(abs(pr - r), abs(pc - c)) <= 1 else 0.0
 
         own_charge = 1.0 if char.own_ability_charge() > 0 else 0.0
-        blind_norm = char.blind_remaining / BLIND_DURATION_TICKS if BLIND_DURATION_TICKS else 0.0
+        blind_norm = (
+            char.blind_remaining / BLIND_DURATION_TICKS if BLIND_DURATION_TICKS else 0.0
+        )
         defuse_norm = char.defuse_timer / DEFUSE_REQUIRED_TICKS
         detonate_norm = self.detonate_timer / SPIKE_DETONATION_TICKS
 
@@ -618,9 +676,14 @@ class RetakeEnv:
 
         allies_alive_norm = len(allies) / 5.0
         allies_in_zone = sum(1 for a in allies if tuple(a.pos) in self.site_zone) / 5.0
-        allies_near_entry = sum(
-            1 for a in allies if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
-        ) / 5.0
+        allies_near_entry = (
+            sum(
+                1
+                for a in allies
+                if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
+            )
+            / 5.0
+        )
 
         others = [a for a in allies if a is not char]
         if others:
@@ -650,18 +713,30 @@ class RetakeEnv:
         role_onehot = [0.0, 0.0, 0.0, 0.0]
         role_onehot[ROLE_INDEX.get(char.role, 0)] = 1.0
 
-        obs = [
-            r / h, c / w,
-            char.hp / char.max_hp,
-            *good_dir,                 # up, down, left, right (4次元。BFSベース)
-            dist_to_plant,              # BFS距離ベース
-            in_site_zone, adjacent_to_plant,
-            own_charge, blind_norm, defuse_norm, detonate_norm,
-            allies_alive_norm, allies_in_zone, allies_near_entry, nearest_ally_dist,
-            ally_ability_active,
-            len(visible_enemies) / 5.0,
-            len(enemies) / 5.0,
-        ] + enemy_feats + role_onehot
+        obs = (
+            [
+                r / h,
+                c / w,
+                char.hp / char.max_hp,
+                *good_dir,  # up, down, left, right (4次元。BFSベース)
+                dist_to_plant,  # BFS距離ベース
+                in_site_zone,
+                adjacent_to_plant,
+                own_charge,
+                blind_norm,
+                defuse_norm,
+                detonate_norm,
+                allies_alive_norm,
+                allies_in_zone,
+                allies_near_entry,
+                nearest_ally_dist,
+                ally_ability_active,
+                len(visible_enemies) / 5.0,
+                len(enemies) / 5.0,
+            ]
+            + enemy_feats
+            + role_onehot
+        )
 
         return np.array(obs, dtype=np.float32)
 
@@ -688,7 +763,9 @@ class RetakeEnv:
                 elif action == ACTION_ABILITY:
                     pending_ability.add(char.name)
             else:
-                next_positions[char.name] = self.attacker_stub.decide_move(char, self.chars, self.planted_pos)
+                next_positions[char.name] = self.attacker_stub.decide_move(
+                    char, self.chars, self.planted_pos
+                )
 
         for char in self.chars:
             if char.name in pending_ability:
@@ -740,7 +817,7 @@ class RetakeEnv:
         current_los_revealed = set()
         alive = [c for c in self.chars if c.is_alive]
         for i, a in enumerate(alive):
-            for b in alive[i + 1:]:
+            for b in alive[i + 1 :]:
                 if a.team != b.team and self.check_line_of_sight(a, b):
                     current_los_revealed.add(a.name)
                     current_los_revealed.add(b.name)
@@ -752,7 +829,8 @@ class RetakeEnv:
 
         if not self.is_defused:
             completed = [
-                c for c in self.defenders()
+                c
+                for c in self.defenders()
                 if c.is_alive and c.defuse_timer >= DEFUSE_REQUIRED_TICKS
             ]
             if completed:
@@ -768,14 +846,22 @@ class RetakeEnv:
         for shooter in alive:
             if shooter.defuse_timer > 0:
                 continue
-            possible = [t for t in alive if t.team != shooter.team and self.check_line_of_sight(shooter, t)]
+            possible = [
+                t
+                for t in alive
+                if t.team != shooter.team and self.check_line_of_sight(shooter, t)
+            ]
             if not possible:
                 continue
             defusers = [t for t in possible if t.defuse_timer > 0]
             pool = defusers if defusers else possible
             target = min(
                 pool,
-                key=lambda t: (max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])), t.hp, t.name),
+                key=lambda t: (
+                    max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])),
+                    t.hp,
+                    t.name,
+                ),
             )
             intents.append({"shooter": shooter, "target": target})
 
@@ -788,14 +874,18 @@ class RetakeEnv:
             if not shooter.is_alive or not target.is_alive:
                 continue
 
-            shooter_accuracy = MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
+            shooter_accuracy = (
+                MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
+            )
             if shooter.blind_remaining > 0:
                 shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
 
             revealed = target.reveal_remaining > 0 or (
                 target.los_revealed and target.name in current_los_revealed
             )
-            effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if revealed else 1.0)
+            effective_dodge = target.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER if revealed else 1.0
+            )
             hit_chance = shooter_accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
@@ -805,10 +895,15 @@ class RetakeEnv:
             headshot = hit and random.random() < shooter.hs_rate
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
 
-            shots.append({
-                "shooter": shooter, "target": target, "hit": hit,
-                "headshot": headshot, "damage": damage,
-            })
+            shots.append(
+                {
+                    "shooter": shooter,
+                    "target": target,
+                    "hit": hit,
+                    "headshot": headshot,
+                    "damage": damage,
+                }
+            )
 
             if damage > 0:
                 target.hp = max(0, target.hp - damage)
@@ -899,7 +994,9 @@ def compute_rewards(env, before, chosen_actions):
         dist_now = raw_now if raw_now >= 0 else (HEIGHT + WIDTH)
 
         allies_near_entry = sum(
-            1 for a in allies_alive if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
+            1
+            for a in allies_alive
+            if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
         )
 
         # 💡変更: detonate_frac(割合)ではなく、残りtickの絶対値で「時間切れ間近か」を判定する。
@@ -910,7 +1007,11 @@ def compute_rewards(env, before, chosen_actions):
                 reward += ENTRY_WITH_SUPPORT_BONUS
             else:
                 reward += ENTRY_ALONE_PENALTY
-        elif in_zone_now and allies_near_entry < MIN_ALLIES_FOR_ENTRY and not time_critical_for_entry:
+        elif (
+            in_zone_now
+            and allies_near_entry < MIN_ALLIES_FOR_ENTRY
+            and not time_critical_for_entry
+        ):
             reward += ENTRY_ALONE_LINGER_PENALTY
         elif not in_zone_now:
             reward += APPROACH_REWARD_SCALE * (b["dist_to_plant"] - dist_now)
@@ -918,7 +1019,10 @@ def compute_rewards(env, before, chosen_actions):
         action_id = chosen_actions.get(name)
         if action_id == ACTION_ABILITY:
             char_dist_to_plant = max(abs(pr - char.pos[0]), abs(pc - char.pos[1]))
-            ready = char_dist_to_plant <= ENTRY_READY_RADIUS and allies_near_entry >= MIN_ALLIES_FOR_ENTRY
+            ready = (
+                char_dist_to_plant <= ENTRY_READY_RADIUS
+                and allies_near_entry >= MIN_ALLIES_FOR_ENTRY
+            )
             if ready or time_critical_for_entry:
                 reward += ABILITY_GOOD_USE_BONUS
             else:
@@ -927,13 +1031,19 @@ def compute_rewards(env, before, chosen_actions):
         if char.defuse_timer > b["defuse_timer"]:
             reward += DEFUSE_PROGRESS_REWARD
 
-        if action_id == ACTION_DEFUSE and b["defuse_timer"] == 0 and char.defuse_timer > 0:
+        if (
+            action_id == ACTION_DEFUSE
+            and b["defuse_timer"] == 0
+            and char.defuse_timer > 0
+        ):
             threat = any(
                 e.is_alive and env.check_line_of_sight(char, e) for e in env.attackers()
             )
             # 💡変更: 解除に最低限必要な時間(DEFUSE_REQUIRED_TICKS)+安全マージンを
             # 切っている場合は、脅威がいてもペナルティを科さない(間に合わなくなるのを防ぐ)。
-            time_critical_for_defuse = env.detonate_timer <= (DEFUSE_REQUIRED_TICKS + DEFUSE_SAFETY_MARGIN_TICKS)
+            time_critical_for_defuse = env.detonate_timer <= (
+                DEFUSE_REQUIRED_TICKS + DEFUSE_SAFETY_MARGIN_TICKS
+            )
             if threat and not time_critical_for_defuse:
                 reward += UNSAFE_DEFUSE_PENALTY
 
@@ -946,7 +1056,11 @@ def compute_rewards(env, before, chosen_actions):
         if shooter.name not in rewards:
             continue
         add = DAMAGE_REWARD_SCALE * shot["damage"]
-        debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0 or target.los_revealed
+        debuffed = (
+            target.blind_remaining > 0
+            or target.reveal_remaining > 0
+            or target.los_revealed
+        )
         if debuffed:
             add *= DEBUFF_HIT_MULTIPLIER
         if not target.is_alive:
@@ -962,15 +1076,22 @@ def compute_rewards(env, before, chosen_actions):
 # Dueling DQN
 # ============================================================
 
+
 class DuelingQNet(nn.Module):
     def __init__(self, obs_dim, n_actions, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, 1))
-        self.adv_head = nn.Sequential(nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, n_actions))
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, 1)
+        )
+        self.adv_head = nn.Sequential(
+            nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, n_actions)
+        )
 
     def forward(self, x):
         feat = self.feature(x)
@@ -979,7 +1100,10 @@ class DuelingQNet(nn.Module):
         return value + adv - adv.mean(dim=1, keepdim=True)
 
 
-Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done", "mask", "next_mask"])
+Transition = namedtuple(
+    "Transition",
+    ["state", "action", "reward", "next_state", "done", "mask", "next_mask"],
+)
 
 
 class ReplayBuffer:
@@ -1035,6 +1159,7 @@ def compute_td_loss(net, target_net, batch, gamma):
 # 学習ループ
 # ============================================================
 
+
 def run_episode(env, net, target_net, replay, epsilon, obs_dim):
     env.reset()
     zero_obs = np.zeros(obs_dim, dtype=np.float32)
@@ -1078,7 +1203,15 @@ def run_episode(env, net, target_net, replay, epsilon, obs_dim):
             else:
                 next_state = zero_obs
                 next_mask = zero_mask
-            replay.push(state, chosen_actions[name], rewards.get(name, 0.0), next_state, float(done), mask_before[name], next_mask)
+            replay.push(
+                state,
+                chosen_actions[name],
+                rewards.get(name, 0.0),
+                next_state,
+                float(done),
+                mask_before[name],
+                next_mask,
+            )
 
     return env.is_defused, env.tick
 
@@ -1099,7 +1232,11 @@ def main():
     print(f"[INIT] device = {DEVICE}")
     os.makedirs(SAVE_DIR, exist_ok=True)
 
-    env = RetakeEnv(min_detonate_ticks=15, max_detonate_ticks=SPIKE_DETONATION_TICKS, attacker_hold_radius=4)
+    env = RetakeEnv(
+        min_detonate_ticks=15,
+        max_detonate_ticks=SPIKE_DETONATION_TICKS,
+        attacker_hold_radius=4,
+    )
     env.reset()
     sample_char = env.defenders()[0]
     obs_dim = env.build_observation(sample_char).shape[0]
@@ -1117,7 +1254,11 @@ def main():
     batch_size = 256
     gamma = 0.99
     target_update_every = 1000
-    epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.02, int(EPISODE_COUNT * 0.8)
+    epsilon_start, epsilon_end, epsilon_decay_episodes = (
+        1.0,
+        0.02,
+        int(EPISODE_COUNT * 0.8),
+    )
 
     global_step = 0
     win_history = deque(maxlen=200)
@@ -1125,9 +1266,13 @@ def main():
 
     start_time = time.perf_counter()
     for episode in range(1, num_episodes + 1):
-        epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(0.0, 1.0 - episode / epsilon_decay_episodes)
+        epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(
+            0.0, 1.0 - episode / epsilon_decay_episodes
+        )
 
-        defused, ticks_used = run_episode(env, net, target_net, replay, epsilon, obs_dim)
+        defused, ticks_used = run_episode(
+            env, net, target_net, replay, epsilon, obs_dim
+        )
         win_history.append(1 if defused else 0)
 
         for _ in range(max(1, ticks_used)):
@@ -1137,19 +1282,28 @@ def main():
             global_step += 1
 
         if episode % 500 == 0:
-            eval_win_rate, eval_entered_rate = evaluate_greedy(env, net, obs_dim, num_eval_episodes=200)
+            eval_win_rate, eval_entered_rate = evaluate_greedy(
+                env, net, obs_dim, num_eval_episodes=200
+            )
 
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
+            start_time = time.perf_counter()
 
-            print(f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}, elapsed={elapsed_time:.1f}s")
+            print(
+                f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}, elapsed={elapsed_time:.1f}s"
+            )
             if eval_win_rate > best_win_rate:
                 best_win_rate = eval_win_rate
-                torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_gc_best_by_eval.pt"))
+                torch.save(
+                    net.state_dict(),
+                    os.path.join(SAVE_DIR, "dqn_defender_retake_gc_best_by_eval.pt"),
+                )
                 print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
 
-    torch.save(net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_gc_final.pt"))
+    torch.save(
+        net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_gc_final.pt")
+    )
     print("[DONE] training finished.")
 
 

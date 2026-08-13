@@ -492,11 +492,19 @@ def play_map(
             except tk.TclError:
                 pass
 
-    score1, score2 = original_scores(
-        game,
-        list(team1.players),
-        list(team2.players),
-    )
+    if team1.name == team2.name:
+        # 同一プリセット戦では両陣営のroster集合が同一なので、
+        # original_scores()では左右を識別できない。開始サイドから直接対応付ける。
+        if attacker is team1:
+            score1, score2 = int(game.attacker_wins), int(game.defender_wins)
+        else:
+            score1, score2 = int(game.defender_wins), int(game.attacker_wins)
+    else:
+        score1, score2 = original_scores(
+            game,
+            list(team1.players),
+            list(team2.players),
+        )
     winner = team1.name if score1 > score2 else team2.name
 
     return MResult(
@@ -529,9 +537,9 @@ def run_series_core(
     emit: Callable[[tuple[Any, ...]], None],
     team_controllers: dict[str, str] | None = None,
     context_label: str = "",
+    team1_controller_key: str | None = None,
+    team2_controller_key: str | None = None,
 ) -> SeriesResult:
-    if team1_name == team2_name:
-        raise ValueError("異なる2チームを選んでください")
 
     need = validate_maps_to_win(maps_to_win)
     seed_mode = validate_seed_mode(seed_mode)
@@ -541,8 +549,16 @@ def run_series_core(
     validate_preset(team2)
 
     controller_map = team_controllers or {}
-    controller1 = str(controller_map.get(team1.name, "fnatic_v1"))
-    controller2 = str(controller_map.get(team2.name, "fnatic_v1"))
+    controller1 = str(
+        team1_controller_key
+        if team1_controller_key is not None
+        else controller_map.get(team1.name, "fnatic_v1")
+    )
+    controller2 = str(
+        team2_controller_key
+        if team2_controller_key is not None
+        else controller_map.get(team2.name, "fnatic_v1")
+    )
 
     wins1 = 0
     wins2 = 0
@@ -614,7 +630,9 @@ def run_series_core(
             )
         maps.append(result)
 
-        if result.winner == team1.name:
+        # 同一プリセット同士ではwinner名だけでは左右を区別できないため、
+        # マップの実スコアでTeam 1 / Team 2の勝利数を判定する。
+        if result.score1 > result.score2:
             wins1 += 1
         else:
             wins2 += 1
@@ -1986,6 +2004,8 @@ class CompetitionApp:
         self.seed_mode_var = tk.StringVar(value="random")
         self.seed_var = tk.StringVar(value="42")
         self.render_var = tk.BooleanVar(value=False)
+        self.rating_enabled_var = tk.BooleanVar(value=True)
+        self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
 
@@ -2069,21 +2089,27 @@ class CompetitionApp:
             command=self._on_render_toggle,
         )
         self.render_check.grid(row=0, column=7, padx=(4, 0))
+        self.rating_enabled_check = tk.Checkbutton(
+            frame,
+            text="レートに反映",
+            variable=self.rating_enabled_var,
+        )
+        self.rating_enabled_check.grid(row=0, column=8, padx=(8, 0))
         self.start_button = tk.Button(
             frame,
             text="現在のモードを開始",
             font=("Arial", 11, "bold"),
             command=self.start_current_mode,
         )
-        self.start_button.grid(row=0, column=8, padx=(12, 0))
+        self.start_button.grid(row=0, column=9, padx=(12, 0))
 
         self.rating_button = tk.Button(
             frame,
             text="レーティング・推移",
             command=self.open_rating_window,
         )
-        self.rating_button.grid(row=0, column=9, padx=(8, 0))
-        frame.grid_columnconfigure(10, weight=1)
+        self.rating_button.grid(row=0, column=10, padx=(8, 0))
+        frame.grid_columnconfigure(11, weight=1)
         self._update_seed_entry_state()
 
     def _on_render_toggle(self) -> None:
@@ -2810,7 +2836,10 @@ class CompetitionApp:
 
         y = 58
         for result in self.visual_series_maps:
-            winner_is_1 = result.winner == result.team1
+            # 同一チーム戦では result.winner / result.team1 / result.team2 が
+            # すべて同じチーム名になり得るため、名前では左右を判定できない。
+            # 実際のマップスコアを唯一の判定基準にする。
+            winner_is_1 = result.score1 > result.score2
             team1_fill = "#14532d" if winner_is_1 else "#374151"
             team2_fill = "#14532d" if not winner_is_1 else "#374151"
 
@@ -3415,6 +3444,7 @@ class CompetitionApp:
             self.seed_entry.config(state="disabled")
         # 描画ON/OFFは大会途中でも変更可能。
         self.render_check.config(state="normal")
+        self.rating_enabled_check.config(state=state)
         self.start_button.config(state=state)
         self.rating_button.config(state="normal")
         self.team1_box.config(state="readonly" if enabled else "disabled")
@@ -3443,18 +3473,20 @@ class CompetitionApp:
                     "series",
                     [self.team1_var.get(), self.team2_var.get()],
                 )
-                if payload[1][0] == payload[1][1]:
-                    raise ValueError("異なる2チームを選んでください")
-                team_controllers = {
-                    payload[1][0]: CONTROLLER_OPTIONS.get(
-                        self.team1_controller_var.get(),
-                        "fnatic_v1",
-                    ),
-                    payload[1][1]: CONTROLLER_OPTIONS.get(
-                        self.team2_controller_var.get(),
-                        "fnatic_v1",
-                    ),
-                }
+                # 単独シリーズでは同一チーム同士も許可する。
+                # コントローラーはチーム名辞書では同名時に衝突するため、
+                # Team 1 / Team 2の位置情報を別途payloadへ保持する。
+                series_controller1 = CONTROLLER_OPTIONS.get(
+                    self.team1_controller_var.get(),
+                    "fnatic_v1",
+                )
+                series_controller2 = CONTROLLER_OPTIONS.get(
+                    self.team2_controller_var.get(),
+                    "fnatic_v1",
+                )
+                team_controllers = {payload[1][0]: series_controller1}
+                if payload[1][1] != payload[1][0]:
+                    team_controllers[payload[1][1]] = series_controller2
             elif tab == 1:
                 teams = self.swiss_slots.selected_teams()
                 if len(teams) < 4:
@@ -3475,10 +3507,13 @@ class CompetitionApp:
                 team_controllers = self.league_slots.selected_team_controllers()
                 payload = ("league", teams)
 
-            user_teams = [
-                team for team, key in team_controllers.items() if key == "user"
-            ]
-            if len(user_teams) > 1:
+            if tab == 0:
+                user_count = int(series_controller1 == "user") + int(
+                    series_controller2 == "user"
+                )
+            else:
+                user_count = sum(1 for key in team_controllers.values() if key == "user")
+            if user_count > 1:
                 raise ValueError("ユーザー操作は1大会につき1チームまでです")
         except Exception as exc:
             messagebox.showerror("設定エラー", str(exc))
@@ -3491,9 +3526,26 @@ class CompetitionApp:
             "大会途中のON/OFF変更は次のマップから反映されます。\n"
         )
         self.append("TEAM CONTROLLERS\n")
-        for team in payload[1]:
-            key = team_controllers.get(team, "fnatic_v1")
-            self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
+        if payload[0] == "series":
+            self.append(
+                f"  Team 1 / {payload[1][0]}: "
+                f"{CONTROLLER_KEY_TO_DISPLAY.get(series_controller1, series_controller1)}\n"
+            )
+            self.append(
+                f"  Team 2 / {payload[1][1]}: "
+                f"{CONTROLLER_KEY_TO_DISPLAY.get(series_controller2, series_controller2)}\n"
+            )
+        else:
+            for team in payload[1]:
+                key = team_controllers.get(team, "fnatic_v1")
+                self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
+        requested_rating = bool(self.rating_enabled_var.get())
+        same_team_series = payload[0] == "series" and payload[1][0] == payload[1][1]
+        self.current_rating_enabled = requested_rating and not same_team_series
+        if same_team_series and requested_rating:
+            self.append("RATING: OFF（同一チーム対戦のため自動的に無効）\n")
+        else:
+            self.append(f"RATING: {'ON' if self.current_rating_enabled else 'OFF'}\n")
         self.append("-" * 78 + "\n")
         self.competition_id = f"{payload[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.competition_rating_updates = []
@@ -3527,6 +3579,8 @@ class CompetitionApp:
                 seed_mode,
                 base_seed,
                 self._render_controller,
+                series_controller1 if payload[0] == "series" else None,
+                series_controller2 if payload[0] == "series" else None,
             ),
             daemon=True,
         )
@@ -3634,6 +3688,8 @@ class CompetitionApp:
         seed_mode: str,
         base_seed: int | None,
         render: bool | Callable[[], bool],
+        series_controller1: str | None = None,
+        series_controller2: str | None = None,
     ) -> None:
         try:
             mode, teams = payload
@@ -3649,12 +3705,18 @@ class CompetitionApp:
                     emit=self.emit,
                     team_controllers=team_controllers,
                     context_label="SERIES",
+                    team1_controller_key=series_controller1,
+                    team2_controller_key=series_controller2,
                 )
                 data = {
                     "mode": "series",
                     "seed_mode": seed_mode,
                     "base_seed": (base_seed if seed_mode == "fixed" else None),
-                    "team_controllers": dict(team_controllers),
+                    "team_controllers": {
+                        "team1": series_controller1,
+                        "team2": series_controller2,
+                    },
+                    "rating_enabled": bool(self.current_rating_enabled),
                     **asdict(series),
                     "player_leaderboards": build_player_leaderboards([series]),
                 }
@@ -3837,24 +3899,33 @@ class CompetitionApp:
                 elif kind == "series_done":
                     series: SeriesResult = event[1]
                     context = event[2]
-                    rating_update = self.rating_store.update_series(
-                        series,
-                        context,
-                        self.competition_id,
-                    )
-                    self.competition_rating_updates.append(rating_update)
-                    d1 = rating_update["delta"][series.team1]
-                    d2 = rating_update["delta"][series.team2]
-                    a1 = rating_update["after"][series.team1]
-                    a2 = rating_update["after"][series.team2]
-
                     self.append(
                         f"\n{context} FINAL: {series.team1} {series.team1_wins} - {series.team2_wins} {series.team2}"
                         f" / WINNER: {series.winner}\n"
-                        f"RATING: {series.team1} {a1:.1f} ({d1:+.1f})"
-                        f" / {series.team2} {a2:.1f} ({d2:+.1f})\n\n"
                     )
-                    self.refresh_rating_window()
+                    if self.current_rating_enabled and series.team1 != series.team2:
+                        rating_update = self.rating_store.update_series(
+                            series,
+                            context,
+                            self.competition_id,
+                        )
+                        self.competition_rating_updates.append(rating_update)
+                        d1 = rating_update["delta"][series.team1]
+                        d2 = rating_update["delta"][series.team2]
+                        a1 = rating_update["after"][series.team1]
+                        a2 = rating_update["after"][series.team2]
+                        self.append(
+                            f"RATING: {series.team1} {a1:.1f} ({d1:+.1f})"
+                            f" / {series.team2} {a2:.1f} ({d2:+.1f})\n\n"
+                        )
+                        self.refresh_rating_window()
+                    else:
+                        reason = (
+                            "同一チーム対戦"
+                            if series.team1 == series.team2
+                            else "レート反映OFF"
+                        )
+                        self.append(f"RATING: NO CHANGE（{reason}）\n\n")
                 elif kind == "bracket_match":
                     match = event[1]
                     self.visual_bracket_matches[match["id"]] = dict(match)
@@ -3889,6 +3960,7 @@ class CompetitionApp:
                     data, path = event[1], event[2]
                     champion = data.get("champion", data.get("winner", "?"))
 
+                    data["rating_enabled"] = bool(self.current_rating_enabled)
                     data["rating_system"] = {
                         "default_rating": DEFAULT_TEAM_RATING,
                         "k_factor": RATING_K_FACTOR,

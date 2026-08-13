@@ -25,7 +25,7 @@ class CharacterStats:
 
 CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Xdll": CharacterStats("Xdll", 0.23, 0.24, 125, 0.78, 140, "シーカー", 45, 7, 4),
-    "Syouta": CharacterStats("Syouta", 0.45, 0.2, 90, 0.75, 140, "タイガー", 95, 8, 9),
+    "SyouTa": CharacterStats("SyouTa", 0.45, 0.2, 90, 0.75, 140, "タイガー", 95, 8, 9),
     "Absol": CharacterStats("Absol", 0.15, 0.31, 130, 0.87, 155, "タイガー", 50, 10, 3),
     "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "タイガー", 60, 5, 8),
     "SugarZ3ro": CharacterStats(
@@ -33,7 +33,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
 }
 
-GC_ROSTER_ORDER = ["Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"]
+GC_ROSTER_ORDER = ["Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"]
 
 # 旧コードとの互換用エイリアス
 CHARACTER_STATS = CHARACTER_TABLE

@@ -1,6 +1,6 @@
 """gc_v1/learning_attacker_retrieve_gc.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「retrieve phase」推論コントローラー(落下スパイク回収)。
 
 gc_v1/train_attacker_retrieve.py で学習した Dueling DQN を読み込み、
@@ -84,7 +84,12 @@ from character_stats_gc import (
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
+CARDINAL = [
+    (-1, 0),
+    (1, 0),
+    (0, -1),
+    (0, 1),
+]  # up, down, left, right (行動ID 0-3と対応)
 
 OBS_DIM = 21
 N_ACTIONS = 6
@@ -93,8 +98,7 @@ ACTION_ABILITY = 5
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
 DEFAULT_MODEL_PATH = (
-    "data/attacker_retrieve_gc_data/"
-    "dqn_attacker_retrieve_gc_best_by_eval.pt"
+    "data/attacker_retrieve_gc_data/" "dqn_attacker_retrieve_gc_best_by_eval.pt"
 )
 
 
@@ -106,11 +110,15 @@ class DuelingQNet(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, n_actions=N_ACTIONS, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
         self.value = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, n_actions))
+        self.advantage = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, n_actions)
+        )
 
     def forward(self, x):
         feat = self.feature(x)
@@ -168,10 +176,16 @@ def _bfs_distance_map(grid, goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < height
+                and 0 <= nc < width
+                and grid[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
+
 
 def _ability_charge(char):
     """ロールに対応する残チャージ数を取得する。HUNT(アビリティ無し)は常に0。"""
@@ -217,10 +231,14 @@ class LearningAttackerRetrieveGCController:
                 # 後方互換: 素のstate_dictのみが渡された場合
                 state_dict = checkpoint
                 if verbose:
-                    print(f"[LearningAttackerRetrieveGCController] loaded (raw state_dict): {model_path}")
+                    print(
+                        f"[LearningAttackerRetrieveGCController] loaded (raw state_dict): {model_path}"
+                    )
             self.model.load_state_dict(state_dict)
         except Exception as exc:
-            print(f"[LOAD ERROR] attacker retrieve(gc) model '{model_path}' の読込に失敗: {exc}")
+            print(
+                f"[LOAD ERROR] attacker retrieve(gc) model '{model_path}' の読込に失敗: {exc}"
+            )
         self.model.eval()
 
         # 落下スパイク位置(spike_pos)はキャラが拾うまで不変のため、
@@ -254,7 +272,9 @@ class LearningAttackerRetrieveGCController:
         obs[1] = c / width
 
         occupied = {
-            tuple(o.pos) for o in chars if o is not char and getattr(o, "is_alive", True)
+            tuple(o.pos)
+            for o in chars
+            if o is not char and getattr(o, "is_alive", True)
         }
 
         max_dist_scale = float(height + width)
@@ -279,7 +299,9 @@ class LearningAttackerRetrieveGCController:
         raw_dist = self._dist_map[r, c] if self._dist_map is not None else -1
         obs[10] = min(1.0, raw_dist / max_dist_scale) if raw_dist >= 0 else 1.0
 
-        role_index = {"FLASH": 11, "SMOKE": 12, "RECON": 13, "HUNT": 14}.get(char.ability_name, 11)
+        role_index = {"FLASH": 11, "SMOKE": 12, "RECON": 13, "HUNT": 14}.get(
+            char.ability_name, 11
+        )
         obs[role_index] = 1.0
 
         obs[15] = float(1 if _ability_charge(char) > 0 else 0)
@@ -295,9 +317,14 @@ class LearningAttackerRetrieveGCController:
             obs[17] = edr
             obs[18] = edc
             obs[19] = 1.0 if getattr(nearest, "blind_remaining", 0) > 0 else 0.0
-            obs[20] = 1.0 if (
-                getattr(nearest, "reveal_remaining", 0) > 0 or getattr(nearest, "los_revealed", False)
-            ) else 0.0
+            obs[20] = (
+                1.0
+                if (
+                    getattr(nearest, "reveal_remaining", 0) > 0
+                    or getattr(nearest, "los_revealed", False)
+                )
+                else 0.0
+            )
 
         return obs
 
@@ -310,14 +337,17 @@ class LearningAttackerRetrieveGCController:
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
-            tuple(o.pos) for o in chars if o is not char and getattr(o, "is_alive", True)
+            tuple(o.pos)
+            for o in chars
+            if o is not char and getattr(o, "is_alive", True)
         }
 
         for a in range(4):
             dr, dc = CARDINAL[a]
             nr, nc = r + dr, c + dc
             walkable = (
-                0 <= nr < height and 0 <= nc < width
+                0 <= nr < height
+                and 0 <= nc < width
                 and grid[nr, nc] != 1
                 and (nr, nc) not in occupied
             )
@@ -348,7 +378,9 @@ class LearningAttackerRetrieveGCController:
 
         enemies = [e for e in chars if e.team != char.team]
         visible_enemies = [
-            e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
+            e
+            for e in enemies
+            if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
         # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
@@ -385,7 +417,9 @@ class LearningAttackerRetrieveGCController:
         if visible_enemies:
             nearest = min(
                 visible_enemies,
-                key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
+                key=lambda e: max(
+                    abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                ),
             )
             target_pos = (int(nearest.pos[0]), int(nearest.pos[1]))
         else:

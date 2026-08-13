@@ -1,6 +1,6 @@
 """gc_v1/train_attacker_escort.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker Carry Phase「escort(護衛)」学習スクリプト(Dueling DQN)。
 
 【目的】
@@ -83,6 +83,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
@@ -114,7 +115,12 @@ SITE_CELL_VALUE = 2
 ATTACKER_SPAWN_VALUE = 3
 DEFENDER_SPAWN_VALUE = 4
 
-ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")  # HUNTはアビリティ行動を持たない(常にマスク)
+ABILITY_TYPES = (
+    "FLASH",
+    "RECON",
+    "SMOKE",
+    "HUNT",
+)  # HUNTはアビリティ行動を持たない(常にマスク)
 ABILITY_RANGE = 6  # アビリティが届く最大距離(チェビシェフ距離で判定)
 
 N_ESCORTS = 4  # gc固定チーム5人からキャリアー1人を除いた人数
@@ -124,9 +130,9 @@ DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0  # 観測正規化用の上限距離
 
-STALL_THRESHOLD_TICKS = 3       # これを超えて無進捗が続いたら混雑ペナルティ開始
-STALL_PENALTY_CAP_TICKS = 10    # ペナルティの伸び幅の上限(無限にエスカレートさせない)
-CONGESTION_RADIUS = 2           # carryからこの距離以内のescortを「渋滞に関与」とみなす
+STALL_THRESHOLD_TICKS = 3  # これを超えて無進捗が続いたら混雑ペナルティ開始
+STALL_PENALTY_CAP_TICKS = 10  # ペナルティの伸び幅の上限(無限にエスカレートさせない)
+CONGESTION_RADIUS = 2  # carryからこの距離以内のescortを「渋滞に関与」とみなす
 
 HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
 
@@ -158,11 +164,12 @@ GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
 
 def _compute_gc_effective_stats():
     """character_stats_gc.py の生値に、常時発動するチームコンボ
@@ -313,7 +320,9 @@ class EscortEnv:
     """gc_v1固定チームのキャリアー護衛4体(重み共有)を学習させる
     軽量マルチエージェント環境。"""
 
-    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
+    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = (
+        range(6)
+    )
     N_ACTIONS = 6
     _MOVE_DELTA = {
         ACTION_UP: (-1, 0),
@@ -350,7 +359,9 @@ class EscortEnv:
         seed=None,
     ):
         lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
-        self.grid = np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
+        self.grid = np.array(
+            [[int(ch) for ch in line] for line in lines], dtype=np.int32
+        )
         self.height, self.width = self.grid.shape
 
         self.max_ticks = max_ticks
@@ -484,13 +495,21 @@ class EscortEnv:
         # --- キャリアーとescort4人のスポーン位置を決定 ---
         occupied = set()
         if handoff:
-            spawn_positions = self.rng.sample(self.walkable_cells, min(5, len(self.walkable_cells)))
+            spawn_positions = self.rng.sample(
+                self.walkable_cells, min(5, len(self.walkable_cells))
+            )
         else:
-            spawn_positions = list(self.attacker_spawns[:5]) if len(self.attacker_spawns) >= 5 else list(self.attacker_spawns)
+            spawn_positions = (
+                list(self.attacker_spawns[:5])
+                if len(self.attacker_spawns) >= 5
+                else list(self.attacker_spawns)
+            )
             while len(spawn_positions) < 5:
                 spawn_positions.append(self._random_walkable(exclude=occupied))
 
-        carry_base_pos = spawn_positions[GC_ROSTER_ORDER.index(carrier_name) % len(spawn_positions)]
+        carry_base_pos = spawn_positions[
+            GC_ROSTER_ORDER.index(carrier_name) % len(spawn_positions)
+        ]
         self.carry_pos = self._resolve_spawn_collision(carry_base_pos, occupied)
         occupied.add(self.carry_pos)
 
@@ -507,7 +526,9 @@ class EscortEnv:
         self.escort_reaction = []
         for i, name in enumerate(escort_names):
             stats = GC_EFFECTIVE_STATS[name]
-            base_pos = spawn_positions[GC_ROSTER_ORDER.index(name) % len(spawn_positions)]
+            base_pos = spawn_positions[
+                GC_ROSTER_ORDER.index(name) % len(spawn_positions)
+            ]
             pos = self._resolve_spawn_collision(base_pos, occupied)
             occupied.add(pos)
 
@@ -554,7 +575,9 @@ class EscortEnv:
         self.enemy_accuracy = [DEFAULT_ACCURACY] * self.n_enemies
         self.enemy_dodge = [DEFAULT_DODGE] * self.n_enemies
         self.enemy_hs_rate = [DEFAULT_HS_RATE] * self.n_enemies
-        self.enemy_reaction = [DEFAULT_REACTION + self.rng.uniform(-10, 10) for _ in range(self.n_enemies)]
+        self.enemy_reaction = [
+            DEFAULT_REACTION + self.rng.uniform(-10, 10) for _ in range(self.n_enemies)
+        ]
         self.enemy_moved = [False] * self.n_enemies
         self.enemy_blind_remaining = [0] * self.n_enemies
         self.enemy_blind_source = [None] * self.n_enemies
@@ -618,7 +641,9 @@ class EscortEnv:
 
     def _refresh_carry_dist_map(self):
         """carry_pos が変化した際に呼び、BFS距離マップを更新する。"""
-        self._carry_dist_map = _build_distance_map_walls_only(self.grid, [self.carry_pos])
+        self._carry_dist_map = _build_distance_map_walls_only(
+            self.grid, [self.carry_pos]
+        )
 
     # ------------------------------------------------------------------
     # 観測
@@ -730,8 +755,12 @@ class EscortEnv:
             obs.append(max(-1.0, min(1.0, (er - r) / DIST_NORM_MAX)))
             obs.append(max(-1.0, min(1.0, (ec - c) / DIST_NORM_MAX)))
             obs.append(min(1.0, enemy_dist / DIST_NORM_MAX))
-            obs.append(self.enemy_blind_remaining[enemy_idx] / max(1, BLIND_DURATION_TICKS))
-            obs.append(self.enemy_reveal_remaining[enemy_idx] / max(1, REVEAL_DURATION_TICKS))
+            obs.append(
+                self.enemy_blind_remaining[enemy_idx] / max(1, BLIND_DURATION_TICKS)
+            )
+            obs.append(
+                self.enemy_reveal_remaining[enemy_idx] / max(1, REVEAL_DURATION_TICKS)
+            )
         else:
             obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
 
@@ -741,9 +770,11 @@ class EscortEnv:
             obs.append(1.0 if self.escort_ability_type[i] == ability else 0.0)
 
         # チーム状況：誰かの効果(blind/reveal/smoke)が現在有効か
-        team_effect_active = any(v > 0 for v in self.enemy_blind_remaining) or any(
-            v > 0 for v in self.enemy_reveal_remaining
-        ) or len(self.smokes) > 0
+        team_effect_active = (
+            any(v > 0 for v in self.enemy_blind_remaining)
+            or any(v > 0 for v in self.enemy_reveal_remaining)
+            or len(self.smokes) > 0
+        )
         obs.append(1.0 if team_effect_active else 0.0)
 
         obs.append(self.escort_last_delta[i][0])
@@ -788,7 +819,11 @@ class EscortEnv:
                 self.enemy_reveal_remaining[enemy_idx] = REVEAL_DURATION_TICKS
                 self.enemy_reveal_source[enemy_idx] = i
 
-            return -self.ability_redundant_penalty if already else self.ability_success_reward
+            return (
+                -self.ability_redundant_penalty
+                if already
+                else self.ability_success_reward
+            )
 
         if ability == "SMOKE":
             # 「敵が味方(キャリアー)へ射線を持っている」状況を遮断できたら成功
@@ -806,11 +841,17 @@ class EscortEnv:
                 (rr, cc)
                 for rr in range(target_pos[0] - 1, target_pos[0] + 2)
                 for cc in range(target_pos[1] - 1, target_pos[1] + 2)
-                if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1
+                if 0 <= rr < self.height
+                and 0 <= cc < self.width
+                and self.grid[rr, cc] != 1
             }
             self.smokes.append({"cells": cells, "remaining": SMOKE_DURATION_TICKS})
 
-            return self.ability_success_reward if enemy_had_los_to_carry else -self.ability_waste_penalty
+            return (
+                self.ability_success_reward
+                if enemy_had_los_to_carry
+                else -self.ability_waste_penalty
+            )
 
         # HUNT(タイガー)はここに到達しない(常にマスクされているため)。保険としてwasteを返す。
         return -self.ability_waste_penalty
@@ -831,25 +872,39 @@ class EscortEnv:
         def _stats_for(kind, idx):
             if kind == "carry":
                 return {
-                    "accuracy": self.carry_accuracy, "dodge": self.carry_dodge,
-                    "hs_rate": self.carry_hs_rate, "reaction": self.carry_reaction,
+                    "accuracy": self.carry_accuracy,
+                    "dodge": self.carry_dodge,
+                    "hs_rate": self.carry_hs_rate,
+                    "reaction": self.carry_reaction,
                     "moved": self.carry_moved,
                 }
             if kind == "escort":
                 return {
-                    "accuracy": self.escort_accuracy[idx], "dodge": self.escort_dodge[idx],
-                    "hs_rate": self.escort_hs_rate[idx], "reaction": self.escort_reaction[idx],
+                    "accuracy": self.escort_accuracy[idx],
+                    "dodge": self.escort_dodge[idx],
+                    "hs_rate": self.escort_hs_rate[idx],
+                    "reaction": self.escort_reaction[idx],
                     "moved": self.escort_moved[idx],
                 }
             return {
-                "accuracy": self.enemy_accuracy[idx], "dodge": self.enemy_dodge[idx],
-                "hs_rate": self.enemy_hs_rate[idx], "reaction": self.enemy_reaction[idx],
+                "accuracy": self.enemy_accuracy[idx],
+                "dodge": self.enemy_dodge[idx],
+                "hs_rate": self.enemy_hs_rate[idx],
+                "reaction": self.enemy_reaction[idx],
                 "moved": self.enemy_moved[idx],
             }
 
         allies = [("carry", 0, self.carry_pos)] if self.carry_alive else []
-        allies += [("escort", i, self.escort_pos[i]) for i in range(self.n_escorts) if self.escort_alive[i]]
-        enemies = [("enemy", i, self.enemy_pos[i]) for i in range(self.n_enemies) if self.enemy_alive[i]]
+        allies += [
+            ("escort", i, self.escort_pos[i])
+            for i in range(self.n_escorts)
+            if self.escort_alive[i]
+        ]
+        enemies = [
+            ("enemy", i, self.enemy_pos[i])
+            for i in range(self.n_enemies)
+            if self.enemy_alive[i]
+        ]
 
         shooters = []
         for kind, idx, pos in allies:
@@ -876,14 +931,22 @@ class EscortEnv:
 
         for shooter_kind, shooter_idx, target_kind, target_idx in shooters:
             shooter_alive = (
-                self.carry_alive if shooter_kind == "carry"
-                else self.escort_alive[shooter_idx] if shooter_kind == "escort"
-                else self.enemy_alive[shooter_idx]
+                self.carry_alive
+                if shooter_kind == "carry"
+                else (
+                    self.escort_alive[shooter_idx]
+                    if shooter_kind == "escort"
+                    else self.enemy_alive[shooter_idx]
+                )
             )
             target_alive = (
-                self.carry_alive if target_kind == "carry"
-                else self.escort_alive[target_idx] if target_kind == "escort"
-                else self.enemy_alive[target_idx]
+                self.carry_alive
+                if target_kind == "carry"
+                else (
+                    self.escort_alive[target_idx]
+                    if target_kind == "escort"
+                    else self.enemy_alive[target_idx]
+                )
             )
             if not shooter_alive or not target_alive:
                 continue
@@ -891,7 +954,9 @@ class EscortEnv:
             shooter_stats = _stats_for(shooter_kind, shooter_idx)
             target_stats = _stats_for(target_kind, target_idx)
 
-            accuracy = MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
+            accuracy = (
+                MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
+            )
             if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
 
@@ -907,7 +972,11 @@ class EscortEnv:
             if self.rng.random() >= hit_chance:
                 continue
 
-            damage = HEADSHOT_DAMAGE if self.rng.random() < shooter_stats["hs_rate"] else BODY_DAMAGE
+            damage = (
+                HEADSHOT_DAMAGE
+                if self.rng.random() < shooter_stats["hs_rate"]
+                else BODY_DAMAGE
+            )
 
             if target_kind == "carry":
                 self.carry_hp = max(0, self.carry_hp - damage)
@@ -1029,13 +1098,19 @@ class EscortEnv:
             for i in range(self.n_escorts):
                 if not self.escort_alive[i]:
                     continue
-                if _chebyshev(self.escort_pos[i], self.carry_pos) <= self.congestion_radius:
+                if (
+                    _chebyshev(self.escort_pos[i], self.carry_pos)
+                    <= self.congestion_radius
+                ):
                     rewards[i] -= congestion_penalty
 
         # 5. Escortの移動(アビリティ使用者・死亡者を除く、ランダム順で逐次解決)
         move_order = [
-            i for i in range(self.n_escorts)
-            if self.escort_alive[i] and i not in used_ability_this_tick and actions[i] is not None
+            i
+            for i in range(self.n_escorts)
+            if self.escort_alive[i]
+            and i not in used_ability_this_tick
+            and actions[i] is not None
         ]
         self.rng.shuffle(move_order)
         for i in move_order:
@@ -1136,7 +1211,9 @@ class DuelingQNetwork(nn.Module):
         return value + (advantage - advantage.mean(dim=1, keepdim=True))
 
 
-Transition = namedtuple("Transition", ("state", "action", "reward", "next_state", "next_mask", "done"))
+Transition = namedtuple(
+    "Transition", ("state", "action", "reward", "next_state", "next_mask", "done")
+)
 
 
 class ReplayBuffer:
@@ -1159,24 +1236,36 @@ def select_action(net, state, mask, epsilon, device):
         valid_actions = np.flatnonzero(mask)
         return int(random.choice(valid_actions))
     with torch.no_grad():
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+        state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(
+            0
+        )
         q = net(state_t).squeeze(0).cpu().numpy()
     q = np.where(mask, q, -1e9)
     return int(np.argmax(q))
 
 
-def optimize_model(policy_net, target_net, optimizer, buffer, batch_size, gamma, device):
+def optimize_model(
+    policy_net, target_net, optimizer, buffer, batch_size, gamma, device
+):
     if len(buffer) < batch_size:
         return None
 
     batch = buffer.sample(batch_size)
 
     states = torch.as_tensor(np.array(batch.state), dtype=torch.float32, device=device)
-    actions = torch.as_tensor(batch.action, dtype=torch.int64, device=device).unsqueeze(1)
-    rewards = torch.as_tensor(batch.reward, dtype=torch.float32, device=device).unsqueeze(1)
-    next_states = torch.as_tensor(np.array(batch.next_state), dtype=torch.float32, device=device)
+    actions = torch.as_tensor(batch.action, dtype=torch.int64, device=device).unsqueeze(
+        1
+    )
+    rewards = torch.as_tensor(
+        batch.reward, dtype=torch.float32, device=device
+    ).unsqueeze(1)
+    next_states = torch.as_tensor(
+        np.array(batch.next_state), dtype=torch.float32, device=device
+    )
     dones = torch.as_tensor(batch.done, dtype=torch.float32, device=device).unsqueeze(1)
-    next_masks = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=device)
+    next_masks = torch.as_tensor(
+        np.array(batch.next_mask), dtype=torch.bool, device=device
+    )
 
     q_values = policy_net(states).gather(1, actions)
 
@@ -1217,7 +1306,9 @@ def evaluate(env, policy_net, device, episodes=20):
                     continue
                 mask = env.get_action_mask(i)
                 with torch.no_grad():
-                    state_t = torch.as_tensor(obs_list[i], dtype=torch.float32, device=device).unsqueeze(0)
+                    state_t = torch.as_tensor(
+                        obs_list[i], dtype=torch.float32, device=device
+                    ).unsqueeze(0)
                     q = policy_net(state_t).squeeze(0).cpu().numpy()
                 q = np.where(mask, q, -1e9)
                 actions.append(int(np.argmax(q)))
@@ -1240,7 +1331,9 @@ def evaluate(env, policy_net, device, episodes=20):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="gc_v1 Attacker Escort Phase 学習スクリプト")
+    parser = argparse.ArgumentParser(
+        description="gc_v1 Attacker Escort Phase 学習スクリプト"
+    )
     parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
     parser.add_argument("--max-ticks", type=int, default=90)
     parser.add_argument("--batch-size", type=int, default=256)
@@ -1249,7 +1342,9 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--eps-start", type=float, default=1.0)
     parser.add_argument("--eps-end", type=float, default=0.05)
-    parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
+    parser.add_argument(
+        "--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8)
+    )
     parser.add_argument("--target-update-every", type=int, default=800)
     parser.add_argument("--eval-every", type=int, default=200)
     parser.add_argument("--eval-episodes", type=int, default=20)
@@ -1274,7 +1369,9 @@ def main():
 
     obs_dim = env._obs_dim()
     n_actions = env.N_ACTIONS
-    print(f"[INFO] obs_dim={obs_dim} n_actions={n_actions} n_escorts={env.n_escorts} device={device}")
+    print(
+        f"[INFO] obs_dim={obs_dim} n_actions={n_actions} n_escorts={env.n_escorts} device={device}"
+    )
 
     policy_net = DuelingQNetwork(obs_dim, n_actions).to(device)
     target_net = DuelingQNetwork(obs_dim, n_actions).to(device)
@@ -1331,7 +1428,14 @@ def main():
                     continue
                 next_mask = env.get_action_mask(i)
                 agent_done = done or not env.escort_alive[i]
-                buffer.push(obs_list[i], actions[i], rewards[i], next_obs_list[i], next_mask, agent_done)
+                buffer.push(
+                    obs_list[i],
+                    actions[i],
+                    rewards[i],
+                    next_obs_list[i],
+                    next_mask,
+                    agent_done,
+                )
 
             obs_list = next_obs_list
             episode_reward += sum(rewards)
@@ -1339,8 +1443,13 @@ def main():
 
             if len(buffer) >= max(args.batch_size, args.warmup_steps):
                 optimize_model(
-                    policy_net, target_net, optimizer, buffer,
-                    args.batch_size, args.gamma, device,
+                    policy_net,
+                    target_net,
+                    optimizer,
+                    buffer,
+                    args.batch_size,
+                    args.gamma,
+                    device,
                 )
 
             if global_step % args.target_update_every == 0:
@@ -1349,13 +1458,13 @@ def main():
         if episode % 50 == 0:
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
+            start_time = time.perf_counter()
             print(
                 f"[EP {episode}/{args.episodes}] reward={episode_reward:.2f} elapse={elapsed_time:.1f} "
                 f"eps={epsilon:.3f} success={info.get('success')} ticks={env.tick} "
                 f"carrier={env.carry_name}"
             )
-        
+
         if episode % args.eval_every == 0:
             success_rate, avg_reward, avg_block_events = evaluate(
                 eval_env, policy_net, device, args.eval_episodes
@@ -1365,21 +1474,30 @@ def main():
                 f"avg_reward={avg_reward:.2f} avg_block_events={avg_block_events:.2f}"
             )
 
-            latest_path = os.path.join(args.save_dir, "dqn_attacker_escort_gc_latest.pt")
-            torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), latest_path)
+            latest_path = os.path.join(
+                args.save_dir, "dqn_attacker_escort_gc_latest.pt"
+            )
+            torch.save(
+                _make_checkpoint(episode, success_rate, avg_reward, avg_block_events),
+                latest_path,
+            )
 
-            is_better = (
-                success_rate > best_success_rate + 1e-9
-                or (
-                    success_rate >= best_success_rate - 1e-9
-                    and avg_reward > best_eval_reward
-                )
+            is_better = success_rate > best_success_rate + 1e-9 or (
+                success_rate >= best_success_rate - 1e-9
+                and avg_reward > best_eval_reward
             )
             if is_better:
                 best_success_rate = max(best_success_rate, success_rate)
                 best_eval_reward = avg_reward
-                best_path = os.path.join(args.save_dir, "dqn_attacker_escort_gc_best_by_eval.pt")
-                torch.save(_make_checkpoint(episode, success_rate, avg_reward, avg_block_events), best_path)
+                best_path = os.path.join(
+                    args.save_dir, "dqn_attacker_escort_gc_best_by_eval.pt"
+                )
+                torch.save(
+                    _make_checkpoint(
+                        episode, success_rate, avg_reward, avg_block_events
+                    ),
+                    best_path,
+                )
                 print(
                     f"[SAVE] 新しいベストモデルを保存: {best_path} "
                     f"(success_rate={success_rate:.2%}, avg_reward={avg_reward:.2f}, "

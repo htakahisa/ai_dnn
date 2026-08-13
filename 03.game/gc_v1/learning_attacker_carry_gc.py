@@ -1,6 +1,6 @@
 """gc_v1/learning_attacker_carry_gc.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「carry phase」推論コントローラー。
 
 train_attacker_carry.py で学習したDQNモデル(dict形式チェックポイント)をロードし、
@@ -350,10 +350,7 @@ class LearningAttackerCarryGCController:
             ):
                 cells = [(int(raw_cells[0]), int(raw_cells[1]))]
             else:
-                cells = [
-                    (int(cell[0]), int(cell[1]))
-                    for cell in (raw_cells or [])
-                ]
+                cells = [(int(cell[0]), int(cell[1])) for cell in (raw_cells or [])]
             if cells:
                 self.waypoint_cells[str(site)] = cells
 
@@ -753,8 +750,7 @@ class LearningAttackerCarryGCController:
         if not self._reached_waypoint:
             waypoint_cells = self.waypoint_cells[self._active_waypoint_site]
             waypoint_dist = min(
-                max(abs(r - cell[0]), abs(c - cell[1]))
-                for cell in waypoint_cells
+                max(abs(r - cell[0]), abs(c - cell[1])) for cell in waypoint_cells
             )
             if waypoint_dist <= 1:
                 self._reached_waypoint = True

@@ -1,6 +1,6 @@
 """gc_v1/learning_attacker_escort_gc.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker Carry Phase「escort(護衛)」推論コントローラー。
 
 train_attacker_escort.py(gc_v1版)で学習した、Escort役4体用の
@@ -66,7 +66,9 @@ from character_stats_gc import (
 # ---------------------------------------------------------------------------
 # 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)
 # ---------------------------------------------------------------------------
-ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
+ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(
+    6
+)
 N_ACTIONS = 6
 _MOVE_DELTA = {
     ACTION_UP: (-1, 0),
@@ -205,7 +207,9 @@ class LearningAttackerEscortGCController:
         if not os.path.isfile(model_path):
             raise FileNotFoundError(f"Escortモデルが見つかりません: {model_path}")
 
-        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        checkpoint = torch.load(
+            model_path, map_location=self.device, weights_only=False
+        )
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
@@ -299,7 +303,8 @@ class LearningAttackerEscortGCController:
 
         carrier = next(
             (
-                c for c in chars
+                c
+                for c in chars
                 if getattr(c, "is_alive", True)
                 and getattr(c, "team", None) == char.team
                 and getattr(c, "has_spike", False)
@@ -309,8 +314,10 @@ class LearningAttackerEscortGCController:
 
         if carrier is not None:
             carry_pos = tuple(int(v) for v in carrier.pos)
-            goal = tuple(planted_pos) if is_planted and planted_pos else (
-                tuple(target_plant_pos) if target_plant_pos else carry_pos
+            goal = (
+                tuple(planted_pos)
+                if is_planted and planted_pos
+                else (tuple(target_plant_pos) if target_plant_pos else carry_pos)
             )
             return carry_pos, goal
 
@@ -380,7 +387,10 @@ class LearningAttackerEscortGCController:
         for c in chars:
             if getattr(c, "team", None) == my_team or not getattr(c, "is_alive", True):
                 continue
-            if getattr(c, "blind_remaining", 0) > 0 or getattr(c, "reveal_remaining", 0) > 0:
+            if (
+                getattr(c, "blind_remaining", 0) > 0
+                or getattr(c, "reveal_remaining", 0) > 0
+            ):
                 return True
         return False
 
@@ -468,15 +478,29 @@ class LearningAttackerEscortGCController:
         obs.append(band_dev)
 
         # 最寄りの視認可能な敵
-        enemy_char, enemy_dist = self._nearest_visible_enemy(grid, chars, char.team, (r, c))
+        enemy_char, enemy_dist = self._nearest_visible_enemy(
+            grid, chars, char.team, (r, c)
+        )
         if enemy_char is not None:
             er, ec = int(enemy_char.pos[0]), int(enemy_char.pos[1])
             obs.append(1.0)
             obs.append(max(-1.0, min(1.0, (er - r) / DIST_NORM_MAX)))
             obs.append(max(-1.0, min(1.0, (ec - c) / DIST_NORM_MAX)))
             obs.append(min(1.0, enemy_dist / DIST_NORM_MAX))
-            obs.append(min(1.0, getattr(enemy_char, "blind_remaining", 0) / max(1, BLIND_DURATION_TICKS)))
-            obs.append(min(1.0, getattr(enemy_char, "reveal_remaining", 0) / max(1, REVEAL_DURATION_TICKS)))
+            obs.append(
+                min(
+                    1.0,
+                    getattr(enemy_char, "blind_remaining", 0)
+                    / max(1, BLIND_DURATION_TICKS),
+                )
+            )
+            obs.append(
+                min(
+                    1.0,
+                    getattr(enemy_char, "reveal_remaining", 0)
+                    / max(1, REVEAL_DURATION_TICKS),
+                )
+            )
         else:
             obs.extend([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
 
@@ -556,7 +580,9 @@ class LearningAttackerEscortGCController:
             action = int(np.random.choice(np.flatnonzero(mask)))
         else:
             with torch.no_grad():
-                state_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+                state_t = torch.as_tensor(
+                    obs, dtype=torch.float32, device=self.device
+                ).unsqueeze(0)
                 q = self.policy_net(state_t).squeeze(0).cpu().numpy()
             q = np.where(mask, q, -1e9)
             action = int(np.argmax(q))

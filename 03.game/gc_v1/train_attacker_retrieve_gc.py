@@ -1,6 +1,6 @@
 """gc_v1/train_attacker_retrieve.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「retrieve phase」学習スクリプト(落下スパイク回収)。
 
 【全員対称設計への変更】
@@ -48,6 +48,7 @@ import torch.optim as optim
 import time
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
@@ -75,6 +76,7 @@ EPISODE_COUNT = 4000
 # 保存先
 # ---------------------------------------------------------------------------
 import os
+
 DATA_DIR = "data/attacker_retrieve_gc_data/"
 os.makedirs(DATA_DIR, exist_ok=True)
 MODEL_SAVE_PATH = os.path.join(DATA_DIR, "dqn_attacker_retrieve_gc_best_by_eval.pt")
@@ -95,8 +97,8 @@ ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]
 
 # 敵スタブ(学習用の簡易ディフェンダー)。他のgc_v1学習ファイルと
 # 共通のDEFAULT_*値に統一(汎用版はこのファイル固有の値を使っていた)。
-ENEMY_SPAWN_PROB = 0.6          # そのエピソードで敵が出現するか
-ENEMY_PRE_AFFECTED_PROB = 0.3   # 出現時、すでに味方が炙り出し済みという想定
+ENEMY_SPAWN_PROB = 0.6  # そのエピソードで敵が出現するか
+ENEMY_PRE_AFFECTED_PROB = 0.3  # 出現時、すでに味方が炙り出し済みという想定
 DEFAULT_ACCURACY = 0.50
 DEFAULT_DODGE = 0.12
 DEFAULT_HS_RATE = 0.20
@@ -108,16 +110,16 @@ DEFAULT_REACTION = 100.0
 # T字路等で複数人が同時に同じマスへ進もうとしても、片方だけが進み、
 # 残りは次tickで自分のBFS距離マップに従って別ルート・再試行するだけで
 # 詰まりが解消される想定。
-STALL_TICKS_PENALTY = -0.05     # 同じマスに留まり続けている場合の追加ペナルティ
-STALL_TICKS_THRESHOLD = 3       # 何tick同じ位置に留まったらペナルティを課すか
+STALL_TICKS_PENALTY = -0.05  # 同じマスに留まり続けている場合の追加ペナルティ
+STALL_TICKS_THRESHOLD = 3  # 何tick同じ位置に留まったらペナルティを課すか
 
 # 報酬(全エージェント共通)
 STEP_PENALTY = -0.02
 GOAL_REWARD = 12.0
 TIMEOUT_PENALTY = -4.0
 DEATH_PENALTY = -8.0
-ABILITY_GOOD_FIRE = 0.6          # 未使用の敵に初めて当てた
-ABILITY_EMPTY_FIRE = -1.2        # 敵が見えないのに撃った(空撃ち)
+ABILITY_GOOD_FIRE = 0.6  # 未使用の敵に初めて当てた
+ABILITY_EMPTY_FIRE = -1.2  # 敵が見えないのに撃った(空撃ち)
 ABILITY_WASTED_ON_AFFECTED = -0.8  # すでに炙り出されている敵に撃った(重複)
 KILL_REWARD = 3.0
 KILL_WHILE_DEBUFFED_BONUS = 1.5  # フラッシュ/リコン状態の敵を倒した追加ボーナス
@@ -145,11 +147,12 @@ GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
 
 def _compute_gc_effective_stats():
     """character_stats_gc.py の生値に、常時発動するチームコンボ
@@ -205,12 +208,7 @@ def load_grid():
 
 GRID = load_grid()
 HEIGHT, WIDTH = GRID.shape
-WALKABLE = [
-    (r, c)
-    for r in range(HEIGHT)
-    for c in range(WIDTH)
-    if GRID[r, c] != 1
-]
+WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
 
 
 def bfs_distance_map(goal):
@@ -222,10 +220,16 @@ def bfs_distance_map(goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
+
 
 def line_cells(p1, p2):
     y0, x0 = p1
@@ -333,7 +337,9 @@ class RetrieveEnv:
         self.enemy_blind = 0
         self.enemy_reveal = 0
         if self.enemy_alive:
-            occupied_start = {tuple(a.pos) for a in self.agents} | {tuple(self.spike_pos)}
+            occupied_start = {tuple(a.pos) for a in self.agents} | {
+                tuple(self.spike_pos)
+            }
             candidates = [p for p in WALKABLE if p not in occupied_start]
             self.enemy_pos = list(random.choice(candidates))
             if random.random() < ENEMY_PRE_AFFECTED_PROB:
@@ -345,9 +351,7 @@ class RetrieveEnv:
         return self._collect_observations(), self._collect_masks()
 
     def _occupied_cells(self, exclude=None):
-        return {
-            tuple(a.pos) for a in self.agents if a is not exclude and a.alive
-        }
+        return {tuple(a.pos) for a in self.agents if a is not exclude and a.alive}
 
     def _visible_enemy_for(self, unit):
         if not self.enemy_alive or not unit.alive:
@@ -379,7 +383,9 @@ class RetrieveEnv:
                 neighbor_dists.append(min(1.0, self.dist_map[nr, nc] / max_dist_scale))
 
         raw_self_dist = self.dist_map[r, c]
-        dist_norm = min(1.0, raw_self_dist / max_dist_scale) if raw_self_dist >= 0 else 1.0
+        dist_norm = (
+            min(1.0, raw_self_dist / max_dist_scale) if raw_self_dist >= 0 else 1.0
+        )
         role_onehot = [1.0 if unit.role == role else 0.0 for role in ROLES]
 
         visible = self._visible_enemy_for(unit)
@@ -395,18 +401,26 @@ class RetrieveEnv:
             e_present = e_blind = e_reveal = 0.0
 
         obs = [
-            r / HEIGHT, c / WIDTH,
-            wall_up, wall_down, wall_left, wall_right,
+            r / HEIGHT,
+            c / WIDTH,
+            wall_up,
+            wall_down,
+            wall_left,
+            wall_right,
             *neighbor_dists,
             dist_norm,
             *role_onehot,
             float(unit.charge),
-            e_present, edr, edc, e_blind, e_reveal,
+            e_present,
+            edr,
+            edc,
+            e_blind,
+            e_reveal,
         ]
         obs_arr = np.array(obs, dtype=np.float32)
-        assert obs_arr.shape[0] == self.OBS_DIM, (
-            f"観測次元がOBS_DIM({self.OBS_DIM})と不一致: {obs_arr.shape[0]}"
-        )
+        assert (
+            obs_arr.shape[0] == self.OBS_DIM
+        ), f"観測次元がOBS_DIM({self.OBS_DIM})と不一致: {obs_arr.shape[0]}"
         return obs_arr
 
     def _action_mask_for(self, unit):
@@ -481,13 +495,22 @@ class RetrieveEnv:
                 u.stall_ticks = 0
             else:
                 u.stall_ticks += 1
-            stall_penalty = STALL_TICKS_PENALTY if u.stall_ticks > STALL_TICKS_THRESHOLD else 0.0
+            stall_penalty = (
+                STALL_TICKS_PENALTY if u.stall_ticks > STALL_TICKS_THRESHOLD else 0.0
+            )
 
             new_dist = self.dist_map[tuple(u.pos)]
             od = old_dist[u.name]
-            approach_reward = 0.3 * (od - new_dist) if od >= 0 and new_dist >= 0 else 0.0
+            approach_reward = (
+                0.3 * (od - new_dist) if od >= 0 and new_dist >= 0 else 0.0
+            )
 
-            reward = STEP_PENALTY + approach_reward + stall_penalty + ability_rewards.get(u.name, 0.0)
+            reward = (
+                STEP_PENALTY
+                + approach_reward
+                + stall_penalty
+                + ability_rewards.get(u.name, 0.0)
+            )
 
             if tuple(u.pos) == tuple(self.spike_pos):
                 reward += GOAL_REWARD
@@ -558,12 +581,16 @@ class RetrieveEnv:
         units = [a for a in self.agents if a.alive]
         debuffed = self.enemy_blind > 0 or self.enemy_reveal > 0
 
-        visible_units = [u for u in units if has_los(tuple(u.pos), tuple(self.enemy_pos))]
+        visible_units = [
+            u for u in units if has_los(tuple(u.pos), tuple(self.enemy_pos))
+        ]
         enemy_target = None
         if visible_units and self.enemy_alive:
             enemy_target = min(
                 visible_units,
-                key=lambda u: max(abs(u.pos[0] - self.enemy_pos[0]), abs(u.pos[1] - self.enemy_pos[1])),
+                key=lambda u: max(
+                    abs(u.pos[0] - self.enemy_pos[0]), abs(u.pos[1] - self.enemy_pos[1])
+                ),
             )
 
         # 味方 -> 敵(視認していれば全員が同時に撃つ)
@@ -577,24 +604,37 @@ class RetrieveEnv:
                 self.enemy_hp -= dmg
                 if self.enemy_hp <= 0 and self.enemy_alive:
                     self.enemy_alive = False
-                    reward = KILL_REWARD + (KILL_WHILE_DEBUFFED_BONUS if debuffed else 0.0)
+                    reward = KILL_REWARD + (
+                        KILL_WHILE_DEBUFFED_BONUS if debuffed else 0.0
+                    )
                     rewards[u.name] = rewards.get(u.name, 0.0) + reward
 
         # 敵 -> 味方(視認できている最も近いユニット1体を狙う)
         if enemy_target is not None and self.enemy_alive:
             u = enemy_target
-            my_effective_dodge = u.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
-            enemy_hit_chance = DEFAULT_ACCURACY * (1.0 - my_effective_dodge) * MOVING_TARGET_HIT_MULTIPLIER
+            my_effective_dodge = u.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER if debuffed else 1.0
+            )
+            enemy_hit_chance = (
+                DEFAULT_ACCURACY
+                * (1.0 - my_effective_dodge)
+                * MOVING_TARGET_HIT_MULTIPLIER
+            )
             if debuffed and self.enemy_blind > 0:
                 enemy_hit_chance *= BLIND_ACCURACY_MULTIPLIER
             enemy_hit_chance = max(0.0, min(1.0, enemy_hit_chance))
             if random.random() < enemy_hit_chance:
-                dmg = HEADSHOT_DAMAGE if random.random() < DEFAULT_HS_RATE else BODY_DAMAGE
+                dmg = (
+                    HEADSHOT_DAMAGE
+                    if random.random() < DEFAULT_HS_RATE
+                    else BODY_DAMAGE
+                )
                 u.hp -= dmg
                 if u.hp <= 0:
                     u.alive = False
 
         return rewards
+
 
 # ---------------------------------------------------------------------------
 # Dueling DQN
@@ -603,11 +643,15 @@ class DuelingQNet(nn.Module):
     def __init__(self, obs_dim, n_actions, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
         self.value = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, n_actions))
+        self.advantage = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, n_actions)
+        )
 
     def forward(self, x):
         feat = self.feature(x)
@@ -688,9 +732,13 @@ def train(
         batch = random.sample(replay, batch_size)
         s = torch.from_numpy(np.stack([t.s for t in batch])).float().to(DEVICE)
         a = torch.tensor([t.a for t in batch], device=DEVICE).unsqueeze(1)
-        r = torch.tensor([t.r for t in batch], device=DEVICE, dtype=torch.float32).unsqueeze(1)
+        r = torch.tensor(
+            [t.r for t in batch], device=DEVICE, dtype=torch.float32
+        ).unsqueeze(1)
         s2 = torch.from_numpy(np.stack([t.s2 for t in batch])).float().to(DEVICE)
-        d = torch.tensor([t.done for t in batch], device=DEVICE, dtype=torch.float32).unsqueeze(1)
+        d = torch.tensor(
+            [t.done for t in batch], device=DEVICE, dtype=torch.float32
+        ).unsqueeze(1)
         mask2 = torch.from_numpy(np.stack([t.mask2 for t in batch])).to(DEVICE)
 
         q_sa = policy_net(s).gather(1, a)
@@ -716,7 +764,8 @@ def train(
 
         while not done:
             action_dict = {
-                key: _select_action(obs, mask_dict[key], eps) for key, obs in obs_dict.items()
+                key: _select_action(obs, mask_dict[key], eps)
+                for key, obs in obs_dict.items()
             }
 
             prev_obs_dict = obs_dict
@@ -739,7 +788,9 @@ def train(
                     next_mask = zero_mask
                     step_done = True
 
-                replay.append(Transition(obs, action, reward, next_obs, step_done, next_mask))
+                replay.append(
+                    Transition(obs, action, reward, next_obs, step_done, next_mask)
+                )
                 step_count += 1
 
                 _optimize()
@@ -751,20 +802,25 @@ def train(
 
         recent_rewards.append(ep_reward)
         if ep % 200 == 0:
-            eval_reward, success_rate, death_rate = evaluate_greedy(policy_net, episodes=100)
-            
+            eval_reward, success_rate, death_rate = evaluate_greedy(
+                policy_net, episodes=100
+            )
+
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
-            
-            print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
-                f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%} elapse={elapsed_time:.1f}")
-            if success_rate > best_success_rate or (success_rate == best_success_rate and eps < best_eps):
+            start_time = time.perf_counter()
+
+            print(
+                f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
+                f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%} elapse={elapsed_time:.1f}"
+            )
+            if success_rate > best_success_rate or (
+                success_rate == best_success_rate and eps < best_eps
+            ):
                 best_success_rate = success_rate
                 best_eps = eps
                 _save_checkpoint(policy_net, MODEL_SAVE_PATH, ep, success_rate)
                 print(f"  -> best model saved (success_rate={success_rate:.2%})")
-
 
     _save_checkpoint(policy_net, MODEL_FINAL_PATH, episodes, best_success_rate)
     print("Training complete.")
@@ -798,6 +854,7 @@ def evaluate_greedy(policy_net, episodes=100):
             died += 1
     n = episodes
     return total_reward / n, reached / n, died / n
+
 
 if __name__ == "__main__":
     train()

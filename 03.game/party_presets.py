@@ -119,10 +119,10 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "ブラッドムーン": TeamPreset(
         name="ブラッドムーン",
-        players=("Nanasaki", "Meteor", "WoohyuN", "Zest", "FNS"),
-        igl="FNS",
+        players=("Nanasaki", "Meteor", "WoohyuN", "Zest", "Ethan"),
+        igl="Ethan",
         spike_holder="WoohyuN",
-        description="HS%連発の殺意に満ちた化け物達を飼いならせる唯一のIGL、FNSを添える",
+        description="HS%連発の殺意に満ちた化け物達に、世界一のIGL、Ethanを添える",
     ),
     "radiantdancer": TeamPreset(
         name="radiantdancer",
@@ -140,7 +140,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "とうやまゲーミング": TeamPreset(
         name="とうやまゲーミング",
-        players=("Tortlilyan", "えんぺん","ろびぃな", "いぐるん", "夢の街"),
+        players=("Tortlilyan", "えんぺん", "ろびぃな", "いぐるん", "夢の街"),
         igl="えんぺん",
         spike_holder="ろびぃな",
         description="とうやまのおうちゲーミングチーム",
@@ -161,7 +161,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Ghost Champions": TeamPreset(
         name="Ghost Champions",
-        players=("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        players=("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         igl="SugarZ3ro",
         spike_holder="Absol",
         description="個人技とマクロのバランス",
