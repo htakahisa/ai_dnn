@@ -19,6 +19,7 @@ from game_core import (
     BODY_DAMAGE,
     WINNING_ROUNDS,
     DEFUSE_REQUIRED,
+    CLUTCH_ACE_BANNER_TICKS,
 )
 
 
@@ -363,7 +364,10 @@ class BattleLogicMixin:
 
         self.current_round += 1
         if not self.headless:
-            self.round_transition_ticks_left = ROUND_TRANSITION_TICKS
+            banner_ticks = (
+                CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
+            )
+            self.round_transition_ticks_left = ROUND_TRANSITION_TICKS + banner_ticks
             self._advance_round_transition()
         else:
             self.init_round()
@@ -372,11 +376,64 @@ class BattleLogicMixin:
         if self.match_over:
             return
         if self.round_transition_ticks_left <= 0:
+            self.special_round_banner = None
             self.init_round()
             self.loop()
             return
         self.round_transition_ticks_left -= 1
+        self.draw()
         self.root.after(TICK_TIME, self._advance_round_transition)
+
+    def _ensure_round_tracking_state(self):
+        """ラウンドが切り替わったら clutch/ace 用の状態をリセットする。"""
+        round_key = getattr(self, "current_round", None)
+        if getattr(self, "_round_tracking_round_key", None) != round_key:
+            self._round_tracking_round_key = round_key
+            self.clutch_watch = {}
+            self.special_round_banner = None
+
+    def _check_special_round_banner(self, winning_team):
+        """ラウンド勝利チームに ACE / CLUTCH が発生していたかを判定する。"""
+        self._ensure_round_tracking_state()
+        self.special_round_banner = None
+
+        enemy_team = "D" if winning_team == "A" else "A"
+        enemy_total = sum(1 for c in self.chars if c.team == enemy_team)
+
+        # ACE: 勝利チームの誰かが敵全員を単独で撃破
+        ace_player = next(
+            (
+                c
+                for c in self.chars
+                if c.team == winning_team
+                and enemy_total > 0
+                and c.round_kills >= enemy_total
+            ),
+            None,
+        )
+        if ace_player is not None:
+            self.special_round_banner = {
+                "type": "ACE",
+                "name": ace_player.display_name,
+            }
+            return
+
+        # CLUTCH: 自チーム1人生存の状態からそのまま勝利
+        clutch_name = self.clutch_watch.get(winning_team)
+        if clutch_name:
+            survivor = next(
+                (
+                    c
+                    for c in self.chars
+                    if c.team == winning_team and c.name == clutch_name
+                ),
+                None,
+            )
+            if survivor is not None and survivor.is_alive:
+                self.special_round_banner = {
+                    "type": "CLUTCH",
+                    "name": survivor.display_name,
+                }
 
     def _kill_character(self, shooter, target):
         target.hp = 0
@@ -398,6 +455,15 @@ class BattleLogicMixin:
         if target.has_spike:
             self.spike_pos = tuple(target.pos)
             target.has_spike = False
+
+        # 1人生存になった瞬間を記録しておき、ラウンド終了時にクラッチ判定へ使う。
+        self._ensure_round_tracking_state()
+        for watch_team in ("A", "D"):
+            alive_members = [
+                c for c in self.chars if c.team == watch_team and c.is_alive
+            ]
+            if len(alive_members) == 1 and watch_team not in self.clutch_watch:
+                self.clutch_watch[watch_team] = alive_members[0].name
 
     def _resolve_all_shots(self, engagements=None, current_los_revealed_names=None):
         """同Tickの射撃を反応速度が高い順に逐次処理する。
@@ -525,6 +591,7 @@ class BattleLogicMixin:
 
     def process_battle(self):
         self.battle_tick += 1
+        self._ensure_round_tracking_state()
         # すべての持続効果をTick数で管理する。
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
@@ -595,6 +662,7 @@ class BattleLogicMixin:
         if self.is_defused:
             self.defender_wins += 1
             self._record_round_mental_result("D")
+            self._check_special_round_banner("D")
             if not self.headless:
                 self.label.config(
                     text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
@@ -607,6 +675,7 @@ class BattleLogicMixin:
             if self.detonate_timer <= 0:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
                         text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
@@ -617,6 +686,7 @@ class BattleLogicMixin:
             elif not alive_D:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
@@ -662,6 +732,7 @@ class BattleLogicMixin:
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")
+                self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
                         text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
@@ -672,6 +743,7 @@ class BattleLogicMixin:
             elif not alive_A:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")
+                self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
@@ -682,6 +754,7 @@ class BattleLogicMixin:
             elif not alive_D:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
                         text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",

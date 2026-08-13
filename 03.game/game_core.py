@@ -36,6 +36,7 @@ SPIKE_DETONATION_TICKS = 55
 RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
+CLUTCH_ACE_BANNER_TICKS = 10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
 
 # とるようパラメータ
 ABILITY_TYPES = ["flash", "smoke", "recon", "none"]

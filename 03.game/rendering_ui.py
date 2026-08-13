@@ -466,6 +466,32 @@ class RenderingUIMixin:
             cx, cy + 20,
             text="VICTORY!", fill=accent, font=("Arial", 26, "bold")
         )
+    
+    def _draw_special_round_banner(self):
+        """ラウンド内でのCLUTCH/ACEを、VICTORY演出と同じ中央枠で表示する。"""
+        banner = self.special_round_banner
+        is_ace = banner["type"] == "ACE"
+        accent = "#f1c40f" if is_ace else "#e74c3c"
+
+        cx = self.map_offset_x + self.map_pixel_width / 2
+        cy = self.map_pixel_height / 2
+        box_w, box_h = 340, 150
+
+        x1, y1 = cx - box_w / 2, cy - box_h / 2
+        x2, y2 = cx + box_w / 2, cy + box_h / 2
+
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3)
+        self.canvas.create_rectangle(x1 + 6, y1 + 6, x2 - 6, y2 - 6, fill="", outline=accent, width=1)
+
+        self.canvas.create_text(
+            cx, cy - 24,
+            text=banner["name"], fill="white", font=("Arial", 20, "bold")
+        )
+        self.canvas.create_text(
+            cx, cy + 20,
+            text="ACE!" if is_ace else "CLUTCH!",
+            fill=accent, font=("Arial", 26, "bold")
+        )
 
     def draw(self):
         if self.headless:
@@ -695,6 +721,8 @@ class RenderingUIMixin:
 
         if self.match_over:
             self._draw_victory_overlay()
+        elif getattr(self, "special_round_banner", None):
+            self._draw_special_round_banner()
 
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
         self.canvas.move("all", 0, COMBO_BANNER_HEIGHT)
