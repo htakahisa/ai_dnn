@@ -1,6 +1,6 @@
 """gc_v1/train_attacker_carry.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「carry phase」学習スクリプト。
 スパイクをスポーンからプラント可能地点まで運び、自動発火するプラントを
 完了させることを目的とする。学習対象はスパイク保持者(キャリア)のみ。
@@ -50,6 +50,7 @@ import torch.optim as optim
 import time
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data_carry_gc import NEW_MAZE_STR
@@ -92,7 +93,9 @@ DEVICE = torch.device("cpu")
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 29
-ACTION_DIM = 11  # move_idx(0-4)*2 + use_ability_flag(0/1) の10種類 + 明示PLANT(index=10)
+ACTION_DIM = (
+    11  # move_idx(0-4)*2 + use_ability_flag(0/1) の10種類 + 明示PLANT(index=10)
+)
 PLANT_ACTION_INDEX = 10
 
 # サイト別ウェイポイント: 右サイト=6, 左サイト=7。
@@ -140,11 +143,12 @@ GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
 
 def _compute_gc_effective_stats():
     """character_stats_gc.py の生値に、常時発動するチームコンボ
@@ -192,26 +196,31 @@ for _name in GC_ROSTER_ORDER:
 
 # 報酬パラメータ
 STEP_PENALTY = -0.001
-PROGRESS_REWARD = 0.03          # 目標プラント地点への接近(ポテンシャル差分)
+PROGRESS_REWARD = 0.03  # 目標プラント地点への接近(ポテンシャル差分)
 DAMAGE_TAKEN_PENALTY_SCALE = -0.002  # 被弾ダメージ1あたり
 KILL_REWARD = 0.4
-DEATH_PENALTY = -1.0            # キャリア死亡=スパイクドロップ(retrieveフェーズへ引き継ぎ)
+DEATH_PENALTY = -1.0  # キャリア死亡=スパイクドロップ(retrieveフェーズへ引き継ぎ)
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
-PLANT_WHIFF_PENALTY = -0.05     # サイト外でPLANTを選んだ場合(マスクが機能していれば理論上到達しない保険)
-PLANT_TICK_BONUS = 0.15         # PLANT進行1Tickごと。迅速な設置を強く評価
-PLANT_SUCCESS_REWARD = 2.5      # プラント完了
+PLANT_WHIFF_PENALTY = (
+    -0.05
+)  # サイト外でPLANTを選んだ場合(マスクが機能していれば理論上到達しない保険)
+PLANT_TICK_BONUS = 0.15  # PLANT進行1Tickごと。迅速な設置を強く評価
+PLANT_SUCCESS_REWARD = 2.5  # プラント完了
 PLANTABLE_WAIT_PENALTY = -0.08  # 設置可能なのにPLANTしないTick
 PLANTABLE_WAIT_GROWTH = -0.025  # 待つほど追加で悪化（2Tick目以降）
 MAX_PLANTABLE_WAIT_PENALTY = -0.30
-TIME_EXPIRE_PENALTY = -0.5      # ラウンド時間切れ(未設置=Defender有利)
-TEAM_WIPE_PENALTY = -0.2        # 味方(エスコート込み)全滅だがキャリアは生存継続中
-WAYPOINT_REACHED_REWARD = 0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
+TIME_EXPIRE_PENALTY = -0.5  # ラウンド時間切れ(未設置=Defender有利)
+TEAM_WIPE_PENALTY = -0.2  # 味方(エスコート込み)全滅だがキャリアは生存継続中
+WAYPOINT_REACHED_REWARD = (
+    0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
+)
 
 
 # ============================================================================
 # マップ読み込み(map_data.NEW_MAZE_STRのみ参照。パース処理は自前で複製)
 # ============================================================================
+
 
 def _parse_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -221,14 +230,25 @@ def _parse_grid(maze_str):
 GRID = _parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
-ATTACKER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3]
-DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
+ATTACKER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3
+]
+DEFENDER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4
+]
 # プラント可能マスは 2(通常) と 5(map_data_carry_gc.pyが付与した優先/代表マーカー)の両方
-PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) in SITE_VALUES]
+PLANT_CELLS = [
+    (r, c)
+    for r in range(HEIGHT)
+    for c in range(WIDTH)
+    if int(GRID[r, c]) in SITE_VALUES
+]
 # 優先(代表)地点: 本番map_data.pyには存在しない、map_data_carry_gc.py専用のマーカー(5)。
 # 学習済みチェックポイントには座標として保存し、本番実行時はgridの値に依存せず
 # その座標リストをそのまま使う(learning_attacker_carry.py側で対応予定)。
-PRIORITY_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == 5]
+PRIORITY_CELLS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == 5
+]
 
 # サイト別ウェイポイント(右=6/左=7)。
 # 同じ値は複数配置可能。対応サイトでは候補群のどれか1つを通れば達成とする。
@@ -236,10 +256,7 @@ PRIORITY_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRI
 WAYPOINT_CELLS = {}
 for _site, _value in WAYPOINT_VALUE_BY_SITE.items():
     _cells = [
-        (r, c)
-        for r in range(HEIGHT)
-        for c in range(WIDTH)
-        if int(GRID[r, c]) == _value
+        (r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == _value
     ]
     if _cells:
         WAYPOINT_CELLS[_site] = list(_cells)
@@ -263,14 +280,19 @@ if len(DEFENDER_SPAWNS) < N_DEFENDERS:
         f"DEFENDER_SPAWNSが{len(DEFENDER_SPAWNS)}マスしかなく、敵{N_DEFENDERS}人分を配置できません。"
     )
 if not PLANT_CELLS:
-    raise RuntimeError("map_data_carry_gc.py にプラント可能マス(2 または 5)が見つかりません。")
+    raise RuntimeError(
+        "map_data_carry_gc.py にプラント可能マス(2 または 5)が見つかりません。"
+    )
 if not PRIORITY_CELLS:
-    print("[WARN] map_data_carry_gc.py に優先地点マーカー(5)が見つかりません。優先地点ガイダンス特徴量は常に0になります。")
+    print(
+        "[WARN] map_data_carry_gc.py に優先地点マーカー(5)が見つかりません。優先地点ガイダンス特徴量は常に0になります。"
+    )
 
 
 # ============================================================================
 # LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
 # ============================================================================
+
 
 def line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
@@ -315,11 +337,15 @@ def bfs_distance_map(goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
-
 
 
 def bfs_distance_map_multi(sources):
@@ -337,7 +363,12 @@ def bfs_distance_map_multi(sources):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
@@ -367,19 +398,20 @@ PLANT_DIST_MAPS = {cell: bfs_distance_map(cell) for cell in PLANT_CELLS}
 
 # サイト別ウェイポイントへのBFS距離マップ(WAYPOINT_CELLSに存在するサイトのみ)。
 WAYPOINT_DIST_MAPS = {
-    site: bfs_distance_map_multi(cells)
-    for site, cells in WAYPOINT_CELLS.items()
+    site: bfs_distance_map_multi(cells) for site, cells in WAYPOINT_CELLS.items()
 }
-
-
 
 
 # 優先(代表)地点への誘導特徴量用。PRIORITY_CELLSが空の場合は全マス-1(=未到達)になる。
 PRIORITY_DIST_MAP = (
-    bfs_distance_map_multi(PRIORITY_CELLS) if PRIORITY_CELLS else np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
+    bfs_distance_map_multi(PRIORITY_CELLS)
+    if PRIORITY_CELLS
+    else np.full((HEIGHT, WIDTH), -1, dtype=np.int32)
 )
 _PRIORITY_FINITE = PRIORITY_DIST_MAP[PRIORITY_DIST_MAP >= 0]
-PRIORITY_MAX_DIST = int(_PRIORITY_FINITE.max()) if _PRIORITY_FINITE.size else (HEIGHT + WIDTH)
+PRIORITY_MAX_DIST = (
+    int(_PRIORITY_FINITE.max()) if _PRIORITY_FINITE.size else (HEIGHT + WIDTH)
+)
 
 
 def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
@@ -396,8 +428,10 @@ def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
         for dr, dc in CARDINAL:
             adj = (goal[0] + dr, goal[1] + dc)
             if (
-                0 <= adj[0] < HEIGHT and 0 <= adj[1] < WIDTH
-                and GRID[adj[0], adj[1]] != 1 and adj not in occupied
+                0 <= adj[0] < HEIGHT
+                and 0 <= adj[1] < WIDTH
+                and GRID[adj[0], adj[1]] != 1
+                and adj not in occupied
             ):
                 candidate_goals.append(adj)
     candidate_goals = list(dict.fromkeys(candidate_goals))
@@ -439,9 +473,12 @@ def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
 def _random_step(pos, occupied):
     r, c = pos
     valid = [
-        (r + dr, c + dc) for dr, dc in CARDINAL
-        if 0 <= r + dr < HEIGHT and 0 <= c + dc < WIDTH
-        and GRID[r + dr, c + dc] != 1 and (r + dr, c + dc) not in occupied
+        (r + dr, c + dc)
+        for dr, dc in CARDINAL
+        if 0 <= r + dr < HEIGHT
+        and 0 <= c + dc < WIDTH
+        and GRID[r + dr, c + dc] != 1
+        and (r + dr, c + dc) not in occupied
     ]
     return random.choice(valid) if valid else pos
 
@@ -472,8 +509,21 @@ def _shortest_path_distance(pos, target):
 # ユニットスタブ(game_core.Characterの必要最小限の複製。継承・importはしない)
 # ============================================================================
 
+
 class UnitStub:
-    def __init__(self, name, team, pos, role, ability, accuracy, dodge_rate, hs_rate, reaction, has_spike=False):
+    def __init__(
+        self,
+        name,
+        team,
+        pos,
+        role,
+        ability,
+        accuracy,
+        dodge_rate,
+        hs_rate,
+        reaction,
+        has_spike=False,
+    ):
         self.name = name
         self.team = team  # "A"(gc/carry+escort) or "D"(敵)
         self.pos = list(pos)
@@ -535,8 +585,15 @@ def _build_fixed_attackers(carrier_name, handoff=False):
         occupied.add(spawn_pos)
 
         unit = UnitStub(
-            name, "A", spawn_pos, stats["ability"], stats["ability"],
-            stats["accuracy"], stats["dodge_rate"], stats["hs_rate"], stats["reaction"],
+            name,
+            "A",
+            spawn_pos,
+            stats["ability"],
+            stats["ability"],
+            stats["accuracy"],
+            stats["dodge_rate"],
+            stats["hs_rate"],
+            stats["reaction"],
             has_spike=(name == carrier_name),
         )
         attackers.append(unit)
@@ -549,8 +606,15 @@ def _build_defenders():
     d_spawns = random.sample(DEFENDER_SPAWNS, min(N_DEFENDERS, len(DEFENDER_SPAWNS)))
     return [
         UnitStub(
-            f"D{i+1}", "D", pos, "NONE", random.choice(["FLASH", "SMOKE", "RECON", "NONE"]),
-            DEFAULT_ACCURACY, DEFAULT_DODGE, DEFAULT_HS_RATE, DEFAULT_REACTION,
+            f"D{i+1}",
+            "D",
+            pos,
+            "NONE",
+            random.choice(["FLASH", "SMOKE", "RECON", "NONE"]),
+            DEFAULT_ACCURACY,
+            DEFAULT_DODGE,
+            DEFAULT_HS_RATE,
+            DEFAULT_REACTION,
         )
         for i, pos in enumerate(d_spawns)
     ]
@@ -560,6 +624,7 @@ def _build_defenders():
 # ヒューリスティック(エスコート4人 / 敵5人)
 # controllers.py の Default*Controller と同等ロジックをこのファイル内へ複製
 # ============================================================================
+
 
 def _heuristic_ability_action(unit, visible_enemies):
     """DefaultAttackerController._decide_ability / DefaultDefenderController._decide_ability
@@ -588,7 +653,9 @@ def _heuristic_ability_action(unit, visible_enemies):
     return None
 
 
-def _apply_ability(unit, ability_name, target_pos, smokes, defenders_or_attackers, smoke_cells):
+def _apply_ability(
+    unit, ability_name, target_pos, smokes, defenders_or_attackers, smoke_cells
+):
     unit.charges -= 1
     if ability_name == "SMOKE":
         tr, tc = int(target_pos[0]), int(target_pos[1])
@@ -598,15 +665,27 @@ def _apply_ability(unit, ability_name, target_pos, smokes, defenders_or_attacker
             for cc in range(tc - 1, tc + 2)
             if 0 <= rr < HEIGHT and 0 <= cc < WIDTH and GRID[rr, cc] != 1
         }
-        smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "team": unit.team})
+        smokes.append(
+            {"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "team": unit.team}
+        )
     elif ability_name == "FLASH":
         for other in defenders_or_attackers:
-            if other.is_alive and other.team != unit.team and has_los(target_pos, other.pos, smoke_cells):
+            if (
+                other.is_alive
+                and other.team != unit.team
+                and has_los(target_pos, other.pos, smoke_cells)
+            ):
                 other.blind_remaining = max(other.blind_remaining, BLIND_DURATION_TICKS)
     elif ability_name == "RECON":
         for other in defenders_or_attackers:
-            if other.is_alive and other.team != unit.team and has_los(target_pos, other.pos, smoke_cells):
-                other.reveal_remaining = max(other.reveal_remaining, REVEAL_DURATION_TICKS)
+            if (
+                other.is_alive
+                and other.team != unit.team
+                and has_los(target_pos, other.pos, smoke_cells)
+            ):
+                other.reveal_remaining = max(
+                    other.reveal_remaining, REVEAL_DURATION_TICKS
+                )
 
 
 def _escort_move(unit, carrier, all_units, occupied, smoke_cells):
@@ -619,7 +698,9 @@ def _escort_move(unit, carrier, all_units, occupied, smoke_cells):
     if random.random() < 0.3:
         return _random_step(tuple(unit.pos), occupied)
     if dist > 5:
-        return _bfs_next_step(tuple(unit.pos), tuple(carrier.pos), occupied, allow_adjacent_goal=True)
+        return _bfs_next_step(
+            tuple(unit.pos), tuple(carrier.pos), occupied, allow_adjacent_goal=True
+        )
     return _random_step(tuple(unit.pos), occupied)
 
 
@@ -632,6 +713,7 @@ def _defender_move(unit, occupied):
 # 索敵メモリ(キャリア視点。敵の目撃情報)
 # ============================================================================
 
+
 class SightingMemory:
     def __init__(self):
         self.last_seen_enemy = None
@@ -642,13 +724,23 @@ class SightingMemory:
     def update(self, carrier, defenders, smoke_cells):
         if carrier is None or not carrier.is_alive:
             return
-        visible = [d for d in defenders if d.is_alive and has_los(carrier.pos, d.pos, smoke_cells)]
+        visible = [
+            d
+            for d in defenders
+            if d.is_alive and has_los(carrier.pos, d.pos, smoke_cells)
+        ]
         if visible:
             nearest = min(
                 visible,
-                key=lambda d: max(abs(d.pos[0] - carrier.pos[0]), abs(d.pos[1] - carrier.pos[1])),
+                key=lambda d: max(
+                    abs(d.pos[0] - carrier.pos[0]), abs(d.pos[1] - carrier.pos[1])
+                ),
             )
-            self.last_seen_enemy = {"pos": tuple(nearest.pos), "name": nearest.name, "tick_ago": 0}
+            self.last_seen_enemy = {
+                "pos": tuple(nearest.pos),
+                "name": nearest.name,
+                "tick_ago": 0,
+            }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
             if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
@@ -659,15 +751,22 @@ class SightingMemory:
 # ネットワーク
 # ============================================================================
 
+
 class AttackerCarryDuelingDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1)
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
+        )
 
     def forward(self, x):
         f = self.feature(x)
@@ -676,7 +775,9 @@ class AttackerCarryDuelingDQN(nn.Module):
         return v + (a - a.mean(dim=1, keepdim=True))
 
 
-Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done"))
+Transition = namedtuple(
+    "Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done")
+)
 
 
 class ReplayBuffer:
@@ -698,9 +799,17 @@ class ReplayBuffer:
 # 観測構築(キャリア視点のみ。エスコート・敵はヒューリスティックのため不要)
 # ============================================================================
 
+
 def build_observation(
-    carrier, attackers, defenders, sighting, smoke_cells, own_smoke_active,
-    elapsed_ticks, dist_map, reached_waypoint=True,
+    carrier,
+    attackers,
+    defenders,
+    sighting,
+    smoke_cells,
+    own_smoke_active,
+    elapsed_ticks,
+    dist_map,
+    reached_waypoint=True,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(carrier.pos[0]), int(carrier.pos[1])
@@ -710,7 +819,9 @@ def build_observation(
     obs[2] = carrier.hp / carrier.max_hp if carrier.max_hp else 0.0
     obs[3] = 1.0 if carrier.moved_this_tick else 0.0
 
-    ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}.get(carrier.ability_name)
+    ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}.get(
+        carrier.ability_name
+    )
     if ability_index is not None:
         obs[ability_index] = 1.0
     obs[8] = 1.0 if carrier.charges > 0 else 0.0
@@ -724,7 +835,9 @@ def build_observation(
     obs[11] = float(best_dc)
     obs[12] = 1.0 if int(GRID[r0, c0]) in SITE_VALUES else 0.0
 
-    visible_enemies = [d for d in defenders if d.is_alive and has_los(carrier.pos, d.pos, smoke_cells)]
+    visible_enemies = [
+        d for d in defenders if d.is_alive and has_los(carrier.pos, d.pos, smoke_cells)
+    ]
     obs[13] = 1.0 if visible_enemies else 0.0
     obs[14] = len(visible_enemies) / 5.0
     if visible_enemies:
@@ -736,7 +849,14 @@ def build_observation(
         obs[16] = (nearest.pos[1] - c0) / WIDTH
         dist = max(abs(nearest.pos[0] - r0), abs(nearest.pos[1] - c0))
         obs[17] = min(dist, HEIGHT) / HEIGHT
-    obs[18] = 1.0 if any(d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0) for d in defenders) else 0.0
+    obs[18] = (
+        1.0
+        if any(
+            d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0)
+            for d in defenders
+        )
+        else 0.0
+    )
     obs[19] = 1.0 if own_smoke_active else 0.0
 
     teammates = [a for a in attackers if a is not carrier and a.is_alive]
@@ -783,7 +903,8 @@ def build_action_mask(unit, occupied, on_site):
     for move_idx, (dr, dc) in enumerate(MOVES):
         nr, nc = r + dr, c + dc
         walkable = (
-            0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            0 <= nr < HEIGHT
+            and 0 <= nc < WIDTH
             and GRID[nr, nc] != 1
             and (nr, nc) not in occupied
         )
@@ -803,6 +924,7 @@ def build_action_mask(unit, occupied, on_site):
 # ============================================================================
 # 環境本体
 # ============================================================================
+
 
 class CarryEnv:
     """carryフェーズを模した簡易環境。学習対象はキャリア1体のみ。
@@ -889,14 +1011,23 @@ class CarryEnv:
     def _collect_observation(self):
         smoke_cells = self._smoke_cells()
         obs = build_observation(
-            self.carrier, self.attackers, self.defenders, self.sighting,
-            smoke_cells, self._own_smoke_active(), self.elapsed_ticks, self.dist_map,
+            self.carrier,
+            self.attackers,
+            self.defenders,
+            self.sighting,
+            smoke_cells,
+            self._own_smoke_active(),
+            self.elapsed_ticks,
+            self.dist_map,
             self.reached_waypoint,
         )
-        occupied = {tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive} - {tuple(self.carrier.pos)}
+        occupied = {
+            tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive
+        } - {tuple(self.carrier.pos)}
         on_site = (
             self.carrier.is_alive
-            and int(GRID[int(self.carrier.pos[0]), int(self.carrier.pos[1])]) in SITE_VALUES
+            and int(GRID[int(self.carrier.pos[0]), int(self.carrier.pos[1])])
+            in SITE_VALUES
         )
         mask = build_action_mask(self.carrier, occupied, on_site)
         return obs, mask
@@ -907,7 +1038,8 @@ class CarryEnv:
             u.moved_this_tick = False
 
         pre_flash_recon_active = any(
-            d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0) for d in self.defenders
+            d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0)
+            for d in self.defenders
         )
 
         smoke_cells = self._smoke_cells()
@@ -920,7 +1052,8 @@ class CarryEnv:
         carrier_alive = self.carrier.is_alive
         on_site_before_action = (
             carrier_alive
-            and int(GRID[int(self.carrier.pos[0]), int(self.carrier.pos[1])]) in SITE_VALUES
+            and int(GRID[int(self.carrier.pos[0]), int(self.carrier.pos[1])])
+            in SITE_VALUES
         )
 
         # --- 敵(Defender)側: ランダム移動+近接ヒューリスティックアビリティ ---
@@ -928,10 +1061,21 @@ class CarryEnv:
             if not d.is_alive:
                 continue
             own_occupied = occupied - {tuple(d.pos)}
-            visible = [a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)]
+            visible = [
+                a
+                for a in self.attackers
+                if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
+            ]
             ability = _heuristic_ability_action(d, visible)
             if ability is not None:
-                _apply_ability(d, ability[0], ability[1], self.smokes, self.attackers + self.defenders, smoke_cells)
+                _apply_ability(
+                    d,
+                    ability[0],
+                    ability[1],
+                    self.smokes,
+                    self.attackers + self.defenders,
+                    smoke_cells,
+                )
                 move_plans.append((d, tuple(d.pos)))
                 continue
             nxt = _defender_move(d, own_occupied)
@@ -942,13 +1086,30 @@ class CarryEnv:
             if a is self.carrier or not a.is_alive:
                 continue
             own_occupied = occupied - {tuple(a.pos)}
-            visible = [d for d in self.defenders if d.is_alive and has_los(a.pos, d.pos, smoke_cells)]
+            visible = [
+                d
+                for d in self.defenders
+                if d.is_alive and has_los(a.pos, d.pos, smoke_cells)
+            ]
             ability = _heuristic_ability_action(a, visible)
             if ability is not None:
-                _apply_ability(a, ability[0], ability[1], self.smokes, self.attackers + self.defenders, smoke_cells)
+                _apply_ability(
+                    a,
+                    ability[0],
+                    ability[1],
+                    self.smokes,
+                    self.attackers + self.defenders,
+                    smoke_cells,
+                )
                 move_plans.append((a, tuple(a.pos)))
                 continue
-            nxt = _escort_move(a, self.carrier, self.attackers + self.defenders, own_occupied, smoke_cells)
+            nxt = _escort_move(
+                a,
+                self.carrier,
+                self.attackers + self.defenders,
+                own_occupied,
+                smoke_cells,
+            )
             move_plans.append((a, nxt))
 
         # --- キャリア: DQNの行動を反映(明示PLANT対応) ---
@@ -956,7 +1117,9 @@ class CarryEnv:
         if carrier_alive:
             decoded = decode_action(action_idx)
             visible_enemies = [
-                d for d in self.defenders if d.is_alive and has_los(self.carrier.pos, d.pos, smoke_cells)
+                d
+                for d in self.defenders
+                if d.is_alive and has_los(self.carrier.pos, d.pos, smoke_cells)
             ]
 
             if decoded == "PLANT":
@@ -972,28 +1135,49 @@ class CarryEnv:
 
                 if use_ability:
                     ability_whiff = not visible_enemies
-                    ability_overlap = pre_flash_recon_active and self.carrier.ability_name in ("FLASH", "RECON")
+                    ability_overlap = (
+                        pre_flash_recon_active
+                        and self.carrier.ability_name in ("FLASH", "RECON")
+                    )
                     if self.carrier.charges > 0:
                         if visible_enemies:
                             nearest = min(
                                 visible_enemies,
-                                key=lambda d: max(abs(d.pos[0] - self.carrier.pos[0]), abs(d.pos[1] - self.carrier.pos[1])),
+                                key=lambda d: max(
+                                    abs(d.pos[0] - self.carrier.pos[0]),
+                                    abs(d.pos[1] - self.carrier.pos[1]),
+                                ),
                             )
-                            dist = max(abs(nearest.pos[0] - self.carrier.pos[0]), abs(nearest.pos[1] - self.carrier.pos[1]))
+                            dist = max(
+                                abs(nearest.pos[0] - self.carrier.pos[0]),
+                                abs(nearest.pos[1] - self.carrier.pos[1]),
+                            )
                             if dist <= ABILITY_RANGE:
                                 _apply_ability(
-                                    self.carrier, self.carrier.ability_name, tuple(nearest.pos),
-                                    self.smokes, self.attackers + self.defenders, smoke_cells,
+                                    self.carrier,
+                                    self.carrier.ability_name,
+                                    tuple(nearest.pos),
+                                    self.smokes,
+                                    self.attackers + self.defenders,
+                                    smoke_cells,
                                 )
                         elif self.sighting.last_seen_enemy is not None:
                             _apply_ability(
-                                self.carrier, self.carrier.ability_name, self.sighting.last_seen_enemy["pos"],
-                                self.smokes, self.attackers + self.defenders, smoke_cells,
+                                self.carrier,
+                                self.carrier.ability_name,
+                                self.sighting.last_seen_enemy["pos"],
+                                self.smokes,
+                                self.attackers + self.defenders,
+                                smoke_cells,
                             )
                         else:
                             _apply_ability(
-                                self.carrier, self.carrier.ability_name, random.choice(PLANT_CELLS),
-                                self.smokes, self.attackers + self.defenders, smoke_cells,
+                                self.carrier,
+                                self.carrier.ability_name,
+                                random.choice(PLANT_CELLS),
+                                self.smokes,
+                                self.attackers + self.defenders,
+                                smoke_cells,
                             )
 
         # --- 移動の適用 ---
@@ -1043,8 +1227,7 @@ class CarryEnv:
             wr, wc = int(self.carrier.pos[0]), int(self.carrier.pos[1])
             waypoint_cells = WAYPOINT_CELLS[self.active_waypoint_site]
             waypoint_dist = min(
-                max(abs(wr - cell[0]), abs(wc - cell[1]))
-                for cell in waypoint_cells
+                max(abs(wr - cell[0]), abs(wc - cell[1])) for cell in waypoint_cells
             )
             if waypoint_dist <= 1:
                 self.reached_waypoint = True
@@ -1055,8 +1238,13 @@ class CarryEnv:
         # ここでの再計算は行わない。
 
         reward, done = self._compute_reward(
-            ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
-            plant_action_chosen, on_site_before_action, waypoint_bonus,
+            ability_whiff,
+            ability_overlap,
+            plant_tick_progress,
+            plant_completed,
+            plant_action_chosen,
+            on_site_before_action,
+            waypoint_bonus,
         )
 
         all_units = self.attackers + self.defenders
@@ -1064,8 +1252,10 @@ class CarryEnv:
         self._prev_alive = {u.name: u.is_alive for u in all_units}
         self._prev_hp = {u.name: u.hp for u in all_units}
 
-        obs, mask = self._collect_observation() if self.carrier.is_alive else (
-            np.zeros(OBS_DIM, dtype=np.float32), np.ones(ACTION_DIM, dtype=bool)
+        obs, mask = (
+            self._collect_observation()
+            if self.carrier.is_alive
+            else (np.zeros(OBS_DIM, dtype=np.float32), np.ones(ACTION_DIM, dtype=bool))
         )
         return obs, mask, reward, done
 
@@ -1075,14 +1265,19 @@ class CarryEnv:
         shot_intents = []
 
         for shooter in alive:
-            targets = [t for t in alive if t.team != shooter.team and has_los(shooter.pos, t.pos, smoke_cells)]
+            targets = [
+                t
+                for t in alive
+                if t.team != shooter.team and has_los(shooter.pos, t.pos, smoke_cells)
+            ]
             if not targets:
                 continue
             target = min(
                 targets,
                 key=lambda t: (
                     max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])),
-                    t.hp, t.name,
+                    t.hp,
+                    t.name,
                 ),
             )
             shot_intents.append((shooter, target))
@@ -1099,7 +1294,9 @@ class CarryEnv:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
 
             debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0
-            effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
+            effective_dodge = target.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER if debuffed else 1.0
+            )
             hit_chance = accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
@@ -1116,8 +1313,14 @@ class CarryEnv:
                         target.has_spike = False
 
     def _compute_reward(
-        self, ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
-        plant_action_chosen, on_site_before_action, waypoint_bonus=0.0,
+        self,
+        ability_whiff,
+        ability_overlap,
+        plant_tick_progress,
+        plant_completed,
+        plant_action_chosen,
+        on_site_before_action,
+        waypoint_bonus=0.0,
     ):
         reward = STEP_PENALTY + waypoint_bonus
 
@@ -1134,7 +1337,9 @@ class CarryEnv:
             return reward, True
 
         # 被ダメージペナルティ
-        hp_lost = max(0, self._prev_hp.get(self.carrier.name, self.carrier.hp) - self.carrier.hp)
+        hp_lost = max(
+            0, self._prev_hp.get(self.carrier.name, self.carrier.hp) - self.carrier.hp
+        )
         reward += DAMAGE_TAKEN_PENALTY_SCALE * hp_lost
 
         # 目標地点への接近報酬(ポテンシャル差分)。プラント進行中は距離0扱いなので自然に0。
@@ -1152,7 +1357,9 @@ class CarryEnv:
         if ability_overlap:
             reward += ABILITY_OVERLAP_PENALTY
 
-        new_kills = self.carrier.kills - self._prev_kills.get(self.carrier.name, self.carrier.kills)
+        new_kills = self.carrier.kills - self._prev_kills.get(
+            self.carrier.name, self.carrier.kills
+        )
         if new_kills > 0:
             reward += KILL_REWARD * new_kills
 
@@ -1164,9 +1371,8 @@ class CarryEnv:
         # これにより「サイトで時間を使ってから最後に設置」のQ値局所解を抑える。
         if on_site_before_action and not plant_action_chosen:
             self.plantable_wait_ticks += 1
-            wait_penalty = (
-                PLANTABLE_WAIT_PENALTY
-                + PLANTABLE_WAIT_GROWTH * max(0, self.plantable_wait_ticks - 1)
+            wait_penalty = PLANTABLE_WAIT_PENALTY + PLANTABLE_WAIT_GROWTH * max(
+                0, self.plantable_wait_ticks - 1
             )
             reward += max(MAX_PLANTABLE_WAIT_PENALTY, wait_penalty)
         elif plant_action_chosen:
@@ -1200,7 +1406,10 @@ class CarryEnv:
 # 学習ループ
 # ============================================================================
 
-def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8):
+
+def epsilon_by_episode(
+    episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8
+):
     decay_episodes = total_episodes * decay_ratio
     return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
 
@@ -1224,10 +1433,16 @@ def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
 
     batch = buffer.sample(batch_size)
     obs_batch = torch.as_tensor(np.array(batch.obs), dtype=torch.float32, device=DEVICE)
-    action_batch = torch.as_tensor(batch.action, dtype=torch.int64, device=DEVICE).unsqueeze(1)
+    action_batch = torch.as_tensor(
+        batch.action, dtype=torch.int64, device=DEVICE
+    ).unsqueeze(1)
     reward_batch = torch.as_tensor(batch.reward, dtype=torch.float32, device=DEVICE)
-    next_obs_batch = torch.as_tensor(np.array(batch.next_obs), dtype=torch.float32, device=DEVICE)
-    next_mask_batch = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=DEVICE)
+    next_obs_batch = torch.as_tensor(
+        np.array(batch.next_obs), dtype=torch.float32, device=DEVICE
+    )
+    next_mask_batch = torch.as_tensor(
+        np.array(batch.next_mask), dtype=torch.bool, device=DEVICE
+    )
     done_batch = torch.as_tensor(batch.done, dtype=torch.float32, device=DEVICE)
 
     q_values = policy_net(obs_batch).gather(1, action_batch).squeeze(1)
@@ -1289,7 +1504,7 @@ def train(
             },
             path,
         )
-    
+
     start_time = time.perf_counter()
 
     for episode in range(1, episodes + 1):
@@ -1316,14 +1531,16 @@ def train(
                 break
 
         episode_reward_history.append(episode_reward_total)
-        episode_success_history.append(1.0 if env.match_over_reason == "planted" else 0.0)
+        episode_success_history.append(
+            1.0 if env.match_over_reason == "planted" else 0.0
+        )
         avg_reward = sum(episode_reward_history) / len(episode_reward_history)
         success_rate = sum(episode_success_history) / len(episode_success_history)
 
         if episode % 20 == 0:
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
+            start_time = time.perf_counter()
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} elapse={elapsed_time:.1f} "
                 f"avg100={avg_reward:.3f} success100={success_rate:.3f} "
@@ -1334,7 +1551,9 @@ def train(
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward
             _save_checkpoint(MODEL_SAVE_PATH, episode, success_rate)
-            print(f"[SAVE] best model updated: avg100={avg_reward:.3f} success100={success_rate:.3f} -> {MODEL_SAVE_PATH}")
+            print(
+                f"[SAVE] best model updated: avg100={avg_reward:.3f} success100={success_rate:.3f} -> {MODEL_SAVE_PATH}"
+            )
 
         if episode % 100 == 0:
             _save_checkpoint(MODEL_LATEST_PATH, episode, success_rate)

@@ -1,6 +1,6 @@
 """gc_v1/learning_defender_retake_gc.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Defender「retake phase」推論コントローラー(プラント後限定)。
 
 gc_v1/train_defender_retake.py で学習した Dueling DQN を読み込み、
@@ -68,8 +68,7 @@ ACTION_ABILITY = 6
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "タイガー": 3}
 
 DEFAULT_MODEL_PATH = (
-    "data/defender_retake_gc_data/"
-    "dqn_defender_retake_gc_best_by_eval.pt"
+    "data/defender_retake_gc_data/" "dqn_defender_retake_gc_best_by_eval.pt"
 )
 
 
@@ -80,8 +79,10 @@ class DefenderRetakeDuelingDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, n_actions=N_ACTIONS, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
         self.value_head = nn.Sequential(
             nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, 1)
@@ -148,7 +149,12 @@ def _bfs_distance_map(grid, goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL_MOVES:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < height
+                and 0 <= nc < width
+                and grid[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
@@ -204,7 +210,9 @@ class LearningDefenderRetakeGCController:
             if verbose:
                 print(f"[LearningDefenderRetakeGCController] loaded: {model_path}")
         except Exception as exc:
-            print(f"[LOAD ERROR] defender retake(gc) model '{model_path}' の読込に失敗: {exc}")
+            print(
+                f"[LOAD ERROR] defender retake(gc) model '{model_path}' の読込に失敗: {exc}"
+            )
         self.model.eval()
 
         # プラント地点(planted_pos)は1ラウンド中不変のため、
@@ -239,7 +247,9 @@ class LearningDefenderRetakeGCController:
     # -- 観測構築 ----------------------------------------------------------
     # train_defender_retake.py の build_observation() と要素・並び順を
     # 完全一致させること。インデックスはコメントで明示する。
-    def _build_observation(self, char, game_state, chars, enemies, visible_enemies, detonate_timer):
+    def _build_observation(
+        self, char, game_state, chars, enemies, visible_enemies, detonate_timer
+    ):
         grid = game_state["grid"]
         height, width = grid.shape
         planted_pos = game_state["planted_pos"]
@@ -248,32 +258,44 @@ class LearningDefenderRetakeGCController:
 
         obs = np.zeros(OBS_DIM, dtype=np.float32)
 
-        obs[0] = r / height                                   # [0] 自己座標r
-        obs[1] = c / width                                     # [1] 自己座標c
+        obs[0] = r / height  # [0] 自己座標r
+        obs[1] = c / width  # [1] 自己座標c
         obs[2] = char.hp / char.max_hp if char.max_hp else 0.0  # [2] 自己HP割合
 
         good_dir = _good_directions(self._dist_map, grid, r, c)
-        obs[3], obs[4], obs[5], obs[6] = good_dir               # [3-6] BFS推奨方向(up,down,left,right)
+        obs[3], obs[4], obs[5], obs[6] = (
+            good_dir  # [3-6] BFS推奨方向(up,down,left,right)
+        )
 
         raw_dist = self._dist_map[r, c]
         dist_to_plant = min(1.0, raw_dist / (height + width)) if raw_dist >= 0 else 1.0
-        obs[7] = dist_to_plant                                  # [7] BFSプラント距離
+        obs[7] = dist_to_plant  # [7] BFSプラント距離
 
-        obs[8] = 1.0 if (r, c) in self._site_zone else 0.0       # [8] サイトゾーン内フラグ
-        obs[9] = 1.0 if max(abs(pr - r), abs(pc - c)) <= 1 else 0.0  # [9] プラント隣接フラグ
+        obs[8] = 1.0 if (r, c) in self._site_zone else 0.0  # [8] サイトゾーン内フラグ
+        obs[9] = (
+            1.0 if max(abs(pr - r), abs(pc - c)) <= 1 else 0.0
+        )  # [9] プラント隣接フラグ
 
-        obs[10] = 1.0 if _ability_charge(char) > 0 else 0.0      # [10] 自己アビリティ残チャージ
-        obs[11] = char.blind_remaining / BLIND_DURATION_TICKS if BLIND_DURATION_TICKS else 0.0  # [11]
-        obs[12] = char.defuse_timer / DEFUSE_REQUIRED_TICKS      # [12] 解除進捗
-        obs[13] = detonate_timer / SPIKE_DETONATION_TICKS        # [13] 起爆タイマー割合
+        obs[10] = (
+            1.0 if _ability_charge(char) > 0 else 0.0
+        )  # [10] 自己アビリティ残チャージ
+        obs[11] = (
+            char.blind_remaining / BLIND_DURATION_TICKS if BLIND_DURATION_TICKS else 0.0
+        )  # [11]
+        obs[12] = char.defuse_timer / DEFUSE_REQUIRED_TICKS  # [12] 解除進捗
+        obs[13] = detonate_timer / SPIKE_DETONATION_TICKS  # [13] 起爆タイマー割合
 
         allies = [a for a in chars if a.team == char.team and a.is_alive]
-        obs[14] = len(allies) / 5.0                               # [14] 生存味方数
-        obs[15] = sum(1 for a in allies if tuple(a.pos) in self._site_zone) / 5.0  # [15] サイトゾーン内味方数
+        obs[14] = len(allies) / 5.0  # [14] 生存味方数
+        obs[15] = (
+            sum(1 for a in allies if tuple(a.pos) in self._site_zone) / 5.0
+        )  # [15] サイトゾーン内味方数
         allies_near_entry = sum(
-            1 for a in allies if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
+            1
+            for a in allies
+            if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
         )
-        obs[16] = allies_near_entry / 5.0                         # [16] エントリー圏内味方数
+        obs[16] = allies_near_entry / 5.0  # [16] エントリー圏内味方数
 
         others = [a for a in allies if a is not char]
         if others:
@@ -282,19 +304,25 @@ class LearningDefenderRetakeGCController:
             ) / max(height, width)
         else:
             nearest_ally_dist = 1.0
-        obs[17] = nearest_ally_dist                               # [17] 最近接味方距離
+        obs[17] = nearest_ally_dist  # [17] 最近接味方距離
 
         # 味方アビリティ発動中フラグ。smoke情報がgame_stateに無いため、
         # 敵側のデバフ状態(blind/reveal)のみで近似する。
-        obs[18] = 1.0 if any(
-            e.is_alive and (
-                getattr(e, "blind_remaining", 0) > 0 or getattr(e, "reveal_remaining", 0) > 0
+        obs[18] = (
+            1.0
+            if any(
+                e.is_alive
+                and (
+                    getattr(e, "blind_remaining", 0) > 0
+                    or getattr(e, "reveal_remaining", 0) > 0
+                )
+                for e in enemies
             )
-            for e in enemies
-        ) else 0.0                                                 # [18] 味方アビリティ発動中(近似)
+            else 0.0
+        )  # [18] 味方アビリティ発動中(近似)
 
-        obs[19] = len(visible_enemies) / 5.0                       # [19] 視認中敵数
-        obs[20] = len([e for e in enemies if e.is_alive]) / 5.0    # [20] 生存敵総数
+        obs[19] = len(visible_enemies) / 5.0  # [19] 視認中敵数
+        obs[20] = len([e for e in enemies if e.is_alive]) / 5.0  # [20] 生存敵総数
 
         # [21-32] 視認中の近い敵、最大2体分(6次元 x 2)
         sorted_enemies = sorted(
@@ -308,10 +336,15 @@ class LearningDefenderRetakeGCController:
             edist = max(abs(e.pos[0] - r), abs(e.pos[1] - c)) / max(height, width)
             ehp = e.hp / e.max_hp if e.max_hp else 0.0
             eblind = 1.0 if getattr(e, "blind_remaining", 0) > 0 else 0.0
-            erevealed = 1.0 if (
-                getattr(e, "reveal_remaining", 0) > 0 or getattr(e, "los_revealed", False)
-            ) else 0.0
-            obs[idx:idx + 6] = [edx, edy, edist, ehp, eblind, erevealed]
+            erevealed = (
+                1.0
+                if (
+                    getattr(e, "reveal_remaining", 0) > 0
+                    or getattr(e, "los_revealed", False)
+                )
+                else 0.0
+            )
+            obs[idx : idx + 6] = [edx, edy, edist, ehp, eblind, erevealed]
             idx += 6
         # 視認中敵が2体未満の残り枠は0.0のまま(np.zerosで初期化済み)
 
@@ -327,14 +360,17 @@ class LearningDefenderRetakeGCController:
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
-            tuple(o.pos) for o in chars if o is not char and getattr(o, "is_alive", True)
+            tuple(o.pos)
+            for o in chars
+            if o is not char and getattr(o, "is_alive", True)
         }
 
         for a in range(4):
             dr, dc = MOVE_DELTAS[a]
             nr, nc = r + dr, c + dc
             walkable = (
-                0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
+                0 <= nr < grid.shape[0]
+                and 0 <= nc < grid.shape[1]
                 and grid[nr, nc] != 1
                 and (nr, nc) not in occupied
             )
@@ -373,7 +409,9 @@ class LearningDefenderRetakeGCController:
 
         enemies = [e for e in chars if e.team != char.team]
         visible_enemies = [
-            e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
+            e
+            for e in enemies
+            if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
         # 💡train_defender_retake.py の action_mask() と同一条件:
@@ -382,7 +420,9 @@ class LearningDefenderRetakeGCController:
         time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
         lock_movement = (not time_critical) and bool(visible_enemies)
 
-        obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
+        obs = self._build_observation(
+            char, game_state, chars, enemies, visible_enemies, detonate_timer
+        )
         mask = self._action_mask(char, grid, chars, lock_movement)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)

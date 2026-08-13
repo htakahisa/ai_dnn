@@ -1,6 +1,6 @@
 """gc_v1/train_attacker_guard.py
 
-固定チーム(Xdll/Syouta/Absol/eKo/SugarZ3ro)専用の
+固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「guard phase」学習スクリプト(プラント後、解除阻止に特化)。
 
 train_defender_search.py(gc_v1)をベースに、以下を置き換えた:
@@ -44,6 +44,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
@@ -95,8 +96,8 @@ N_ATTACKERS = 5  # gc固定チーム(このフェーズではAttacker)
 N_DEFENDERS = 5  # 敵(ヒューリスティック)
 MAX_TICKS = SPIKE_DETONATION_TICKS  # 55: プラント後の起爆までの時間と一致させる
 
-ABILITY_RANGE = 8            # FLASH/RECONを即時適用してよい最大距離(簡易化)
-GUARD_POS_REACH_RADIUS = 1   # 担当ガードポジションへ「到着した」とみなすBFS距離
+ABILITY_RANGE = 8  # FLASH/RECONを即時適用してよい最大距離(簡易化)
+GUARD_POS_REACH_RADIUS = 1  # 担当ガードポジションへ「到着した」とみなすBFS距離
 SIGHTING_STALENESS_CAP = 20
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
@@ -126,11 +127,12 @@ GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
 GC_PLAYER_BONUSES = {
     "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "Syouta": {"reaction": 40, "mental": 3},
+    "SyouTa": {"reaction": 40, "mental": 3},
     "Absol": {"dodge_rate": 0.4, "mental": 3},
     "eKo": {"hs_rate": 0.4, "mental": 3},
     "SugarZ3ro": {"iq": 40, "mental": 3},
 }
+
 
 def _compute_gc_effective_stats():
     """character_stats_gc.py の生値に、常時発動するチームコンボ
@@ -180,26 +182,31 @@ for _name in GC_ROSTER_ORDER:
 # 報酬パラメータ
 # 優先度: defuse_alert > sighting > position の順で明確に重みを引き離す。
 STEP_PENALTY = -0.001
-DEFUSE_PROGRESS_PENALTY = -0.05      # 敵の解除が1Tick進むごとのペナルティ(全員で共有)
-GUARD_POSITION_PULL_REWARD = 0.03    # 担当ガードポジション/解除地点へ近づく(ポテンシャル差分)
-HOLD_POSITION_BONUS = 0.04           # 到着後の静止をより強く優遇(射撃は静止側が有利なため)
-HOLD_POSITION_PENALTY = -0.02        # 到着後の無駄な動き回りを強めに抑制(ただし移動自体は禁止しない)
+DEFUSE_PROGRESS_PENALTY = -0.05  # 敵の解除が1Tick進むごとのペナルティ(全員で共有)
+GUARD_POSITION_PULL_REWARD = (
+    0.03  # 担当ガードポジション/解除地点へ近づく(ポテンシャル差分)
+)
+HOLD_POSITION_BONUS = 0.04  # 到着後の静止をより強く優遇(射撃は静止側が有利なため)
+HOLD_POSITION_PENALTY = (
+    -0.02
+)  # 到着後の無駄な動き回りを強めに抑制(ただし移動自体は禁止しない)
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
-SPIKE_WATCH_BONUS = 0.02     # プラント地点にLOSが通っている間、静止して警戒(引き上げ)
+SPIKE_WATCH_BONUS = 0.02  # プラント地点にLOSが通っている間、静止して警戒(引き上げ)
 KILL_REWARD = 0.5
-DEFUSER_KILL_BONUS = 0.4     # 解除中だった敵を倒した場合の追加ボーナス
+DEFUSER_KILL_BONUS = 0.4  # 解除中だった敵を倒した場合の追加ボーナス
 DEATH_PENALTY = -0.5
-ROUND_WIN_REWARD = 1.0       # 起爆 or 敵全滅によるAttacker勝利
-DEFUSE_LOSS_PENALTY = -1.0   # 解除完了によるDefender勝利
-WIPE_LOSS_PENALTY = -0.5     # 自チーム全滅(解除は時間の問題)による実質敗北
+ROUND_WIN_REWARD = 1.0  # 起爆 or 敵全滅によるAttacker勝利
+DEFUSE_LOSS_PENALTY = -1.0  # 解除完了によるDefender勝利
+WIPE_LOSS_PENALTY = -0.5  # 自チーム全滅(解除は時間の問題)による実質敗北
 
 
 # ============================================================================
 # マップ読み込み(map_data.NEW_MAZE_STRのみ参照。パース処理は自前で複製)
 # ============================================================================
+
 
 def _parse_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
@@ -209,7 +216,9 @@ def _parse_grid(maze_str):
 GRID = _parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
-DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
+DEFENDER_SPAWNS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4
+]
 PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
 
 if len(DEFENDER_SPAWNS) < N_DEFENDERS:
@@ -263,6 +272,7 @@ for _marker in ACTIVE_GUARD_PATTERNS:
 # LOS・BFS(abilities_los.py / controllers.py と同等のロジックを複製)
 # ============================================================================
 
+
 def line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
     y1, x1 = int(p2[0]), int(p2[1])
@@ -306,7 +316,12 @@ def bfs_distance_map(goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < HEIGHT and 0 <= nc < WIDTH and GRID[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
@@ -328,8 +343,6 @@ def bfs_best_direction(dist_map, r0, c0):
     return best_dr, best_dc
 
 
-
-
 def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
     """敵(Defender)ヒューリスティック用。controllers.BaseController.move_towards_target
     と同等のロジックをこのファイル内で複製したもの。"""
@@ -345,8 +358,10 @@ def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
         for dr, dc in CARDINAL:
             adj = (goal[0] + dr, goal[1] + dc)
             if (
-                0 <= adj[0] < HEIGHT and 0 <= adj[1] < WIDTH
-                and GRID[adj[0], adj[1]] != 1 and adj not in occupied
+                0 <= adj[0] < HEIGHT
+                and 0 <= adj[1] < WIDTH
+                and GRID[adj[0], adj[1]] != 1
+                and adj not in occupied
             ):
                 candidate_goals.append(adj)
     candidate_goals = list(dict.fromkeys(candidate_goals))
@@ -388,9 +403,12 @@ def _bfs_next_step(start, goal, occupied, allow_adjacent_goal=True):
 def _random_step(pos, occupied):
     r, c = pos
     valid = [
-        (r + dr, c + dc) for dr, dc in CARDINAL
-        if 0 <= r + dr < HEIGHT and 0 <= c + dc < WIDTH
-        and GRID[r + dr, c + dc] != 1 and (r + dr, c + dc) not in occupied
+        (r + dr, c + dc)
+        for dr, dc in CARDINAL
+        if 0 <= r + dr < HEIGHT
+        and 0 <= c + dc < WIDTH
+        and GRID[r + dr, c + dc] != 1
+        and (r + dr, c + dc) not in occupied
     ]
     return random.choice(valid) if valid else pos
 
@@ -490,6 +508,7 @@ for _marker in ACTIVE_GUARD_PATTERNS:
 # ユニットスタブ(game_core.Characterの必要最小限の複製。継承・importはしない)
 # ============================================================================
 
+
 class UnitStub:
     def __init__(self, name, team, pos, role, has_spike=False):
         self.name = name
@@ -580,6 +599,7 @@ def _build_defenders():
 # チーム共有メモリ(gc/Attacker視点。敵目撃情報のみ管理)
 # ============================================================================
 
+
 class GuardMemory:
     def __init__(self):
         self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
@@ -601,19 +621,29 @@ class GuardMemory:
             tracked = None
             if self.last_seen_enemy is not None:
                 tracked_name = self.last_seen_enemy.get("name")
-                tracked = next((d for d in visible_enemies if d.name == tracked_name), None)
+                tracked = next(
+                    (d for d in visible_enemies if d.name == tracked_name), None
+                )
             if tracked is None:
                 # 解除中の敵がいれば最優先、いなければ最も近い敵を追跡する
                 defusing = [d for d in visible_enemies if d.defuse_timer > 0]
                 pool = defusing if defusing else visible_enemies
                 tracked = min(
                     pool,
-                    key=lambda d: min(
-                        max(abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1]))
-                        for a in alive_attackers
-                    ) if alive_attackers else 0,
+                    key=lambda d: (
+                        min(
+                            max(abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1]))
+                            for a in alive_attackers
+                        )
+                        if alive_attackers
+                        else 0
+                    ),
                 )
-            self.last_seen_enemy = {"pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0}
+            self.last_seen_enemy = {
+                "pos": tuple(tracked.pos),
+                "name": tracked.name,
+                "tick_ago": 0,
+            }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
             if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
@@ -624,15 +654,22 @@ class GuardMemory:
 # ネットワーク
 # ============================================================================
 
+
 class AttackerGuardDuelingDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1)
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
+        )
 
     def forward(self, x):
         f = self.feature(x)
@@ -641,7 +678,9 @@ class AttackerGuardDuelingDQN(nn.Module):
         return v + (a - a.mean(dim=1, keepdim=True))
 
 
-Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done"))
+Transition = namedtuple(
+    "Transition", ("obs", "action", "reward", "next_obs", "next_mask", "done")
+)
 
 
 class ReplayBuffer:
@@ -663,9 +702,18 @@ class ReplayBuffer:
 # 観測構築
 # ============================================================================
 
+
 def build_observation(
-    unit, attackers, defenders, guard_memory, smoke_cells, own_smoke_active,
-    detonate_timer, spike_dist_map, sighting_dist_map, unit_has_spike_los,
+    unit,
+    attackers,
+    defenders,
+    guard_memory,
+    smoke_cells,
+    own_smoke_active,
+    detonate_timer,
+    spike_dist_map,
+    sighting_dist_map,
+    unit_has_spike_los,
     active_defuse_info,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
@@ -689,18 +737,26 @@ def build_observation(
     obs[10] = len(teammates) / 4.0
     if teammates:
         nearest_d = min(
-            max(abs(t.pos[0] - unit.pos[0]), abs(t.pos[1] - unit.pos[1])) for t in teammates
+            max(abs(t.pos[0] - unit.pos[0]), abs(t.pos[1] - unit.pos[1]))
+            for t in teammates
         )
         obs[11] = min(nearest_d, HEIGHT) / HEIGHT
 
-    obs[12] = 1.0 if any(
-        d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0) for d in defenders
-    ) else 0.0
+    obs[12] = (
+        1.0
+        if any(
+            d.is_alive and (d.blind_remaining > 0 or d.reveal_remaining > 0)
+            for d in defenders
+        )
+        else 0.0
+    )
     obs[13] = 1.0 if own_smoke_active else 0.0
 
     # プラント地点(常時既知)への距離・方向・LOS
     dist_here = spike_dist_map[r0, c0]
-    obs[14] = min(dist_here if dist_here >= 0 else HEIGHT + WIDTH, HEIGHT + WIDTH) / (HEIGHT + WIDTH)
+    obs[14] = min(dist_here if dist_here >= 0 else HEIGHT + WIDTH, HEIGHT + WIDTH) / (
+        HEIGHT + WIDTH
+    )
     best_dr, best_dc = bfs_best_direction(spike_dist_map, r0, c0)
     obs[15] = float(best_dr)
     obs[16] = float(best_dc)
@@ -722,7 +778,10 @@ def build_observation(
         )
         obs[23] = (nearest_enemy.pos[0] - unit.pos[0]) / HEIGHT
         obs[24] = (nearest_enemy.pos[1] - unit.pos[1]) / WIDTH
-        dist = max(abs(nearest_enemy.pos[0] - unit.pos[0]), abs(nearest_enemy.pos[1] - unit.pos[1]))
+        dist = max(
+            abs(nearest_enemy.pos[0] - unit.pos[0]),
+            abs(nearest_enemy.pos[1] - unit.pos[1]),
+        )
         obs[25] = min(dist, HEIGHT) / HEIGHT
 
     # 現在進行中の解除情報(LOS不要、常時把握できる仕様。battle_logic.pyの
@@ -765,7 +824,8 @@ def build_action_mask(unit, occupied, lock_movement=False):
             continue
         nr, nc = r + dr, c + dc
         walkable = (
-            0 <= nr < HEIGHT and 0 <= nc < WIDTH
+            0 <= nr < HEIGHT
+            and 0 <= nc < WIDTH
             and GRID[nr, nc] != 1
             and (nr, nc) not in occupied
         )
@@ -783,6 +843,7 @@ def build_action_mask(unit, occupied, lock_movement=False):
 # ============================================================================
 # 環境本体
 # ============================================================================
+
 
 class GuardEnv:
     """プラント後フェーズを模した簡易マルチエージェント環境。
@@ -844,7 +905,8 @@ class GuardEnv:
     def _update_sighting_dist_map(self):
         self.sighting_dist_map = (
             bfs_distance_map(self.guard_memory.last_seen_enemy["pos"])
-            if self.guard_memory.last_seen_enemy is not None else None
+            if self.guard_memory.last_seen_enemy is not None
+            else None
         )
 
     def _smoke_cells(self):
@@ -858,7 +920,9 @@ class GuardEnv:
         return any(s["team"] == team and s["remaining_ticks"] > 0 for s in self.smokes)
 
     def _active_defuse_info(self):
-        defuser = next((d for d in self.defenders if d.is_alive and d.defuse_timer > 0), None)
+        defuser = next(
+            (d for d in self.defenders if d.is_alive and d.defuse_timer > 0), None
+        )
         if defuser is None:
             return None
         return {
@@ -876,16 +940,26 @@ class GuardEnv:
                 continue
             unit_has_spike_los = has_los(a.pos, self.planted_pos, smoke_cells)
             obs_dict[a.name] = build_observation(
-                a, self.attackers, self.defenders, self.guard_memory,
-                smoke_cells, self._own_smoke_active("A"), self.detonate_timer,
-                self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
+                a,
+                self.attackers,
+                self.defenders,
+                self.guard_memory,
+                smoke_cells,
+                self._own_smoke_active("A"),
+                self.detonate_timer,
+                self.spike_dist_map,
+                self.sighting_dist_map,
+                unit_has_spike_los,
                 active_defuse,
             )
             own_occupied = occupied - {tuple(a.pos)}
             has_enemy_los = any(
-                d.is_alive and has_los(a.pos, d.pos, smoke_cells) for d in self.defenders
+                d.is_alive and has_los(a.pos, d.pos, smoke_cells)
+                for d in self.defenders
             )
-            mask_dict[a.name] = build_action_mask(a, own_occupied, lock_movement=has_enemy_los)
+            mask_dict[a.name] = build_action_mask(
+                a, own_occupied, lock_movement=has_enemy_los
+            )
         return obs_dict, mask_dict
 
     # -- メインステップ ---------------------------------------------------
@@ -932,7 +1006,12 @@ class GuardEnv:
             if random.random() < 0.1:
                 nxt = _random_step(tuple(d.pos), own_occupied)
             else:
-                nxt = _bfs_next_step(tuple(d.pos), self.planted_pos, own_occupied, allow_adjacent_goal=True)
+                nxt = _bfs_next_step(
+                    tuple(d.pos),
+                    self.planted_pos,
+                    own_occupied,
+                    allow_adjacent_goal=True,
+                )
             dr, dc = nxt[0] - d.pos[0], nxt[1] - d.pos[1]
             move_plans.append((d, (dr, dc)))
 
@@ -944,7 +1023,9 @@ class GuardEnv:
             move_plans.append((a, (dr, dc)))
 
             visible_enemies = [
-                d for d in self.defenders if d.is_alive and has_los(a.pos, d.pos, smoke_cells)
+                d
+                for d in self.defenders
+                if d.is_alive and has_los(a.pos, d.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
 
@@ -957,20 +1038,28 @@ class GuardEnv:
 
             if use_ability:
                 ability_whiff[a.name] = not has_enemy_los
-                ability_overlap[a.name] = (
-                    pre_tick_flash_recon_active and a.role in ("FLASH", "RECON")
+                ability_overlap[a.name] = pre_tick_flash_recon_active and a.role in (
+                    "FLASH",
+                    "RECON",
                 )
                 if a.charges > 0:
                     if visible_enemies:
                         nearest = min(
                             visible_enemies,
-                            key=lambda d: max(abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1])),
+                            key=lambda d: max(
+                                abs(d.pos[0] - a.pos[0]), abs(d.pos[1] - a.pos[1])
+                            ),
                         )
-                        dist = max(abs(nearest.pos[0] - a.pos[0]), abs(nearest.pos[1] - a.pos[1]))
+                        dist = max(
+                            abs(nearest.pos[0] - a.pos[0]),
+                            abs(nearest.pos[1] - a.pos[1]),
+                        )
                         if dist <= ABILITY_RANGE:
                             ability_requests.append((a, tuple(nearest.pos)))
                     elif self.guard_memory.last_seen_enemy is not None:
-                        ability_requests.append((a, self.guard_memory.last_seen_enemy["pos"]))
+                        ability_requests.append(
+                            (a, self.guard_memory.last_seen_enemy["pos"])
+                        )
                     else:
                         # 視認情報が全く無い場合はプラント地点周辺を予防的に牽制する
                         ability_requests.append((a, self.planted_pos))
@@ -1002,9 +1091,13 @@ class GuardEnv:
                     for cc in range(tc - 1, tc + 2)
                     if 0 <= rr < HEIGHT and 0 <= cc < WIDTH and GRID[rr, cc] != 1
                 }
-                self.smokes.append({
-                    "cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "team": unit.team,
-                })
+                self.smokes.append(
+                    {
+                        "cells": cells,
+                        "remaining_ticks": SMOKE_DURATION_TICKS,
+                        "team": unit.team,
+                    }
+                )
             elif unit.role == "FLASH":
                 for d in self.defenders:
                     if d.is_alive and has_los(target_pos, d.pos, smoke_cells):
@@ -1012,13 +1105,17 @@ class GuardEnv:
             elif unit.role == "RECON":
                 for d in self.defenders:
                     if d.is_alive and has_los(target_pos, d.pos, smoke_cells):
-                        d.reveal_remaining = max(d.reveal_remaining, REVEAL_DURATION_TICKS)
+                        d.reveal_remaining = max(
+                            d.reveal_remaining, REVEAL_DURATION_TICKS
+                        )
 
         self._resolve_shots()
 
         # 解除者が死亡していたらロックを解放する(射撃解決後に判定)
         if self.active_defuser_name is not None:
-            active = next((d for d in self.defenders if d.name == self.active_defuser_name), None)
+            active = next(
+                (d for d in self.defenders if d.name == self.active_defuser_name), None
+            )
             if active is None or not active.is_alive:
                 self.active_defuser_name = None
 
@@ -1034,7 +1131,8 @@ class GuardEnv:
         self.detonate_timer -= 1
 
         defuse_completed = any(
-            d.is_alive and d.defuse_timer >= DEFUSE_REQUIRED_TICKS for d in self.defenders
+            d.is_alive and d.defuse_timer >= DEFUSE_REQUIRED_TICKS
+            for d in self.defenders
         )
 
         rewards = self._compute_rewards(
@@ -1082,7 +1180,8 @@ class GuardEnv:
 
         for shooter in alive:
             targets = [
-                t for t in alive
+                t
+                for t in alive
                 if t.team != shooter.team and has_los(shooter.pos, t.pos, smoke_cells)
             ]
             if not targets:
@@ -1091,7 +1190,8 @@ class GuardEnv:
                 targets,
                 key=lambda t: (
                     max(abs(t.pos[0] - shooter.pos[0]), abs(t.pos[1] - shooter.pos[1])),
-                    t.hp, t.name,
+                    t.hp,
+                    t.name,
                 ),
             )
             shot_intents.append((shooter, target))
@@ -1109,7 +1209,9 @@ class GuardEnv:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
 
             debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0
-            effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
+            effective_dodge = target.dodge_rate * (
+                REVEALED_DODGE_MULTIPLIER if debuffed else 1.0
+            )
             hit_chance = accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
@@ -1120,7 +1222,9 @@ class GuardEnv:
                 headshot = random.random() < shooter.hs_rate
                 damage = HEADSHOT_DAMAGE if headshot else BODY_DAMAGE
                 target.hp = max(0, target.hp - damage)
-                self.last_shots.append({"shooter": shooter, "target": target, "hit": True})
+                self.last_shots.append(
+                    {"shooter": shooter, "target": target, "hit": True}
+                )
                 if target.hp <= 0:
                     target.is_alive = False
                     shooter.kills += 1
@@ -1129,7 +1233,9 @@ class GuardEnv:
                         if self.active_defuser_name == target.name:
                             self.active_defuser_name = None
             else:
-                self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
+                self.last_shots.append(
+                    {"shooter": shooter, "target": target, "hit": False}
+                )
 
     def _priority_mode_and_distmap(self, attacker):
         active_defuse = self._active_defuse_info()
@@ -1141,7 +1247,9 @@ class GuardEnv:
             return "sighting", self.sighting_dist_map, target_key
         return "position", attacker.assigned_guard_dist_map, "position"
 
-    def _compute_rewards(self, pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle):
+    def _compute_rewards(
+        self, pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle
+    ):
         rewards = {}
         smoke_cells = self._smoke_cells()
 
@@ -1171,14 +1279,20 @@ class GuardEnv:
                 a.prev_priority_dist = bfs_dist
 
                 if mode == "defuse_alert":
-                    r += GUARD_POSITION_PULL_REWARD * delta * 2.0  # 解除中は接近を強く促す
+                    r += (
+                        GUARD_POSITION_PULL_REWARD * delta * 2.0
+                    )  # 解除中は接近を強く促す
                 elif mode == "sighting":
                     r += GUARD_POSITION_PULL_REWARD * delta
                 else:
                     if bfs_dist > GUARD_POS_REACH_RADIUS:
                         r += GUARD_POSITION_PULL_REWARD * delta
                     else:
-                        r += HOLD_POSITION_BONUS if not a.moved_this_tick else HOLD_POSITION_PENALTY
+                        r += (
+                            HOLD_POSITION_BONUS
+                            if not a.moved_this_tick
+                            else HOLD_POSITION_PENALTY
+                        )
 
             # プラント地点にLOSが通っている間、静止していれば常時警戒ボーナス
             if not a.moved_this_tick and has_los(a.pos, self.planted_pos, smoke_cells):
@@ -1227,7 +1341,10 @@ class GuardEnv:
 # 学習ループ
 # ============================================================================
 
-def epsilon_by_episode(episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8):
+
+def epsilon_by_episode(
+    episode, total_episodes=EPISODE_COUNT, eps_start=1.0, eps_end=0.05, decay_ratio=0.8
+):
     decay_episodes = total_episodes * decay_ratio
     return max(eps_end, eps_start - (eps_start - eps_end) * episode / decay_episodes)
 
@@ -1251,10 +1368,16 @@ def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
 
     batch = buffer.sample(batch_size)
     obs_batch = torch.as_tensor(np.array(batch.obs), dtype=torch.float32, device=DEVICE)
-    action_batch = torch.as_tensor(batch.action, dtype=torch.int64, device=DEVICE).unsqueeze(1)
+    action_batch = torch.as_tensor(
+        batch.action, dtype=torch.int64, device=DEVICE
+    ).unsqueeze(1)
     reward_batch = torch.as_tensor(batch.reward, dtype=torch.float32, device=DEVICE)
-    next_obs_batch = torch.as_tensor(np.array(batch.next_obs), dtype=torch.float32, device=DEVICE)
-    next_mask_batch = torch.as_tensor(np.array(batch.next_mask), dtype=torch.bool, device=DEVICE)
+    next_obs_batch = torch.as_tensor(
+        np.array(batch.next_obs), dtype=torch.float32, device=DEVICE
+    )
+    next_mask_batch = torch.as_tensor(
+        np.array(batch.next_mask), dtype=torch.bool, device=DEVICE
+    )
     done_batch = torch.as_tensor(batch.done, dtype=torch.float32, device=DEVICE)
 
     q_values = policy_net(obs_batch).gather(1, action_batch).squeeze(1)
@@ -1343,7 +1466,7 @@ def train(
         if episode % 20 == 0:
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            start_time = time.perf_counter();
+            start_time = time.perf_counter()
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} elapse={elapsed_time:.1f} "
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
@@ -1353,7 +1476,9 @@ def train(
         if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
             best_avg_reward = avg_reward
             torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
-            print(f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}")
+            print(
+                f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}"
+            )
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)

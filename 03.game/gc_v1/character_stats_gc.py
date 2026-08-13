@@ -33,7 +33,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
 }
 
-GC_ROSTER_ORDER = ["Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"]
+GC_ROSTER_ORDER = ["Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"]
 
 # 旧コードとの互換用エイリアス
 CHARACTER_STATS = CHARACTER_TABLE

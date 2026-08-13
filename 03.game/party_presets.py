@@ -161,7 +161,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Ghost Champions": TeamPreset(
         name="Ghost Champions",
-        players=("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        players=("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         igl="SugarZ3ro",
         spike_holder="Absol",
         description="個人技とマクロのバランス",

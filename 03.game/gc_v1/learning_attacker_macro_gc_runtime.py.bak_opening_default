@@ -237,9 +237,8 @@ class LearningAttackerMacroGCController:
         self.game = game
 
     def reset_round(self):
-        # Opening strategy is NOT forced to DEFAULT.
-        # The first real-game tick immediately runs the DQN decision.
         self.env.reset(
+            forced_strategy="DEFAULT",
             forced_curriculum_mode="FREE",
         )
         self._last_real_tick = None
