@@ -6,6 +6,8 @@ from controllers import UserInputController
 from game_core import (
     COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_TICKS,
     COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS, SMOKE_WARNING_TICKS,
+    EXPLOSION_DURATION_TICKS, EXPLOSION_START_RADIUS, EXPLOSION_MAX_RADIUS,
+    EXPLOSION_FILL_COLOR, EXPLOSION_OUTLINE_COLOR, EXPLOSION_OUTLINE_WIDTH,
 )
 
 # サイドパネル上部のヘッダー高さ。ここを変えると _draw_team_panel と
@@ -492,6 +494,23 @@ class RenderingUIMixin:
             text="ACE!" if is_ace else "CLUTCH!",
             fill=accent, font=("Arial", 26, "bold")
         )
+    
+    def _draw_explosion_effect(self):
+        """スパイク位置を中心に黒い円が広がる爆発演出を描く。"""
+        effect = self.explosion_effect
+        pr, pc = effect["pos"]
+        progress = min(1.0, effect["ticks_elapsed"] / max(1, EXPLOSION_DURATION_TICKS))
+
+        radius = EXPLOSION_START_RADIUS + (EXPLOSION_MAX_RADIUS - EXPLOSION_START_RADIUS) * progress
+
+        cx = self._map_x((pc + 0.5) * self.cell_size)
+        cy = (pr + 0.5) * self.cell_size
+
+        self.canvas.create_oval(
+            cx - radius, cy - radius, cx + radius, cy + radius,
+            fill=EXPLOSION_FILL_COLOR, outline=EXPLOSION_OUTLINE_COLOR,
+            width=EXPLOSION_OUTLINE_WIDTH,
+        )
 
     def draw(self):
         if self.headless:
@@ -550,6 +569,9 @@ class RenderingUIMixin:
             sr, sc = self.spike_pos
             x1 = self._map_x(sc*self.cell_size)
             self.canvas.create_oval(x1+2, sr*self.cell_size+2, x1+self.cell_size-2, (sr+1)*self.cell_size-2, fill="black", outline="")
+
+        if getattr(self, "explosion_effect", None) is not None:
+            self._draw_explosion_effect()
 
         if self.last_shot:
             shooter = self.last_shot["shooter"]

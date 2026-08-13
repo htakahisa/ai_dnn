@@ -38,6 +38,14 @@ SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
 CLUTCH_ACE_BANNER_TICKS = 10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
 
+# スパイク爆発の演出設定。TICK_TIME=100msなら DURATION=8 で約0.8秒。
+EXPLOSION_DURATION_TICKS = 4       # 広がりきるまでのTick数（速さの調整はこれ）
+EXPLOSION_START_RADIUS = 4         # 開始時の半径(px)
+EXPLOSION_MAX_RADIUS = 200          # 広がりきった時の半径(px)（大きさの調整はこれ）
+EXPLOSION_FILL_COLOR = "#0d0d0d"
+EXPLOSION_OUTLINE_COLOR = "#ffffff"
+EXPLOSION_OUTLINE_WIDTH = 3
+
 # とるようパラメータ
 ABILITY_TYPES = ["flash", "smoke", "recon", "none"]
 FLASH_BLIND_TICKS = 3
