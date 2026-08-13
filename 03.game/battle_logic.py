@@ -20,6 +20,7 @@ from game_core import (
     WINNING_ROUNDS,
     DEFUSE_REQUIRED,
     CLUTCH_ACE_BANNER_TICKS,
+    EXPLOSION_DURATION_TICKS,
 )
 
 
@@ -367,7 +368,11 @@ class BattleLogicMixin:
             banner_ticks = (
                 CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
             )
-            self.round_transition_ticks_left = ROUND_TRANSITION_TICKS + banner_ticks
+            explosion_ticks = (
+                EXPLOSION_DURATION_TICKS if self.explosion_effect else 0
+            )
+            extra_ticks = max(banner_ticks, explosion_ticks)
+            self.round_transition_ticks_left = ROUND_TRANSITION_TICKS + extra_ticks
             self._advance_round_transition()
         else:
             self.init_round()
@@ -377,20 +382,27 @@ class BattleLogicMixin:
             return
         if self.round_transition_ticks_left <= 0:
             self.special_round_banner = None
+            self.explosion_effect = None
             self.init_round()
             self.loop()
             return
+        if self.explosion_effect is not None:
+            self.explosion_effect["ticks_elapsed"] = min(
+                EXPLOSION_DURATION_TICKS,
+                self.explosion_effect["ticks_elapsed"] + 1,
+            )
         self.round_transition_ticks_left -= 1
         self.draw()
         self.root.after(TICK_TIME, self._advance_round_transition)
 
     def _ensure_round_tracking_state(self):
-        """ラウンドが切り替わったら clutch/ace 用の状態をリセットする。"""
+        """ラウンドが切り替わったら clutch/ace/爆発 用の状態をリセットする。"""
         round_key = getattr(self, "current_round", None)
         if getattr(self, "_round_tracking_round_key", None) != round_key:
             self._round_tracking_round_key = round_key
             self.clutch_watch = {}
             self.special_round_banner = None
+            self.explosion_effect = None
 
     def _check_special_round_banner(self, winning_team):
         """ラウンド勝利チームに ACE / CLUTCH が発生していたかを判定する。"""
@@ -676,6 +688,10 @@ class BattleLogicMixin:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
                 self._check_special_round_banner("A")
+                self.explosion_effect = {
+                    "pos": self.planted_pos,
+                    "ticks_elapsed": 0,
+                }
                 if not self.headless:
                     self.label.config(
                         text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
