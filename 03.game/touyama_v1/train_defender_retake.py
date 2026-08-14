@@ -868,6 +868,8 @@ ABILITY_NO_EFFECT_PENALTY = -0.3
 FLASH_EFFECT_BONUS_PER_ENEMY = 0.5
 RECON_EFFECT_BONUS_PER_ENEMY = 0.3
 SMOKE_EFFECT_BONUS_PER_BLOCKED = 0.4
+SMOKE_COVER_DEFUSE_COMPLETE_BONUS = 2.0  # 解除完了の瞬間、スモークに覆われていれば加算
+SMOKE_COVER_MIN_REMAIN_TICKS = DEFUSE_REQUIRED_TICKS - DEFUSE_SAFETY_MARGIN_TICKS  # 開始時に要求する最低スモーク残りtick
 DAMAGE_REWARD_SCALE = 0.01
 DEBUFF_HIT_MULTIPLIER = 1.5
 KILL_REWARD = 3.0
@@ -895,6 +897,19 @@ def snapshot_before(env):
             "defuse_timer": char.defuse_timer,
         }
     return before
+
+def _smoke_covering(env, pos):
+    """posを覆っている、味方(Defender)が設置した有効なスモークのうち、
+    remaining_ticksが最大のものを返す(無ければNone)。"""
+    defender_names = {d.name for d in env.defenders()}
+    pos_t = tuple(pos)
+    covering = [
+        s for s in env.smokes
+        if pos_t in s["cells"] and s["owner"] in defender_names and s["remaining_ticks"] > 0
+    ]
+    if not covering:
+        return None
+    return max(covering, key=lambda s: s["remaining_ticks"])
 
 
 def compute_rewards(env, before, chosen_actions):
@@ -962,20 +977,31 @@ def compute_rewards(env, before, chosen_actions):
                     reward += RECON_EFFECT_BONUS_PER_ENEMY * effect["value"]
                 elif effect["type"] == "SMOKE":
                     reward += SMOKE_EFFECT_BONUS_PER_BLOCKED * effect["value"]
-                if effect["value"] == 0:
+                # 💡追加: SMOKEは「設置時点でLOSを遮断できたか」ではなく
+                # 「その後の解除を隠せたか」で評価したいため、即時効果0でも
+                # no-effectペナルティは科さない(評価はdefuse系の新ボーナスに委ねる)。
+                if effect["value"] == 0 and effect["type"] != "SMOKE":
                     reward += ABILITY_NO_EFFECT_PENALTY
             else:
                 reward += ABILITY_PREMATURE_PENALTY
 
         if char.defuse_timer > b["defuse_timer"]:
             reward += DEFUSE_PROGRESS_REWARD
+            # 💡変更: tickごと/開始時のボーナスは中断してもリセットされずに得られてしまい
+            # (完走せずに稼げる)ファーミングの抜け道になっていたため撤回。
+            # 「解除タイマーが完了ラインに到達した瞬間、スモークに覆われていたか」
+            # だけを見る一括ボーナスに変更する(完走しないと得られない)。
+            if (
+                b["defuse_timer"] < DEFUSE_REQUIRED_TICKS
+                and char.defuse_timer >= DEFUSE_REQUIRED_TICKS
+                and _smoke_covering(env, char.pos) is not None
+            ):
+                reward += SMOKE_COVER_DEFUSE_COMPLETE_BONUS
 
         if action_id == ACTION_DEFUSE and b["defuse_timer"] == 0 and char.defuse_timer > 0:
             threat = any(
                 e.is_alive and env.check_line_of_sight(char, e) for e in env.attackers()
             )
-            # 💡変更: 解除に最低限必要な時間(DEFUSE_REQUIRED_TICKS)+安全マージンを
-            # 切っている場合は、脅威がいてもペナルティを科さない(間に合わなくなるのを防ぐ)。
             time_critical_for_defuse = env.detonate_timer <= (DEFUSE_REQUIRED_TICKS + DEFUSE_SAFETY_MARGIN_TICKS)
             if threat and not time_critical_for_defuse:
                 reward += UNSAFE_DEFUSE_PENALTY
@@ -1151,6 +1177,8 @@ def main():
 
         num_eval_episodes = 200
         if episode % 500 == 0:
+            print(f"[EVAL EP {episode}/{EPISODE_COUNT}]")
+
             eval_win_rate, eval_entered_rate = evaluate_greedy(
                 env, net, obs_dim, num_eval_episodes=200
             )
@@ -1166,7 +1194,6 @@ def main():
             )
 
             print(
-                f"[EVAL EP {episode}/{EPISODE_COUNT}] "
                 f"greedy win_rate(200 episodes) = {eval_win_rate:.3f}, "
                 f"eval_entered_rate={eval_entered_rate:.3f} "
                 f"elapse={elapsed_time:.1f}"
