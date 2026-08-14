@@ -78,6 +78,8 @@ from game_core import (
 )
 
 EPISODE_COUNT = 8000
+EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
+EVAL_EPISODES = 5         # 1回の評価で何エピソード分プレイして平均するか
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -103,7 +105,7 @@ MAX_TICKS = ROUND_DURATION_TICKS  # 90
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30
-REACH_RADIUS = 1        # 担当ポジションへ「到着した」とみなすBFS距離
+REACH_RADIUS = 0        # 担当ポジションへ「到着した」とみなすBFS距離
 
 # 敵(Attacker)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
 DEFAULT_ACCURACY = 0.50
@@ -135,6 +137,8 @@ ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 ABILITY_AIMED_REWARD = 0.03      # 視認あり・射程内で使用(外れても付与、whiffとは排他)
 ABILITY_HIT_BONUS = 0.10         # 上記に加え、実際に命中/デバフ成立した場合に追加
+SMOKE_SPIKE_TARGET_BONUS = 0.08  # SMOKE: スパイク保持者/地面スパイクに近い敵へ使用
+SMOKE_NONSPIKE_TARGET_PENALTY = -0.04  # SMOKE: 上記以外(フェイク候補含む)の視認敵へ使用
 DEBUFF_KILL_BONUS = 0.3
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
@@ -721,6 +725,23 @@ class SearchEnv:
             )
         return obs_dict, mask_dict
 
+    def _select_smoke_priority_target(unit, visible_enemies, spike_ground_pos):
+        """SMOKE専用: 視認中の敵の中から優先ターゲットを選ぶ。
+        1. スパイク保持者がいれば最優先。
+        2. いなければ、地面に落ちているスパイクに最も近い敵(拾いに来ている可能性)。
+        3. どちらも無ければNone(呼び出し側で従来通りnearest視認にフォールバックし、
+        その場合はability_smoke_valid_target側でFalse扱いにして報酬側にペナルティを乗せる)。
+        """
+        holder = next((a for a in visible_enemies if a.has_spike), None)
+        if holder is not None:
+            return holder
+        if spike_ground_pos is not None:
+            return min(
+                visible_enemies,
+                key=lambda a: max(abs(a.pos[0]-spike_ground_pos[0]), abs(a.pos[1]-spike_ground_pos[1])),
+            )
+        return None
+
     # -- Attacker側の簡易ヒューリスティック ------------------------------
     def _attacker_decide_move(self, unit):
         goal_dist_map = SITE_DIST_MAPS[self.carrier_target_site_idx]
@@ -778,6 +799,7 @@ class SearchEnv:
         ability_whiff = {}
         ability_overlap = {}
         held_angle = {}
+        ability_smoke_valid_target = {}
 
         carriers = [a for a in self.attackers if a.is_alive and a.has_spike]
         others = [a for a in self.attackers if a.is_alive and not a.has_spike]
@@ -805,6 +827,8 @@ class SearchEnv:
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
                     dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
+                else:
+                    dr, dc = 0, 0
             elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
                 # spike確定 or 接近中(spike_watchは除く): 目標座標は既知なので、
                 # 移動方向はBFS最短方向を強制し、ネットワークにはアビリティ使用の
@@ -852,13 +876,24 @@ class SearchEnv:
                     # 同じユニットが毎tickwhiffを繰り返し選べてしまっていた。
                     d.charges -= 1
                     if visible_enemies:
-                        nearest = min(
-                            visible_enemies,
-                            key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
-                        )
-                        dist = max(abs(nearest.pos[0]-d.pos[0]), abs(nearest.pos[1]-d.pos[1]))
+                        if d.role == "SMOKE":
+                            target = _select_smoke_priority_target(
+                                d, visible_enemies, self.spike_ground_pos
+                            )
+                            ability_smoke_valid_target[d.name] = target is not None
+                            if target is None:
+                                target = min(
+                                    visible_enemies,
+                                    key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
+                                )
+                        else:
+                            target = min(
+                                visible_enemies,
+                                key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
+                            )
+                        dist = max(abs(target.pos[0]-d.pos[0]), abs(target.pos[1]-d.pos[1]))
                         if dist <= ABILITY_RANGE:
-                            ability_requests.append((d, tuple(nearest.pos)))
+                            ability_requests.append((d, tuple(target.pos)))
                     elif self.team_memory.last_seen_enemy is not None:
                         ability_requests.append((d, self.team_memory.last_seen_enemy["pos"]))
 
@@ -970,7 +1005,8 @@ class SearchEnv:
             self._plant_progress = 0
 
         rewards = self._compute_rewards(
-            pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit
+            pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit,
+            ability_smoke_valid_target,
         )
 
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
@@ -1067,8 +1103,12 @@ class SearchEnv:
             return "sighting", self.sighting_dist_map, target_key
         return "position", defender.assigned_defense_dist_map, "position"
 
-    def _compute_rewards(self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit=None):
+    def _compute_rewards(
+        self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle,
+        ability_hit=None, ability_smoke_valid_target=None,
+    ):
         ability_hit = ability_hit or {}
+        ability_smoke_valid_target = ability_smoke_valid_target or {}
         rewards = {}
         for d in self.defenders:
             r = STEP_PENALTY
@@ -1128,6 +1168,11 @@ class SearchEnv:
                     r += ABILITY_AIMED_REWARD
                     if ability_hit.get(d.name):
                         r += ABILITY_HIT_BONUS
+                    if d.role == "SMOKE" and d.name in ability_smoke_valid_target:
+                        if ability_smoke_valid_target[d.name]:
+                            r += SMOKE_SPIKE_TARGET_BONUS
+                        else:
+                            r += SMOKE_NONSPIKE_TARGET_PENALTY
             if ability_overlap.get(d.name):
                 r += ABILITY_OVERLAP_PENALTY
 
@@ -1193,6 +1238,7 @@ def train(
     global_step = 0
     best_avg_reward = -float("inf")
     episode_reward_history = deque(maxlen=100)
+    eval_avg_reward_history = deque(maxlen=5)  # epsilon=0評価の平滑化用
 
     # --- 診断用(1): キャラ別(ロール別)の直近100エピソード報酬履歴 ---
     per_name_reward_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
@@ -1313,21 +1359,20 @@ def train(
                 for name in TOUYAMA_ROSTER_ORDER
                 if len(per_name_reward_history[name]) > 0
             )
-            print(f"  [PER-CHAR avg100] {per_name_str}")
+            #print(f"  [PER-CHAR avg100] {per_name_str}")
 
             # --- 診断用(4): positionモード中の平均BFS距離・到着率・移動率 ---
-            position_diag_str = " / ".join(
+            position_diag_str = " \n ".join(
                 f"{name}(dist={sum(per_name_avg_dist_history[name]) / len(per_name_avg_dist_history[name]):.2f},"
                 f"arrive={sum(per_name_arrival_rate_history[name]) / len(per_name_arrival_rate_history[name]) * 100:.1f}%,"
                 f"move={sum(per_name_move_rate_history[name]) / len(per_name_move_rate_history[name]) * 100:.1f}%)"
                 for name in TOUYAMA_ROSTER_ORDER
                 if len(per_name_avg_dist_history[name]) > 0
             )
-            
-            print(f"  [POSITION-MODE diag] {position_diag_str}")
+            print(f"  [POSITION-MODE diag]\n {position_diag_str}")
 
             # --- 診断用(5): 直近<=100エピソード合計でのアビリティ使用内訳 ---
-            ability_diag_str = " / ".join(
+            ability_diag_str = " \n ".join(
                 f"{name}(aimed={sum(per_name_ability_history[name]['aimed'])},"
                 f"hit={sum(per_name_ability_history[name]['hit'])},"
                 f"miss={sum(per_name_ability_history[name]['miss'])},"
@@ -1336,18 +1381,47 @@ def train(
                 f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])})"
                 for name in TOUYAMA_ROSTER_ORDER
             )
-            print(f"  [ABILITY diag, sum over last<=100 eps] {ability_diag_str}")
+            print(f"  [ABILITY diag, sum over last<=100 eps]\n {ability_diag_str}")
 
-        if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
-            best_avg_reward = avg_reward
-            torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
-            print(f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}")
+        if episode % EVAL_EVERY == 0:
+            eval_avg = evaluate_policy(policy_net, env, EVAL_EPISODES)
+            eval_avg_reward_history.append(eval_avg)
+            eval_avg_smoothed = sum(eval_avg_reward_history) / len(eval_avg_reward_history)
+            print(f"  [EVAL eps=0, n={EVAL_EPISODES}] avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f}")
+
+            if eval_avg_smoothed > best_avg_reward:
+                best_avg_reward = eval_avg_smoothed
+                torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
+                print(f"[SAVE] best model updated: eval_smoothed={eval_avg_smoothed:.3f} -> {MODEL_SAVE_PATH}")
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
 
     print("[DONE] training finished.")
 
+def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
+    """epsilon=0(greedy)でepisodes回プレイし、平均合計報酬を返す。
+    学習(buffer/optimizer)には一切触れない評価専用ループ。
+    policy_netのtrain/evalモードはBatchNorm等未使用のため実質影響ないが、
+    将来的な拡張に備えてeval()/train()を明示的に切り替えておく。"""
+    policy_net.eval()
+    total = 0.0
+    with torch.no_grad():
+        for _ in range(episodes):
+            obs_dict, mask_dict = env.reset()
+            ep_reward = 0.0
+            for _tick in range(MAX_TICKS):
+                action_dict = {
+                    name: select_action(policy_net, obs, mask_dict[name], 0.0)
+                    for name, obs in obs_dict.items()
+                }
+                obs_dict, mask_dict, rewards, done, _ = env.step(action_dict)
+                ep_reward += sum(rewards.values())
+                if done or not obs_dict:
+                    break
+            total += ep_reward
+    policy_net.train()
+    return total / episodes
 
 if __name__ == "__main__":
     train()

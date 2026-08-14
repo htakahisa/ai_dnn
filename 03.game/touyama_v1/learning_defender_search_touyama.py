@@ -1,6 +1,6 @@
 """touyama_v1/learning_defender_search_touyama.py
 
-固定チーム(イグルン/夢の街/ろびぃな/Tortlilyan/えんぺん)専用の
+固定チーム(いぐるん/夢の街/ろびぃな/Tortlilyan/えんぺん)専用の
 Defender「search phase」推論コントローラー(プラント前限定)。
 
 touyama_v1/train_defender_search.py で学習した Dueling DQN を読み込み、
