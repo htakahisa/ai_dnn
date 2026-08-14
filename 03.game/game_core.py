@@ -18,11 +18,11 @@ SIDE_PANEL_WIDTH = 260
 PLANT_REQUIRED_TICKS = 4
 DEFUSE_REQUIRED_TICKS = 6
 SMOKE_DURATION_TICKS = 15
-MOVING_ACCURACY = 0.50
+MOVING_ACCURACY = 0.30
 MOVING_TARGET_HIT_MULTIPLIER = 0.70
 BLIND_DURATION_TICKS = 3
 FLASH_BURST_DURATION_TICKS = 2
-BLIND_ACCURACY_MULTIPLIER = 0.30
+BLIND_ACCURACY_MULTIPLIER = 0.10
 FLASH_SPEED_CELLS_PER_TICK = 3
 FLASH_MAX_FLIGHT_TICKS = 5
 RECON_SPEED_CELLS_PER_TICK = 3
@@ -36,7 +36,9 @@ SPIKE_DETONATION_TICKS = 55
 RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
-CLUTCH_ACE_BANNER_TICKS = 10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
+CLUTCH_ACE_BANNER_TICKS = (
+    10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
+)
 
 # とるようパラメータ
 ABILITY_TYPES = ["flash", "smoke", "recon", "none"]
@@ -426,8 +428,7 @@ class Character:
             # 精神が削られているほど、既存の調子抽選を悪い側へずらす。
             # form_variance=0ならmax_condition_delta=0なので完全に無影響。
             biased_condition = (
-                raw_condition
-                - self.mental_pressure * self.max_condition_delta
+                raw_condition - self.mental_pressure * self.max_condition_delta
             )
             self.condition_modifier = max(
                 -self.max_condition_delta,

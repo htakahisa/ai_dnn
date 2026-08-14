@@ -12,6 +12,10 @@ from game_core import (
     SMOKE_DURATION_TICKS,
 )
 
+# Rush対策: Smokeの実持続時間。
+# game_core側の既存値に依存せず、このAbility実装では25Tickを使用する。
+SMOKE_DURATION_TICKS = 25
+
 
 class AbilityLosMixin:
 

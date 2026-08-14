@@ -67,10 +67,37 @@ class BattleLogicMixin:
 
         counts[new_position] = int(counts.get(new_position, 0)) + 1
 
+    def _finalize_movement_transition_state(self, char):
+        """今Tickの移動結果から、停止・Smoke境界通過状態を確定する。"""
+        char.stopped_after_move_this_tick = bool(
+            getattr(char, "moved_last_tick", False)
+            and not getattr(char, "moved_this_tick", False)
+        )
+
+        smoke_cells_now = self._smoke_cells()
+        in_smoke_now = tuple(char.pos) in smoke_cells_now
+        was_in_smoke = bool(getattr(char, "was_in_smoke_before_move", False))
+        char.entered_smoke_this_tick = bool(not was_in_smoke and in_smoke_now)
+        char.exited_smoke_this_tick = bool(was_in_smoke and not in_smoke_now)
+
     def move_character(self, char):
         r, c = char.pos
         old_pos = tuple(char.pos)
+
+        # ---------------------------------------------------------------------
+        # Rush対策用の1Tick状態
+        # ---------------------------------------------------------------------
+        # 前Tickに移動していたかを退避してから、今Tickの状態を初期化する。
+        # 「移動→停止」は、前Tick moved=True かつ今Tick moved=False で判定する。
+        char.moved_last_tick = bool(getattr(char, "moved_this_tick", False))
         char.moved_this_tick = False
+        char.stopped_after_move_this_tick = False
+
+        # Smoke境界通過も今Tick単位で記録する。
+        smoke_cells_before_move = self._smoke_cells()
+        char.was_in_smoke_before_move = old_pos in smoke_cells_before_move
+        char.entered_smoke_this_tick = False
+        char.exited_smoke_this_tick = False
 
         # ---------------------------------------------------------------------
         # プラントは自動開始しない。
@@ -199,6 +226,7 @@ class BattleLogicMixin:
             char.defuse_timer = 0
             self.execute_ai_ability(char, ability_payload)
             char.moved_this_tick = False
+            self._finalize_movement_transition_state(char)
             return
 
         if action_type == "PLANT":
@@ -229,12 +257,14 @@ class BattleLogicMixin:
 
                 # 設置中は移動・射撃を行わない。
                 char.moved_this_tick = False
+                self._finalize_movement_transition_state(char)
                 return
 
             # 無効な場所でのPLANTは失敗し、設置進捗をリセットする。
             char.is_planting = False
             char.plant_timer = 0
             char.moved_this_tick = False
+            self._finalize_movement_transition_state(char)
             return
 
         # PLANT以外を選んだ時点で設置を中断する。
@@ -250,13 +280,16 @@ class BattleLogicMixin:
                         self.active_defuser_name = char.name
                         char.defuse_timer += 1
                         # 解除完了は射撃解決後に判定する。
+                        self._finalize_movement_transition_state(char)
                         return
                     char.defuse_timer = 0
+                    self._finalize_movement_transition_state(char)
                     return
 
             if self.active_defuser_name == char.name:
                 self.active_defuser_name = None
             char.defuse_timer = 0
+            self._finalize_movement_transition_state(char)
             return
 
         # MOVE処理。解除担当者が解除をやめたらロックを解放する。
@@ -297,6 +330,7 @@ class BattleLogicMixin:
                 )
 
         char.moved_this_tick = tuple(char.pos) != old_pos
+        self._finalize_movement_transition_state(char)
 
     def get_spotted_info(self):
         spike_holder = next(
@@ -540,6 +574,22 @@ class BattleLogicMixin:
             shooter_accuracy = (
                 MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
             )
+
+            # -----------------------------------------------------------------
+            # Rush対策の射撃精度補正（すべて乗算）
+            # -----------------------------------------------------------------
+            # Smokeへ入ったTick: x0.75
+            if getattr(shooter, "entered_smoke_this_tick", False):
+                shooter_accuracy *= 0.75
+
+            # Smokeから出たTick: x0.75
+            if getattr(shooter, "exited_smoke_this_tick", False):
+                shooter_accuracy *= 0.75
+
+            # 前Tickに移動し、今Tick停止した最初のTick: x0.75
+            if getattr(shooter, "stopped_after_move_this_tick", False):
+                shooter_accuracy *= 0.75
+
             if shooter.blind_remaining > 0:
                 shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
 
