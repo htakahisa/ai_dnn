@@ -97,9 +97,9 @@ def _build_team_ai(key):
             ),
         )
 
-    if normalized == "toru_ai_v3":
+    if normalized == "toru_ai_v3.1":
         return DualRoleTeamAI(
-            name="Toru AI v3",
+            name="Toru AI v3.1",
             attacker_factory=lambda: MultiRoleAttackerController(),
             defender_factory=lambda: MultiRoleDefenderController(),
         )
