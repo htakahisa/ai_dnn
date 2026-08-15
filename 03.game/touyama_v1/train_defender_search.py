@@ -79,7 +79,8 @@ from game_core import (
 
 EPISODE_COUNT = 8000
 EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
-EVAL_EPISODES = 5         # 1回の評価で何エピソード分プレイして平均するか
+EVAL_EPISODES = 30        # 1回の評価で何エピソード分プレイして平均するか(分散低減のため5->30)
+EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.3)  # epsilonが十分下がるまでbest更新の対象外にする
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -108,10 +109,10 @@ SIGHTING_STALENESS_CAP = 30
 REACH_RADIUS = 0        # 担当ポジションへ「到着した」とみなすBFS距離
 
 # 敵(Attacker)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
-DEFAULT_ACCURACY = 0.50
-DEFAULT_DODGE = 0.12
-DEFAULT_HS_RATE = 0.20
-DEFAULT_REACTION = 100.0
+DEFAULT_ACCURACY = 0.70
+DEFAULT_DODGE = 0.42
+DEFAULT_HS_RATE = 0.30
+DEFAULT_REACTION = 150.0
 
 # ---------------------------------------------------------------------------
 # touyama_v1 固定チーム定義
@@ -128,7 +129,9 @@ print_effective_stats(TOUYAMA_EFFECTIVE_STATS, "Defender/search")
 # 優先度: SPIKE > SIGHTING > DEFENSE_POSITION > HOLD_POSITION
 # の順で明確に重みを引き離し、「待機の方が得」という学習結果を防ぐ。
 STEP_PENALTY = -0.001
-SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(ポテンシャル差分)
+SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(保持中=緊急時のみ使用)
+SPIKE_GROUND_PULL_REWARD = 0.02  # 地面に落ちたスパイクへ近づく(弱め)
+SPIKE_GROUND_APPROACH_RADIUS = 4 # 担当ポジションからこの距離以内でのみSPIKE_GROUND_PULL_REWARDを付与
 SIGHTING_PULL_REWARD = 0.05      # 敵目撃方向へ近づく(ポテンシャル差分)
 DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
 HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
@@ -267,23 +270,28 @@ DEFENSE_POS_DIST_MAPS = [bfs_distance_map(pos) for pos in DEFENSE_POSITIONS]
 # TOUYAMA_DEFENSE_ASSIGNMENT はマップ読み込み時点(上のブロック)で
 # 5/6/7/8/9 とロースター順の対応から直接確定済みのため、ここでの
 # 総当たり最適化は不要。確認用のログのみ出力する。
-print("[touyama_v1] 固定 担当ポジション割り当て(マップ上の5/6/7/8/9をロースター順に直接対応):")
-for i, _name in enumerate(TOUYAMA_ROSTER_ORDER):
-    _pos = TOUYAMA_DEFENSE_ASSIGNMENT[_name]
-    _spawn = DEFENDER_SPAWNS[i]
-    _dist = DEFENSE_POS_DIST_MAPS[i][_spawn[0], _spawn[1]]
-    print(
-        f"  {_name}: spawn={_spawn} -> "
-        f"pos={_pos}(value={TOUYAMA_DEFENSE_POSITION_VALUES[_name]}) dist={_dist}"
-    )
+# print("[touyama_v1] 固定 担当ポジション割り当て(マップ上の5/6/7/8/9をロースター順に直接対応):")
+# for i, _name in enumerate(TOUYAMA_ROSTER_ORDER):
+#     _pos = TOUYAMA_DEFENSE_ASSIGNMENT[_name]
+#     _spawn = DEFENDER_SPAWNS[i]
+#     _dist = DEFENSE_POS_DIST_MAPS[i][_spawn[0], _spawn[1]]
+#     print(
+#         f"  {_name}: spawn={_spawn} -> "
+#         f"pos={_pos}(value={TOUYAMA_DEFENSE_POSITION_VALUES[_name]}) dist={_dist}"
+#     )
+
+# print("[touyama_v1][DIAG] ろびぃな担当地点からのLOS確認:")
+# _robina_pos = TOUYAMA_DEFENSE_ASSIGNMENT["ろびぃな"]
+# for _cell in PLANT_CELLS:
+#     _los = has_los(_robina_pos, _cell)
+#     print(f"  plant_cell {_cell}: los={_los}")
 
 # --- 診断用: マップ構造そのものに起因する偏りが無いか確認する ---
 # 各キャラのスポーン地点から「最も近いdefense position」までの純粋なBFS距離
 # (貪欲割当・シャッフル順のバイアスを除いた理論上の最短値)を出力する。
 # もしこれ自体が上段/下段で大きく偏っていれば、マップ側(map_data_search.py の
 # 7の配置)がそもそも不公平であることが確定する。
-print("[touyama_v1][DIAG] DEFENSE_POSITIONS(ロースター順、値5-9) 座標一覧:", DEFENSE_POSITIONS)
-print("[touyama_v1][DIAG] DEFENDER_SPAWNS 座標一覧:", DEFENDER_SPAWNS)
+print(f"[touyama_v1][DIAG] 配置 {TOUYAMA_ROSTER_ORDER[3]}, {TOUYAMA_ROSTER_ORDER[4]}, {TOUYAMA_ROSTER_ORDER[0]}, {TOUYAMA_ROSTER_ORDER[1]}, {TOUYAMA_ROSTER_ORDER[2]}")
 for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
     spawn = DEFENDER_SPAWNS[i]
     nearest_dist = min(
@@ -296,7 +304,6 @@ for i, name in enumerate(TOUYAMA_ROSTER_ORDER):
     print(
         f"[touyama_v1][DIAG] {name} spawn={spawn} "
         f"nearest_defense_dist={nearest_dist} "
-        f"all_defense_dists_sorted={all_dists}"
     )
 
 
@@ -618,7 +625,10 @@ class SearchEnv:
         # --- 診断用: アビリティ使用の内訳(視認あり使用/命中/外れ/whiff/overlap/debuffキル)を
         # 1エピソード分蓄積する。train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
         self.ability_diag_stats = {
-            name: {"aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0, "debuff_kill": 0}
+            name: {
+                "aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0,
+                "debuff_kill": 0, "opportunity": 0, "own_any_enemy_seen": 0,
+            }
             for name in TOUYAMA_ROSTER_ORDER
         }
 
@@ -638,7 +648,10 @@ class SearchEnv:
             for name in TOUYAMA_ROSTER_ORDER
         }
         self.ability_diag_stats = {
-            name: {"aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0, "debuff_kill": 0}
+            name: {
+                "aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0,
+                "debuff_kill": 0, "opportunity": 0, "own_any_enemy_seen": 0,
+            }
             for name in TOUYAMA_ROSTER_ORDER
         }
 
@@ -710,37 +723,26 @@ class SearchEnv:
                 self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
             )
             own_occupied = occupied - {tuple(d.pos)}
-            has_enemy_los = any(
-                a.is_alive and has_los(d.pos, a.pos, smoke_cells) for a in self.attackers
-            )
+            visible_enemies_for_mask = [
+                a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
+            ]
+            has_enemy_los = bool(visible_enemies_for_mask)
             # スパイク(地面)に射線が通った時点で、それ以上通路を進ませず
             # その場で待ち伏せさせる(敵が拾いに来るところを迎撃する方が有利なため)。
             lock_movement = has_enemy_los or unit_has_spike_los
             # 敵の視認情報も直近の目撃情報も一切無い場合、use_abilityは常に無意味
             # (ability_requestsに追加されない空撃ち)になるため、探索での浪費を防ぐ
             # ためマスクの時点で選択肢から除外する。
-            has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+            # SMOKEのみ例外: 自分自身がスパイクキャリアーを直接視認している場合のみ許可。
+            if d.role == "SMOKE":
+                has_target_info = any(a.has_spike for a in visible_enemies_for_mask)
+            else:
+                has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
             mask_dict[d.name] = build_action_mask(
                 d, own_occupied, lock_movement=lock_movement, has_target_info=has_target_info
             )
         return obs_dict, mask_dict
 
-    def _select_smoke_priority_target(unit, visible_enemies, spike_ground_pos):
-        """SMOKE専用: 視認中の敵の中から優先ターゲットを選ぶ。
-        1. スパイク保持者がいれば最優先。
-        2. いなければ、地面に落ちているスパイクに最も近い敵(拾いに来ている可能性)。
-        3. どちらも無ければNone(呼び出し側で従来通りnearest視認にフォールバックし、
-        その場合はability_smoke_valid_target側でFalse扱いにして報酬側にペナルティを乗せる)。
-        """
-        holder = next((a for a in visible_enemies if a.has_spike), None)
-        if holder is not None:
-            return holder
-        if spike_ground_pos is not None:
-            return min(
-                visible_enemies,
-                key=lambda a: max(abs(a.pos[0]-spike_ground_pos[0]), abs(a.pos[1]-spike_ground_pos[1])),
-            )
-        return None
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
     def _attacker_decide_move(self, unit):
@@ -822,7 +824,18 @@ class SearchEnv:
                 continue
             (dr, dc), use_ability = decode_action(action_dict[d.name])
 
-            if in_position_phase and d.assigned_defense_dist_map is not None:
+            visible_enemies = [
+                a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
+            ]
+            has_enemy_los = bool(visible_enemies)
+
+            if has_enemy_los:
+                # 敵を直接視認中はBFS強制移動を一切行わない。
+                # 観測側のマスク(lock_movement)でネットワークはstay以外を
+                # 選べないはずだが、以前はここでBFS方向へ強制上書きしており、
+                # 交戦中でも敵の方向へ突進してしまっていた。
+                pass
+            elif in_position_phase and d.assigned_defense_dist_map is not None:
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
@@ -830,33 +843,35 @@ class SearchEnv:
                 else:
                     dr, dc = 0, 0
             elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
-                # spike確定 or 接近中(spike_watchは除く): 目標座標は既知なので、
-                # 移動方向はBFS最短方向を強制し、ネットワークにはアビリティ使用の
-                # 判断のみ委ねる。spike_watch(既にLOSが通っている)は対象外。
-                r0, c0 = int(d.pos[0]), int(d.pos[1])
-                already_watching = (
-                    not self.team_memory.spike_held
-                    and has_los(d.pos, self.team_memory.spike_pos, smoke_cells)
-                )
-                if not already_watching:
+                if self.team_memory.spike_held:
+                    r0, c0 = int(d.pos[0]), int(d.pos[1])
                     dr, dc = bfs_best_direction(self.spike_dist_map, r0, c0)
             elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
-                # sighting(目撃情報ベース追跡): 同様にBFS最短方向を強制する。
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 dr, dc = bfs_best_direction(self.sighting_dist_map, r0, c0)
 
             actual_action_dict[d.name] = encode_action((dr, dc), use_ability)
             move_plans.append((d, (dr, dc)))
-
-            visible_enemies = [
-                a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
-            ]
-            has_enemy_los = bool(visible_enemies)
             # use_abilityのマスク許可条件(has_target_info)と、実際にability_requestsへ
             # 追加されるかどうかの条件は一致している必要がある。以前はwhiff判定に
             # has_enemy_los(直接視認のみ)を使っており、sightingモード(記憶ベース)での
             # 正しい使用まで誤ってwhiff扱いしていた。
-            has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+            # SMOKEのみ例外: 味方の目撃情報(team_memory)は使わず、自分自身が
+            # スパイクキャリアーを直接視認した場合のみ有効とする
+            # (反対サイドの目撃情報で誤射しないようにするための合意事項)。
+            if d.role == "SMOKE":
+                has_target_info = any(a.has_spike for a in visible_enemies)
+            else:
+                has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+
+            if has_target_info:
+                stats = self.ability_diag_stats.get(d.name)
+                if stats is not None:
+                    stats["opportunity"] += 1
+            if d.role == "SMOKE" and visible_enemies:
+                stats = self.ability_diag_stats.get(d.name)
+                if stats is not None:
+                    stats["own_any_enemy_seen"] += 1
 
             if has_enemy_los and (dr, dc) == (0, 0):
                 held_angle[d.name] = "held_with_los"
@@ -875,22 +890,20 @@ class SearchEnv:
                     # 以前はここで消費しておらず、狙う対象が無い場合にチャージが無限に温存され、
                     # 同じユニットが毎tickwhiffを繰り返し選べてしまっていた。
                     d.charges -= 1
-                    if visible_enemies:
-                        if d.role == "SMOKE":
-                            target = _select_smoke_priority_target(
-                                d, visible_enemies, self.spike_ground_pos
-                            )
-                            ability_smoke_valid_target[d.name] = target is not None
-                            if target is None:
-                                target = min(
-                                    visible_enemies,
-                                    key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
-                                )
-                        else:
-                            target = min(
-                                visible_enemies,
-                                key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
-                            )
+                    if d.role == "SMOKE":
+                        # 自分自身が直接視認しているスパイクキャリアーのみを対象とする。
+                        # 味方の目撃情報・非キャリアー敵へのフォールバックは行わない。
+                        carrier = next((a for a in visible_enemies if a.has_spike), None)
+                        if carrier is not None:
+                            ability_smoke_valid_target[d.name] = True
+                            dist = max(abs(carrier.pos[0]-d.pos[0]), abs(carrier.pos[1]-d.pos[1]))
+                            if dist <= ABILITY_RANGE:
+                                ability_requests.append((d, tuple(carrier.pos)))
+                    elif visible_enemies:
+                        target = min(
+                            visible_enemies,
+                            key=lambda a: max(abs(a.pos[0]-d.pos[0]), abs(a.pos[1]-d.pos[1])),
+                        )
                         dist = max(abs(target.pos[0]-d.pos[0]), abs(target.pos[1]-d.pos[1]))
                         if dist <= ABILITY_RANGE:
                             ability_requests.append((d, tuple(target.pos)))
@@ -1138,7 +1151,10 @@ class SearchEnv:
                 if mode == "spike":
                     r += SPIKE_PULL_REWARD * delta
                 elif mode == "spike_approach":
-                    r += SPIKE_PULL_REWARD * delta
+                    post_dist_map = d.assigned_defense_dist_map
+                    post_dist = post_dist_map[r0, c0] if post_dist_map is not None else None
+                    if post_dist is not None and 0 <= post_dist <= SPIKE_GROUND_APPROACH_RADIUS:
+                        r += SPIKE_GROUND_PULL_REWARD * delta
                 elif mode == "spike_watch":
                     r += SPIKE_WATCH_HOLD_BONUS if not d.moved_this_tick else SPIKE_WATCH_MOVE_PENALTY
                 elif mode == "sighting":
@@ -1238,7 +1254,7 @@ def train(
     global_step = 0
     best_avg_reward = -float("inf")
     episode_reward_history = deque(maxlen=100)
-    eval_avg_reward_history = deque(maxlen=5)  # epsilon=0評価の平滑化用
+    eval_avg_reward_history = deque(maxlen=10)  # epsilon=0評価の平滑化用(5->10)
 
     # --- 診断用(1): キャラ別(ロール別)の直近100エピソード報酬履歴 ---
     per_name_reward_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
@@ -1250,7 +1266,7 @@ def train(
     per_name_move_rate_history = {name: deque(maxlen=100) for name in TOUYAMA_ROSTER_ORDER}
 
     # --- 診断用(5): アビリティ使用内訳(aimed/hit/miss/whiff/overlap/debuff_kill)の直近100エピソード履歴 ---
-    ABILITY_DIAG_KEYS = ("aimed", "hit", "miss", "whiff", "overlap", "debuff_kill")
+    ABILITY_DIAG_KEYS = ("aimed", "hit", "miss", "whiff", "overlap", "debuff_kill", "opportunity", "own_any_enemy_seen")
     per_name_ability_history = {
         name: {key: deque(maxlen=100) for key in ABILITY_DIAG_KEYS}
         for name in TOUYAMA_ROSTER_ORDER
@@ -1378,7 +1394,9 @@ def train(
                 f"miss={sum(per_name_ability_history[name]['miss'])},"
                 f"whiff={sum(per_name_ability_history[name]['whiff'])},"
                 f"overlap={sum(per_name_ability_history[name]['overlap'])},"
-                f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])})"
+                f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])},"
+                f"opp={sum(per_name_ability_history[name]['opportunity'])},"
+                f"seen={sum(per_name_ability_history[name]['own_any_enemy_seen'])})"
                 for name in TOUYAMA_ROSTER_ORDER
             )
             print(f"  [ABILITY diag, sum over last<=100 eps]\n {ability_diag_str}")
@@ -1389,7 +1407,9 @@ def train(
             eval_avg_smoothed = sum(eval_avg_reward_history) / len(eval_avg_reward_history)
             print(f"  [EVAL eps=0, n={EVAL_EPISODES}] avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f}")
 
-            if eval_avg_smoothed > best_avg_reward:
+            if episode < EVAL_MIN_EPISODE:
+                print(f"  [SAVE skip] episode={episode} < EVAL_MIN_EPISODE={EVAL_MIN_EPISODE} (epsilon依然高いため候補から除外)")
+            elif eval_avg_smoothed > best_avg_reward:
                 best_avg_reward = eval_avg_smoothed
                 torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
                 print(f"[SAVE] best model updated: eval_smoothed={eval_avg_smoothed:.3f} -> {MODEL_SAVE_PATH}")

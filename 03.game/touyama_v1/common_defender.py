@@ -25,7 +25,7 @@ controllers.py / battle_logic.py / abilities_los.py 等は引き続き
 一切importしない。
 """
 
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+from character_stats_touyama import TOUYAMA_ROSTER_ORDER
 
 TOUYAMA_COMBO_NAME = "ふわんだりぃず"
 TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
@@ -57,9 +57,9 @@ def compute_touyama_effective_stats(stats_table, roster_order=TOUYAMA_ROSTER_ORD
     effective = {}
     for name in roster_order:
         raw = stats_table[name]
-        accuracy = float(raw.hit_pct) / 100.0
-        hs_rate = float(raw.hs_pct) / 100.0
-        dodge_rate = float(raw.dodge_pct) / 100.0
+        accuracy = float(raw.hit_pct)
+        hs_rate = float(raw.hs_pct)
+        dodge_rate = float(raw.dodge_pct)
         reaction = float(raw.reaction)
 
         if raw.role == "タイガー":
