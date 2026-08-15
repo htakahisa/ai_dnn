@@ -76,14 +76,14 @@ PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c]
 SITE_BOUNDARY_COL = WIDTH // 2
 
 KNOWN_PLANT_LEFT = [(8, 3), (8, 4)]
-KNOWN_PLANT_RIGHT = [(7, 42), (8, 42), (7, 40)]
+KNOWN_PLANT_RIGHT = [(6, 42), (7, 42), (8, 42)]
 
 LEFT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] < SITE_BOUNDARY_COL]
 RIGHT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] >= SITE_BOUNDARY_COL]
 
 # CLIから上書き可能(main()内でargparseにより再代入)
 SITE_LEFT_PROB = 0.5    # 左サイトを選ぶ確率(残りは右サイト)
-KNOWN_POS_PROB = 0.8    # 選ばれたサイト内で既知位置を使う確率(残りはそのサイト範囲内のランダムPLANT_CELLS)
+KNOWN_POS_PROB = 0.5    # 選ばれたサイト内で既知位置を使う確率(残りはそのサイト範囲内のランダムPLANT_CELLS)
 
 
 def _sample_planted_pos():
