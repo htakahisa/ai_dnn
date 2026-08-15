@@ -334,10 +334,10 @@ good_directions = common_rl.good_directions
 # 軽量キャラクター表現(game_core.Character非依存)
 # ============================================================
 
-BASE_ACCURACY = 0.55
-BASE_DODGE = 0.12
-BASE_HS_RATE = 0.22
-BASE_REACTION = 100.0
+BASE_ACCURACY = 0.70
+BASE_DODGE = 0.42
+BASE_HS_RATE = 0.30
+BASE_REACTION = 150.0
 
 # 💡バグ修正: 元実装は未定義の TOUYAMA_RAW_STATS を参照しておりNameErrorに
 # なる不具合があった。common_defender.compute_touyama_effective_stats

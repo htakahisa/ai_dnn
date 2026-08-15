@@ -11,7 +11,8 @@ touyama_v1固定チーム定義・実効ステータス計算を集約したフ�
 abilities_los.py 等は引き続き一切importしない。
 """
 
-TOUYAMA_ROSTER_ORDER = ["Tortlilyan", "いぐるん", "ろびぃな", "夢の街", "えんぺん"]
+from character_stats_touyama import TOUYAMA_ROSTER_ORDER
+
 TOUYAMA_SPIKE_HOLDER = "ろびぃな"  # 通常ラウンド開始時の既定キャリア
 
 TOUYAMA_COMBO_MEMBERS = {"ろびぃな", "えんぺん", "いぐるん"}
