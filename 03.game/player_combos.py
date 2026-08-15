@@ -442,10 +442,10 @@ COMBOS = [
     },
     {
         "name": "幽霊部員de廃部待ったなし",
-        "players": ("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        "players": ("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         "player_bonuses": {
             "Xdll": {"dodge_rate": 0.4, "mental": 3},
-            "Syouta": {"reaction": 40, "mental": 3},
+            "SyouTa": {"reaction": 40, "mental": 3},
             "Absol": {"dodge_rate": 0.4, "mental": 3},
             "eKo": {"hs_rate": 0.4, "mental": 3},
             "SugarZ3ro": {"iq": 40, "mental": 3},
