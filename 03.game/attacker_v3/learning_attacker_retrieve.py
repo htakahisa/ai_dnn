@@ -24,7 +24,7 @@ from game_core import (
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY"]
+ACTIONS = ["MOVE", "ABILITY"]
 N_ACTIONS = len(ACTIONS)
 ROLES = ["FLASH", "SMOKE", "RECON"]
 
@@ -231,16 +231,29 @@ class LearningAttackerRetrieveController:
         return best
 
     def _action_mask(self, char, grid):
+        """チャージ0でのABILITYのみ禁止する。移動は常にBFS最短距離で自動移動するためマスク不要。"""
+        mask = [True] * N_ACTIONS
+        if _ability_charge(char) <= 0:
+            mask[1] = False
+        return np.array(mask, dtype=bool)
+    
+    def _bfs_next_pos(self, char, grid, dist_map):
+        """スパイクの位置へBFS距離で1マス進んだ座標を返す(距離最小の隣接セル)。"""
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
-        mask = [True] * N_ACTIONS
-        for i, (dr, dc) in enumerate(CARDINAL):
+        best_cell = None
+        best_dist = dist_map[r, c] if dist_map[r, c] >= 0 else float("inf")
+        for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
             if not (0 <= nr < height and 0 <= nc < width) or grid[nr, nc] == 1:
-                mask[i] = False
-        if _ability_charge(char) <= 0:
-            mask[5] = False
-        return np.array(mask, dtype=bool)
+                continue
+            d = dist_map[nr, nc]
+            if d >= 0 and d < best_dist:
+                best_dist = d
+                best_cell = (nr, nc)
+        if best_cell is None:
+            return list(char.pos)
+        return [best_cell[0], best_cell[1]]
 
     # -- メイン ----------------------------------------------------------
     def decide_move(self, char, game_state):
@@ -267,20 +280,12 @@ class LearningAttackerRetrieveController:
         if self.verbose:
             print(f"[RETRIEVE] {char.name} pos={tuple(char.pos)} action={ACTIONS[action]}")
 
-        if action < 4:
-            dr, dc = CARDINAL[action]
-            next_pos = [char.pos[0] + dr, char.pos[1] + dc]
-            return next_pos
+        if action == 0:
+            return self._bfs_next_pos(char, grid, dist_map)
 
-        if action == 4:
-            return list(char.pos)
-
-        # action == 5: ABILITY
         target_char = self._nearest_visible_enemy(char, grid, chars)
         if target_char is None:
-            # マスク上は許容されていても学習が不十分で見えない敵に撃とうとした場合の
-            # 安全策。チャージを無駄にしないよう移動に切り替える。
-            return list(char.pos)
+            return self._bfs_next_pos(char, grid, dist_map)
 
         return list(char.pos), {
             "ability": char.ability_name,
