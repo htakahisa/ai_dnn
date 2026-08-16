@@ -41,9 +41,9 @@ CLUTCH_ACE_BANNER_TICKS = (
 )
 
 # スパイク爆発の演出設定。TICK_TIME=100msなら DURATION=8 で約0.8秒。
-EXPLOSION_DURATION_TICKS = 4       # 広がりきるまでのTick数（速さの調整はこれ）
-EXPLOSION_START_RADIUS = 4         # 開始時の半径(px)
-EXPLOSION_MAX_RADIUS = 200          # 広がりきった時の半径(px)（大きさの調整はこれ）
+EXPLOSION_DURATION_TICKS = 4  # 広がりきるまでのTick数（速さの調整はこれ）
+EXPLOSION_START_RADIUS = 4  # 開始時の半径(px)
+EXPLOSION_MAX_RADIUS = 200  # 広がりきった時の半径(px)（大きさの調整はこれ）
 EXPLOSION_FILL_COLOR = "#0d0d0d"
 EXPLOSION_OUTLINE_COLOR = "#ffffff"
 EXPLOSION_OUTLINE_WIDTH = 3

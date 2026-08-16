@@ -42,10 +42,10 @@ COMBOS = [
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
         "bonuses": {
-            "hs_rate": 0.15,
-            "accuracy": 0.35,
-            "iq": 20,
-            "dodge_rate": 0.15,
+            "hs_rate": 0.1,
+            "accuracy": 0.1,
+            "iq": 30,
+            "dodge_rate": 0.1,
             "mental": 4,
         },
         "renames": {},
@@ -53,13 +53,22 @@ COMBOS = [
     {
         "name": "悪魔率いる天才集団",
         "players": ("Demon1", "jawgemo", "Ethan", "Boostio", "C0M"),
-        "bonuses": {"reaction": 35, "accuracy": 0.15, "iq": 15},
+        "bonuses": {"reaction": 10, "accuracy": 0.15, "hs_rate": 0.15, "iq": 20},
+        "renames": {},
+    },
+    {
+        "name": "流れを変える者たち",
+        "players": ("Boostio", "C0M"),
+        "bonuses": {"reaction": 15, "hs_rate": 0.15, "mental": 1, "iq": -10},
         "renames": {},
     },
     {
         "name": "ベテランより奇人に",
         "players": ("Ethan", "Boostio"),
-        "player_bonuses": {"Ethan": {"accuracy": 0.1}, "Boostio": {"iq": 50}},
+        "player_bonuses": {
+            "Ethan": {"accuracy": 0.15, "iq": -10},
+            "Boostio": {"iq": 30},
+        },
         "renames": {},
     },
     {
@@ -176,7 +185,7 @@ COMBOS = [
     {
         "name": "何者である必要もないこの夜に踊る",
         "players": ("Derke", "Sayonara", "Lar0k", "marteen", "something"),
-        "bonuses": {"dodge_rate": 0.5, "reaction": 20},
+        "bonuses": {"dodge_rate": 0.5, "reaction": 10},
         "renames": {},
     },
     {
@@ -373,6 +382,36 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "スモッシー",
+        "players": ("Smoggy", "Rossy"),
+        "bonuses": {"accuracy": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "チーカンカン",
+        "players": ("CHICHOO", "ZMJKK"),
+        "bonuses": {"mental": 5},
+        "renames": {},
+    },
+    {
+        "name": "カンカンソアー",
+        "players": ("ZMJKK", "Lysoar"),
+        "bonuses": {"dodge_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "ロッモッギー",
+        "players": ("Rossy", "Smoggy"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "ロッチー",
+        "players": ("Rossy", "CHICHOO"),
+        "bonuses": {"accuracy": 0.2},
+        "renames": {},
+    },
+    {
         "name": "問題児",
         "players": ("Canezerra", "Rossy", "Sayonara"),
         "bonuses": {"accuracy": 0.2, "reaction": 30},
@@ -394,7 +433,7 @@ COMBOS = [
         "players": ("Lar0k",),
         "bonuses": {
             "hs_rate": 0.1,
-            "reaction": 20,
+            "reaction": 10,
         },
         "renames": {},
     },
@@ -402,7 +441,7 @@ COMBOS = [
         "name": "2nd cover",
         "players": ("Lar0k", "lovers rock"),
         "bonuses": {
-            "accuracy": 0.3,
+            "accuracy": 0.1,
             "dodge_rate": 0.1,
         },
         "renames": {},
@@ -412,7 +451,7 @@ COMBOS = [
         "players": ("Lar0k", "Loita"),
         "bonuses": {
             "accuracy": 0.1,
-            "dodge_rate": 0.3,
+            "dodge_rate": 0.1,
         },
         "renames": {},
     },
@@ -421,7 +460,7 @@ COMBOS = [
         "players": ("Lar0k", "Crewn"),
         "bonuses": {
             "dodge_rate": 0.1,
-            "iq": 30,
+            "iq": 10,
         },
         "renames": {},
     },
@@ -429,7 +468,7 @@ COMBOS = [
         "name": "5th counterattack",
         "players": ("Lar0k", "Rosé"),
         "bonuses": {
-            "hs_rate": 0.3,
+            "hs_rate": 0.1,
             "iq": 10,
         },
         "renames": {},
@@ -437,15 +476,15 @@ COMBOS = [
     {
         "name": "All for Lar0k",
         "players": ("Lar0k", "lovers rock", "Loita", "Crewn", "Rosé"),
-        "player_bonuses": {"Lar0k": {"hs_rate": 0.3, "reaction": 30}},
+        "player_bonuses": {"Lar0k": {"accuracy": 0.25, "hs_rate": 0.4, "reaction": 45}},
         "renames": {},
     },
     {
         "name": "幽霊部員de廃部待ったなし",
-        "players": ("Xdll", "Syouta", "Absol", "eKo", "SugarZ3ro"),
+        "players": ("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         "player_bonuses": {
             "Xdll": {"dodge_rate": 0.4, "mental": 3},
-            "Syouta": {"reaction": 40, "mental": 3},
+            "SyouTa": {"reaction": 40, "mental": 3},
             "Absol": {"dodge_rate": 0.4, "mental": 3},
             "eKo": {"hs_rate": 0.4, "mental": 3},
             "SugarZ3ro": {"iq": 40, "mental": 3},

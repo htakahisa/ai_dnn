@@ -21,14 +21,13 @@ from tkinter import messagebox, ttk
 from map_data import NEW_MAZE_STR
 from party_presets import all_preset_names, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
+from game_core import PLAYER_COMBOS, get_character_combat_stats
 
 CONTROLLER_OPTIONS = {
     "Toru AI v3": "toru_ai_v3",
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
-    "Toru AI v3": "toru_ai_v3",
-    "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
     "AI v1": "learning_v1",
     "ロジック": "default",
@@ -492,19 +491,11 @@ def play_map(
             except tk.TclError:
                 pass
 
-    if team1.name == team2.name:
-        # 同一プリセット戦では両陣営のroster集合が同一なので、
-        # original_scores()では左右を識別できない。開始サイドから直接対応付ける。
-        if attacker is team1:
-            score1, score2 = int(game.attacker_wins), int(game.defender_wins)
-        else:
-            score1, score2 = int(game.defender_wins), int(game.attacker_wins)
-    else:
-        score1, score2 = original_scores(
-            game,
-            list(team1.players),
-            list(team2.players),
-        )
+    score1, score2 = original_scores(
+        game,
+        list(team1.players),
+        list(team2.players),
+    )
     winner = team1.name if score1 > score2 else team2.name
 
     return MResult(
@@ -537,9 +528,9 @@ def run_series_core(
     emit: Callable[[tuple[Any, ...]], None],
     team_controllers: dict[str, str] | None = None,
     context_label: str = "",
-    team1_controller_key: str | None = None,
-    team2_controller_key: str | None = None,
 ) -> SeriesResult:
+    if team1_name == team2_name:
+        raise ValueError("異なる2チームを選んでください")
 
     need = validate_maps_to_win(maps_to_win)
     seed_mode = validate_seed_mode(seed_mode)
@@ -549,16 +540,8 @@ def run_series_core(
     validate_preset(team2)
 
     controller_map = team_controllers or {}
-    controller1 = str(
-        team1_controller_key
-        if team1_controller_key is not None
-        else controller_map.get(team1.name, "fnatic_v1")
-    )
-    controller2 = str(
-        team2_controller_key
-        if team2_controller_key is not None
-        else controller_map.get(team2.name, "fnatic_v1")
-    )
+    controller1 = str(controller_map.get(team1.name, "fnatic_v1"))
+    controller2 = str(controller_map.get(team2.name, "fnatic_v1"))
 
     wins1 = 0
     wins2 = 0
@@ -630,9 +613,7 @@ def run_series_core(
             )
         maps.append(result)
 
-        # 同一プリセット同士ではwinner名だけでは左右を区別できないため、
-        # マップの実スコアでTeam 1 / Team 2の勝利数を判定する。
-        if result.score1 > result.score2:
+        if result.winner == team1.name:
             wins1 += 1
         else:
             wins2 += 1
@@ -1975,6 +1956,178 @@ class TournamentSeedEditor(tk.LabelFrame):
                 box.config(state="disabled")
 
 
+# ---------------------------------------------------------------------------
+# Team combat-power index (after player combos)
+# ---------------------------------------------------------------------------
+COMBAT_POWER_IQ_EFFECTIVE_CAP = 200.0
+
+
+def calculate_combat_power_index(
+    hs_rate: float,
+    dodge_rate: float,
+    iq: float,
+    accuracy: float,
+    reaction: float,
+) -> float:
+    """Current combat-power formula with IQ effective cap at 200.
+
+    Formula:
+        HS% * 130
+        + dodge% * 170
+        + min(IQ, 200) / 2
+        + (accuracy - 0.2) * 130
+        + reaction / 2.2
+
+    IQ itself is not modified. Only its contribution to the index is capped.
+    """
+    try:
+        hs_rate = max(0.0, min(1.0, float(hs_rate)))
+    except (TypeError, ValueError):
+        hs_rate = 0.0
+    try:
+        dodge_rate = max(0.0, min(1.0, float(dodge_rate)))
+    except (TypeError, ValueError):
+        dodge_rate = 0.0
+    try:
+        accuracy = max(0.0, float(accuracy))
+    except (TypeError, ValueError):
+        accuracy = 0.0
+    try:
+        iq = max(0.0, float(iq))
+    except (TypeError, ValueError):
+        iq = 0.0
+    try:
+        reaction = max(0.0, float(reaction))
+    except (TypeError, ValueError):
+        reaction = 0.0
+
+    iq_for_power = min(iq, COMBAT_POWER_IQ_EFFECTIVE_CAP)
+    return (
+        hs_rate * 130.0
+        + dodge_rate * 170.0
+        + iq_for_power / 2.0
+        + (accuracy - 0.2) * 130.0
+        + reaction / 2.2
+    )
+
+
+def _combo_stat_key(stat_key: Any) -> str | None:
+    normalized = str(stat_key).strip().lower()
+    aliases = {
+        'accuracy': 'accuracy', 'aim': 'accuracy', 'hit': 'accuracy',
+        'hit%': 'accuracy', 'hit_pct': 'accuracy', 'hit_rate': 'accuracy', '命中率': 'accuracy',
+        'hs': 'hs_rate', 'hs%': 'hs_rate', 'hs_pct': 'hs_rate',
+        'hs_rate': 'hs_rate', 'headshot_rate': 'hs_rate', 'ヘッドショット率': 'hs_rate',
+        'dodge': 'dodge_rate', 'dodge%': 'dodge_rate', 'dodge_pct': 'dodge_rate',
+        'dodge_rate': 'dodge_rate', '回避率': 'dodge_rate', '弾除け率': 'dodge_rate',
+        'reaction': 'reaction', 'reaction_speed': 'reaction', '反応速度': 'reaction',
+        'iq': 'iq', 'intelligence': 'iq', '判断力': 'iq', '知能': 'iq',
+    }
+    return aliases.get(normalized)
+
+
+def _apply_combo_bonus_to_stats(stats: dict[str, float], stat_key: Any, value: Any) -> None:
+    """Mirror game_core combo stat behavior for the five power-index stats."""
+    key = _combo_stat_key(stat_key)
+    if key is None:
+        return
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return
+
+    if key in {'accuracy', 'hs_rate', 'dodge_rate'}:
+        if abs(amount) > 1.0:
+            amount /= 100.0
+        updated = float(stats[key]) + amount
+        if key == 'accuracy':
+            stats[key] = max(0.0, updated)  # game_core allows >100% accuracy after combos
+        else:
+            stats[key] = max(0.0, min(1.0, updated))
+    elif key in {'reaction', 'iq'}:
+        stats[key] = max(0.0, float(stats[key]) + amount)
+
+
+def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
+    """Calculate a preset's combat power before/after every active player combo.
+
+    This intentionally includes player-combo bonuses only. IGL correction,
+    awakenings, mental/condition effects, and in-round temporary effects are not
+    included in this static comparison.
+    """
+    preset = get_preset(team_name)
+    validate_preset(preset)
+    player_names = [str(name) for name in preset.players]
+    team_set = set(player_names)
+
+    base_stats: dict[str, dict[str, float]] = {}
+    combo_stats: dict[str, dict[str, float]] = {}
+    for name in player_names:
+        raw = get_character_combat_stats(name)
+        row = {
+            'hs_rate': float(raw.get('hs_rate', 0.0)),
+            'dodge_rate': float(raw.get('dodge_rate', 0.0)),
+            'iq': float(raw.get('iq', 0.0)),
+            'accuracy': float(raw.get('accuracy', 0.0)),
+            'reaction': float(raw.get('reaction', 0.0)),
+        }
+        base_stats[name] = dict(row)
+        combo_stats[name] = dict(row)
+
+    active_combos: list[str] = []
+    for combo in PLAYER_COMBOS:
+        if not isinstance(combo, dict):
+            continue
+        required = tuple(str(x) for x in combo.get('players', ()))
+        if not required or not set(required).issubset(team_set):
+            continue
+        active_combos.append(str(combo.get('name', '名称未設定コンボ')))
+
+        common = combo.get('bonuses', {})
+        per_player = combo.get('player_bonuses', {})
+        for name in required:
+            if name not in combo_stats:
+                continue
+            if isinstance(common, dict):
+                for key, value in common.items():
+                    _apply_combo_bonus_to_stats(combo_stats[name], key, value)
+            if isinstance(per_player, dict):
+                bonuses = per_player.get(name, {})
+                if isinstance(bonuses, dict):
+                    for key, value in bonuses.items():
+                        _apply_combo_bonus_to_stats(combo_stats[name], key, value)
+
+    rows: list[dict[str, Any]] = []
+    base_total = 0.0
+    combo_total = 0.0
+    for name in player_names:
+        base = base_stats[name]
+        after = combo_stats[name]
+        base_power = calculate_combat_power_index(**base)
+        combo_power = calculate_combat_power_index(**after)
+        base_total += base_power
+        combo_total += combo_power
+        rows.append({
+            'name': name,
+            'base': base,
+            'after': after,
+            'base_power': base_power,
+            'combo_power': combo_power,
+            'delta': combo_power - base_power,
+        })
+
+    return {
+        'team': team_name,
+        'players': rows,
+        'active_combos': active_combos,
+        'base_total': base_total,
+        'combo_total': combo_total,
+        'delta': combo_total - base_total,
+        'base_average': base_total / len(rows) if rows else 0.0,
+        'combo_average': combo_total / len(rows) if rows else 0.0,
+    }
+
+
 class CompetitionApp:
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -2008,6 +2161,10 @@ class CompetitionApp:
         self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
+        self.power_team_var = tk.StringVar(value=self.names[0])
+        self.power_summary_var = tk.StringVar(value="チームを選択して計算してください")
+        self.power_combo_var = tk.StringVar(value="発動コンボ: -")
+        self.power_tree: ttk.Treeview | None = None
 
         # 右側の図表示に使う進行状態。
         self.visual_mode = "series"
@@ -2463,9 +2620,11 @@ class CompetitionApp:
         self.series_tab = tk.Frame(self.notebook)
         self.swiss_tab = tk.Frame(self.notebook)
         self.league_tab = tk.Frame(self.notebook)
+        self.power_tab = tk.Frame(self.notebook)
         self.notebook.add(self.series_tab, text="単独シリーズ")
         self.notebook.add(self.swiss_tab, text="ダブルエリミネーション")
         self.notebook.add(self.league_tab, text="総当たりリーグ")
+        self.notebook.add(self.power_tab, text="戦闘力指数")
 
         self.team1_var = tk.StringVar(value=self.names[0])
         self.team2_var = tk.StringVar(value=self.names[1])
@@ -2580,6 +2739,106 @@ class CompetitionApp:
             self.league_tab, self.names, "参加チーム（各Slotへチームを設定）", 8
         )
         self.league_slots.pack(fill="both", expand=True, padx=8, pady=8)
+
+        self._build_power_index_tab()
+
+    def _build_power_index_tab(self) -> None:
+        top = tk.LabelFrame(self.power_tab, text="コンボ後チーム戦闘力指数", padx=10, pady=8)
+        top.pack(fill="x", padx=8, pady=(8, 4))
+
+        tk.Label(top, text="チーム").grid(row=0, column=0, sticky="w")
+        self.power_team_box = ttk.Combobox(
+            top, values=self.names, textvariable=self.power_team_var,
+            state="readonly", width=34,
+        )
+        self.power_team_box.grid(row=0, column=1, padx=(8, 12), sticky="w")
+        tk.Button(top, text="戦闘力指数を計算", command=self._refresh_power_index).grid(
+            row=0, column=2, padx=4
+        )
+
+        tk.Label(
+            top,
+            text="IQは実値を保持しつつ、戦闘力指数への寄与だけ200を上限として計算。",
+            fg="#555",
+            anchor="w",
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(7, 0))
+
+        tk.Label(
+            self.power_tab, textvariable=self.power_summary_var,
+            font=("Arial", 11, "bold"), anchor="w", fg="#1f5f7a"
+        ).pack(fill="x", padx=12, pady=(4, 2))
+        tk.Label(
+            self.power_tab, textvariable=self.power_combo_var,
+            anchor="w", justify="left", wraplength=1040, fg="#444"
+        ).pack(fill="x", padx=12, pady=(0, 5))
+
+        columns = (
+            "player", "base_power", "combo_power", "delta",
+            "hs", "dodge", "iq", "iq_used", "accuracy", "reaction"
+        )
+        self.power_tree = ttk.Treeview(
+            self.power_tab, columns=columns, show="headings", height=7
+        )
+        headings = {
+            "player": "Player", "base_power": "素指数", "combo_power": "コンボ後",
+            "delta": "増減", "hs": "HS%", "dodge": "回避%", "iq": "IQ",
+            "iq_used": "指数IQ", "accuracy": "命中%", "reaction": "反応",
+        }
+        widths = {
+            "player": 130, "base_power": 78, "combo_power": 78, "delta": 70,
+            "hs": 62, "dodge": 62, "iq": 58, "iq_used": 64,
+            "accuracy": 62, "reaction": 62,
+        }
+        for key in columns:
+            self.power_tree.heading(key, text=headings[key])
+            self.power_tree.column(key, width=widths[key], anchor="center")
+        self.power_tree.pack(fill="x", padx=10, pady=(2, 8))
+
+        self.power_team_box.bind("<<ComboboxSelected>>", lambda _e: self._refresh_power_index())
+        self._refresh_power_index()
+
+    def _refresh_power_index(self) -> None:
+        if self.power_tree is None:
+            return
+        team_name = self.power_team_var.get()
+        try:
+            report = build_team_combo_power_report(team_name)
+        except Exception as exc:
+            self.power_summary_var.set(f"計算エラー: {exc}")
+            self.power_combo_var.set("発動コンボ: -")
+            return
+
+        for item in self.power_tree.get_children():
+            self.power_tree.delete(item)
+
+        for row in report["players"]:
+            after = row["after"]
+            iq = float(after["iq"])
+            self.power_tree.insert(
+                "", "end", values=(
+                    row["name"],
+                    f'{row["base_power"]:.1f}',
+                    f'{row["combo_power"]:.1f}',
+                    f'{row["delta"]:+.1f}',
+                    f'{after["hs_rate"] * 100:.1f}',
+                    f'{after["dodge_rate"] * 100:.1f}',
+                    f'{iq:.0f}',
+                    f'{min(iq, COMBAT_POWER_IQ_EFFECTIVE_CAP):.0f}',
+                    f'{after["accuracy"] * 100:.1f}',
+                    f'{after["reaction"]:.0f}',
+                )
+            )
+
+        self.power_summary_var.set(
+            f'{team_name}  |  チーム合計: {report["base_total"]:.1f} → '
+            f'{report["combo_total"]:.1f} ({report["delta"]:+.1f})  |  '
+            f'5人平均: {report["base_average"]:.1f} → {report["combo_average"]:.1f}'
+        )
+        combos = report["active_combos"]
+        self.power_combo_var.set(
+            "発動コンボ: " + (" / ".join(combos) if combos else "なし")
+            + "  ※ IGL補正・覚醒・メンタル/コンディション等は含めません"
+        )
 
     def _build_results(self) -> None:
         status_bar = tk.Frame(self.root)
@@ -2836,10 +3095,7 @@ class CompetitionApp:
 
         y = 58
         for result in self.visual_series_maps:
-            # 同一チーム戦では result.winner / result.team1 / result.team2 が
-            # すべて同じチーム名になり得るため、名前では左右を判定できない。
-            # 実際のマップスコアを唯一の判定基準にする。
-            winner_is_1 = result.score1 > result.score2
+            winner_is_1 = result.winner == result.team1
             team1_fill = "#14532d" if winner_is_1 else "#374151"
             team2_fill = "#14532d" if not winner_is_1 else "#374151"
 
@@ -3473,20 +3729,18 @@ class CompetitionApp:
                     "series",
                     [self.team1_var.get(), self.team2_var.get()],
                 )
-                # 単独シリーズでは同一チーム同士も許可する。
-                # コントローラーはチーム名辞書では同名時に衝突するため、
-                # Team 1 / Team 2の位置情報を別途payloadへ保持する。
-                series_controller1 = CONTROLLER_OPTIONS.get(
-                    self.team1_controller_var.get(),
-                    "fnatic_v1",
-                )
-                series_controller2 = CONTROLLER_OPTIONS.get(
-                    self.team2_controller_var.get(),
-                    "fnatic_v1",
-                )
-                team_controllers = {payload[1][0]: series_controller1}
-                if payload[1][1] != payload[1][0]:
-                    team_controllers[payload[1][1]] = series_controller2
+                if payload[1][0] == payload[1][1]:
+                    raise ValueError("異なる2チームを選んでください")
+                team_controllers = {
+                    payload[1][0]: CONTROLLER_OPTIONS.get(
+                        self.team1_controller_var.get(),
+                        "fnatic_v1",
+                    ),
+                    payload[1][1]: CONTROLLER_OPTIONS.get(
+                        self.team2_controller_var.get(),
+                        "fnatic_v1",
+                    ),
+                }
             elif tab == 1:
                 teams = self.swiss_slots.selected_teams()
                 if len(teams) < 4:
@@ -3507,13 +3761,10 @@ class CompetitionApp:
                 team_controllers = self.league_slots.selected_team_controllers()
                 payload = ("league", teams)
 
-            if tab == 0:
-                user_count = int(series_controller1 == "user") + int(
-                    series_controller2 == "user"
-                )
-            else:
-                user_count = sum(1 for key in team_controllers.values() if key == "user")
-            if user_count > 1:
+            user_teams = [
+                team for team, key in team_controllers.items() if key == "user"
+            ]
+            if len(user_teams) > 1:
                 raise ValueError("ユーザー操作は1大会につき1チームまでです")
         except Exception as exc:
             messagebox.showerror("設定エラー", str(exc))
@@ -3526,26 +3777,11 @@ class CompetitionApp:
             "大会途中のON/OFF変更は次のマップから反映されます。\n"
         )
         self.append("TEAM CONTROLLERS\n")
-        if payload[0] == "series":
-            self.append(
-                f"  Team 1 / {payload[1][0]}: "
-                f"{CONTROLLER_KEY_TO_DISPLAY.get(series_controller1, series_controller1)}\n"
-            )
-            self.append(
-                f"  Team 2 / {payload[1][1]}: "
-                f"{CONTROLLER_KEY_TO_DISPLAY.get(series_controller2, series_controller2)}\n"
-            )
-        else:
-            for team in payload[1]:
-                key = team_controllers.get(team, "fnatic_v1")
-                self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
-        requested_rating = bool(self.rating_enabled_var.get())
-        same_team_series = payload[0] == "series" and payload[1][0] == payload[1][1]
-        self.current_rating_enabled = requested_rating and not same_team_series
-        if same_team_series and requested_rating:
-            self.append("RATING: OFF（同一チーム対戦のため自動的に無効）\n")
-        else:
-            self.append(f"RATING: {'ON' if self.current_rating_enabled else 'OFF'}\n")
+        for team in payload[1]:
+            key = team_controllers.get(team, "fnatic_v1")
+            self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
+        self.current_rating_enabled = bool(self.rating_enabled_var.get())
+        self.append(f"RATING: {'ON' if self.current_rating_enabled else 'OFF'}\n")
         self.append("-" * 78 + "\n")
         self.competition_id = f"{payload[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.competition_rating_updates = []
@@ -3579,8 +3815,6 @@ class CompetitionApp:
                 seed_mode,
                 base_seed,
                 self._render_controller,
-                series_controller1 if payload[0] == "series" else None,
-                series_controller2 if payload[0] == "series" else None,
             ),
             daemon=True,
         )
@@ -3688,8 +3922,6 @@ class CompetitionApp:
         seed_mode: str,
         base_seed: int | None,
         render: bool | Callable[[], bool],
-        series_controller1: str | None = None,
-        series_controller2: str | None = None,
     ) -> None:
         try:
             mode, teams = payload
@@ -3705,17 +3937,12 @@ class CompetitionApp:
                     emit=self.emit,
                     team_controllers=team_controllers,
                     context_label="SERIES",
-                    team1_controller_key=series_controller1,
-                    team2_controller_key=series_controller2,
                 )
                 data = {
                     "mode": "series",
                     "seed_mode": seed_mode,
                     "base_seed": (base_seed if seed_mode == "fixed" else None),
-                    "team_controllers": {
-                        "team1": series_controller1,
-                        "team2": series_controller2,
-                    },
+                    "team_controllers": dict(team_controllers),
                     "rating_enabled": bool(self.current_rating_enabled),
                     **asdict(series),
                     "player_leaderboards": build_player_leaderboards([series]),
@@ -3903,7 +4130,7 @@ class CompetitionApp:
                         f"\n{context} FINAL: {series.team1} {series.team1_wins} - {series.team2_wins} {series.team2}"
                         f" / WINNER: {series.winner}\n"
                     )
-                    if self.current_rating_enabled and series.team1 != series.team2:
+                    if self.current_rating_enabled:
                         rating_update = self.rating_store.update_series(
                             series,
                             context,
@@ -3920,12 +4147,7 @@ class CompetitionApp:
                         )
                         self.refresh_rating_window()
                     else:
-                        reason = (
-                            "同一チーム対戦"
-                            if series.team1 == series.team2
-                            else "レート反映OFF"
-                        )
-                        self.append(f"RATING: NO CHANGE（{reason}）\n\n")
+                        self.append("RATING: OFF（レート変動なし）\n\n")
                 elif kind == "bracket_match":
                     match = event[1]
                     self.visual_bracket_matches[match["id"]] = dict(match)

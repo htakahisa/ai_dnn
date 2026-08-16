@@ -178,6 +178,41 @@ def _good_directions(dist_map, grid, r, c):
     return good
 
 
+def _bfs_next_step_avoiding_occupied(dist_map, grid, char, chars):
+    """Spikeへ向かうBFS最短の合法1手を返す。"""
+    r0, c0 = int(char.pos[0]), int(char.pos[1])
+    if dist_map is None:
+        return [r0, c0]
+
+    cur = int(dist_map[r0, c0])
+    if cur <= 0:
+        return [r0, c0]
+
+    occupied = {
+        (int(o.pos[0]), int(o.pos[1]))
+        for o in chars
+        if o is not char and getattr(o, "is_alive", True)
+    }
+
+    best = None
+    for dr, dc in CARDINAL_MOVES:
+        nr, nc = r0 + dr, c0 + dc
+        if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+            continue
+        if grid[nr, nc] == 1 or (nr, nc) in occupied:
+            continue
+        nd = int(dist_map[nr, nc])
+        if nd < 0 or nd >= cur:
+            continue
+        cand = (nd, nr, nc)
+        if best is None or cand < best:
+            best = cand
+
+    if best is None:
+        return [r0, c0]
+    return [best[1], best[2]]
+
+
 def _ability_charge(char):
     """ロールに対応する残チャージ数を取得する。HUNT(アビリティ無し)は常に0。"""
     return {
@@ -414,9 +449,109 @@ class LearningDefenderRetakeGCController:
             if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
-        # 💡train_defender_retake.py の action_mask() と同一条件:
-        # 時間に余裕があり(time_criticalでない)、かつ敵が視認できている
-        # 場合は移動をマスクして足を止めさせる。
+        # ------------------------------------------------------------------
+        # Retake Commitment
+        # ------------------------------------------------------------------
+        r0, c0 = int(char.pos[0]), int(char.pos[1])
+        pr, pc = int(planted_pos[0]), int(planted_pos[1])
+        raw_dist = int(self._dist_map[r0, c0])
+        cheb_dist = max(abs(pr - r0), abs(pc - c0))
+
+        alive_defenders = [
+            d for d in chars if d.team == char.team and getattr(d, "is_alive", True)
+        ]
+        alive_enemies = [
+            e for e in enemies if getattr(e, "is_alive", True)
+        ]
+
+        def _retake_dist(unit):
+            ur, uc = int(unit.pos[0]), int(unit.pos[1])
+            d = int(self._dist_map[ur, uc])
+            return d if d >= 0 else 10**9
+
+        designated_defuser = (
+            min(alive_defenders, key=lambda d: (_retake_dist(d), d.name))
+            if alive_defenders else None
+        )
+        is_designated = designated_defuser is char
+
+        move_ticks_needed = max(0, raw_dist - 1) if raw_dist >= 0 else 10**9
+        latest_safe_total = (
+            move_ticks_needed
+            + DEFUSE_REQUIRED_TICKS
+            + DEFUSE_SAFETY_MARGIN_TICKS
+        )
+        must_commit_now = detonate_timer <= latest_safe_total
+
+        # Attacker全滅後は戦術判断を終了し、「解除だけ」を最優先する。
+        # 既に誰かが隣接していれば、その1人を即解除担当に固定。
+        # まだ誰も隣接していなければ、生存Defender全員を最短でSpikeへ寄せる。
+        if not alive_enemies:
+            adjacent = [
+                d for d in alive_defenders
+                if max(
+                    abs(int(d.pos[0]) - pr),
+                    abs(int(d.pos[1]) - pc),
+                ) <= 1
+            ]
+            if adjacent:
+                emergency_defuser = min(adjacent, key=lambda d: d.name)
+                if emergency_defuser is char:
+                    if self.verbose:
+                        print(
+                            f"[GC RETAKE COMMIT] {char.name} ALL_ENEMIES_DEAD "
+                            f"-> DEFUSE detonate={detonate_timer:.1f}"
+                        )
+                    return list(char.pos), "DEFUSE"
+                # 解除担当の周囲で味方が動き回って詰まらせない。
+                return list(char.pos)
+
+            forced_next = _bfs_next_step_avoiding_occupied(
+                self._dist_map, grid, char, chars
+            )
+            if self.verbose and forced_next != [r0, c0]:
+                print(
+                    f"[GC RETAKE COMMIT] {char.name} ALL_ENEMIES_DEAD_FAST "
+                    f"from={tuple(char.pos)} to={tuple(forced_next)} "
+                    f"detonate={detonate_timer:.1f}"
+                )
+            return forced_next
+
+        # 解除デッドライン: 指定解除担当は戦闘判断よりSpikeを優先。
+        if is_designated and must_commit_now:
+            if cheb_dist <= 1:
+                if self.verbose:
+                    print(
+                        f"[GC RETAKE COMMIT] {char.name} DEADLINE -> DEFUSE "
+                        f"detonate={detonate_timer:.1f} need={latest_safe_total}"
+                    )
+                return list(char.pos), "DEFUSE"
+            forced_next = _bfs_next_step_avoiding_occupied(
+                self._dist_map, grid, char, chars
+            )
+            if self.verbose:
+                print(
+                    f"[GC RETAKE COMMIT] {char.name} DEADLINE "
+                    f"from={tuple(char.pos)} to={tuple(forced_next)} "
+                    f"detonate={detonate_timer:.1f} need={latest_safe_total}"
+                )
+            return forced_next
+
+        # 遠距離からは全員BFS最短。サイト近辺(3マス以内)に入ってからDQNへ戻す。
+        if raw_dist > ENTRY_READY_RADIUS:
+            forced_next = _bfs_next_step_avoiding_occupied(
+                self._dist_map, grid, char, chars
+            )
+            if forced_next != [r0, c0]:
+                if self.verbose:
+                    print(
+                        f"[GC RETAKE COMMIT] {char.name} FAST_ROTATE "
+                        f"dist={raw_dist} from={tuple(char.pos)} "
+                        f"to={tuple(forced_next)}"
+                    )
+                return forced_next
+
+        # サイト近辺では従来DQNを使う。
         time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
         lock_movement = (not time_critical) and bool(visible_enemies)
 

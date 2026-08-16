@@ -25,9 +25,13 @@ class CharacterStats:
 
 CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Xdll": CharacterStats("Xdll", 0.23, 0.24, 125, 0.78, 140, "シーカー", 45, 7, 4),
-    "SyouTa": CharacterStats("SyouTa", 0.45, 0.2, 90, 0.75, 140, "タイガー", 95, 8, 9),
-    "Absol": CharacterStats("Absol", 0.15, 0.31, 130, 0.87, 155, "タイガー", 50, 10, 3),
-    "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "タイガー", 60, 5, 8),
+    "SyouTa": CharacterStats(
+        "SyouTa", 0.45, 0.2, 90, 0.75, 140, "スモーカー", 95, 8, 9
+    ),
+    "Absol": CharacterStats(
+        "Absol", 0.15, 0.31, 130, 0.87, 155, "フラッシュ", 50, 10, 3
+    ),
+    "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "シーカー", 60, 5, 8),
     "SugarZ3ro": CharacterStats(
         "SugarZ3ro", 0.29, 0.18, 120, 0.67, 93, "スモーカー", 40, 5, 5
     ),

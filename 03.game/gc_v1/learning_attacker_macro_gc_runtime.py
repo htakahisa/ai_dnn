@@ -27,6 +27,8 @@ import os
 import numpy as np
 import torch
 
+from game_core import PLANT_REQUIRED_TICKS
+
 # Keep this import exact: runtime must use the same observation/action semantics
 # as the final Macro model.
 from train_attacker_macro_gc_v28 import (
@@ -69,6 +71,17 @@ DEFAULT_MODEL_CANDIDATES = (
 )
 
 CARDINAL = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+# ---------------------------------------------------------------------------
+# Practical-game Plant Commitment
+# ---------------------------------------------------------------------------
+# Once the living spike carrier reaches a plant cell, Macro may no longer drag
+# that carrier back out of the site.  A very short combat grace is allowed when
+# a visible defender is immediately threatening the carrier; otherwise plant
+# starts at once.  Once planting has started, it is never voluntarily cancelled.
+PLANT_COMMIT_COMBAT_GRACE_TICKS = 2
+PLANT_COMMIT_DANGER_RANGE = 6
+PLANT_COMMIT_TIME_MARGIN = 2
 
 
 def _first_existing(paths):
@@ -225,6 +238,13 @@ class LearningAttackerMacroGCController:
         self._last_strategy = None
         self._last_q_values = None
 
+        # Real-game-only plant commitment state.  This deliberately lives
+        # outside MacroEnv, so the trained 68-dim policy is unchanged.
+        self._plant_commit_holder = None
+        self._plant_commit_pos = None
+        self._plant_commit_side = None
+        self._plant_commit_start_tick = None
+
         if self.verbose:
             print(
                 "[GC Macro Runtime] loaded "
@@ -246,6 +266,90 @@ class LearningAttackerMacroGCController:
         self._last_macro_decision_tick = None
         self._last_strategy = self.env.current_strategy
         self._last_q_values = None
+        self._clear_plant_commit()
+
+    def _clear_plant_commit(self):
+        self._plant_commit_holder = None
+        self._plant_commit_pos = None
+        self._plant_commit_side = None
+        self._plant_commit_start_tick = None
+
+    def _start_plant_commit(self, holder, game_state):
+        pos = tuple(map(int, holder.pos))
+        self._plant_commit_holder = holder.name
+        self._plant_commit_pos = pos
+        self._plant_commit_side = side_of_pos(pos)
+        self._plant_commit_start_tick = self._tick_id()
+
+        # Freeze the real plant target to the cell already reached.  This stops
+        # a later Macro switch/rotate from pulling the carrier off the site.
+        if self.game is not None:
+            self.game.target_plant_pos = pos
+
+        if self.verbose:
+            print(
+                f"[GC PlantCommit] start tick={self._tick_id()} "
+                f"holder={holder.name} pos={pos}"
+            )
+
+    def _holder_on_plant_cell(self, holder, game_state):
+        grid = np.asarray(game_state["grid"])
+        r, c = map(int, holder.pos)
+        return (
+            0 <= r < grid.shape[0]
+            and 0 <= c < grid.shape[1]
+            and int(grid[r, c]) == 2
+        )
+
+    def _carrier_in_immediate_danger(self, holder, game_state):
+        """Only information actually visible to attackers may delay planting."""
+        grid = np.asarray(game_state["grid"])
+        attackers = [
+            a for a in self._real_attackers(game_state)
+            if bool(getattr(a, "is_alive", True))
+        ]
+        hp = tuple(map(int, holder.pos))
+
+        for d in self._real_defenders(game_state):
+            if not bool(getattr(d, "is_alive", True)):
+                continue
+            revealed = bool(
+                getattr(d, "revealed", False)
+                or getattr(d, "is_revealed", False)
+                or getattr(d, "reveal_timer", 0)
+                or getattr(d, "revealed_ticks", 0)
+            )
+            visible = revealed or any(_has_los(grid, a.pos, d.pos) for a in attackers)
+            if not visible:
+                continue
+            dp = tuple(map(int, d.pos))
+            dist = max(abs(dp[0] - hp[0]), abs(dp[1] - hp[1]))
+            if dist <= PLANT_COMMIT_DANGER_RANGE and _has_los(grid, hp, dp):
+                return True
+        return False
+
+    def _plant_commit_result(self, char, holder, game_state):
+        """Return forced holder action while committed, otherwise None."""
+        if char is not holder and getattr(char, "name", None) != getattr(holder, "name", None):
+            return None
+
+        # If planting already started, never voluntarily cancel it.
+        if int(getattr(holder, "plant_timer", 0)) > 0 or bool(getattr(holder, "is_planting", False)):
+            return list(holder.pos), "PLANT"
+
+        remaining = int(game_state.get("round_timer", getattr(self.game, "round_timer", 999999)))
+        hard_plant = remaining <= int(PLANT_REQUIRED_TICKS + PLANT_COMMIT_TIME_MARGIN)
+        age = max(0, self._tick_id() - int(self._plant_commit_start_tick or self._tick_id()))
+        danger = self._carrier_in_immediate_danger(holder, game_state)
+
+        # Safe site -> immediate plant.  Under immediate visible threat, allow
+        # at most a tiny stationary combat window, provided the clock permits.
+        if hard_plant or not danger or age >= PLANT_COMMIT_COMBAT_GRACE_TICKS:
+            return list(holder.pos), "PLANT"
+
+        # Staying still lets normal battle logic shoot while preserving the
+        # reached plant cell.  It cannot wander out of the site.
+        return list(holder.pos), "MOVE"
 
     # ------------------------------------------------------------------
     # Real-state synchronization
@@ -547,6 +651,11 @@ class LearningAttackerMacroGCController:
         if self.game is None:
             return
 
+        # Plant Commitment wins over later strategic retargeting.
+        if self._plant_commit_pos is not None:
+            self.game.target_plant_pos = tuple(self._plant_commit_pos)
+            return
+
         side = self._strategy_target_side(strategy)
         if side is None:
             side = getattr(self.env, "target_site", None)
@@ -616,7 +725,18 @@ class LearningAttackerMacroGCController:
         )
         # Dropped spike: Retrieve controller must own the phase.
         if holder is None:
+            self._clear_plant_commit()
             return base_result
+
+        # Start commitment the moment the living carrier actually reaches any
+        # legal plant cell.  From here the carrier cannot be Macro-routed away.
+        if self._plant_commit_holder is None and self._holder_on_plant_cell(holder, game_state):
+            self._start_plant_commit(holder, game_state)
+
+        if self._plant_commit_holder is not None:
+            forced = self._plant_commit_result(char, holder, game_state)
+            if forced is not None:
+                return forced
 
         if self._is_special_phase_result(base_result):
             return base_result

@@ -48,6 +48,8 @@ from combo_awakening import ComboAwakeningMixin
 from abilities_los import AbilityLosMixin
 from battle_logic import BattleLogicMixin
 from rendering_ui import RenderingUIMixin
+from defender_setup_phase import DefenderSetupPhase
+from map_data_defender_setup import validate_against_map
 
 ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
 FNATIC_V1_ATTACKER_MODEL_PATH = "policy_fnatic_attacker_dagger_final.pt"
@@ -147,11 +149,17 @@ def _build_team_ai(key):
         )
 
     if normalized == "user":
-        return DualRoleTeamAI(
+        # 人間操作はIQ知覚補正でラップしない。
+        # RenderingUIMixin は UserInputController を直接認識して
+        # クリック操作を有効化するため、ラップされると操作不能になる。
+        team_ai = DualRoleTeamAI(
             name="ユーザー操作",
             attacker_factory=lambda: UserInputController(),
             defender_factory=lambda: UserInputController(),
         )
+        if hasattr(team_ai, "use_iq_perception"):
+            team_ai.use_iq_perception = False
+        return team_ai
 
     raise ValueError(f"不明なTeam AIです: {key}")
 
@@ -277,6 +285,13 @@ class VisualFPSBattle(
 
         if hasattr(self.defender_controller, "set_game"):
             self.defender_controller.set_game(self)
+
+        setup_errors = validate_against_map(self.maze_str)
+        if setup_errors:
+            raise ValueError(
+                "Defender Setup map mismatch: " + "; ".join(setup_errors)
+            )
+        self.defender_setup_phase = DefenderSetupPhase()
 
         self.init_round()
 
@@ -588,6 +603,17 @@ class VisualFPSBattle(
 
         if hasattr(self.attacker_controller, "reset_round"):
             self.attacker_controller.reset_round()
+
+        # 毎ラウンド、通常戦闘より先にDefender Setup Phaseを開始する。
+        self.defender_setup_phase.start()
+
+    @property
+    def in_defender_setup_phase(self):
+        return bool(self.defender_setup_phase.active)
+
+    @property
+    def defender_setup_ticks_remaining(self):
+        return int(self.defender_setup_phase.ticks_remaining)
 
     def run(self):
         if self.headless:

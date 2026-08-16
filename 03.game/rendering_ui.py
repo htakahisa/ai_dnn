@@ -1,3 +1,10 @@
+from map_data_defender_setup import (
+    get_setup_forbidden_floor_cells,
+    SETUP_FORBIDDEN_OVERLAY_COLOR,
+    SETUP_FORBIDDEN_OVERLAY_STIPPLE,
+    SETUP_FORBIDDEN_OUTLINE_COLOR,
+)
+
 """Tkinter input handling and all visual rendering."""
 
 import math
@@ -5,15 +12,8 @@ import math
 from controllers import UserInputController
 from game_core import (
     COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_TICKS,
-    COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS, SMOKE_WARNING_TICKS,
-    EXPLOSION_DURATION_TICKS, EXPLOSION_START_RADIUS, EXPLOSION_MAX_RADIUS,
-    EXPLOSION_FILL_COLOR, EXPLOSION_OUTLINE_COLOR, EXPLOSION_OUTLINE_WIDTH,
+    COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS,
 )
-
-# サイドパネル上部のヘッダー高さ。ここを変えると _draw_team_panel と
-# _handle_team_panel_click 両方のクリック判定に反映される。
-PANEL_HEADER_H = 54
-PANEL_ROWS_TOP = PANEL_HEADER_H + 6
 
 class RenderingUIMixin:
     def get_user_controllers(self):
@@ -29,14 +29,10 @@ class RenderingUIMixin:
     def _controller_for_team(self, team):
         controller = self.attacker_controller if team == "A" else self.defender_controller
         return controller if isinstance(controller, UserInputController) else None
-
-
     def _clear_other_user_selections(self, active_team):
         for ctrl, team in self.get_user_controllers():
             if team != active_team:
                 ctrl.selected_char = None
-
-
     def _set_active_user_character(self, team, character_name):
         ctrl = self._controller_for_team(team)
         if ctrl is None:
@@ -57,13 +53,9 @@ class RenderingUIMixin:
         self.active_user_team = team
         self.ability_mode = None
         return True
-
-
     def _is_character_selected(self, character):
         ctrl = self._controller_for_team(character.team)
         return bool(ctrl and ctrl.selected_char == character.name)
-
-
     def _handle_team_panel_click(self, x, y):
         if x < SIDE_PANEL_WIDTH:
             team = "A"
@@ -86,14 +78,13 @@ class RenderingUIMixin:
         card_h = 100
 
         for index, character in enumerate(chars):
-            y1 = PANEL_ROWS_TOP + index * row_h
+            y1 = 48 + index * row_h
             y2 = y1 + card_h
             if y1 <= y <= y2:
                 self._set_active_user_character(team, character.name)
                 self.draw()
                 return True
         return False
-
 
     def on_canvas_click(self, event):
         if event.y < COMBO_BANNER_HEIGHT:
@@ -200,7 +191,6 @@ class RenderingUIMixin:
 
         self.draw()
 
-
     def _selected_user_character(self):
         active_team = getattr(self, "active_user_team", None)
         ctrl = self._controller_for_team(active_team) if active_team in ("A", "D") else None
@@ -232,7 +222,6 @@ class RenderingUIMixin:
                     self.active_user_team = team
                     return selected
         return None
-
 
     def _can_selected_plant(self):
         selected = self._selected_user_character()
@@ -297,66 +286,39 @@ class RenderingUIMixin:
         else:  # HUNT
             self.canvas.create_text(cx, cy, text="H", fill=fill, font=("Arial", 10, "bold"))
 
-    def _draw_team_panel(self, team, x0, team_name, role_label, accent):
-        """左右パネルへチーム名・役割・HP・K/D・アビリティ・現在の戦闘ステータスを表示する。
 
-        team_name がrole_label（"ATTACKERS"/"DEFENDERS"）と異なる場合のみ、
-        1段目にチーム名、2段目に役割ラベルの2行表示にする。
-        TeamPreset未使用時（team_name==role_label）は従来通り1行のみ表示する。
-        """
+    def _draw_team_panel(self, team, x0, title, accent):
+        """左右パネルへHP・K/D・アビリティ・現在の戦闘ステータスを表示する。"""
         panel_w = SIDE_PANEL_WIDTH
         panel_h = self.map_pixel_height + self.ability_area_height
         self.canvas.create_rectangle(
             x0, 0, x0 + panel_w, panel_h,
             fill="#111722", outline="#2a3444"
         )
-        self.canvas.create_rectangle(x0, 0, x0 + panel_w, PANEL_HEADER_H, fill=accent, outline="")
-
-        if team_name and team_name != role_label:
-            self.canvas.create_text(
-                x0 + panel_w / 2, 20,
-                text=team_name, fill="white", font=("Arial", 13, "bold")
-            )
-            self.canvas.create_text(
-                x0 + panel_w / 2, 40,
-                text=role_label, fill="#e8ecf2", font=("Arial", 9, "bold")
-            )
-        else:
-            self.canvas.create_text(
-                x0 + panel_w / 2, PANEL_HEADER_H / 2,
-                text=role_label, fill="white", font=("Arial", 13, "bold")
-            )
+        self.canvas.create_rectangle(x0, 0, x0 + panel_w, 42, fill=accent, outline="")
+        self.canvas.create_text(
+            x0 + panel_w / 2, 21,
+            text=title, fill="white", font=("Arial", 13, "bold")
+        )
 
         chars = [c for c in self.chars if c.team == team][:5]
         row_h = 108
         card_h = 100
 
         for i, char in enumerate(chars):
-            y = PANEL_ROWS_TOP + i * row_h
+            y = 48 + i * row_h
             row_fill = "#1b2432" if char.is_alive else "#17191e"
             muted = "#aeb8c6" if char.is_alive else "#666b73"
             name_fill = "white" if char.is_alive else "#777b83"
 
-            selected = self._is_character_selected(char)
-            selectable = self._controller_for_team(team) is not None and char.is_alive
-            card_outline = "#f1c40f" if selected else ("#52657c" if selectable else "#323e50")
-            card_width = 3 if selected else 1
-
             self.canvas.create_rectangle(
                 x0 + 10, y, x0 + panel_w - 10, y + card_h,
-                fill=row_fill, outline=card_outline, width=card_width
+                fill=row_fill, outline="#323e50"
             )
-
-            if selected:
-                self.canvas.create_text(
-                    x0 + 14, y + 13,
-                    text="▶", anchor="w",
-                    fill="#f1c40f", font=("Arial", 9, "bold")
-                )
 
             # 名前・K/D
             self.canvas.create_text(
-                x0 + (30 if selected else 18), y + 13,
+                x0 + 18, y + 13,
                 text=char.display_name, anchor="w",
                 fill=name_fill, font=("Arial", 9, "bold")
             )
@@ -386,13 +348,13 @@ class RenderingUIMixin:
             accuracy_pct = round(char.accuracy * 100)
             dodge_pct = round(char.dodge_rate * 100)
             hs_pct = round(char.hs_rate * 100)
-            judgment_text = str(math.floor(float(getattr(char, "effective_iq", getattr(char, "iq", 0))))) + (" [IGL]" if getattr(char, "is_igl", False) else "")
+            iq_text = f"{char.iq:g}"
             reaction_text = f"{char.reaction:g}"
             power_text = str(math.floor(char.combat_power))
 
             self.canvas.create_text(
                 x0 + 18, y + 49,
-                text=f"命中精度 {accuracy_pct}%   判断力 {judgment_text}",
+                text=f"命中精度 {accuracy_pct}%   判断力(IQ) {iq_text}",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
             self.canvas.create_text(
@@ -443,84 +405,13 @@ class RenderingUIMixin:
                 fill=muted, font=("Arial", 7, "bold")
             )
 
-    def _draw_victory_overlay(self):
-        """試合終了時、マップ中央に勝利チームを表示する。"""
-        attacker_won = self.attacker_wins > self.defender_wins
-        winner_name = self.attacker_team_name if attacker_won else self.defender_team_name
-        accent = "#c0392b" if attacker_won else "#27ae60"
-
-        cx = self.map_offset_x + self.map_pixel_width / 2
-        cy = self.map_pixel_height / 2
-        box_w, box_h = 340, 150
-
-        x1, y1 = cx - box_w / 2, cy - box_h / 2
-        x2, y2 = cx + box_w / 2, cy + box_h / 2
-
-        # 半透明風に見せるための下敷き＋縁取り二重枠
-        self.canvas.create_rectangle(x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3)
-        self.canvas.create_rectangle(x1 + 6, y1 + 6, x2 - 6, y2 - 6, fill="", outline=accent, width=1)
-
-        self.canvas.create_text(
-            cx, cy - 24,
-            text=winner_name, fill="white", font=("Arial", 20, "bold")
-        )
-        self.canvas.create_text(
-            cx, cy + 20,
-            text="VICTORY!", fill=accent, font=("Arial", 26, "bold")
-        )
-    
-    def _draw_special_round_banner(self):
-        """ラウンド内でのCLUTCH/ACEを、VICTORY演出と同じ中央枠で表示する。"""
-        banner = self.special_round_banner
-        is_ace = banner["type"] == "ACE"
-        accent = "#f1c40f" if is_ace else "#e74c3c"
-
-        cx = self.map_offset_x + self.map_pixel_width / 2
-        cy = self.map_pixel_height / 2
-        box_w, box_h = 340, 150
-
-        x1, y1 = cx - box_w / 2, cy - box_h / 2
-        x2, y2 = cx + box_w / 2, cy + box_h / 2
-
-        self.canvas.create_rectangle(x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3)
-        self.canvas.create_rectangle(x1 + 6, y1 + 6, x2 - 6, y2 - 6, fill="", outline=accent, width=1)
-
-        self.canvas.create_text(
-            cx, cy - 24,
-            text=banner["name"], fill="white", font=("Arial", 20, "bold")
-        )
-        self.canvas.create_text(
-            cx, cy + 20,
-            text="ACE!" if is_ace else "CLUTCH!",
-            fill=accent, font=("Arial", 26, "bold")
-        )
-    
-    def _draw_explosion_effect(self):
-        """スパイク位置を中心に黒い円が広がる爆発演出を描く。"""
-        effect = self.explosion_effect
-        pr, pc = effect["pos"]
-        progress = min(1.0, effect["ticks_elapsed"] / max(1, EXPLOSION_DURATION_TICKS))
-
-        radius = EXPLOSION_START_RADIUS + (EXPLOSION_MAX_RADIUS - EXPLOSION_START_RADIUS) * progress
-
-        cx = self._map_x((pc + 0.5) * self.cell_size)
-        cy = (pr + 0.5) * self.cell_size
-
-        self.canvas.create_oval(
-            cx - radius, cy - radius, cx + radius, cy + radius,
-            fill=EXPLOSION_FILL_COLOR, outline=EXPLOSION_OUTLINE_COLOR,
-            width=EXPLOSION_OUTLINE_WIDTH,
-        )
 
     def draw(self):
         if self.headless:
             return
         self.canvas.delete("all")
-        self._draw_team_panel("A", 0, self.attacker_team_name, "ATTACKERS", "#c0392b")
-        self._draw_team_panel(
-            "D", self.map_offset_x + self.map_pixel_width,
-            self.defender_team_name, "DEFENDERS", "#27ae60",
-        )
+        self._draw_team_panel("A", 0, "ATTACKERS", "#c0392b")
+        self._draw_team_panel("D", self.map_offset_x + self.map_pixel_width, "DEFENDERS", "#27ae60")
 
         color_map = {"0":"white", "1":"#34495e", "2":"#fff9c4", "3":"#ffcccc", "4":"#ccffcc"}
         for r in range(self.height):
@@ -529,10 +420,47 @@ class RenderingUIMixin:
                 color = color_map.get(str(self.grid[r, c]), "white")
                 self.canvas.create_rectangle(x1, r*self.cell_size, x1+self.cell_size, (r+1)*self.cell_size, fill=color, outline="#eee")
 
+        # Defender Setup Phase中だけ、通常床だがSetup進入禁止のセルを薄黄色表示。
+        if getattr(self, "in_defender_setup_phase", False):
+            for sr, sc in get_setup_forbidden_floor_cells(self.maze_str):
+                x1 = self._map_x(sc * self.cell_size)
+                y1 = sr * self.cell_size
+                self.canvas.create_rectangle(
+                    x1,
+                    y1,
+                    x1 + self.cell_size,
+                    y1 + self.cell_size,
+                    fill=SETUP_FORBIDDEN_OVERLAY_COLOR,
+                    outline=SETUP_FORBIDDEN_OUTLINE_COLOR,
+                    width=1,
+                    stipple=SETUP_FORBIDDEN_OVERLAY_STIPPLE,
+                )
+
+        if getattr(self, "in_defender_setup_phase", False):
+            self.canvas.create_rectangle(
+                self.map_offset_x + 8,
+                8,
+                self.map_offset_x + 230,
+                42,
+                fill="#fff8d8",
+                outline="#d6b84a",
+                width=2,
+            )
+            self.canvas.create_text(
+                self.map_offset_x + 119,
+                25,
+                text=(
+                    "DEFENDER SETUP  "
+                    f"{getattr(self, 'defender_setup_ticks_remaining', 0)}"
+                ),
+                fill="#5e4a00",
+                font=("Arial", 12, "bold"),
+            )
+
         # 煙らしく見えるように、半透明風の円を重ねて雲状に描画する。
         # Tkinter CanvasはRGBA非対応なのでstippleを使う。
         for smoke_index, smoke in enumerate(self.smokes):
-            warning = smoke["remaining_ticks"] <= SMOKE_WARNING_TICKS
+            warning = smoke["remaining_ticks"] <= 3
             if warning and self.battle_tick % 2 == 0:
                 continue
             for sr, sc in smoke["cells"]:
@@ -569,9 +497,6 @@ class RenderingUIMixin:
             sr, sc = self.spike_pos
             x1 = self._map_x(sc*self.cell_size)
             self.canvas.create_oval(x1+2, sr*self.cell_size+2, x1+self.cell_size-2, (sr+1)*self.cell_size-2, fill="black", outline="")
-
-        if getattr(self, "explosion_effect", None) is not None:
-            self._draw_explosion_effect()
 
         if self.last_shot:
             shooter = self.last_shot["shooter"]
@@ -628,11 +553,7 @@ class RenderingUIMixin:
             self.canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
                                     fill="#fff7bf", outline="#f1c40f", width=2, stipple="gray50")
 
-        selected_characters = {
-            (team, ctrl.selected_char)
-            for ctrl, team in self.get_user_controllers()
-            if ctrl.selected_char is not None
-        }
+        selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
         viewer_team = self.get_viewer_team()
         visible_chars = [
             c for c in self.chars
@@ -648,9 +569,8 @@ class RenderingUIMixin:
                 continue
 
             bg = "#2980b9" if (char.defuse_timer > 0 and self.is_planted) else char.bg_color
-            is_selected = (char.team, char.name) in selected_characters
-            outline_color = "yellow" if is_selected else ""
-            outline_width = 3 if is_selected else 1
+            outline_color = "yellow" if char.name in selected_names else ""
+            outline_width = 3 if char.name in selected_names else 1
             self.canvas.create_oval(x1, row*self.cell_size, x1+self.cell_size, (row+1)*self.cell_size, fill=bg, outline=outline_color, width=outline_width)
             if char.blind_remaining > 0:
                 # 視認性を壊さない薄い二重リングと小さな印でブラインド状態を表示。
@@ -736,15 +656,10 @@ class RenderingUIMixin:
                 self.canvas.create_text((px1+px2)/2, py1+22,
                                         text="PLANTING..." if planting else "PLANT",
                                         fill="#ffd27a", font=("Arial", 11, "bold"))
-                progress = min(1.0, selected.plant_timer / max(1, PLANT_REQUIRED_TICKS))
+                progress = min(1.0, selected.plant_timer / max(0.001, PLANT_REQUIRED_TICKS))
                 self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
                 self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
                                              fill="#f39c12", outline="")
-
-        if self.match_over:
-            self._draw_victory_overlay()
-        elif getattr(self, "special_round_banner", None):
-            self._draw_special_round_banner()
 
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
         self.canvas.move("all", 0, COMBO_BANNER_HEIGHT)
@@ -773,49 +688,23 @@ class RenderingUIMixin:
         category_text = "覚醒イベント" if is_awakening else "プレイヤーコンボ"
         title_color = "#ff8f70" if is_awakening else "#ffd66b"
 
-        self.canvas.create_rectangle(
-            12, 10, total_w - 12, COMBO_BANNER_HEIGHT - 10,
-            fill="#151c27", outline=accent, width=3
-        )
-
-        title_y = 25
-        players_y = 52
-        effect_y = COMBO_BANNER_HEIGHT - 25
-
+        self.canvas.create_rectangle(12, 10, total_w-12, COMBO_BANNER_HEIGHT-10, fill="#151c27", outline=accent, width=3)
         self.canvas.create_text(
-            30, title_y, text=category_text, anchor="w",
+            30, 25, text=category_text, anchor="w",
             fill=accent, font=("Arial", 10, "bold")
         )
         self.canvas.create_text(
-            total_w / 2, title_y,
-            text=announcement.get("name", "名称未設定"),
+            total_w/2, 25, text=announcement.get("name", "名称未設定"),
             fill=title_color, font=("Arial", 17, "bold")
         )
-
-        names = " × ".join(
-            announcement.get("display_players", announcement.get("players", ()))
-        )
+        names = " × ".join(announcement.get("display_players", announcement.get("players", ())))
         self.canvas.create_text(
-            total_w / 2, players_y,
-            text=f"{team_text}  |  {names}",
+            total_w/2, 51, text=f"{team_text}  |  {names}",
             fill="white", font=("Arial", 11, "bold")
         )
-
-        effect_text = announcement.get("effect_text", "特殊効果")
-        if isinstance(effect_text, str):
-            parts = [part.strip() for part in effect_text.split("\n") if part.strip()]
-            if len(parts) > 1:
-                effect_text = "\n".join(
-                    " / ".join(parts[i:i + 2])
-                    for i in range(0, len(parts), 2)
-                )
-
         self.canvas.create_text(
-            total_w / 2, effect_y,
-            text=effect_text,
-            fill="#b9c6d8",
-            font=("Arial", 9),
-            width=max(200, total_w - 100),
-            justify="center",
-            anchor="center",
+            total_w/2, 73, text=announcement.get("effect_text", "特殊効果"),
+            fill="#b9c6d8", font=("Arial", 10)
         )
+
+

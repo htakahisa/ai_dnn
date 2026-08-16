@@ -67,6 +67,16 @@ SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
 REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすBFS距離
 
+# Search Information Commitment:
+# DQNには交戦・アビリティ・現地判断を残しつつ、確定度の高い情報に対する
+# 長距離ローテートだけBFS最短移動で上書きする。
+SPIKE_HOLDER_COMMIT_TICKS = 6
+SINGLE_SIGHTING_COMMIT_TICKS = 3
+DOUBLE_SIGHTING_COMMIT_TICKS = 8
+MAIN_FORCE_COMMIT_TICKS = 12
+SINGLE_SIGHTING_MAX_BFS = 10   # 1人目撃では近いDefenderだけ寄る
+DOUBLE_SIGHTING_MAX_BFS = 18   # 2人目撃ではかなり広い範囲から寄る
+
 DEFAULT_MODEL_PATH = (
     "data/defender_search_gc_data/" "dqn_defender_search_gc_best_by_eval.pt"
 )
@@ -250,6 +260,43 @@ def _bfs_best_direction(dist_map, grid, r0, c0):
     return best_dr, best_dc
 
 
+def _bfs_best_step_avoiding_occupied(dist_map, grid, char, chars):
+    """BFS距離を確実に1以上縮める合法手を返す。味方詰まりも避ける。"""
+    if dist_map is None:
+        return [int(char.pos[0]), int(char.pos[1])]
+
+    r0, c0 = int(char.pos[0]), int(char.pos[1])
+    cur = int(dist_map[r0, c0])
+    if cur <= 0:
+        return [r0, c0]
+
+    occupied = {
+        (int(o.pos[0]), int(o.pos[1]))
+        for o in chars
+        if o is not char and getattr(o, "is_alive", True)
+    }
+
+    best = None
+    for dr, dc in CARDINAL:
+        nr, nc = r0 + dr, c0 + dc
+        if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+            continue
+        if grid[nr, nc] == 1 or (nr, nc) in occupied:
+            continue
+
+        nd = int(dist_map[nr, nc])
+        if nd < 0 or nd >= cur:
+            continue
+
+        cand = (nd, nr, nc)
+        if best is None or cand < best:
+            best = cand
+
+    if best is None:
+        return [r0, c0]
+    return [best[1], best[2]]
+
+
 def _parse_search_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
@@ -334,15 +381,36 @@ def _ability_charge(char):
 class _TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.spike_held = (
-            False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
-        )
-        self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
+        self.spike_held = False
+        self.spike_tick_ago = 999
+        self.last_seen_enemy = None
+        self.visible_enemy_count = 0
+        self.visible_enemy_positions = []
 
     def reset(self):
         self.spike_pos = None
         self.spike_held = False
+        self.spike_tick_ago = 999
         self.last_seen_enemy = None
+        self.visible_enemy_count = 0
+        self.visible_enemy_positions = []
+
+    @staticmethod
+    def _main_force_focus_position(visible_enemies):
+        """複数目撃時は、目撃群の中心に最も近い実在敵座標を返す。"""
+        if not visible_enemies:
+            return None
+        if len(visible_enemies) == 1:
+            return tuple(visible_enemies[0].pos)
+
+        positions = [tuple(e.pos) for e in visible_enemies]
+        return min(
+            positions,
+            key=lambda p: sum(
+                max(abs(p[0] - q[0]), abs(p[1] - q[1]))
+                for q in positions
+            ),
+        )
 
     def update(self, grid, my_team, chars, spike_ground_pos=None):
         defenders = [c for c in chars if c.team == my_team and c.is_alive]
@@ -356,41 +424,69 @@ class _TeamMemory:
                 if _has_los(grid, tuple(d.pos), tuple(e.pos)):
                     visible_enemies.append(e)
 
+        # 複数Defenderから同じ敵が見えるので、名前で重複除去する。
+        unique_visible = {}
+        for e in visible_enemies:
+            unique_visible[e.name] = e
+        visible_enemies = list(unique_visible.values())
+
+        self.visible_enemy_count = len(visible_enemies)
+        self.visible_enemy_positions = [tuple(e.pos) for e in visible_enemies]
+
         spike_holder = next(
-            (e for e in visible_enemies if getattr(e, "has_spike", False)), None
+            (e for e in visible_enemies if getattr(e, "has_spike", False)),
+            None,
         )
+
         if spike_holder is not None:
             self.spike_pos = tuple(spike_holder.pos)
             self.spike_held = True
+            self.spike_tick_ago = 0
         elif spike_ground_pos is not None and any(
-            _has_los(grid, tuple(d.pos), tuple(spike_ground_pos)) for d in defenders
+            _has_los(grid, tuple(d.pos), tuple(spike_ground_pos))
+            for d in defenders
         ):
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
+            self.spike_tick_ago = 0
+        elif self.spike_pos is not None:
+            self.spike_tick_ago += 1
+            if self.spike_held and self.spike_tick_ago > SPIKE_HOLDER_COMMIT_TICKS:
+                self.spike_pos = None
+                self.spike_held = False
+                self.spike_tick_ago = 999
 
         if visible_enemies:
+            focus_pos = self._main_force_focus_position(visible_enemies)
+
             tracked = None
             if self.last_seen_enemy is not None:
                 tracked_name = self.last_seen_enemy.get("name")
                 tracked = next(
-                    (e for e in visible_enemies if e.name == tracked_name), None
+                    (e for e in visible_enemies if e.name == tracked_name),
+                    None,
                 )
             if tracked is None:
                 tracked = min(
                     visible_enemies,
                     key=lambda e: (
                         min(
-                            max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
+                            max(
+                                abs(e.pos[0] - d.pos[0]),
+                                abs(e.pos[1] - d.pos[1]),
+                            )
                             for d in defenders
                         )
                         if defenders
                         else 0
                     ),
                 )
+
             self.last_seen_enemy = {
-                "pos": tuple(tracked.pos),
+                "pos": tuple(focus_pos if focus_pos is not None else tracked.pos),
                 "name": tracked.name,
                 "tick_ago": 0,
+                "count": self.visible_enemy_count,
             }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
@@ -619,9 +715,14 @@ class LearningDefenderSearchGCController:
             obs[27] = (site_positions[1][0] - char.pos[0]) / height
             obs[28] = (site_positions[1][1] - char.pos[1]) / width
 
-        # search phaseではdetonate_timerは未使用(プラント前)。
-        # ラウンド経過情報を持たないため中立値(0.5)を入れる。
-        obs[29] = 0.5
+        # Search v2: 実戦側でも可能ならラウンド経過を入力する。
+        # game_state に無い旧環境では中立値0.5へフォールバック。
+        tick_value = game_state.get("battle_tick", game_state.get("round_tick", None))
+        obs[29] = (
+            min(max(float(tick_value), 0.0), 90.0) / 90.0
+            if tick_value is not None
+            else 0.5
+        )
         obs[30] = 0.0
 
         # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
@@ -725,7 +826,8 @@ class LearningDefenderSearchGCController:
         obs, visible_enemies = self._build_observation(
             char, game_state, self._site_positions_cache, unit_has_spike_los
         )
-        mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
+        # Search v2: 接敵中も引く/横ずれ/合流をDQNに判断させる。
+        mask = self._action_mask(char, grid, chars, lock_movement=False)
 
         if self.verbose:
             mode = (
@@ -764,6 +866,12 @@ class LearningDefenderSearchGCController:
         move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+
+        # ------------------------------------------------------------------
+        # Search v2: information commitment is no longer forcibly scripted.
+        # Spike / sighting direction remains in the observation, but the DQN
+        # chooses HOLD / rotate / retreat / ability itself.
+        # ------------------------------------------------------------------
 
         # train_defender_search.py と挙動を一致させる: position mode
         # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、

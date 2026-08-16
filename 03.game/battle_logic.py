@@ -81,6 +81,104 @@ class BattleLogicMixin:
         char.entered_smoke_this_tick = bool(not was_in_smoke and in_smoke_now)
         char.exited_smoke_this_tick = bool(was_in_smoke and not in_smoke_now)
 
+    def _move_character_during_defender_setup(self, char):
+        """Setup Phase中のDefender専用移動。
+
+        コントローラーから移動先だけを受け取り、Ability / Plant / Defuseは
+        一切実行しない。Setupマップで禁止されているセルにも入れない。
+        """
+        if char.team != "D" or not char.is_alive:
+            return
+
+        old_pos = tuple(char.pos)
+        char.moved_last_tick = bool(getattr(char, "moved_this_tick", False))
+        char.moved_this_tick = False
+        char.stopped_after_move_this_tick = False
+        char.entered_smoke_this_tick = False
+        char.exited_smoke_this_tick = False
+        char.was_in_smoke_before_move = False
+        char.is_planting = False
+        char.plant_timer = 0
+        char.defuse_timer = 0
+
+        game_state = {
+            "grid": self.grid,
+            "spike_pos": self.spike_pos,
+            "is_planted": False,
+            "planted_pos": None,
+            "target_plant_pos": self.target_plant_pos,
+            "chars": self.chars,
+            "spotted_info": {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0},
+            "defender_defuse_info": {},
+            "detonate_timer": self.detonate_timer,
+            "round_timer": self.round_timer,
+            "defender_setup_active": True,
+            "defender_setup_ticks_remaining": self.defender_setup_phase.ticks_remaining,
+        }
+
+        # Setup Phase はラウンド前の自陣配置なので、IQ知覚補正を通さない。
+        # IQAwareController を通すと perceived_char / perceived_state のコピー座標で
+        # Setup BFSが計算され、実キャラの位置と食い違う。
+        #
+        # Setup中だけ inner_controller を直接呼び、
+        # LIVE後は通常の self.defender_controller 経由へ戻す。
+        setup_controller = self.defender_controller
+        seen_controller_ids = set()
+
+        while hasattr(setup_controller, "inner_controller"):
+            controller_id = id(setup_controller)
+            if controller_id in seen_controller_ids:
+                break
+            seen_controller_ids.add(controller_id)
+
+            inner = getattr(setup_controller, "inner_controller", None)
+            if inner is None or inner is setup_controller:
+                break
+            setup_controller = inner
+
+        # IQ wrapper が通常時に inner.set_game(perceived_view) を呼ぶため、
+        # Setup判断の直前に実ゲームへ戻しておく。
+        if hasattr(setup_controller, "set_game"):
+            setup_controller.set_game(self)
+
+        result = setup_controller.decide_move(char, game_state)
+        next_pos = result
+
+        # Ability付き戻り値や legacy action でも、Setup中は座標部分だけ使う。
+        if isinstance(result, tuple) and len(result) >= 1:
+            next_pos = result[0]
+
+        if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
+            nr, nc = int(next_pos[0]), int(next_pos[1])
+            in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
+            target_pos = (nr, nc)
+            occupied = self._is_position_occupied(char, target_pos, old_pos)
+            is_wall = in_bounds and self.grid[nr, nc] == 1
+            setup_allowed = (
+                in_bounds
+                and self.defender_setup_phase.defender_can_move_to(nr, nc)
+            )
+
+            if in_bounds and not is_wall and not occupied and setup_allowed:
+                char.pos = [nr, nc]
+                self._update_occupancy_after_move(old_pos, (nr, nc))
+
+        char.moved_this_tick = tuple(char.pos) != old_pos
+
+    def _run_defender_setup_tick(self):
+        """Setup Phaseを1Tick処理する。Defenderだけが移動する。"""
+        self._build_occupancy_counts()
+        try:
+            for char in self.chars:
+                if char.is_alive and char.team == "D":
+                    self._move_character_during_defender_setup(char)
+        finally:
+            self._clear_occupancy_counts()
+
+        ended = self.defender_setup_phase.advance_tick()
+        if ended and not self.headless:
+            self.label.config(text=f"⚔️ Round {self.current_round} LIVE", fg="black")
+
     def move_character(self, char):
         r, c = char.pos
         old_pos = tuple(char.pos)
@@ -140,6 +238,8 @@ class BattleLogicMixin:
             ),
             "defender_defuse_info": defender_defuse_info,
             "detonate_timer": self.detonate_timer,
+            # GC Macro Plant Commitment: pre-plant remaining round time.
+            "round_timer": self.round_timer,
         }
 
         if char.team == "A":
@@ -850,22 +950,9 @@ class BattleLogicMixin:
 
     def loop(self):
         if not self.round_over and not self.match_over:
-            self._build_occupancy_counts()
-            try:
-                for c in self._move_order():
-                    if c.is_alive:
-                        self.move_character(c)
-            finally:
-                self._clear_occupancy_counts()
-            self.process_battle()
-            self.draw()
-            self._advance_combo_announcement()
-            self.root.after(TICK_TIME, self.loop)
-
-    def run_headless_loop(self):
-        """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
-        while not self.match_over:
-            if not self.round_over:
+            if self.defender_setup_phase.active:
+                self._run_defender_setup_tick()
+            else:
                 self._build_occupancy_counts()
                 try:
                     for c in self._move_order():
@@ -875,3 +962,23 @@ class BattleLogicMixin:
                     self._clear_occupancy_counts()
                 self.process_battle()
                 self._advance_combo_announcement()
+
+            self.draw()
+            self.root.after(TICK_TIME, self.loop)
+
+    def run_headless_loop(self):
+        """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
+        while not self.match_over:
+            if not self.round_over:
+                if self.defender_setup_phase.active:
+                    self._run_defender_setup_tick()
+                else:
+                    self._build_occupancy_counts()
+                    try:
+                        for c in self._move_order():
+                            if c.is_alive:
+                                self.move_character(c)
+                    finally:
+                        self._clear_occupancy_counts()
+                    self.process_battle()
+                    self._advance_combo_announcement()
