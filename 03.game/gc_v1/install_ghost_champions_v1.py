@@ -50,9 +50,9 @@ team_block = '''    if normalized in {
 
 '''
 if team_block.strip() not in t:
-    marker = '    if normalized == "toru_ai_v3":\n'
+    marker = '    if normalized == "toru_ai_v3.1":\n'
     if marker not in t:
-        raise RuntimeError("run_game.py: _build_team_ai の Toru AI v3 分岐が見つかりません")
+        raise RuntimeError("run_game.py: _build_team_ai の Toru AI v3.1 分岐が見つかりません")
     t = t.replace(marker, team_block + marker, 1)
 
 attacker_block = '''    if normalized in {

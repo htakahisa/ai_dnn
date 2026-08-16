@@ -76,14 +76,14 @@ PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c]
 SITE_BOUNDARY_COL = WIDTH // 2
 
 KNOWN_PLANT_LEFT = [(8, 3), (8, 4)]
-KNOWN_PLANT_RIGHT = [(7, 42), (8, 42), (7, 40)]
+KNOWN_PLANT_RIGHT = [(6, 42), (7, 42), (8, 42)]
 
 LEFT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] < SITE_BOUNDARY_COL]
 RIGHT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] >= SITE_BOUNDARY_COL]
 
 # CLIから上書き可能(main()内でargparseにより再代入)
 SITE_LEFT_PROB = 0.5    # 左サイトを選ぶ確率(残りは右サイト)
-KNOWN_POS_PROB = 0.8    # 選ばれたサイト内で既知位置を使う確率(残りはそのサイト範囲内のランダムPLANT_CELLS)
+KNOWN_POS_PROB = 0.5    # 選ばれたサイト内で既知位置を使う確率(残りはそのサイト範囲内のランダムPLANT_CELLS)
 
 
 def _sample_planted_pos():
@@ -334,10 +334,10 @@ good_directions = common_rl.good_directions
 # 軽量キャラクター表現(game_core.Character非依存)
 # ============================================================
 
-BASE_ACCURACY = 0.55
-BASE_DODGE = 0.12
-BASE_HS_RATE = 0.22
-BASE_REACTION = 100.0
+BASE_ACCURACY = 0.70
+BASE_DODGE = 0.42
+BASE_HS_RATE = 0.30
+BASE_REACTION = 150.0
 
 # 💡バグ修正: 元実装は未定義の TOUYAMA_RAW_STATS を参照しておりNameErrorに
 # なる不具合があった。common_defender.compute_touyama_effective_stats

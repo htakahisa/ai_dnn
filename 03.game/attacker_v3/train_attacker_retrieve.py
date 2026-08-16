@@ -42,7 +42,7 @@ DEVICE = torch.device("cpu")
 
 MAX_TICKS = 70
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY"]
+ACTIONS = ["MOVE", "ABILITY"]
 N_ACTIONS = len(ACTIONS)
 ROLES = ["FLASH", "SMOKE", "RECON"]
 
@@ -72,6 +72,7 @@ ABILITY_WASTED_ON_AFFECTED = -0.8  # すでに炙り出されている敵に撃�
 KILL_REWARD = 3.0
 KILL_WHILE_DEBUFFED_BONUS = 1.5  # フラッシュ/リコン状態の敵を倒した追加ボーナス
 
+GREEDY_EPISODE = 200   # 評価に使用する episode数
 
 Transition = namedtuple("Transition", ["s", "a", "r", "s2", "done", "mask2"])
 
@@ -257,18 +258,29 @@ class RetrieveEnv:
         return np.array(obs, dtype=np.float32)
 
     def _action_mask(self):
-        """壁への移動 / チャージ0でのABILITYは禁止する。
-        味方に塞がれたセルへの移動は、実ゲームと同様に"物理的には選べるが失敗する"
-        挙動を再現したいため、ここではマスクせずstep側で失敗させる。"""
+        """チャージ0でのABILITYのみ禁止する。移動は常にBFS最短距離で自動移動するためマスク不要。"""
         mask = [True] * N_ACTIONS
+        if self.charge <= 0:
+            mask[1] = False
+        return np.array(mask, dtype=bool)
+
+    def _bfs_move_to_spike(self):
+        """スパイクの位置へBFS距離で1マス進む(常に距離が最小になる隣接セルへ移動)。"""
         r, c = self.pos
-        for i, (dr, dc) in enumerate(CARDINAL):
+        best_cell = None
+        best_dist = self.dist_map[r, c]
+        for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
             if not (0 <= nr < HEIGHT and 0 <= nc < WIDTH) or GRID[nr, nc] == 1:
-                mask[i] = False
-        if self.charge <= 0:
-            mask[5] = False
-        return np.array(mask, dtype=bool)
+                continue
+            d = self.dist_map[nr, nc]
+            if d != -1 and d < best_dist:
+                best_dist = d
+                best_cell = (nr, nc)
+        if best_cell is None:
+            return False
+        self.pos = [best_cell[0], best_cell[1]]
+        return True
 
     # -- ステップ ------------------------------------------------------------
     def step(self, action):
@@ -286,27 +298,13 @@ class RetrieveEnv:
             self.ally_blocked_cell = None
 
         moved = False
-        if action < 4:
-            dr, dc = CARDINAL[action]
-            nr, nc = self.pos[0] + dr, self.pos[1] + dc
-            in_bounds = 0 <= nr < HEIGHT and 0 <= nc < WIDTH
-            is_wall = in_bounds and GRID[nr, nc] == 1
-            blocked_by_ally = in_bounds and self._is_ally_blocked((nr, nc))
-
-            if in_bounds and not is_wall and not blocked_by_ally:
-                old_dist = self.dist_map[self.pos[0], self.pos[1]]
-                self.pos = [nr, nc]
-                new_dist = self.dist_map[nr, nc]
-                # BFS距離ポテンシャルによる報酬シェーピング
+        if action == 0:
+            old_dist = self.dist_map[self.pos[0], self.pos[1]]
+            moved = self._bfs_move_to_spike()
+            if moved:
+                new_dist = self.dist_map[self.pos[0], self.pos[1]]
                 reward += 0.3 * (old_dist - new_dist)
-                moved = True
-            elif blocked_by_ally:
-                # 実ゲームのoccupied判定と同様、位置は変わらずtickだけ消費する。
-                # 明確な負のシグナルにはしすぎない(迂回や待機は状況次第で正解のため)。
-                pass
-        elif action == 4:
-            pass  # STAY
-        elif action == 5:
+        elif action == 1:
             reward += self._resolve_ability()
 
         # 足踏み(同じマスに留まり続ける)ペナルティ。
@@ -451,7 +449,7 @@ def train(
     replay = deque(maxlen=buffer_size)
     recent_rewards = deque(maxlen=200)
     step_count = 0
-    best_success_rate = 0
+    best_eval_reward = float("-inf")
 
     for ep in range(episodes):
         obs, mask = env.reset()
@@ -505,20 +503,20 @@ def train(
                 target_net.load_state_dict(policy_net.state_dict())
 
         recent_rewards.append(ep_reward)
-        if ep % 200 == 0:
-            eval_reward, success_rate, death_rate = evaluate_greedy(policy_net, episodes=100)
+        if ep % GREEDY_EPISODE == 0:
+            eval_reward, success_rate, death_rate = evaluate_greedy(policy_net, episodes=GREEDY_EPISODE)
             print(f"[EP {ep}/{EPISODE_COUNT}] eps={eps:.3f} "
                 f"eval_reward={eval_reward:.3f} success={success_rate:.2%} death={death_rate:.2%}")
-            if success_rate > best_success_rate:
-                best_success_rate = success_rate
+            if eval_reward > best_eval_reward:
+                best_eval_reward = eval_reward
                 torch.save(policy_net.state_dict(), save_path)
-                print(f"  -> best model saved (success_rate={success_rate:.2%})")
+                print(f"  -> best model saved (eval_reward={eval_reward:.3f})")
 
     torch.save(policy_net.state_dict(), save_path.replace("best", "final"))
     print("Training complete.")
 
 
-def evaluate_greedy(policy_net, episodes=100):
+def evaluate_greedy(policy_net, episodes=GREEDY_EPISODE):
     """探索なし(eps=0)でN episode実行し、成功率・死亡率・平均報酬を計測する。"""
     env = RetrieveEnv()
     total_reward = 0.0

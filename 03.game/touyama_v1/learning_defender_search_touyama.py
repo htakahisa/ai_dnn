@@ -662,7 +662,9 @@ class LearningDefenderSearchTouyamaController:
             self.team_memory.spike_pos is None
             and self.team_memory.last_seen_enemy is None
         )
-        if in_position_mode:
+        if visible_enemies:
+            pass
+        elif in_position_mode:
             dist_map = self._assigned_dist_maps.get(char.name)
             if dist_map is not None:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])
