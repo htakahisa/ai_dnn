@@ -12,7 +12,7 @@ abilities_los.py への依存はなく、必要なLOS計算・行動マスク・
 このファイル内に複製する。game_core / map_data_search からは定数・
 マップ文字列のみを参照する(ロジックは参照しない)。
 
-ステータス(GCステータス・タイガーパッシブ込みの確定値)は
+ステータス(GC現行ステータス・正式コンボ込みの確定値)は
 character_stats_gc.py 側の定義に基づき、run_game.py の既存エンジン
 (combo_awakening.py / game_core.Character)が実戦時に自動適用するため、
 本ファイルではステータスの再計算は行わない。char.accuracy等の実値を
@@ -39,19 +39,36 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from gc_search_config import GC_DEFENSE_DEPTH_BIAS_BY_MARKER
+from pathlib import Path
 
 from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
 )
 from map_data import NEW_MAZE_STR
-from map_data_search_gc import SEARCH_MAZE_STR
 
-from character_stats_gc import (
-    CHARACTER_TABLE as GC_STATS_TABLE,
-    GC_ROSTER_ORDER,
-)
+try:
+    from .gc_search_config_aggression import (
+        GC_SEARCH_AGGRESSION_MARKERS,
+        GC_SEARCH_POSITION_RANDOMNESS,
+        GC_SEARCH_RELEASE_BY_MARKER,
+    )
+    from .map_data_search_gc import SEARCH_MAZE_STR
+    from .character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+except ImportError:
+    from gc_search_config import (
+        GC_SEARCH_AGGRESSION_MARKERS,
+        GC_SEARCH_POSITION_RANDOMNESS,
+        GC_SEARCH_RELEASE_BY_MARKER,
+    )
+    from map_data_search_gc import SEARCH_MAZE_STR
+    from character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -65,20 +82,19 @@ ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
-REACH_RADIUS = 1  # 担当ポジションへ「到着した」とみなすBFS距離
+REACH_RADIUS = 1
+SEARCH_DOUBLE_SIGHTING_RELEASE_BFS = 10
+SEARCH_SIGHTING_FRESH_TICKS = 5
 
-# Search Information Commitment:
-# DQNには交戦・アビリティ・現地判断を残しつつ、確定度の高い情報に対する
-# 長距離ローテートだけBFS最短移動で上書きする。
-SPIKE_HOLDER_COMMIT_TICKS = 6
-SINGLE_SIGHTING_COMMIT_TICKS = 3
-DOUBLE_SIGHTING_COMMIT_TICKS = 8
-MAIN_FORCE_COMMIT_TICKS = 12
-SINGLE_SIGHTING_MAX_BFS = 10   # 1人目撃では近いDefenderだけ寄る
-DOUBLE_SIGHTING_MAX_BFS = 18   # 2人目撃ではかなり広い範囲から寄る
-
-DEFAULT_MODEL_PATH = (
-    "data/defender_search_gc_data/" "dqn_defender_search_gc_best_by_eval.pt"
+_THIS_DIR = Path(__file__).resolve().parent
+_MODEL_CANDIDATES = (
+    Path("data/defender_search_gc_data/dqn_defender_search_gc_best_by_eval.pt"),
+    Path("data/defender_search_gc_data/dqn_defender_search_gc_latest.pt"),
+    _THIS_DIR / "data/defender_search_gc_data/dqn_defender_search_gc_best_by_eval.pt",
+    _THIS_DIR / "data/defender_search_gc_data/dqn_defender_search_gc_latest.pt",
+)
+DEFAULT_MODEL_PATH = next(
+    (str(p) for p in _MODEL_CANDIDATES if p.is_file()), str(_MODEL_CANDIDATES[0])
 )
 
 
@@ -200,44 +216,28 @@ def _bfs_distance_map_multi(grid, goals):
     return dist
 
 
-def _choose_defense_position_for_round(grid, name, start_pos):
-    """5～9の候補群から、このラウンドで使う基本配置を1地点だけ抽選する。
-
-    スポーン/現在の開始地点からのBFS距離順位を用いるため、
-    候補数が変わっても設定値はそのまま使える。
-    """
-    candidates = list(_GC_FIXED_DEFENSE_GROUPS.get(name, []))
+def _choose_defense_position_for_round(grid, marker_value, start_pos):
+    """指定アグレッシブ段階の候補から1地点を選ぶ。"""
+    candidates = list(_GC_DEFENSE_GROUPS_BY_MARKER.get(int(marker_value), []))
     if not candidates:
         return None
     if len(candidates) == 1:
         return candidates[0]
 
-    try:
-        marker_value = 5 + GC_ROSTER_ORDER.index(name)
-    except ValueError:
-        marker_value = 5
-
-    bias = float(GC_DEFENSE_DEPTH_BIAS_BY_MARKER.get(marker_value, 0.0))
-    sr, sc = int(start_pos[0]), int(start_pos[1])
-
-    with_dist = []
+    sr, sc = map(int, start_pos)
+    scored = []
     for pos in candidates:
-        dist_map = _bfs_distance_map(grid, pos)
-        d = int(dist_map[sr, sc])
-        if d < 0:
-            d = 10**9
-        with_dist.append((d, pos))
+        dmap = _bfs_distance_map(grid, pos)
+        d = int(dmap[sr, sc])
+        if d >= 0:
+            scored.append((d, pos))
+    if not scored:
+        return random.choice(candidates)
 
-    with_dist.sort(key=lambda item: (item[0], item[1][0], item[1][1]))
-    ordered = [pos for _, pos in with_dist]
-    n = len(ordered)
-
-    if abs(bias) < 1e-12:
-        return random.choice(ordered)
-
-    rank_scores = [-1.0 + 2.0 * i / (n - 1) for i in range(n)]
-    weights = [float(np.exp(bias * score)) for score in rank_scores]
-    return random.choices(ordered, weights=weights, k=1)[0]
+    scored.sort(key=lambda x: (x[0], x[1]))
+    randomness = max(0.0, float(GC_SEARCH_POSITION_RANDOMNESS))
+    weights = [float(np.exp(-randomness * d)) for d, _ in scored]
+    return random.choices([p for _, p in scored], weights=weights, k=1)[0]
 
 
 def _bfs_best_direction(dist_map, grid, r0, c0):
@@ -258,43 +258,6 @@ def _bfs_best_direction(dist_map, grid, r0, c0):
                 best_d = dist_map[nr, nc]
                 best_dr, best_dc = dr, dc
     return best_dr, best_dc
-
-
-def _bfs_best_step_avoiding_occupied(dist_map, grid, char, chars):
-    """BFS距離を確実に1以上縮める合法手を返す。味方詰まりも避ける。"""
-    if dist_map is None:
-        return [int(char.pos[0]), int(char.pos[1])]
-
-    r0, c0 = int(char.pos[0]), int(char.pos[1])
-    cur = int(dist_map[r0, c0])
-    if cur <= 0:
-        return [r0, c0]
-
-    occupied = {
-        (int(o.pos[0]), int(o.pos[1]))
-        for o in chars
-        if o is not char and getattr(o, "is_alive", True)
-    }
-
-    best = None
-    for dr, dc in CARDINAL:
-        nr, nc = r0 + dr, c0 + dc
-        if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
-            continue
-        if grid[nr, nc] == 1 or (nr, nc) in occupied:
-            continue
-
-        nd = int(dist_map[nr, nc])
-        if nd < 0 or nd >= cur:
-            continue
-
-        cand = (nd, nr, nc)
-        if best is None or cand < best:
-            best = cand
-
-    if best is None:
-        return [r0, c0]
-    return [best[1], best[2]]
 
 
 def _parse_search_grid(maze_str):
@@ -322,19 +285,20 @@ def _find_marker_positions(grid, value):
     return hits
 
 
-def _compute_gc_fixed_defense_groups():
-    """5=roster[0] ... 9=roster[4] の対応は固定しつつ、
-    各値は複数候補を許可する。"""
+def _compute_gc_defense_groups_by_marker():
+    """5～9を選手ではなくアグレッシブ段階として読み込む。"""
     search_grid = _parse_search_grid(SEARCH_MAZE_STR)
     return {
-        name: _find_marker_positions(search_grid, 5 + i)
-        for i, name in enumerate(GC_ROSTER_ORDER)
+        marker: _find_marker_positions(search_grid, marker)
+        for marker in GC_SEARCH_AGGRESSION_MARKERS
     }
 
 
-_GC_FIXED_DEFENSE_GROUPS = _compute_gc_fixed_defense_groups()
+_GC_DEFENSE_GROUPS_BY_MARKER = _compute_gc_defense_groups_by_marker()
 _DEFENSE_POSITIONS_CACHE = [
-    pos for name in GC_ROSTER_ORDER for pos in _GC_FIXED_DEFENSE_GROUPS[name]
+    pos
+    for marker in GC_SEARCH_AGGRESSION_MARKERS
+    for pos in _GC_DEFENSE_GROUPS_BY_MARKER[marker]
 ]
 
 
@@ -381,36 +345,15 @@ def _ability_charge(char):
 class _TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.spike_held = False
-        self.spike_tick_ago = 999
-        self.last_seen_enemy = None
-        self.visible_enemy_count = 0
-        self.visible_enemy_positions = []
+        self.spike_held = (
+            False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
+        )
+        self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
         self.spike_pos = None
         self.spike_held = False
-        self.spike_tick_ago = 999
         self.last_seen_enemy = None
-        self.visible_enemy_count = 0
-        self.visible_enemy_positions = []
-
-    @staticmethod
-    def _main_force_focus_position(visible_enemies):
-        """複数目撃時は、目撃群の中心に最も近い実在敵座標を返す。"""
-        if not visible_enemies:
-            return None
-        if len(visible_enemies) == 1:
-            return tuple(visible_enemies[0].pos)
-
-        positions = [tuple(e.pos) for e in visible_enemies]
-        return min(
-            positions,
-            key=lambda p: sum(
-                max(abs(p[0] - q[0]), abs(p[1] - q[1]))
-                for q in positions
-            ),
-        )
 
     def update(self, grid, my_team, chars, spike_ground_pos=None):
         defenders = [c for c in chars if c.team == my_team and c.is_alive]
@@ -424,69 +367,45 @@ class _TeamMemory:
                 if _has_los(grid, tuple(d.pos), tuple(e.pos)):
                     visible_enemies.append(e)
 
-        # 複数Defenderから同じ敵が見えるので、名前で重複除去する。
-        unique_visible = {}
-        for e in visible_enemies:
-            unique_visible[e.name] = e
+        unique_visible = {e.name: e for e in visible_enemies}
         visible_enemies = list(unique_visible.values())
 
-        self.visible_enemy_count = len(visible_enemies)
-        self.visible_enemy_positions = [tuple(e.pos) for e in visible_enemies]
-
         spike_holder = next(
-            (e for e in visible_enemies if getattr(e, "has_spike", False)),
-            None,
+            (e for e in visible_enemies if getattr(e, "has_spike", False)), None
         )
-
         if spike_holder is not None:
             self.spike_pos = tuple(spike_holder.pos)
             self.spike_held = True
-            self.spike_tick_ago = 0
         elif spike_ground_pos is not None and any(
-            _has_los(grid, tuple(d.pos), tuple(spike_ground_pos))
-            for d in defenders
+            _has_los(grid, tuple(d.pos), tuple(spike_ground_pos)) for d in defenders
         ):
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
-            self.spike_tick_ago = 0
-        elif self.spike_pos is not None:
-            self.spike_tick_ago += 1
-            if self.spike_held and self.spike_tick_ago > SPIKE_HOLDER_COMMIT_TICKS:
-                self.spike_pos = None
-                self.spike_held = False
-                self.spike_tick_ago = 999
 
         if visible_enemies:
-            focus_pos = self._main_force_focus_position(visible_enemies)
-
             tracked = None
             if self.last_seen_enemy is not None:
                 tracked_name = self.last_seen_enemy.get("name")
                 tracked = next(
-                    (e for e in visible_enemies if e.name == tracked_name),
-                    None,
+                    (e for e in visible_enemies if e.name == tracked_name), None
                 )
             if tracked is None:
                 tracked = min(
                     visible_enemies,
                     key=lambda e: (
                         min(
-                            max(
-                                abs(e.pos[0] - d.pos[0]),
-                                abs(e.pos[1] - d.pos[1]),
-                            )
+                            max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
                             for d in defenders
                         )
                         if defenders
                         else 0
                     ),
                 )
-
             self.last_seen_enemy = {
-                "pos": tuple(focus_pos if focus_pos is not None else tracked.pos),
+                "pos": tuple(tracked.pos),
                 "name": tracked.name,
                 "tick_ago": 0,
-                "count": self.visible_enemy_count,
+                "count": len(visible_enemies),
             }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
@@ -503,7 +422,7 @@ class LearningDefenderSearchGCController:
     Defenderチーム全員(5人)がこの1インスタンスを共有して呼び出される
     (learning_defender.LearningDefenderAllAIController と同じ運用形態)。
 
-    ステータス(コンボ・タイガーパッシブ込みの確定値)は run_game.py の
+    ステータス(GC現行ステータス・正式コンボ込みの確定値)は run_game.py の
     既存エンジンが character_stats_gc.py を経由して自動適用済みの
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
@@ -529,7 +448,8 @@ class LearningDefenderSearchGCController:
 
         # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
-        self._assigned_positions = {}  # char_name -> [(r,c), ...] 候補群
+        self._assigned_positions = {}
+        self._assigned_markers = {}  # char_name -> [(r,c), ...] 候補群
         self._assigned_dist_maps = {}  # char_name -> np.ndarray(BFS距離マップ)
         self._prev_defense_bfs_dist = {}  # char_name -> float(デバッグ用に保持)
         self._debug_log_path = "defender_search_gc_debug.log"
@@ -564,6 +484,45 @@ class LearningDefenderSearchGCController:
             self.team_memory.update(grid, char.team, chars, spike_ground_pos)
         self._processed_this_tick.add(char.name)
 
+    def _should_force_positioning(self, char, grid, chars):
+        dist_map = self._assigned_dist_maps.get(char.name)
+        if dist_map is None:
+            return False
+
+        r, c = int(char.pos[0]), int(char.pos[1])
+        cur_dist = int(dist_map[r, c])
+        if cur_dist < 0 or cur_dist <= REACH_RADIUS:
+            return False
+
+        enemies = [e for e in chars if e.team != char.team and e.is_alive]
+
+        # 自分自身が接敵していれば、配置移動よりSearch判断を優先。
+        if any(_has_los(grid, tuple(char.pos), tuple(e.pos)) for e in enemies):
+            return False
+
+        # Spike holderを確認したら高確度情報。
+        if self.team_memory.spike_pos is not None and self.team_memory.spike_held:
+            return False
+
+        seen = self.team_memory.last_seen_enemy
+        if seen is None:
+            return True
+
+        age = int(seen.get("tick_ago", 999))
+        count = int(seen.get("count", 1))
+        if age > SEARCH_SIGHTING_FRESH_TICKS:
+            return True
+        marker = int(self._assigned_markers.get(char.name, 7))
+        release = GC_SEARCH_RELEASE_BY_MARKER.get(
+            marker, GC_SEARCH_RELEASE_BY_MARKER[7]
+        )
+        if count < int(release["min_seen"]):
+            return True
+        if self.sighting_dist_map is None:
+            return True
+        sighting_dist = int(self.sighting_dist_map[r, c])
+        return not (0 <= sighting_dist <= int(release["max_bfs"]))
+
     def _update_priority_dist_maps(self, grid):
         """team_memoryのspike_pos/last_seen_enemyが変化した時だけBFSを
         再計算する(全defenderで共有するため、キャラクターごとには呼ばない)。"""
@@ -588,12 +547,7 @@ class LearningDefenderSearchGCController:
             self._sighting_dist_map_source = sighting_pos
 
     def _ensure_defense_assignment(self, char, grid, chars):
-        """各GCプレイヤーの基本配置をラウンドごとに1地点抽選する。
-
-        5～9の対応は固定。各数字の候補数は可変。
-        前目/引き目の確率は gc_search_config.py の値で調整する。
-        一度選んだ地点は reset_round() まで変えない。
-        """
+        """5～9をGCの5人へ毎ラウンドランダムに1つずつ割り当てる。"""
         if self._assignment_done:
             return
 
@@ -602,26 +556,31 @@ class LearningDefenderSearchGCController:
             for c in chars
             if getattr(c, "team", None) == getattr(char, "team", None)
             and getattr(c, "is_alive", True)
+            and getattr(c, "name", None) in GC_ROSTER_ORDER
         ]
+        # chars側の並び順にも依存しないように一度シャッフルする。
+        random.shuffle(teammates)
+        markers = list(GC_SEARCH_AGGRESSION_MARKERS)
+        random.shuffle(markers)
 
-        for teammate in teammates:
-            candidates = _GC_FIXED_DEFENSE_GROUPS.get(teammate.name)
-            if not candidates:
-                continue
-
-            chosen = _choose_defense_position_for_round(
-                grid, teammate.name, teammate.pos
-            )
+        for teammate, marker in zip(teammates, markers):
+            chosen = _choose_defense_position_for_round(grid, marker, teammate.pos)
             if chosen is None:
                 continue
-
-            # 候補一覧はデバッグ用に保持し、実際の誘導先はchosen 1点に固定。
+            self._assigned_markers[teammate.name] = int(marker)
             self._assigned_positions[teammate.name] = [chosen]
             self._assigned_dist_maps[teammate.name] = _bfs_distance_map(grid, chosen)
 
         self._assignment_done = True
 
-    def _build_observation(self, char, game_state, site_positions, unit_has_spike_los):
+    def _build_observation(
+        self,
+        char,
+        game_state,
+        site_positions,
+        unit_has_spike_los,
+        force_positioning=False,
+    ):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         height, width = grid.shape
@@ -715,21 +674,16 @@ class LearningDefenderSearchGCController:
             obs[27] = (site_positions[1][0] - char.pos[0]) / height
             obs[28] = (site_positions[1][1] - char.pos[1]) / width
 
-        # Search v2: 実戦側でも可能ならラウンド経過を入力する。
-        # game_state に無い旧環境では中立値0.5へフォールバック。
-        tick_value = game_state.get("battle_tick", game_state.get("round_tick", None))
-        obs[29] = (
-            min(max(float(tick_value), 0.0), 90.0) / 90.0
-            if tick_value is not None
-            else 0.5
-        )
+        # search phaseではdetonate_timerは未使用(プラント前)。
+        # ラウンド経過情報を持たないため中立値(0.5)を入れる。
+        obs[29] = 0.5
         obs[30] = 0.0
 
         # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
         # spike/sightingモードの間はこの情報を出さない。到着済みフラグが
         # 「動くな」という学習済みバイアスとして誤って引き継がれ、緊急時の
         # 移動を妨げるのを防ぐため。
-        in_position_mode = (
+        in_position_mode = bool(force_positioning) or (
             self.team_memory.spike_pos is None
             and self.team_memory.last_seen_enemy is None
         )
@@ -823,10 +777,15 @@ class LearningDefenderSearchGCController:
             and not self.team_memory.spike_held
             and _has_los(grid, tuple(char.pos), self.team_memory.spike_pos)
         )
+        force_positioning = self._should_force_positioning(char, grid, chars)
         obs, visible_enemies = self._build_observation(
-            char, game_state, self._site_positions_cache, unit_has_spike_los
+            char,
+            game_state,
+            self._site_positions_cache,
+            unit_has_spike_los,
+            force_positioning=force_positioning,
         )
-        # Search v2: 接敵中も引く/横ずれ/合流をDQNに判断させる。
+        # Search v3: 接敵中も引く/横ずれ/合流を選べる。
         mask = self._action_mask(char, grid, chars, lock_movement=False)
 
         if self.verbose:
@@ -867,33 +826,32 @@ class LearningDefenderSearchGCController:
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
 
-        # ------------------------------------------------------------------
-        # Search v2: information commitment is no longer forcibly scripted.
-        # Spike / sighting direction remains in the observation, but the DQN
-        # chooses HOLD / rotate / retreat / ability itself.
-        # ------------------------------------------------------------------
-
         # train_defender_search.py と挙動を一致させる: position mode
         # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、
         # スポーン・担当地点が毎ラウンド固定である以上、ネットワークの
         # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
         # 上書き後の行動で作られているため、推論側もこれに合わせないと
         # 学習内容とズレる。
-        in_position_mode = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
-        )
-        if in_position_mode:
+        if force_positioning:
             dist_map = self._assigned_dist_maps.get(char.name)
             if dist_map is not None:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])
-                cur_dist = dist_map[r0, c0]
-                if cur_dist > REACH_RADIUS:
-                    move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
+                move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
 
         if self.verbose:
+            seen = self.team_memory.last_seen_enemy
+            seen_count = int(seen.get("count", 0)) if seen else 0
+            mode = (
+                "FORCE_POS"
+                if force_positioning
+                else (
+                    "SPIKE"
+                    if self.team_memory.spike_pos is not None
+                    else f"SIGHTINGx{seen_count}" if seen is not None else "FREE"
+                )
+            )
             print(
-                f"[DEFENDER SEARCH GC] {char.name} pos={tuple(char.pos)} "
+                f"[SEARCH] {char.name:10s} pos={tuple(char.pos)} mode={mode:10s} "
                 f"action={action_idx} move={move_offset} ability={use_ability}"
             )
 

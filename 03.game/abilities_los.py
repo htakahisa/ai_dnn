@@ -12,10 +12,6 @@ from game_core import (
     SMOKE_DURATION_TICKS,
 )
 
-# Rush対策: Smokeの実持続時間。
-# game_core側の既存値に依存せず、このAbility実装では25Tickを使用する。
-SMOKE_DURATION_TICKS = 25
-
 
 class AbilityLosMixin:
 
@@ -148,6 +144,34 @@ class AbilityLosMixin:
                 return False
 
         return self._smoke_allows_line(line_cells, self._smoke_cells())
+
+    def check_shot_line_of_sight(self, shooter, target):
+        """射撃専用の射線判定。
+
+        通常の壁・スモーク判定に加えて、射手と標的の間にいる
+        生存プレイヤーを遮蔽物として扱う。味方・敵のどちらでも遮る。
+        射手自身と標的自身のマスは遮蔽物判定から除外する。
+
+        視認用 check_line_of_sight() の仕様は変更しない。
+        """
+        if not self.check_line_of_sight(shooter, target):
+            return False
+
+        line_cells = self._line_cells(tuple(shooter.pos), tuple(target.pos))
+        if len(line_cells) <= 2:
+            return True
+
+        intermediate_cells = set(line_cells[1:-1])
+        if not intermediate_cells:
+            return True
+
+        for char in self.chars:
+            if char is shooter or char is target or not char.is_alive:
+                continue
+            if tuple(char.pos) in intermediate_cells:
+                return False
+
+        return True
 
     def get_viewer_team(self):
         controllers = self.get_user_controllers()

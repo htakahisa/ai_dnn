@@ -588,6 +588,16 @@ class BattleLogicMixin:
         target.deaths += 1
         shooter.kills += 1
         shooter.round_kills += 1
+
+        # タイガー「ハンター」：敵を倒した瞬間にHPを50回復。
+        # 最大HPを超えて回復しない。
+        if (
+            getattr(shooter, "role", None) == "タイガー"
+            or getattr(shooter, "ability_name", None) == "HUNT"
+        ):
+            max_hp = float(getattr(shooter, "max_hp", 100))
+            shooter.hp = min(max_hp, float(shooter.hp) + 50.0)
+
         self.match_stats.setdefault(target.name, {"kills": 0, "deaths": 0})[
             "deaths"
         ] = target.deaths
@@ -648,6 +658,12 @@ class BattleLogicMixin:
                     if target.team != shooter.team
                     and self.check_line_of_sight(shooter, target)
                 ]
+            # 視認できていても、射手と標的の間に別プレイヤーがいれば撃てない。
+            possible_targets = [
+                target
+                for target in possible_targets
+                if self.check_shot_line_of_sight(shooter, target)
+            ]
             if not possible_targets:
                 continue
 

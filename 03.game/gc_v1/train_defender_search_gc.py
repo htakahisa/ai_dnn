@@ -4,8 +4,8 @@
 Defender「search phase」学習スクリプト（プラント前限定）。
 
 train_defender_search.py(root/defender_v3)をベースに、以下を固定化した:
-  - ステータス: character_stats_gc.py の生値 + 常時発動コンボ
-    「ふわんだりぃず」(GCコンボ対象メンバー) + タイガーパッシブ(Tortlilyan)
+  - ステータス: character_stats_gc.py の生値 + GC正式コンボ
+    「幽霊部員de廃部待ったなし」
   - ロール: 上記5人のロールに完全固定(ランダム選択なし)
   - スポーン: ロースター順 = DEFENDER_SPAWNS(行優先走査順)の対応で固定
     (run_game.py の実際のスポーン割り当てロジックと一致)
@@ -52,13 +52,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
-from map_data_search_gc import SEARCH_MAZE_STR
-from character_stats_gc import (
+from .map_data_search_gc import SEARCH_MAZE_STR
+from .character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
 
-from gc_search_config import GC_DEFENSE_DEPTH_BIAS_BY_MARKER
+from .gc_search_config import (
+    GC_SEARCH_AGGRESSION_MARKERS,
+    GC_SEARCH_POSITION_RANDOMNESS,
+    GC_SEARCH_RELEASE_BY_MARKER,
+)
 
 from game_core import (
     MAX_HP,
@@ -117,6 +121,17 @@ DEFAULT_REACTION = 100.0
 # ---------------------------------------------------------------------------
 GC_SPIKE_HOLDER = "Absol"  # GC既定キャリア
 
+GC_SEARCH_START_POSITIONS = {
+    "Xdll": [(6, 6), (9, 23)],
+    "SyouTa": [(6, 12)],
+    "Absol": [(6, 17), (9, 21)],
+    "eKo": [(2, 35), (9, 23)],
+    "SugarZ3ro": [(7, 31), (9, 21)],
+}
+GC_SEARCH_START_JITTER_STEPS = 2
+SEARCH_DOUBLE_SIGHTING_RELEASE_BFS = 10
+SEARCH_SIGHTING_FRESH_TICKS = 5
+
 # ロースター5人が固定で揃っている前提のため、このコンボは毎ラウンド常時発動する。
 
 GC_ROLE_TO_ABILITY = {
@@ -125,9 +140,6 @@ GC_ROLE_TO_ABILITY = {
     "シーカー": "RECON",
     "タイガー": "HUNT",
 }
-# タイガーの固有パッシブ(game_core.Character 準拠): 常時 Hit%+10pt, HS%+5pt
-TIGER_ACCURACY_BONUS = 0.10
-TIGER_HS_BONUS = 0.05
 
 
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
@@ -142,11 +154,13 @@ GC_PLAYER_BONUSES = {
 
 
 def _compute_gc_effective_stats():
-    """character_stats_gc.py の生値に、常時発動するチームコンボ
-    (ふわんだりぃず)とタイガーパッシブを適用した確定値を返す。
+    """Current Ghost Champions Search-training stats.
 
-    「調子の波」(form_variance)によるラウンド毎の変動はここでは含めない
-    (固定ステータスとしての再現性を優先する意図的な仕様)。
+    Base values and CURRENT roles come directly from character_stats_gc.py.
+    The only explicit team adjustment reproduced here is the official GC combo
+    「幽霊部員de廃部待ったなし」.
+
+    Current GC is a 0-Tiger composition, so no Tiger passive is applied here.
     """
     effective = {}
     for name in GC_ROSTER_ORDER:
@@ -156,18 +170,15 @@ def _compute_gc_effective_stats():
         dodge_rate = float(raw.dodge_pct)
         reaction = float(raw.reaction)
 
-        if raw.role == "タイガー":
-            accuracy += TIGER_ACCURACY_BONUS
-            hs_rate += TIGER_HS_BONUS
-
         if name in GC_COMBO_MEMBERS:
-            accuracy += GC_PLAYER_BONUSES.get(name, {}).get("accuracy", 0.0)
-            hs_rate += GC_PLAYER_BONUSES.get(name, {}).get("hs_rate", 0.0)
-            dodge_rate += GC_PLAYER_BONUSES.get(name, {}).get("dodge_rate", 0.0)
-            reaction += GC_PLAYER_BONUSES.get(name, {}).get("reaction", 0.0)
+            bonuses = GC_PLAYER_BONUSES.get(name, {})
+            accuracy += bonuses.get("accuracy", 0.0)
+            hs_rate += bonuses.get("hs_rate", 0.0)
+            dodge_rate += bonuses.get("dodge_rate", 0.0)
+            reaction += bonuses.get("reaction", 0.0)
 
         effective[name] = {
-            "accuracy": max(0.0, accuracy),  # 命中率は100%超を保持(game_core準拠)
+            "accuracy": max(0.0, accuracy),
             "hs_rate": max(0.0, min(1.0, hs_rate)),
             "dodge_rate": max(0.0, min(1.0, dodge_rate)),
             "reaction": max(0.0, reaction),
@@ -193,30 +204,30 @@ for _name in GC_ROSTER_ORDER:
 # の順で明確に重みを引き離し、「待機の方が得」という学習結果を防ぐ。
 # Search v2 reward: 「敵へ寄る」より、遅延・生存・サイト維持を主役にする。
 STEP_PENALTY = -0.0005
-SPIKE_PULL_REWARD = 0.018          # 確定Spike情報への寄りは補助点
-SIGHTING_PULL_REWARD = 0.006       # 目撃方向へ近づくだけではほぼ稼げない
+SPIKE_PULL_REWARD = 0.018  # 確定Spike情報への寄りは補助点
+SIGHTING_PULL_REWARD = 0.006  # 目撃方向へ近づくだけではほぼ稼げない
 DEFENSE_POSITION_PULL_REWARD = 0.025
 HOLD_POSITION_BONUS = 0.012
 HOLD_POSITION_PENALTY = -0.004
-ABILITY_WHIFF_PENALTY = -0.008     # 空振りもゾーニング価値があるため軽くする
+ABILITY_WHIFF_PENALTY = -0.008  # 空振りもゾーニング価値があるため軽くする
 ABILITY_OVERLAP_PENALTY = -0.015
 DEBUFF_KILL_BONUS = 0.12
 HOLD_ANGLE_BONUS = 0.008
-HOLD_ANGLE_PENALTY = -0.002        # 接敵中の移動を禁止しない
+HOLD_ANGLE_PENALTY = -0.002  # 接敵中の移動を禁止しない
 SPIKE_WATCH_HOLD_BONUS = 0.012
 SPIKE_WATCH_MOVE_PENALTY = -0.003
 KILL_REWARD = 0.22
 DEATH_PENALTY = -0.28
-ROUND_WIN_REWARD = 0.30             # Search外の結果論はソフトに
+ROUND_WIN_REWARD = 0.30  # Search外の結果論はソフトに
 PLANT_PENALTY = -0.20
 
 # チームマクロ報酬
 ATTACKER_PROGRESS_PENALTY = -0.010  # Carrierがサイトへ1BFS/Chebyshev進む
-ATTACKER_DELAY_BONUS = 0.004        # 進行を止めたtick
-SITE_COVERAGE_BONUS = 0.004         # 情報が薄い間、両サイトを守備できている
-SITE_ABANDON_PENALTY = -0.006       # 情報が薄いのに片サイトを完全放棄
-SUPPORT_SPACING_BONUS = 0.003       # 味方との距離が近すぎず遠すぎない
-CROWDING_PENALTY = -0.004           # 3人以上が極端に固まる
+ATTACKER_DELAY_BONUS = 0.004  # 進行を止めたtick
+SITE_COVERAGE_BONUS = 0.004  # 情報が薄い間、両サイトを守備できている
+SITE_ABANDON_PENALTY = -0.006  # 情報が薄いのに片サイトを完全放棄
+SUPPORT_SPACING_BONUS = 0.003  # 味方との距離が近すぎず遠すぎない
+CROWDING_PENALTY = -0.004  # 3人以上が極端に固まる
 
 
 # ============================================================================
@@ -249,15 +260,9 @@ if len(DEFENDER_SPAWNS) < len(GC_ROSTER_ORDER):
 
 _SEARCH_GRID = _parse_grid(SEARCH_MAZE_STR)
 
-# ロースター順(GC_ROSTER_ORDER)に、マップ上の値 5,6,7,8,9 をそのまま
-# 1:1で対応させる。5=roster[0], 6=roster[1], 7=roster[2], 8=roster[3], 9=roster[4]。
-# 5人×5地点の総当たり最適化は不要で、マップ側で明示的に指定された担当地点へ
-# ロースター順のままそのまま割り当てるだけでよい。
-GC_DEFENSE_POSITION_VALUES = {name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)}
-
 
 def _find_marker_positions(grid, value):
-    """同じマーカー値を複数配置可能にして、候補座標群を返す。"""
+    """Searchマップ内の同一マーカー値の候補座標をすべて返す。"""
     hits = [
         (r, c)
         for r in range(grid.shape[0])
@@ -266,23 +271,20 @@ def _find_marker_positions(grid, value):
     ]
     if not hits:
         raise RuntimeError(
-            f"map_data_search_gc.py に値{value}の防衛候補マスが1つもありません。"
+            f"map_data_search_gc.py に値{value}のSearch候補マスがありません。"
         )
     return hits
 
 
-# ロースター順に 5,6,7,8,9 を担当。
-# 各値は複数マス置けて、そのプレイヤーは候補群のどこか1つに入れば配置完了。
-GC_DEFENSE_POSITION_VALUES = {name: 5 + i for i, name in enumerate(GC_ROSTER_ORDER)}
-
-GC_DEFENSE_POSITION_GROUPS = {
-    name: _find_marker_positions(_SEARCH_GRID, value)
-    for name, value in GC_DEFENSE_POSITION_VALUES.items()
+# 5～9は選手名ではなくポジションのアグレッシブさ。
+GC_DEFENSE_POSITION_GROUPS_BY_MARKER = {
+    marker: _find_marker_positions(_SEARCH_GRID, marker)
+    for marker in GC_SEARCH_AGGRESSION_MARKERS
 }
-
-# 互換用。全候補をまとめた一覧。
 DEFENSE_POSITIONS = [
-    pos for name in GC_ROSTER_ORDER for pos in GC_DEFENSE_POSITION_GROUPS[name]
+    pos
+    for marker in GC_SEARCH_AGGRESSION_MARKERS
+    for pos in GC_DEFENSE_POSITION_GROUPS_BY_MARKER[marker]
 ]
 
 
@@ -406,42 +408,26 @@ def bfs_distance_map_multi(goals):
     return dist
 
 
-def _choose_defense_position_for_round(name, start_pos):
-    """対応マーカー候補から、このラウンドで使う基本配置を1つ抽選する。
-
-    候補はスポーン地点からのBFS距離で「引き目→前目」に並べ、
-    gc_search_config.py のバイアス値から可変長の重みを自動生成する。
-    選ばれた地点はそのラウンド中固定される。
-    """
-    candidates = list(GC_DEFENSE_POSITION_GROUPS[name])
+def _choose_defense_position_for_round(marker_value, start_pos):
+    """指定アグレッシブ段階の候補から1地点を選ぶ。選手名とは無関係。"""
+    candidates = list(GC_DEFENSE_POSITION_GROUPS_BY_MARKER[int(marker_value)])
     if len(candidates) == 1:
         return candidates[0]
 
-    marker_value = GC_DEFENSE_POSITION_VALUES[name]
-    bias = float(GC_DEFENSE_DEPTH_BIAS_BY_MARKER.get(marker_value, 0.0))
-
-    sr, sc = int(start_pos[0]), int(start_pos[1])
-    with_dist = []
+    sr, sc = map(int, start_pos)
+    scored = []
     for pos in candidates:
-        dist_map = bfs_distance_map(pos)
-        d = int(dist_map[sr, sc])
-        # 到達不能候補は最後尾にしない。通常マップでは発生しない想定。
-        if d < 0:
-            d = 10**9
-        with_dist.append((d, pos))
+        dmap = bfs_distance_map(pos)
+        d = int(dmap[sr, sc])
+        if d >= 0:
+            scored.append((d, pos))
+    if not scored:
+        return random.choice(candidates)
 
-    # 近い=引き目、遠い=前目。
-    with_dist.sort(key=lambda item: (item[0], item[1][0], item[1][1]))
-    ordered = [pos for _, pos in with_dist]
-    n = len(ordered)
-
-    if abs(bias) < 1e-12:
-        return random.choice(ordered)
-
-    # rank_score: -1(最も引き目) ～ +1(最も前目)
-    rank_scores = [-1.0 + 2.0 * i / (n - 1) for i in range(n)]
-    weights = [float(np.exp(bias * score)) for score in rank_scores]
-    return random.choices(ordered, weights=weights, k=1)[0]
+    scored.sort(key=lambda x: (x[0], x[1]))
+    randomness = max(0.0, float(GC_SEARCH_POSITION_RANDOMNESS))
+    weights = [math.exp(-randomness * d) for d, _ in scored]
+    return random.choices([p for _, p in scored], weights=weights, k=1)[0]
 
 
 def bfs_best_direction(dist_map, r0, c0):
@@ -463,25 +449,13 @@ def bfs_best_direction(dist_map, r0, c0):
 
 
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
-GC_DEFENSE_DIST_MAPS = {
-    name: bfs_distance_map_multi(GC_DEFENSE_POSITION_GROUPS[name])
-    for name in GC_ROSTER_ORDER
-}
-
-
-# GC_DEFENSE_POSITION_GROUPS はマップ読み込み時点(上のブロック)で
-# 5/6/7/8/9 とロースター順の対応から直接確定済みのため、ここでの
-# 総当たり最適化は不要。確認用のログのみ出力する。
-print("[gc_v1] 固定 防衛候補グループ(5-9):")
-for i, _name in enumerate(GC_ROSTER_ORDER):
-    _value = GC_DEFENSE_POSITION_VALUES[_name]
-    _goals = GC_DEFENSE_POSITION_GROUPS[_name]
-    _spawn = DEFENDER_SPAWNS[i]
-    _dist = GC_DEFENSE_DIST_MAPS[_name][_spawn[0], _spawn[1]]
-    _bias = GC_DEFENSE_DEPTH_BIAS_BY_MARKER.get(_value, 0.0)
+print("[gc_v1] Search marker meaning: 5=safe ... 9=aggressive")
+print("[gc_v1] 5～9 are shuffled across the five defenders every round.")
+for _marker in GC_SEARCH_AGGRESSION_MARKERS:
     print(
-        f"  {_name}: marker={_value} candidates={_goals} "
-        f"spawn={_spawn} nearest_bfs={_dist} depth_bias={_bias:+.2f}"
+        f"  aggression={_marker}: "
+        f"candidates={GC_DEFENSE_POSITION_GROUPS_BY_MARKER[_marker]} "
+        f"release={GC_SEARCH_RELEASE_BY_MARKER[_marker]}"
     )
 
 
@@ -514,6 +488,7 @@ class UnitStub:
         # Defender専用: 割り当てられた待機ポジション(7)とそのBFS距離マップ。
         self.assigned_defense_pos = None
         self.assigned_defense_dist_map = None
+        self.assigned_aggression_marker = 7
 
         # Defender専用: 現在アクティブな優先モード("spike"/"sighting"/"position")
         # と、そのモードで前tickに観測したBFS距離。モード切替直後は基準値を
@@ -523,18 +498,57 @@ class UnitStub:
         self.prev_priority_target_key = None
 
 
-def _build_fixed_defenders():
-    """gc_v1固定チーム(5人)をDefenderとして生成する。
+def _nearest_valid_search_start(pos, occupied):
+    r, c = map(int, pos)
+    if not (0 <= r < HEIGHT and 0 <= c < WIDTH) or GRID[r, c] == 1:
+        return None
+    current = (r, c)
+    for _ in range(random.randint(0, GC_SEARCH_START_JITTER_STEPS)):
+        cr, cc = current
+        candidates = [current]
+        for dr, dc in CARDINAL:
+            nr, nc = cr + dr, cc + dc
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and (nr, nc) not in occupied
+            ):
+                candidates.append((nr, nc))
+        current = random.choice(candidates)
+    if current not in occupied:
+        return current
+    q = deque([(r, c)])
+    seen = {(r, c)}
+    while q:
+        cr, cc = q.popleft()
+        if GRID[cr, cc] != 1 and (cr, cc) not in occupied:
+            return (cr, cc)
+        for dr, dc in CARDINAL:
+            nr, nc = cr + dr, cc + dc
+            if (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and (nr, nc) not in seen
+            ):
+                seen.add((nr, nc))
+                q.append((nr, nc))
+    return None
 
-    ロースター順 = DEFENDER_SPAWNS(行優先走査順)の対応で固定し、
-    run_game.py の実際のスポーン割り当てロジック(ロースターi番目 =
-    area_4[i])と一致させる。ステータス・ロールは_compute_gc_effective_stats
-    で確定済みの値をそのまま使う(ランダム選択・ランダムjitterなし)。
-    """
+
+def _build_fixed_defenders():
+    """Start Search from positions approximating Setup/Opening completion."""
     defenders = []
+    occupied = set()
     for i, name in enumerate(GC_ROSTER_ORDER):
         stats = GC_EFFECTIVE_STATS[name]
-        unit = UnitStub(name, "D", DEFENDER_SPAWNS[i], stats["ability"])
+        base = random.choice(GC_SEARCH_START_POSITIONS.get(name, [DEFENDER_SPAWNS[i]]))
+        pos = _nearest_valid_search_start(base, occupied)
+        if pos is None:
+            pos = tuple(DEFENDER_SPAWNS[i])
+        occupied.add(tuple(pos))
+        unit = UnitStub(name, "D", pos, stats["ability"])
         unit.accuracy = stats["accuracy"]
         unit.dodge_rate = stats["dodge_rate"]
         unit.hs_rate = stats["hs_rate"]
@@ -617,10 +631,12 @@ class TeamMemory:
                         else 0
                     ),
                 )
+            unique_visible = {a.name: a for a in visible_enemies}
             self.last_seen_enemy = {
                 "pos": tuple(tracked.pos),
                 "name": tracked.name,
                 "tick_ago": 0,
+                "count": len(unique_visible),
             }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
@@ -692,6 +708,7 @@ def build_observation(
     spike_dist_map,
     sighting_dist_map,
     unit_has_spike_los,
+    force_positioning=False,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(unit.pos[0]), int(unit.pos[1])
@@ -767,7 +784,7 @@ def build_observation(
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 0.0  # 予備次元
 
-    in_position_mode = (
+    in_position_mode = bool(force_positioning) or (
         team_memory.spike_pos is None and team_memory.last_seen_enemy is None
     )
     if in_position_mode and unit.assigned_defense_pos is not None:
@@ -916,23 +933,24 @@ class SearchEnv:
         carrier = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
         if carrier is not None:
             site = SITE_POSITIONS[self.carrier_target_site_idx]
-            self._prev_carrier_site_dist = max(abs(carrier.pos[0]-site[0]), abs(carrier.pos[1]-site[1]))
+            self._prev_carrier_site_dist = max(
+                abs(carrier.pos[0] - site[0]), abs(carrier.pos[1] - site[1])
+            )
         else:
             self._prev_carrier_site_dist = None
 
         return self._collect_observations()
 
     def _assign_defense_positions(self):
-        """各Defenderの基本配置をラウンド開始時に1地点だけ抽選して固定する。
-
-        5～9ごとに候補数はいくつでもよい。
-        gc_search_config.py のバイアスで前目/引き目の出現率を調整する。
-        """
-        for d in self.defenders:
-            candidates = GC_DEFENSE_POSITION_GROUPS[d.name]
-            chosen = _choose_defense_position_for_round(d.name, d.pos)
-
-            d.assigned_defense_positions = list(candidates)
+        """5～9を5人へ毎ラウンドシャッフルして割り当てる。"""
+        markers = list(GC_SEARCH_AGGRESSION_MARKERS)
+        random.shuffle(markers)
+        for d, marker in zip(self.defenders, markers):
+            chosen = _choose_defense_position_for_round(marker, d.pos)
+            d.assigned_aggression_marker = int(marker)
+            d.assigned_defense_positions = list(
+                GC_DEFENSE_POSITION_GROUPS_BY_MARKER[int(marker)]
+            )
             d.assigned_defense_pos = chosen
             d.assigned_defense_dist_map = bfs_distance_map(chosen)
 
@@ -958,6 +976,43 @@ class SearchEnv:
     def _own_smoke_active(self, team):
         return any(s["team"] == team and s["remaining_ticks"] > 0 for s in self.smokes)
 
+    def _should_force_positioning(self, defender, smoke_cells):
+        dist_map = getattr(defender, "assigned_defense_dist_map", None)
+        if dist_map is None:
+            return False
+        r, c = map(int, defender.pos)
+        cur_dist = int(dist_map[r, c])
+        if cur_dist < 0 or cur_dist <= REACH_RADIUS:
+            return False
+
+        if any(
+            a.is_alive and has_los(defender.pos, a.pos, smoke_cells)
+            for a in self.attackers
+        ):
+            return False
+
+        if self.team_memory.spike_pos is not None and self.team_memory.spike_held:
+            return False
+
+        seen = self.team_memory.last_seen_enemy
+        if seen is None:
+            return True
+
+        age = int(seen.get("tick_ago", 999))
+        count = int(seen.get("count", 1))
+        if age > SEARCH_SIGHTING_FRESH_TICKS:
+            return True
+        marker = int(getattr(defender, "assigned_aggression_marker", 7))
+        release = GC_SEARCH_RELEASE_BY_MARKER.get(
+            marker, GC_SEARCH_RELEASE_BY_MARKER[7]
+        )
+        if count < int(release["min_seen"]):
+            return True
+        if self.sighting_dist_map is None:
+            return True
+        sighting_dist = int(self.sighting_dist_map[r, c])
+        return not (0 <= sighting_dist <= int(release["max_bfs"]))
+
     def _collect_observations(self):
         smoke_cells = self._smoke_cells()
         occupied = {tuple(u.pos) for u in self.defenders + self.attackers if u.is_alive}
@@ -970,6 +1025,7 @@ class SearchEnv:
                 and not self.team_memory.spike_held
                 and has_los(d.pos, self.team_memory.spike_pos, smoke_cells)
             )
+            force_positioning = self._should_force_positioning(d, smoke_cells)
             obs_dict[d.name] = build_observation(
                 d,
                 self.defenders,
@@ -981,6 +1037,7 @@ class SearchEnv:
                 self.spike_dist_map,
                 self.sighting_dist_map,
                 unit_has_spike_los,
+                force_positioning=force_positioning,
             )
             own_occupied = occupied - {tuple(d.pos)}
             has_enemy_los = any(
@@ -988,9 +1045,7 @@ class SearchEnv:
                 for a in self.attackers
             )
             # Search v2: 接敵中も引く/横ずれ/合流を学べるよう移動を禁止しない。
-            mask_dict[d.name] = build_action_mask(
-                d, own_occupied, lock_movement=False
-            )
+            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=False)
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
@@ -1061,14 +1116,7 @@ class SearchEnv:
             dr, dc = self._attacker_decide_move(unit)
             move_plans.append((unit, (dr, dc)))
 
-        # position mode(スパイク情報も敵目撃情報も無い状態)かつ担当地点未到着の
-        # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
-        # RLに手探りさせる意味がない。既知のBFS最短方向をそのまま強制適用する。
-        in_position_phase = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
-        )
-
+        # Basic-position BFS release is decided separately for each defender.
         actual_action_dict = {}
 
         for d in self.defenders:
@@ -1076,11 +1124,9 @@ class SearchEnv:
                 continue
             (dr, dc), use_ability = decode_action(action_dict[d.name])
 
-            if in_position_phase and d.assigned_defense_dist_map is not None:
+            if self._should_force_positioning(d, smoke_cells):
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
-                cur_dist = d.assigned_defense_dist_map[r0, c0]
-                if cur_dist > REACH_RADIUS:
-                    dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
+                dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
 
             actual_action_dict[d.name] = encode_action((dr, dc), use_ability)
             move_plans.append((d, (dr, dc)))
@@ -1224,11 +1270,14 @@ class SearchEnv:
             pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle
         )
 
-        carrier_after = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
+        carrier_after = next(
+            (a for a in self.attackers if a.is_alive and a.has_spike), None
+        )
         if carrier_after is not None:
             site_after = SITE_POSITIONS[self.carrier_target_site_idx]
             self._prev_carrier_site_dist = max(
-                abs(carrier_after.pos[0]-site_after[0]), abs(carrier_after.pos[1]-site_after[1])
+                abs(carrier_after.pos[0] - site_after[0]),
+                abs(carrier_after.pos[1] - site_after[1]),
             )
         else:
             self._prev_carrier_site_dist = None
@@ -1263,15 +1312,24 @@ class SearchEnv:
     @staticmethod
     def _distance_hit_multiplier(distance):
         """Euclidean-distance hit multiplier shared with the live-game design."""
-        points = [(1.0,2.00),(3.0,1.65),(5.0,1.45),(10.0,1.15),
-                  (15.0,1.00),(20.0,0.93),(30.0,0.82),(40.0,0.75),(60.0,0.64)]
-        d=float(distance)
+        points = [
+            (1.0, 2.00),
+            (3.0, 1.65),
+            (5.0, 1.45),
+            (10.0, 1.15),
+            (15.0, 1.00),
+            (20.0, 0.93),
+            (30.0, 0.82),
+            (40.0, 0.75),
+            (60.0, 0.64),
+        ]
+        d = float(distance)
         if d <= points[0][0]:
             return points[0][1]
-        for (d0,m0),(d1,m1) in zip(points,points[1:]):
+        for (d0, m0), (d1, m1) in zip(points, points[1:]):
             if d <= d1:
-                t=(d-d0)/(d1-d0)
-                return m0+t*(m1-m0)
+                t = (d - d0) / (d1 - d0)
+                return m0 + t * (m1 - m0)
         return points[-1][1]
 
     def _resolve_shots(self):
@@ -1446,11 +1504,13 @@ class SearchEnv:
 
             # ---- Search v2 macro shaping ---------------------------------
             # 1) Attacker進行を止めること自体を評価。
-            carrier = next((a for a in self.attackers if a.is_alive and a.has_spike), None)
+            carrier = next(
+                (a for a in self.attackers if a.is_alive and a.has_spike), None
+            )
             if carrier is not None and self._prev_carrier_site_dist is not None:
                 site = SITE_POSITIONS[self.carrier_target_site_idx]
                 cur_carrier_dist = max(
-                    abs(carrier.pos[0]-site[0]), abs(carrier.pos[1]-site[1])
+                    abs(carrier.pos[0] - site[0]), abs(carrier.pos[1] - site[1])
                 )
                 progress = self._prev_carrier_site_dist - cur_carrier_dist
                 if progress > 0:
@@ -1459,27 +1519,36 @@ class SearchEnv:
                     r += ATTACKER_DELAY_BONUS
 
             # 2) 情報が薄い間は両サイトを完全放棄しない。
-            weak_info = (
-                self.team_memory.spike_pos is None
-                and (self.team_memory.last_seen_enemy is None
-                     or int(self.team_memory.last_seen_enemy.get("count",1)) <= 1)
+            weak_info = self.team_memory.spike_pos is None and (
+                self.team_memory.last_seen_enemy is None
+                or int(self.team_memory.last_seen_enemy.get("count", 1)) <= 1
             )
             if weak_info:
-                alive_defs=[x for x in self.defenders if x.is_alive]
-                covered=0
+                alive_defs = [x for x in self.defenders if x.is_alive]
+                covered = 0
                 for site in SITE_POSITIONS[:2]:
-                    if any(max(abs(x.pos[0]-site[0]),abs(x.pos[1]-site[1])) <= 10 for x in alive_defs):
+                    if any(
+                        max(abs(x.pos[0] - site[0]), abs(x.pos[1] - site[1])) <= 10
+                        for x in alive_defs
+                    ):
                         covered += 1
                 if len(SITE_POSITIONS) >= 2:
                     r += SITE_COVERAGE_BONUS if covered >= 2 else SITE_ABANDON_PENALTY
 
             # 3) クロスを作れる程度の味方間隔を維持。極端な団子を避ける。
-            alive_mates=[x for x in self.defenders if x is not d and x.is_alive]
+            alive_mates = [x for x in self.defenders if x is not d and x.is_alive]
             if alive_mates:
-                nearest=min(max(abs(x.pos[0]-d.pos[0]),abs(x.pos[1]-d.pos[1])) for x in alive_mates)
+                nearest = min(
+                    max(abs(x.pos[0] - d.pos[0]), abs(x.pos[1] - d.pos[1]))
+                    for x in alive_mates
+                )
                 if 2 <= nearest <= 8:
                     r += SUPPORT_SPACING_BONUS
-                crowded=sum(1 for x in alive_mates if max(abs(x.pos[0]-d.pos[0]),abs(x.pos[1]-d.pos[1])) <= 2)
+                crowded = sum(
+                    1
+                    for x in alive_mates
+                    if max(abs(x.pos[0] - d.pos[0]), abs(x.pos[1] - d.pos[1])) <= 2
+                )
                 if crowded >= 2:
                     r += CROWDING_PENALTY
 

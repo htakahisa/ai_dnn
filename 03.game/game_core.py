@@ -17,7 +17,7 @@ SHOOT_INTERVAL_TICKS = 1
 SIDE_PANEL_WIDTH = 260
 PLANT_REQUIRED_TICKS = 4
 DEFUSE_REQUIRED_TICKS = 6
-SMOKE_DURATION_TICKS = 15
+SMOKE_DURATION_TICKS = 25
 MOVING_ACCURACY = 0.30
 MOVING_TARGET_HIT_MULTIPLIER = 0.70
 BLIND_DURATION_TICKS = 3
@@ -415,15 +415,11 @@ class Character:
             min(10.0, float(stats.get("form_variance", 0.0))),
         )
 
-        # タイガーの固有パッシブ「ハンター」：常時 Hit% を10ポイント、HS% を5ポイント上昇。
+        # タイガーの固有パッシブ「ハンター」：
+        # 常時 Hit/HS 上昇は廃止。キル時HP+50は battle_logic._kill_character() 側で処理する。
         self.hunter_active = self.role == "タイガー"
-        if self.hunter_active:
-            # 命中率は相手の回避率と掛け合わせて最終判定するため、
-            # 100%を超えてもここではクランプしない。
-            self.accuracy = max(0.0, self.accuracy + 0.10)
-            self.hs_rate = min(1.0, self.hs_rate + 0.05)
 
-        # コンディションは、タイガーの常時パッシブを含めた現在値へ乗算する。
+        # コンディションは現在の素の命中率・HS率へ乗算する。
         # 命中率とHS率には同じ係数を使用し、選手全体の調子として一貫させる。
         self.base_accuracy_before_condition = self.accuracy
         self.base_hs_rate_before_condition = self.hs_rate

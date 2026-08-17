@@ -1,27 +1,31 @@
 """Ghost Champions Defender Search configuration.
 
-5～9はGC_ROSTER_ORDERの5人に順番に対応します。
+map_data_search_gc.py の 5～9 は選手IDではなく、ポジションの
+「アグレッシブさ」を表す。
 
-GC_DEFENSE_DEPTH_BIAS_BY_MARKER:
-    0.0  = 候補を均等確率で選ぶ
-    正数 = スポーンから遠い候補（前目）を選びやすい
-    負数 = スポーンから近い候補（引き目）を選びやすい
+5 = 最も引き目 / 安全寄り
+6 = やや引き目
+7 = 標準
+8 = やや前目
+9 = 最も前目 / アグレッシブ
 
-目安:
-    +0.5 / -0.5 : 少しだけ偏る
-    +1.0 / -1.0 : はっきり偏る
-    +2.0 / -2.0 : かなり偏る
-    +3.0 / -3.0 : かなり強く偏る
-
-候補数が2個でも10個でも自動的に確率を計算するため、
-map_data_search_gc.py側の5～9の個数を変更しても、この辞書の長さを
-変更する必要はありません。
+各ラウンド、5段階を5人へランダムに1つずつ割り当てる。
+したがって Xdll=5 のような固定対応は存在しない。
 """
 
-GC_DEFENSE_DEPTH_BIAS_BY_MARKER = {
-    5: 1.0,
-    6: 0.0,
-    7: -1.0,
-    8: 1.0,
-    9: 1.5,
+GC_SEARCH_AGGRESSION_MARKERS = (5, 6, 7, 8, 9)
+
+# 同じ数字の候補が複数ある場合、最短候補を基本にしつつ少し散らす。
+GC_SEARCH_POSITION_RANDOMNESS = 0.35
+
+# 数字が大きいほど、少ない/遠い敵情報でも持ち場を離れやすい。
+GC_SEARCH_RELEASE_BY_MARKER = {
+    5: {"min_seen": 3, "max_bfs": 6},
+    6: {"min_seen": 2, "max_bfs": 8},
+    7: {"min_seen": 2, "max_bfs": 10},
+    8: {"min_seen": 1, "max_bfs": 14},
+    9: {"min_seen": 1, "max_bfs": 999},
 }
+
+# 古いimportへの互換性だけ残す。
+GC_DEFENSE_DEPTH_BIAS_BY_MARKER = {m: 0.0 for m in GC_SEARCH_AGGRESSION_MARKERS}
