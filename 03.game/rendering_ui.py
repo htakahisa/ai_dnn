@@ -14,6 +14,8 @@ from game_core import (
     COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_TICKS,
     COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS,
     FACING_VECTORS, FACING_INDICATOR_LENGTH_RATIO,
+    EXPLOSION_DURATION_TICKS, EXPLOSION_START_RADIUS, EXPLOSION_MAX_RADIUS,
+    EXPLOSION_FILL_COLOR, EXPLOSION_OUTLINE_COLOR, EXPLOSION_OUTLINE_WIDTH,
 )
 
 class RenderingUIMixin:
@@ -407,6 +409,77 @@ class RenderingUIMixin:
             )
 
 
+    def _draw_victory_overlay(self):
+        """試合終了時、マップ中央に勝利チームを表示する。"""
+        attacker_won = self.attacker_wins > self.defender_wins
+        winner_name = self.attacker_team_name if attacker_won else self.defender_team_name
+        accent = "#c0392b" if attacker_won else "#27ae60"
+
+        cx = self.map_offset_x + self.map_pixel_width / 2
+        cy = self.map_pixel_height / 2
+        box_w, box_h = 340, 150
+
+        x1, y1 = cx - box_w / 2, cy - box_h / 2
+        x2, y2 = cx + box_w / 2, cy + box_h / 2
+
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3)
+        self.canvas.create_rectangle(x1 + 6, y1 + 6, x2 - 6, y2 - 6, fill="", outline=accent, width=1)
+
+        self.canvas.create_text(
+            cx, cy - 24,
+            text=winner_name, fill="white", font=("Arial", 20, "bold")
+        )
+        self.canvas.create_text(
+            cx, cy + 20,
+            text="VICTORY!", fill=accent, font=("Arial", 26, "bold")
+        )
+
+
+    def _draw_special_round_banner(self):
+        """ラウンド内でのCLUTCH/ACEを、VICTORY演出と同じ中央枠で表示する。"""
+        banner = self.special_round_banner
+        is_ace = banner["type"] == "ACE"
+        accent = "#f1c40f" if is_ace else "#e74c3c"
+
+        cx = self.map_offset_x + self.map_pixel_width / 2
+        cy = self.map_pixel_height / 2
+        box_w, box_h = 340, 150
+
+        x1, y1 = cx - box_w / 2, cy - box_h / 2
+        x2, y2 = cx + box_w / 2, cy + box_h / 2
+
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3)
+        self.canvas.create_rectangle(x1 + 6, y1 + 6, x2 - 6, y2 - 6, fill="", outline=accent, width=1)
+
+        self.canvas.create_text(
+            cx, cy - 24,
+            text=banner["name"], fill="white", font=("Arial", 20, "bold")
+        )
+        self.canvas.create_text(
+            cx, cy + 20,
+            text="ACE!" if is_ace else "CLUTCH!",
+            fill=accent, font=("Arial", 26, "bold")
+        )
+
+
+    def _draw_explosion_effect(self):
+        """スパイク位置を中心に黒い円が広がる爆発演出を描く。"""
+        effect = self.explosion_effect
+        pr, pc = effect["pos"]
+        progress = min(1.0, effect["ticks_elapsed"] / max(1, EXPLOSION_DURATION_TICKS))
+
+        radius = EXPLOSION_START_RADIUS + (EXPLOSION_MAX_RADIUS - EXPLOSION_START_RADIUS) * progress
+
+        cx = self._map_x((pc + 0.5) * self.cell_size)
+        cy = (pr + 0.5) * self.cell_size
+
+        self.canvas.create_oval(
+            cx - radius, cy - radius, cx + radius, cy + radius,
+            fill=EXPLOSION_FILL_COLOR, outline=EXPLOSION_OUTLINE_COLOR,
+            width=EXPLOSION_OUTLINE_WIDTH,
+        )
+
+
     def draw(self):
         if self.headless:
             return
@@ -498,6 +571,9 @@ class RenderingUIMixin:
             sr, sc = self.spike_pos
             x1 = self._map_x(sc*self.cell_size)
             self.canvas.create_oval(x1+2, sr*self.cell_size+2, x1+self.cell_size-2, (sr+1)*self.cell_size-2, fill="black", outline="")
+
+        if getattr(self, "explosion_effect", None) is not None:
+            self._draw_explosion_effect()
 
         if self.last_shot:
             shooter = self.last_shot["shooter"]
@@ -669,6 +745,11 @@ class RenderingUIMixin:
                 self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
                 self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
                                              fill="#f39c12", outline="")
+
+        if self.match_over:
+            self._draw_victory_overlay()
+        elif getattr(self, "special_round_banner", None):
+            self._draw_special_round_banner()
 
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
         self.canvas.move("all", 0, COMBO_BANNER_HEIGHT)
