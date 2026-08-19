@@ -21,10 +21,52 @@ from game_core import (
     DEFUSE_REQUIRED,
     CLUTCH_ACE_BANNER_TICKS,
     EXPLOSION_DURATION_TICKS,
+    FACING_VECTORS,
+    SHOOTING_SITE_DIGREE,
 )
 
-
 class BattleLogicMixin:
+
+    def _facing_from_delta(self, dr, dc, fallback):
+        """移動delta(dr, dc)から4方向facingを判定する。斜め移動は存在しない前提。"""
+        dr, dc = int(dr), int(dc)
+        if dr == 0 and dc == 0:
+            return fallback
+        if dr != 0:
+            return "N" if dr < 0 else "S"
+        return "W" if dc < 0 else "E"
+
+    def _facing_angle_diff(self, shooter, target):
+        """射手のfacingと、射手→標的方向との角度差(度)を返す。"""
+        dc = float(target.pos[1] - shooter.pos[1])
+        dr = float(target.pos[0] - shooter.pos[0])
+        dist = math.hypot(dc, dr)
+        if dist == 0:
+            return 0.0
+        fx, fy = FACING_VECTORS[shooter.facing]
+        dot = max(-1.0, min(1.0, (fx * dc + fy * dr) / dist))
+        return math.degrees(math.acos(dot))
+
+    def _facing_accuracy_multiplier(self, shooter, target):
+        """正面100%～真横50%まで、角度差に応じて線形に精度を落とす。"""
+        angle = self._facing_angle_diff(shooter, target)
+        return 1.0 - min(SHOOTING_SITE_DIGREE, angle) / SHOOTING_SITE_DIGREE * 0.5
+
+    def _facing_towards(self, from_pos, to_pos):
+        """from_posからto_posへ最も近い8方向のfacingを返す。"""
+        dc = float(to_pos[1] - from_pos[1])
+        dr = float(to_pos[0] - from_pos[0])
+        dist = math.hypot(dc, dr)
+        if dist == 0:
+            return None
+        nx, ny = dc / dist, dr / dist
+        best_dir, best_dot = None, -2.0
+        for direction, (fx, fy) in FACING_VECTORS.items():
+            dot = fx * nx + fy * ny
+            if dot > best_dot:
+                best_dot = dot
+                best_dir = direction
+        return best_dir
 
     def _build_occupancy_counts(self):
         """現在生存中のキャラクター位置を数える。移動フェーズ中だけ使用する。"""
@@ -157,6 +199,16 @@ class BattleLogicMixin:
             )
 
             if in_bounds and not is_wall and not occupied and setup_allowed:
+                new_facing = self._facing_from_delta(
+                    nr - old_pos[0], nc - old_pos[1], char.facing
+                )
+                # print(
+                #     "[SETUP FACING DEBUG]", char.name,
+                #     "old_pos=", old_pos, "new_pos=", (nr, nc),
+                #     "dr=", nr - old_pos[0], "dc=", nc - old_pos[1],
+                #     "old_facing=", char.facing, "new_facing=", new_facing,
+                # )
+                char.facing = new_facing
                 char.pos = [nr, nc]
                 self._update_occupancy_after_move(old_pos, (nr, nc))
 
@@ -194,6 +246,13 @@ class BattleLogicMixin:
         char.was_in_smoke_before_move = old_pos in smoke_cells_before_move
         char.entered_smoke_this_tick = False
         char.exited_smoke_this_tick = False
+
+        # 前Tickで被弾していれば、このTickだけ強制的に相手の方向を向く。
+        char.facing_forced_this_tick = False
+        if getattr(char, "forced_facing_next_tick", None):
+            char.facing = char.forced_facing_next_tick
+            char.facing_forced_this_tick = True
+        char.forced_facing_next_tick = None
 
         # ---------------------------------------------------------------------
         # プラントは自動開始しない。
@@ -421,6 +480,18 @@ class BattleLogicMixin:
             # )
 
             if in_bounds and not is_wall and not occupied:
+                if not char.facing_forced_this_tick:
+                    new_facing = self._facing_from_delta(
+                        nr - old_pos[0], nc - old_pos[1], char.facing
+                    )
+                    # print(
+                    #     "[FACING DEBUG]", char.name,
+                    #     "old_pos=", old_pos, "new_pos=", (nr, nc),
+                    #     "dr=", nr - old_pos[0], "dc=", nc - old_pos[1],
+                    #     "old_facing=", char.facing, "new_facing=", new_facing,
+                    #     "forced=", char.facing_forced_this_tick,
+                    # )
+                    char.facing = new_facing
                 char.pos = [nr, nc]
                 self._update_occupancy_after_move(
                     old_pos,
@@ -659,6 +730,12 @@ class BattleLogicMixin:
                 for target in possible_targets
                 if self.check_shot_line_of_sight(shooter, target)
             ]
+            # 正面から左右x度を超える(背後含む)相手は視界外のため撃てない。
+            possible_targets = [
+                target
+                for target in possible_targets
+                if self._facing_angle_diff(shooter, target) <= SHOOTING_SITE_DIGREE
+            ]
             if not possible_targets:
                 continue
 
@@ -697,6 +774,8 @@ class BattleLogicMixin:
             shooter_accuracy = (
                 MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
             )
+            # 正面からの角度差による補正(正面100%～真横50%)
+            shooter_accuracy *= self._facing_accuracy_multiplier(shooter, target)
 
             # -----------------------------------------------------------------
             # Rush対策の射撃精度補正（すべて乗算）
@@ -757,6 +836,11 @@ class BattleLogicMixin:
                 "reaction": shooter.reaction,
             }
             executed_shots.append(shot)
+
+            # 命中・被弾を問わず、撃たれたら次のTickだけ相手の方向を強制的に向く。
+            target.forced_facing_next_tick = self._facing_towards(
+                target.pos, shooter.pos
+            )
 
             if damage > 0:
                 target.hp = max(0, target.hp - damage)

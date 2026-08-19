@@ -9,7 +9,7 @@ from pathlib import Path
 
 # Gameplay configuration
 WINNING_ROUNDS = 13
-TICK_TIME = 10
+TICK_TIME = 100
 MAX_HP = 100
 BODY_DAMAGE = 40
 HEADSHOT_DAMAGE = 160
@@ -36,6 +36,21 @@ SPIKE_DETONATION_TICKS = 55
 RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
+
+# 向き(facing)関連
+FACING_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+FACING_VECTORS = {
+    "N": (0, -1),
+    "NE": (0.70710678, -0.70710678),
+    "E": (1, 0),
+    "SE": (0.70710678, 0.70710678),
+    "S": (0, 1),
+    "SW": (-0.70710678, 0.70710678),
+    "W": (-1, 0),
+    "NW": (-0.70710678, -0.70710678),
+}
+SHOOTING_SITE_DIGREE = 90.0   #左右の視認可能な角度
+FACING_INDICATOR_LENGTH_RATIO = 0.55  # cell_sizeに対する短い線の長さの比率
 CLUTCH_ACE_BANNER_TICKS = (
     10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
 )
@@ -472,6 +487,12 @@ class Character:
 
         # とるよう設定
         self.ability_type = "none"  # "flash" / "smoke" / "recon" / "none"
+
+        # 向き。Defenderはマップ上部スポーンなので南(下)、Attackerは北(上)を向いて開始する。
+        self.facing = "S" if self.team == "D" else "N"
+        # 被弾した場合、次のTickだけ強制的にこの方向(8方向)を向く。
+        self.forced_facing_next_tick = None
+        self.facing_forced_this_tick = False
 
     @property
     def condition_text(self):
