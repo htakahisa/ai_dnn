@@ -13,6 +13,7 @@ from controllers import UserInputController
 from game_core import (
     COMBO_BANNER_HEIGHT, SIDE_PANEL_WIDTH, SMOKE_DURATION_TICKS,
     COMBO_DISPLAY_TICKS, PLANT_REQUIRED_TICKS, DEFUSE_REQUIRED_TICKS,
+    FACING_VECTORS, FACING_INDICATOR_LENGTH_RATIO,
 )
 
 class RenderingUIMixin:
@@ -572,6 +573,14 @@ class RenderingUIMixin:
             outline_color = "yellow" if char.name in selected_names else ""
             outline_width = 3 if char.name in selected_names else 1
             self.canvas.create_oval(x1, row*self.cell_size, x1+self.cell_size, (row+1)*self.cell_size, fill=bg, outline=outline_color, width=outline_width)
+
+            facing_vector = FACING_VECTORS.get(char.facing)
+            if facing_vector:
+                indicator_length = self.cell_size * FACING_INDICATOR_LENGTH_RATIO
+                fx = cx + facing_vector[0] * indicator_length
+                fy = cy + facing_vector[1] * indicator_length
+                self.canvas.create_line(cx, cy, fx, fy, fill="#111111", width=3)
+
             if char.blind_remaining > 0:
                 # 視認性を壊さない薄い二重リングと小さな印でブラインド状態を表示。
                 self.canvas.create_oval(x1+2, row*self.cell_size+2, x1+self.cell_size-2, (row+1)*self.cell_size-2,
