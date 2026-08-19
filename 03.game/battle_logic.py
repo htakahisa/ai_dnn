@@ -44,9 +44,7 @@ class BattleLogicMixin:
         counts = getattr(self, "_movement_occupancy_counts", None)
         if counts is None:
             return any(
-                other is not char
-                and other.is_alive
-                and tuple(other.pos) == position
+                other is not char and other.is_alive and tuple(other.pos) == position
                 for other in self.chars
             )
 
@@ -155,8 +153,7 @@ class BattleLogicMixin:
             occupied = self._is_position_occupied(char, target_pos, old_pos)
             is_wall = in_bounds and self.grid[nr, nc] == 1
             setup_allowed = (
-                in_bounds
-                and self.defender_setup_phase.defender_can_move_to(nr, nc)
+                in_bounds and self.defender_setup_phase.defender_can_move_to(nr, nc)
             )
 
             if in_bounds and not is_wall and not occupied and setup_allowed:
@@ -475,7 +472,9 @@ class BattleLogicMixin:
 
         if match_finished:
             attacker_won = self.attacker_wins > self.defender_wins
-            winner_name = self.attacker_team_name if attacker_won else self.defender_team_name
+            winner_name = (
+                self.attacker_team_name if attacker_won else self.defender_team_name
+            )
             winner_score = self.attacker_wins if attacker_won else self.defender_wins
             loser_score = self.defender_wins if attacker_won else self.attacker_wins
             winner_color = "#c0392b" if attacker_won else "#27ae60"
@@ -499,12 +498,8 @@ class BattleLogicMixin:
 
         self.current_round += 1
         if not self.headless:
-            banner_ticks = (
-                CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
-            )
-            explosion_ticks = (
-                EXPLOSION_DURATION_TICKS if self.explosion_effect else 0
-            )
+            banner_ticks = CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
+            explosion_ticks = EXPLOSION_DURATION_TICKS if self.explosion_effect else 0
             extra_ticks = max(banner_ticks, explosion_ticks)
             self.round_transition_ticks_left = ROUND_TRANSITION_TICKS + extra_ticks
             self._advance_round_transition()
@@ -729,6 +724,23 @@ class BattleLogicMixin:
             hit_chance = shooter_accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+
+            # 距離補正（ユークリッド距離）。
+            # 基準: 1マス=2.00倍 / 15マス=1.00倍 / 40マス=0.75倍。
+            # 指定点の間は線形補間し、40マス以遠は0.75倍で下限固定する。
+            dr = float(target.pos[0] - shooter.pos[0])
+            dc = float(target.pos[1] - shooter.pos[1])
+            distance = math.hypot(dr, dc)
+            if distance <= 1.0:
+                distance_multiplier = 2.0
+            elif distance <= 15.0:
+                distance_multiplier = 2.0 + (1.0 - 2.0) * ((distance - 1.0) / 14.0)
+            elif distance <= 40.0:
+                distance_multiplier = 1.0 + (0.75 - 1.0) * ((distance - 15.0) / 25.0)
+            else:
+                distance_multiplier = 0.75
+            hit_chance *= distance_multiplier
+
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
