@@ -29,6 +29,7 @@ run_game.py からは他の learning_attacker_*.py 系コントローラーと�
 """
 
 import os
+import random
 from collections import deque
 
 import numpy as np
@@ -43,6 +44,10 @@ from controllers import BaseController
 # ---------------------------------------------------------------------------
 ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_PLANT = range(6)
 N_ACTIONS = 6
+
+# デバッグ用の左右サイト選択。合計は比率として扱う。
+AI_CONTROLLED_SITE_SELECTION = False
+SITE_SELECTION_WEIGHTS = {"left": 1.0, "right": 0.0}  # Trueのとき、この比率が有効になる
 _MOVE_DELTA = {
     ACTION_UP: (-1, 0),
     ACTION_DOWN: (1, 0),
@@ -130,6 +135,8 @@ class LearningAttackerCarryController(BaseController):
         max_ticks=90,
         plant_required_ticks=4,
         verbose=False,
+        ai_controlled_site_selection=AI_CONTROLLED_SITE_SELECTION,
+        site_selection_weights=None,
     ):
         super().__init__()
         self.device = device or torch.device("cpu")
@@ -138,6 +145,10 @@ class LearningAttackerCarryController(BaseController):
         self.max_ticks = max_ticks
         self.plant_required_ticks = plant_required_ticks
         self.verbose = verbose
+        self.ai_controlled_site_selection = bool(ai_controlled_site_selection)
+        self.site_selection_weights = dict(
+            SITE_SELECTION_WEIGHTS if site_selection_weights is None else site_selection_weights
+        )
 
         if not os.path.isfile(model_path):
             raise FileNotFoundError(f"Carryモデルが見つかりません: {model_path}")
@@ -175,12 +186,36 @@ class LearningAttackerCarryController(BaseController):
         self._norm_max_dist_cache = {}
         # キャラクター名ごとの episode 内状態（tick数・移動履歴・停滞カウント）
         self._char_state = {}
+        self._active_target_pos = None
 
     # ------------------------------------------------------------------
     # ラウンド開始時にrun_game.pyから呼ばれる（hasattr判定で自動検出される）
     # ------------------------------------------------------------------
     def reset_round(self):
         self._char_state.clear()
+        self._active_target_pos = None
+
+    def _choose_weighted_site(self):
+        left_weight = max(0.0, float(self.site_selection_weights.get("left", 0.0)))
+        right_weight = max(0.0, float(self.site_selection_weights.get("right", 0.0)))
+        total = left_weight + right_weight
+        if total <= 0.0:
+            return random.choice(("left", "right"))
+        return "left" if random.random() < left_weight / total else "right"
+
+    def _select_weighted_target(self, grid):
+        site_cells = {"left": [], "right": []}
+        width = grid.shape[1]
+        for cell in _cells_with_value(grid, SITE_CELL_VALUE):
+            site = "left" if cell[1] < width // 2 else "right"
+            site_cells[site].append(cell)
+
+        chosen_site = self._choose_weighted_site()
+        candidates = site_cells[chosen_site]
+        if not candidates:
+            fallback_site = "right" if chosen_site == "left" else "left"
+            candidates = site_cells[fallback_site]
+        return random.choice(candidates) if candidates else None
 
     # ------------------------------------------------------------------
     # 内部ヘルパー
@@ -271,7 +306,14 @@ class LearningAttackerCarryController(BaseController):
         含まれているので、それをそのまま使う。万一含まれていない場合
         （デフォルト値None等）は、最も近いサイトセルにフォールバックする。
         """
-        target = game_state.get("target_plant_pos")
+        if self.ai_controlled_site_selection and self._active_target_pos is None:
+            self._active_target_pos = self._select_weighted_target(grid)
+
+        target = (
+            self._active_target_pos
+            if self.ai_controlled_site_selection and self._active_target_pos is not None
+            else game_state.get("target_plant_pos")
+        )
         if target is not None:
             return (int(target[0]), int(target[1]))
 
