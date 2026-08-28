@@ -299,6 +299,7 @@ class BattleLogicMixin:
             "detonate_timer": self.detonate_timer,
             # GC Macro Plant Commitment: pre-plant remaining round time.
             "round_timer": self.round_timer,
+            "smoke_cells": self._smoke_cells(),
         }
 
         if char.team == "A":
@@ -308,6 +309,7 @@ class BattleLogicMixin:
             # 3. レガシー: (座標, "MOVE"/"PLANT") ← 既存モデル対応
             result = self.attacker_controller.decide_move(char, game_state)
             ability_payload = None
+            facing_payload = None
 
             if isinstance(result, tuple) and len(result) >= 2:
                 next_pos = result[0]
@@ -317,6 +319,10 @@ class BattleLogicMixin:
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
                     action_type = "ABILITY"
+                # ケース1.5: 辞書型「その場で向きだけ変える」（移動しない）
+                elif isinstance(second_elem, dict) and "facing" in second_elem:
+                    facing_payload = second_elem
+                    action_type = "TURN"
                 # ケース2: 文字列型アクション（既存モデル）
                 elif isinstance(second_elem, str):
                     action_type = second_elem
@@ -353,6 +359,7 @@ class BattleLogicMixin:
             # ディフェンダー側も同様に自動判別する。
             result = self.defender_controller.decide_move(char, game_state)
             ability_payload = None
+            facing_payload = None
 
             if isinstance(result, tuple) and len(result) >= 2:
                 next_pos = result[0]
@@ -362,6 +369,13 @@ class BattleLogicMixin:
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
                     action_type = "ABILITY"
+                # ケース1.5: 辞書型「移動先(現在地含む)+向き」を同時指定。
+                # next_posが現在地と同じなら実質その場旋回、異なれば移動しつつ
+                # facingを指定通りに固定する(移動方向への自動追従を上書きする)。
+                # 通常のMOVE処理に相乗りさせるだけなので action_type は "MOVE"。
+                elif isinstance(second_elem, dict) and "facing" in second_elem:
+                    facing_payload = second_elem
+                    action_type = "MOVE"
                 # ケース2: 文字列型アクション（既存モデル）
                 elif isinstance(second_elem, str):
                     action_type = second_elem
@@ -483,7 +497,14 @@ class BattleLogicMixin:
             # )
 
             if in_bounds and not is_wall and not occupied:
-                if not char.facing_forced_this_tick:
+                # facing_payloadで明示的にfacingが指定されていれば、移動方向とは
+                # 無関係にそちらを優先する(例: 前進しながら後ろを向く、等)。
+                # 指定が無ければ従来通り移動方向から自動計算する。
+                explicit_facing = (facing_payload or {}).get("facing")
+                if explicit_facing in FACING_VECTORS:
+                    if not char.facing_forced_this_tick:
+                        char.facing = explicit_facing
+                elif not char.facing_forced_this_tick:
                     new_facing = self._facing_from_delta(
                         nr - old_pos[0], nc - old_pos[1], char.facing
                     )
