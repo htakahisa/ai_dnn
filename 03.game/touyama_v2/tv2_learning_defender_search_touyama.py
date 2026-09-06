@@ -50,6 +50,7 @@ from tv2_character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
     TOUYAMA_ROSTER_ORDER,
 )
+from tv2_train_defender_search import DEFENSE_WATCH_POINTS
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -70,13 +71,6 @@ ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80
 # (FACING_DIRSと同一)。action decode用の変数と混同しないよう別名で持つ。
 ALL_FACINGS = FACING_DIRS
 
-DEFENSE_WATCH_POINTS = {
-    "夢の街": (9, 3),
-    "いぐるん": (12, 29),
-    "ろびぃな": (11, 40),
-    "Tortlilyan": (10, 40),
-    "えんぺん": (10, 40),
-}
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
@@ -247,7 +241,17 @@ def _bfs_best_direction_unoccupied(dist_map, grid, r0, c0, occupied):
 
 
 def _watch_point(name):
-    return DEFENSE_WATCH_POINTS.get(name)
+    value = DEFENSE_WATCH_POINTS.get(name)
+    if value is None:
+        return None
+    # train側は[(r, c)]、旧learning側は(r, c)だったため、両形式を受け付ける。
+    if (
+        len(value) == 1
+        and isinstance(value[0], (tuple, list))
+        and len(value[0]) == 2
+    ):
+        value = value[0]
+    return int(value[0]), int(value[1])
 
 def _decode_action(action_idx):
     """action_idx = base_idx(0-9) * 4 + facing_idx(0-3)。
@@ -884,6 +888,12 @@ class LearningDefenderSearchTouyamaController:
 
         (dr, dc), use_ability, facing = _decode_action(action_idx)
         move_offset = (dr, dc)
+
+        # battle_logic.pyのABILITY処理はfacing payloadを処理せずにreturnするため、
+        # アビリティ使用tickだけcontroller側でfacingを反映する。
+        # 射撃直後の強制旋回は既存ルールを優先する。
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
 
         # train_defender_search.py と挙動を一致させる: position mode
         # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、

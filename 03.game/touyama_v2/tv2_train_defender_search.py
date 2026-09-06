@@ -83,8 +83,9 @@ from tv2_common_defender import (
 
 EPISODE_COUNT = 8000
 EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
-EVAL_EPISODES = 30        # 1回の評価で何エピソード分プレイして平均するか(分散低減のため5->30)
+EVAL_EPISODES = 100       # 1回の評価で何エピソード分プレイして平均するか
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)  # epsilonが十分下がるまでbest更新の対象外にする
+MIN_EVAL_ARRIVAL_RATE = 0.80  # 配置到着率がこれ未満のモデルはbest候補から除外
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -165,6 +166,7 @@ HOLD_ANGLE_PENALTY = -0.01
 # 直接視認時は既存の交戦報酬(命中率経由)に完全に委ね、このshapingは加えない。
 FACING_ALIGN_SPIKE_WEIGHT = 0.02
 FACING_ALIGN_SIGHTING_WEIGHT = 0.02
+FACING_ALIGN_VISIBLE_WEIGHT = 0.04
 FACING_ALIGN_POSITION_WEIGHT = 0.25  # 担当地点到着後、監視座標(DEFENSE_WATCH_POINTS)を向く
                                       # (旧0.01ではHOLD_POSITION_BONUSに埋もれてfacingが安定しなかったため引き上げ)
 SPIKE_WATCH_HOLD_BONUS = 0.02       # 落下中スパイクにLOSが通っている間、静止(待ち伏せ)
@@ -1082,7 +1084,11 @@ class SearchEnv:
 
         move_plans = []
         actual_action_dict = {}
-        prev_dists = {}
+        prev_dists = {
+            d.name: float(d.assigned_setup_dist_map[int(d.pos[0]), int(d.pos[1])])
+            for d in self.defenders
+            if d.is_alive and d.assigned_setup_dist_map is not None
+        }
 
         # position mode(スパイク情報も敵目撃情報も無い状態)かつ担当地点未到着の
         # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
@@ -1175,6 +1181,12 @@ class SearchEnv:
                         r += DEFENSE_POSITION_PULL_REWARD * delta
                     else:
                         r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
+                        if bfs_dist <= REACH_RADIUS:
+                            watch_pos = _nearest_watch_point(d.name, tuple(d.pos))
+                            if watch_pos is not None:
+                                r += FACING_ALIGN_POSITION_WEIGHT * _facing_alignment(
+                                    d.facing, tuple(d.pos), watch_pos
+                                )
             rewards[d.name] = r
 
         obs_dict, mask_dict = self._collect_observations()
@@ -1632,6 +1644,23 @@ class SearchEnv:
             elif angle_state == "moved_with_los":
                 r += HOLD_ANGLE_PENALTY
 
+            # 敵を直接視認できているtickは、射撃結果が疎でも敵方向を
+            # 向く行動に即時の学習信号を与える。
+            visible_enemies = [
+                a for a in self.attackers
+                if a.is_alive and has_los(d.pos, a.pos, self._smoke_cells())
+            ]
+            if visible_enemies:
+                nearest_enemy = min(
+                    visible_enemies,
+                    key=lambda a: max(
+                        abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1])
+                    ),
+                )
+                r += FACING_ALIGN_VISIBLE_WEIGHT * _facing_alignment(
+                    d.facing, tuple(d.pos), tuple(nearest_enemy.pos)
+                )
+
             new_kills = d.kills - self._prev_kills.get(d.name, d.kills)
             if new_kills > 0:
                 r += KILL_REWARD * new_kills
@@ -1855,22 +1884,68 @@ def train(
             print(f"  [ABILITY diag, sum over last<=100 eps]\n {ability_diag_str}")
 
         if episode % EVAL_EVERY == 0:
-            eval_avg = evaluate_policy(policy_net, env, EVAL_EPISODES)
+            eval_metrics = evaluate_policy(policy_net, env, EVAL_EPISODES)
+            eval_avg = eval_metrics["avg_reward"]
             eval_avg_reward_history.append(eval_avg)
             eval_avg_smoothed = sum(eval_avg_reward_history) / len(eval_avg_reward_history)
-            print(f"  [EVAL eps=0, n={EVAL_EPISODES}] avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f}")
+            eval_score = evaluation_score(eval_metrics)
+            print(
+                f"  [EVAL eps=0, n={EVAL_EPISODES}] "
+                f"avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f} "
+                f"score={eval_score:.3f} arrival={eval_metrics['arrival_rate']:.3f} "
+                f"all_arrived={eval_metrics['all_arrived_rate']:.3f} "
+                f"facing={eval_metrics['facing_rate']:.3f} "
+                f"plant_prevent={eval_metrics['plant_prevent_rate']:.3f} "
+                f"win={eval_metrics['defender_win_rate']:.3f} "
+                f"kills={eval_metrics['avg_kills']:.3f}"
+            )
 
             if episode < EVAL_MIN_EPISODE:
                 print(f"  [SAVE skip] episode={episode} < EVAL_MIN_EPISODE={EVAL_MIN_EPISODE} (epsilon依然高いため候補から除外)")
-            elif eval_avg_smoothed > best_avg_reward:
-                best_avg_reward = eval_avg_smoothed
+            elif eval_metrics["arrival_rate"] < MIN_EVAL_ARRIVAL_RATE:
+                print(
+                    f"  [SAVE skip] arrival_rate={eval_metrics['arrival_rate']:.3f} "
+                    f"< MIN_EVAL_ARRIVAL_RATE={MIN_EVAL_ARRIVAL_RATE:.3f}"
+                )
+            elif eval_score > best_avg_reward:
+                best_avg_reward = eval_score
                 torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
-                print(f"[SAVE] best model updated: eval_smoothed={eval_avg_smoothed:.3f} -> {MODEL_SAVE_PATH}")
+                print(f"[SAVE] best model updated: score={eval_score:.3f} -> {MODEL_SAVE_PATH}")
 
         if episode % 100 == 0:
             torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
 
+    if os.path.exists(MODEL_SAVE_PATH):
+        best_state = torch.load(MODEL_SAVE_PATH, map_location=DEVICE)
+        policy_net.load_state_dict(best_state)
+        final_best_eval = evaluate_policy(policy_net, env, EVAL_EPISODES)
+        print(
+            f"[FINAL BEST EVAL eps=0, n={EVAL_EPISODES}] "
+            f"avg={final_best_eval['avg_reward']:.3f} "
+            f"score={evaluation_score(final_best_eval):.3f} "
+            f"arrival={final_best_eval['arrival_rate']:.3f} "
+            f"all_arrived={final_best_eval['all_arrived_rate']:.3f} "
+            f"facing={final_best_eval['facing_rate']:.3f} "
+            f"plant_prevent={final_best_eval['plant_prevent_rate']:.3f} "
+            f"win={final_best_eval['defender_win_rate']:.3f} "
+            f"kills={final_best_eval['avg_kills']:.3f} "
+            f"checkpoint={MODEL_SAVE_PATH}"
+        )
+    else:
+        print(f"[FINAL BEST EVAL skipped] checkpoint not found: {MODEL_SAVE_PATH}")
+
     print("[DONE] training finished.")
+
+def evaluation_score(metrics):
+    """目的に沿った評価スコア。到着率の低いモデルは別途候補から除外する。"""
+    return (
+        4.0 * metrics["defender_win_rate"]
+        + 3.0 * metrics["plant_prevent_rate"]
+        + 1.5 * metrics["facing_rate"]
+        + 1.0 * metrics["arrival_rate"]
+        + 0.5 * min(metrics["avg_kills"] / max(N_ATTACKERS, 1), 1.0)
+    )
+
 
 def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
     """epsilon=0(greedy)でepisodes回プレイし、平均合計報酬を返す。
@@ -1879,10 +1954,19 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
     将来的な拡張に備えてeval()/train()を明示的に切り替えておく。"""
     policy_net.eval()
     total = 0.0
+    arrival_count = 0
+    agent_count = 0
+    all_arrived_count = 0
+    facing_checks = 0
+    facing_correct = 0
+    plant_prevented_count = 0
+    defender_win_count = 0
+    kill_total = 0
     with torch.no_grad():
         for _ in range(episodes):
             obs_dict, mask_dict = env.reset()
             ep_reward = 0.0
+            arrived = {d.name: False for d in env.defenders}
             for _tick in range(MAX_TICKS + DEFENDER_SETUP_TICKS):
                 action_dict = {
                     name: select_action(policy_net, obs, mask_dict[name], 0.0)
@@ -1890,11 +1974,49 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
                 }
                 obs_dict, mask_dict, rewards, done, _ = env.step(action_dict)
                 ep_reward += sum(rewards.values())
+
+                for d in env.defenders:
+                    dist_map = d.assigned_defense_dist_map
+                    if dist_map is None:
+                        continue
+                    r0, c0 = int(d.pos[0]), int(d.pos[1])
+                    if dist_map[r0, c0] <= REACH_RADIUS:
+                        arrived[d.name] = True
+                    # facing評価は、スパイク・敵の既知情報がまだない初期配置中に限定する。
+                    # 交戦開始後は敵方向を向くことが正しい場合があるため、
+                    # watch point評価に混ぜない。
+                    if (
+                        arrived[d.name]
+                        and env.team_memory.spike_pos is None
+                        and env.team_memory.last_seen_enemy is None
+                    ):
+                        facing_checks += 1
+                        watch_pos = _nearest_watch_point(d.name, tuple(d.pos))
+                        if (
+                            watch_pos is not None
+                            and _facing_alignment(d.facing, tuple(d.pos), watch_pos) > 0.5
+                        ):
+                            facing_correct += 1
+
                 if done or not obs_dict:
                     break
             total += ep_reward
+            arrival_count += sum(arrived.values())
+            agent_count += len(arrived)
+            all_arrived_count += int(bool(arrived) and all(arrived.values()))
+            plant_prevented_count += int(not env.planted)
+            defender_win_count += int(env.match_over_reason == "defender_win")
+            kill_total += sum(d.kills for d in env.defenders)
     policy_net.train()
-    return total / episodes
+    return {
+        "avg_reward": total / episodes,
+        "arrival_rate": arrival_count / max(agent_count, 1),
+        "all_arrived_rate": all_arrived_count / episodes,
+        "facing_rate": facing_correct / max(facing_checks, 1),
+        "plant_prevent_rate": plant_prevented_count / episodes,
+        "defender_win_rate": defender_win_count / episodes,
+        "avg_kills": kill_total / episodes,
+    }
 
 if __name__ == "__main__":
     train()
