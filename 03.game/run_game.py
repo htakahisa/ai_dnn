@@ -28,6 +28,10 @@ from policy_ppo_attacker_controller import PolicyPPOAttackerController
 from policy_defender_controller import PolicyDefenderController
 from touyama_v1.touyama_defender_controller import TouyamaDefenderController
 from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
+
+from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
+from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
+
 from ghost_champions_v1_macro import GhostChampionsV1AttackerController, GhostChampionsV1DefenderController
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
@@ -111,6 +115,13 @@ def _build_team_ai(key):
             name="Touyama Gaming v1",
             attacker_factory=lambda: TouyamaAttackerController(),
             defender_factory=lambda: TouyamaDefenderController(),
+        )
+    
+    if normalized == "touyama_gaming_v2":
+        return DualRoleTeamAI(
+            name="Touyama Gaming v2",
+            attacker_factory=lambda: Tv2TouyamaAttackerController(),
+            defender_factory=lambda: Tv2TouyamaDefenderController(),
         )
 
     if normalized in {
