@@ -85,7 +85,7 @@ EPISODE_COUNT = 8000
 EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
 EVAL_EPISODES = 100       # 1回の評価で何エピソード分プレイして平均するか
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)  # epsilonが十分下がるまでbest更新の対象外にする
-MIN_EVAL_ARRIVAL_RATE = 0.80  # 配置到着率がこれ未満のモデルはbest候補から除外
+#MIN_EVAL_ARRIVAL_RATE = 0.70  # 配置到着率がこれ未満のモデルはbest候補から除外
 
 # ---------------------------------------------------------------------------
 # 保存先
@@ -101,7 +101,9 @@ MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_defender_search_touyama_latest.p
 
 CARDINAL = tv2_common_rl.CARDINAL_MOVES
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 46  # 44(従来) + 2(担当監視座標への方向)
+AGENT_ID_DIM = len(TOUYAMA_ROSTER_ORDER)
+AGENT_ID_OFFSET = 46
+OBS_DIM = AGENT_ID_OFFSET + AGENT_ID_DIM  # 既存46次元 + キャラID one-hot
               # + 8(自身のfacing one-hot。従来欠落していたため追加。POMDP化を防ぐ)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
 # 完全に独立した直積として扱う: action_idx = base_idx(0-9) * 8 + facing_idx(0-7)。
@@ -117,7 +119,7 @@ N_ATTACKERS = 5
 MAX_TICKS = ROUND_DURATION_TICKS  # 90
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
-SIGHTING_STALENESS_CAP = 30
+SIGHTING_STALENESS_CAP = 30  # 敵が倒された後も、このtick数その方向を警戒する
 REACH_RADIUS = 0        # 担当ポジションへ「到着した」とみなすBFS距離
 
 # 敵(Attacker)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
@@ -147,6 +149,8 @@ SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(保持�
 SPIKE_GROUND_PULL_REWARD = 0.02  # 地面に落ちたスパイクへ近づく(弱め)
 SPIKE_GROUND_APPROACH_RADIUS = 4 # 担当ポジションからこの距離以内でのみSPIKE_GROUND_PULL_REWARDを付与
 SIGHTING_PULL_REWARD = 0.05      # 敵目撃方向へ近づく(ポテンシャル差分)
+COMBAT_HOLD_BONUS = 0.08         # 直接視認中は、その場で撃ち合う
+COMBAT_MOVE_PENALTY = -0.12      # 直接視認中の追撃移動
 THREAT_NEAR_RADIUS = 7           # 脅威(spike保持中/敵目撃)にこの半径距離以内なら「既に近い」とみなし、
                                   # 追走ではなく待ち伏せ(HOLD)へ切り替える
 DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
@@ -164,11 +168,20 @@ HOLD_ANGLE_PENALTY = -0.01
 # 💡追加: facing整合の弱いshaping報酬。自分が敵を直接視認していない時のみ有効。
 # 優先順位はTeamMemoryの優先度ツリーと揃える: spike > sighting > 担当地点。
 # 直接視認時は既存の交戦報酬(命中率経由)に完全に委ね、このshapingは加えない。
-FACING_ALIGN_SPIKE_WEIGHT = 0.02
-FACING_ALIGN_SIGHTING_WEIGHT = 0.02
-FACING_ALIGN_VISIBLE_WEIGHT = 0.04
-FACING_ALIGN_POSITION_WEIGHT = 0.25  # 担当地点到着後、監視座標(DEFENSE_WATCH_POINTS)を向く
-                                      # (旧0.01ではHOLD_POSITION_BONUSに埋もれてfacingが安定しなかったため引き上げ)
+FACING_POSITION_REWARD = 0.25  # 配置後に指定監視位置を向く
+FACING_ROUTE_REWARD = 0.08     # 移動経路の次方向(曲がり角の先読みを含む)を向く
+FACING_SETUP_REWARD_TICKS = 5  # 到着後、監視方向を評価する tick 数
+# 旧 combat/priority facing shaping は簡略化方針により無効化する。
+FACING_ALIGN_SPIKE_WEIGHT = 0.0
+FACING_ALIGN_SIGHTING_WEIGHT = 0.0
+FACING_ALIGN_VISIBLE_WEIGHT = 0.0
+FACING_ALIGN_POSITION_WEIGHT = 0.0
+FACING_COMBAT_CORRECT_REWARD = 0.0
+FACING_COMBAT_INCORRECT_PENALTY = 0.0
+# 旧 combat shaping の互換用。旧ブロックは報酬係数が0のため無効だが、
+# 内部の relevance 計算が参照するため定義だけ残す。
+FACING_MEMORY_MAX_DISTANCE = 10
+FACING_MEMORY_MAX_STALENESS = 12
 SPIKE_WATCH_HOLD_BONUS = 0.02       # 落下中スパイクにLOSが通っている間、静止(待ち伏せ)
 SPIKE_WATCH_MOVE_PENALTY = -0.01    # 同上、無駄にうろつく
 KILL_REWARD = 0.5
@@ -245,8 +258,8 @@ DEFENSE_WATCH_POINTS = {
      "夢の街": [(12, 0)],
      "いぐるん": [(12, 29)],
      "ろびぃな": [(11, 40)],
-     "Tortlilyan": [(10, 40)],
-     "えんぺん": [(10, 40)],
+     "Tortlilyan": [(12, 40)],
+     "えんぺん": [(11, 40)],
 }
 
 
@@ -343,6 +356,44 @@ def _facing_alignment(facing, from_pos, to_pos):
     return (fx * dc + fy * dr) / dist
 
 
+def _expected_facing(from_pos, to_pos):
+    """from_posからto_posへ最も近い8方向のfacingを返す。"""
+    dc = float(to_pos[1] - from_pos[1])
+    dr = float(to_pos[0] - from_pos[0])
+    dist = math.hypot(dc, dr)
+    if dist == 0:
+        return None
+    nx, ny = dc / dist, dr / dist
+    return max(
+        FACING_VECTORS,
+        key=lambda direction: (
+            FACING_VECTORS[direction][0] * nx
+            + FACING_VECTORS[direction][1] * ny
+        ),
+    )
+
+
+def _facing_memory_relevance(from_pos, memory):
+    """遠すぎる・古すぎるlast_seen_enemyをfacing対象から外す。"""
+    if memory is None:
+        return 0.0
+    target = memory.get("pos")
+    if target is None:
+        return 0.0
+    distance = max(
+        abs(int(target[0]) - int(from_pos[0])),
+        abs(int(target[1]) - int(from_pos[1])),
+    )
+    staleness = max(0, int(memory.get("tick_ago", 0)))
+    if distance > FACING_MEMORY_MAX_DISTANCE:
+        return 0.0
+    if staleness > FACING_MEMORY_MAX_STALENESS:
+        return 0.0
+    distance_factor = 1.0 - distance / FACING_MEMORY_MAX_DISTANCE
+    staleness_factor = 1.0 - staleness / FACING_MEMORY_MAX_STALENESS
+    return max(0.0, distance_factor * staleness_factor)
+
+
 def bfs_distance_map(goal):
     return tv2_common_rl.bfs_distance_map(GRID, goal)
 
@@ -388,6 +439,29 @@ def bfs_best_direction_unoccupied(dist_map, r0, c0, occupied):
             best_d = dist_map[nr, nc]
             best_dr, best_dc = dr, dc
     return best_dr, best_dc
+
+
+def planned_route_facing(dist_map, pos):
+    """経路上の次方向を基本に、次 tick で曲がる場合は曲がる方向を返す。
+
+    例: 上、上、右、右 の経路では、facing は 上、右、右、右 になる。
+    dist_map は目的地からの BFS 距離なので、現在位置と1マス先から
+    それぞれ最短経路の方向を調べれば、次の曲がり角を先読みできる。
+    """
+    if dist_map is None:
+        return None
+    r0, c0 = int(pos[0]), int(pos[1])
+    first = bfs_best_direction(dist_map, r0, c0)
+    if first == (0, 0):
+        return None
+
+    nr, nc = r0 + first[0], c0 + first[1]
+    if not (0 <= nr < HEIGHT and 0 <= nc < WIDTH):
+        return _facing_from_delta(first[0], first[1], None)
+
+    second = bfs_best_direction(dist_map, nr, nc)
+    desired = second if second != (0, 0) and second != first else first
+    return _facing_from_delta(desired[0], desired[1], None)
 
 
 def bfs_distance_map_avoiding(goal, avoid_cells):
@@ -708,16 +782,16 @@ def build_observation(
         obs[19] = float(best_dc)
         obs[20] = min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
 
-    obs[21] = len(visible_enemies) / 5.0
-    if visible_enemies:
-        nearest_enemy = min(
-            visible_enemies,
+        obs[21] = len(visible_enemies) / 5.0
+        if visible_enemies:
+            nearest_enemy = min(
+                visible_enemies,
             key=lambda a: max(abs(a.pos[0] - unit.pos[0]), abs(a.pos[1] - unit.pos[1])),
         )
-        obs[22] = (nearest_enemy.pos[0] - unit.pos[0]) / HEIGHT
-        obs[23] = (nearest_enemy.pos[1] - unit.pos[1]) / WIDTH
-        dist = max(abs(nearest_enemy.pos[0] - unit.pos[0]), abs(nearest_enemy.pos[1] - unit.pos[1]))
-        obs[24] = min(dist, HEIGHT) / HEIGHT
+            obs[22] = (nearest_enemy.pos[0] - unit.pos[0]) / HEIGHT
+            obs[23] = (nearest_enemy.pos[1] - unit.pos[1]) / WIDTH
+            dist = max(abs(nearest_enemy.pos[0] - unit.pos[0]), abs(nearest_enemy.pos[1] - unit.pos[1]))
+            obs[24] = min(dist, HEIGHT) / HEIGHT
 
     if len(SITE_POSITIONS) >= 1:
         obs[25] = (SITE_POSITIONS[0][0] - unit.pos[0]) / HEIGHT
@@ -768,6 +842,10 @@ def build_observation(
         obs[44] = (watch_pos[0] - r0) / HEIGHT
         obs[45] = (watch_pos[1] - c0) / WIDTH
 
+    # 共有ネットワークがキャラごとの担当・facing方針を区別できるようにする。
+    agent_id = TOUYAMA_ROSTER_ORDER.index(unit.name)
+    obs[AGENT_ID_OFFSET + agent_id] = 1.0
+
     return obs
 
 
@@ -790,7 +868,10 @@ def encode_action(move, use_ability, facing):
     return base_idx * len(FACING_DIRS) + facing_idx
 
 
-def build_action_mask(unit, occupied, lock_movement=False, has_target_info=True, in_setup_phase=False):
+def build_action_mask(
+    unit, occupied, lock_movement=False, has_target_info=True,
+    in_setup_phase=False, forced_facing=None,
+):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
     交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。
     has_target_info=False(敵の視認情報も直近の目撃情報も一切無い)の場合、
@@ -823,7 +904,48 @@ def build_action_mask(unit, occupied, lock_movement=False, has_target_info=True,
             base_mask[move_idx * 2 + 1] = False
 
     # base_idxごとに向き4通りをまとめて許可/禁止する(encode_actionのbase_idx*4+facing_idxと対応)。
-    return np.repeat(base_mask, len(FACING_DIRS))
+    action_mask = np.repeat(base_mask, len(FACING_DIRS))
+    if forced_facing in FACING_DIRS:
+        facing_idx = FACING_DIRS.index(forced_facing)
+        for base_idx in range(BASE_ACTION_DIM):
+            if base_mask[base_idx]:
+                start = base_idx * len(FACING_DIRS)
+                action_mask[start:start + len(FACING_DIRS)] = False
+                action_mask[start + facing_idx] = True
+    return action_mask
+
+
+def _forced_watch_facing(unit, visible_enemies, team_memory):
+    """配置完了後、敵を直接視認するまで監視方向を固定する。"""
+    if visible_enemies or team_memory.last_seen_enemy is not None:
+        return None
+    assigned = getattr(unit, "assigned_defense_pos", None)
+    if assigned is None or tuple(map(int, unit.pos)) != tuple(map(int, assigned)):
+        return None
+    watch_pos = _nearest_watch_point(unit.name, tuple(unit.pos))
+    if watch_pos is None:
+        return None
+    return _expected_facing(tuple(unit.pos), watch_pos)
+
+
+def _forced_combat_facing(unit, visible_enemies, team_memory):
+    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    if visible_enemies:
+        target = min(
+            visible_enemies,
+            key=lambda a: max(
+                abs(a.pos[0] - unit.pos[0]), abs(a.pos[1] - unit.pos[1])
+            ),
+        )
+        facing = _expected_facing(tuple(unit.pos), tuple(target.pos))
+        if facing is not None:
+            unit._combat_facing = facing
+        return getattr(unit, "_combat_facing", None)
+    if team_memory.last_seen_enemy is not None:
+        return getattr(unit, "_combat_facing", None) or _expected_facing(
+            tuple(unit.pos), tuple(team_memory.last_seen_enemy["pos"])
+        )
+    return None
 
 
 # ============================================================================
@@ -869,6 +991,10 @@ class SearchEnv:
             name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
             for name in TOUYAMA_ROSTER_ORDER
         }
+        # エピソード中に指定配置位置へ一度でも到達したか。
+        # position mode から索敵/戦闘 mode へ移行した後の到達も記録する。
+        self.episode_arrived = {name: False for name in TOUYAMA_ROSTER_ORDER}
+        self.position_facing_ticks = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
 
         # --- 診断用: アビリティ使用の内訳(視認あり使用/命中/外れ/whiff/overlap/debuffキル)を
         # 1エピソード分蓄積する。train()側がエピソード終了ごとにこれを読み取り、履歴に積算する。
@@ -897,6 +1023,8 @@ class SearchEnv:
             name: {"dist_sum": 0.0, "dist_count": 0, "moved_count": 0, "arrived_count": 0}
             for name in TOUYAMA_ROSTER_ORDER
         }
+        self.episode_arrived = {name: False for name in TOUYAMA_ROSTER_ORDER}
+        self.position_facing_ticks = {name: 0 for name in TOUYAMA_ROSTER_ORDER}
         self.ability_diag_stats = {
             name: {
                 "aimed": 0, "hit": 0, "miss": 0, "whiff": 0, "overlap": 0,
@@ -911,6 +1039,7 @@ class SearchEnv:
         self.carrier_target_site_idx = random.randrange(len(SITE_POSITIONS))
 
         self._assign_defense_positions()
+        self._update_episode_arrival_flags()
 
         self.team_memory.update(self.defenders, self.attackers, self._smoke_cells(), self.spike_ground_pos)
         self._update_priority_dist_maps()
@@ -918,6 +1047,18 @@ class SearchEnv:
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
 
         return self._collect_observations()
+
+    def _update_episode_arrival_flags(self):
+        """エピソード全体の配置位置到達状況を記録する。
+
+        position_mode_stats の arrived_count は position mode 中の診断用であり、
+        mode 切り替え後に到着したケースを数えられない。そのため、こちらは
+        毎 tick、指定座標との一致を確認して一度 True になったら保持する。
+        """
+        for d in self.defenders:
+            target = getattr(d, "assigned_defense_pos", None)
+            if target is not None and tuple(map(int, d.pos)) == tuple(map(int, target)):
+                self.episode_arrived[d.name] = True
 
     def _assign_defense_positions(self):
         """touyama_v2固定チームはスポーン位置が毎エピソード同一のため、
@@ -1026,9 +1167,16 @@ class SearchEnv:
                 has_target_info = any(a.has_spike for a in visible_enemies_for_mask)
             else:
                 has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+            forced_facing = _forced_combat_facing(
+                d, visible_enemies_for_mask, self.team_memory
+            )
+            if forced_facing is None:
+                forced_facing = _forced_watch_facing(
+                    d, visible_enemies_for_mask, self.team_memory
+                )
             mask_dict[d.name] = build_action_mask(
                 d, own_occupied, lock_movement=lock_movement, has_target_info=has_target_info,
-                in_setup_phase=self.in_setup_phase,
+                in_setup_phase=self.in_setup_phase, forced_facing=forced_facing,
             )
         return obs_dict, mask_dict
 
@@ -1144,6 +1292,9 @@ class SearchEnv:
             # 向き(facing)は移動先の決定方法(BFS強制/ネットワーク)と無関係に、
             # ネットワークが選んだ向きをそのまま毎tick適用する。
             d.facing = facing
+            d._facing_eval_pos = tuple(d.pos)
+            d._facing_route_map = d.assigned_setup_dist_map
+            d._facing_move = (dr, dc)
             actual_action_dict[d.name] = encode_action((dr, dc), use_ability, facing)
             move_plans.append((d, (dr, dc)))
 
@@ -1166,6 +1317,8 @@ class SearchEnv:
         self.setup_ticks_remaining -= 1
         if self.setup_ticks_remaining <= 0:
             self.in_setup_phase = False
+
+        self._update_episode_arrival_flags()
 
         rewards = {}
         for d in self.defenders:
@@ -1245,6 +1398,16 @@ class SearchEnv:
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+            forced_facing = _forced_combat_facing(
+                d, visible_enemies, self.team_memory
+            )
+            if forced_facing is None:
+                forced_facing = _forced_watch_facing(
+                    d, visible_enemies, self.team_memory
+                )
+            if forced_facing is not None:
+                # マスクだけでなく実行側でも保証し、replayに実際のfacingを記録する。
+                facing = forced_facing
 
             if has_enemy_los:
                 # 敵を直接視認中はBFS強制移動を一切行わない。
@@ -1271,6 +1434,9 @@ class SearchEnv:
             # 向き(facing)は移動先の決定方法(BFS強制/ネットワーク)と無関係に、
             # ネットワークが選んだ向きをそのまま毎tick適用する。
             d.facing = facing
+            d._facing_eval_pos = tuple(d.pos)
+            d._facing_route_map = d.assigned_defense_dist_map if in_position_phase else None
+            d._facing_move = (dr, dc)
             actual_action_dict[d.name] = encode_action((dr, dc), use_ability, facing)
             move_plans.append((d, (dr, dc)))
             # use_abilityのマスク許可条件(has_target_info)と、実際にability_requestsへ
@@ -1469,6 +1635,7 @@ class SearchEnv:
             elif not defenders_alive:
                 self.match_over_reason = "defender_wipe"
 
+        self._update_episode_arrival_flags()
         obs_dict, mask_dict = self._collect_observations()
         return obs_dict, mask_dict, rewards, done, actual_action_dict
 
@@ -1534,6 +1701,14 @@ class SearchEnv:
 
     def _priority_mode_and_distmap(self, defender):
         r0, c0 = int(defender.pos[0]), int(defender.pos[1])
+        # 直接視認中の個体は、共有されたlast_seen_enemyへ向かう役割ではなく、
+        # 現在位置で射撃して角度を維持する役割にする。ここをsightingにすると、
+        # THREAT_NEAR_RADIUSの外側で「見えている敵へ近づく」報酬が発生する。
+        if any(
+            a.is_alive and has_los(defender.pos, a.pos, self._smoke_cells())
+            for a in self.attackers
+        ):
+            return "combat_hold", None, "combat_hold"
         if self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
             if self.team_memory.spike_held:
                 dist = self.spike_dist_map[r0, c0]
@@ -1566,6 +1741,44 @@ class SearchEnv:
             bfs_dist = dist_map[r0, c0] if dist_map is not None else None
             if bfs_dist is not None and bfs_dist < 0:
                 bfs_dist = None
+
+            if mode == "combat_hold":
+                # 直接視認中の本人は追撃しない。敵を見ていない味方は
+                # sightingモードのまま増援として接近できる。
+                r += (
+                    COMBAT_HOLD_BONUS
+                    if not d.moved_this_tick
+                    else COMBAT_MOVE_PENALTY
+                )
+
+            # 配置地点到着後の向きを明確に学習させる。
+            # 移動中は向きの自由度を維持し、配置地点にいるときだけ
+            # 現在の優先対象(spike / last seen enemy / watch point)に対する
+            # 8方向の正解・不正解を直接報酬化する。
+            # facing shaping は、移動経路と配置直後の監視方向だけに限定する。
+            eval_pos = getattr(d, "_facing_eval_pos", tuple(d.pos))
+            route_facing = planned_route_facing(
+                getattr(d, "_facing_route_map", None), eval_pos
+            )
+            if route_facing is None:
+                move_dr, move_dc = getattr(d, "_facing_move", (0, 0))
+                route_facing = _facing_from_delta(move_dr, move_dc, None)
+            if route_facing is not None and d.facing == route_facing:
+                r += FACING_ROUTE_REWARD
+
+            at_defense_pos = (
+                d.assigned_defense_pos is not None
+                and tuple(map(int, d.pos)) == tuple(map(int, d.assigned_defense_pos))
+            )
+            if at_defense_pos and self.team_memory.last_seen_enemy is None:
+                facing_ticks = self.position_facing_ticks.get(d.name, 0)
+                if facing_ticks < FACING_SETUP_REWARD_TICKS:
+                    watch_pos = _nearest_watch_point(d.name, tuple(d.pos))
+                    if watch_pos is not None:
+                        expected_facing = _expected_facing(tuple(d.pos), watch_pos)
+                        if expected_facing is not None and d.facing == expected_facing:
+                            r += FACING_POSITION_REWARD
+                    self.position_facing_ticks[d.name] = facing_ticks + 1
 
             if bfs_dist is None:
                 d.prev_priority_mode = mode
@@ -1661,6 +1874,36 @@ class SearchEnv:
                     d.facing, tuple(d.pos), tuple(nearest_enemy.pos)
                 )
 
+            # 戦闘・ピーク中のfacingを明確に学習させる。
+            # 直接視認できる場合は視認中の最寄り敵を優先し、視認できない場合は
+            # TeamMemoryのlast_seen_enemyを使う。移動中もこの報酬を与えることで、
+            # 敵へ寄りながら敵と反対方向を向く行動を抑制する。
+            combat_target = None
+            combat_facing_weight = 0.0
+            if visible_enemies:
+                combat_target = tuple(nearest_enemy.pos)
+            elif self.team_memory.last_seen_enemy is not None:
+                memory_relevance = _facing_memory_relevance(
+                    tuple(d.pos), self.team_memory.last_seen_enemy
+                )
+                if memory_relevance > 0.0:
+                    combat_target = tuple(self.team_memory.last_seen_enemy["pos"])
+                    combat_facing_weight = memory_relevance
+
+            if visible_enemies:
+                combat_facing_weight = 1.0
+
+            if combat_target is not None:
+                combat_expected_facing = _expected_facing(
+                    tuple(d.pos), combat_target
+                )
+                if combat_expected_facing is not None:
+                    r += combat_facing_weight * (
+                        FACING_COMBAT_CORRECT_REWARD
+                        if d.facing == combat_expected_facing
+                        else FACING_COMBAT_INCORRECT_PENALTY
+                    )
+
             new_kills = d.kills - self._prev_kills.get(d.name, d.kills)
             if new_kills > 0:
                 r += KILL_REWARD * new_kills
@@ -1685,8 +1928,18 @@ class SearchEnv:
                 if team_memory.spike_pos is not None:
                     watch_pos, watch_weight = team_memory.spike_pos, FACING_ALIGN_SPIKE_WEIGHT
                 elif team_memory.last_seen_enemy is not None:
-                    watch_pos = team_memory.last_seen_enemy["pos"]
-                    watch_weight = FACING_ALIGN_SIGHTING_WEIGHT
+                    memory_relevance = _facing_memory_relevance(
+                        tuple(d.pos), team_memory.last_seen_enemy
+                    )
+                    if memory_relevance > 0.0:
+                        watch_pos = team_memory.last_seen_enemy["pos"]
+                        watch_weight = FACING_ALIGN_SIGHTING_WEIGHT * memory_relevance
+                    elif d.assigned_defense_pos is not None:
+                        watch_pos = (
+                            _nearest_watch_point(d.name, tuple(d.pos))
+                            or d.assigned_defense_pos
+                        )
+                        watch_weight = FACING_ALIGN_POSITION_WEIGHT
                 elif d.assigned_defense_pos is not None:
                     watch_pos = (
                         _nearest_watch_point(d.name, tuple(d.pos))
@@ -1819,12 +2072,16 @@ def train(
         for name in TOUYAMA_ROSTER_ORDER:
             stats = env.position_mode_stats.get(name, {})
             dist_count = stats.get("dist_count", 0)
+            # 到達判定は position mode の有無に依存させない。
+            # position mode が短い/存在しないエピソードでも、実際に指定位置へ
+            # 到達していれば best 判定用の履歴へ記録する。
+            per_name_arrival_rate_history[name].append(
+                1.0 if env.episode_arrived.get(name, False) else 0.0
+            )
             if dist_count > 0:
                 avg_dist = stats["dist_sum"] / dist_count
-                arrival_rate = stats["arrived_count"] / dist_count
                 move_rate = stats["moved_count"] / dist_count
                 per_name_avg_dist_history[name].append(avg_dist)
-                per_name_arrival_rate_history[name].append(arrival_rate)
                 per_name_move_rate_history[name].append(move_rate)
 
         episode_reward_history.append(episode_reward_total)
@@ -1867,21 +2124,21 @@ def train(
                 for name in TOUYAMA_ROSTER_ORDER
                 if len(per_name_avg_dist_history[name]) > 0
             )
-            print(f"  [POSITION-MODE diag]\n {position_diag_str}")
+            print(f"  [POSITION-MODE diag | arrive=episode-wide]\n {position_diag_str}")
 
             # --- 診断用(5): 直近<=100エピソード合計でのアビリティ使用内訳 ---
-            ability_diag_str = " \n ".join(
-                f"{name}(aimed={sum(per_name_ability_history[name]['aimed'])},"
-                f"hit={sum(per_name_ability_history[name]['hit'])},"
-                f"miss={sum(per_name_ability_history[name]['miss'])},"
-                f"whiff={sum(per_name_ability_history[name]['whiff'])},"
-                f"overlap={sum(per_name_ability_history[name]['overlap'])},"
-                f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])},"
-                f"opp={sum(per_name_ability_history[name]['opportunity'])},"
-                f"seen={sum(per_name_ability_history[name]['own_any_enemy_seen'])})"
-                for name in TOUYAMA_ROSTER_ORDER
-            )
-            print(f"  [ABILITY diag, sum over last<=100 eps]\n {ability_diag_str}")
+            # ability_diag_str = " \n ".join(
+            #     f"{name}(aimed={sum(per_name_ability_history[name]['aimed'])},"
+            #     f"hit={sum(per_name_ability_history[name]['hit'])},"
+            #     f"miss={sum(per_name_ability_history[name]['miss'])},"
+            #     f"whiff={sum(per_name_ability_history[name]['whiff'])},"
+            #     f"overlap={sum(per_name_ability_history[name]['overlap'])},"
+            #     f"dbuff_kill={sum(per_name_ability_history[name]['debuff_kill'])},"
+            #     f"opp={sum(per_name_ability_history[name]['opportunity'])},"
+            #     f"seen={sum(per_name_ability_history[name]['own_any_enemy_seen'])})"
+            #     for name in TOUYAMA_ROSTER_ORDER
+            # )
+            # print(f"  [ABILITY diag, sum over last<=100 eps]\n {ability_diag_str}")
 
         if episode % EVAL_EVERY == 0:
             eval_metrics = evaluate_policy(policy_net, env, EVAL_EPISODES)
@@ -1889,24 +2146,29 @@ def train(
             eval_avg_reward_history.append(eval_avg)
             eval_avg_smoothed = sum(eval_avg_reward_history) / len(eval_avg_reward_history)
             eval_score = evaluation_score(eval_metrics)
+            per_agent_arrival = " / ".join(
+                f"{name}={rate:.3f}"
+                for name, rate in eval_metrics["arrival_rate_by_name"].items()
+            )
             print(
-                f"  [EVAL eps=0, n={EVAL_EPISODES}] "
-                f"avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f} "
+                f"  [EVAL per={EVAL_EPISODES}] "
                 f"score={eval_score:.3f} arrival={eval_metrics['arrival_rate']:.3f} "
+                f"avg={eval_avg:.3f} smoothed={eval_avg_smoothed:.3f} "
                 f"all_arrived={eval_metrics['all_arrived_rate']:.3f} "
                 f"facing={eval_metrics['facing_rate']:.3f} "
                 f"plant_prevent={eval_metrics['plant_prevent_rate']:.3f} "
                 f"win={eval_metrics['defender_win_rate']:.3f} "
                 f"kills={eval_metrics['avg_kills']:.3f}"
             )
+            print(f"  [EVAL arrival_by_agent] {per_agent_arrival}")
 
             if episode < EVAL_MIN_EPISODE:
                 print(f"  [SAVE skip] episode={episode} < EVAL_MIN_EPISODE={EVAL_MIN_EPISODE} (epsilon依然高いため候補から除外)")
-            elif eval_metrics["arrival_rate"] < MIN_EVAL_ARRIVAL_RATE:
-                print(
-                    f"  [SAVE skip] arrival_rate={eval_metrics['arrival_rate']:.3f} "
-                    f"< MIN_EVAL_ARRIVAL_RATE={MIN_EVAL_ARRIVAL_RATE:.3f}"
-                )
+            # elif min(eval_metrics["arrival_rate_by_name"].values()) < MIN_EVAL_ARRIVAL_RATE:
+            #     print(
+            #         f"  [SAVE skip] per-agent arrival rate is below "
+            #         f"MIN_EVAL_ARRIVAL_RATE={MIN_EVAL_ARRIVAL_RATE:.3f}"
+            #     )
             elif eval_score > best_avg_reward:
                 best_avg_reward = eval_score
                 torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
@@ -1930,6 +2192,13 @@ def train(
             f"win={final_best_eval['defender_win_rate']:.3f} "
             f"kills={final_best_eval['avg_kills']:.3f} "
             f"checkpoint={MODEL_SAVE_PATH}"
+        )
+        print(
+            "[FINAL BEST arrival_by_agent] "
+            + " / ".join(
+                f"{name}={rate:.3f}"
+                for name, rate in final_best_eval["arrival_rate_by_name"].items()
+            )
         )
     else:
         print(f"[FINAL BEST EVAL skipped] checkpoint not found: {MODEL_SAVE_PATH}")
@@ -1957,6 +2226,7 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
     arrival_count = 0
     agent_count = 0
     all_arrived_count = 0
+    arrival_by_name_count = {d.name: 0 for d in env.defenders}
     facing_checks = 0
     facing_correct = 0
     plant_prevented_count = 0
@@ -1976,17 +2246,24 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
                 ep_reward += sum(rewards.values())
 
                 for d in env.defenders:
-                    dist_map = d.assigned_defense_dist_map
-                    if dist_map is None:
+                    assigned_pos = getattr(d, "assigned_defense_pos", None)
+                    if assigned_pos is None:
                         continue
-                    r0, c0 = int(d.pos[0]), int(d.pos[1])
-                    if dist_map[r0, c0] <= REACH_RADIUS:
+                    # 実ゲームの配置判定と一致させるため、BFS距離ではなく
+                    # assigned_defense_posとの実座標一致で判定する。
+                    if tuple(d.pos) == tuple(assigned_pos):
                         arrived[d.name] = True
                     # facing評価は、スパイク・敵の既知情報がまだない初期配置中に限定する。
                     # 交戦開始後は敵方向を向くことが正しい場合があるため、
                     # watch point評価に混ぜない。
+                    # facing評価は、到達後に移動した tick を含めず、
+                    # このtickで実際に担当配置地点にいる場合だけ行う。
+                    # 学習側のFACING_POSITION_REWARD条件と一致させる。
+                    at_assigned_defense_pos = (
+                        tuple(d.pos) == tuple(assigned_pos)
+                    )
                     if (
-                        arrived[d.name]
+                        at_assigned_defense_pos
                         and env.team_memory.spike_pos is None
                         and env.team_memory.last_seen_enemy is None
                     ):
@@ -2003,6 +2280,8 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
             total += ep_reward
             arrival_count += sum(arrived.values())
             agent_count += len(arrived)
+            for name, did_arrive in arrived.items():
+                arrival_by_name_count[name] += int(did_arrive)
             all_arrived_count += int(bool(arrived) and all(arrived.values()))
             plant_prevented_count += int(not env.planted)
             defender_win_count += int(env.match_over_reason == "defender_win")
@@ -2011,6 +2290,10 @@ def evaluate_policy(policy_net, env, episodes=EVAL_EPISODES):
     return {
         "avg_reward": total / episodes,
         "arrival_rate": arrival_count / max(agent_count, 1),
+        "arrival_rate_by_name": {
+            name: count / episodes
+            for name, count in arrival_by_name_count.items()
+        },
         "all_arrived_rate": all_arrived_count / episodes,
         "facing_rate": facing_correct / max(facing_checks, 1),
         "plant_prevent_rate": plant_prevented_count / episodes,

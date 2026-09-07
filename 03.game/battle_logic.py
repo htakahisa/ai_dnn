@@ -183,10 +183,13 @@ class BattleLogicMixin:
 
         result = setup_controller.decide_move(char, game_state)
         next_pos = result
+        facing_payload = None
 
         # Ability付き戻り値や legacy action でも、Setup中は座標部分だけ使う。
         if isinstance(result, tuple) and len(result) >= 1:
             next_pos = result[0]
+            if len(result) >= 2 and isinstance(result[1], dict):
+                facing_payload = result[1].get("facing")
 
         if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
             nr, nc = int(next_pos[0]), int(next_pos[1])
@@ -199,9 +202,12 @@ class BattleLogicMixin:
             )
 
             if in_bounds and not is_wall and not occupied and setup_allowed:
-                new_facing = self._facing_from_delta(
-                    nr - old_pos[0], nc - old_pos[1], char.facing
-                )
+                if facing_payload in FACING_VECTORS:
+                    new_facing = facing_payload
+                else:
+                    new_facing = self._facing_from_delta(
+                        nr - old_pos[0], nc - old_pos[1], char.facing
+                    )
                 # print(
                 #     "[SETUP FACING DEBUG]", char.name,
                 #     "old_pos=", old_pos, "new_pos=", (nr, nc),

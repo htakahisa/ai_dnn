@@ -40,6 +40,7 @@ import torch.nn as nn
 from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
+    FACING_VECTORS,
 )
 from map_data import NEW_MAZE_STR
 from map_data_defender_setup import DEFENDER_SETUP_MASK_STR
@@ -57,7 +58,9 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 46  # 44(従来) + 2(担当監視座標への方向)
+AGENT_ID_DIM = len(TOUYAMA_ROSTER_ORDER)
+AGENT_ID_OFFSET = 46
+OBS_DIM = AGENT_ID_OFFSET + AGENT_ID_DIM  # 既存46次元 + キャラID one-hot
               # + 8(自身のfacing one-hot。従来欠落していたため追加)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
 # 完全に独立した直積として扱う: action_idx = base_idx(0-9) * 8 + facing_idx(0-7)。
@@ -252,6 +255,54 @@ def _watch_point(name):
     ):
         value = value[0]
     return int(value[0]), int(value[1])
+
+
+def _expected_facing(from_pos, to_pos):
+    dc = float(to_pos[1] - from_pos[1])
+    dr = float(to_pos[0] - from_pos[0])
+    norm = (dc * dc + dr * dr) ** 0.5
+    if norm == 0:
+        return None
+    nx, ny = dc / norm, dr / norm
+    return max(
+        FACING_DIRS,
+        key=lambda direction: (
+            FACING_VECTORS[direction][0] * nx
+            + FACING_VECTORS[direction][1] * ny
+        ),
+    )
+
+
+def _forced_watch_facing(char, visible_enemies, team_memory):
+    if visible_enemies or team_memory.last_seen_enemy is not None:
+        return None
+    assigned = getattr(char, "assigned_defense_pos", None)
+    if assigned is None or tuple(map(int, char.pos)) != tuple(map(int, assigned)):
+        return None
+    watch_pos = _watch_point(char.name)
+    if watch_pos is None:
+        return None
+    return _expected_facing(tuple(char.pos), watch_pos)
+
+
+def _forced_combat_facing(char, visible_enemies, team_memory):
+    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    if visible_enemies:
+        target = min(
+            visible_enemies,
+            key=lambda e: max(
+                abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+            ),
+        )
+        facing = _expected_facing(tuple(char.pos), tuple(target.pos))
+        if facing is not None:
+            char._combat_facing = facing
+        return getattr(char, "_combat_facing", None)
+    if team_memory.last_seen_enemy is not None:
+        return getattr(char, "_combat_facing", None) or _expected_facing(
+            tuple(char.pos), tuple(team_memory.last_seen_enemy["pos"])
+        )
+    return None
 
 def _decode_action(action_idx):
     """action_idx = base_idx(0-9) * 4 + facing_idx(0-3)。
@@ -709,12 +760,16 @@ class LearningDefenderSearchTouyamaController:
             obs[44] = (watch_pos[0] - r0) / height
             obs[45] = (watch_pos[1] - c0) / width
 
+        # train側と同じ共有ネットワーク用のキャラID one-hot。
+        agent_id = TOUYAMA_ROSTER_ORDER.index(char.name)
+        obs[AGENT_ID_OFFSET + agent_id] = 1.0
+
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(
         self, char, grid, chars, lock_movement=False, in_setup_phase=False,
-        has_target_info=False,
+        has_target_info=False, forced_facing=None,
     ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。
@@ -753,7 +808,15 @@ class LearningDefenderSearchTouyamaController:
             for move_idx in range(5):
                 base_mask[move_idx * 2 + 1] = False
 
-        return np.repeat(base_mask, len(FACING_DIRS))
+        action_mask = np.repeat(base_mask, len(FACING_DIRS))
+        if forced_facing in FACING_DIRS:
+            facing_idx = FACING_DIRS.index(forced_facing)
+            for base_idx in range(BASE_ACTION_DIM):
+                if base_mask[base_idx]:
+                    start = base_idx * len(FACING_DIRS)
+                    action_mask[start:start + len(FACING_DIRS)] = False
+                    action_mask[start + facing_idx] = True
+        return action_mask
 
     # -- メイン ----------------------------------------------------------
     def decide_move(self, char, game_state):
@@ -850,9 +913,16 @@ class LearningDefenderSearchTouyamaController:
             has_target_info = any(getattr(e, "is_alive", True) and e.has_spike for e in visible_enemies)
         else:
             has_target_info = bool(visible_enemies) or self.team_memory.last_seen_enemy is not None
+        forced_facing = _forced_combat_facing(
+            char, visible_enemies, self.team_memory
+        )
+        if forced_facing is None:
+            forced_facing = _forced_watch_facing(
+                char, visible_enemies, self.team_memory
+            )
         mask = self._action_mask(
             char, grid, chars, lock_movement=bool(visible_enemies),
-            has_target_info=has_target_info,
+            has_target_info=has_target_info, forced_facing=forced_facing,
         )
 
         # After
@@ -887,6 +957,9 @@ class LearningDefenderSearchTouyamaController:
                 f.write(f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n")
 
         (dr, dc), use_ability, facing = _decode_action(action_idx)
+        if forced_facing is not None:
+            # マスクだけでなく実行側でも保証する。
+            facing = forced_facing
         move_offset = (dr, dc)
 
         # battle_logic.pyのABILITY処理はfacing payloadを処理せずにreturnするため、
