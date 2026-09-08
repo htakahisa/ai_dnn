@@ -49,15 +49,16 @@ from tv2_character_stats_touyama import (
     TOUYAMA_ROSTER_ORDER,
 )
 from tv2_train_defender_retake import KNOWN_ENTRY_POINTS_LEFT, KNOWN_ENTRY_POINTS_RIGHT, ENTRY_CORRIDOR_RADIUS
+from tv2_train_defender_retake import _facing_from_delta, _facing_towards
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 
-OBS_DIM = 52  # train_defender_retake.py の build_observation() と要素数を一致させること
+OBS_DIM = 53  # train_defender_retake.py の build_observation() と要素数を一致させること
               # (role_onehot+facing_onehot[8方向]で45、チーム共有目撃情報4次元+
-              # 既知侵入経路3次元の追加で45→52)
+              # 既知侵入経路3次元の追加で45→52、スモーク被覆フラグ追加で52→53)
 N_ACTIONS = 11  # 0-3:move, 4:stay, 5:DEFUSE, 6:ABILITY, 7-10:TURN(N/S/E/W)
 
 SITE_ZONE_RADIUS = 6
@@ -189,6 +190,56 @@ def _good_directions(dist_map, grid, r, c):
     return good
 
 
+def _bfs_best_direction(dist_map, r0, c0):
+    if dist_map is None:
+        return 0, 0
+    current = dist_map[r0, c0]
+    if current < 0:
+        return 0, 0
+    best = (0, 0)
+    best_distance = current
+    for dr, dc in CARDINAL_MOVES:
+        nr, nc = r0 + dr, c0 + dc
+        if 0 <= nr < dist_map.shape[0] and 0 <= nc < dist_map.shape[1]:
+            if 0 <= dist_map[nr, nc] < best_distance:
+                best = (dr, dc)
+                best_distance = dist_map[nr, nc]
+    return best
+
+
+def _planned_route_facing(dist_map, pos):
+    r0, c0 = int(pos[0]), int(pos[1])
+    first = _bfs_best_direction(dist_map, r0, c0)
+    if first == (0, 0):
+        return None
+    nr, nc = r0 + first[0], c0 + first[1]
+    second = _bfs_best_direction(dist_map, nr, nc)
+    desired = second if second != (0, 0) and second != first else first
+    return _facing_from_delta(desired[0], desired[1], None)
+
+
+def _forced_combat_facing(char, visible_enemies, enemies):
+    if visible_enemies:
+        target = min(
+            visible_enemies,
+            key=lambda enemy: max(
+                abs(enemy.pos[0] - char.pos[0]),
+                abs(enemy.pos[1] - char.pos[1]),
+            ),
+        )
+        facing = _facing_towards(tuple(char.pos), tuple(target.pos))
+        if facing is not None:
+            char._combat_facing = facing
+            char._combat_facing_staleness = SIGHTING_STALENESS_CAP
+        return getattr(char, "_combat_facing", None)
+    if any(e.is_alive for e in enemies):
+        remaining = getattr(char, "_combat_facing_staleness", 0)
+        if remaining > 0:
+            char._combat_facing_staleness = remaining - 1
+            return getattr(char, "_combat_facing", None)
+    return None
+
+
 def _ability_charge(char):
     """ロールに対応する残チャージ数を取得する。HUNT(アビリティ無し)は常に0。"""
     return {
@@ -234,9 +285,12 @@ class _TeamSightingMemory:
                 )
             self.last_seen_enemy = {"pos": tuple(map(int, tracked.pos)), "name": tracked.name, "tick_ago": 0}
         elif self.last_seen_enemy is not None:
-            self.last_seen_enemy["tick_ago"] += 1
-            if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
+            if not any(e.name == self.last_seen_enemy.get("name") for e in enemies):
                 self.last_seen_enemy = None
+            else:
+                self.last_seen_enemy["tick_ago"] += 1
+                if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
+                    self.last_seen_enemy = None
 
 
 # ---------------------------------------------------------------------------
@@ -383,15 +437,23 @@ class LearningDefenderRetakeTouyamaController:
             for e in enemies
         ) else 0.0                                                 # [18] 味方アビリティ発動中(近似)
 
-        obs[19] = len(visible_enemies) / 5.0                       # [19] 視認中敵数
-        obs[20] = len([e for e in enemies if e.is_alive]) / 5.0    # [20] 生存敵総数
+        # 💡追加: 自分が「現在」スモークに覆われているかの直接フラグ。
+        # train_defender_retake.py側と同じ理由(古い目撃情報が残っていても、
+        # 実際にはスモークで安全なら解除して良いと学習させるため)。
+        # game_stateのsmoke_cellsは全スモークの合算セル集合(所有チーム区別なし)
+        # のため、team_sighting同様の近似として扱う。
+        smoke_cells = game_state.get("smoke_cells") or set()
+        obs[19] = 1.0 if (r, c) in smoke_cells else 0.0             # [19] 自己スモーク被覆フラグ
 
-        # [21-32] 視認中の近い敵、最大2体分(6次元 x 2)
+        obs[20] = len(visible_enemies) / 5.0                       # [20] 視認中敵数
+        obs[21] = len([e for e in enemies if e.is_alive]) / 5.0    # [21] 生存敵総数
+
+        # [22-33] 視認中の近い敵、最大2体分(6次元 x 2)
         sorted_enemies = sorted(
             visible_enemies,
             key=lambda e: max(abs(e.pos[0] - r), abs(e.pos[1] - c)),
         )
-        idx = 21
+        idx = 22
         for e in sorted_enemies[:2]:
             edx = (e.pos[1] - c) / width
             edy = (e.pos[0] - r) / height
@@ -405,33 +467,33 @@ class LearningDefenderRetakeTouyamaController:
             idx += 6
         # 視認中敵が2体未満の残り枠は0.0のまま(np.zerosで初期化済み)
 
-        # [33-36] ロールone-hot(フラッシュ/スモーカー/シーカー/タイガー)
-        role_idx = 33 + ROLE_INDEX.get(char.role, 0)
+        # [34-37] ロールone-hot(フラッシュ/スモーカー/シーカー/タイガー)
+        role_idx = 34 + ROLE_INDEX.get(char.role, 0)
         obs[role_idx] = 1.0
 
-        # [37-44] 自身の向き(8方向)one-hot。train_defender_retake.py の
+        # [38-45] 自身の向き(8方向)one-hot。train_defender_retake.py の
         # facing_onehot(ALL_FACINGSと同じ並び順)と完全一致させること。
         # 被弾直後はforced_facing_next_tickにより斜め向きになり得るため8方向で持つ。
         if char.facing in ALL_FACINGS:
-            obs[37 + ALL_FACINGS.index(char.facing)] = 1.0
+            obs[38 + ALL_FACINGS.index(char.facing)] = 1.0
 
-        # [45-48] チーム共有の目撃情報(自分が直接視認していなくても、他の味方が
+        # [46-49] チーム共有の目撃情報(自分が直接視認していなくても、他の味方が
         # 見ていれば共有される)。train_defender_retake.pyのbuild_observationと
         # 同一の埋め方。
         last_seen = self.team_sighting.last_seen_enemy
         if last_seen is not None:
             tr, tc = last_seen["pos"]
-            obs[45] = 1.0
-            obs[46] = max(-1.0, min(1.0, (tr - r) / max(height, width)))
-            obs[47] = max(-1.0, min(1.0, (tc - c) / max(height, width)))
-            obs[48] = min(last_seen["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
+            obs[46] = 1.0
+            obs[47] = max(-1.0, min(1.0, (tr - r) / max(height, width)))
+            obs[48] = max(-1.0, min(1.0, (tc - c) / max(height, width)))
+            obs[49] = min(last_seen["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
 
-        # [49-51] 既知侵入経路のうち視認できる最寄り点への方向。
+        # [50-52] 既知侵入経路のうち視認できる最寄り点への方向。
         nearest_entry = self._nearest_visible_entry_point(grid, (r, c))
         if nearest_entry is not None:
-            obs[49] = 1.0
-            obs[50] = (nearest_entry[0] - r) / height
-            obs[51] = (nearest_entry[1] - c) / width
+            obs[50] = 1.0
+            obs[51] = (nearest_entry[0] - r) / height
+            obs[52] = (nearest_entry[1] - c) / width
 
         return obs
 
@@ -463,8 +525,8 @@ class LearningDefenderRetakeTouyamaController:
 
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
 
-        for i in range(len(TURN_DIRS)):
-            mask[ACTION_TURN_BASE + i] = True
+        # train側と同じく、facingは自動決定する。
+        mask[ACTION_TURN_BASE:] = False
 
         return mask
 
@@ -506,6 +568,19 @@ class LearningDefenderRetakeTouyamaController:
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
 
+        forced_facing = _forced_combat_facing(char, visible_enemies, enemies)
+        if forced_facing is None and action_idx <= 3:
+            dr, dc = MOVE_DELTAS[action_idx]
+            first_step = _bfs_best_direction(
+                self._dist_map, int(char.pos[0]), int(char.pos[1])
+            )
+            if (dr, dc) == first_step:
+                forced_facing = _planned_route_facing(self._dist_map, char.pos)
+            if forced_facing is None:
+                forced_facing = _facing_from_delta(
+                    dr, dc, getattr(char, "facing", "S")
+                )
+
         if self.verbose:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 f.write(
@@ -516,18 +591,24 @@ class LearningDefenderRetakeTouyamaController:
 
         if action_idx <= 4:
             dr, dc = MOVE_DELTAS[action_idx]
+            if forced_facing is not None:
+                return [char.pos[0] + dr, char.pos[1] + dc], {"facing": forced_facing}
             return [char.pos[0] + dr, char.pos[1] + dc]
 
         if action_idx == ACTION_DEFUSE:
+            if forced_facing is not None:
+                char.facing = forced_facing
             return list(char.pos), "DEFUSE"
 
         if action_idx >= ACTION_TURN_BASE:
             # battle_logic.py新契約: Defenderは{"facing": ...}を返すとaction_type="MOVE"
             # として扱われ、next_pos=現在地のためその場で向きだけ変わる。
-            turn_dir = TURN_DIRS[action_idx - ACTION_TURN_BASE]
+            turn_dir = forced_facing or TURN_DIRS[action_idx - ACTION_TURN_BASE]
             return list(char.pos), {"facing": turn_dir}
 
         # ACTION_ABILITY: 学習環境(RetakeEnv.apply_ability)がプラント地点
         # 中心に効果を計算する設計だったため、狙点は常にplanted_posとする。
         target_pos = (int(planted_pos[0]), int(planted_pos[1]))
+        if forced_facing is not None:
+            char.facing = forced_facing
         return list(char.pos), {"ability": char.ability_name, "target": target_pos}

@@ -332,17 +332,20 @@ def compute_double_dqn_loss(
         next_q_target = torch.nan_to_num(next_q_target, neginf=0.0)
         target = rewards + gamma * next_q_target * (1.0 - dones)
 
-    return F.smooth_l1_loss(q_values, target)
+    loss = F.smooth_l1_loss(q_values, target)
+    q_stats = (
+        float(q_values.detach().mean().item()),
+        float(q_values.detach().max().item()),
+        float(target.detach().mean().item()),
+    )
+    return loss, q_stats
 
 
 def optimize_double_dqn_step(
     policy_net, target_net, optimizer, state, action, reward, next_state, done, next_mask,
     gamma, device=DEVICE, max_grad_norm=10.0,
 ):
-    """compute_double_dqn_loss + backward + clip + step までを1回で行う。
-    呼び出し側(各train_*.py)はbuffer.sample()で得たbatchの各フィールドを
-    そのままここに渡すだけでよい。"""
-    loss = compute_double_dqn_loss(
+    loss, q_stats = compute_double_dqn_loss(
         policy_net, target_net, state, action, reward, next_state, done, next_mask,
         gamma, device,
     )
@@ -350,4 +353,4 @@ def optimize_double_dqn_step(
     loss.backward()
     torch.nn.utils.clip_grad_norm_(policy_net.parameters(), max_norm=max_grad_norm)
     optimizer.step()
-    return float(loss.item())
+    return float(loss.item()), q_stats

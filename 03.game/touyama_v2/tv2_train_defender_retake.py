@@ -54,11 +54,12 @@ from game_core import (
 
 from tv2_character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
 import tv2_common_rl
-from tv2_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step, soft_update
+from tv2_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, soft_update
 from tv2_common_defender import TOUYAMA_ROSTER_ORDER, TOUYAMA_ROLE_TO_ABILITY, compute_touyama_effective_stats
 
 EPISODE_COUNT = 10000
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)
+DEFUSE_LERNING_EPISODE_COUNT = EPISODE_COUNT * 0.3  #解除学習を強制するエピソード。減衰させ最後は0。
 
 SAVE_DIR = "data/defender_retake_touyama_data"
 
@@ -126,6 +127,48 @@ DEFUSE_SAFETY_MARGIN_TICKS = 4
 ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
 
+# ============================================================
+# 報酬設計
+# ============================================================
+
+APPROACH_REWARD_SCALE = 0.20
+APPROACH_WRONG_DIRECTION_PENALTY = -0.35
+ENTRY_WITH_SUPPORT_BONUS = 1.5
+ENTRY_ALONE_PENALTY = -0.3
+ENTRY_ALONE_LINGER_PENALTY = -0.15
+ALLY_GATHER_REWARD = 0.1
+ABILITY_GOOD_USE_BONUS = 0.4
+ABILITY_PREMATURE_PENALTY = -0.5
+# 💡追加: タイミングは適切でも「誰にも効果がなかった」場合のペナルティと、
+# ability種別ごとの効果量に応じた追加ボーナス。
+ABILITY_NO_EFFECT_PENALTY = -0.3
+FLASH_EFFECT_BONUS_PER_ENEMY = 0.5
+RECON_EFFECT_BONUS_PER_ENEMY = 0.3
+SMOKE_EFFECT_BONUS_PER_BLOCKED = 0.4
+SMOKE_EARLY_CAST_BONUS = 1.2
+SMOKE_DELAY_PENALTY = -0.15
+SMOKE_DELAY_DISTANCE_SCALE = -0.35
+# 💡追加: 既知の侵入経路(KNOWN_ENTRY_POINTS_*)付近からの投げは、SMOKEと同様に
+# 「即時効果が0でも無効射撃ペナルティを免除」し、さらに事前投げ自体への
+# 小さなボーナスを与える。この免除がこれまでFLASH/RECONに無かったことが、
+# SMOKEだけ事前投げを覚えてFLASH/RECONが覚えなかった主因。
+ABILITY_CORRIDOR_PREEMPT_BONUS = 0.2
+SIGHTING_STALENESS_CAP = 20         # チーム共有の目撃情報を保持する最大tick数(carry/escort/guardと同一方針)
+TEAM_SIGHTING_ALIGN_WEIGHT = 0.02   # 自分が直接視認していない時のみ有効。チーム共有の目撃位置を向くほど+
+CORRIDOR_WATCH_ALIGN_WEIGHT = 0.02  # 敵の目撃情報(自分・チーム共有とも)が無い時のみ有効。
+                                     # 最寄りの既知侵入経路を向くほど+
+SMOKE_COVER_DEFUSE_COMPLETE_BONUS = 2.0  # 解除完了の瞬間、スモークに覆われていれば加算
+SMOKE_COVER_MIN_REMAIN_TICKS = DEFUSE_REQUIRED_TICKS - DEFUSE_SAFETY_MARGIN_TICKS  # 開始時に要求する最低スモーク残りtick
+DAMAGE_REWARD_SCALE = 0.01
+DEBUFF_HIT_MULTIPLIER = 1.5
+KILL_REWARD = 3.0
+KILL_ON_DEBUFFED_BONUS = 1.5
+DEATH_PENALTY = -3.0
+DEFUSE_PROGRESS_REWARD = 0.3
+UNSAFE_DEFUSE_PENALTY = -0.5
+DEFUSE_WIN_REWARD = 10.0
+LOSS_PENALTY = -10.0
+TICK_TIME_PENALTY = -0.01
 
 
 def _sample_planted_pos():
@@ -191,6 +234,9 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
     defuse_progress_3_count = 0
     defuse_progress_5_count = 0
     defuse_progress_required_count = 0
+    action_counts = np.zeros(N_ACTIONS, dtype=np.int64)
+    defuse_eligible_count = 0
+    defuse_selected_count = 0
 
     for eval_episode in range(num_eval_episodes):
         env.reset()
@@ -229,6 +275,9 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
                 masked_q_values = np.where(mask, q_values, -np.inf)
 
                 action = int(np.argmax(masked_q_values))
+                action_counts[action] += 1
+                defuse_eligible_count += int(bool(mask[ACTION_DEFUSE]))
+                defuse_selected_count += int(action == ACTION_DEFUSE)
 
                 actions[char.name] = action
 
@@ -352,6 +401,15 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
         f">=5={defuse_progress_5_count}, "
         f">=required={defuse_progress_required_count}"
     )
+    print(
+        f"    eval_actions: move={int(action_counts[0:4].sum())}, "
+        f"stay={int(action_counts[4])}, "
+        f"defuse={int(action_counts[ACTION_DEFUSE])}, "
+        f"ability={int(action_counts[ACTION_ABILITY])}, "
+        f"turn={int(action_counts[ACTION_TURN_BASE:].sum())}, "
+        f"defuse_eligible={defuse_eligible_count}, "
+        f"defuse_selected={defuse_selected_count}"
+    )
     return wins / num_eval_episodes, entered_site_count / num_eval_episodes
 
 def move_towards_target(pos, target, chars, moving_char=None, allow_adjacent_goal=False):
@@ -420,6 +478,46 @@ def _facing_alignment(facing, from_pos, to_pos):
     return (fx * dc + fy * dr) / dist
 
 
+def _planned_route_facing(dist_map, pos):
+    """最短経路の2手目を先読みした移動 facing を返す。"""
+    if dist_map is None:
+        return None
+    r0, c0 = int(pos[0]), int(pos[1])
+    first = tv2_common_rl.bfs_best_direction(dist_map, r0, c0)
+    if first == (0, 0):
+        return None
+    nr, nc = r0 + first[0], c0 + first[1]
+    if not _in_bounds((nr, nc)):
+        return _facing_from_delta(first[0], first[1], None)
+    second = tv2_common_rl.bfs_best_direction(dist_map, nr, nc)
+    desired = second if second != (0, 0) and second != first else first
+    return _facing_from_delta(desired[0], desired[1], None)
+
+
+def _forced_combat_facing(unit, visible_enemies, team_sighting):
+    """視認中の最寄り敵、または一時的な直前 combat facing を返す。"""
+    if visible_enemies:
+        target = min(
+            visible_enemies,
+            key=lambda enemy: max(
+                abs(enemy.pos[0] - unit.pos[0]),
+                abs(enemy.pos[1] - unit.pos[1]),
+            ),
+        )
+        facing = _facing_towards(tuple(unit.pos), tuple(target.pos))
+        if facing is not None:
+            unit._combat_facing = facing
+            unit._combat_facing_staleness = SIGHTING_STALENESS_CAP
+        return getattr(unit, "_combat_facing", None)
+
+    if team_sighting.last_seen_enemy is not None:
+        remaining = getattr(unit, "_combat_facing_staleness", 0)
+        if remaining > 0:
+            unit._combat_facing_staleness = remaining - 1
+            return getattr(unit, "_combat_facing", None)
+    return None
+
+
 class _TeamSightingMemory:
     """5人のDefender全体で共有する、敵の最新目撃情報(carry/escort/guardの
     SightingMemory/TeamMemoryと同一方針)。誰か一人でも視認していれば共有され、
@@ -457,9 +555,12 @@ class _TeamSightingMemory:
                 "pos": tuple(map(int, tracked.pos)), "name": tracked.name, "tick_ago": 0,
             }
         elif self.last_seen_enemy is not None:
-            self.last_seen_enemy["tick_ago"] += 1
-            if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
+            if not any(a.name == self.last_seen_enemy.get("name") for a in attackers_alive):
                 self.last_seen_enemy = None
+            else:
+                self.last_seen_enemy["tick_ago"] += 1
+                if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
+                    self.last_seen_enemy = None
 
 
 def bfs_distance_map(goal):
@@ -499,6 +600,8 @@ class SimChar:
         self.defuse_timer = 0
         # Defenderは下向き(南)、Attackerは上向き(北)スポーンでgame_core.Characterと合わせる。
         self.facing = "S" if team == "D" else "N"
+        self._combat_facing = None
+        self._combat_facing_staleness = 0
         # battle_logic.py同様、被弾した次のTickだけ相手方向へ強制的に向く仕組みを再現する。
         self.forced_facing_next_tick = None
         self.facing_forced_this_tick = False
@@ -747,8 +850,8 @@ class RetakeEnv:
         has_charge = char.own_ability_charge() > 0
         mask[ACTION_ABILITY] = bool(has_charge)
 
-        for i in range(len(TURN_DIRS)):
-            mask[ACTION_TURN_BASE + i] = True
+        # facing は経路・combat 状態から自動決定するため、TURN action は使わない。
+        mask[ACTION_TURN_BASE:] = False
 
         return mask
 
@@ -792,6 +895,13 @@ class RetakeEnv:
             nearest_ally_dist = 1.0
 
         ally_ability_active = 1.0 if self.ally_ability_active(char) else 0.0
+        # 💡追加: 自分が「現在」味方スモークに覆われているかの直接フラグ。
+        # team_sighting_featsは敵を見失った後もSIGHTING_STALENESS_CAP tickの間
+        # 古い目撃情報を保持し続けるため、スモークで実際には安全になっていても
+        # 観測上「敵がいる」ように見えて解除をためらう原因になっていた。
+        # この直接フラグで「スモークで守られている」ことを明示し、
+        # 古い目撃情報より優先して解除して良いと学習できるようにする。
+        self_smoke_covered = 1.0 if _smoke_covering(self, tuple(char.pos)) is not None else 0.0
 
         visible_enemies = [e for e in enemies if self.check_line_of_sight(char, e)]
         visible_enemies.sort(key=lambda e: max(abs(e.pos[0] - r), abs(e.pos[1] - c)))
@@ -850,7 +960,7 @@ class RetakeEnv:
             in_site_zone, adjacent_to_plant,
             own_charge, blind_norm, defuse_norm, detonate_norm,
             allies_alive_norm, allies_in_zone, allies_near_entry, nearest_ally_dist,
-            ally_ability_active,
+            ally_ability_active, self_smoke_covered,
             len(visible_enemies) / 5.0,
             len(enemies) / 5.0,
         ] + enemy_feats + role_onehot + facing_onehot + team_sighting_feats + entry_feats
@@ -893,6 +1003,26 @@ class RetakeEnv:
                 elif action >= ACTION_TURN_BASE:
                     if not char.facing_forced_this_tick:
                         char.facing = TURN_DIRS[action - ACTION_TURN_BASE]
+
+                visible_enemies = [
+                    enemy for enemy in self.attackers()
+                    if enemy.is_alive and self.check_line_of_sight(char, enemy)
+                ]
+                forced_facing = _forced_combat_facing(
+                    char, visible_enemies, self.team_sighting
+                )
+                if forced_facing is None and action in (0, 1, 2, 3):
+                    dr, dc = MOVE_DELTAS[action]
+                    first_step = tv2_common_rl.bfs_best_direction(
+                        self.dist_map, int(char.pos[0]), int(char.pos[1])
+                    )
+                    if (dr, dc) == first_step:
+                        forced_facing = _planned_route_facing(self.dist_map, char.pos)
+                    if forced_facing is None:
+                        forced_facing = _facing_from_delta(dr, dc, char.facing)
+                if forced_facing is not None:
+                    char.facing = forced_facing
+                    char.facing_forced_this_tick = True
             else:
                 next_positions[char.name] = self.attacker_stub.decide_move(char, self.chars, self.planted_pos)
 
@@ -1055,48 +1185,7 @@ class RetakeEnv:
         return False, None
 
 
-# ============================================================
-# 報酬設計
-# ============================================================
 
-APPROACH_REWARD_SCALE = 0.20
-APPROACH_WRONG_DIRECTION_PENALTY = -0.35
-ENTRY_WITH_SUPPORT_BONUS = 1.5
-ENTRY_ALONE_PENALTY = -0.3
-ENTRY_ALONE_LINGER_PENALTY = -0.15
-ALLY_GATHER_REWARD = 0.1
-ABILITY_GOOD_USE_BONUS = 0.4
-ABILITY_PREMATURE_PENALTY = -0.5
-# 💡追加: タイミングは適切でも「誰にも効果がなかった」場合のペナルティと、
-# ability種別ごとの効果量に応じた追加ボーナス。
-ABILITY_NO_EFFECT_PENALTY = -0.3
-FLASH_EFFECT_BONUS_PER_ENEMY = 0.5
-RECON_EFFECT_BONUS_PER_ENEMY = 0.3
-SMOKE_EFFECT_BONUS_PER_BLOCKED = 0.4
-SMOKE_EARLY_CAST_BONUS = 1.2
-SMOKE_DELAY_PENALTY = -0.15
-SMOKE_DELAY_DISTANCE_SCALE = -0.35
-# 💡追加: 既知の侵入経路(KNOWN_ENTRY_POINTS_*)付近からの投げは、SMOKEと同様に
-# 「即時効果が0でも無効射撃ペナルティを免除」し、さらに事前投げ自体への
-# 小さなボーナスを与える。この免除がこれまでFLASH/RECONに無かったことが、
-# SMOKEだけ事前投げを覚えてFLASH/RECONが覚えなかった主因。
-ABILITY_CORRIDOR_PREEMPT_BONUS = 0.2
-SIGHTING_STALENESS_CAP = 20         # チーム共有の目撃情報を保持する最大tick数(carry/escort/guardと同一方針)
-TEAM_SIGHTING_ALIGN_WEIGHT = 0.02   # 自分が直接視認していない時のみ有効。チーム共有の目撃位置を向くほど+
-CORRIDOR_WATCH_ALIGN_WEIGHT = 0.02  # 敵の目撃情報(自分・チーム共有とも)が無い時のみ有効。
-                                     # 最寄りの既知侵入経路を向くほど+
-SMOKE_COVER_DEFUSE_COMPLETE_BONUS = 2.0  # 解除完了の瞬間、スモークに覆われていれば加算
-SMOKE_COVER_MIN_REMAIN_TICKS = DEFUSE_REQUIRED_TICKS - DEFUSE_SAFETY_MARGIN_TICKS  # 開始時に要求する最低スモーク残りtick
-DAMAGE_REWARD_SCALE = 0.01
-DEBUFF_HIT_MULTIPLIER = 1.5
-KILL_REWARD = 3.0
-KILL_ON_DEBUFFED_BONUS = 1.5
-DEATH_PENALTY = -3.0
-DEFUSE_PROGRESS_REWARD = 0.3
-UNSAFE_DEFUSE_PENALTY = -0.5
-DEFUSE_WIN_REWARD = 10.0
-LOSS_PENALTY = -10.0
-TICK_TIME_PENALTY = -0.01
 
 
 def snapshot_before(env):
@@ -1332,7 +1421,7 @@ Transition = namedtuple("Transition", ["state", "action", "reward", "next_state"
 # 学習ループ
 # ============================================================
 
-def run_episode(env, net, target_net, replay, epsilon, obs_dim):
+def run_episode(env, net, target_net, replay, epsilon, obs_dim, defuse_force_prob=0.0):
     env.reset()
     zero_obs = np.zeros(obs_dim, dtype=np.float32)
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
@@ -1352,6 +1441,18 @@ def run_episode(env, net, target_net, replay, epsilon, obs_dim):
             state = env.build_observation(char)
             mask = env.action_mask(char)
             action = select_action(net, state, mask, epsilon, fallback_action=4)
+            # 解除カリキュラム: 序盤はDEFUSE可能かつ「敵に見られていない」
+            # 状況に限って強制的にDEFUSEを選ばせ、成功体験を先にreplayへ
+            # 積ませる。視認されている状況まで無条件に強制すると、
+            # 「DEFUSE=即死」という相関をむしろ強化してしまうため、
+            # 危険な状況では強制しない(=ここでは学習済みQ値の判断に任せる)。
+            if mask[ACTION_DEFUSE] and random.random() < defuse_force_prob:
+                under_threat = any(
+                    e.is_alive and env.check_line_of_sight(char, e)
+                    for e in env.attackers()
+                )
+                if not under_threat:
+                    action = ACTION_DEFUSE
             obs_before[char.name] = state
             mask_before[char.name] = mask
             chosen_actions[char.name] = action
@@ -1380,15 +1481,60 @@ def run_episode(env, net, target_net, replay, epsilon, obs_dim):
     return env.is_defused, env.tick
 
 
+# 💡追加: retake専用のtargetクリップ付きDouble DQN更新。
+# tv2_common_rl.optimize_double_dqn_step は他のtrain_*.pyからも共有される
+# ため、そちらは変更せず、retakeだけで完結する独自実装をここに持つ。
+# 稀な状態(スモーク越し解除など)でQ値が自己参照的に吊り上がる問題への対処として、
+# TD targetを理論上あり得る範囲にクリップしてから学習する。
+TARGET_CLIP_MIN = -15.0
+TARGET_CLIP_MAX = 15.0
+
+
+def _optimize_double_dqn_step_clipped(
+    policy_net, target_net, optimizer, state, action, reward, next_state, done, next_mask,
+    gamma, device=DEVICE, max_grad_norm=1.0,
+):
+    states = torch.as_tensor(np.array(state), dtype=torch.float32, device=device)
+    actions = torch.as_tensor(np.array(action), dtype=torch.int64, device=device).unsqueeze(1)
+    rewards = torch.as_tensor(np.array(reward), dtype=torch.float32, device=device)
+    next_states = torch.as_tensor(np.array(next_state), dtype=torch.float32, device=device)
+    dones = torch.as_tensor(np.array(done), dtype=torch.float32, device=device)
+    next_masks = torch.as_tensor(np.array(next_mask), dtype=torch.bool, device=device)
+
+    q_values = policy_net(states).gather(1, actions).squeeze(1)
+
+    with torch.no_grad():
+        next_q_policy = policy_net(next_states)
+        next_q_policy = next_q_policy.masked_fill(~next_masks, -float("inf"))
+        next_actions = next_q_policy.argmax(dim=1, keepdim=True)
+        next_q_target = target_net(next_states).gather(1, next_actions).squeeze(1)
+        next_q_target = torch.nan_to_num(next_q_target, neginf=0.0)
+        target = rewards + gamma * next_q_target * (1.0 - dones)
+        target = torch.clamp(target, TARGET_CLIP_MIN, TARGET_CLIP_MAX)
+
+    loss = F.smooth_l1_loss(q_values, target)
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), max_norm=max_grad_norm)
+    optimizer.step()
+
+    q_stats = (
+        float(q_values.detach().mean().item()),
+        float(q_values.detach().max().item()),
+        float(target.detach().mean().item()),
+    )
+    return float(loss.item()), q_stats
+
+
 def train_step(net, target_net, optimizer, replay, batch_size, gamma):
     if len(replay) < batch_size:
         return None
     batch = replay.sample(batch_size)
-    return optimize_double_dqn_step(
+    return _optimize_double_dqn_step_clipped(
         net, target_net, optimizer,
         batch.state, batch.action, batch.reward, batch.next_state, batch.done, batch.next_mask,
         gamma, max_grad_norm=1.0,
-    )
+    )  # -> (loss, (q_mean, q_max, target_mean))
 
 
 def main():
@@ -1426,6 +1572,9 @@ def main():
     gamma = 0.99
     target_update_every = 1000
     epsilon_start, epsilon_end, epsilon_decay_episodes = 1.0, 0.02, int(EPISODE_COUNT * 0.8)
+    # 解除カリキュラム: 最初はDEFUSE可能なら必ず選ばせ、EPISODE_COUNTの30%を
+    # かけて0まで線形に減衰させる(epsilonの減衰より短め)。
+    defuse_force_prob_start, defuse_force_prob_decay_episodes = 1.0, int(DEFUSE_LERNING_EPISODE_COUNT)
 
     global_step = 0
     win_history = deque(maxlen=200)
@@ -1451,6 +1600,9 @@ def main():
     log_loss_sum = 0.0
     log_loss_count = 0
     log_train_steps = 0
+    log_q_mean_sum = 0.0
+    log_q_max_max = -float("inf")
+    log_target_mean_sum = 0.0
 
     for episode in range(1, num_episodes + 1):
         epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(
@@ -1458,16 +1610,24 @@ def main():
             1.0 - episode / epsilon_decay_episodes
         )
 
-        defused, ticks_used = run_episode(env, net, target_net, replay, epsilon, obs_dim)
+        defuse_force_prob = defuse_force_prob_start * max(
+            0.0,
+            1.0 - episode / defuse_force_prob_decay_episodes
+        )
+        defused, ticks_used = run_episode(env, net, target_net, replay, epsilon, obs_dim, defuse_force_prob)
         win_history.append(1 if defused else 0)
 
         for _ in range(max(1, ticks_used)):
-            loss = train_step(net, target_net, optimizer, replay, batch_size, gamma)
-            if loss is not None:
+            result = train_step(net, target_net, optimizer, replay, batch_size, gamma)
+            if result is not None:
+                loss, (q_mean, q_max, target_mean) = result
                 soft_update(target_net, net, tau=0.001)
                 log_loss_sum += loss
                 log_loss_count += 1
                 log_train_steps += 1
+                log_q_mean_sum += q_mean
+                log_q_max_max = max(log_q_max_max, q_max)
+                log_target_mean_sum += target_mean
             global_step += 1
 
         num_eval_episodes = 200
@@ -1487,9 +1647,23 @@ def main():
                 if log_loss_count > 0
                 else 0.0
             )
+            avg_q_mean = (
+                log_q_mean_sum / log_loss_count
+                if log_loss_count > 0
+                else 0.0
+            )
+            avg_target_mean = (
+                log_target_mean_sum / log_loss_count
+                if log_loss_count > 0
+                else 0.0
+            )
             # 直近区間(500ep)ごとの平均に戻す。累積のままだと発散の実態が薄まって見える。
             log_loss_sum = 0.0
             log_loss_count = 0
+            q_max_snapshot = log_q_max_max
+            log_q_mean_sum = 0.0
+            log_q_max_max = -float("inf")
+            log_target_mean_sum = 0.0
 
             print(
                 f"greedy win_rate(200 episodes) = {eval_win_rate:.3f}, "
@@ -1502,6 +1676,11 @@ def main():
                 f"train_steps={log_train_steps}, "
                 f"avg_loss={avg_loss:.6f}, "
                 f"global_step={global_step}"
+            )
+            print(
+                f"    qvalues: avg_q_mean={avg_q_mean:.3f}, "
+                f"q_max(区間内)={q_max_snapshot:.3f}, "
+                f"avg_target_mean={avg_target_mean:.3f}"
             )
             eval_win_rate_history.append(eval_win_rate)
             eval_win_rate_smoothed = sum(eval_win_rate_history) / len(eval_win_rate_history)
