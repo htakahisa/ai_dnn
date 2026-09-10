@@ -373,6 +373,21 @@ def _expected_facing(from_pos, to_pos):
     )
 
 
+# 各キャラの監視方向(固定ラベル)。担当地点(TOUYAMA_DEFENSE_ASSIGNMENT)と
+# 監視座標(DEFENSE_WATCH_POINTS)から起動時に1度だけ計算し、以後は座標を
+# 毎tick動的計算しない。Setup Phase中の移動〜担当地点到着後の静止まで、
+# 交戦情報が無い間は常にこのラベルだけをforced facingとして使うことで、
+# 経路方向依存のN/Sふらつきを無くす。
+DEFENSE_WATCH_FACING = {}
+for _name in TOUYAMA_ROSTER_ORDER:
+    _watch_pos = _nearest_watch_point(_name, TOUYAMA_DEFENSE_ASSIGNMENT[_name])
+    if _watch_pos is not None:
+        DEFENSE_WATCH_FACING[_name] = _expected_facing(
+            TOUYAMA_DEFENSE_ASSIGNMENT[_name], _watch_pos
+        )
+print("[touyama_v2] 固定監視方向:", DEFENSE_WATCH_FACING)
+
+
 def _facing_memory_relevance(from_pos, memory):
     """遠すぎる・古すぎるlast_seen_enemyをfacing対象から外す。"""
     if memory is None:
@@ -916,16 +931,12 @@ def build_action_mask(
 
 
 def _forced_watch_facing(unit, visible_enemies, team_memory):
-    """配置完了後、敵を直接視認するまで監視方向を固定する。"""
+    """交戦情報(視認中の敵・記憶中の目撃情報)が無い間、監視方向を固定
+    ラベル(DEFENSE_WATCH_FACING)で強制する。Setup Phase中の移動や
+    担当地点への移動中も含め常に適用する(座標からの動的計算はしない)。"""
     if visible_enemies or team_memory.last_seen_enemy is not None:
         return None
-    assigned = getattr(unit, "assigned_defense_pos", None)
-    if assigned is None or tuple(map(int, unit.pos)) != tuple(map(int, assigned)):
-        return None
-    watch_pos = _nearest_watch_point(unit.name, tuple(unit.pos))
-    if watch_pos is None:
-        return None
-    return _expected_facing(tuple(unit.pos), watch_pos)
+    return DEFENSE_WATCH_FACING.get(unit.name)
 
 
 def _forced_combat_facing(unit, visible_enemies, team_memory):
@@ -1261,6 +1272,12 @@ class SearchEnv:
             ]
             has_enemy_los = bool(visible_enemies)
             self_occupied = occupied_now - {tuple(d.pos)}
+
+            forced_facing = _forced_combat_facing(d, visible_enemies, self.team_memory)
+            if forced_facing is None:
+                forced_facing = _forced_watch_facing(d, visible_enemies, self.team_memory)
+            if forced_facing is not None:
+                facing = forced_facing
 
             if has_enemy_los:
                 # 敵を直接視認中はBFS強制移動を一切行わない。
