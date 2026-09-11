@@ -479,6 +479,41 @@ class RenderingUIMixin:
             width=EXPLOSION_OUTLINE_WIDTH,
         )
 
+    def _draw_awakening_flame(self, cx, cy):
+        """覚醒済みキャラクターの円内に、黄色い炎のマークを描く。
+
+        Tkinter Canvas は面のグラデーションを持たないため、外側から内側へ
+        色を変えた炎形ポリゴンを重ねて、簡易的なグラデーションにしている。
+        """
+        scale = self.cell_size / 24.0
+
+        def points(coords):
+            return [value for x, y in coords for value in (cx + x * scale, cy + y * scale)]
+
+        # 輝きを先に敷き、炎がプレイヤー円から浮き上がって見えるようにする。
+        glow = 8 * scale
+        self.canvas.create_oval(
+            cx - glow, cy - glow, cx + glow, cy + glow,
+            fill="#f6b928", outline="", stipple="gray50",
+        )
+
+        # 外側の橙色から中心の淡い黄色へ、3段階で色を重ねる。
+        self.canvas.create_polygon(
+            points([(0, 10), (-7, 5), (-5, -1), (-2, -7), (1, -3),
+                    (3, -10), (7, -2), (6, 4), (3, 9)]),
+            fill="#e8890c", outline="#ffd54f", width=max(1, int(scale)),
+        )
+        self.canvas.create_polygon(
+            points([(0, 8), (-5, 4), (-3, -1), (-1, -5), (1, -1),
+                    (3, -6), (5, 1), (4, 5), (2, 8)]),
+            fill="#ffb300", outline="",
+        )
+        self.canvas.create_polygon(
+            points([(0, 7), (-3, 3), (-2, 0), (0, -3), (1, 0),
+                    (3, 2), (2, 5), (1, 7)]),
+            fill="#fff3a1", outline="",
+        )
+
 
     def draw(self):
         if self.headless:
@@ -656,6 +691,9 @@ class RenderingUIMixin:
                 fx = cx + facing_vector[0] * indicator_length
                 fy = cy + facing_vector[1] * indicator_length
                 self.canvas.create_line(cx, cy, fx, fy, fill="#111111", width=3)
+
+            if getattr(char, "active_awakening", None):
+                self._draw_awakening_flame(cx, cy)
 
             if char.blind_remaining > 0:
                 # 視認性を壊さない薄い二重リングと小さな印でブラインド状態を表示。

@@ -51,7 +51,7 @@ from tv2_character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
     TOUYAMA_ROSTER_ORDER,
 )
-from tv2_train_defender_search import DEFENSE_WATCH_POINTS
+from tv2_train_defender_search import DEFENSE_WATCH_POINTS, DEFENSE_WATCH_FACING
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -274,19 +274,20 @@ def _expected_facing(from_pos, to_pos):
 
 
 def _forced_watch_facing(char, visible_enemies, team_memory):
+    """交戦情報が無い間、監視方向を固定ラベル(DEFENSE_WATCH_FACING)で
+    強制する。Setup Phase中の移動や担当地点への移動中も含め常に適用する
+    (tv2_train_defender_search.py側と同一方針。座標からの動的計算はしない)。"""
     if visible_enemies or team_memory.last_seen_enemy is not None:
         return None
-    assigned = getattr(char, "assigned_defense_pos", None)
-    if assigned is None or tuple(map(int, char.pos)) != tuple(map(int, assigned)):
-        return None
-    watch_pos = _watch_point(char.name)
-    if watch_pos is None:
-        return None
-    return _expected_facing(tuple(char.pos), watch_pos)
+    return DEFENSE_WATCH_FACING.get(char.name)
 
 
 def _forced_combat_facing(char, visible_enemies, team_memory):
-    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    """敵を直接視認している間だけ、combat方向を固定する。
+
+    tv2_train_defender_search.py側の変更と合わせ、視認が途切れた後の
+    last_seen_enemyベースの強制は行わない(学習された自由なfacing選択に委ねる)。
+    """
     if visible_enemies:
         target = min(
             visible_enemies,
@@ -298,10 +299,6 @@ def _forced_combat_facing(char, visible_enemies, team_memory):
         if facing is not None:
             char._combat_facing = facing
         return getattr(char, "_combat_facing", None)
-    if team_memory.last_seen_enemy is not None:
-        return getattr(char, "_combat_facing", None) or _expected_facing(
-            tuple(char.pos), tuple(team_memory.last_seen_enemy["pos"])
-        )
     return None
 
 def _decode_action(action_idx):
@@ -845,7 +842,10 @@ class LearningDefenderSearchTouyamaController:
             obs, _visible = self._build_observation(
                 char, game_state, [], False, in_setup_phase=True,
             )
-            mask = self._action_mask(char, grid, chars, in_setup_phase=True)
+            forced_facing = _forced_watch_facing(char, [], self.team_memory)
+            mask = self._action_mask(
+                char, grid, chars, in_setup_phase=True, forced_facing=forced_facing,
+            )
 
             obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
             mask_t = torch.from_numpy(mask).to(DEVICE)
@@ -855,6 +855,8 @@ class LearningDefenderSearchTouyamaController:
                 action_idx = int(torch.argmax(q_values).item())
 
             (dr, dc), _use_ability, facing = _decode_action(action_idx)
+            if forced_facing is not None:
+                facing = forced_facing
             move_offset = (dr, dc)
 
             # 学習側(_step_setup_phase)と同様、担当地点は毎ラウンド固定のため

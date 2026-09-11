@@ -255,7 +255,7 @@ DEFENSE_POSITIONS = [TOUYAMA_DEFENSE_ASSIGNMENT[name] for name in TOUYAMA_ROSTER
 # 壁越しなど視認不可能な座標は登録しないこと(視認可否のチェックはここでは行わない)。
 # 味方が直線上に立ち、一時的に視線を塞ぐことはあり得るが許容する。
 DEFENSE_WATCH_POINTS = {
-     "夢の街": [(12, 0)],
+     "夢の街": [(13, 3)],
      "いぐるん": [(12, 29)],
      "ろびぃな": [(11, 40)],
      "Tortlilyan": [(12, 40)],
@@ -371,6 +371,21 @@ def _expected_facing(from_pos, to_pos):
             + FACING_VECTORS[direction][1] * ny
         ),
     )
+
+
+# 各キャラの監視方向(固定ラベル)。担当地点(TOUYAMA_DEFENSE_ASSIGNMENT)と
+# 監視座標(DEFENSE_WATCH_POINTS)から起動時に1度だけ計算し、以後は座標を
+# 毎tick動的計算しない。Setup Phase中の移動〜担当地点到着後の静止まで、
+# 交戦情報が無い間は常にこのラベルだけをforced facingとして使うことで、
+# 経路方向依存のN/Sふらつきを無くす。
+DEFENSE_WATCH_FACING = {}
+for _name in TOUYAMA_ROSTER_ORDER:
+    _watch_pos = _nearest_watch_point(_name, TOUYAMA_DEFENSE_ASSIGNMENT[_name])
+    if _watch_pos is not None:
+        DEFENSE_WATCH_FACING[_name] = _expected_facing(
+            TOUYAMA_DEFENSE_ASSIGNMENT[_name], _watch_pos
+        )
+print("[touyama_v2] 固定監視方向:", DEFENSE_WATCH_FACING)
 
 
 def _facing_memory_relevance(from_pos, memory):
@@ -916,20 +931,25 @@ def build_action_mask(
 
 
 def _forced_watch_facing(unit, visible_enemies, team_memory):
-    """配置完了後、敵を直接視認するまで監視方向を固定する。"""
+    """交戦情報(視認中の敵・記憶中の目撃情報)が無い間、監視方向を固定
+    ラベル(DEFENSE_WATCH_FACING)で強制する。Setup Phase中の移動や
+    担当地点への移動中も含め常に適用する(座標からの動的計算はしない)。"""
     if visible_enemies or team_memory.last_seen_enemy is not None:
         return None
-    assigned = getattr(unit, "assigned_defense_pos", None)
-    if assigned is None or tuple(map(int, unit.pos)) != tuple(map(int, assigned)):
-        return None
-    watch_pos = _nearest_watch_point(unit.name, tuple(unit.pos))
-    if watch_pos is None:
-        return None
-    return _expected_facing(tuple(unit.pos), watch_pos)
+    return DEFENSE_WATCH_FACING.get(unit.name)
 
 
 def _forced_combat_facing(unit, visible_enemies, team_memory):
-    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    """敵を直接視認している間だけ、combat方向のfacingを固定する。
+
+    以前は視認が途切れた後もteam_memory.last_seen_enemyが残っている間
+    (最大SIGHTING_STALENESS_CAP tick)、直近の戦闘方向を強制的に向かせていた。
+    「撃破後もしばらく同方向を警戒する」判断は学習対象にしたいため、
+    視認が切れた後の強制は廃止する。代わりに_compute_rewards側の
+    FACING_ALIGN_SIGHTING_WEIGHT(_facing_memory_relevanceによる
+    距離・経過tickでの減衰込み)で、正しい方向を向く行動にのみ
+    報酬を与えて学習させる。
+    """
     if visible_enemies:
         target = min(
             visible_enemies,
@@ -941,10 +961,6 @@ def _forced_combat_facing(unit, visible_enemies, team_memory):
         if facing is not None:
             unit._combat_facing = facing
         return getattr(unit, "_combat_facing", None)
-    if team_memory.last_seen_enemy is not None:
-        return getattr(unit, "_combat_facing", None) or _expected_facing(
-            tuple(unit.pos), tuple(team_memory.last_seen_enemy["pos"])
-        )
     return None
 
 
@@ -1261,6 +1277,12 @@ class SearchEnv:
             ]
             has_enemy_los = bool(visible_enemies)
             self_occupied = occupied_now - {tuple(d.pos)}
+
+            forced_facing = _forced_combat_facing(d, visible_enemies, self.team_memory)
+            if forced_facing is None:
+                forced_facing = _forced_watch_facing(d, visible_enemies, self.team_memory)
+            if forced_facing is not None:
+                facing = forced_facing
 
             if has_enemy_los:
                 # 敵を直接視認中はBFS強制移動を一切行わない。
