@@ -299,9 +299,16 @@ class RenderingUIMixin:
             fill="#111722", outline="#2a3444"
         )
         self.canvas.create_rectangle(x0, 0, x0 + panel_w, 42, fill=accent, outline="")
+
+        team_name = self.attacker_team_name if team == "A" else self.defender_team_name
+
         self.canvas.create_text(
-            x0 + panel_w / 2, 21,
-            text=title, fill="white", font=("Arial", 13, "bold")
+            x0 + panel_w / 2, 13,
+            text=team_name, fill="white", font=("Arial", 12, "bold")
+        )
+        self.canvas.create_text(
+            x0 + panel_w / 2, 30,
+            text=title, fill="#f0f0f0", font=("Arial", 8, "bold")
         )
 
         chars = [c for c in self.chars if c.team == team][:5]
@@ -734,55 +741,63 @@ class RenderingUIMixin:
             self.map_offset_x + self.map_pixel_width, bottom_y + self.ability_area_height,
             fill="#0b1018", outline="#2a3444", width=2
         )
-        self.canvas.create_text(
-            self.map_offset_x + 18, bottom_y + 18,
-            text="ABILITIES", anchor="w", fill="#8b98a9", font=("Arial", 10, "bold")
-        )
 
-        bounds = self._ability_panel_bounds()
-        selected = self._selected_user_character()
-        if bounds and selected:
-            ability_name = selected.ability_name
-            x1, y1, x2, y2 = bounds
-            accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
-            charges = {
-                "SMOKE": selected.smoke_charges,
-                "FLASH": selected.flash_charges,
-                "RECON": selected.recon_charges,
-                "HUNT": 1,
-            }[ability_name]
-            armed = self.ability_mode == (ability_name, selected.team, selected.name)
-            self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27",
-                                         outline=accent if armed or ability_name == "HUNT" else "#536273", width=2)
-            icon_cx, icon_cy = x1 + 42, (y1 + y2) / 2
-            self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, charges > 0)
+        has_user_control = bool(self.get_user_controllers())
+        queue = getattr(self, "announcement_queue", [])
+        has_announcement = self.combo_announcement_index < len(queue)
 
-            text_cx = (x1 + 70 + x2) / 2
-            if ability_name == "HUNT":
-                state = "HUNT / ハンター（常時発動）"
-                help_text = "Hit% +10ポイント・HS% +5ポイント"
-            else:
-                label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
-                state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
-                help_text = ("方向を指定" if armed and ability_name in ("FLASH", "RECON")
-                             else ("マスを選択" if armed else f"クリックして{label}を構える"))
-            self.canvas.create_text(text_cx, y1+22, text=state,
-                                    fill=accent if charges else "#777", font=("Arial", 10, "bold"))
-            self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
+        if not has_user_control and has_announcement:
+            self._draw_bottom_combo_announcement(bottom_y)
+        else:
+            self.canvas.create_text(
+                self.map_offset_x + 18, bottom_y + 18,
+                text="ABILITIES", anchor="w", fill="#8b98a9", font=("Arial", 10, "bold")
+            )
 
-            plant_bounds = self._plant_button_bounds()
-            if plant_bounds:
-                px1, py1, px2, py2 = plant_bounds
-                planting = selected.is_planting
-                self.canvas.create_rectangle(px1, py1, px2, py2, fill="#2a1d0d",
-                                             outline="#f39c12" if planting else "#8a6a32", width=2)
-                self.canvas.create_text((px1+px2)/2, py1+22,
-                                        text="PLANTING..." if planting else "PLANT",
-                                        fill="#ffd27a", font=("Arial", 11, "bold"))
-                progress = min(1.0, selected.plant_timer / max(0.001, PLANT_REQUIRED_TICKS))
-                self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
-                self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
-                                             fill="#f39c12", outline="")
+            bounds = self._ability_panel_bounds()
+            selected = self._selected_user_character()
+            if bounds and selected:
+                ability_name = selected.ability_name
+                x1, y1, x2, y2 = bounds
+                accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
+                charges = {
+                    "SMOKE": selected.smoke_charges,
+                    "FLASH": selected.flash_charges,
+                    "RECON": selected.recon_charges,
+                    "HUNT": 1,
+                }[ability_name]
+                armed = self.ability_mode == (ability_name, selected.team, selected.name)
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27",
+                                            outline=accent if armed or ability_name == "HUNT" else "#536273", width=2)
+                icon_cx, icon_cy = x1 + 42, (y1 + y2) / 2
+                self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, charges > 0)
+
+                text_cx = (x1 + 70 + x2) / 2
+                if ability_name == "HUNT":
+                    state = "HUNT / ハンター（常時発動）"
+                    help_text = "Hit% +10ポイント・HS% +5ポイント"
+                else:
+                    label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
+                    state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
+                    help_text = ("方向を指定" if armed and ability_name in ("FLASH", "RECON")
+                                else ("マスを選択" if armed else f"クリックして{label}を構える"))
+                self.canvas.create_text(text_cx, y1+22, text=state,
+                                        fill=accent if charges else "#777", font=("Arial", 10, "bold"))
+                self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
+
+                plant_bounds = self._plant_button_bounds()
+                if plant_bounds:
+                    px1, py1, px2, py2 = plant_bounds
+                    planting = selected.is_planting
+                    self.canvas.create_rectangle(px1, py1, px2, py2, fill="#2a1d0d",
+                                                outline="#f39c12" if planting else "#8a6a32", width=2)
+                    self.canvas.create_text((px1+px2)/2, py1+22,
+                                            text="PLANTING..." if planting else "PLANT",
+                                            fill="#ffd27a", font=("Arial", 11, "bold"))
+                    progress = min(1.0, selected.plant_timer / max(0.001, PLANT_REQUIRED_TICKS))
+                    self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
+                    self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
+                                                fill="#f39c12", outline="")
 
         if self.match_over:
             self._draw_victory_overlay()
@@ -794,21 +809,52 @@ class RenderingUIMixin:
         self._draw_combo_announcement_banner()
 
 
+    def _draw_round_score_banner(self, total_w):
+        """上部バナーのROUND+スコア表示部分。"""
+        self.canvas.create_text(
+            total_w / 2, COMBO_BANNER_HEIGHT / 2 - 18,
+            text=f"ROUND {self.current_round}", fill="#768394",
+            font=("Arial", 14, "bold")
+        )
+
+        score_y = COMBO_BANNER_HEIGHT / 2 + 16
+        gap = 16
+
+        score_text = f"{self.attacker_wins}  -  {self.defender_wins}"
+        score_id = self.canvas.create_text(
+            total_w / 2, score_y,
+            text=score_text, fill="#e8edf5", font=("Arial", 20, "bold")
+        )
+        score_bbox = self.canvas.bbox(score_id)
+        score_half_w = (score_bbox[2] - score_bbox[0]) / 2 if score_bbox else 26
+
+        self.canvas.create_text(
+            total_w / 2 - score_half_w - gap, score_y,
+            text=self.attacker_team_name, fill="#c0392b", font=("Arial", 15, "bold"),
+            anchor="e",
+        )
+        self.canvas.create_text(
+            total_w / 2 + score_half_w + gap, score_y,
+            text=self.defender_team_name, fill="#27ae60", font=("Arial", 15, "bold"),
+            anchor="w",
+        )
+
     def _draw_combo_announcement_banner(self):
-        """コンボと覚醒イベントを共通の上部パネルへ描画する。"""
         total_w = self.map_pixel_width + SIDE_PANEL_WIDTH * 2
         self.canvas.create_rectangle(0, 0, total_w, COMBO_BANNER_HEIGHT, fill="#090d14", outline="#2a3444", width=2)
 
+        has_user_control = bool(self.get_user_controllers())
         queue = getattr(self, "announcement_queue", [])
-        if self.combo_announcement_index >= len(queue):
-            self.canvas.create_text(
-                total_w / 2, COMBO_BANNER_HEIGHT / 2,
-                text=f"ROUND {self.current_round}", fill="#768394",
-                font=("Arial", 14, "bold")
-            )
+        has_announcement = self.combo_announcement_index < len(queue)
+
+        # ユーザー操作が無い試合(観戦/AI同士)では、上部は常にROUND+スコアを表示し、
+        # コンボ/覚醒告知は下部の枠へ回す。
+        if not has_user_control or not has_announcement:
+            self._draw_round_score_banner(total_w)
             return
 
         announcement = queue[self.combo_announcement_index]
+        # ↓ ここから下は既存のコンボ告知描画処理をそのまま残す
         is_awakening = announcement.get("type") == "awakening"
         team = announcement.get("team")
         accent = "#c0392b" if team == "A" else "#27ae60"
@@ -835,4 +881,38 @@ class RenderingUIMixin:
             fill="#b9c6d8", font=("Arial", 10)
         )
 
+    def _draw_bottom_combo_announcement(self, bottom_y):
+        """ユーザー操作が無い試合で、コンボ/覚醒告知を下部の枠内に表示する。"""
+        announcement = self.announcement_queue[self.combo_announcement_index]
+        is_awakening = announcement.get("type") == "awakening"
+        team = announcement.get("team")
+        accent = "#c0392b" if team == "A" else "#27ae60"
+        team_text = "ATTACKERS" if team == "A" else "DEFENDERS"
+        category_text = "覚醒イベント" if is_awakening else "プレイヤーコンボ"
+        title_color = "#ff8f70" if is_awakening else "#ffd66b"
 
+        cx = self.map_offset_x + self.map_pixel_width / 2
+        y1 = bottom_y + 6
+        y2 = bottom_y + self.ability_area_height - 6
+
+        self.canvas.create_rectangle(
+            self.map_offset_x + 10, y1, self.map_offset_x + self.map_pixel_width - 10, y2,
+            fill="#151c27", outline=accent, width=3
+        )
+        self.canvas.create_text(
+            self.map_offset_x + 28, y1 + 15, text=category_text, anchor="w",
+            fill=accent, font=("Arial", 9, "bold")
+        )
+        self.canvas.create_text(
+            cx, y1 + 15, text=announcement.get("name", "名称未設定"),
+            fill=title_color, font=("Arial", 14, "bold")
+        )
+        names = " × ".join(announcement.get("display_players", announcement.get("players", ())))
+        self.canvas.create_text(
+            cx, y1 + 38, text=f"{team_text}  |  {names}",
+            fill="white", font=("Arial", 10, "bold")
+        )
+        self.canvas.create_text(
+            cx, y1 + 58, text=announcement.get("effect_text", "特殊効果"),
+            fill="#b9c6d8", font=("Arial", 9)
+        )

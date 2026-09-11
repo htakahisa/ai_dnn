@@ -975,10 +975,6 @@ class BattleLogicMixin:
         alive_A = any(c.is_alive for c in self.chars if c.team == "A")
         alive_D = any(c.is_alive for c in self.chars if c.team == "D")
         overtime_text = " [OT]" if self.overtime else ""
-        score_text = (
-            f" [Score: {self.attacker_team_name} {self.attacker_wins} - "
-            f"{self.defender_wins} {self.defender_team_name}]{overtime_text}"
-        )
 
         if self.is_defused:
             self.defender_wins += 1
@@ -986,7 +982,7 @@ class BattleLogicMixin:
             self._check_special_round_banner("D")
             if not self.headless:
                 self.label.config(
-                    text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                    text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}!",
                     fg="green",
                 )
             self.round_over = True
@@ -1003,7 +999,7 @@ class BattleLogicMixin:
                 }
                 if not self.headless:
                     self.label.config(
-                        text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="red",
                     )
                 self.round_over = True
@@ -1014,7 +1010,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="#c0392b",
                     )
                 self.round_over = True
@@ -1035,7 +1031,7 @@ class BattleLogicMixin:
                         else ""
                     )
                     self.label.config(
-                        text=f"💀 {self.attacker_team_name} Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
+                        text=f"💀 {self.attacker_team_name} Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}",
                         fg="#27ae60",
                     )
             elif not self.headless:
@@ -1049,7 +1045,7 @@ class BattleLogicMixin:
                     else ""
                 )
                 self.label.config(
-                    text=f"🔥 Spike Planted! Detonation in {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
+                    text=f"🔥 Spike Planted! Detonation in {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}",
                     fg="red",
                 )
         else:
@@ -1060,7 +1056,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}!",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -1071,7 +1067,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}!",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -1082,7 +1078,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="#c0392b",
                     )
                 self.round_over = True
@@ -1095,7 +1091,7 @@ class BattleLogicMixin:
                     else "Right Side"
                 )
                 self.label.config(
-                    text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick | {score_text}",
+                    text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick |",
                     fg="black",
                 )
 
