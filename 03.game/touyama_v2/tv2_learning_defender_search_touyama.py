@@ -283,7 +283,11 @@ def _forced_watch_facing(char, visible_enemies, team_memory):
 
 
 def _forced_combat_facing(char, visible_enemies, team_memory):
-    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    """敵を直接視認している間だけ、combat方向を固定する。
+
+    tv2_train_defender_search.py側の変更と合わせ、視認が途切れた後の
+    last_seen_enemyベースの強制は行わない(学習された自由なfacing選択に委ねる)。
+    """
     if visible_enemies:
         target = min(
             visible_enemies,
@@ -295,10 +299,6 @@ def _forced_combat_facing(char, visible_enemies, team_memory):
         if facing is not None:
             char._combat_facing = facing
         return getattr(char, "_combat_facing", None)
-    if team_memory.last_seen_enemy is not None:
-        return getattr(char, "_combat_facing", None) or _expected_facing(
-            tuple(char.pos), tuple(team_memory.last_seen_enemy["pos"])
-        )
     return None
 
 def _decode_action(action_idx):

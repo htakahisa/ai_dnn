@@ -255,7 +255,7 @@ DEFENSE_POSITIONS = [TOUYAMA_DEFENSE_ASSIGNMENT[name] for name in TOUYAMA_ROSTER
 # 壁越しなど視認不可能な座標は登録しないこと(視認可否のチェックはここでは行わない)。
 # 味方が直線上に立ち、一時的に視線を塞ぐことはあり得るが許容する。
 DEFENSE_WATCH_POINTS = {
-     "夢の街": [(12, 0)],
+     "夢の街": [(13, 3)],
      "いぐるん": [(12, 29)],
      "ろびぃな": [(11, 40)],
      "Tortlilyan": [(12, 40)],
@@ -940,7 +940,16 @@ def _forced_watch_facing(unit, visible_enemies, team_memory):
 
 
 def _forced_combat_facing(unit, visible_enemies, team_memory):
-    """敵発見後は監視地点ではなく、combat方向を固定する。"""
+    """敵を直接視認している間だけ、combat方向のfacingを固定する。
+
+    以前は視認が途切れた後もteam_memory.last_seen_enemyが残っている間
+    (最大SIGHTING_STALENESS_CAP tick)、直近の戦闘方向を強制的に向かせていた。
+    「撃破後もしばらく同方向を警戒する」判断は学習対象にしたいため、
+    視認が切れた後の強制は廃止する。代わりに_compute_rewards側の
+    FACING_ALIGN_SIGHTING_WEIGHT(_facing_memory_relevanceによる
+    距離・経過tickでの減衰込み)で、正しい方向を向く行動にのみ
+    報酬を与えて学習させる。
+    """
     if visible_enemies:
         target = min(
             visible_enemies,
@@ -952,10 +961,6 @@ def _forced_combat_facing(unit, visible_enemies, team_memory):
         if facing is not None:
             unit._combat_facing = facing
         return getattr(unit, "_combat_facing", None)
-    if team_memory.last_seen_enemy is not None:
-        return getattr(unit, "_combat_facing", None) or _expected_facing(
-            tuple(unit.pos), tuple(team_memory.last_seen_enemy["pos"])
-        )
     return None
 
 
