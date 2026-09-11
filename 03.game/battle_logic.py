@@ -798,9 +798,12 @@ class BattleLogicMixin:
             if not target.is_alive:
                 continue
 
-            shooter_accuracy = (
-                MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
-            )
+            if shooter.moved_this_tick:
+                shooter_accuracy = MOVING_ACCURACY
+                shooter_hs_rate = shooter.hs_rate * 0.1
+            else:
+                shooter_accuracy = shooter.accuracy
+                shooter_hs_rate = shooter.hs_rate
             # 正面からの角度差による補正(正面100%～真横50%)
             shooter_accuracy *= self._facing_accuracy_multiplier(shooter, target)
 
@@ -810,17 +813,23 @@ class BattleLogicMixin:
             # Smokeへ入ったTick: x0.75
             if getattr(shooter, "entered_smoke_this_tick", False):
                 shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             # Smokeから出たTick: x0.75
             if getattr(shooter, "exited_smoke_this_tick", False):
                 shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
             if getattr(shooter, "stopped_after_move_this_tick", False):
                 shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             if shooter.blind_remaining > 0:
                 shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
+                shooter_hs_rate *= BLIND_ACCURACY_MULTIPLIER
+
+            shooter_hs_rate = max(0.0, min(1.0, shooter_hs_rate))
 
             effective_dodge = target.dodge_rate * (
                 REVEALED_DODGE_MULTIPLIER
@@ -850,7 +859,7 @@ class BattleLogicMixin:
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
-            headshot = hit and random.random() < shooter.hs_rate
+            headshot = hit and random.random() < shooter_hs_rate
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
 
             shot = {
