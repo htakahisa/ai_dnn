@@ -74,6 +74,10 @@ from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+try:
+    from .gc_combo_stats import build_combo_bonuses
+except ImportError:
+    from gc_combo_stats import build_combo_bonuses
 
 EPISODE_COUNT = 8000
 
@@ -114,7 +118,7 @@ MAX_TICKS = ROUND_DURATION_TICKS  # 100: ラウンド制限時間と一致させ
 
 ABILITY_RANGE = 8
 SIGHTING_STALENESS_CAP = 20
-HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でスポーン以外(拾得後の合流)からスタート
+HANDOFF_AUGMENT_PROB = 0.0  # GC実戦方針: Absolを常にスパイクキャリアーにする
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
 DEFAULT_ACCURACY = 0.50
@@ -141,13 +145,7 @@ TIGER_HS_BONUS = 0.05
 
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
-GC_PLAYER_BONUSES = {
-    "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "SyouTa": {"reaction": 40, "mental": 3},
-    "Absol": {"dodge_rate": 0.4, "mental": 3},
-    "eKo": {"hs_rate": 0.4, "mental": 3},
-    "SugarZ3ro": {"iq": 40, "mental": 3},
-}
+GC_PLAYER_BONUSES = build_combo_bonuses(GC_ROSTER_ORDER)
 
 
 def _compute_gc_effective_stats():
@@ -174,7 +172,7 @@ def _compute_gc_effective_stats():
 
         effective[name] = {
             "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "hs_rate": max(0.0, hs_rate),
             "dodge_rate": max(0.0, min(1.0, dodge_rate)),
             "reaction": max(0.0, reaction),
             "ability": GC_ROLE_TO_ABILITY[raw.role],
@@ -202,6 +200,8 @@ KILL_REWARD = 0.4
 DEATH_PENALTY = -1.0  # キャリア死亡=スパイクドロップ(retrieveフェーズへ引き継ぎ)
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
+ABILITY_OBJECTIVE_REWARD = 0.35
+ABILITY_OBJECTIVE_PENALTY = -0.20
 PLANT_WHIFF_PENALTY = (
     -0.05
 )  # サイト外でPLANTを選んだ場合(マスクが機能していれば理論上到達しない保険)
@@ -1048,6 +1048,7 @@ class CarryEnv:
         move_plans = []
         ability_whiff = False
         ability_overlap = False
+        ability_objective_reward = 0.0
 
         carrier_alive = self.carrier.is_alive
         on_site_before_action = (
@@ -1161,6 +1162,20 @@ class CarryEnv:
                                     self.attackers + self.defenders,
                                     smoke_cells,
                                 )
+                                if self.carrier.ability_name == "SMOKE":
+                                    blocked = not has_los(
+                                        self.carrier.pos,
+                                        nearest.pos,
+                                        self._smoke_cells(),
+                                    )
+                                    ability_objective_reward += (
+                                        ABILITY_OBJECTIVE_REWARD
+                                        if blocked else ABILITY_OBJECTIVE_PENALTY
+                                    )
+                                else:
+                                    # Flash/Re-con are information or entry
+                                    # tools: a real enemy target is valuable.
+                                    ability_objective_reward += ABILITY_OBJECTIVE_REWARD
                         elif self.sighting.last_seen_enemy is not None:
                             _apply_ability(
                                 self.carrier,
@@ -1170,6 +1185,7 @@ class CarryEnv:
                                 self.attackers + self.defenders,
                                 smoke_cells,
                             )
+                            ability_objective_reward += ABILITY_OBJECTIVE_REWARD * 0.75
                         else:
                             _apply_ability(
                                 self.carrier,
@@ -1178,6 +1194,11 @@ class CarryEnv:
                                 self.smokes,
                                 self.attackers + self.defenders,
                                 smoke_cells,
+                            )
+                            ability_objective_reward += (
+                                ABILITY_OBJECTIVE_REWARD * 0.35
+                                if self.carrier.ability_name == "RECON"
+                                else ABILITY_OBJECTIVE_PENALTY
                             )
 
         # --- 移動の適用 ---
@@ -1245,6 +1266,7 @@ class CarryEnv:
             plant_action_chosen,
             on_site_before_action,
             waypoint_bonus,
+            ability_objective_reward,
         )
 
         all_units = self.attackers + self.defenders
@@ -1321,6 +1343,7 @@ class CarryEnv:
         plant_action_chosen,
         on_site_before_action,
         waypoint_bonus=0.0,
+        ability_objective_reward=0.0,
     ):
         reward = STEP_PENALTY + waypoint_bonus
 
@@ -1356,6 +1379,7 @@ class CarryEnv:
             reward += ABILITY_WHIFF_PENALTY
         if ability_overlap:
             reward += ABILITY_OVERLAP_PENALTY
+        reward += ability_objective_reward
 
         new_kills = self.carrier.kills - self._prev_kills.get(
             self.carrier.name, self.carrier.kills

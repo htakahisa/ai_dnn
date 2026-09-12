@@ -181,6 +181,9 @@ class VisualFPSBattle(
     RenderingUIMixin,
 ):
 
+    SIDE_SWAP_MENTAL_RECOVERY = 0.045
+    MAP_END_MENTAL_RECOVERY = 0.24
+
     def _refresh_active_controllers(self):
         self.attacker_controller = (
             self.current_attacker_team_ai.get_attacker_controller()
@@ -216,7 +219,11 @@ class VisualFPSBattle(
         self.headless = headless
         self.disable_side_swap = disable_side_swap
         self.series_context = dict(series_context or {})
-        self.player_mental_fatigue = {}
+        saved_mental_fatigue = self.series_context.get("mental_fatigue", {})
+        self.player_mental_fatigue = {
+            str(name): max(-0.75, min(0.75, float(value)))
+            for name, value in dict(saved_mental_fatigue or {}).items()
+        }
         self.team_round_loss_streak = {}
         self.attacker_roster = list(attacker_roster) if attacker_roster else None
         self.defender_roster = list(defender_roster) if defender_roster else None
@@ -378,7 +385,17 @@ class VisualFPSBattle(
             self.current_attacker_team_ai,
         )
 
+        self._recover_bad_mental_state(self.SIDE_SWAP_MENTAL_RECOVERY)
+
         self._refresh_active_controllers()
+
+    def _recover_bad_mental_state(self, amount):
+        """Move only positive mental pressure toward neutral by ``amount``."""
+        amount = max(0.0, float(amount))
+        for key, value in list(self.player_mental_fatigue.items()):
+            value = float(value)
+            if value > 0.0:
+                self.player_mental_fatigue[key] = max(0.0, value - amount)
 
     def _swap_sides_if_needed(self):
         """通常戦は13R開始時、OTは毎ラウンド開始時に攻守を交代する。
@@ -405,10 +422,12 @@ class VisualFPSBattle(
 
     @staticmethod
     def _mental_player_key(name, fallback_team=""):
-        return (
-            str(getattr(name, "team_id", fallback_team)),
-            str(name),
-        )
+        # Player identity must survive attacker/defender side swaps.
+        return str(name)
+
+    def _recover_mental_at_map_end(self):
+        """Give struggling players a substantial between-map reset."""
+        self._recover_bad_mental_state(self.MAP_END_MENTAL_RECOVERY)
 
     def _series_pressure_for_side(self, side):
         prefix = "attacker" if side == "A" else "defender"

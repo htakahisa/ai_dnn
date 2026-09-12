@@ -577,6 +577,8 @@ class BattleLogicMixin:
             )
 
         if match_finished:
+            if hasattr(self, "_recover_mental_at_map_end"):
+                self._recover_mental_at_map_end()
             attacker_won = self.attacker_wins > self.defender_wins
             winner_name = (
                 self.attacker_team_name if attacker_won else self.defender_team_name
@@ -807,6 +809,10 @@ class BattleLogicMixin:
             if not target.is_alive:
                 continue
 
+            # Every shot gets a fresh quality multiplier.  Keep this local to
+            # the shot so movement/smoke/blind penalties cannot leak between
+            # engagements or depend on an older code path.
+            shot_quality_multiplier = 1.0
             if shooter.moved_this_tick:
                 shooter_accuracy = MOVING_ACCURACY
                 shooter_hs_rate = shooter.hs_rate * 0.1
@@ -815,6 +821,7 @@ class BattleLogicMixin:
                 shooter_hs_rate = shooter.hs_rate
             # 正面からの角度差による補正(正面100%～真横50%)
             facing_mult = self._facing_accuracy_multiplier(shooter, target)
+            shot_quality_multiplier *= facing_mult
             shooter_accuracy *= facing_mult
             shooter_hs_rate *= facing_mult
 
@@ -823,24 +830,29 @@ class BattleLogicMixin:
             # -----------------------------------------------------------------
             # Smokeへ入ったTick: x0.75
             if getattr(shooter, "entered_smoke_this_tick", False):
+                shot_quality_multiplier *= 0.75
                 shooter_accuracy *= 0.75
                 shooter_hs_rate *= 0.75
 
             # Smokeから出たTick: x0.75
             if getattr(shooter, "exited_smoke_this_tick", False):
+                shot_quality_multiplier *= 0.75
                 shooter_accuracy *= 0.75
                 shooter_hs_rate *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
             if getattr(shooter, "stopped_after_move_this_tick", False):
+                shot_quality_multiplier *= 0.75
                 shooter_accuracy *= 0.75
                 shooter_hs_rate *= 0.75
 
             if shooter.blind_remaining > 0:
+                shot_quality_multiplier *= BLIND_ACCURACY_MULTIPLIER
                 shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
                 shooter_hs_rate *= BLIND_ACCURACY_MULTIPLIER
 
-            shooter_hs_rate = max(0.0, min(1.0, shooter_hs_rate))
+            # HS% has no 100% cap; values above 1.0 intentionally guarantee HS.
+            shooter_hs_rate = max(0.0, shooter_hs_rate)
 
             effective_dodge = target.dodge_rate * (
                 REVEALED_DODGE_MULTIPLIER

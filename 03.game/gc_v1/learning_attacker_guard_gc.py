@@ -69,6 +69,10 @@ from character_stats_gc import (
 )
 from map_data_guard_gc import NEW_MAZE_STR as GUARD_MAZE_STR
 from map_data_guard_plant_gc import NEW_MAZE_STR as GUARD_PLANT_MAZE_STR
+try:
+    from .postplant_utils import postplant_watch_cells
+except ImportError:
+    from postplant_utils import postplant_watch_cells
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -676,7 +680,10 @@ class LearningAttackerGuardGCController:
         self._maybe_advance_tick(char, grid, chars)
         self._update_sighting_dist_map(grid)
 
-        unit_has_spike_los = _has_los(grid, tuple(char.pos), tuple(planted_pos))
+        watch_cells = postplant_watch_cells(grid, planted_pos)
+        unit_has_spike_los = any(
+            _has_los(grid, tuple(char.pos), cell) for cell in watch_cells
+        )
         active_defuse_info = self._active_defuse_info(game_state)
 
         obs, visible_enemies = self._build_observation(
@@ -703,6 +710,10 @@ class LearningAttackerGuardGCController:
         move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+        # 設置マスまたは周囲8マスへ射線が通る場所を確保できたら、
+        # 解除に来る敵を待ち構える。能力使用はその場で実行する。
+        if unit_has_spike_los and not use_ability:
+            move_offset = MOVES[0]
         next_pos = [char.pos[0] + move_offset[0], char.pos[1] + move_offset[1]]
 
         if self.verbose:

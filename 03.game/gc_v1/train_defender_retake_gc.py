@@ -53,6 +53,7 @@ from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+from gc_combo_stats import build_combo_bonuses
 
 EPISODE_COUNT = 20000
 
@@ -323,13 +324,7 @@ GC_TIGER_BONUS = {"accuracy": 0.10, "hs_rate": 0.05}
 
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
-GC_PLAYER_BONUSES = {
-    "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "SyouTa": {"reaction": 40, "mental": 3},
-    "Absol": {"dodge_rate": 0.4, "mental": 3},
-    "eKo": {"hs_rate": 0.4, "mental": 3},
-    "SugarZ3ro": {"iq": 40, "mental": 3},
-}
+GC_PLAYER_BONUSES = build_combo_bonuses(GC_ROSTER_ORDER)
 
 
 def _compute_gc_effective_stats():
@@ -364,7 +359,7 @@ def _compute_gc_effective_stats():
 
         effective[name] = {
             "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "hs_rate": max(0.0, hs_rate),
             "dodge_rate": max(0.0, min(1.0, dodge_rate)),
             "iq": iq,
             "reaction": max(0.0, reaction),

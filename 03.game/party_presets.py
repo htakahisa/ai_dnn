@@ -117,8 +117,8 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="Derke",
         description="ハイレベルハイスペックのドリームチーム",
     ),
-    "ブラッドムーン": TeamPreset(
-        name="ブラッドムーン",
+    "ブラッドムウン": TeamPreset(
+        name="ブラッドムウン",
         players=("Nanasaki", "Meteor", "WoohyuN", "Zest", "Ethan"),
         igl="Ethan",
         spike_holder="WoohyuN",

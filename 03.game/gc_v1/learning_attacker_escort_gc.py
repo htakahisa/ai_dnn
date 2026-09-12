@@ -58,6 +58,10 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
+try:
+    from .tactical_ability import choose_pre_entry_ability
+except ImportError:
+    from tactical_ability import choose_pre_entry_ability
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -573,6 +577,34 @@ class LearningAttackerEscortGCController:
         st = self._get_char_state(char)
         st["tick"] += 1
 
+        carrier = next(
+            (other for other in chars
+             if getattr(other, "is_alive", True)
+             and other.team == char.team
+             and getattr(other, "has_spike", False)),
+            None,
+        )
+        smoke_cells = game_state.get("smoke_cells", set())
+        if not smoke_cells and getattr(self, "game", None) is not None:
+            smoke_cells = {
+                cell
+                for smoke in getattr(self.game, "smokes", [])
+                for cell in smoke.get("cells", ())
+            }
+        pre_entry_ability = choose_pre_entry_ability(
+            char,
+            chars,
+            grid,
+            smoke_cells,
+            destination=tuple(carrier.pos) if carrier is not None else None,
+            max_range=ABILITY_RANGE,
+        )
+        if pre_entry_ability is not None:
+            return list(char.pos), {
+                "ability": pre_entry_ability[0],
+                "target": pre_entry_ability[1],
+            }
+
         obs = self._build_obs(char, game_state, st)
         mask = self._action_mask(char, grid, chars)
 
@@ -606,6 +638,16 @@ class LearningAttackerEscortGCController:
 
         dr, dc = _MOVE_DELTA[action]
         nr, nc = r + dr, c + dc
+
+        # Absol(スパイクキャリアー)を先頭に保つ。escortがキャリアーを
+        # 追い越す移動は止め、2マス以上後ろから追従させる。
+        if carrier is not None:
+            cur_dist = max(abs(carrier.pos[0] - r), abs(carrier.pos[1] - c))
+            next_dist = max(abs(carrier.pos[0] - nr), abs(carrier.pos[1] - nc))
+            if next_dist < 2 or (cur_dist <= 2 and next_dist <= cur_dist):
+                st["last_delta"] = (0.0, 0.0)
+                st["stuck"] += 1
+                return [r, c]
 
         if action == ACTION_STAY or self._is_wall(grid, nr, nc):
             st["last_delta"] = (0.0, 0.0)

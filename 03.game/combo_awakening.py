@@ -9,6 +9,7 @@ from game_core import (
     _clamp_rate,
     _canonical_combo_stat_key,
     _apply_combo_bonus,
+    _normalize_hs_rate,
 )
 
 
@@ -143,7 +144,7 @@ class ComboAwakeningMixin:
         char.accuracy = _clamp_rate(
             data.get("hit_pct", data.get("accuracy")), char.accuracy
         )
-        char.hs_rate = _clamp_rate(
+        char.hs_rate = _normalize_hs_rate(
             data.get("hs_pct", data.get("hs_rate")), char.hs_rate
         )
         char.dodge_rate = _clamp_rate(

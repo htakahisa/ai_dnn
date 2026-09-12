@@ -275,6 +275,10 @@ PLANT_AFTER_SMART_ROTATE_BONUS = 2.5
 PLANT_AFTER_FAKE_BONUS = 2.2
 PLANT_AFTER_SPLIT_BONUS = 2.4
 PLANT_AFTER_LURK_BONUS = 0.8
+# Reward the intended sequence, not only the final plant.  This makes the
+# learner prefer "lurk acts first, main enters second" over a passive split.
+LURK_LEAD_ACTION_REWARD = 0.42
+LURK_LEAD_ENTRY_REWARD = 0.68
 PLANT_AFTER_FLANK_CUT_BONUS = 1.0
 PLANT_FAST_BONUS_MAX = 1.2              # 速くPlantできたほど追加
 PLANT_FAST_BONUS_MIN_TIME_RATIO = 0.35
@@ -944,6 +948,9 @@ class MacroEnv:
 
         self._lurk_touched = False
         self._cut_touched = False
+        self._lurk_lead_touched = False
+        self._lurk_lead_action_rewarded = False
+        self._lurk_lead_entry_rewarded = False
 
         # --------------------------------------------------------------
         # v5 diagnostic only: learning behavior is NOT changed.
@@ -1159,6 +1166,9 @@ class MacroEnv:
 
         self._lurk_touched = False
         self._cut_touched = False
+        self._lurk_lead_touched = False
+        self._lurk_lead_action_rewarded = False
+        self._lurk_lead_entry_rewarded = False
 
         self._diag_fake_selected = 0
         self._diag_fake_triggered = False
@@ -3600,6 +3610,10 @@ class MacroEnv:
             cut_set = set(_cut_cells(side))
             if any(a.pos in lurk_set for a in living):
                 self._lurk_touched = True
+                if self.target_site in {SIDE_A, SIDE_B}:
+                    opposite = SIDE_B if self.target_site == SIDE_A else SIDE_A
+                    if side == opposite:
+                        self._lurk_lead_touched = True
             if any(a.pos in cut_set for a in living):
                 self._cut_touched = True
 
@@ -4093,6 +4107,35 @@ class MacroEnv:
             reward += DISTRIBUTION_REWARD
 
         self._update_tactical_history()
+
+        # Explicitly teach the desired timing: the opposite-side lurker must
+        # reach its action area before the main group reaches the plant site.
+        # These are one-shot shaping rewards, so merely lingering in LURK does
+        # not farm reward every Macro step.
+        if (
+            self._lurk_lead_touched
+            and not self._lurk_lead_action_rewarded
+        ):
+            self._lurk_lead_action_rewarded = True
+            reward += LURK_LEAD_ACTION_REWARD
+
+        if (
+            self._lurk_lead_touched
+            and not self._lurk_lead_entry_rewarded
+            and self.target_site in {SIDE_A, SIDE_B}
+        ):
+            site_cells = set(_site_cells(self.target_site))
+            lurk_cells = set(
+                _lurk_cells(
+                    SIDE_B if self.target_site == SIDE_A else SIDE_A
+                )
+            )
+            if any(
+                a.pos in site_cells and a.pos not in lurk_cells
+                for a in self._living_attackers()
+            ):
+                self._lurk_lead_entry_rewarded = True
+                reward += LURK_LEAD_ENTRY_REWARD
 
         # v5: 情報不足コミットと、練習scenarioの小さな成立補助。
         reward += self._uncertain_commit_penalty()

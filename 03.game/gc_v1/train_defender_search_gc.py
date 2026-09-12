@@ -62,6 +62,7 @@ from .character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+from .gc_combo_stats import build_combo_bonuses
 
 from .gc_search_config import (
     GC_SEARCH_AGGRESSION_MARKERS,
@@ -160,13 +161,7 @@ GC_ROLE_TO_ABILITY = {
 
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
-GC_PLAYER_BONUSES = {
-    "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "SyouTa": {"reaction": 40, "mental": 3},
-    "Absol": {"dodge_rate": 0.4, "mental": 3},
-    "eKo": {"hs_rate": 0.4, "mental": 3},
-    "SugarZ3ro": {"iq": 40, "mental": 3},
-}
+GC_PLAYER_BONUSES = build_combo_bonuses(GC_ROSTER_ORDER)
 
 
 def _compute_gc_effective_stats():
@@ -195,7 +190,7 @@ def _compute_gc_effective_stats():
 
         effective[name] = {
             "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "hs_rate": max(0.0, hs_rate),
             "dodge_rate": max(0.0, min(1.0, dodge_rate)),
             "reaction": max(0.0, reaction),
             "ability": GC_ROLE_TO_ABILITY[raw.role],
@@ -227,6 +222,8 @@ HOLD_POSITION_BONUS = 0.012
 HOLD_POSITION_PENALTY = -0.004
 FACING_CORRECT_REWARD = 0.025
 FACING_INCORRECT_PENALTY = -0.010
+REINFORCE_PULL_REWARD = 0.080
+REINFORCE_HOLD_BONUS = 0.035
 ABILITY_WHIFF_PENALTY = -0.008  # 空振りもゾーニング価値があるため軽くする
 ABILITY_OVERLAP_PENALTY = -0.015
 DEBUFF_KILL_BONUS = 0.12
@@ -1512,6 +1509,34 @@ class SearchEnv:
                 r += ABILITY_WHIFF_PENALTY
             if ability_overlap.get(d.name):
                 r += ABILITY_OVERLAP_PENALTY
+
+            # Team-level reinforcement: one defender seeing 2+ attackers is
+            # a high-value callout.  Reward the other defenders for closing
+            # distance to that cluster instead of holding an empty site.
+            reinforce_seen = []
+            for observer in self.defenders:
+                if not observer.is_alive:
+                    continue
+                seen = [
+                    a for a in self.attackers
+                    if a.is_alive and has_los(observer.pos, a.pos, self._smoke_cells())
+                ]
+                if len(seen) >= 2:
+                    reinforce_seen.extend(tuple(a.pos) for a in seen)
+            if len(set(reinforce_seen)) >= 2:
+                target = min(
+                    set(reinforce_seen),
+                    key=lambda pos: max(abs(pos[0] - d.pos[0]), abs(pos[1] - d.pos[1])),
+                )
+                cur_dist = max(abs(target[0] - d.pos[0]), abs(target[1] - d.pos[1]))
+                prev_dist = getattr(d, "prev_reinforce_dist", None)
+                if prev_dist is not None:
+                    r += REINFORCE_PULL_REWARD * (prev_dist - cur_dist)
+                if cur_dist <= 3:
+                    r += REINFORCE_HOLD_BONUS
+                d.prev_reinforce_dist = cur_dist
+            else:
+                d.prev_reinforce_dist = None
 
             # Dense facing signal: face the nearest visible threat, otherwise
             # the currently actionable shared objective/assigned position.

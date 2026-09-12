@@ -52,12 +52,30 @@ class GhostChampionsV1AttackerController(BaseController):
 
     def set_game(self, game):
         self.game = game
+        # GC攻撃側はAbsolをスパイクキャリアー兼エントリー先頭に固定する。
+        if hasattr(game, "spike_holder_name"):
+            game.spike_holder_name = "Absol"
+        self._ensure_absol_carrier()
         for c in (self.fallback,self.carry,self.escort,self.retrieve,self.guard):
             if c is not None and hasattr(c,"set_game"):
                 c.set_game(game)
 
+    def _ensure_absol_carrier(self):
+        if self.game is None:
+            return
+        attackers = [
+            c for c in getattr(self.game, "chars", [])
+            if getattr(c, "team", None) == "A"
+        ]
+        absol = next((c for c in attackers if c.name == "Absol" and c.is_alive), None)
+        carrier = next((c for c in attackers if getattr(c, "has_spike", False)), None)
+        if absol is not None and carrier is not None and carrier is not absol:
+            carrier.has_spike = False
+            absol.has_spike = True
+
     def reset_round(self):
         self.site_ability_used_by_team = False
+        self._ensure_absol_carrier()
         for c in (self.fallback,self.carry,self.escort,self.retrieve,self.guard):
             if c is not None and hasattr(c,"reset_round"):
                 c.reset_round()
@@ -68,6 +86,77 @@ class GhostChampionsV1AttackerController(BaseController):
     def _mark_ability(self, result):
         if isinstance(result,tuple) and len(result)>=2 and isinstance(result[1],dict) and result[1].get("ability"):
             self.site_ability_used_by_team = True
+
+    def _cover_result(self, char, game_state, result):
+        """孤立したキャリアーに、最寄りのescortを緩やかに寄せる。"""
+        if game_state.get("is_planted") or getattr(char, "has_spike", False):
+            return result
+        if isinstance(result, tuple) and len(result) >= 2:
+            if isinstance(result[1], dict) or str(result[1]).upper() in {"PLANT", "ABILITY"}:
+                return result
+
+        chars = game_state.get("chars", [])
+        alive_attackers = [c for c in chars if c.team == "A" and c.is_alive]
+        carrier = next((c for c in alive_attackers if getattr(c, "has_spike", False)), None)
+        if carrier is None or len(alive_attackers) <= 1:
+            return result
+        escorts = [c for c in alive_attackers if c is not carrier]
+        existing_cover = any(
+            max(abs(c.pos[0] - carrier.pos[0]), abs(c.pos[1] - carrier.pos[1])) <= 5
+            for c in escorts
+        )
+        if existing_cover:
+            return result
+        cover = min(
+            escorts,
+            key=lambda c: max(abs(c.pos[0] - carrier.pos[0]), abs(c.pos[1] - carrier.pos[1])),
+        )
+        if cover is not char:
+            return result
+
+        grid = game_state["grid"]
+        occupied = {
+            tuple(map(int, c.pos))
+            for c in alive_attackers
+            if c is not char and c is not carrier
+        }
+        cr, cc = map(int, carrier.pos)
+        plant = game_state.get("target_plant_pos") or carrier.pos
+        vr, vc = int(plant[0]) - cr, int(plant[1]) - cc
+        preferred = (cr - (1 if vr > 0 else -1 if vr < 0 else 0) * 2,
+                     cc - (1 if vc > 0 else -1 if vc < 0 else 0) * 2)
+        goals = []
+        for r in range(max(0, cr - 4), min(grid.shape[0], cr + 5)):
+            for c in range(max(0, cc - 4), min(grid.shape[1], cc + 5)):
+                dist = max(abs(r - cr), abs(c - cc))
+                if 2 <= dist <= 4 and grid[r, c] != 1 and (r, c) not in occupied:
+                    goals.append((r, c))
+        if not goals:
+            return result
+        goal = min(goals, key=lambda p: (max(abs(p[0] - preferred[0]), abs(p[1] - preferred[1])),
+                                         max(abs(p[0] - char.pos[0]), abs(p[1] - char.pos[1]))))
+
+        # BFS to the soft cover point, respecting walls and current occupants.
+        start = tuple(map(int, char.pos))
+        queue = [start]
+        parent = {start: None}
+        for pos in queue:
+            if pos == goal:
+                break
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nxt = (pos[0] + dr, pos[1] + dc)
+                if (nxt in parent or nxt in occupied or
+                        not (0 <= nxt[0] < grid.shape[0] and 0 <= nxt[1] < grid.shape[1]) or
+                        grid[nxt[0], nxt[1]] == 1):
+                    continue
+                parent[nxt] = pos
+                queue.append(nxt)
+        if goal not in parent:
+            return result
+        step = goal
+        while parent[step] is not None and parent[step] != start:
+            step = parent[step]
+        return [step[0], step[1]]
 
     def decide_move(self, char, game_state):
         if game_state.get("is_planted"):
@@ -84,7 +173,7 @@ class GhostChampionsV1AttackerController(BaseController):
             self.escort.site_ability_used_by_teammate = self.site_ability_used_by_team
         result = self._use(self.escort,char,game_state)
         self._mark_ability(result)
-        return result
+        return self._cover_result(char, game_state, result)
 
 class GhostChampionsV1DefenderController(BaseController):
     def __init__(self, greedy=True):

@@ -817,6 +817,50 @@ class LearningDefenderSearchGCController:
             unit_has_spike_los,
             force_positioning=force_positioning,
         )
+        # 1人が2人以上を見たら、サイト保持より増援を優先する。
+        # 視認者本人だけでなく、同じチームの全員に共有して人数不利を防ぐ。
+        reinforce_targets = []
+        for observer in chars:
+            if not observer.is_alive or observer.team != char.team:
+                continue
+            seen = [
+                enemy for enemy in chars
+                if enemy.is_alive and enemy.team != char.team
+                and _has_los(grid, observer.pos, enemy.pos)
+            ]
+            if len(seen) >= 2:
+                reinforce_targets.extend(tuple(enemy.pos) for enemy in seen)
+        reinforce_target = None
+        if len(set(reinforce_targets)) >= 2:
+            reinforce_target = min(
+                set(reinforce_targets),
+                key=lambda pos: max(abs(pos[0] - char.pos[0]), abs(pos[1] - char.pos[1])),
+            )
+        # 敵の位置が既知で、こちらの角度から射線が通る場合は、
+        # 敵が詰めてくるのを待つ。複数視認時の増援移動はこれより優先する。
+        hold_known_angle = False
+        if reinforce_target is None:
+            if visible_enemies:
+                nearest = min(
+                    visible_enemies,
+                    key=lambda e: max(
+                        abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                    ),
+                )
+                hold_known_angle = (
+                    max(abs(nearest.pos[0] - char.pos[0]), abs(nearest.pos[1] - char.pos[1]))
+                    <= 10
+                )
+            elif self.team_memory.last_seen_enemy is not None:
+                seen = self.team_memory.last_seen_enemy
+                dist = max(
+                    abs(seen["pos"][0] - char.pos[0]),
+                    abs(seen["pos"][1] - char.pos[1]),
+                )
+                hold_known_angle = (
+                    int(seen.get("tick_ago", 999)) <= SEARCH_SIGHTING_FRESH_TICKS
+                    and (dist <= 4 or _has_los(grid, char.pos, seen["pos"]))
+                )
         # Search v3: 接敵中も引く/横ずれ/合流を選べる。
         mask = self._action_mask(char, grid, chars, lock_movement=False)
 
@@ -864,6 +908,8 @@ class LearningDefenderSearchGCController:
             move_idx, use_ability_int = divmod(base_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+        if hold_known_angle:
+            move_offset = MOVES[0]
         if facing is not None:
             char.facing = facing
 
@@ -890,6 +936,8 @@ class LearningDefenderSearchGCController:
             assigned = self._assigned_positions.get(char.name)
             if assigned:
                 tactical_facing = facing_towards(char.pos, assigned[0])
+        if reinforce_target is not None and not self.legacy_model:
+            tactical_facing = facing_towards(char.pos, reinforce_target)
         if tactical_facing is not None and not self.legacy_model:
             facing = tactical_facing
             char.facing = facing
@@ -900,7 +948,14 @@ class LearningDefenderSearchGCController:
         # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
         # 上書き後の行動で作られているため、推論側もこれに合わせないと
         # 学習内容とズレる。
-        if force_positioning:
+        if reinforce_target is not None:
+            reinforce_map = _bfs_distance_map(grid, reinforce_target)
+            move_offset = _bfs_best_direction(
+                reinforce_map, grid, int(char.pos[0]), int(char.pos[1])
+            )
+        elif hold_known_angle:
+            move_offset = MOVES[0]
+        elif force_positioning:
             dist_map = self._assigned_dist_maps.get(char.name)
             if dist_map is not None:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])

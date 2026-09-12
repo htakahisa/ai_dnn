@@ -361,6 +361,7 @@ def play_map(
     team1_series_wins: int = 0,
     team2_series_wins: int = 0,
     series_maps_to_win: int = 1,
+    mental_fatigue_state: dict[str, float] | None = None,
 ) -> MResult:
     seed_all(seed)
 
@@ -414,6 +415,7 @@ def play_map(
         "attacker_maps_lost": attacker_series_losses,
         "defender_maps_won": defender_series_wins,
         "defender_maps_lost": defender_series_losses,
+        "mental_fatigue": dict(mental_fatigue_state or {}),
     }
 
     output_context = (
@@ -485,6 +487,12 @@ def play_map(
 
         game.run()
 
+        if mental_fatigue_state is not None:
+            mental_fatigue_state.clear()
+            mental_fatigue_state.update(
+                getattr(game, "player_mental_fatigue", {})
+            )
+
         if render:
             # run()内のmainloopから戻ったことを保証したうえで非表示化。
             try:
@@ -548,6 +556,7 @@ def run_series_core(
     wins1 = 0
     wins2 = 0
     maps: list[MResult] = []
+    mental_fatigue_state: dict[str, float] = {}
 
     while wins1 < need and wins2 < need:
         map_number = len(maps) + 1
@@ -599,6 +608,7 @@ def run_series_core(
                 wins1,
                 wins2,
                 need,
+                mental_fatigue_state,
             )
         else:
             result = play_map(
@@ -612,6 +622,7 @@ def run_series_core(
                 wins1,
                 wins2,
                 need,
+                mental_fatigue_state,
             )
         maps.append(result)
 
@@ -1983,7 +1994,9 @@ def calculate_combat_power_index(
     IQ itself is not modified. Only its contribution to the index is capped.
     """
     try:
-        hs_rate = max(0.0, min(1.0, float(hs_rate)))
+        hs_rate = max(0.0, float(hs_rate))
+        if hs_rate > 10.0:
+            hs_rate /= 100.0
     except (TypeError, ValueError):
         hs_rate = 0.0
     try:
@@ -3055,9 +3068,15 @@ class CompetitionApp:
         body.config(state="disabled")
 
     def redraw_visual(self) -> None:
-        if not hasattr(self, "visual_canvas"):
+        if not hasattr(self, "visual_canvas") or getattr(self, "_visual_canvas_dead", False):
             return
-        self.visual_canvas.delete("all")
+        try:
+            self.visual_canvas.delete("all")
+        except tk.TclError:
+            # The embedded visual window may be destroyed independently of
+            # the manager (for example when a rendered match is closed).
+            self._visual_canvas_dead = True
+            return
 
         if self.visual_mode == "swiss":
             self._draw_double_elimination_visual()
@@ -3840,6 +3859,7 @@ class CompetitionApp:
             team1_series_wins: int,
             team2_series_wins: int,
             series_maps_to_win: int,
+            mental_fatigue_state: dict[str, float] | None = None,
         ) -> MResult:
             user_match = "user" in {
                 team1_controller_key,
@@ -3857,6 +3877,7 @@ class CompetitionApp:
                     team1_series_wins,
                     team2_series_wins,
                     series_maps_to_win,
+                    mental_fatigue_state,
                 )
 
             request = {
@@ -3869,6 +3890,7 @@ class CompetitionApp:
                 "team1_series_wins": team1_series_wins,
                 "team2_series_wins": team2_series_wins,
                 "series_maps_to_win": series_maps_to_win,
+                "mental_fatigue_state": mental_fatigue_state,
                 "done": threading.Event(),
                 "result": None,
                 "error": None,
@@ -3907,6 +3929,7 @@ class CompetitionApp:
                 request["team1_series_wins"],
                 request["team2_series_wins"],
                 request["series_maps_to_win"],
+                request["mental_fatigue_state"],
             )
         except BaseException as exc:
             request["error"] = exc

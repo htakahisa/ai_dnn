@@ -86,7 +86,7 @@ AWAKENING_EVENTS = [
         "player": "Ethan",
         "condition": "overtime",
         "rename": "-老兵-Ethan",
-        "bonuses": {"accuracy": 0.1, "hs_rate": 0.3, "reaction": 40},
+        "bonuses": {"accuracy": 0.15, "hs_rate": 0.3, "reaction": 40},
     },
     {
         "name": "夜の始まり",
@@ -101,7 +101,7 @@ AWAKENING_EVENTS = [
         "player": "Canezerra",
         "condition": "overtime",
         "rename": "-問題児-Canezerra",
-        "bonuses": {"hs_rate": 0.4, "reaction": 40},
+        "bonuses": {"hs_rate": 0.7, "reaction": 10},
     },
     {
         "name": "ハゲが二人",

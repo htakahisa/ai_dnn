@@ -146,6 +146,17 @@ def _clamp_rate(value, default):
     return max(0.0, min(1.0, value))
 
 
+def _normalize_hs_rate(value, default):
+    """HS%は100%超を許可する（1.0=100%、2.0=200%）。"""
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return default
+    if value > 1.0:
+        value /= 100.0
+    return max(0.0, value)
+
+
 def _normalize_accuracy(value, default):
     """命中率を正規化する。0未満だけ防ぎ、100%超はそのまま保持する。"""
     try:
@@ -169,7 +180,15 @@ def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
         + (命中率-0.2)*130
         + 反応速度/2.2
     """
-    hs_rate = _clamp_rate(hs_rate, 0.0)
+    # Character.hs_rate is already normalized. Combo bonuses may intentionally
+    # produce 1.05 (=105%), so do not reinterpret it as 1.05% here.
+    try:
+        hs_rate = float(hs_rate)
+    except (TypeError, ValueError):
+        hs_rate = 0.0
+    if hs_rate > 10.0:
+        hs_rate /= 100.0
+    hs_rate = max(0.0, hs_rate)
     dodge_rate = _clamp_rate(dodge_rate, 0.0)
     accuracy = _normalize_accuracy(accuracy, 0.0)
     try:
@@ -242,6 +261,12 @@ def get_character_combat_stats(name):
                 return _normalize_accuracy(raw[key], default)
         return default
 
+    def pick_hs(keys, default):
+        for key in keys:
+            if key in raw:
+                return _normalize_hs_rate(raw[key], default)
+        return default
+
     def pick_text(keys, default):
         for key in keys:
             if key in raw and raw[key] is not None:
@@ -265,7 +290,7 @@ def get_character_combat_stats(name):
             ("dodge_rate", "dodge", "dodge_pct", "evasion", "弾除け率"),
             defaults["dodge_rate"],
         ),
-        "hs_rate": pick(
+        "hs_rate": pick_hs(
             ("hs_rate", "hs", "hs_pct", "headshot_rate", "HS", "HS%"),
             defaults["hs_rate"],
         ),
@@ -465,10 +490,7 @@ class Character:
         )
         self.hs_rate = max(
             0.0,
-            min(
-                1.0,
-                self.base_hs_rate_before_condition * condition_multiplier,
-            ),
+            self.base_hs_rate_before_condition * condition_multiplier,
         )
         self.ability_name = {
             "フラッシュ": "FLASH",
@@ -589,6 +611,8 @@ def _apply_combo_bonus(character, stat_key, value):
         updated = getattr(character, attr) + amount
         if attr == "accuracy":
             # 命中率だけは100%超を保持する。
+            setattr(character, attr, max(0.0, updated))
+        elif attr == "hs_rate":
             setattr(character, attr, max(0.0, updated))
         else:
             setattr(character, attr, max(0.0, min(1.0, updated)))

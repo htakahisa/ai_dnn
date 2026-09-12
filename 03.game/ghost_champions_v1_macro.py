@@ -102,11 +102,12 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         if holder is None:
             return base_result
 
-        return self.macro_controller.coordinate(
+        coordinated = self.macro_controller.coordinate(
             char,
             game_state,
             base_result,
         )
+        return self._cover_result(char, game_state, coordinated)
 
 
 class GhostChampionsV1DefenderController(_BaseGCDefender):

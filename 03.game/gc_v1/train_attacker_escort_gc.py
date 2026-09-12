@@ -105,6 +105,10 @@ from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+try:
+    from .gc_combo_stats import build_combo_bonuses
+except ImportError:
+    from gc_combo_stats import build_combo_bonuses
 
 EPISODE_COUNT = 9000
 
@@ -134,7 +138,7 @@ STALL_THRESHOLD_TICKS = 3  # これを超えて無進捗が続いたら混雑ペ
 STALL_PENALTY_CAP_TICKS = 10  # ペナルティの伸び幅の上限(無限にエスカレートさせない)
 CONGESTION_RADIUS = 2  # carryからこの距離以内のescortを「渋滞に関与」とみなす
 
-HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
+HANDOFF_AUGMENT_PROB = 0.0  # GC実戦方針: Absolを常に先頭キャリアーにする
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
 # train_attacker_carry.py / train_attacker_guard.py と同一値)
@@ -162,13 +166,7 @@ TIGER_HS_BONUS = 0.05
 
 GC_COMBO_NAME = "幽霊部員de廃部待ったなし"
 GC_COMBO_MEMBERS = set(GC_ROSTER_ORDER)
-GC_PLAYER_BONUSES = {
-    "Xdll": {"dodge_rate": 0.4, "mental": 3},
-    "SyouTa": {"reaction": 40, "mental": 3},
-    "Absol": {"dodge_rate": 0.4, "mental": 3},
-    "eKo": {"hs_rate": 0.4, "mental": 3},
-    "SugarZ3ro": {"iq": 40, "mental": 3},
-}
+GC_PLAYER_BONUSES = build_combo_bonuses(GC_ROSTER_ORDER)
 
 
 def _compute_gc_effective_stats():
@@ -195,7 +193,7 @@ def _compute_gc_effective_stats():
 
         effective[name] = {
             "accuracy": max(0.0, accuracy),
-            "hs_rate": max(0.0, min(1.0, hs_rate)),
+            "hs_rate": max(0.0, hs_rate),
             "dodge_rate": max(0.0, min(1.0, dodge_rate)),
             "reaction": max(0.0, reaction),
             "ability": GC_ROLE_TO_ABILITY[raw.role],
@@ -1152,6 +1150,16 @@ class EscortEnv:
                 rewards[i] -= (dist - self.dist_band_max) * self.dist_penalty_coef
 
         # 7. 戦闘解決
+        # Soft cover reward: keep at least one escort within five cells.
+        alive_escorts = [i for i in range(self.n_escorts) if self.escort_alive[i]]
+        if self.carry_alive and alive_escorts:
+            cover_dist = {
+                i: _chebyshev(self.escort_pos[i], self.carry_pos)
+                for i in alive_escorts
+            }
+            nearest = min(alive_escorts, key=lambda i: cover_dist[i])
+            rewards[nearest] += 0.08 if cover_dist[nearest] <= 5 else -0.03
+
         kill_bonus_targets = self._resolve_combat()
         for escort_idx in kill_bonus_targets:
             if 0 <= escort_idx < self.n_escorts:

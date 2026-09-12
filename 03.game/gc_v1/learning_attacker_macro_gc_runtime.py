@@ -83,6 +83,11 @@ PLANT_COMMIT_COMBAT_GRACE_TICKS = 2
 PLANT_COMMIT_DANGER_RANGE = 6
 PLANT_COMMIT_TIME_MARGIN = 2
 
+# Attacker-side tactical waits must not become an accidental round timeout.
+# A wait is allowed to continue while a defender is definitely visible/revealed,
+# but an unconfirmed hold is converted into progress after this many ticks.
+ATTACKER_UNCONFIRMED_WAIT_MAX_TICKS = 10
+
 
 def _first_existing(paths):
     for p in paths:
@@ -244,6 +249,7 @@ class LearningAttackerMacroGCController:
         self._plant_commit_pos = None
         self._plant_commit_side = None
         self._plant_commit_start_tick = None
+        self._attacker_wait_ticks = {}
 
         if self.verbose:
             print(
@@ -267,6 +273,7 @@ class LearningAttackerMacroGCController:
         self._last_strategy = self.env.current_strategy
         self._last_q_values = None
         self._clear_plant_commit()
+        self._attacker_wait_ticks.clear()
 
     def _clear_plant_commit(self):
         self._plant_commit_holder = None
@@ -327,6 +334,54 @@ class LearningAttackerMacroGCController:
             if dist <= PLANT_COMMIT_DANGER_RANGE and _has_los(grid, hp, dp):
                 return True
         return False
+
+    def _attacker_has_confirmed_threat(self, game_state):
+        """Return whether attackers currently have reliable enemy information."""
+        grid = np.asarray(game_state["grid"])
+        attackers = [
+            a for a in self._real_attackers(game_state)
+            if bool(getattr(a, "is_alive", True))
+        ]
+        if not attackers:
+            return False
+
+        for defender in self._real_defenders(game_state):
+            if not bool(getattr(defender, "is_alive", True)):
+                continue
+            revealed = bool(
+                getattr(defender, "revealed", False)
+                or getattr(defender, "is_revealed", False)
+                or getattr(defender, "reveal_timer", 0)
+                or getattr(defender, "revealed_ticks", 0)
+            )
+            if revealed:
+                return True
+            if any(_has_los(grid, attacker.pos, defender.pos) for attacker in attackers):
+                return True
+        return False
+
+    def _fallback_progress_target(self, char, holder, game_state):
+        """Choose a concrete attack-progress target after an unconfirmed hold."""
+        if char is holder or getattr(char, "name", None) == getattr(holder, "name", None):
+            target = getattr(self.game, "target_plant_pos", None)
+            if target is not None:
+                return tuple(map(int, target))
+
+        side = self._strategy_target_side(self.env.current_strategy)
+        if side not in {SIDE_A, SIDE_B}:
+            side = getattr(self.env, "target_site", None)
+        grid = np.asarray(game_state["grid"])
+        plant_cells = [
+            tuple(map(int, p))
+            for p in zip(*np.where(grid == 2))
+            if side_of_pos(tuple(map(int, p))) == side
+        ]
+        if plant_cells:
+            return min(
+                plant_cells,
+                key=lambda p: abs(p[0] - int(char.pos[0])) + abs(p[1] - int(char.pos[1])),
+            )
+        return tuple(map(int, char.pos))
 
     def _plant_commit_result(self, char, holder, game_state):
         """Return forced holder action while committed, otherwise None."""
@@ -771,6 +826,37 @@ class LearningAttackerMacroGCController:
             tuple(map(int, target)),
             occupied,
         )
+
+        # A stale Macro hold can otherwise keep an attacker in place forever.
+        # Do not apply this to defenders or to a confirmed enemy hold; this
+        # controller is attacker-only and the defender controller is untouched.
+        char_key = getattr(char, "name", id(char))
+        is_waiting = tuple(next_pos) == tuple(map(int, char.pos))
+        if is_waiting and not self._attacker_has_confirmed_threat(game_state):
+            waited = int(self._attacker_wait_ticks.get(char_key, 0)) + 1
+            self._attacker_wait_ticks[char_key] = waited
+            if waited > ATTACKER_UNCONFIRMED_WAIT_MAX_TICKS:
+                progress_target = self._fallback_progress_target(char, holder, game_state)
+                next_pos = _bfs_next_step(
+                    grid,
+                    tuple(map(int, char.pos)),
+                    progress_target,
+                    occupied,
+                )
+                # If the current route is blocked, retry toward the plant cell
+                # so a stale hold cannot consume the whole attack clock.
+                if tuple(next_pos) == tuple(map(int, char.pos)):
+                    plant_target = getattr(self.game, "target_plant_pos", None)
+                    if plant_target is not None:
+                        next_pos = _bfs_next_step(
+                            grid,
+                            tuple(map(int, char.pos)),
+                            tuple(map(int, plant_target)),
+                            occupied,
+                        )
+                self._attacker_wait_ticks[char_key] = 0
+        else:
+            self._attacker_wait_ticks[char_key] = 0
 
         # GC phase controllers use (pos, action_type[, payload]).
         return list(next_pos), "MOVE"

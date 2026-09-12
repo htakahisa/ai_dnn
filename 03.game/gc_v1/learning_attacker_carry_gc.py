@@ -49,6 +49,10 @@ from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+try:
+    from .tactical_ability import choose_pre_entry_ability
+except ImportError:
+    from tactical_ability import choose_pre_entry_ability
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -766,6 +770,20 @@ class LearningAttackerCarryGCController:
         on_site = int(grid[r, c]) in SITE_VALUES
 
         self._update_sighting(char, chars, smoke_cells)
+        pre_entry_ability = choose_pre_entry_ability(
+            char,
+            chars,
+            grid,
+            smoke_cells,
+            destination=target_plant_pos,
+            last_seen=self._sighting["pos"] if self._sighting else None,
+            max_range=ABILITY_RANGE,
+        )
+        if pre_entry_ability is not None:
+            return list(char.pos), {
+                "ability": pre_entry_ability[0],
+                "target": pre_entry_ability[1],
+            }
         elapsed_ticks = getattr(self.game, "battle_tick", 0)
         max_ticks = (
             getattr(self.game, "round_timer", 100) + elapsed_ticks
