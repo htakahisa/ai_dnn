@@ -807,17 +807,12 @@ class BattleLogicMixin:
             if not target.is_alive:
                 continue
 
-            shooter_accuracy = shooter.accuracy
-            shooter_hs_rate = shooter.hs_rate
-            # Every shooter-side accuracy penalty also lowers the chance that
-            # a successful shot is a headshot by the same multiplier.
-            shot_quality_multiplier = 1.0
             if shooter.moved_this_tick:
-                shot_quality_multiplier *= (
-                    MOVING_ACCURACY / shooter.accuracy
-                    if shooter.accuracy > 0.0
-                    else 0.0
-                )
+                shooter_accuracy = MOVING_ACCURACY
+                shooter_hs_rate = shooter.hs_rate * 0.1
+            else:
+                shooter_accuracy = shooter.accuracy
+                shooter_hs_rate = shooter.hs_rate
             # 正面からの角度差による補正(正面100%～真横50%)
             shot_quality_multiplier *= self._facing_accuracy_multiplier(shooter, target)
 
@@ -826,21 +821,24 @@ class BattleLogicMixin:
             # -----------------------------------------------------------------
             # Smokeへ入ったTick: x0.75
             if getattr(shooter, "entered_smoke_this_tick", False):
-                shot_quality_multiplier *= 0.75
+                shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             # Smokeから出たTick: x0.75
             if getattr(shooter, "exited_smoke_this_tick", False):
-                shot_quality_multiplier *= 0.75
+                shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
             if getattr(shooter, "stopped_after_move_this_tick", False):
-                shot_quality_multiplier *= 0.75
+                shooter_accuracy *= 0.75
+                shooter_hs_rate *= 0.75
 
             if shooter.blind_remaining > 0:
-                shot_quality_multiplier *= BLIND_ACCURACY_MULTIPLIER
+                shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
+                shooter_hs_rate *= BLIND_ACCURACY_MULTIPLIER
 
-            shooter_accuracy *= shot_quality_multiplier
-            shooter_hs_rate *= shot_quality_multiplier
+            shooter_hs_rate = max(0.0, min(1.0, shooter_hs_rate))
 
             effective_dodge = target.dodge_rate * (
                 REVEALED_DODGE_MULTIPLIER
@@ -870,7 +868,7 @@ class BattleLogicMixin:
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
-            headshot = hit and random.random() < max(0.0, min(1.0, shooter_hs_rate))
+            headshot = hit and random.random() < shooter_hs_rate
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
 
             shot = {
@@ -975,10 +973,6 @@ class BattleLogicMixin:
         alive_A = any(c.is_alive for c in self.chars if c.team == "A")
         alive_D = any(c.is_alive for c in self.chars if c.team == "D")
         overtime_text = " [OT]" if self.overtime else ""
-        score_text = (
-            f" [Score: {self.attacker_team_name} {self.attacker_wins} - "
-            f"{self.defender_wins} {self.defender_team_name}]{overtime_text}"
-        )
 
         if self.is_defused:
             self.defender_wins += 1
@@ -986,7 +980,7 @@ class BattleLogicMixin:
             self._check_special_round_banner("D")
             if not self.headless:
                 self.label.config(
-                    text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                    text=f"⚙️ Spike Defused! {self.defender_team_name} WIN Round {self.current_round}!",
                     fg="green",
                 )
             self.round_over = True
@@ -1003,7 +997,7 @@ class BattleLogicMixin:
                 }
                 if not self.headless:
                     self.label.config(
-                        text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"💥 Spike Detonated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="red",
                     )
                 self.round_over = True
@@ -1014,7 +1008,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="#c0392b",
                     )
                 self.round_over = True
@@ -1035,7 +1029,7 @@ class BattleLogicMixin:
                         else ""
                     )
                     self.label.config(
-                        text=f"💀 {self.attacker_team_name} Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
+                        text=f"💀 {self.attacker_team_name} Eliminated! Defuse the Spike! {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}",
                         fg="#27ae60",
                     )
             elif not self.headless:
@@ -1049,7 +1043,7 @@ class BattleLogicMixin:
                     else ""
                 )
                 self.label.config(
-                    text=f"🔥 Spike Planted! Detonation in {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}{score_text}",
+                    text=f"🔥 Spike Planted! Detonation in {int(self.detonate_timer)} Tick{defuse_str} | R{self.current_round}",
                     fg="red",
                 )
         else:
@@ -1060,7 +1054,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"⏰ Time Expired! {self.defender_team_name} WIN Round {self.current_round}!",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -1071,7 +1065,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.attacker_team_name} Annihilated! {self.defender_team_name} WIN Round {self.current_round}!",
                         fg="#27ae60",
                     )
                 self.round_over = True
@@ -1082,7 +1076,7 @@ class BattleLogicMixin:
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
-                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}! {score_text}",
+                        text=f"🏆 {self.defender_team_name} Annihilated! {self.attacker_team_name} WIN Round {self.current_round}!",
                         fg="#c0392b",
                     )
                 self.round_over = True
@@ -1095,7 +1089,7 @@ class BattleLogicMixin:
                     else "Right Side"
                 )
                 self.label.config(
-                    text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick | {score_text}",
+                    text=f"⚔️ Round {self.current_round} (Attacking {site_side}) | Ends in {int(self.round_timer)} Tick |",
                     fg="black",
                 )
 

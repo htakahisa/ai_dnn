@@ -63,6 +63,7 @@ from tv2_character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
     TOUYAMA_ROSTER_ORDER,
 )
+from tv2_train_attacker_escort import FLASH_LINEUP_CELLS
 
 # ---------------------------------------------------------------------------
 # 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)
@@ -94,7 +95,8 @@ REVEAL_DURATION_TICKS = 5
 # total_charges<=0判定で自動的にマスクされる(game_core.pyの仕様上、
 # タイガー役はflash/smoke/recon_chargesが全て0で初期化されるため)。
 ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")
-ABILITY_RANGE = 6
+ABILITY_RANGE = 15
+
 
 DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
@@ -306,6 +308,10 @@ class LearningAttackerEscortTouyamaController:
         self.team_sighting = _TeamSightingMemory()
         self._processed_this_tick = set()
 
+        # tv2_train_attacker_escort.pyのflash_lineup_used_cellsと同一方針。
+        # 定点フラッシュは1ラウンドにつき1回だけ(4体全体で共有)。
+        self._flash_lineup_used_cells = set()
+
     # ------------------------------------------------------------------
     # ラウンド開始時にrun_game.pyから呼ばれる(hasattr判定で自動検出される)
     # ------------------------------------------------------------------
@@ -313,6 +319,7 @@ class LearningAttackerEscortTouyamaController:
         self._char_state.clear()
         self.team_sighting.reset()
         self._processed_this_tick.clear()
+        self._flash_lineup_used_cells.clear()
 
     # ------------------------------------------------------------------
     # 内部ヘルパー
@@ -479,6 +486,23 @@ class LearningAttackerEscortTouyamaController:
             if best_dist is None or dist < best_dist:
                 best_char, best_dist = c, dist
         return best_char, best_dist
+
+    def _available_flash_lineup_cell(self, grid, pos):
+        """tv2_train_attacker_escort.pyの_available_flash_lineup_cell()・
+        _apply_ability()内フォールバックと同一ロジック。未使用・射程内
+        (ABILITY_RANGE)・射線が通っている定点のうち最も近いものを返す。
+        DQNがACTION_ABILITYを選び、かつ視認可能な敵がいない場合にのみ
+        呼ばれる想定(_action_mask()・decide_move()側で判定順序を揃える)。
+        """
+        candidates = [
+            cell for cell in FLASH_LINEUP_CELLS
+            if cell not in self._flash_lineup_used_cells
+            and _chebyshev(pos, cell) <= ABILITY_RANGE
+            and _has_los_walls_only(grid, pos, cell)
+        ]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda cell: _chebyshev(pos, cell))
 
     def _team_effect_active(self, chars, my_team):
         """味方の誰かが敵にかけたblind/revealが現在有効かどうか。
@@ -681,10 +705,18 @@ class LearningAttackerEscortTouyamaController:
             # チャージがあっても、射程内に有効な標的がいなければABILITYは
             # マスクする。学習済みネットワークがABILITYを選び続けて
             # 実質STAYのままブロックし続けるのを防ぐ。
+            # FLASHのみ、視認可能な敵がいなくても未使用の定点セルが
+            # 射程内・射線内にあればアンマスクする(tv2_train_attacker_escort.py
+            # のget_action_mask()と同一方針。以前存在した「無条件自動投擲」は
+            # action-reward対応を壊すため廃止し、ACTION_ABILITY選択時にのみ
+            # 発動するよう学習側・推論側を揃えた)。
             enemy_char, _ = self._nearest_visible_enemy(
                 grid, chars, char.team, (r, c), max_range=ABILITY_RANGE
             )
-            if enemy_char is None:
+            has_target = enemy_char is not None
+            if not has_target and char.ability_name == "FLASH":
+                has_target = self._available_flash_lineup_cell(grid, (r, c)) is not None
+            if not has_target:
                 base_mask[ACTION_ABILITY] = False
 
         return np.repeat(base_mask, len(FACING_DIRS))
@@ -724,6 +756,16 @@ class LearningAttackerEscortTouyamaController:
                 st["stuck"] += 1
                 target = (int(enemy_char.pos[0]), int(enemy_char.pos[1]))
                 return list(char.pos), {"ability": char.ability_name, "target": target}
+            # 視認可能な敵がいない場合、FLASHのみ定点セルへのフォールバックを
+            # 許可する(_apply_ability()の学習側ロジックと同一。ACTION_ABILITY
+            # をネットワークが選んだ場合にのみ発動する)。
+            if char.ability_name == "FLASH":
+                lineup_cell = self._available_flash_lineup_cell(grid, (r, c))
+                if lineup_cell is not None:
+                    self._flash_lineup_used_cells.add(lineup_cell)
+                    st["last_delta"] = (0.0, 0.0)
+                    st["stuck"] += 1
+                    return list(char.pos), {"ability": "FLASH", "target": lineup_cell}
             # 射程内に有効な標的がいない場合、実チャージを無駄撃ちしないよう
             # STAYにフォールバックする。facingだけは選択どおり反映する。
             st["last_delta"] = (0.0, 0.0)
