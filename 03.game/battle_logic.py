@@ -814,7 +814,9 @@ class BattleLogicMixin:
                 shooter_accuracy = shooter.accuracy
                 shooter_hs_rate = shooter.hs_rate
             # 正面からの角度差による補正(正面100%～真横50%)
-            shot_quality_multiplier *= self._facing_accuracy_multiplier(shooter, target)
+            facing_mult = self._facing_accuracy_multiplier(shooter, target)
+            shooter_accuracy *= facing_mult
+            shooter_hs_rate *= facing_mult
 
             # -----------------------------------------------------------------
             # Rush対策の射撃精度補正（すべて乗算）
