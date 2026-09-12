@@ -101,6 +101,8 @@ from game_core import (
     SMOKE_DURATION_TICKS,
     FACING_VECTORS,
     SHOOTING_SITE_DIGREE,
+    FLASH_SPEED_CELLS_PER_TICK,
+    FLASH_MAX_FLIGHT_TICKS,
 )
 
 from tv2_character_stats_touyama import CHARACTER_TABLE as TOUYAMA_STATS_TABLE
@@ -128,7 +130,13 @@ ATTACKER_SPAWN_VALUE = 3
 DEFENDER_SPAWN_VALUE = 4
 
 ABILITY_TYPES = ("FLASH", "RECON", "SMOKE", "HUNT")  # HUNTはアビリティ行動を持たない(常にマスク)
-ABILITY_RANGE = 6  # アビリティが届く最大距離(チェビシェフ距離で判定)
+ABILITY_RANGE = 6  # RECON/SMOKEが届く最大距離(チェビシェフ距離で判定)
+# FLASHの実際の飛距離。ゲーム本体(abilities_los.py _advance_flash_projectiles)は
+# 壁に当たるかFLASH_MAX_FLIGHT_TICKS経過するまで直進するため、
+# 物理的な最大飛距離は FLASH_SPEED_CELLS_PER_TICK×FLASH_MAX_FLIGHT_TICKS=15。
+# controllers.pyのdefaultヒューリスティック(distance<=5)は「使うかどうか」の
+# 独自判断基準であり、ゲームエンジンの物理制限ではないためここでは使わない。
+FLASH_RANGE = FLASH_SPEED_CELLS_PER_TICK * FLASH_MAX_FLIGHT_TICKS
 
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
@@ -153,6 +161,9 @@ ESCORT_HOLD_TICKS = 3           # 開始直後この tick 数だけ移動アク�
 HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな以外から選ぶ(train_attacker_carry.pyと同一方針)
 
 FACING_ALIGN_WEIGHT_ESCORT = 0.01  # 敵不可視時のみ有効。進行方向を向くほど+、背を向けるほど-(弱いshaping)
+
+FLASH_LINEUP_CELLS = [(8, 3)]     # ろびぃなのスモーク運用に連携する、事前投擲フラッシュの定点(暫定)
+FLASH_LINEUP_REWARD = 2.0          # 定点フラッシュ使用のボーナス(ability_success_rewardと同水準)
 
 SIGHTING_STALENESS_CAP = 20        # チーム共有の目撃情報を保持する最大tick数(carry/guardと同一方針)
 TEAM_SIGHTING_ALIGN_WEIGHT = 0.02  # 自分が直接視認していない時のみ有効。チーム共有の目撃位置を
@@ -342,6 +353,7 @@ class EscortEnv:
         ability_success_reward=2.0,
         ability_redundant_penalty=1.0,
         ability_waste_penalty=0.3,
+        flash_lineup_reward=FLASH_LINEUP_REWARD,
         kill_bonus=5.0,
         death_penalty=3.0,
         mission_success_reward=5.0,
@@ -371,6 +383,7 @@ class EscortEnv:
         self.ability_success_reward = ability_success_reward
         self.ability_redundant_penalty = ability_redundant_penalty
         self.ability_waste_penalty = ability_waste_penalty
+        self.flash_lineup_reward = flash_lineup_reward
         self.kill_bonus = kill_bonus
         self.death_penalty = death_penalty
         self.mission_success_reward = mission_success_reward
@@ -465,6 +478,7 @@ class EscortEnv:
     def reset(self):
         self.tick = 0
         self.smokes = []
+        self.flash_lineup_used_cells = set()
 
         # --- キャリアー役を決定(train_attacker_carry.pyと同一のハンドオフ方針) ---
         handoff = self.rng.random() < self.handoff_augment_prob
@@ -657,6 +671,22 @@ class EscortEnv:
                 best_idx, best_dist = i, dist
         return best_idx, best_dist
 
+    def _available_flash_lineup_cell(self, pos):
+        """射程内(FLASH_RANGE)・射線が通っていて、まだ味方が使っていない定点のうち
+        最も近いものを返す。無ければNone。1定点=1フラッシュのみ許可するため、
+        flash_lineup_used_cells(このエピソード中に使用済みの定点集合)で
+        連携する(train_attacker_carry.pyのスモーク定点運用と同一方針)。"""
+        smoke_cells = self._smoke_cell_set()
+        candidates = [
+            cell for cell in FLASH_LINEUP_CELLS
+            if cell not in self.flash_lineup_used_cells
+            and _chebyshev(pos, cell) <= FLASH_RANGE
+            and _has_los(self.grid, smoke_cells, pos, cell)
+        ]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda cell: _chebyshev(pos, cell))
+
     def _all_ally_positions(self):
         """carrier(生存時)+生存中escort全員の現在位置。チーム共有目撃判定に使う。"""
         positions = []
@@ -787,8 +817,21 @@ class EscortEnv:
             base_mask[self.ACTION_ABILITY] = False
         else:
             # 射程内に有効な標的(視認可能な敵)がいない場合もマスクする。
-            enemy_idx, _ = self._nearest_visible_enemy((r, c), max_range=ABILITY_RANGE)
-            if enemy_idx is None:
+            # FLASHは実際の投擲飛距離(FLASH_RANGE)、RECON/SMOKEは従来通り
+            # ABILITY_RANGEで判定する。
+            # FLASHのみ、視認可能な敵がいなくても未使用の定点セル
+            # (FLASH_LINEUP_CELLS)が射程内・射線内にあればアンマスクする。
+            # 以前は定点フラッシュをDQNの行動選択と無関係に自動投擲していたが、
+            # action-reward対応が崩れQ学習が成立しなくなるため廃止し、
+            # ACTION_ABILITYを選んだ場合にのみ_apply_ability()側で解決する
+            # 方式に統一した。
+            ability_type = self.escort_ability_type[i]
+            enemy_range = FLASH_RANGE if ability_type == "FLASH" else ABILITY_RANGE
+            enemy_idx, _ = self._nearest_visible_enemy((r, c), max_range=enemy_range)
+            has_target = enemy_idx is not None
+            if not has_target and ability_type == "FLASH":
+                has_target = self._available_flash_lineup_cell((r, c)) is not None
+            if not has_target:
                 base_mask[self.ACTION_ABILITY] = False
 
         return np.repeat(base_mask, len(FACING_DIRS))
@@ -948,8 +991,20 @@ class EscortEnv:
         self.escort_ability_used[i] = True  # 成否に関わらず1ラウンド1回を消費
 
         if ability in ("FLASH", "RECON"):
-            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=ABILITY_RANGE)
+            enemy_range = FLASH_RANGE if ability == "FLASH" else ABILITY_RANGE
+            enemy_idx, dist = self._nearest_visible_enemy(pos, max_range=enemy_range)
+
             if enemy_idx is None:
+                # FLASHのみ、視認可能な敵がいない場合に定点セルへの投擲を
+                # フォールバックとして許可する(ろびぃなのスモーク運用に
+                # 連携する事前投擲)。ACTION_ABILITYをDQNが選んだ場合にのみ
+                # ここへ到達するため、以前の無条件自動投擲と異なりaction選択
+                # に正しく報酬が紐づく。
+                if ability == "FLASH":
+                    lineup_cell = self._available_flash_lineup_cell(pos)
+                    if lineup_cell is not None:
+                        self.flash_lineup_used_cells.add(lineup_cell)
+                        return self.flash_lineup_reward
                 return -self.ability_waste_penalty
 
             if ability == "FLASH":
@@ -1200,7 +1255,13 @@ class EscortEnv:
         for i in range(self.n_escorts):
             rewards[i] -= 0.01  # 時間経過ペナルティ
 
-        # 2. アビリティ行動を先に解決(アビリティ使用者はこのtick移動しない)
+        # 2. アビリティ行動を先に解決(アビリティ使用者はこのtick移動しない)。
+        # 以前はここに「定点フラッシュの無条件自動投擲」があったが、DQNの
+        # 行動選択(actions[i])と無関係に発動して報酬だけが加算されるため、
+        # リプレイバッファのaction-reward対応が壊れ、ACTION_ABILITY自体を
+        # 選ぶ動機をネットワークが学習できなくなっていた。定点フラッシュも
+        # 含め、ACTION_ABILITYが選択された場合にのみ_apply_ability()内で
+        # 標的(視認可能な敵、無ければ定点セル)を解決するよう統一した。
         used_ability_this_tick = set()
         for i in range(self.n_escorts):
             if not self.escort_alive[i] or decoded_base_actions[i] is None:
@@ -1587,6 +1648,7 @@ def main():
             "roster_order": list(TOUYAMA_ROSTER_ORDER),
             "spike_holder_default": TOUYAMA_SPIKE_HOLDER,
             "hold_ticks": args.hold_ticks,
+            "flash_lineup_cells": list(FLASH_LINEUP_CELLS),
         }
 
     start_time = time.perf_counter()

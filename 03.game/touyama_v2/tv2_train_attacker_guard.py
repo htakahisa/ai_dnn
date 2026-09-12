@@ -121,6 +121,8 @@ print_effective_stats(TOUYAMA_EFFECTIVE_STATS, "Attacker/guard")
 STEP_PENALTY = -0.001
 DEFUSE_PROGRESS_PENALTY = -0.05      # 敵の解除が1Tick進むごとのペナルティ(全員で共有)
 GUARD_POSITION_PULL_REWARD = 0.03    # 担当ガードポジション/解除地点へ近づく(ポテンシャル差分)
+SMOKE_BLIND_RUSH_MULTIPLIER = 4.0    # 解除中だが敵にもスパイクにもLOSが無い「スモーク越し」状態の間、
+                                      # 通常のdefuse_alert(x2.0)よりさらに強くスパイクへ詰め寄らせる倍率
 HOLD_POSITION_BONUS = 0.10           # 到着後の静止をより強く優遇(射撃は静止側が有利なため)
 HOLD_POSITION_PENALTY = -0.06        # 到着後の無駄な動き回りを強めに抑制(ただし移動自体は禁止しない)
 ABILITY_WHIFF_PENALTY = -0.05
@@ -1092,12 +1094,22 @@ class GuardEnv:
         ranked = sorted(alive_attackers, key=_dist)
         return {a.name for a in ranked[:MAX_SIGHTING_RESPONDERS]}
 
-    def _priority_mode_and_distmap(self, attacker):
+    def _priority_mode_and_distmap(self, attacker, smoke_cells):
         active_defuse = self._active_defuse_info()
         if active_defuse is not None:
-            # 解除中は最優先でプラント地点(=解除者の隣接マス)へ詰め寄る
-            return "defuse_alert", self.spike_dist_map, "defuse_alert"
-        return "position", attacker.assigned_guard_dist_map, "position"
+            # 解除中は最優先でプラント地点(=解除者の隣接マス)へ詰め寄る。
+            # スモーク等でスパイクにも解除中の敵本人にもLOSが無い「盲目」状態
+            # なら、通常よりさらに強く詰め寄らせる(スパイク隣接まで踏み込めば
+            # LOS判定は距離2マス以下で必ず通るため、これで視認・交戦に繋がる)。
+            blind = (
+                not has_los(tuple(attacker.pos), self.planted_pos, smoke_cells)
+                and not any(
+                    d.is_alive and has_los(attacker.pos, d.pos, smoke_cells)
+                    for d in self.defenders
+                )
+            )
+            return "defuse_alert", self.spike_dist_map, "defuse_alert", blind
+        return "position", attacker.assigned_guard_dist_map, "position", False
 
     def _compute_rewards(
         self, pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle,
@@ -1109,7 +1121,7 @@ class GuardEnv:
         for a in self.attackers:
             r = STEP_PENALTY
 
-            mode, dist_map, target_key = self._priority_mode_and_distmap(a)
+            mode, dist_map, target_key, blind = self._priority_mode_and_distmap(a, smoke_cells)
             r0, c0 = int(a.pos[0]), int(a.pos[1])
             bfs_dist = dist_map[r0, c0] if dist_map is not None else None
             if bfs_dist is not None and bfs_dist < 0:
@@ -1132,7 +1144,10 @@ class GuardEnv:
                 a.prev_priority_dist = bfs_dist
 
                 if mode == "defuse_alert":
-                    r += GUARD_POSITION_PULL_REWARD * delta * 2.0  # 解除中は接近を強く促す
+                    # 通常の解除中はx2.0、スモーク等で盲目の間はさらに強くx4.0で
+                    # スパイクへ詰め寄らせる(見えていないからと足を止めさせない)。
+                    multiplier = SMOKE_BLIND_RUSH_MULTIPLIER if blind else 2.0
+                    r += GUARD_POSITION_PULL_REWARD * delta * multiplier
                 elif mode == "sighting":
                     r += GUARD_POSITION_PULL_REWARD * delta
                 else:
