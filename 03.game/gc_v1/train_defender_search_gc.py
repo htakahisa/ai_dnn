@@ -47,6 +47,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+# This network is small and is evaluated for only five agents at a time.
+# Excessive OpenMP thread fan-out costs more than it saves on CPU.
+if not torch.cuda.is_available():
+    torch.set_num_threads(int(os.environ.get("GC_TORCH_THREADS", "1")))
+
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -63,6 +68,13 @@ from .gc_search_config import (
     GC_SEARCH_POSITION_RANDOMNESS,
     GC_SEARCH_RELEASE_BY_MARKER,
 )
+from .gc_facing import (
+    FACING_DIRS,
+    FACING_VECTORS,
+    append_facing_onehot,
+    decode_action as decode_facing_action,
+    encode_action as encode_facing_action,
+)
 
 from game_core import (
     MAX_HP,
@@ -77,6 +89,7 @@ from game_core import (
     SMOKE_DURATION_TICKS,
     ROUND_DURATION_TICKS,
     PLANT_REQUIRED_TICKS,
+    SHOOTING_SITE_DIGREE,
 )
 
 EPISODE_COUNT = 8000
@@ -99,7 +112,9 @@ MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = (
     36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
 )
-ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+OBS_DIM = 44
+BASE_ACTION_DIM = 10
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # Attacker(敵)側の簡易ヒューリスティック用
 
 N_DEFENDERS = 5
@@ -484,6 +499,7 @@ class UnitStub:
         self.dodge_rate = DEFAULT_DODGE
         self.hs_rate = DEFAULT_HS_RATE
         self.reaction = DEFAULT_REACTION + random.uniform(-10, 10)
+        self.facing = "S" if team == "D" else "N"
 
         # Defender専用: 割り当てられた待機ポジション(7)とそのBFS距離マップ。
         self.assigned_defense_pos = None
@@ -808,28 +824,31 @@ def build_observation(
         else 0.0
     )
 
+    append_facing_onehot(obs, getattr(unit, "facing", "S"))
+
     return obs
 
 
 def decode_action(action_idx):
-    move_idx, use_ability = divmod(int(action_idx), 2)
-    return MOVES[move_idx], bool(use_ability)
+    base_idx, facing = decode_facing_action(action_idx)
+    move_idx, use_ability = divmod(base_idx, 2)
+    return MOVES[move_idx], bool(use_ability), facing
 
 
-def encode_action(move, use_ability):
+def encode_action(move, use_ability, facing):
     move_idx = MOVES.index(move)
-    return move_idx * 2 + (1 if use_ability else 0)
+    return encode_facing_action(move_idx * 2 + (1 if use_ability else 0), facing)
 
 
 def build_action_mask(unit, occupied, lock_movement=False):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
     交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。"""
-    mask = np.ones(ACTION_DIM, dtype=bool)
+    base_mask = np.ones(BASE_ACTION_DIM, dtype=bool)
     r, c = int(unit.pos[0]), int(unit.pos[1])
     for move_idx, (dr, dc) in enumerate(MOVES):
         if lock_movement and move_idx != 0:
-            mask[move_idx * 2] = False
-            mask[move_idx * 2 + 1] = False
+            base_mask[move_idx * 2] = False
+            base_mask[move_idx * 2 + 1] = False
             continue
         nr, nc = r + dr, c + dc
         walkable = (
@@ -839,14 +858,14 @@ def build_action_mask(unit, occupied, lock_movement=False):
             and (nr, nc) not in occupied
         )
         if not walkable:
-            mask[move_idx * 2] = False
-            mask[move_idx * 2 + 1] = False
+            base_mask[move_idx * 2] = False
+            base_mask[move_idx * 2 + 1] = False
 
     if unit.charges <= 0 or unit.role == "HUNT":
         for move_idx in range(5):
-            mask[move_idx * 2 + 1] = False
+            base_mask[move_idx * 2 + 1] = False
 
-    return mask
+    return np.repeat(base_mask, len(FACING_DIRS))
 
 
 # ============================================================================
@@ -1122,13 +1141,14 @@ class SearchEnv:
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
-            (dr, dc), use_ability = decode_action(action_dict[d.name])
+            (dr, dc), use_ability, facing = decode_action(action_dict[d.name])
 
             if self._should_force_positioning(d, smoke_cells):
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
 
-            actual_action_dict[d.name] = encode_action((dr, dc), use_ability)
+            d.facing = facing
+            actual_action_dict[d.name] = encode_action((dr, dc), use_ability, facing)
             move_plans.append((d, (dr, dc)))
 
             visible_enemies = [
@@ -1372,6 +1392,16 @@ class SearchEnv:
                 REVEALED_DODGE_MULTIPLIER if debuffed else 1.0
             )
             hit_chance = accuracy * (1.0 - effective_dodge)
+            dc = float(target.pos[1] - shooter.pos[1])
+            dr = float(target.pos[0] - shooter.pos[0])
+            distance = math.hypot(dc, dr)
+            if distance:
+                fx, fy = FACING_VECTORS[shooter.facing]
+                dot = max(-1.0, min(1.0, (fx * dc + fy * dr) / distance))
+                angle = math.degrees(math.acos(dot))
+                if angle > SHOOTING_SITE_DIGREE:
+                    continue
+                hit_chance *= 1.0 - min(SHOOTING_SITE_DIGREE, angle) / SHOOTING_SITE_DIGREE * 0.5
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
             euclid = math.hypot(
@@ -1581,6 +1611,32 @@ def select_action(policy_net, obs, mask, epsilon):
         return int(np.argmax(q_values))
 
 
+def select_actions_batch(policy_net, obs_dict, mask_dict, epsilon):
+    """Select all defender actions in one forward pass.
+
+    The environment still receives the same name->action mapping, but the
+    neural network is called once per tick instead of once per defender.
+    """
+    names = list(obs_dict)
+    if not names:
+        return {}
+    observations = np.asarray([obs_dict[name] for name in names], dtype=np.float32)
+    masks = np.asarray([mask_dict[name] for name in names], dtype=bool)
+    with torch.no_grad():
+        obs_t = torch.as_tensor(observations, dtype=torch.float32, device=DEVICE)
+        q_values = policy_net(obs_t).cpu().numpy()
+    actions = {}
+    for row, name in enumerate(names):
+        valid = np.flatnonzero(masks[row])
+        if len(valid) == 0:
+            actions[name] = 0
+        elif random.random() < epsilon:
+            actions[name] = int(np.random.choice(valid))
+        else:
+            actions[name] = int(np.argmax(np.where(masks[row], q_values[row], -np.inf)))
+    return actions
+
+
 def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
     if len(buffer) < batch_size:
         return None
@@ -1663,10 +1719,9 @@ def train(
 
         for tick in range(MAX_TICKS):
 
-            action_dict = {
-                name: select_action(policy_net, obs, mask_dict[name], epsilon)
-                for name, obs in obs_dict.items()
-            }
+            action_dict = select_actions_batch(
+                policy_net, obs_dict, mask_dict, epsilon
+            )
 
             next_obs_dict, next_mask_dict, rewards, done, actual_action_dict = env.step(
                 action_dict
@@ -1754,7 +1809,7 @@ def train(
             )
             print(f"  [POSITION-MODE diag] {position_diag_str}")
 
-        if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
+        if avg_reward > best_avg_reward and episode >= 100:
             best_avg_reward = avg_reward
             torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
             print(

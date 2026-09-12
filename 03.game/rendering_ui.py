@@ -400,7 +400,7 @@ class RenderingUIMixin:
             }[ability]
             available = char.is_alive and (charges > 0 or ability == "HUNT")
             self._draw_compact_ability_icon(ability, x0 + 27, y + 91, available)
-            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +10%"}[ability]
+            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP"}[ability]
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
             self.canvas.create_text(
                 x0 + 43, y + 91,

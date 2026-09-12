@@ -321,6 +321,7 @@ class BattleLogicMixin:
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
+                    facing_payload = second_elem
                     action_type = "ABILITY"
                 # ケース1.5: 辞書型「その場で向きだけ変える」（移動しない）
                 elif isinstance(second_elem, dict) and "facing" in second_elem:
@@ -371,6 +372,7 @@ class BattleLogicMixin:
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
                 if isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
+                    facing_payload = second_elem
                     action_type = "ABILITY"
                 # ケース1.5: 辞書型「移動先(現在地含む)+向き」を同時指定。
                 # next_posが現在地と同じなら実質その場旋回、異なれば移動しつつ
@@ -688,7 +690,8 @@ class BattleLogicMixin:
             getattr(shooter, "role", None) == "タイガー"
             or getattr(shooter, "ability_name", None) == "HUNT"
         ):
-            max_hp = float(getattr(shooter, "max_hp", 100))
+            # HUNT回復の上限はゲーム上の通常最大HP(100)を超えない。
+            max_hp = min(100.0, float(getattr(shooter, "max_hp", 100)))
             shooter.hp = min(max_hp, float(shooter.hp) + 50.0)
 
         self.match_stats.setdefault(target.name, {"kills": 0, "deaths": 0})[
@@ -798,29 +801,40 @@ class BattleLogicMixin:
             if not target.is_alive:
                 continue
 
-            shooter_accuracy = (
-                MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
-            )
+            shooter_accuracy = shooter.accuracy
+            shooter_hs_rate = shooter.hs_rate
+            # Every shooter-side accuracy penalty also lowers the chance that
+            # a successful shot is a headshot by the same multiplier.
+            shot_quality_multiplier = 1.0
+            if shooter.moved_this_tick:
+                shot_quality_multiplier *= (
+                    MOVING_ACCURACY / shooter.accuracy
+                    if shooter.accuracy > 0.0
+                    else 0.0
+                )
             # 正面からの角度差による補正(正面100%～真横50%)
-            shooter_accuracy *= self._facing_accuracy_multiplier(shooter, target)
+            shot_quality_multiplier *= self._facing_accuracy_multiplier(shooter, target)
 
             # -----------------------------------------------------------------
             # Rush対策の射撃精度補正（すべて乗算）
             # -----------------------------------------------------------------
             # Smokeへ入ったTick: x0.75
             if getattr(shooter, "entered_smoke_this_tick", False):
-                shooter_accuracy *= 0.75
+                shot_quality_multiplier *= 0.75
 
             # Smokeから出たTick: x0.75
             if getattr(shooter, "exited_smoke_this_tick", False):
-                shooter_accuracy *= 0.75
+                shot_quality_multiplier *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
             if getattr(shooter, "stopped_after_move_this_tick", False):
-                shooter_accuracy *= 0.75
+                shot_quality_multiplier *= 0.75
 
             if shooter.blind_remaining > 0:
-                shooter_accuracy *= BLIND_ACCURACY_MULTIPLIER
+                shot_quality_multiplier *= BLIND_ACCURACY_MULTIPLIER
+
+            shooter_accuracy *= shot_quality_multiplier
+            shooter_hs_rate *= shot_quality_multiplier
 
             effective_dodge = target.dodge_rate * (
                 REVEALED_DODGE_MULTIPLIER
@@ -850,7 +864,7 @@ class BattleLogicMixin:
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
-            headshot = hit and random.random() < shooter.hs_rate
+            headshot = hit and random.random() < max(0.0, min(1.0, shooter_hs_rate))
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
 
             shot = {

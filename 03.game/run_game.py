@@ -441,7 +441,7 @@ class VisualFPSBattle(
         if form_variance <= 0.0:
             return 0.0
 
-        mental = max(0.0, min(10.0, float(stats.get("mental", 5.0))))
+        mental = max(0.0, min(20.0, float(stats.get("mental", 5.0))))
         vulnerability = 1.0 - mental / 10.0
         key = self._mental_player_key(name, side)
 
@@ -450,7 +450,7 @@ class VisualFPSBattle(
             self._series_pressure_for_side(side)
             + self._long_map_pressure()
         ) * vulnerability
-        return max(0.0, min(1.0, accumulated + situational))
+        return max(-0.75, min(0.75, accumulated + situational))
 
     def _record_round_mental_result(self, winning_side):
         losing_side = "D" if winning_side == "A" else "A"
@@ -493,7 +493,7 @@ class VisualFPSBattle(
 
             mental = max(
                 0.0,
-                min(10.0, float(stats.get("mental", 5.0))),
+                min(20.0, float(stats.get("mental", 5.0))),
             )
             vulnerability = 1.0 - mental / 10.0
             current = float(self.player_mental_fatigue.get(key, 0.0))
@@ -504,7 +504,7 @@ class VisualFPSBattle(
                 current -= 0.055
 
             self.player_mental_fatigue[key] = max(
-                0.0,
+                -0.75,
                 min(0.75, current),
             )
 

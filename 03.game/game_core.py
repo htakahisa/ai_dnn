@@ -296,7 +296,7 @@ def get_character_combat_stats(name):
         "mental": max(
             0.0,
             min(
-                10.0,
+                20.0,
                 pick_number(
                     ("mental", "mentality", "メンタル"),
                     defaults["mental"],
@@ -420,8 +420,11 @@ class Character:
         self.is_igl = False
         self.reaction = stats.get("reaction", 100.0)
         self.influence = stats.get("influence", 0.0)
-        self.mental = max(0.0, min(10.0, float(stats.get("mental", 5.0))))
-        self.mental_pressure = max(0.0, min(1.0, float(mental_pressure)))
+        # Mentality may exceed the ordinary 0-10 range.  Values above 10
+        # invert the series-pressure effect and make positive condition more
+        # likely under pressure.
+        self.mental = max(0.0, min(20.0, float(stats.get("mental", 5.0))))
+        self.mental_pressure = max(-0.75, min(0.75, float(mental_pressure)))
 
         # スプレッドシートの「調子の波」。
         # 0なら変動なし、10なら命中率・HS率が最大±30%の範囲で変動する。
@@ -438,7 +441,7 @@ class Character:
         # 命中率とHS率には同じ係数を使用し、選手全体の調子として一貫させる。
         self.base_accuracy_before_condition = self.accuracy
         self.base_hs_rate_before_condition = self.hs_rate
-        self.max_condition_delta = (self.form_variance / 10.0) * 0.30
+        self.max_condition_delta = (self.form_variance / 10.0) * 0.40
         if self.max_condition_delta > 0.0:
             raw_condition = random.uniform(
                 -self.max_condition_delta,
@@ -603,8 +606,8 @@ def _apply_combo_bonus(character, stat_key, value):
     elif attr == "mental":
         character.mental = max(
             0.0,
-            min(
-                10.0,
+                min(
+                    20.0,
                 float(getattr(character, "mental", 5.0)) + amount,
             ),
         )

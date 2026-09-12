@@ -48,7 +48,7 @@ from game_core import (
 from map_data import NEW_MAZE_STR
 
 try:
-    from .gc_search_config_aggression import (
+    from .gc_search_config import (
         GC_SEARCH_AGGRESSION_MARKERS,
         GC_SEARCH_POSITION_RANDOMNESS,
         GC_SEARCH_RELEASE_BY_MARKER,
@@ -70,6 +70,11 @@ except ImportError:
         GC_ROSTER_ORDER,
     )
 
+try:
+    from .gc_facing import FACING_DIRS, append_facing_onehot, decode_action as decode_facing_action
+except ImportError:
+    from gc_facing import FACING_DIRS, append_facing_onehot, decode_action as decode_facing_action
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -78,7 +83,9 @@ MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = (
     36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
 )
-ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+OBS_DIM = 44
+BASE_ACTION_DIM = 10
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
@@ -430,9 +437,20 @@ class LearningDefenderSearchGCController:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
         self.greedy = greedy
         self.verbose = verbose
+        self.legacy_model = False
         self.model = DefenderSearchDuelingDQN().to(DEVICE)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            state_dict = torch.load(model_path, map_location=DEVICE, weights_only=False)
+            # Keep old checkpoints runnable while the expanded facing model
+            # is being retrained.  They retain the old automatic movement
+            # facing behaviour; new checkpoints use the learned action.
+            old_obs = int(state_dict["feature.0.weight"].shape[1])
+            old_actions = int(state_dict["advantage_head.2.weight"].shape[0])
+            if old_obs != OBS_DIM or old_actions != ACTION_DIM:
+                self.legacy_model = True
+                self.model = DefenderSearchDuelingDQN(
+                    obs_dim=old_obs, action_dim=old_actions
+                ).to(DEVICE)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningDefenderSearchGCController] loaded: {model_path}")
@@ -710,13 +728,15 @@ class LearningDefenderSearchGCController:
             else 0.0
         )
 
+        append_facing_onehot(obs, getattr(char, "facing", "S"))
+
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(self, char, grid, chars, lock_movement=False):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。"""
-        mask = np.ones(ACTION_DIM, dtype=bool)
+        base_mask = np.ones(BASE_ACTION_DIM, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
             tuple(o.pos)
@@ -726,8 +746,8 @@ class LearningDefenderSearchGCController:
 
         for move_idx, (dr, dc) in enumerate(MOVES):
             if lock_movement and move_idx != 0:
-                mask[move_idx * 2] = False
-                mask[move_idx * 2 + 1] = False
+                base_mask[move_idx * 2] = False
+                base_mask[move_idx * 2 + 1] = False
                 continue
             nr, nc = r + dr, c + dc
             walkable = (
@@ -737,14 +757,14 @@ class LearningDefenderSearchGCController:
                 and (nr, nc) not in occupied
             )
             if not walkable:
-                mask[move_idx * 2] = False
-                mask[move_idx * 2 + 1] = False
+                base_mask[move_idx * 2] = False
+                base_mask[move_idx * 2 + 1] = False
 
         if _ability_charge(char) <= 0 or char.ability_name == "HUNT":
             for move_idx in range(5):
-                mask[move_idx * 2 + 1] = False
+                base_mask[move_idx * 2 + 1] = False
 
-        return mask
+        return np.repeat(base_mask, len(FACING_DIRS))
 
     # -- メイン ----------------------------------------------------------
     def decide_move(self, char, game_state):
@@ -807,8 +827,10 @@ class LearningDefenderSearchGCController:
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        model_obs = obs[:36] if self.legacy_model else obs
+        model_mask = mask.reshape(BASE_ACTION_DIM, len(FACING_DIRS))[:, 0] if self.legacy_model else mask
+        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
+        mask_t = torch.from_numpy(model_mask).to(DEVICE)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()
@@ -822,9 +844,16 @@ class LearningDefenderSearchGCController:
                     f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n"
                 )
 
-        move_idx, use_ability_int = divmod(action_idx, 2)
+        if self.legacy_model:
+            move_idx, use_ability_int = divmod(action_idx, 2)
+            facing = None
+        else:
+            base_idx, facing = decode_facing_action(action_idx)
+            move_idx, use_ability_int = divmod(base_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
+        if facing is not None:
+            char.facing = facing
 
         # train_defender_search.py と挙動を一致させる: position mode
         # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、
@@ -858,7 +887,7 @@ class LearningDefenderSearchGCController:
         next_pos = [char.pos[0] + move_offset[0], char.pos[1] + move_offset[1]]
 
         if not use_ability:
-            return next_pos
+            return next_pos if facing is None else (next_pos, {"facing": facing})
 
         # アビリティ使用: 狙点は「射線内の最近接の敵」を最優先、
         # いなければチーム共有メモリの直近目撃座標を使う。
@@ -881,6 +910,9 @@ class LearningDefenderSearchGCController:
 
         if target_pos is None:
             # 狙点が定まらない場合はチャージを無駄にしないよう移動のみ行う。
-            return next_pos
+            return next_pos if facing is None else (next_pos, {"facing": facing})
 
-        return next_pos, {"ability": char.ability_name, "target": target_pos}
+        payload = {"ability": char.ability_name, "target": target_pos}
+        if facing is not None:
+            payload["facing"] = facing
+        return next_pos, payload
