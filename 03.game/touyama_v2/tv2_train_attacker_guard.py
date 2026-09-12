@@ -129,6 +129,8 @@ ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 HOLD_ANGLE_BONUS = 0.02
 HOLD_ANGLE_PENALTY = -0.01
+BLOCKING_ALLY_PENALTY = -0.05  # 到着済みの味方が、まだ持ち場に着けていない味方の進路を
+                                # 塞いでいる間、毎Tick科すペナルティ。道を譲る行動を促す。
 SPIKE_WATCH_BONUS = 0.02     # プラント地点にLOSが通っている間、静止して警戒(引き上げ)
 GUARD_WATCH_ALIGN_WEIGHT = 0.10       # 警戒ポイントが視認できる時のみ有効。最も近い視認可能ポイントを
                                        # 向くほど+、逆を向くほど-(carryのFACING_ALIGN_WEIGHTと同一方針)
@@ -930,6 +932,35 @@ class GuardEnv:
                         unit.pos[0] - old_pos[0], unit.pos[1] - old_pos[1], unit.facing
                     )
 
+        # --- 進路を塞いでいる味方へのペナルティ判定 ---
+        # 持ち場に既に到着して静止している味方が、まだ持ち場へ向かっている
+        # 別の味方の進路(隣接1マス先)を塞いでいる場合にペナルティを科す。
+        # これにより「先に着いた者勝ちで居座る」のではなく、道を譲る/
+        # 一時的に離れる挙動が学習で自然に生まれることを狙う。
+        blocking_penalties = {}
+        for unit, (dr, dc) in move_plans:
+            if not unit.is_alive or unit.team != "A":
+                continue
+            if (dr, dc) == (0, 0) or unit.moved_this_tick:
+                continue
+            nr, nc = unit.pos[0] + dr, unit.pos[1] + dc
+            occupant = next(
+                (
+                    other for other in self.attackers
+                    if other is not unit and other.is_alive and tuple(other.pos) == (nr, nc)
+                ),
+                None,
+            )
+            if occupant is None or occupant.moved_this_tick:
+                continue
+            occ_dist_map = occupant.assigned_guard_dist_map
+            occ_r, occ_c = int(occupant.pos[0]), int(occupant.pos[1])
+            occ_bfs_dist = occ_dist_map[occ_r, occ_c] if occ_dist_map is not None else -1
+            if 0 <= occ_bfs_dist <= GUARD_POS_REACH_RADIUS:
+                blocking_penalties[occupant.name] = (
+                    blocking_penalties.get(occupant.name, 0.0) + BLOCKING_ALLY_PENALTY
+                )
+
         # --- アビリティの適用 ---
         for unit, target_pos in ability_requests:
             unit.charges -= 1
@@ -981,6 +1012,8 @@ class GuardEnv:
             pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle,
             nearest_watch_by_name, watch_alignment_info,
         )
+        for name, penalty in blocking_penalties.items():
+            rewards[name] = rewards.get(name, 0.0) + penalty
 
         self._prev_kills = {u.name: u.kills for u in self.attackers + self.defenders}
         self._prev_alive = {u.name: u.is_alive for u in self.attackers + self.defenders}
