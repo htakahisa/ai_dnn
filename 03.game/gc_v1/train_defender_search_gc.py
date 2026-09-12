@@ -74,6 +74,7 @@ from .gc_facing import (
     append_facing_onehot,
     decode_action as decode_facing_action,
     encode_action as encode_facing_action,
+    facing_towards,
 )
 
 from game_core import (
@@ -224,6 +225,8 @@ SIGHTING_PULL_REWARD = 0.006  # 目撃方向へ近づくだけではほぼ稼げ
 DEFENSE_POSITION_PULL_REWARD = 0.025
 HOLD_POSITION_BONUS = 0.012
 HOLD_POSITION_PENALTY = -0.004
+FACING_CORRECT_REWARD = 0.025
+FACING_INCORRECT_PENALTY = -0.010
 ABILITY_WHIFF_PENALTY = -0.008  # 空振りもゾーニング価値があるため軽くする
 ABILITY_OVERLAP_PENALTY = -0.015
 DEBUFF_KILL_BONUS = 0.12
@@ -1509,6 +1512,35 @@ class SearchEnv:
                 r += ABILITY_WHIFF_PENALTY
             if ability_overlap.get(d.name):
                 r += ABILITY_OVERLAP_PENALTY
+
+            # Dense facing signal: face the nearest visible threat, otherwise
+            # the currently actionable shared objective/assigned position.
+            visible = [
+                a for a in self.attackers
+                if a.is_alive and has_los(d.pos, a.pos, self._smoke_cells())
+            ]
+            facing_target = None
+            if visible:
+                facing_target = min(
+                    visible,
+                    key=lambda a: max(
+                        abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1])
+                    ),
+                ).pos
+            elif self.team_memory.last_seen_enemy is not None:
+                facing_target = self.team_memory.last_seen_enemy["pos"]
+            elif self.team_memory.spike_pos is not None:
+                facing_target = self.team_memory.spike_pos
+            elif d.assigned_defense_pos is not None:
+                facing_target = d.assigned_defense_pos
+            if facing_target is not None:
+                expected = facing_towards(d.pos, facing_target)
+                if expected is not None:
+                    r += (
+                        FACING_CORRECT_REWARD
+                        if d.facing == expected
+                        else FACING_INCORRECT_PENALTY
+                    )
 
             angle_state = held_angle.get(d.name)
             if angle_state == "held_with_los":

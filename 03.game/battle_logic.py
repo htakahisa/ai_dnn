@@ -476,6 +476,16 @@ class BattleLogicMixin:
             self.active_defuser_name = None
         char.defuse_timer = 0
 
+        # 明示された視点方向は、移動できたかどうかとは独立して適用する。
+        # 壁・味方・範囲外を選んだターンでも、AIが選んだ敵/警戒方向を維持する。
+        explicit_facing = (
+            facing_payload.get("facing")
+            if isinstance(facing_payload, dict)
+            else None
+        )
+        if explicit_facing in FACING_VECTORS and not char.facing_forced_this_tick:
+            char.facing = explicit_facing
+
         if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
             nr, nc = int(next_pos[0]), int(next_pos[1])
             in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
@@ -505,11 +515,7 @@ class BattleLogicMixin:
                 # facing_payloadで明示的にfacingが指定されていれば、移動方向とは
                 # 無関係にそちらを優先する(例: 前進しながら後ろを向く、等)。
                 # 指定が無ければ従来通り移動方向から自動計算する。
-                explicit_facing = (facing_payload or {}).get("facing")
-                if explicit_facing in FACING_VECTORS:
-                    if not char.facing_forced_this_tick:
-                        char.facing = explicit_facing
-                elif not char.facing_forced_this_tick:
+                if explicit_facing not in FACING_VECTORS and not char.facing_forced_this_tick:
                     new_facing = self._facing_from_delta(
                         nr - old_pos[0], nc - old_pos[1], char.facing
                     )

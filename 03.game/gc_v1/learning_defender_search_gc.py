@@ -71,9 +71,21 @@ except ImportError:
     )
 
 try:
-    from .gc_facing import FACING_DIRS, append_facing_onehot, decode_action as decode_facing_action
+    from .gc_facing import (
+        FACING_DIRS,
+        append_facing_onehot,
+        decode_action as decode_facing_action,
+        facing_from_delta,
+        facing_towards,
+    )
 except ImportError:
-    from gc_facing import FACING_DIRS, append_facing_onehot, decode_action as decode_facing_action
+    from gc_facing import (
+        FACING_DIRS,
+        append_facing_onehot,
+        decode_action as decode_facing_action,
+        facing_from_delta,
+        facing_towards,
+    )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -853,6 +865,33 @@ class LearningDefenderSearchGCController:
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
         if facing is not None:
+            char.facing = facing
+
+        # Tactical facing guardrail.  The learned action remains the default,
+        # but a visible enemy/known threat must never leave the unit staring
+        # at an unrelated wall.  This also supplies a stable target for the
+        # newly expanded policy while it is being retrained.
+        tactical_facing = None
+        if visible_enemies:
+            nearest = min(
+                visible_enemies,
+                key=lambda e: max(
+                    abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                ),
+            )
+            tactical_facing = facing_towards(char.pos, nearest.pos)
+        elif self.team_memory.last_seen_enemy is not None:
+            tactical_facing = facing_towards(
+                char.pos, self.team_memory.last_seen_enemy["pos"]
+            )
+        elif self.team_memory.spike_pos is not None:
+            tactical_facing = facing_towards(char.pos, self.team_memory.spike_pos)
+        else:
+            assigned = self._assigned_positions.get(char.name)
+            if assigned:
+                tactical_facing = facing_towards(char.pos, assigned[0])
+        if tactical_facing is not None and not self.legacy_model:
+            facing = tactical_facing
             char.facing = facing
 
         # train_defender_search.py と挙動を一致させる: position mode
