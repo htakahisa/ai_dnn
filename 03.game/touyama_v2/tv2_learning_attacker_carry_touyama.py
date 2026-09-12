@@ -69,7 +69,7 @@ PLANT_REQUIRED_TICKS = 4
 
 # --- 本番プレイ時のサイト選択・target選定をAI側に委ねる ---------------------
 AI_CONTROLLED_SITE_SELECTION = True    # Trueのとき、下の確率で選択する
-SITE_SELECTION_WEIGHTS = {"left": 0.9, "right": 0.1}
+SITE_SELECTION_WEIGHTS = {"left": 0.5, "right": 0.5}
 
 
 # ============================================================================
