@@ -162,7 +162,7 @@ HANDOFF_AUGMENT_PROB = 0.25  # 一定確率でキャリアー役をろびぃな�
 
 FACING_ALIGN_WEIGHT_ESCORT = 0.01  # 敵不可視時のみ有効。進行方向を向くほど+、背を向けるほど-(弱いshaping)
 
-FLASH_LINEUP_CELLS = [(8, 3)]     # ろびぃなのスモーク運用に連携する、事前投擲フラッシュの定点(暫定)
+FLASH_LINEUP_CELLS = [(10, 6)]     # ろびぃなのスモーク運用に連携する、事前投擲フラッシュの定点(暫定)
 FLASH_LINEUP_REWARD = 2.0          # 定点フラッシュ使用のボーナス(ability_success_rewardと同水準)
 
 SIGHTING_STALENESS_CAP = 20        # チーム共有の目撃情報を保持する最大tick数(carry/guardと同一方針)
