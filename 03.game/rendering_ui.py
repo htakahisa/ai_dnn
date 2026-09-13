@@ -716,7 +716,9 @@ class RenderingUIMixin:
 
             # キャラクター上部の名前・HPパネル
             panel_w = max(56, min(150, 16 + len(char.display_name) * 7))
-            panel_h = 23
+            kill_star_count = min(5, char.round_kills)
+            star_row_h = 10 if kill_star_count > 0 else 0
+            panel_h = 23 + star_row_h
             px1 = cx - panel_w / 2
             py2 = row*self.cell_size - 3
             py1 = py2 - panel_h
@@ -728,8 +730,11 @@ class RenderingUIMixin:
             # 隣接時は札を半透明風(stipple)にして重なりの圧迫感を減らす。
             self.canvas.create_rectangle(px1, py1, px1+panel_w, py2, fill="#101820", outline=char.bg_color,
                                          width=1, stipple="gray50" if has_adjacent else "")
+            if kill_star_count > 0:
+                stars_text = "★" * kill_star_count
+                self.canvas.create_text(cx, py1+7, text=stars_text, fill="#ffd700", font=("Arial", 8, "bold"))
             name_color = "#d6d9de" if has_adjacent else ("yellow" if char.has_spike else "white")
-            self.canvas.create_text(cx, py1+8, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
+            self.canvas.create_text(cx, py1+8+star_row_h, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
             hp_ratio = char.hp / char.max_hp
             self.canvas.create_rectangle(px1+4, py2-7, px1+panel_w-4, py2-3, fill="#3a404a", outline="")
             self.canvas.create_rectangle(px1+4, py2-7, px1+4+(panel_w-8)*hp_ratio, py2-3, fill=char.bg_color, outline="")
