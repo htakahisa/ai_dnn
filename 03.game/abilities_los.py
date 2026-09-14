@@ -259,7 +259,12 @@ class AbilityLosMixin:
             ]
         )
         self.flash_bursts.append(
-            {"pos": impact, "remaining_ticks": FLASH_BURST_DURATION_TICKS}
+            {
+                "pos": impact,
+                "remaining_ticks": FLASH_BURST_DURATION_TICKS,
+                "owner": projectile.get("owner"),
+                "team": projectile.get("team"),
+            }
         )
         owner_team = projectile.get("team")
         for char in self.chars:
@@ -267,6 +272,14 @@ class AbilityLosMixin:
                 continue
             if self.check_cell_line_of_sight(tuple(char.pos), impact, block_smoke=True):
                 char.blind_remaining = max(char.blind_remaining, BLIND_DURATION_TICKS)
+                tracker = getattr(self, "analytics_tracker", None)
+                if tracker is not None:
+                    owner = next(
+                        (c for c in self.chars
+                         if str(c.name) == str(projectile.get("owner"))),
+                        None,
+                    )
+                    tracker.record_contribution(owner, char, self.battle_tick, "flash")
 
     def _explode_recon(self, projectile, impact=None):
         impact = (
@@ -285,7 +298,12 @@ class AbilityLosMixin:
             if 0 <= rr < self.height and 0 <= cc < self.width
         }
         self.recon_bursts.append(
-            {"cells": cells, "remaining_ticks": RECON_BURST_DISPLAY_TICKS}
+            {
+                "cells": cells,
+                "remaining_ticks": RECON_BURST_DISPLAY_TICKS,
+                "owner": projectile.get("owner"),
+                "team": projectile.get("team"),
+            }
         )
         owner_team = projectile.get("team")
         for char in self.chars:
@@ -293,6 +311,14 @@ class AbilityLosMixin:
                 char.reveal_remaining = max(
                     char.reveal_remaining, REVEAL_DURATION_TICKS
                 )
+                tracker = getattr(self, "analytics_tracker", None)
+                if tracker is not None:
+                    owner = next(
+                        (c for c in self.chars
+                         if str(c.name) == str(projectile.get("owner"))),
+                        None,
+                    )
+                    tracker.record_contribution(owner, char, self.battle_tick, "recon")
 
     def _advance_flash_projectiles(self):
         remaining = []

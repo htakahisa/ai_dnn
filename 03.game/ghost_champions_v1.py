@@ -53,7 +53,13 @@ class GhostChampionsV1AttackerController(BaseController):
     def set_game(self, game):
         self.game = game
         # GC攻撃側はAbsolをスパイクキャリアー兼エントリー先頭に固定する。
-        if hasattr(game, "spike_holder_name"):
+        # set_game() is also called for the GC defender controller after a
+        # side swap. Only force Absol when the GC roster is actually attacking;
+        # otherwise this would overwrite the opponent's configured holder.
+        attacker_names = {
+            str(name) for name in getattr(game, "attacker_roster", [])
+        }
+        if "Absol" in attacker_names and hasattr(game, "spike_holder_name"):
             game.spike_holder_name = "Absol"
         self._ensure_absol_carrier()
         for c in (self.fallback,self.carry,self.escort,self.retrieve,self.guard):
@@ -101,14 +107,22 @@ class GhostChampionsV1AttackerController(BaseController):
         if carrier is None or len(alive_attackers) <= 1:
             return result
         escorts = [c for c in alive_attackers if c is not carrier]
-        existing_cover = any(
-            max(abs(c.pos[0] - carrier.pos[0]), abs(c.pos[1] - carrier.pos[1])) <= 5
-            for c in escorts
-        )
-        if existing_cover:
+        support_distance = 6
+        supporters = [
+            c for c in escorts
+            if max(
+                abs(c.pos[0] - carrier.pos[0]),
+                abs(c.pos[1] - carrier.pos[1]),
+            ) <= support_distance
+        ]
+        # Keep two attackers near the carrier whenever the roster allows it.
+        # This remains soft: the escort with the shortest route is nudged in
+        # first, and natural combat/ability actions still take precedence.
+        required_support = min(2, len(escorts))
+        if len(supporters) >= required_support:
             return result
         cover = min(
-            escorts,
+            [c for c in escorts if c not in supporters] or escorts,
             key=lambda c: max(abs(c.pos[0] - carrier.pos[0]), abs(c.pos[1] - carrier.pos[1])),
         )
         if cover is not char:

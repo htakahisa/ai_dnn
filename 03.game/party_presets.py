@@ -168,10 +168,20 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
 }
 
+# Backward-compatible team-name migration. Historical ratings, brackets, and
+# model metadata may still contain the former spelling.
+PRESET_NAME_ALIASES = {
+    "ブラッドムーン": "ブラッドムウン",
+}
+
+
+def canonical_preset_name(name):
+    return PRESET_NAME_ALIASES.get(str(name), str(name))
+
 
 def all_preset_names():
     return list(PARTY_PRESETS.keys())
 
 
 def get_preset(name):
-    return PARTY_PRESETS.get(name)
+    return PARTY_PRESETS.get(canonical_preset_name(name))

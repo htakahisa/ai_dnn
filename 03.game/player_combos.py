@@ -43,10 +43,10 @@ COMBOS = [
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
         "bonuses": {
             "hs_rate": 0.1,
-            "accuracy": 0.1,
-            "iq": 35,
+            "accuracy": 0.15,
+            "iq": 40,
             "dodge_rate": 0.1,
-            "mental": 8,
+            "mental": 9,
         },
         "renames": {},
     },
@@ -55,7 +55,6 @@ COMBOS = [
         "players": ("Demon1", "jawgemo", "Ethan", "Boostio", "C0M"),
         "bonuses": {
             "reaction": 15,
-            "accuracy": 0.25,
             "hs_rate": 0.15,
             "iq": 30,
             "mental": -3,
@@ -101,37 +100,37 @@ COMBOS = [
     {
         "name": "クイーンズギャンビット",
         "players": ("nAts", "Chronicle", "Lar0k"),
-        "bonuses": {"hs_rate": 0.15, "iq": 20, "mental": -2},
+        "bonuses": {"hs_rate": 0.4, "reaction": -50},
         "renames": {},
     },
     {
         "name": "クイーンズフラワー",
         "players": ("leaf", "Lar0k"),
-        "bonuses": {"accuracy": 0.15, "reaction": 15, "iq": 5, "mental": -2},
+        "bonuses": {"accuracy": 0.15, "reaction": 15, "mental": -5},
         "renames": {},
     },
     {
         "name": "フラワーギャンビット",
         "players": ("leaf", "Chronicle", "nAts"),
-        "bonuses": {"accuracy": 0.15, "iq": 20, "mental": -2},
+        "bonuses": {"accuracy": 0.4, "iq": -30},
         "renames": {},
     },
     {
         "name": "黒い破片飛び散る夜空",
         "players": ("Meteor", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.15, "reaction": 30},
+        "bonuses": {"hs_rate": 0.25, "reaction": 30, "accuracy": -0.2},
         "renames": {},
     },
     {
         "name": "赤い果実迫りゆく森林",
         "players": ("Zest", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.25, "reaction": 20},
+        "bonuses": {"hs_rate": 0.35, "reaction": 20, "accuracy": -0.2},
         "renames": {},
     },
     {
         "name": "白き珊瑚浮かれ揺られ海洋",
         "players": ("WoohyuN", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.35, "reaction": 10},
+        "bonuses": {"hs_rate": 0.45, "reaction": 10, "accuracy": -0.2},
         "renames": {},
     },
     {
@@ -152,25 +151,25 @@ COMBOS = [
     {
         "name": "クロネコのドラゴンテイル",
         "players": ("vo0kashu", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.3, "reaction": 35},
+        "bonuses": {"hs_rate": 0.2, "reaction": 35, "form_variance": -2},
         "renames": {},
     },
     {
         "name": "生意気なドラゴンテイル",
         "players": ("Canezerra", "Nanasaki"),
-        "bonuses": {"accuracy": 0.15, "hs_rate": 0.1, "reaction": 30},
+        "bonuses": {"accuracy": 0.2, "hs_rate": 0.15},
         "renames": {},
     },
     {
         "name": "北欧仕立てのドラゴンテイル",
         "players": ("Derke", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.1, "accuracy": 0.2, "iq": 10},
+        "bonuses": {"dodge_rate": 0.2, "accuracy": 0.05, "iq": 10, "form_variance": -2},
         "renames": {},
     },
     {
         "name": "朽ち果てたドラゴンテイル",
         "players": ("Ethan", "Nanasaki"),
-        "bonuses": {"dodge_rate": 0.15, "mental": 8},
+        "bonuses": {"dodge_rate": 0.25, "mental": 5, "form_variance": -2},
         "renames": {},
     },
     {
@@ -198,11 +197,11 @@ COMBOS = [
         "name": "モーツァルト～アイネクライネ～",
         "players": ("FNS", "crashies", "cNed", "soulcas", "trexx"),
         "player_bonuses": {
-            "FNS": {"reaction": 30},
-            "crashies": {"accuracy": 0.15, "reaction": 15},
-            "cNed": {"hs_rate": 0.15, "dodge_rate": 0.15},
-            "crashies": {"dodge_rate": 0.3},
-            "soulcas": {"accuracy": 0.3},
+            "FNS": {"reaction": 40},
+            "crashies": {"accuracy": 0.25, "reaction": 15},
+            "cNed": {"hs_rate": 0.25, "dodge_rate": 0.15},
+            "crashies": {"dodge_rate": 0.4},
+            "soulcas": {"accuracy": 0.4},
         },
         "renames": {},
     },
@@ -293,20 +292,20 @@ COMBOS = [
         "name": "花と剣",
         "players": ("Furina", "Lohen"),
         "player_bonuses": {
-            "Lohen": {"hs_rate": 0.2, "accuracy": 0.2, "dodge_rate": -0.1}
+            "Lohen": {"hs_rate": 0.2, "accuracy": 0.4, "dodge_rate": -0.1}
         },
         "renames": {},
     },
     {
         "name": "戦況は傾いている",
         "players": ("Furina", "Kachina"),
-        "player_bonuses": {"Kachina": {"reaction": 20, "hs_rate": 0.2, "iq": -10}},
+        "player_bonuses": {"Kachina": {"reaction": 20, "hs_rate": 0.6, "iq": -10}},
         "renames": {},
     },
     {
         "name": "意外な関係値",
         "players": ("Furina", "Jean"),
-        "player_bonuses": {"Furina": {"dodge_rate": 0.1}, "Jean": {"hs_rate": 0.2}},
+        "player_bonuses": {"Furina": {"dodge_rate": 0.2}, "Jean": {"hs_rate": 0.2}},
         "renames": {},
     },
     {
@@ -320,8 +319,8 @@ COMBOS = [
         "players": ("Lisa", "Lohen", "Furina"),
         "player_bonuses": {
             "Furina": {"hs_rate": 0.05},
-            "Lisa": {"dodge_rate": 0.25},
-            "Lohen": {"hs_rate": 0.25},
+            "Lisa": {"dodge_rate": 0.4},
+            "Lohen": {"hs_rate": 0.4},
         },
         "renames": {},
     },
@@ -335,14 +334,14 @@ COMBOS = [
         "name": "生殺与奪の水と炎",
         "players": ("Arlecchino", "Furina"),
         "player_bonuses": {
-            "Arlecchino": {"accuracy": 0.2, "hs_rate": 0.2, "dodge_rate": -0.1}
+            "Arlecchino": {"accuracy": 0.15, "hs_rate": 0.45, "dodge_rate": -0.1}
         },
         "renames": {},
     },
     {
         "name": "花と鯨",
         "players": ("Furina", "Tartaglia"),
-        "player_bonuses": {"Furina": {"dodge_rate": 0.2, "iq": 10}},
+        "player_bonuses": {"Furina": {"dodge_rate": 0.4, "iq": 10}},
         "renames": {},
     },
     {
@@ -482,7 +481,9 @@ COMBOS = [
     {
         "name": "All for Lar0k",
         "players": ("Lar0k", "lovers rock", "Loita", "Crewn", "Rosé"),
-        "player_bonuses": {"Lar0k": {"accuracy": 0.25, "hs_rate": 0.4, "reaction": 45}},
+        "player_bonuses": {
+            "Lar0k": {"accuracy": 0.45, "hs_rate": 0.45, "reaction": 45}
+        },
         "renames": {},
     },
     {

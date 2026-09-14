@@ -51,6 +51,7 @@ from game_core import (
 from combo_awakening import ComboAwakeningMixin
 from abilities_los import AbilityLosMixin
 from battle_logic import BattleLogicMixin
+from analytics.combat_tracker import CombatTracker
 from rendering_ui import RenderingUIMixin
 from defender_setup_phase import DefenderSetupPhase
 from map_data_defender_setup import validate_against_map
@@ -260,6 +261,7 @@ class VisualFPSBattle(
         self.last_overtime_swap_round = 0
         self.battle_tick = 0
         self.match_stats = {}
+        self.analytics_tracker = CombatTracker()
         self.map_offset_x = SIDE_PANEL_WIDTH
         self.map_pixel_width = self.width * self.cell_size
         self.map_pixel_height = self.height * self.cell_size
@@ -454,6 +456,20 @@ class VisualFPSBattle(
             pressure += (completed_rounds - 25) * 0.018
         return min(0.40, pressure)
 
+    def _map_score_pressure(self, side):
+        """Pressure from the current map score, independent of mentality."""
+        if side == "A":
+            own_score = int(self.attacker_wins)
+            opponent_score = int(self.defender_wins)
+        else:
+            own_score = int(self.defender_wins)
+            opponent_score = int(self.attacker_wins)
+
+        deficit = max(0, opponent_score - own_score)
+        # A small deficit is normal variance. From 3 rounds behind onward,
+        # pressure grows quickly enough for an 0-8/1-9 map to be felt.
+        return min(0.75, 0.12 * max(0, deficit - 2))
+
     def _mental_pressure_for_player(self, name, side):
         stats = get_character_combat_stats(name)
         form_variance = float(stats.get("form_variance", 0.0))
@@ -468,6 +484,7 @@ class VisualFPSBattle(
         situational = (
             self._series_pressure_for_side(side)
             + self._long_map_pressure()
+            + self._map_score_pressure(side)
         ) * vulnerability
         return max(-0.75, min(0.75, accumulated + situational))
 
@@ -530,13 +547,41 @@ class VisualFPSBattle(
     def init_round(self):
         self._swap_sides_if_needed()
         self.round_over = False
+        if self.analytics_tracker is not None:
+            self.analytics_tracker.begin_round()
 
         area_3 = list(zip(*np.where(self.grid == 3)))
         area_4 = list(zip(*np.where(self.grid == 4)))
 
         spike_holder_index = random.randint(0, len(area_3) - 1) if area_3 else -1
-        if self.attacker_roster and self.spike_holder_name in self.attacker_roster:
-            spike_holder_index = self.attacker_roster.index(self.spike_holder_name)
+        configured_name = None
+        if self.attacker_roster and area_3:
+            configured_holder = self.spike_holder_name
+            configured_name = (
+                str(configured_holder)
+                if configured_holder is not None
+                else None
+            )
+            roster_index = next(
+                (
+                    index
+                    for index, roster_name in enumerate(self.attacker_roster)
+                    if str(roster_name) == configured_name
+                ),
+                None,
+            )
+            if roster_index is not None and roster_index < len(area_3):
+                spike_holder_index = roster_index
+            elif configured_name is not None:
+                # A configured holder must never silently become random just
+                # because a TeamPlayerKey/string or side-swap representation
+                # differs. Keep the result deterministic until the mismatch
+                # is corrected by the caller.
+                spike_holder_index = 0
+                print(
+                    "[SPIKE][WARN] configured holder not found in attacker "
+                    f"roster: {configured_name!r}; using roster index 0"
+                )
 
         self.chars = []
         for i, pos in enumerate(area_3):
@@ -559,6 +604,23 @@ class VisualFPSBattle(
                     mental_pressure=self._mental_pressure_for_player(name, "A"),
                 )
             )
+
+        # Enforce the configured holder by player identity after characters
+        # are created. This is deliberately name-based so side swaps and
+        # TeamPlayerKey/string representations cannot redirect the spike to
+        # another roster slot.
+        if self.chars and self.attacker_roster and configured_name is not None:
+            attackers = [char for char in self.chars if char.team == "A"]
+            configured_char = next(
+                (
+                    char for char in attackers
+                    if str(char.name) == configured_name
+                ),
+                None,
+            )
+            if configured_char is not None:
+                for char in attackers:
+                    char.has_spike = char is configured_char
         if self.defender_roster is None:
             registered_names = get_all_character_names()
             attacker_names = set(self.attacker_roster or [])
@@ -599,6 +661,11 @@ class VisualFPSBattle(
         # IQを含むコンボ補正を先に適用し、その後でIGL倍率を計算する。
         self._apply_player_combos()
         self._apply_igl_iq_bonus()
+        if self.analytics_tracker is not None:
+            self.analytics_tracker.register_players(self.chars)
+        self._analytics_initial_defender_positions = [
+            tuple(c.pos) for c in self.chars if c.team == "D"
+        ]
         self.announcement_queue = []
         self.combo_announcement_index = 0
         self.combo_announcement_ticks_left = 0

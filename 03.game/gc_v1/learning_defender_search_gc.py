@@ -177,6 +177,27 @@ def _has_los(grid, p1, p2):
     return True
 
 
+def _active_smoke_cells(game):
+    """Return currently active smoke cells without assuming one smoke schema."""
+    cells = set()
+    for smoke in getattr(game, "smokes", ()) or ():
+        remaining = smoke.get("remaining_ticks", smoke.get("remaining", 1))
+        if int(remaining) <= 0:
+            continue
+        for cell in smoke.get("cells", ()):
+            try:
+                cells.add((int(cell[0]), int(cell[1])))
+            except (TypeError, IndexError, ValueError):
+                continue
+    return cells
+
+
+def _line_crosses_smoke(p1, p2, smoke_cells):
+    if not smoke_cells:
+        return False
+    return any(cell in smoke_cells for cell in _line_cells(p1, p2))
+
+
 def _bfs_distance_map(grid, goal):
     """指定ゴールから各セルへの最短距離マップ(壁越え不可)。
     train_defender_search.py の bfs_distance_map と同一ロジック。"""
@@ -383,7 +404,11 @@ class _TeamMemory:
             for e in enemies:
                 if not e.is_alive:
                     continue
-                if _has_los(grid, tuple(d.pos), tuple(e.pos)):
+                if (
+                    _has_los(grid, tuple(d.pos), tuple(e.pos))
+                    or getattr(e, "reveal_remaining", 0) > 0
+                    or getattr(e, "los_revealed", False)
+                ):
                     visible_enemies.append(e)
 
         unique_visible = {e.name: e for e in visible_enemies}
@@ -449,6 +474,8 @@ class LearningDefenderSearchGCController:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
         self.greedy = greedy
         self.verbose = verbose
+        # Runtime game/view reference used for active smoke information.
+        self.game = None
         self.legacy_model = False
         self.model = DefenderSearchDuelingDQN().to(DEVICE)
         try:
@@ -494,8 +521,14 @@ class LearningDefenderSearchGCController:
         )
 
     # -- ラウンド開始時のリセット -----------------------------------------
+        self._spike_guard_names = set()
+
+    def set_game(self, game):
+        self.game = game
+
     def reset_round(self):
         self.team_memory.reset()
+        self._spike_guard_names.clear()
         self._processed_this_tick.clear()
         self._assigned_positions.clear()
         self._assigned_dist_maps.clear()
@@ -576,6 +609,37 @@ class LearningDefenderSearchGCController:
             )
             self._sighting_dist_map_source = sighting_pos
 
+    def _refresh_spike_guard_assignments(self, chars):
+        """Assign the two nearest defenders to the dropped-spike angle."""
+        spike_pos = self.team_memory.spike_pos
+        if spike_pos is None or self.team_memory.spike_held:
+            self._spike_guard_names.clear()
+            return
+
+        alive = [
+            c for c in chars
+            if getattr(c, "team", None) == "D"
+            and bool(getattr(c, "is_alive", True))
+        ]
+        if not alive:
+            self._spike_guard_names.clear()
+            return
+
+        def distance(c):
+            if self.spike_dist_map is not None:
+                r, col = map(int, c.pos)
+                value = int(self.spike_dist_map[r, col])
+                if value >= 0:
+                    return value
+            return max(
+                abs(int(c.pos[0]) - int(spike_pos[0])),
+                abs(int(c.pos[1]) - int(spike_pos[1])),
+            )
+
+        self._spike_guard_names = {
+            c.name for c in sorted(alive, key=lambda c: (distance(c), c.name))[:2]
+        }
+
     def _ensure_defense_assignment(self, char, grid, chars):
         """5～9をGCの5人へ毎ラウンドランダムに1つずつ割り当てる。"""
         if self._assignment_done:
@@ -634,7 +698,13 @@ class LearningDefenderSearchGCController:
         obs[8] = 1.0 if _ability_charge(char) > 0 else 0.0
 
         visible_enemies = [
-            e for e in enemies if e.is_alive and _has_los(grid, char.pos, e.pos)
+            e for e in enemies
+            if e.is_alive
+            and (
+                _has_los(grid, char.pos, e.pos)
+                or getattr(e, "reveal_remaining", 0) > 0
+                or getattr(e, "los_revealed", False)
+            )
         ]
         obs[9] = 1.0 if visible_enemies else 0.0
 
@@ -803,6 +873,7 @@ class LearningDefenderSearchGCController:
         self._ensure_defense_assignment(char, grid, chars)
         self._maybe_advance_tick(char, grid, chars, game_state.get("spike_pos"))
         self._update_priority_dist_maps(grid)
+        self._refresh_spike_guard_assignments(chars)
 
         unit_has_spike_los = (
             self.team_memory.spike_pos is not None
@@ -826,14 +897,21 @@ class LearningDefenderSearchGCController:
             seen = [
                 enemy for enemy in chars
                 if enemy.is_alive and enemy.team != char.team
-                and _has_los(grid, observer.pos, enemy.pos)
+                and (
+                    _has_los(grid, observer.pos, enemy.pos)
+                    or getattr(enemy, "reveal_remaining", 0) > 0
+                    or getattr(enemy, "los_revealed", False)
+                )
             ]
             if len(seen) >= 2:
                 reinforce_targets.extend(tuple(enemy.pos) for enemy in seen)
         reinforce_target = None
-        if len(set(reinforce_targets)) >= 2:
+        # Count observations, not only distinct blurred cells.  IQ position
+        # noise can put two revealed attackers on the same perceived cell;
+        # that must not suppress the cross-site rotation signal.
+        if len(reinforce_targets) >= 2:
             reinforce_target = min(
-                set(reinforce_targets),
+                reinforce_targets,
                 key=lambda pos: max(abs(pos[0] - char.pos[0]), abs(pos[1] - char.pos[1])),
             )
         # 敵の位置が既知で、こちらの角度から射線が通る場合は、
@@ -861,6 +939,36 @@ class LearningDefenderSearchGCController:
                     int(seen.get("tick_ago", 999)) <= SEARCH_SIGHTING_FRESH_TICKS
                     and (dist <= 4 or _has_los(grid, char.pos, seen["pos"]))
                 )
+
+        # A defender should not walk into an active smoke just because the
+        # learned position policy selected a forward step.  If a known enemy
+        # is on the far side of the smoke, keep the current angle and wait for
+        # the enemy to emerge.  This is intentionally a soft tactical
+        # override: it only applies to a confirmed/observed threat and does
+        # not freeze an uninformed defender.
+        smoke_hold_target = None
+        smoke_cells = _active_smoke_cells(self.game)
+        if smoke_cells:
+            candidates = [
+                e for e in chars
+                if e.is_alive
+                and e.team != char.team
+                and (
+                    e in visible_enemies
+                    or getattr(e, "reveal_remaining", 0) > 0
+                    or getattr(e, "los_revealed", False)
+                )
+                and max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])) <= 14
+                and _line_crosses_smoke(char.pos, e.pos, smoke_cells)
+            ]
+            if candidates:
+                smoke_hold_target = min(
+                    candidates,
+                    key=lambda e: max(
+                        abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                    ),
+                )
+                hold_known_angle = True
         # Search v3: 接敵中も引く/横ずれ/合流を選べる。
         mask = self._action_mask(char, grid, chars, lock_movement=False)
 
@@ -918,7 +1026,9 @@ class LearningDefenderSearchGCController:
         # at an unrelated wall.  This also supplies a stable target for the
         # newly expanded policy while it is being retrained.
         tactical_facing = None
-        if visible_enemies:
+        if smoke_hold_target is not None:
+            tactical_facing = facing_towards(char.pos, smoke_hold_target.pos)
+        elif visible_enemies:
             nearest = min(
                 visible_enemies,
                 key=lambda e: max(
@@ -948,7 +1058,31 @@ class LearningDefenderSearchGCController:
         # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
         # 上書き後の行動で作られているため、推論側もこれに合わせないと
         # 学習内容とズレる。
-        if reinforce_target is not None:
+        if smoke_hold_target is not None:
+            move_offset = MOVES[0]
+        elif (
+            not visible_enemies
+            and self.team_memory.spike_pos is not None
+            and not self.team_memory.spike_held
+            and char.name in self._spike_guard_names
+            and self.spike_dist_map is not None
+        ):
+            # After the carrier dies, send two defenders to the dropped spike
+            # immediately.  They hold the pickup angle instead of continuing
+            # their original site assignment.
+            use_ability = False
+            move_offset = _bfs_best_direction(
+                self.spike_dist_map,
+                grid,
+                int(char.pos[0]),
+                int(char.pos[1]),
+            )
+        elif visible_enemies and getattr(char, "blind_remaining", 0) <= 0:
+            # Once a defender has a real LOS engagement, standing still is the
+            # default.  Moving here would mark the shooter as moved_this_tick
+            # and unnecessarily apply the moving accuracy/HS penalty.
+            move_offset = MOVES[0]
+        elif reinforce_target is not None:
             reinforce_map = _bfs_distance_map(grid, reinforce_target)
             move_offset = _bfs_best_direction(
                 reinforce_map, grid, int(char.pos[0]), int(char.pos[1])
@@ -960,6 +1094,9 @@ class LearningDefenderSearchGCController:
             if dist_map is not None:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])
                 move_offset = _bfs_best_direction(dist_map, grid, r0, c0)
+
+        if smoke_hold_target is not None:
+            move_offset = MOVES[0]
 
         if self.verbose:
             seen = self.team_memory.last_seen_enemy

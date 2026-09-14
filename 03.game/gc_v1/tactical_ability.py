@@ -1,6 +1,16 @@
 """共有する攻撃アビリティの戦術判定。"""
 
 
+try:
+    from .attacker_ability_patterns_gc import get_pattern_targets
+except ImportError:
+    try:
+        from attacker_ability_patterns_gc import get_pattern_targets
+    except ImportError:
+        def get_pattern_targets(_ability):
+            return ()
+
+
 def line_cells(start, end):
     r0, c0 = int(start[0]), int(start[1])
     r1, c1 = int(end[0]), int(end[1])
@@ -54,6 +64,35 @@ def smoke_target(source, threat, grid):
     return tuple(map(int, usable[max(0, (len(usable) - 1) // 2)]))
 
 
+def _custom_smoke_target(source, threat, grid):
+    """Choose a configured smoke point that is near the current threat line."""
+    if threat is None:
+        return None
+    candidates = [
+        tuple(map(int, pos))
+        for pos in get_pattern_targets("SMOKE")
+        if _walkable(grid, pos)
+    ]
+    if not candidates:
+        return None
+
+    threat_line = line_cells(source, threat)
+
+    def score(pos):
+        line_distance = min(
+            max(abs(pos[0] - cell[0]), abs(pos[1] - cell[1]))
+            for cell in threat_line
+        )
+        source_distance = max(
+            abs(pos[0] - source[0]), abs(pos[1] - source[1])
+        )
+        return line_distance, source_distance
+
+    target = min(candidates, key=score)
+    # Do not use a pattern from an unrelated part of the map.
+    return target if score(target)[0] <= 3 else None
+
+
 def choose_pre_entry_ability(char, chars, grid, smoke_cells=(), destination=None,
                              last_seen=None, max_range=8):
     """接敵前に使うべき能力と標的を返す。不要ならNone。"""
@@ -71,7 +110,9 @@ def choose_pre_entry_ability(char, chars, grid, smoke_cells=(), destination=None
 
     if ability == "SMOKE":
         # 敵位置がない状態で味方位置/サイトへ投げるのは、射線遮断にならないため避ける。
-        target = smoke_target(char.pos, threat_pos, grid) if threat_pos else None
+        target = _custom_smoke_target(char.pos, threat_pos, grid)
+        if target is None and threat_pos:
+            target = smoke_target(char.pos, threat_pos, grid)
         if target is not None and _walkable(grid, target):
             return ability, tuple(map(int, target))
     elif ability == "FLASH":
@@ -80,7 +121,11 @@ def choose_pre_entry_ability(char, chars, grid, smoke_cells=(), destination=None
             if dist <= max_range and _walkable(grid, threat_pos):
                 return ability, threat_pos
     elif ability == "RECON":
-        target = threat_pos or destination
-        if target is not None and _walkable(grid, target):
-            return ability, tuple(map(int, target))
+        # A carrier's position is passed as ``destination`` by the escort
+        # controller.  Using it as a blind fallback makes RECON fire at the
+        # round-start spawn/feet when no enemy has been found yet.  Recon is
+        # information-gathering, so require an actual threat/last-known
+        # location; the learned policy can still choose when to use it.
+        if threat_pos is not None and _walkable(grid, threat_pos):
+            return ability, tuple(map(int, threat_pos))
     return None

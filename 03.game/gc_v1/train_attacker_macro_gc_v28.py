@@ -283,6 +283,17 @@ PLANT_AFTER_FLANK_CUT_BONUS = 1.0
 PLANT_FAST_BONUS_MAX = 1.2              # 速くPlantできたほど追加
 PLANT_FAST_BONUS_MIN_TIME_RATIO = 0.35
 
+# Carrier safety/tempo shaping.  The macro policy must value a supported,
+# direct plant after an area is controlled, not only the eventual plant.
+CARRIER_SUPPORT_RADIUS = 3
+CARRIER_MIN_SUPPORTERS = 1
+CARRIER_SUPPORT_STEP_REWARD = 0.10
+CARRIER_UNSUPPORTED_STEP_PENALTY = -0.18
+CARRIER_CONTROLLED_SITE_PROGRESS_REWARD = 0.24
+CARRIER_CONTROLLED_SITE_RETREAT_PENALTY = -0.28
+CARRIER_DEATH_EXTRA_PENALTY = -2.0
+CONTROLLED_SITE_THRESHOLD = 0.45
+
 # Split成立判定:
 # main側とsupport側が別経路から同じサイトへ到達し、
 # 近い時間幅で双方がサイト/入口へ入ったことを条件にする。
@@ -1430,6 +1441,68 @@ class MacroEnv:
 
     def _living_attackers(self):
         return [a for a in self.attackers if a.is_alive]
+
+    def _carrier_support_count(self, radius=CARRIER_SUPPORT_RADIUS):
+        carrier = self._carrier()
+        if carrier is None:
+            return 0
+        return sum(
+            1
+            for attacker in self._living_attackers()
+            if attacker is not carrier
+            and max(
+                abs(attacker.pos[0] - carrier.pos[0]),
+                abs(attacker.pos[1] - carrier.pos[1]),
+            ) <= radius
+        )
+
+    def _carrier_site_distance(self, side):
+        carrier = self._carrier()
+        if carrier is None or side not in {SIDE_A, SIDE_B}:
+            return None
+        cells = _site_cells(side)
+        if not cells:
+            return None
+        return min(
+            abs(int(carrier.pos[0]) - int(cell[0]))
+            + abs(int(carrier.pos[1]) - int(cell[1]))
+            for cell in cells
+        )
+
+    def _carrier_safety_reward(self, before):
+        """Reward supported carrier movement and controlled-site tempo."""
+        reward = 0.0
+        carrier = self._carrier()
+        if carrier is None:
+            if bool(before.get("carrier_alive", False)):
+                reward += CARRIER_DEATH_EXTRA_PENALTY
+            return reward
+
+        support_count = self._carrier_support_count()
+        if support_count >= CARRIER_MIN_SUPPORTERS:
+            reward += CARRIER_SUPPORT_STEP_REWARD
+        else:
+            reward += CARRIER_UNSUPPORTED_STEP_PENALTY
+
+        side = self.target_site
+        if side not in {SIDE_A, SIDE_B}:
+            return reward
+
+        site_cov = self._area_coverage(_site_cells(side))
+        if site_cov < CONTROLLED_SITE_THRESHOLD:
+            return reward
+
+        previous = before.get("carrier_site_distance")
+        current = self._carrier_site_distance(side)
+        if previous is None or current is None:
+            return reward
+
+        progress = int(previous) - int(current)
+        if progress > 0:
+            reward += CARRIER_CONTROLLED_SITE_PROGRESS_REWARD * progress
+        elif progress < 0:
+            reward += CARRIER_CONTROLLED_SITE_RETREAT_PENALTY * abs(progress)
+        return reward
 
     def _split_names(self, main_count):
         carrier = self._carrier()
@@ -4300,6 +4373,9 @@ class MacroEnv:
             "split_sync": self.split_sync_score,
             "living_a": len(self._living_attackers()),
             "living_d": sum(d.is_alive for d in self.defenders),
+            "carrier_alive": self._carrier() is not None,
+            "carrier_site_distance": self._carrier_site_distance(self.target_site),
+            "carrier_support_count": self._carrier_support_count(),
         }
 
         reward = 0.0
@@ -4403,11 +4479,14 @@ class MacroEnv:
         self.macro_step += 1
         reward += self._reward_before_after(before)
         reward += self._both_site_info_reward()
+        reward += self._carrier_safety_reward(before)
 
         living_a_now = len(self._living_attackers())
         living_d_now = sum(d.is_alive for d in self.defenders)
         reward += 0.18 * max(0, before["living_d"] - living_d_now)
-        reward -= 0.14 * max(0, before["living_a"] - living_a_now)
+        # Player deaths are much more damaging than a small loss of tempo;
+        # make the macro learn safer regrouping and supported entries.
+        reward -= 0.60 * max(0, before["living_a"] - living_a_now)
 
         if self.done:
             if self.success:

@@ -4,6 +4,8 @@ import math
 import random
 import numpy as np
 
+from analytics.combat_tracker import CombatTracker
+
 from controllers import UserInputController
 from game_core import (
     TICK_TIME,
@@ -35,6 +37,51 @@ class BattleLogicMixin:
         if dr != 0:
             return "N" if dr < 0 else "S"
         return "W" if dc < 0 else "E"
+
+    def _analytics_tactic_snapshot(self):
+        def strategy(controller):
+            seen = set()
+            current = controller
+            while current is not None and id(current) not in seen:
+                seen.add(id(current))
+                value = getattr(current, "current_strategy", None)
+                if value:
+                    return str(value)
+                current = getattr(current, "inner_controller", None)
+            return ""
+
+        attack_strategy = strategy(getattr(self, "attacker_controller", None))
+        attack_upper = attack_strategy.upper()
+        if "RUSH" in attack_upper:
+            attack_type = "rush"
+        elif "SPLIT" in attack_upper:
+            attack_type = "split"
+        elif "FAKE" in attack_upper:
+            attack_type = "fake"
+        elif "ROTATE" in attack_upper:
+            attack_type = "rotate"
+        else:
+            attack_type = "default"
+
+        defenders = [
+            tuple(pos) for pos in getattr(
+                self, "_analytics_initial_defender_positions", []
+            )
+        ]
+        left = sum(pos[1] < self.width / 3 for pos in defenders)
+        mid = sum(self.width / 3 <= pos[1] <= self.width * 2 / 3 for pos in defenders)
+        right = len(defenders) - left - mid
+        return {
+            "attacker_strategy": attack_type,
+            "attacker_strategy_raw": attack_strategy,
+            "final_attack_site": (
+                "A" if (self.planted_pos or self.target_plant_pos)[1] < self.width / 2
+                else "B"
+            ) if (self.planted_pos or self.target_plant_pos) else None,
+            "defender_initial_setup": f"{left}-{mid}-{right}",
+            "defender_initial_setup_axis": "A-Mid-B",
+            "defender_strategy": "fast_retake" if self.is_planted and self.battle_tick < 20 else "retake",
+        }
 
     def _facing_angle_diff(self, shooter, target):
         """射手のfacingと、射手→標的方向との角度差(度)を返す。"""
@@ -559,6 +606,32 @@ class BattleLogicMixin:
         return {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0}
 
     def check_match_winner(self):
+        tracker = getattr(self, "analytics_tracker", None)
+        if tracker is not None:
+            previous_a = getattr(self, "_analytics_attacker_wins", 0)
+            previous_d = getattr(self, "_analytics_defender_wins", 0)
+            if self.attacker_wins != previous_a or self.defender_wins != previous_d:
+                winning_team = "A" if self.attacker_wins > previous_a else "D"
+                if self.is_defused:
+                    reason = "defused"
+                elif self.is_planted and self.detonate_timer <= 0:
+                    reason = "detonated"
+                elif self.is_planted and not any(c.is_alive for c in self.chars if c.team == "D"):
+                    reason = "defender_wipe"
+                elif not self.is_planted and not any(c.is_alive for c in self.chars if c.team == "A"):
+                    reason = "attacker_wipe"
+                elif not self.is_planted and self.round_timer <= 0:
+                    reason = "time_expired"
+                else:
+                    reason = "round_end"
+                tracker.record_round_result(
+                    winning_team,
+                    reason,
+                    self.is_planted,
+                    self._analytics_tactic_snapshot(),
+                )
+                self._analytics_attacker_wins = self.attacker_wins
+                self._analytics_defender_wins = self.defender_wins
         """通常戦は13本先取、12-12以降は2点差が付くまで継続する。"""
         # 12-12に到達した瞬間からオーバータイムへ移行する。
         if (
@@ -577,6 +650,9 @@ class BattleLogicMixin:
             )
 
         if match_finished:
+            tracker = getattr(self, "analytics_tracker", None)
+            if tracker is not None:
+                tracker.end_round(self.chars)
             if hasattr(self, "_recover_mental_at_map_end"):
                 self._recover_mental_at_map_end()
             attacker_won = self.attacker_wins > self.defender_wins
@@ -604,6 +680,9 @@ class BattleLogicMixin:
             self.match_over = True
             return
 
+        tracker = getattr(self, "analytics_tracker", None)
+        if tracker is not None:
+            tracker.end_round(self.chars)
         self.current_round += 1
         if not self.headless:
             banner_ticks = CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
@@ -692,6 +771,10 @@ class BattleLogicMixin:
         shooter.kills += 1
         shooter.round_kills += 1
 
+        tracker = getattr(self, "analytics_tracker", None)
+        if tracker is not None:
+            tracker.record_death(target, shooter, self.battle_tick)
+
         # タイガー「ハンター」：敵を倒した瞬間にHPを50回復。
         # 最大HPを超えて回復しない。
         if (
@@ -708,6 +791,8 @@ class BattleLogicMixin:
         self.match_stats.setdefault(shooter.name, {"kills": 0, "deaths": 0})[
             "kills"
         ] = shooter.kills
+        if tracker is not None:
+            tracker.record_kill(shooter, target, self.battle_tick)
         target.is_planting = False
         target.plant_timer = 0
         if self.active_defuser_name == target.name:
@@ -896,6 +981,13 @@ class BattleLogicMixin:
             }
             executed_shots.append(shot)
 
+            if damage > 0:
+                tracker = getattr(self, "analytics_tracker", None)
+                if tracker is not None:
+                    tracker.record_contribution(
+                        shooter, target, self.battle_tick, "damage"
+                    )
+
             # 命中・被弾を問わず、撃たれたら次のTickだけ相手の方向を強制的に向く。
             target.forced_facing_next_tick = self._facing_towards(
                 target.pos, shooter.pos
@@ -971,6 +1063,9 @@ class BattleLogicMixin:
         self.last_engagements = engagements
         self.last_shot = None
         self._resolve_all_shots(engagements, current_los_revealed_names)
+        tracker = getattr(self, "analytics_tracker", None)
+        if tracker is not None:
+            tracker.tick(engagements, self.chars, self.battle_tick)
 
         # 射撃判定後に、現在の射線状況を次のTick用リビール状態として反映する。
         for char in self.chars:

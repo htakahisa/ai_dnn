@@ -300,8 +300,19 @@ class LearningDefenderSetupGCRuntime:
             )
 
         ck_opponents = checkpoint.get("opponent_names")
-        if ck_opponents is not None and list(ck_opponents) != list(OPPONENT_NAMES):
-            raise RuntimeError("GC Setup opponent preset list changed")
+        if ck_opponents is not None:
+            # A preset can be renamed without changing the one-hot layout.
+            # The model only requires the same number and ordering of slots;
+            # disabling the whole planner for a label-only change makes every
+            # GC defender stand still during Setup and silently falls back to
+            # the current position.
+            if len(ck_opponents) != len(OPPONENT_NAMES):
+                raise RuntimeError("GC Setup opponent preset dimension changed")
+            if list(ck_opponents) != list(OPPONENT_NAMES) and self.verbose:
+                print(
+                    "[GC D-SETUP][WARN] opponent preset names changed; "
+                    "using the compatible one-hot slot layout"
+                )
         ck_variations = checkpoint.get("setup_variations")
         if ck_variations is not None and list(ck_variations) != list(SETUP_VARIATIONS):
             raise RuntimeError("GC Setup variation list changed")

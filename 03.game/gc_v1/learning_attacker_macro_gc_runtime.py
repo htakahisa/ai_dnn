@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from collections import deque
+import heapq
 import os
 
 import numpy as np
@@ -87,6 +88,18 @@ PLANT_COMMIT_TIME_MARGIN = 2
 # A wait is allowed to continue while a defender is definitely visible/revealed,
 # but an unconfirmed hold is converted into progress after this many ticks.
 ATTACKER_UNCONFIRMED_WAIT_MAX_TICKS = 10
+# When a site is already controlled, late-round macro decisions must yield to
+# the plant route.  The margin covers the plant animation and one bad move.
+EMERGENCY_PLANT_TIME_TICKS = 24
+EMERGENCY_PLANT_COVERAGE = 0.45
+# The battle loop decrements the round clock after actions are processed.  A
+# one-tick theoretical margin is therefore not sufficient when the carrier
+# arrives exactly at the deadline; reserve two ticks for arrival/plant start.
+PLANT_DEADLINE_SAFETY_TICKS = 2
+# Non-rush defaults to a deliberate team rhythm: one movement opportunity per
+# two battle ticks for players already within the carrier's support distance.
+NON_RUSH_MOVE_INTERVAL = 2
+NON_RUSH_SUPPORT_DISTANCE = 3
 
 
 def _first_existing(paths):
@@ -176,6 +189,89 @@ def _bfs_next_step(grid, start, goal, occupied):
         step = parent[step]
     if parent[step] is None:
         return start
+    return step
+
+
+def _bfs_distance(grid, start, goal):
+    """Shortest wall-only distance in movement ticks."""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal:
+        return 0
+
+    h, w = grid.shape
+    q = deque([(start, 0)])
+    seen = {start}
+    while q:
+        (r, c), distance = q.popleft()
+        for dr, dc in CARDINAL:
+            nxt = (r + dr, c + dc)
+            if nxt in seen or not (0 <= nxt[0] < h and 0 <= nxt[1] < w):
+                continue
+            if int(grid[nxt[0], nxt[1]]) == 1:
+                continue
+            if nxt == goal:
+                return distance + 1
+            seen.add(nxt)
+            q.append((nxt, distance + 1))
+    return None
+
+
+def _risk_aware_next_step(grid, start, goal, occupied, defenders):
+    """Shortest practical step with a strong penalty for known enemy LOS."""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal:
+        return start
+
+    h, w = grid.shape
+    blocked = set(occupied)
+    blocked.discard(start)
+    blocked.discard(goal)
+
+    def cell_cost(pos):
+        risk = 0.0
+        for defender in defenders:
+            if not bool(getattr(defender, "is_alive", True)):
+                continue
+            dp = tuple(map(int, defender.pos))
+            dist = max(abs(dp[0] - pos[0]), abs(dp[1] - pos[1]))
+            revealed = bool(
+                getattr(defender, "revealed", False)
+                or getattr(defender, "is_revealed", False)
+                or getattr(defender, "reveal_timer", 0)
+                or getattr(defender, "revealed_ticks", 0)
+            )
+            if revealed or (dist <= 10 and _has_los(grid, dp, pos)):
+                risk += 18.0 if dist <= 4 else 8.0
+        return 1.0 + risk
+
+    dist = {start: 0.0}
+    parent = {start: None}
+    queue = [(0.0, start)]
+    while queue:
+        cost, cur = heapq.heappop(queue)
+        if cost != dist.get(cur):
+            continue
+        if cur == goal:
+            break
+        for dr, dc in CARDINAL:
+            nxt = (cur[0] + dr, cur[1] + dc)
+            if not (0 <= nxt[0] < h and 0 <= nxt[1] < w):
+                continue
+            if int(grid[nxt[0], nxt[1]]) == 1 or nxt in blocked:
+                continue
+            new_cost = cost + cell_cost(nxt)
+            if new_cost < dist.get(nxt, float("inf")):
+                dist[nxt] = new_cost
+                parent[nxt] = cur
+                heapq.heappush(queue, (new_cost, nxt))
+
+    if goal not in parent:
+        return _bfs_next_step(grid, start, goal, occupied)
+    step = goal
+    while parent[step] is not None and parent[step] != start:
+        step = parent[step]
     return step
 
 
@@ -360,6 +456,17 @@ class LearningAttackerMacroGCController:
                 return True
         return False
 
+    def _carrier_supporters(self, holder, game_state, max_distance=3):
+        return [
+            attacker for attacker in self._real_attackers(game_state)
+            if attacker is not holder
+            and bool(getattr(attacker, "is_alive", True))
+            and max(
+                abs(int(attacker.pos[0]) - int(holder.pos[0])),
+                abs(int(attacker.pos[1]) - int(holder.pos[1])),
+            ) <= max_distance
+        ]
+
     def _fallback_progress_target(self, char, holder, game_state):
         """Choose a concrete attack-progress target after an unconfirmed hold."""
         if char is holder or getattr(char, "name", None) == getattr(holder, "name", None):
@@ -383,6 +490,138 @@ class LearningAttackerMacroGCController:
             )
         return tuple(map(int, char.pos))
 
+    def _carrier_fast_route(self, char, holder, game_state):
+        """Directly advance a carrier after a safely secured site."""
+        if char is not holder or self.game is None:
+            return None
+
+        target = game_state.get("target_plant_pos")
+        if target is None:
+            target = getattr(self.game, "target_plant_pos", None)
+        if target is None:
+            return None
+        target = tuple(map(int, target))
+        side = side_of_pos(target)
+        if side not in {SIDE_A, SIDE_B}:
+            return None
+
+        grid = np.asarray(game_state["grid"])
+        attackers = [
+            a for a in self._real_attackers(game_state)
+            if bool(getattr(a, "is_alive", True))
+        ]
+        defenders = [
+            d for d in self._real_defenders(game_state)
+            if bool(getattr(d, "is_alive", True))
+        ]
+        if not attackers or not defenders:
+            return None
+
+        def nearest_plant(site_side):
+            cells = [
+                tuple(map(int, p))
+                for p in zip(*np.where(grid == 2))
+                if side_of_pos(tuple(map(int, p))) == site_side
+            ]
+            if not cells:
+                return None
+            return min(
+                cells,
+                key=lambda p: abs(p[0] - int(holder.pos[0]))
+                + abs(p[1] - int(holder.pos[1])),
+            )
+
+        def site_has_known_threat(site_side):
+            cells = _site_cells(site_side)
+            for defender in defenders:
+                dp = tuple(map(int, defender.pos))
+                near = any(
+                    max(abs(dp[0] - cell[0]), abs(dp[1] - cell[1])) <= 7
+                    for cell in cells
+                )
+                revealed = bool(
+                    getattr(defender, "revealed", False)
+                    or getattr(defender, "is_revealed", False)
+                    or getattr(defender, "reveal_timer", 0)
+                    or getattr(defender, "revealed_ticks", 0)
+                )
+                visible = revealed or any(
+                    _has_los(grid, attacker.pos, defender.pos)
+                    for attacker in attackers
+                )
+                if near and visible:
+                    return True
+            return False
+
+        # If the macro selected a remote site while the nearer site is known
+        # clear, prefer the nearer site before committing the carrier.
+        alternate = SIDE_B if side == SIDE_A else SIDE_A
+        current_goal = nearest_plant(side) or target
+        alternate_goal = nearest_plant(alternate)
+        current_dist = abs(current_goal[0] - int(holder.pos[0])) + abs(
+            current_goal[1] - int(holder.pos[1])
+        )
+        if alternate_goal is not None:
+            alternate_dist = abs(alternate_goal[0] - int(holder.pos[0])) + abs(
+                alternate_goal[1] - int(holder.pos[1])
+            )
+            if (
+                alternate_dist < current_dist
+                and not site_has_known_threat(alternate)
+                and (
+                    site_has_known_threat(side)
+                    or alternate_dist <= current_dist * 0.80
+                )
+            ):
+                target = alternate_goal
+                side = alternate
+
+        site_cells = _site_cells(side)
+        if (
+            self._runtime_area_coverage(site_cells) < 0.20
+            and not site_has_known_threat(side)
+        ):
+            # A completely unoccupied site is still acceptable when the
+            # carrier has already reached its immediate approach; otherwise
+            # leave strategic entry timing to the learned macro.
+            if max(
+                abs(int(holder.pos[0]) - int(target[0])),
+                abs(int(holder.pos[1]) - int(target[1])),
+            ) > 10:
+                return None
+
+        for defender in defenders:
+            dp = tuple(map(int, defender.pos))
+            near_site = any(
+                max(abs(dp[0] - cell[0]), abs(dp[1] - cell[1])) <= 5
+                for cell in site_cells
+            )
+            revealed = bool(
+                getattr(defender, "revealed", False)
+                or getattr(defender, "is_revealed", False)
+                or getattr(defender, "reveal_timer", 0)
+                or getattr(defender, "revealed_ticks", 0)
+            )
+            visible = revealed or any(
+                _has_los(grid, attacker.pos, defender.pos)
+                for attacker in attackers
+            )
+            if near_site and visible:
+                return None
+
+        occupied = {
+            tuple(map(int, c.pos))
+            for c in game_state.get("chars", [])
+            if c is not char and bool(getattr(c, "is_alive", True))
+        }
+        return _risk_aware_next_step(
+            grid,
+            tuple(map(int, char.pos)),
+            target,
+            occupied,
+            defenders,
+        )
+
     def _plant_commit_result(self, char, holder, game_state):
         """Return forced holder action while committed, otherwise None."""
         if char is not holder and getattr(char, "name", None) != getattr(holder, "name", None):
@@ -393,7 +632,12 @@ class LearningAttackerMacroGCController:
             return list(holder.pos), "PLANT"
 
         remaining = int(game_state.get("round_timer", getattr(self.game, "round_timer", 999999)))
-        hard_plant = remaining <= int(PLANT_REQUIRED_TICKS + PLANT_COMMIT_TIME_MARGIN)
+        hard_plant = remaining <= int(
+            max(
+                PLANT_REQUIRED_TICKS + PLANT_COMMIT_TIME_MARGIN,
+                EMERGENCY_PLANT_TIME_TICKS,
+            )
+        )
         age = max(0, self._tick_id() - int(self._plant_commit_start_tick or self._tick_id()))
         danger = self._carrier_in_immediate_danger(holder, game_state)
 
@@ -405,6 +649,207 @@ class LearningAttackerMacroGCController:
         # Staying still lets normal battle logic shoot while preserving the
         # reached plant cell.  It cannot wander out of the site.
         return list(holder.pos), "MOVE"
+
+    def _emergency_plant_result(self, char, holder, game_state):
+        """Bypass stale Macro holds and run the carrier to the plant cell."""
+        if char is not holder:
+            return None
+
+        remaining = int(
+            game_state.get(
+                "round_timer",
+                getattr(self.game, "round_timer", ROUND_DURATION_TICKS),
+            )
+        )
+        target = game_state.get("target_plant_pos")
+        if target is None:
+            target = getattr(self.game, "target_plant_pos", None)
+        if target is None:
+            return None
+        target = tuple(map(int, target))
+        side = side_of_pos(target)
+        if side not in {SIDE_A, SIDE_B}:
+            return None
+
+        grid = np.asarray(game_state["grid"])
+        current = tuple(map(int, char.pos))
+
+        # Select legal plant cells from the controlled site.  The configured
+        # target is preferred while it still fits; if it no longer fits, use
+        # the nearest legal plant cell instead of following a stale macro
+        # destination.
+        plant_positions = [
+            (int(r), int(c))
+            for r, c in zip(*np.where(grid == 2))
+            if side_of_pos((int(r), int(c))) == side
+        ]
+        target_distance = _bfs_distance(grid, current, target)
+        deadline_missed = (
+            target_distance is None
+            or target_distance
+            + int(PLANT_REQUIRED_TICKS)
+            + PLANT_DEADLINE_SAFETY_TICKS
+            >= remaining
+        )
+
+        # Only trigger the normal late-round override once the selected site
+        # is actually controlled.  If the route is mathematically no longer
+        # viable, bypass this signal and rush the nearest legal plant cell.
+        site_controlled = (
+            self._runtime_area_coverage(_site_cells(side))
+            >= EMERGENCY_PLANT_COVERAGE
+        )
+        if not site_controlled and not deadline_missed:
+            return None
+
+        if deadline_missed:
+            reachable = [
+                (distance, position)
+                for position in plant_positions
+                if (distance := _bfs_distance(grid, current, position)) is not None
+            ]
+            if reachable:
+                _, target = min(reachable, key=lambda item: (item[0], item[1]))
+            # If no legal cell is reachable, retain the configured target and
+            # still take the shortest available step toward it.
+
+        if remaining > EMERGENCY_PLANT_TIME_TICKS and not deadline_missed:
+            return None
+
+        if current == target:
+            return list(current), "PLANT"
+
+        occupied = {
+            tuple(map(int, other.pos))
+            for other in game_state.get("chars", [])
+            if other is not char and bool(getattr(other, "is_alive", True))
+        }
+        next_pos = _bfs_next_step(grid, current, target, occupied)
+        return list(map(int, next_pos)), "MOVE"
+
+    def _direct_carrier_plant_result(self, char, holder, game_state):
+        """Hard final guard: a ready carrier may not be routed away from site."""
+        if char is not holder:
+            return None
+
+        target = game_state.get("target_plant_pos")
+        if target is None:
+            target = getattr(self.game, "target_plant_pos", None)
+        if target is None:
+            return None
+        target = tuple(map(int, target))
+        side = side_of_pos(target)
+        if side not in {SIDE_A, SIDE_B}:
+            return None
+
+        grid = np.asarray(game_state["grid"])
+        current = tuple(map(int, char.pos))
+        target_distance = _bfs_distance(grid, current, target)
+
+        # The macro may have written a stale/opposite-site target before this
+        # guard runs.  If any legal plant cell is close, recover that local
+        # objective instead of trusting the stale target.
+        if target_distance is None or target_distance > 12:
+            nearby_plants = []
+            for r, c in zip(*np.where(grid == 2)):
+                plant = (int(r), int(c))
+                distance = _bfs_distance(grid, current, plant)
+                if distance is not None and distance <= 12:
+                    nearby_plants.append((distance, plant))
+            if nearby_plants:
+                _, target = min(nearby_plants, key=lambda item: (item[0], item[1]))
+                side = side_of_pos(target)
+                target_distance = _bfs_distance(grid, current, target)
+                if self.game is not None:
+                    self.game.target_plant_pos = tuple(target)
+
+        # This is intentionally a low bar.  Once attackers have entered the
+        # selected site area, a carrier going to the opposite lane is worse
+        # than taking the direct plant attempt.  Also activate it near the
+        # site even if the coverage estimator is temporarily stale.
+        site_cells = _site_cells(side)
+        site_coverage = self._runtime_area_coverage(site_cells)
+        near_site = target_distance is not None and target_distance <= 12
+        if site_coverage < 0.20 and not near_site:
+            return None
+
+        if target_distance is None:
+            return None
+        if current == target:
+            return list(current), "PLANT"
+
+        occupied = {
+            tuple(map(int, other.pos))
+            for other in game_state.get("chars", [])
+            if other is not char and bool(getattr(other, "is_alive", True))
+        }
+        next_pos = _bfs_next_step(grid, current, target, occupied)
+        return list(map(int, next_pos)), "MOVE"
+
+    def _dropped_spike_result(self, char, game_state):
+        """Force the nearest attacker to retrieve a dropped spike in time."""
+        spike_pos = game_state.get("spike_pos")
+        target = game_state.get("target_plant_pos")
+        if spike_pos is None or target is None:
+            return None
+
+        attackers = [
+            c for c in game_state.get("chars", [])
+            if getattr(c, "team", None) == "A"
+            and bool(getattr(c, "is_alive", True))
+            and not bool(getattr(c, "has_spike", False))
+        ]
+        if not attackers:
+            return None
+
+        grid = np.asarray(game_state["grid"])
+        spike_pos = tuple(map(int, spike_pos))
+        target = tuple(map(int, target))
+        spike_to_plant = _bfs_distance(grid, spike_pos, target)
+        if spike_to_plant is None:
+            return None
+
+        routes = []
+        for attacker in attackers:
+            distance = _bfs_distance(grid, tuple(map(int, attacker.pos)), spike_pos)
+            if distance is not None:
+                routes.append((distance, attacker.name, attacker))
+        if not routes:
+            return None
+
+        retrieve_distance, _, retriever = min(routes, key=lambda item: (item[0], item[1]))
+        remaining = int(
+            game_state.get(
+                "round_timer",
+                getattr(self.game, "round_timer", ROUND_DURATION_TICKS),
+            )
+        )
+        required = (
+            retrieve_distance
+            + spike_to_plant
+            + int(PLANT_REQUIRED_TICKS)
+            + PLANT_DEADLINE_SAFETY_TICKS
+        )
+
+        # Do not leave retrieval to the learned Retrieve policy.  Even with
+        # ample time, it may send several players toward unrelated objectives
+        # and start the pickup too late.  The nearest retriever is therefore
+        # forced onto the complete pickup->plant route immediately; the
+        # computed deadline is kept for diagnostics and future telemetry.
+        if char is not retriever and getattr(char, "name", None) != getattr(retriever, "name", None):
+            return None
+
+        current = tuple(map(int, char.pos))
+        if current == spike_pos:
+            return list(current), "MOVE"
+
+        occupied = {
+            tuple(map(int, other.pos))
+            for other in game_state.get("chars", [])
+            if other is not char and bool(getattr(other, "is_alive", True))
+        }
+        next_pos = _bfs_next_step(grid, current, spike_pos, occupied)
+        return list(map(int, next_pos)), "MOVE"
 
     # ------------------------------------------------------------------
     # Real-state synchronization
@@ -711,6 +1156,32 @@ class LearningAttackerMacroGCController:
             self.game.target_plant_pos = tuple(self._plant_commit_pos)
             return
 
+        # Never retarget away from a site that the carrier is already close
+        # enough to reach.  The old order was: Macro selects ROTATE -> this
+        # method rewrites target_plant_pos -> the carrier no longer knows that
+        # the original site was only a few steps away.  That caused the exact
+        # "seven cells from an open site, then runs to the opposite site"
+        # failure.  A 12-cell lock gives the carrier time to plant while still
+        # allowing rotations earlier in the round.
+        current_target = getattr(self.game, "target_plant_pos", None)
+        carrier = next(
+            (
+                c for c in getattr(self.game, "chars", [])
+                if getattr(c, "team", None) == "A"
+                and bool(getattr(c, "is_alive", True))
+                and bool(getattr(c, "has_spike", False))
+            ),
+            None,
+        )
+        if carrier is not None and current_target is not None:
+            current_distance = _bfs_distance(
+                np.asarray(self.game.grid),
+                tuple(map(int, carrier.pos)),
+                tuple(map(int, current_target)),
+            )
+            if current_distance is not None and current_distance <= 12:
+                return
+
         side = self._strategy_target_side(strategy)
         if side is None:
             side = getattr(self.env, "target_site", None)
@@ -726,15 +1197,6 @@ class LearningAttackerMacroGCController:
         if not plant_cells:
             return
 
-        carrier = next(
-            (
-                c for c in getattr(self.game, "chars", [])
-                if getattr(c, "team", None) == "A"
-                and bool(getattr(c, "is_alive", True))
-                and bool(getattr(c, "has_spike", False))
-            ),
-            None,
-        )
         origin = tuple(carrier.pos) if carrier is not None else plant_cells[0]
         chosen = min(
             plant_cells,
@@ -781,6 +1243,9 @@ class LearningAttackerMacroGCController:
         # Dropped spike: Retrieve controller must own the phase.
         if holder is None:
             self._clear_plant_commit()
+            dropped_spike = self._dropped_spike_result(char, game_state)
+            if dropped_spike is not None:
+                return dropped_spike
             return base_result
 
         # Start commitment the moment the living carrier actually reaches any
@@ -793,10 +1258,121 @@ class LearningAttackerMacroGCController:
             if forced is not None:
                 return forced
 
+        # Final anti-throw guard.  Once the selected site has a real attacker
+        # presence, the carrier is never allowed to follow an opposite-site
+        # enemy or a stale Macro waypoint instead of planting.
+        direct_plant = self._direct_carrier_plant_result(char, holder, game_state)
+        if direct_plant is not None:
+            return direct_plant
+
+        emergency = self._emergency_plant_result(char, holder, game_state)
+        if emergency is not None:
+            return emergency
+
         if self._is_special_phase_result(base_result):
             return base_result
 
         self._sync_tick_once(game_state)
+
+        # Hard safety fallback while the retrained escort policy is still
+        # being produced: the carrier does not continue alone, and only the
+        # nearest living escort is asked to close the gap.  This prevents all
+        # four escorts from independently choosing other macro targets.
+        support = self._carrier_supporters(holder, game_state)
+        escorts = [
+            attacker for attacker in self._real_attackers(game_state)
+            if attacker is not holder and bool(getattr(attacker, "is_alive", True))
+        ]
+        if escorts and not support:
+            nearest_escort = min(
+                escorts,
+                key=lambda attacker: max(
+                    abs(int(attacker.pos[0]) - int(holder.pos[0])),
+                    abs(int(attacker.pos[1]) - int(holder.pos[1])),
+                ),
+            )
+            same_holder = (
+                char is holder
+                or getattr(char, "name", None) == getattr(holder, "name", None)
+            )
+            same_nearest = (
+                char is nearest_escort
+                or getattr(char, "name", None) == getattr(nearest_escort, "name", None)
+            )
+            if same_holder:
+                return list(map(int, char.pos)), "MOVE"
+            if same_nearest:
+                occupied = {
+                    tuple(map(int, c.pos))
+                    for c in game_state.get("chars", [])
+                    if c is not char and bool(getattr(c, "is_alive", True))
+                }
+                return list(
+                    _bfs_next_step(
+                        np.asarray(game_state["grid"]),
+                        tuple(map(int, char.pos)),
+                        tuple(map(int, holder.pos)),
+                        occupied,
+                    )
+                ), "MOVE"
+
+        # Do not let one attacker take the first exposed duel while the rest
+        # of the team is still hidden.  Under confirmed enemy information,
+        # the carrier waits for the normal two-player support shape unless an
+        # immediate threat requires a combat reaction.
+        if self._attacker_has_confirmed_threat(game_state):
+            support = self._carrier_supporters(holder, game_state)
+            living_escorts = max(0, len(self._real_attackers(game_state)) - 1)
+            required_support = min(2, living_escorts)
+            if (
+                char is holder
+                and len(support) < required_support
+                and not self._carrier_in_immediate_danger(holder, game_state)
+            ):
+                return list(map(int, char.pos)), "MOVE"
+            if char is not holder and len(support) < required_support:
+                carrier_dist = max(
+                    abs(int(char.pos[0]) - int(holder.pos[0])),
+                    abs(int(char.pos[1]) - int(holder.pos[1])),
+                )
+                if carrier_dist > NON_RUSH_SUPPORT_DISTANCE:
+                    occupied = {
+                        tuple(map(int, c.pos))
+                        for c in game_state.get("chars", [])
+                        if c is not char and bool(getattr(c, "is_alive", True))
+                    }
+                    return list(
+                        _bfs_next_step(
+                            np.asarray(game_state["grid"]),
+                            tuple(map(int, char.pos)),
+                            tuple(map(int, holder.pos)),
+                            occupied,
+                        )
+                    ), "MOVE"
+
+        # Once the chosen site has meaningful attacker coverage and no known
+        # defender is holding it, the carrier should take the shortest safe
+        # route instead of following a stale split/rotate waypoint.
+        fast_step = self._carrier_fast_route(char, holder, game_state)
+        if fast_step is not None:
+            return list(fast_step), "MOVE"
+
+        # Non-rush executions should arrive as a group.  Let players that are
+        # already close to the carrier move every other tick; players that
+        # have fallen behind continue moving so this does not create a halt.
+        strategy = str(self.env.current_strategy or "")
+        is_rush = strategy.endswith("_RUSH")
+        if not is_rush and char is not holder:
+            carrier_dist = max(
+                abs(int(char.pos[0]) - int(holder.pos[0])),
+                abs(int(char.pos[1]) - int(holder.pos[1])),
+            )
+            if (
+                carrier_dist <= NON_RUSH_SUPPORT_DISTANCE
+                and self._tick_id() % NON_RUSH_MOVE_INTERVAL == 1
+                and not self._attacker_has_confirmed_threat(game_state)
+            ):
+                return list(map(int, char.pos)), "MOVE"
 
         target = self.env.targets.get(char.name)
         if target is None:

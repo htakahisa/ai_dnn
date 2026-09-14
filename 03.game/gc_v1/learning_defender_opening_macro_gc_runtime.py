@@ -33,6 +33,8 @@ from learning_defender_opening_macro_gc import (
     EXEC_WAIT,
     EXECUTE,
     EXEC_CANCEL,
+    _visible_enemies,
+    _team_visible_enemies,
     LearningDefenderOpeningMacroGCController as _BaseOpeningMacro,
 )
 
@@ -248,6 +250,48 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
             self._runtime_delay[ability] = int(delay)
         return self._runtime_delay[ability]
 
+    def _smoke_arrival_ready(self, game_state):
+        """Do not spend the defensive smoke while the attack is still far away.
+
+        The learned head still decides whether a smoke pattern is selected and
+        the execution head still decides WAIT/EXECUTE/CANCEL.  This extra
+        observation gate only prevents an EXECUTE from occurring before there
+        is a credible arrival signal, which is much safer than burning the
+        smoke at round start.
+        """
+        plan = self.plans.get("SMOKE")
+        target = getattr(plan, "target", None) if plan is not None else None
+        if target is None:
+            return self.tick >= 10
+
+        target = (int(target[0]), int(target[1]))
+        chars = game_state.get("chars", [])
+        attackers = [
+            c for c in chars
+            if getattr(c, "team", None) == "A"
+            and getattr(c, "is_alive", True)
+        ]
+
+        # A nearby attacker at the smoke target is the strongest timing cue.
+        if any(
+            max(abs(int(c.pos[0]) - target[0]), abs(int(c.pos[1]) - target[1])) <= 8
+            for c in attackers
+        ):
+            return True
+
+        # Seeing an attacker is useful only when that attacker is actually
+        # approaching this smoke target; a long-range spawn sighting is still
+        # too early for an opening smoke.
+        if any(
+            max(abs(int(c.pos[0]) - target[0]), abs(int(c.pos[1]) - target[1])) <= 12
+            for c in _team_visible_enemies("D", game_state)
+        ):
+            return True
+
+        # Keep a late-round safety valve so a poor/blurred perception result
+        # cannot leave a selected smoke unused forever.
+        return self.tick >= 20
+
     def _select_from_q(self, q):
         q = np.asarray(q, dtype=np.float32)
         if self.runtime_greedy:
@@ -326,6 +370,8 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
 
         if now < ready_tick + delay:
             return EXEC_WAIT
+        if ability == "SMOKE" and not self._smoke_arrival_ready(game_state):
+            return EXEC_WAIT
         return EXECUTE
 
 
@@ -349,11 +395,21 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
                 break
 
         try:
-            return super().coordinate(
+            result = super().coordinate(
                 char,
                 game_state,
                 base_result,
             )
+            # Opening abilities may still be executed, but do not let the
+            # macro move a defender during a real, non-blinded gunfight.
+            if (
+                _visible_enemies(char, game_state)
+                and getattr(char, "blind_remaining", 0) <= 0
+            ):
+                if isinstance(result, tuple) and len(result) >= 2:
+                    return (list(char.pos), result[1])
+                return list(char.pos)
+            return result
         finally:
             self._runtime_current_ability = None
 

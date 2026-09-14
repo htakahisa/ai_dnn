@@ -477,6 +477,16 @@ class Character:
             biased_condition = (
                 raw_condition - self.mental_pressure * self.max_condition_delta
             )
+            # Under a severe deficit, low/normal mentality may be softened by
+            # variance but must not randomly become excellent. Mentality above
+            # 10 keeps the inverted-pressure behavior and is exempt.
+            if self.mental <= 10.0 and self.mental_pressure >= 0.45:
+                pressure_ratio = min(
+                    1.0,
+                    max(0.0, (self.mental_pressure - 0.45) / 0.30),
+                )
+                positive_cap = self.max_condition_delta * (1.0 - pressure_ratio)
+                biased_condition = min(biased_condition, positive_cap)
             self.condition_modifier = max(
                 -self.max_condition_delta,
                 min(self.max_condition_delta, biased_condition),
@@ -589,6 +599,10 @@ def _canonical_combo_stat_key(key):
         "max_hp": "max_hp",
         "mental": "mental",
         "mentality": "mental",
+        "form_variance": "form_variance",
+        "condition_variance": "form_variance",
+        "consistency": "form_variance",
+        "調子の波": "form_variance",
         "メンタル": "mental",
     }
     return aliases.get(normalized)
@@ -634,6 +648,32 @@ def _apply_combo_bonus(character, stat_key, value):
                     20.0,
                 float(getattr(character, "mental", 5.0)) + amount,
             ),
+        )
+    elif attr == "form_variance":
+        old_max_delta = float(getattr(character, "max_condition_delta", 0.0))
+        old_modifier = float(getattr(character, "condition_modifier", 0.0))
+        old_ratio = old_modifier / old_max_delta if old_max_delta > 0.0 else 0.0
+        character.form_variance = max(
+            0.0,
+            min(10.0, float(getattr(character, "form_variance", 0.0)) + amount),
+        )
+        character.max_condition_delta = (character.form_variance / 10.0) * 0.40
+        # Keep the current good/bad direction while applying the new swing
+        # amplitude immediately to this active round.
+        character.condition_modifier = max(
+            -character.max_condition_delta,
+            min(character.max_condition_delta, old_ratio * character.max_condition_delta),
+        )
+        multiplier = 1.0 + character.condition_modifier
+        character.accuracy = max(
+            0.0,
+            float(getattr(character, "base_accuracy_before_condition", character.accuracy))
+            * multiplier,
+        )
+        character.hs_rate = max(
+            0.0,
+            float(getattr(character, "base_hs_rate_before_condition", character.hs_rate))
+            * multiplier,
         )
     elif attr == "max_hp":
         old_max = character.max_hp

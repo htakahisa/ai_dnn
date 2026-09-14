@@ -142,9 +142,21 @@ HANDOFF_AUGMENT_PROB = 0.0  # GC実戦方針: Absolを常に先頭キャリア�
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま。
 # train_attacker_carry.py / train_attacker_guard.py と同一値)
-DEFAULT_ACCURACY = 0.50
-DEFAULT_DODGE = 0.12
-DEFAULT_HS_RATE = 0.20
+# Carrier protection shaping. Reward a real support pair instead of only the
+# single nearest escort.
+CARRIER_SUPPORT_RADIUS = 3
+CARRIER_MIN_SUPPORTERS = 1
+CARRIER_IDEAL_SUPPORTERS = 2
+CARRIER_SUPPORT_REWARD = 0.16
+CARRIER_SECOND_SUPPORT_REWARD = 0.10
+CARRIER_CLOSE_SUPPORT_REWARD = 0.10
+CARRIER_UNSUPPORTED_PENALTY = 0.14
+
+# Training-opponent baseline.  Keep the opponent policy itself unchanged for
+# now; only make its combat stats representative of the requested target.
+DEFAULT_ACCURACY = 0.90
+DEFAULT_DODGE = 0.30
+DEFAULT_HS_RATE = 0.50
 DEFAULT_REACTION = 100.0
 
 # ---------------------------------------------------------------------------
@@ -349,7 +361,7 @@ class EscortEnv:
         ability_redundant_penalty=1.0,
         ability_waste_penalty=0.3,
         kill_bonus=5.0,
-        death_penalty=3.0,
+        death_penalty=6.0,
         mission_success_reward=5.0,
         mission_fail_penalty=5.0,
         enemy_move_prob=0.2,
@@ -1150,17 +1162,49 @@ class EscortEnv:
                 rewards[i] -= (dist - self.dist_band_max) * self.dist_penalty_coef
 
         # 7. 戦闘解決
-        # Soft cover reward: keep at least one escort within five cells.
+        alive_escorts_before_combat = {
+            i for i in range(self.n_escorts) if self.escort_alive[i]
+        }
+        carry_alive_before_combat = bool(self.carry_alive)
+
+        # Carrier cover reward: explicitly teach at least one escort to stay
+        # close, and give an additional bonus for a second support player.
         alive_escorts = [i for i in range(self.n_escorts) if self.escort_alive[i]]
         if self.carry_alive and alive_escorts:
             cover_dist = {
                 i: _chebyshev(self.escort_pos[i], self.carry_pos)
                 for i in alive_escorts
             }
-            nearest = min(alive_escorts, key=lambda i: cover_dist[i])
-            rewards[nearest] += 0.08 if cover_dist[nearest] <= 5 else -0.03
+            ordered = sorted(alive_escorts, key=lambda i: cover_dist[i])
+            supporters = [
+                i for i in ordered
+                if cover_dist[i] <= CARRIER_SUPPORT_RADIUS
+            ]
+            if len(supporters) >= CARRIER_MIN_SUPPORTERS:
+                rewards[supporters[0]] += CARRIER_SUPPORT_REWARD
+                rewards[supporters[0]] += CARRIER_CLOSE_SUPPORT_REWARD
+                if len(supporters) >= CARRIER_IDEAL_SUPPORTERS:
+                    rewards[supporters[1]] += CARRIER_SECOND_SUPPORT_REWARD
+            else:
+                for i in alive_escorts:
+                    rewards[i] -= CARRIER_UNSUPPORTED_PENALTY
 
         kill_bonus_targets = self._resolve_combat()
+
+        dead_escorts = [
+            i for i in alive_escorts_before_combat
+            if not self.escort_alive[i]
+        ]
+        if dead_escorts:
+            # Death is a team-level safety failure, so every policy receives
+            # a meaningful penalty, including the dead agent's final sample.
+            for i in range(self.n_escorts):
+                rewards[i] -= self.death_penalty * len(dead_escorts)
+
+        if carry_alive_before_combat and not self.carry_alive:
+            for i in range(self.n_escorts):
+                rewards[i] -= self.death_penalty * 1.5
+
         for escort_idx in kill_bonus_targets:
             if 0 <= escort_idx < self.n_escorts:
                 rewards[escort_idx] += self.kill_bonus

@@ -49,6 +49,11 @@ from character_stats_gc import (
     GC_ROSTER_ORDER,
 )
 
+try:
+    from .gc_facing import facing_towards
+except ImportError:
+    from gc_facing import facing_towards
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
@@ -554,6 +559,22 @@ class LearningDefenderRetakeGCController:
         # サイト近辺では従来DQNを使う。
         time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
         lock_movement = (not time_critical) and bool(visible_enemies)
+
+        # Hold the angle during a real gunfight.  Keep the deadline exception:
+        # a nearly detonated spike still has to be defused even if an enemy is
+        # visible.  A blinded defender is also allowed to reposition.
+        if visible_enemies and getattr(char, "blind_remaining", 0) <= 0 and not time_critical:
+            nearest = min(
+                visible_enemies,
+                key=lambda e: max(
+                    abs(int(e.pos[0]) - r0), abs(int(e.pos[1]) - c0)
+                ),
+            )
+            facing = facing_towards(char.pos, nearest.pos)
+            if facing is not None:
+                char.facing = facing
+                return list(char.pos), {"facing": facing}
+            return list(char.pos)
 
         obs = self._build_observation(
             char, game_state, chars, enemies, visible_enemies, detonate_timer

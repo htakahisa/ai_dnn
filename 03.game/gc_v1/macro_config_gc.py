@@ -68,28 +68,24 @@ GC_MACRO_DECISION_THRESHOLDS
 最初は学習環境の条件生成や教師戦術の基準として使える。
 """
 
-
 # ============================================================================
 # 1. 戦術出現ウェイト
 # ============================================================================
 
 GC_MACRO_STRATEGY_WEIGHTS = {
     # 既存の基本戦術
-    "A_RUSH": 0.6,
-    "B_RUSH": 0.6,
+    "A_RUSH": 0.8,
+    "B_RUSH": 0.8,
     "MID_TO_B": 0.8,
-
     # 今回増やしたい戦術
-    "A_SPLIT": 1.8,
-    "B_SPLIT": 1.6,
+    "A_SPLIT": 1.5,
+    "B_SPLIT": 1.5,
     "DEFAULT": 2.0,
-
     # Fake / Rotate
     "FAKE_A_TO_B": 1.2,
     "FAKE_B_TO_A": 1.2,
     "ROTATE_A_TO_B": 1.4,
     "ROTATE_B_TO_A": 1.4,
-
     # 一度引いて同じサイトへ入り直す
     "REHIT_A": 0.8,
     "REHIT_B": 0.8,
@@ -106,17 +102,14 @@ GC_MACRO_ROUTE_BIAS = {
     # 負 = より遠回り/安全寄り
     "A_SPLIT_ENTRY": 0.0,
     "B_SPLIT_ENTRY": 0.0,
-
     # Rotate
     "A_TO_B_ROTATE": -0.2,
     "B_TO_A_ROTATE": -0.2,
-
     # Staging
     "A_STAGING": 0.0,
     "B_STAGING": 0.0,
     "MID_STAGING": 0.0,
     "NEUTRAL_STAGING": 0.0,
-
     # Reset/Re-hit
     "SAFE_RESET": -0.5,
 }
@@ -136,14 +129,12 @@ GC_MACRO_GROUP_SIZES = {
         "main": 3,
         "support": 2,
     },
-
     # A + MID + B = 5
     "DEFAULT": {
         "A": 2,
         "MID": 1,
         "B": 2,
     },
-
     # Fake時の初動人数
     "FAKE_A_TO_B": {
         "fake": 3,
@@ -164,19 +155,15 @@ GC_MACRO_DECISION_THRESHOLDS = {
     # そのエリアの情報がどの程度新しければ「信頼できる」とみなすか。
     # 例: 0.70以上ならRotate判断材料として扱う。
     "INFO_CONFIDENCE_MIN": 0.70,
-
     # 攻略中サイトで確認された敵人数がこの値以上なら
     # Rotate候補を強く考慮する。
     "HEAVY_SITE_ENEMY_COUNT": 3,
-
     # 反対サイトで確認された敵人数がこの値以下なら
     # 空きサイト候補として扱う。
     "LIGHT_SITE_ENEMY_COUNT": 1,
-
     # Rotateを考慮する最低残り時間比率。
     # 0.30なら、ラウンド残り30%以上ある時のみ大きなRotateを許容。
-    "ROTATE_MIN_TIME_RATIO": 0.30,
-
+    "ROTATE_MIN_TIME_RATIO": 0.40,
     # Re-hit時、一旦距離を取ったとみなす目安。
     "RESET_MIN_BFS_DISTANCE": 4,
 }
@@ -242,6 +229,7 @@ GC_MACRO_TRANSITIONS = {
 # ヘルパー
 # ============================================================================
 
+
 def normalized_strategy_weights():
     """戦術ウェイトを確率に正規化して返す。"""
     active = {
@@ -254,10 +242,7 @@ def normalized_strategy_weights():
     if total <= 0.0:
         raise ValueError("GC_MACRO_STRATEGY_WEIGHTS の合計が0です。")
 
-    return {
-        name: weight / total
-        for name, weight in active.items()
-    }
+    return {name: weight / total for name, weight in active.items()}
 
 
 def validate_macro_config():
@@ -271,9 +256,7 @@ def validate_macro_config():
     for strategy, groups in GC_MACRO_GROUP_SIZES.items():
         total = sum(int(v) for v in groups.values())
         if total != 5:
-            raise ValueError(
-                f"{strategy} の人数合計が5ではありません: {groups}"
-            )
+            raise ValueError(f"{strategy} の人数合計が5ではありません: {groups}")
 
     info_min = float(GC_MACRO_DECISION_THRESHOLDS["INFO_CONFIDENCE_MIN"])
     if not 0.0 <= info_min <= 1.0:

@@ -8,7 +8,7 @@ import random
 import secrets
 import threading
 import traceback
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from itertools import combinations
 from pathlib import Path
@@ -19,7 +19,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from map_data import NEW_MAZE_STR
-from party_presets import all_preset_names, get_preset
+from party_presets import all_preset_names, canonical_preset_name, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from game_core import PLAYER_COMBOS, get_character_combat_stats
 
@@ -87,6 +87,21 @@ class PlayerMapStat:
     team: str
     kills: int
     deaths: int
+    role: str = ""
+    gunfights_participated: int = 0
+    gunfights_won: int = 0
+    gunfights_lost: int = 0
+    gunfights_draw: int = 0
+    one_v_one_participated: int = 0
+    one_v_one_won: int = 0
+    one_v_one_lost: int = 0
+    one_v_one_draw: int = 0
+    assists: int = 0
+    covers: int = 0
+    first_kills: int = 0
+    first_deaths: int = 0
+    preaim_angle_sum: float = 0.0
+    preaim_angle_count: int = 0
 
 
 @dataclass
@@ -103,6 +118,13 @@ class MResult:
     initial_attacker: str
     overtime: bool
     player_stats: list[PlayerMapStat]
+    total_rounds: int = 0
+    gunfights: list[dict[str, Any]] = field(default_factory=list)
+    assist_events: list[dict[str, Any]] = field(default_factory=list)
+    cover_events: list[dict[str, Any]] = field(default_factory=list)
+    attacker_side_stats: dict[str, Any] = field(default_factory=dict)
+    defender_side_stats: dict[str, Any] = field(default_factory=dict)
+    round_records: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -115,6 +137,7 @@ class SeriesResult:
     winner: str
     loser: str
     maps: list[MResult]
+    total_rounds: int = 0
 
 
 def seed_all(seed: int) -> None:
@@ -237,6 +260,25 @@ def player_stats_from_match_stats(
             team=team_name,
             kills=int(match_stats.get(key, {}).get("kills", 0)),
             deaths=int(match_stats.get(key, {}).get("deaths", 0)),
+            role=str(match_stats.get(key, {}).get("role", "")),
+            gunfights_participated=int(
+                match_stats.get(key, {}).get("gunfights_participated", 0)
+            ),
+            gunfights_won=int(match_stats.get(key, {}).get("gunfights_won", 0)),
+            gunfights_lost=int(match_stats.get(key, {}).get("gunfights_lost", 0)),
+            gunfights_draw=int(match_stats.get(key, {}).get("gunfights_draw", 0)),
+            one_v_one_participated=int(
+                match_stats.get(key, {}).get("one_v_one_participated", 0)
+            ),
+            one_v_one_won=int(match_stats.get(key, {}).get("one_v_one_won", 0)),
+            one_v_one_lost=int(match_stats.get(key, {}).get("one_v_one_lost", 0)),
+            one_v_one_draw=int(match_stats.get(key, {}).get("one_v_one_draw", 0)),
+            assists=int(match_stats.get(key, {}).get("assists", 0)),
+            covers=int(match_stats.get(key, {}).get("covers", 0)),
+            first_kills=int(match_stats.get(key, {}).get("first_kills", 0)),
+            first_deaths=int(match_stats.get(key, {}).get("first_deaths", 0)),
+            preaim_angle_sum=float(match_stats.get(key, {}).get("preaim_angle_sum", 0.0)),
+            preaim_angle_count=int(match_stats.get(key, {}).get("preaim_angle_count", 0)),
         )
         for key in player_keys
     ]
@@ -506,6 +548,13 @@ def play_map(
         list(team1.players),
         list(team2.players),
     )
+    analytics = getattr(game, "analytics_tracker", None)
+    if analytics is not None:
+        exported = analytics.export_stats()
+        for key, row in game.match_stats.items():
+            extra = exported["players"].get(str(key))
+            if extra:
+                row.update(extra)
     winner = team1.name if score1 > score2 else team2.name
 
     return MResult(
@@ -524,6 +573,19 @@ def play_map(
             player_stats_from_match_stats(game.match_stats, team1_keys, team1.name)
             + player_stats_from_match_stats(game.match_stats, team2_keys, team2.name)
         ),
+        total_rounds=int(score1 + score2),
+        gunfights=exported.get("gunfights", []) if analytics is not None else [],
+        assist_events=exported.get("assist_events", []) if analytics is not None else [],
+        cover_events=exported.get("cover_events", []) if analytics is not None else [],
+        attacker_side_stats=(
+            exported.get("side_stats", {}).get("attacker", {})
+            if analytics is not None else {}
+        ),
+        defender_side_stats=(
+            exported.get("side_stats", {}).get("defender", {})
+            if analytics is not None else {}
+        ),
+        round_records=exported.get("round_records", []) if analytics is not None else [],
     )
 
 
@@ -645,6 +707,7 @@ def run_series_core(
         winner=winner,
         loser=loser,
         maps=maps,
+        total_rounds=sum(int(getattr(item, "total_rounds", item.score1 + item.score2)) for item in maps),
     )
 
 
@@ -1424,6 +1487,7 @@ class TeamRatingStore:
         self.default_rating = float(DEFAULT_TEAM_RATING)
         self.ratings: dict[str, float] = {}
         self.history: list[dict[str, Any]] = []
+        self._needs_migration = False
         self._load()
 
         changed = False
@@ -1431,7 +1495,7 @@ class TeamRatingStore:
             if name not in self.ratings:
                 self.ratings[name] = self.default_rating
                 changed = True
-        if changed or not self.path.exists():
+        if changed or self._needs_migration or not self.path.exists():
             self.save()
 
     def _load(self) -> None:
@@ -1440,11 +1504,30 @@ class TeamRatingStore:
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
             self.default_rating = float(data.get("default_rating", DEFAULT_TEAM_RATING))
-            self.ratings = {
-                str(name): float(value)
-                for name, value in data.get("ratings", {}).items()
-            }
-            self.history = list(data.get("history", []))
+            self.ratings = {}
+            for name, value in data.get("ratings", {}).items():
+                canonical = canonical_preset_name(name)
+                if str(name) != canonical:
+                    self._needs_migration = True
+                rating = float(value)
+                # If both spellings exist, keep the newer canonical entry and
+                # otherwise migrate the old value instead of resetting it.
+                if canonical in self.ratings:
+                    self.ratings[canonical] = max(self.ratings[canonical], rating)
+                else:
+                    self.ratings[canonical] = rating
+
+            self.history = []
+            for event in data.get("history", []):
+                if isinstance(event, dict):
+                    migrated = dict(event)
+                    if "team" in migrated:
+                        if str(migrated["team"]) != canonical_preset_name(migrated["team"]):
+                            self._needs_migration = True
+                        migrated["team"] = canonical_preset_name(migrated["team"])
+                    self.history.append(migrated)
+                else:
+                    self.history.append(event)
         except Exception:
             # 壊れたファイルで大会自体が起動不能になるのを避ける。
             self.ratings = {}
