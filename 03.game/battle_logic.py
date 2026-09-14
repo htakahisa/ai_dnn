@@ -27,6 +27,57 @@ from game_core import (
     SHOOTING_SITE_DIGREE,
 )
 
+try:
+    import pygame
+except ImportError:
+    pygame = None
+
+# キル数(そのラウンド累計、1～5)に対応する効果音ファイルと音量。
+# 03.game/sound/ 以下に kill1.mp3 ～ kill5.mp3 を配置する想定。
+# 音量は 1.0 = 元の音量そのまま、0.5 = 半分の音量、というように指定する。
+_SOUND_DIR = Path(__file__).resolve().parent / "sound"
+KILL_SOUND_FILENAMES = [
+    ["kill1.mp3", 0.5],
+    ["kill2.mp3", 0.5],
+    ["kill3.mp3", 0.5],
+    ["kill4.mp3", 0.5],
+    ["kill5.mp3", 0.5],
+]
+_kill_sound_cache = {}
+_mixer_ready = False
+
+
+def _ensure_mixer_ready():
+    global _mixer_ready
+    if pygame is None or _mixer_ready:
+        return _mixer_ready
+    try:
+        pygame.mixer.init()
+        _mixer_ready = True
+    except Exception:
+        _mixer_ready = False
+    return _mixer_ready
+
+
+def _get_kill_sound(round_kill_count):
+    """round_kill_count: そのラウンドでのキル数(1以上)。5を超えても5番目の音を使う。"""
+    index = min(max(1, int(round_kill_count)), len(KILL_SOUND_FILENAMES))
+    if index in _kill_sound_cache:
+        return _kill_sound_cache[index]
+    if not _ensure_mixer_ready():
+        _kill_sound_cache[index] = None
+        return None
+    filename, volume = KILL_SOUND_FILENAMES[index - 1]
+    path = _SOUND_DIR / filename
+    try:
+        sound = pygame.mixer.Sound(str(path))
+        sound.set_volume(max(0.0, min(1.0, float(volume))))
+    except Exception:
+        sound = None
+    _kill_sound_cache[index] = sound
+    return sound
+
+
 class BattleLogicMixin:
 
     def _facing_from_delta(self, dr, dc, fallback):
@@ -770,6 +821,7 @@ class BattleLogicMixin:
         target.deaths += 1
         shooter.kills += 1
         shooter.round_kills += 1
+        self._play_kill_sound(shooter)
 
         tracker = getattr(self, "analytics_tracker", None)
         if tracker is not None:
@@ -809,6 +861,14 @@ class BattleLogicMixin:
             ]
             if len(alive_members) == 1 and watch_team not in self.clutch_watch:
                 self.clutch_watch[watch_team] = alive_members[0].name
+
+    def _play_kill_sound(self, shooter):
+        """キル数(そのラウンド)に応じた効果音を再生する。学習(headless)中は鳴らさない。"""
+        if self.headless:
+            return
+        sound = _get_kill_sound(shooter.round_kills)
+        if sound is not None:
+            sound.play()
 
     def _resolve_all_shots(self, engagements=None, current_los_revealed_names=None):
         """同Tickの射撃を反応速度が高い順に逐次処理する。
