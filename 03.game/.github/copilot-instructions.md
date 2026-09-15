@@ -1,0 +1,1 @@
+Always adhere to the coding guidelines defined in ./AGENTS.md.

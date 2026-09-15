@@ -8,6 +8,8 @@ from map_data_defender_setup import (
 """Tkinter input handling and all visual rendering."""
 
 import math
+from pathlib import Path
+import tkinter as tk
 
 from controllers import UserInputController
 from game_core import (
@@ -19,6 +21,34 @@ from game_core import (
 )
 
 class RenderingUIMixin:
+    def _get_ace_effect_frames(self, effect):
+        if not isinstance(effect, dict):
+            return []
+        frame_paths = effect.get("frames")
+        if not isinstance(frame_paths, list) or not frame_paths:
+            return []
+
+        if not hasattr(self, "_ace_effect_image_cache"):
+            self._ace_effect_image_cache = {}
+
+        images = []
+        for frame_path in frame_paths:
+            path = Path(__file__).resolve().parent / str(frame_path)
+            cache_key = str(path)
+            if cache_key not in self._ace_effect_image_cache:
+                try:
+                    self._ace_effect_image_cache[cache_key] = tk.PhotoImage(
+                        master=self.root,
+                        file=cache_key,
+                    )
+                except tk.TclError:
+                    self._ace_effect_image_cache[cache_key] = None
+            image = self._ace_effect_image_cache[cache_key]
+            if image is None:
+                return []
+            images.append(image)
+        return images
+
     def get_user_controllers(self):
         """ユーザー操作のコントローラーとそのチームのペアを返す"""
         result = []
@@ -447,6 +477,38 @@ class RenderingUIMixin:
         banner = self.special_round_banner
         is_ace = banner["type"] == "ACE"
         accent = "#f1c40f" if is_ace else "#e74c3c"
+        effect = banner.get("effect") if is_ace else None
+        images = self._get_ace_effect_frames(effect)
+
+        if images:
+            try:
+                interval_ms = max(1, int(effect.get("frame_interval_ms", 500)))
+            except (TypeError, ValueError):
+                interval_ms = 500
+            frame_index = (
+                int(banner.get("animation_elapsed_ms", 0)) // interval_ms
+            ) % len(images)
+            image = images[frame_index]
+            cx = self.map_offset_x + self.map_pixel_width / 2
+            cy = self.map_pixel_height / 2
+            image_w = max(340, image.width() + 28)
+            image_h = max(220, image.height() + 78)
+            x1, y1 = cx - image_w / 2, cy - image_h / 2
+            x2, y2 = cx + image_w / 2, cy + image_h / 2
+
+            self.canvas.create_rectangle(
+                x1, y1, x2, y2, fill="#0b0f16", outline=accent, width=3
+            )
+            self.canvas.create_image(cx, cy - 18, image=image)
+            self.canvas.create_text(
+                cx, y2 - 28,
+                text=banner["name"], fill="white", font=("Arial", 16, "bold")
+            )
+            self.canvas.create_text(
+                cx, y2 - 8,
+                text="ACE!", fill=accent, font=("Arial", 20, "bold")
+            )
+            return
 
         cx = self.map_offset_x + self.map_pixel_width / 2
         cy = self.map_pixel_height / 2
