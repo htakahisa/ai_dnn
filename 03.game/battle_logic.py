@@ -2,6 +2,7 @@
 
 import math
 import random
+import json
 import numpy as np
 
 from analytics.combat_tracker import CombatTracker
@@ -36,6 +37,8 @@ except ImportError:
 # 03.game/sound/ 以下に kill1.mp3 ～ kill5.mp3 を配置する想定。
 # 音量は 1.0 = 元の音量そのまま、0.5 = 半分の音量、というように指定する。
 _SOUND_DIR = Path(__file__).resolve().parent / "sound"
+_PROJECT_DIR = Path(__file__).resolve().parent
+_ACE_EFFECTS_PATH = _PROJECT_DIR / "ace_effects.json"
 KILL_SOUND_FILENAMES = [
     ["kill1.mp3", 0.5],
     ["kill2.mp3", 0.5],
@@ -44,7 +47,25 @@ KILL_SOUND_FILENAMES = [
     ["kill5.mp3", 0.5],
 ]
 _kill_sound_cache = {}
+_ace_sound_cache = {}
 _mixer_ready = False
+
+# デバッグ用。一時的に全ラウンド終了時のACE特別演出を確認する。
+# 確認後はFalseへ戻す。
+DEBUG_FORCE_ACE_EFFECT = False
+DEBUG_ACE_CHARACTER_NAME = "Tortlilyan"  #確認したいキャラ名指定
+
+
+def _load_ace_effects():
+    try:
+        with _ACE_EFFECTS_PATH.open("r", encoding="utf-8") as file:
+            effects = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return effects if isinstance(effects, dict) else {}
+
+
+ACE_EFFECTS = _load_ace_effects()
 
 
 def _ensure_mixer_ready():
@@ -75,6 +96,28 @@ def _get_kill_sound(round_kill_count):
     except Exception:
         sound = None
     _kill_sound_cache[index] = sound
+    return sound
+
+
+def _get_ace_sound(effect):
+    sound_config = effect.get("sound") if isinstance(effect, dict) else None
+    if not isinstance(sound_config, (list, tuple)) or len(sound_config) != 2:
+        return None
+
+    filename = str(sound_config[0])
+    if filename in _ace_sound_cache:
+        return _ace_sound_cache[filename]
+    if not _ensure_mixer_ready():
+        _ace_sound_cache[filename] = None
+        return None
+
+    try:
+        volume = max(0.0, min(1.0, float(sound_config[1])))
+        sound = pygame.mixer.Sound(str(_PROJECT_DIR / filename))
+        sound.set_volume(volume)
+    except Exception:
+        sound = None
+    _ace_sound_cache[filename] = sound
     return sound
 
 
@@ -737,6 +780,17 @@ class BattleLogicMixin:
         self.current_round += 1
         if not self.headless:
             banner_ticks = CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
+            if self.special_round_banner:
+                effect = self.special_round_banner.get("effect")
+                if isinstance(effect, dict):
+                    try:
+                        duration_ms = max(0, int(effect.get("duration_ms", 0)))
+                    except (TypeError, ValueError):
+                        duration_ms = 0
+                    banner_ticks = max(
+                        banner_ticks,
+                        math.ceil(duration_ms / max(1, TICK_TIME)),
+                    )
             explosion_ticks = EXPLOSION_DURATION_TICKS if self.explosion_effect else 0
             extra_ticks = max(banner_ticks, explosion_ticks)
             self.round_transition_ticks_left = ROUND_TRANSITION_TICKS + extra_ticks
@@ -758,6 +812,11 @@ class BattleLogicMixin:
                 EXPLOSION_DURATION_TICKS,
                 self.explosion_effect["ticks_elapsed"] + 1,
             )
+        banner = self.special_round_banner
+        if banner is not None and isinstance(banner.get("effect"), dict):
+            banner["animation_elapsed_ms"] = (
+                banner.get("animation_elapsed_ms", 0) + TICK_TIME
+            )
         self.round_transition_ticks_left -= 1
         self.draw()
         self.root.after(TICK_TIME, self._advance_round_transition)
@@ -776,6 +835,29 @@ class BattleLogicMixin:
         self._ensure_round_tracking_state()
         self.special_round_banner = None
 
+        if DEBUG_FORCE_ACE_EFFECT:
+            debug_ace_player = next(
+                (
+                    c
+                    for c in self.chars
+                    if getattr(c, "base_name", c.name) == DEBUG_ACE_CHARACTER_NAME
+                ),
+                None,
+            )
+            if debug_ace_player is not None:
+                effect = ACE_EFFECTS.get(DEBUG_ACE_CHARACTER_NAME)
+                self.special_round_banner = {
+                    "type": "ACE",
+                    "name": debug_ace_player.display_name,
+                    "base_name": DEBUG_ACE_CHARACTER_NAME,
+                    "effect": effect if isinstance(effect, dict) else None,
+                }
+                if not self.headless:
+                    sound = _get_ace_sound(effect)
+                    if sound is not None:
+                        sound.play()
+                return
+
         enemy_team = "D" if winning_team == "A" else "A"
         enemy_total = sum(1 for c in self.chars if c.team == enemy_team)
 
@@ -791,10 +873,19 @@ class BattleLogicMixin:
             None,
         )
         if ace_player is not None:
+            effect = ACE_EFFECTS.get(
+                getattr(ace_player, "base_name", ace_player.name)
+            )
             self.special_round_banner = {
                 "type": "ACE",
                 "name": ace_player.display_name,
+                "base_name": getattr(ace_player, "base_name", ace_player.name),
+                "effect": effect if isinstance(effect, dict) else None,
             }
+            if not self.headless:
+                sound = _get_ace_sound(effect)
+                if sound is not None:
+                    sound.play()
             return
 
         # CLUTCH: 自チーム1人生存の状態からそのまま勝利
