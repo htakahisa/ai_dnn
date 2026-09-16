@@ -292,6 +292,9 @@ class VisualFPSBattle(
             self.label.pack()
 
         self.match_over = False
+        # Store actual states so replay is exact and does not depend on
+        # rerunning controller/model randomness from a seed.
+        self.replay_frames = []
 
         # set_game()呼び出し前に実際のコントローラーインスタンスを
         # self.attacker_controller / self.defender_controllerへ反映させる必要がある。
@@ -314,6 +317,65 @@ class VisualFPSBattle(
         self.defender_setup_phase = DefenderSetupPhase()
 
         self.init_round()
+
+    def _record_replay_frame(self):
+        """Append a JSON-safe snapshot of the current match state."""
+        def pos(value):
+            return list(map(int, value)) if value is not None else None
+
+        chars = []
+        for char in getattr(self, "chars", []):
+            chars.append({
+                "name": str(char.name),
+                "display_name": str(getattr(char, "display_name", char.name)),
+                "team": str(char.team),
+                "pos": pos(char.pos),
+                "hp": float(getattr(char, "hp", 0)),
+                "alive": bool(getattr(char, "is_alive", False)),
+                "facing": str(getattr(char, "facing", "")),
+                "has_spike": bool(getattr(char, "has_spike", False)),
+                "blind": int(getattr(char, "blind_remaining", 0)),
+                "revealed": bool(getattr(char, "los_revealed", False)),
+            })
+
+        def projectile(item):
+            return {
+                "path": [list(map(int, cell)) for cell in item.get("path", [])],
+                "progress": int(item.get("progress", 0)),
+            }
+
+        self.replay_frames.append({
+            "round": int(getattr(self, "current_round", 0)),
+            "tick": int(getattr(self, "battle_tick", 0)),
+            "setup": bool(getattr(self, "in_defender_setup_phase", False)),
+            "setup_ticks_remaining": int(getattr(self, "defender_setup_ticks_remaining", 0)),
+            "round_timer": int(getattr(self, "round_timer", 0)),
+            "detonate_timer": int(getattr(self, "detonate_timer", 0)),
+            "attacker_wins": int(getattr(self, "attacker_wins", 0)),
+            "defender_wins": int(getattr(self, "defender_wins", 0)),
+            "planted": bool(getattr(self, "is_planted", False)),
+            "round_over": bool(getattr(self, "round_over", False)),
+            "target_plant_pos": pos(getattr(self, "target_plant_pos", None)),
+            "planted_pos": pos(getattr(self, "planted_pos", None)),
+            "spike_pos": pos(getattr(self, "spike_pos", None)),
+            "chars": chars,
+            "smokes": [
+                {"cells": [list(map(int, cell)) for cell in smoke.get("cells", [])],
+                 "remaining_ticks": int(smoke.get("remaining_ticks", smoke.get("remaining", 0)))}
+                for smoke in getattr(self, "smokes", [])
+            ],
+            "flash_projectiles": [projectile(item) for item in getattr(self, "flash_projectiles", [])],
+            "recon_projectiles": [projectile(item) for item in getattr(self, "recon_projectiles", [])],
+            "flash_bursts": [
+                {"pos": pos(item.get("pos")), "remaining_ticks": int(item.get("remaining_ticks", 0))}
+                for item in getattr(self, "flash_bursts", [])
+            ],
+            "recon_bursts": [
+                {"cells": [list(map(int, cell)) for cell in item.get("cells", [])],
+                 "remaining_ticks": int(item.get("remaining_ticks", 0))}
+                for item in getattr(self, "recon_bursts", [])
+            ],
+        })
 
     def _apply_igl_iq_bonus(self):
         """IGL本人を含む全員へ補正し、最終IQを0～300へ制限する。"""
@@ -662,10 +724,14 @@ class VisualFPSBattle(
         self._apply_player_combos()
         self._apply_igl_iq_bonus()
         if self.analytics_tracker is not None:
-            self.analytics_tracker.register_players(self.chars)
-        self._analytics_initial_defender_positions = [
-            tuple(c.pos) for c in self.chars if c.team == "D"
-        ]
+            self.analytics_tracker.register_players(
+                self.chars,
+                {"A": self.attacker_team_name, "D": self.defender_team_name},
+            )
+        # Setup後の配置をAnalyticsに記録する。スポーン直後ではなく、
+        # LIVE開始から10Tick後にbattle_logic.loopがスナップショットする。
+        self._analytics_initial_defender_positions = None
+        self._analytics_post_setup_ticks = 0
         self.announcement_queue = []
         self.combo_announcement_index = 0
         self.combo_announcement_ticks_left = 0
@@ -703,6 +769,13 @@ class VisualFPSBattle(
 
         # 毎ラウンド、通常戦闘より先にDefender Setup Phaseを開始する。
         self.defender_setup_phase.start()
+        if self.analytics_tracker is not None:
+            self.analytics_tracker.begin_round_tactics(
+                self.width,
+                plants,
+                self.chars,
+            )
+            self.analytics_tracker._target_plant_pos = self.target_plant_pos
 
     @property
     def in_defender_setup_phase(self):

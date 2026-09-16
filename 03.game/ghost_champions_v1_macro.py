@@ -87,6 +87,9 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
 
         # Guard owns post-plant.
         if bool(game_state.get("is_planted", False)):
+            micro_cover = self._micro_cover_result(char, game_state)
+            if micro_cover is not None:
+                return micro_cover
             return base_result
 
         # Retrieve owns dropped-spike phase.

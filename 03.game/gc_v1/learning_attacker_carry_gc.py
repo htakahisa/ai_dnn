@@ -835,7 +835,11 @@ class LearningAttackerCarryGCController:
                         target_pos = tuple(map(int, nearest.pos))
                 elif self._sighting is not None:
                     target_pos = self._sighting["pos"]
-                elif self._plant_cells:
+                elif self._plant_cells and char.ability_name == "SMOKE":
+                    # SMOKE may still use the configured plant-side fallback.
+                    # RECON must never be thrown at a blind/random cell: it
+                    # needs an actual sighting (handled by the pre-entry gate
+                    # above), otherwise the old fallback caused spawn throws.
                     target_pos = random.choice(self._plant_cells)
 
                 if target_pos is not None:

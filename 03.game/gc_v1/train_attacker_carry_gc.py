@@ -222,6 +222,10 @@ WAYPOINT_REACHED_REWARD = (
 # ============================================================================
 
 
+# Retraining reward profile: carrier death is a round-defining failure.
+DEATH_PENALTY = -3.0
+
+
 def _parse_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)

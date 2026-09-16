@@ -727,6 +727,66 @@ class LearningAttackerMacroGCController:
         next_pos = _bfs_next_step(grid, current, target, occupied)
         return list(map(int, next_pos)), "MOVE"
 
+    def _hard_plant_deadline_result(self, char, holder, game_state):
+        """Force the shortest available plant route before the deadline.
+
+        The previous emergency guard evaluated only the macro-selected site.
+        A stale ROTATE/FAKE target could therefore make the selected route look
+        impossible while another site was only a few cells away.  The carrier
+        then kept following the macro waypoint until the last 10-15 ticks.
+        At that point it was already too late to start planting.
+
+        This guard deliberately ignores strategy, coverage and enemy estimates.
+        Once the complete wall-only route (carrier -> plant cell -> plant
+        animation) no longer fits comfortably in the remaining clock, the
+        nearest reachable plant cell on either site becomes the sole objective.
+        """
+        if char is not holder:
+            return None
+
+        remaining = int(
+            game_state.get(
+                "round_timer",
+                getattr(self.game, "round_timer", ROUND_DURATION_TICKS),
+            )
+        )
+        grid = np.asarray(game_state["grid"])
+        current = tuple(map(int, holder.pos))
+        plant_positions = [
+            (int(r), int(c)) for r, c in zip(*np.where(grid == 2))
+        ]
+        if not plant_positions:
+            return None
+
+        reachable = []
+        for plant in plant_positions:
+            distance = _bfs_distance(grid, current, plant)
+            if distance is not None:
+                reachable.append((int(distance), plant))
+        if not reachable:
+            return None
+
+        distance, target = min(reachable, key=lambda item: (item[0], item[1]))
+        required = distance + int(PLANT_REQUIRED_TICKS) + PLANT_DEADLINE_SAFETY_TICKS
+        if remaining > required:
+            return None
+
+        if self.game is not None:
+            # Freeze the target before the normal macro layer can retarget it
+            # again on the next tick.
+            self.game.target_plant_pos = tuple(target)
+
+        if current == target:
+            return list(current), "PLANT"
+
+        occupied = {
+            tuple(map(int, other.pos))
+            for other in game_state.get("chars", [])
+            if other is not char and bool(getattr(other, "is_alive", True))
+        }
+        next_pos = _bfs_next_step(grid, current, target, occupied)
+        return list(map(int, next_pos)), "MOVE"
+
     def _direct_carrier_plant_result(self, char, holder, game_state):
         """Hard final guard: a ready carrier may not be routed away from site."""
         if char is not holder:
@@ -1257,6 +1317,13 @@ class LearningAttackerMacroGCController:
             forced = self._plant_commit_result(char, holder, game_state)
             if forced is not None:
                 return forced
+
+        # This must run before abilities, escort support, and Macro movement.
+        # A carrier that cannot complete the shortest remaining plant route has
+        # no time left for a rotate, fake, hold, or opening ability.
+        hard_deadline = self._hard_plant_deadline_result(char, holder, game_state)
+        if hard_deadline is not None:
+            return hard_deadline
 
         # Final anti-throw guard.  Once the selected site has a real attacker
         # presence, the carrier is never allowed to follow an opposite-site

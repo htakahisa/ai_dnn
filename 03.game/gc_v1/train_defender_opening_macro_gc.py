@@ -50,6 +50,14 @@ from party_presets import get_preset
 from run_game import VisualFPSBattle
 from team_ai import DualRoleTeamAI
 
+try:
+    from touyama_v2.tv2_touyama_attacker_controller import (
+        Tv2TouyamaAttackerController,
+    )
+except Exception:
+    Tv2TouyamaAttackerController = None
+
+
 from learning_defender_opening_macro_gc import (
     ABILITY_ORDER,
     OBS_DIM,
@@ -143,6 +151,11 @@ EXECUTE_BONUS = 0.15
 
 # 1 match = 最大13勝先取なので、学習の単位は内部ラウンド。
 EVAL_MATCHES = 8
+
+# Running a full match for every defender-opening episode makes the Python
+# simulation dominate runtime. The learned decisions are made during these
+# opening ticks, so training/evaluation stop before the first round concludes.
+OPENING_ONLY_LIVE_TICKS = 24
 
 
 # ============================================================================
@@ -506,11 +519,28 @@ class TrainableOpeningMacro(LearningDefenderOpeningMacroGCController):
 
         return result
 
-    def finalize_round(self, defender_won: bool, terminal_obs=None):
+    def finalize_round(self, defender_won: bool | None, terminal_obs=None):
         """Convert one real game round into replay-ready transitions."""
-        terminal_reward = (
-            ROUND_WIN_REWARD if defender_won else ROUND_LOSS_REWARD
-        ) + self.round_aux_reward
+        if defender_won is None:
+            # Opening-only episodes have no round result yet. Give the
+            # selection head the same ability-plan signal that the execution
+            # head receives instead of pretending every truncated round was
+            # a win or a loss.
+            terminal_reward = self.round_aux_reward
+            for plan in self.plans.values():
+                if plan.state == "EXECUTED":
+                    terminal_reward += EXECUTION_SUCCESS_REWARD
+                elif plan.state == "CANCELLED":
+                    if plan.cancel_reason == "OPENING_TIMEOUT":
+                        terminal_reward += EXECUTION_TIMEOUT_PENALTY
+                    else:
+                        terminal_reward += EXECUTION_OTHER_CANCEL_PENALTY
+                else:
+                    terminal_reward += UNUSED_PLAN_PENALTY
+        else:
+            terminal_reward = (
+                ROUND_WIN_REWARD if defender_won else ROUND_LOSS_REWARD
+            ) + self.round_aux_reward
 
         # Chosen but never executed plans receive a tiny penalty.
         for plan in self.plans.values():
@@ -784,13 +814,20 @@ def _build_training_attacker(opponent_key):
             )
         return MultiRoleAttackerController()
 
+    if key == "touyama_gaming_v2":
+        if Tv2TouyamaAttackerController is None:
+            raise RuntimeError(
+                "Touyama Gaming v2 attacker controller could not be imported."
+            )
+        return Tv2TouyamaAttackerController()
+
     raise ValueError(f"Unknown training opponent: {opponent_key}")
 
 
 def _resolve_opponent(opponent_mode, rng):
     mode = str(opponent_mode or "default").strip().lower()
 
-    if mode in {"default", "toru_ai_v3"}:
+    if mode in {"default", "toru_ai_v3", "touyama_gaming_v2"}:
         return mode
 
     if mode == "mixed":
@@ -799,7 +836,8 @@ def _resolve_opponent(opponent_mode, rng):
         return "toru_ai_v3" if rng.random() < 0.70 else "default"
 
     raise ValueError(
-        "--opponent must be one of: default, toru_ai_v3, mixed"
+        "--opponent must be one of: default, toru_ai_v3, "
+        "touyama_gaming_v2, mixed"
     )
 
 
@@ -817,8 +855,21 @@ def _ghost_champions_roster():
     return players
 
 
+def _touyama_gaming_roster():
+    preset = get_preset("とうやまゲーミング")
+    if preset is None or len(tuple(preset.players)) != 5:
+        raise RuntimeError(
+            'party_presets.py に「とうやまゲーミング」の5人ロスターが必要です'
+        )
+    return list(preset.players), preset
+
+
 def make_game(defender_controller, opponent_key="default"):
-    attacker_roster, _unused_defender_roster = build_two_balanced_rosters()
+    if str(opponent_key).strip().lower() == "touyama_gaming_v2":
+        attacker_roster, attacker_preset = _touyama_gaming_roster()
+    else:
+        attacker_roster, _unused_defender_roster = build_two_balanced_rosters()
+        attacker_preset = None
     defender_roster = _ghost_champions_roster()
 
     attacker_team = DualRoleTeamAI(
@@ -841,6 +892,13 @@ def make_game(defender_controller, opponent_key="default"):
     }
     if "disable_side_swap" in inspect.signature(VisualFPSBattle.__init__).parameters:
         kwargs["disable_side_swap"] = True
+    if attacker_preset is not None:
+        if "spike_holder_name" in inspect.signature(VisualFPSBattle.__init__).parameters:
+            kwargs["spike_holder_name"] = attacker_preset.spike_holder
+        if "attacker_igl_name" in inspect.signature(VisualFPSBattle.__init__).parameters:
+            kwargs["attacker_igl_name"] = attacker_preset.igl
+        if "attacker_team_name" in inspect.signature(VisualFPSBattle.__init__).parameters:
+            kwargs["attacker_team_name"] = attacker_preset.name
 
     game = VisualFPSBattle(
         NEW_MAZE_STR,
@@ -848,6 +906,7 @@ def make_game(defender_controller, opponent_key="default"):
         defender_team,
         **kwargs,
     )
+
     defender_controller.set_game(game)
     return game
 
@@ -923,6 +982,28 @@ def load_checkpoint(
 # One actual match
 # ============================================================================
 
+def _run_opening_only(game, live_ticks=OPENING_ONLY_LIVE_TICKS):
+    """Run setup and a short live opening window without finishing a match."""
+    while getattr(game.defender_setup_phase, "active", False):
+        game._run_defender_setup_tick()
+
+    for _ in range(int(live_ticks)):
+        if getattr(game, "match_over", False) or getattr(game, "round_over", False):
+            break
+
+        game._build_occupancy_counts()
+        try:
+            for char in game._move_order():
+                if char.is_alive:
+                    game.move_character(char)
+        finally:
+            game._clear_occupancy_counts()
+
+        game.process_battle()
+        if hasattr(game, "_advance_combo_announcement"):
+            game._advance_combo_announcement()
+
+
 def run_match(
     selection_net,
     execution_net,
@@ -950,44 +1031,19 @@ def run_match(
     opponent_key = _resolve_opponent(opponent_mode, opponent_rng)
     game = make_game(defender, opponent_key=opponent_key)
 
-    # To learn per-round reward without invasive game edits, intercept reset_round.
-    # Battle code calls reset_round after score update. Store previous scoreboard.
-    round_records = []
-    prev_a = int(game.attacker_wins)
-    prev_d = int(game.defender_wins)
-
-    original_reset = defender.reset_round
-
-    def reset_and_record():
-        nonlocal prev_a, prev_d
-
-        now_a = int(game.attacker_wins)
-        now_d = int(game.defender_wins)
-
-        if now_a != prev_a or now_d != prev_d:
-            defender_won = now_d > prev_d
-            sels, execs, info = macro.finalize_round(defender_won)
-            round_records.append((sels, execs, info))
-            prev_a, prev_d = now_a, now_d
-
-        original_reset()
-
-    defender.reset_round = reset_and_record
-
-    game.run_headless_loop()
-
-    # Some versions finish match without another reset_round after final score.
-    now_a = int(game.attacker_wins)
-    now_d = int(game.defender_wins)
-    if now_a != prev_a or now_d != prev_d:
-        defender_won = now_d > prev_d
-        sels, execs, info = macro.finalize_round(defender_won)
-        round_records.append((sels, execs, info))
+    _run_opening_only(game)
+    selections, executions, info = macro.finalize_round(None)
+    round_records = [(selections, executions, info)]
+    opening_success = int(float(info["reward"]) > 0.0)
 
     return {
-        "attacker_wins": int(game.attacker_wins),
-        "defender_wins": int(game.defender_wins),
-        "match_win": int(game.defender_wins > game.attacker_wins),
+        "attacker_wins": 0,
+        "defender_wins": 0,
+        # In opening-only mode this is an opening-quality indicator, not a
+        # completed-match result. It keeps the existing training/evaluation
+        # progress reporting meaningful without simulating the full match.
+        "match_win": opening_success,
+        "opening_reward": float(info["reward"]),
         "round_records": round_records,
         "opponent": opponent_key,
     }
@@ -1110,11 +1166,20 @@ def evaluate(selection, execution, device, matches=EVAL_MATCHES, seed=100000, op
 def train(args):
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-    device = torch.device(
-        "cuda" if args.device == "auto" and torch.cuda.is_available()
-        else "cpu" if args.device == "auto"
-        else args.device
-    )
+    requested_device = str(args.device or "auto").strip().lower()
+    if requested_device == "auto":
+        device_name = "cuda" if torch.cuda.is_available() else "cpu"
+    elif requested_device.startswith("cuda") and not torch.cuda.is_available():
+        # A CPU-only PyTorch build raises a low-level AssertionError in
+        # Module.to("cuda"). Fall back cleanly so training can still start.
+        print(
+            "[DEVICE][WARN] CUDA is unavailable in this PyTorch installation; "
+            "falling back to CPU."
+        )
+        device_name = "cpu"
+    else:
+        device_name = requested_device
+    device = torch.device(device_name)
 
     # Probe runtime patterns to establish head sizes.
     probe = LearningDefenderOpeningMacroGCController()
@@ -1333,9 +1398,12 @@ def main():
     p.add_argument("--save-every", type=int, default=20)
     p.add_argument(
         "--opponent",
-        choices=("default", "toru_ai_v3", "mixed"),
-        default="toru_ai_v3",
-        help="Training/evaluation opponent. mixed = 70% Toru AI v3, 30% Default.",
+        choices=("default", "toru_ai_v3", "touyama_gaming_v2", "mixed"),
+        default="touyama_gaming_v2",
+        help=(
+            "Training/evaluation opponent. Touyama Gaming v2 uses the "
+            "とうやまゲーミング preset roster."
+        ),
     )
     args = p.parse_args()
 

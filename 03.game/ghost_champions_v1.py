@@ -101,6 +101,10 @@ class GhostChampionsV1AttackerController(BaseController):
             if isinstance(result[1], dict) or str(result[1]).upper() in {"PLANT", "ABILITY"}:
                 return result
 
+        micro_cover = self._micro_cover_result(char, game_state)
+        if micro_cover is not None:
+            return micro_cover
+
         chars = game_state.get("chars", [])
         alive_attackers = [c for c in chars if c.team == "A" and c.is_alive]
         carrier = next((c for c in alive_attackers if getattr(c, "has_spike", False)), None)
@@ -171,6 +175,53 @@ class GhostChampionsV1AttackerController(BaseController):
         while parent[step] is not None and parent[step] != start:
             step = parent[step]
         return [step[0], step[1]]
+
+    def _micro_cover_result(self, char, game_state, max_ticks=5):
+        """Nudge a nearby idle teammate into an ongoing crossfire quickly."""
+        game = getattr(self, "game", None)
+        chars = game_state.get("chars", [])
+        if game is None or not char.is_alive:
+            return None
+        enemies = [c for c in chars if c.is_alive and c.team != char.team]
+        allies = [c for c in chars if c.is_alive and c.team == char.team and c is not char]
+        engaged = []
+        for ally in allies:
+            for enemy in enemies:
+                if game.check_line_of_sight(ally, enemy):
+                    engaged.append((ally, enemy))
+        if not engaged:
+            return None
+        # Do not abandon an active duel; this controller is for the second
+        # player who can join the fight.
+        if any(game.check_line_of_sight(char, enemy) for _, enemy in engaged):
+            return None
+
+        ally, enemy = min(
+            engaged,
+            key=lambda pair: max(
+                abs(char.pos[0] - pair[0].pos[0]),
+                abs(char.pos[1] - pair[0].pos[1]),
+            ),
+        )
+        if max(abs(char.pos[0] - ally.pos[0]), abs(char.pos[1] - ally.pos[1])) > max_ticks:
+            return None
+
+        grid = game_state["grid"]
+        occupied = {tuple(c.pos) for c in chars if c.is_alive and c is not char}
+        candidates = []
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            pos = (int(char.pos[0]) + dr, int(char.pos[1]) + dc)
+            if not (0 <= pos[0] < grid.shape[0] and 0 <= pos[1] < grid.shape[1]):
+                continue
+            if grid[pos[0], pos[1]] == 1 or pos in occupied:
+                continue
+            if game.check_cell_line_of_sight(
+                pos, tuple(map(int, enemy.pos)), block_smoke=True
+            ):
+                candidates.append(pos)
+        if not candidates:
+            return None
+        return list(min(candidates, key=lambda p: max(abs(p[0] - ally.pos[0]), abs(p[1] - ally.pos[1]))))
 
     def decide_move(self, char, game_state):
         if game_state.get("is_planted"):

@@ -66,6 +66,7 @@ class Map:
     attacker_side_stats: Dict[str, Any] = field(default_factory=dict)
     defender_side_stats: Dict[str, Any] = field(default_factory=dict)
     round_records: List[Dict[str, Any]] = field(default_factory=list)
+    replay_frames: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
     def total_rounds(self) -> int:
@@ -235,6 +236,7 @@ def load_series_json(json_path: str) -> MatchSeries:
             attacker_side_stats=map_data.get("attacker_side_stats", {}),
             defender_side_stats=map_data.get("defender_side_stats", {}),
             round_records=map_data.get("round_records", []),
+            replay_frames=map_data.get("replay_frames", []),
         )
 
         series.maps.append(map_obj)

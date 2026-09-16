@@ -2,6 +2,7 @@
 
 import math
 import random
+from pathlib import Path
 import numpy as np
 
 from analytics.combat_tracker import CombatTracker
@@ -114,11 +115,10 @@ class BattleLogicMixin:
         else:
             attack_type = "default"
 
-        defenders = [
-            tuple(pos) for pos in getattr(
-                self, "_analytics_initial_defender_positions", []
-            )
-        ]
+        defenders = list(
+            getattr(self, "_analytics_initial_defender_positions", None)
+            or [tuple(c.pos) for c in self.chars if c.team == "D"]
+        )
         left = sum(pos[1] < self.width / 3 for pos in defenders)
         mid = sum(self.width / 3 <= pos[1] <= self.width * 2 / 3 for pos in defenders)
         right = len(defenders) - left - mid
@@ -527,6 +527,9 @@ class BattleLogicMixin:
                 if char.plant_timer >= PLANT_REQUIRED_TICKS:
                     self.is_planted = True
                     self.planted_pos = (r, c)
+                    tracker = getattr(self, "analytics_tracker", None)
+                    if tracker is not None:
+                        tracker._planted_pos = self.planted_pos
                     self.spike_pos = None
                     char.has_spike = False
                     char.plant_timer = 0
@@ -635,28 +638,17 @@ class BattleLogicMixin:
         self._finalize_movement_transition_state(char)
 
     def get_spotted_info(self):
-        spike_holder = next(
-            (c for c in self.chars if c.is_alive and c.team == "A" and c.has_spike),
-            None,
-        )
-        if spike_holder is None:
-            return {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0}
-
-        for d in self.chars:
-            if (
-                d.is_alive
-                and d.team == "D"
-                and self.check_line_of_sight(d, spike_holder)
-            ):
-                return {
-                    "spotted": 1.0,
-                    "site_r": float(spike_holder.pos[0]),
-                    "site_c": float(spike_holder.pos[1]),
-                }
-
+        # Pre-plant carrier identity is not public information. The actual
+        # game state still retains has_spike for pickup, death and win logic;
+        # AI-facing perception gets ordinary enemy LOS through chars instead.
         return {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0}
 
     def check_match_winner(self):
+        recorder = getattr(self, "_record_replay_frame", None)
+        if recorder is not None:
+            # Keep the terminal frame before a headless round transition
+            # replaces the characters with the next round's characters.
+            recorder()
         tracker = getattr(self, "analytics_tracker", None)
         if tracker is not None:
             previous_a = getattr(self, "_analytics_attacker_wins", 0)
@@ -1077,6 +1069,9 @@ class BattleLogicMixin:
     def process_battle(self):
         self.battle_tick += 1
         self._ensure_round_tracking_state()
+        tracker = getattr(self, "analytics_tracker", None)
+        if tracker is not None:
+            tracker.observe_tactics(self.chars, self.battle_tick)
         # すべての持続効果をTick数で管理する。
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
@@ -1285,6 +1280,7 @@ class BattleLogicMixin:
                 self.process_battle()
                 self._advance_combo_announcement()
 
+            self._record_replay_frame()
             self.draw()
             self.root.after(TICK_TIME, self.loop)
 
@@ -1302,5 +1298,14 @@ class BattleLogicMixin:
                                 self.move_character(c)
                     finally:
                         self._clear_occupancy_counts()
+                    self._analytics_post_setup_ticks = (
+                        int(getattr(self, "_analytics_post_setup_ticks", 0)) + 1
+                    )
+                    if self._analytics_post_setup_ticks == 10:
+                        self._analytics_initial_defender_positions = [
+                            tuple(c.pos) for c in self.chars
+                            if c.team == "D" and c.is_alive
+                        ]
                     self.process_battle()
                     self._advance_combo_announcement()
+                self._record_replay_frame()

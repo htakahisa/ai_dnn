@@ -2,7 +2,69 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from iq_controller_adapter import IQAwareController
-from iq_perception import IQPerceptionEngine
+from iq_perception import (
+    IQPerceptionEngine,
+    PerceivedCharacter,
+    PerceivedGameView,
+)
+
+
+class PrivateInfoController:
+    """Hide enemy spike ownership without adding IQ position noise.
+
+    Some training/evaluation team definitions intentionally disable IQ
+    perception. They must still follow the same game-information rule as the
+    normal runtime: own-team spike ownership is visible, enemy ownership is
+    not. Dropped and planted spike positions remain available.
+    """
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.real_game = None
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def set_game(self, game):
+        self.real_game = game
+        if hasattr(self.inner, "set_game"):
+            self.inner.set_game(game)
+
+    def reset_round(self):
+        if hasattr(self.inner, "reset_round"):
+            self.inner.reset_round()
+
+    def decide_move(self, char, game_state):
+        if self.real_game is None:
+            raise RuntimeError("PrivateInfoController.set_game() was not called")
+
+        proxies = []
+        mapping = {}
+        for real in self.real_game.chars:
+            if getattr(real, "team", None) == getattr(char, "team", None):
+                proxy = real
+            else:
+                proxy = PerceivedCharacter(real, has_spike=False)
+            proxies.append(proxy)
+            mapping[id(real)] = proxy
+
+        private_game = PerceivedGameView(
+            self.real_game,
+            {"chars": proxies},
+            mapping,
+        )
+        state = dict(game_state)
+        state["chars"] = proxies
+        if not bool(getattr(self.real_game, "is_planted", False)):
+            state["spotted_info"] = {
+                "spotted": 0.0,
+                "site_r": 0.0,
+                "site_c": 0.0,
+            }
+
+        if hasattr(self.inner, "set_game"):
+            self.inner.set_game(private_game)
+        return self.inner.decide_move(char, state)
 
 
 class DualRoleTeamAI:
@@ -24,8 +86,10 @@ class DualRoleTeamAI:
         self.game = None
 
     def _wrap(self, controller):
-        if not self.use_iq_perception or isinstance(controller, IQAwareController):
+        if isinstance(controller, IQAwareController):
             return controller
+        if not self.use_iq_perception:
+            return PrivateInfoController(controller)
         return IQAwareController(controller, self.perception_engine)
 
     def get_attacker_controller(self):

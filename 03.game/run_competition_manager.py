@@ -125,6 +125,7 @@ class MResult:
     attacker_side_stats: dict[str, Any] = field(default_factory=dict)
     defender_side_stats: dict[str, Any] = field(default_factory=dict)
     round_records: list[dict[str, Any]] = field(default_factory=list)
+    replay_frames: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -586,6 +587,7 @@ def play_map(
             if analytics is not None else {}
         ),
         round_records=exported.get("round_records", []) if analytics is not None else [],
+        replay_frames=list(getattr(game, "replay_frames", [])),
     )
 
 

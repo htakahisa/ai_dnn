@@ -2,13 +2,15 @@
 
 
 try:
-    from .attacker_ability_patterns_gc import get_pattern_targets
+    from .attacker_ability_patterns_gc import get_pattern_target, get_pattern_targets
 except ImportError:
     try:
-        from attacker_ability_patterns_gc import get_pattern_targets
+        from attacker_ability_patterns_gc import get_pattern_target, get_pattern_targets
     except ImportError:
         def get_pattern_targets(_ability):
             return ()
+        def get_pattern_target(*_args, **_kwargs):
+            return None
 
 
 def line_cells(start, end):
@@ -116,6 +118,14 @@ def choose_pre_entry_ability(char, chars, grid, smoke_cells=(), destination=None
         if target is not None and _walkable(grid, target):
             return ability, tuple(map(int, target))
     elif ability == "FLASH":
+        # Touyama-style lineup: use the configured landing cell as soon as
+        # the throw line opens, even before an enemy is directly visible.
+        target = get_pattern_target(
+            ability, char.pos, grid, anchor=threat_pos or destination,
+            max_range=max(15, max_range), blocked_cells=smoke_cells,
+        )
+        if target is not None:
+            return ability, target
         if threat_pos is not None:
             dist = max(abs(threat_pos[0] - char.pos[0]), abs(threat_pos[1] - char.pos[1]))
             if dist <= max_range and _walkable(grid, threat_pos):
@@ -126,6 +136,15 @@ def choose_pre_entry_ability(char, chars, grid, smoke_cells=(), destination=None
         # round-start spawn/feet when no enemy has been found yet.  Recon is
         # information-gathering, so require an actual threat/last-known
         # location; the learned policy can still choose when to use it.
+        # Recon must not fire at the round-start spawn/feet.  When a threat
+        # or last-known position exists, prefer a configured map cell near it
+        # if its throw line is open; otherwise retain the known enemy target.
+        target = get_pattern_target(
+            ability, char.pos, grid, anchor=threat_pos or destination,
+            max_range=max_range, blocked_cells=smoke_cells,
+        ) if threat_pos is not None else None
+        if target is not None:
+            return ability, target
         if threat_pos is not None and _walkable(grid, threat_pos):
             return ability, tuple(map(int, threat_pos))
     return None

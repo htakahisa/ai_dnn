@@ -204,6 +204,13 @@ WIPE_LOSS_PENALTY = -0.5  # 自チーム全滅(解除は時間の問題)によ�
 # ============================================================================
 
 
+# Retraining reward profile: surviving a completed defuse is penalized more
+# heavily because the guard failed to contest the defuser in time.
+DEATH_PENALTY = -1.0
+DEFUSE_LOSS_PENALTY = -1.5
+SURVIVING_DEFUSE_LOSS_PENALTY = -2.0
+
+
 def _parse_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
@@ -1156,6 +1163,8 @@ class GuardEnv:
                 self.match_over_reason = "defused"
                 for a in self.attackers:
                     rewards[a.name] = rewards.get(a.name, 0.0) + DEFUSE_LOSS_PENALTY
+                    if a.is_alive:
+                        rewards[a.name] += SURVIVING_DEFUSE_LOSS_PENALTY
             elif not defenders_alive:
                 self.match_over_reason = "attacker_win_wipe"
                 for a in self.attackers:

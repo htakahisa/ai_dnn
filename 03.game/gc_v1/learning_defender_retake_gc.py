@@ -444,6 +444,10 @@ class LearningDefenderRetakeGCController:
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         detonate_timer = float(game_state.get("detonate_timer", 0.0))
+        smoke_cells = {
+            tuple(map(int, cell))
+            for cell in game_state.get("smoke_cells", ())
+        }
 
         self._ensure_dist_map(grid, planted_pos)
 
@@ -479,6 +483,42 @@ class LearningDefenderRetakeGCController:
             if alive_defenders else None
         )
         is_designated = designated_defuser is char
+
+        # Smoke the spike before the first defuse tick.  A retake smoke is a
+        # cover action, not a blind reaction to a visible enemy: cast it when
+        # an ally is already in defuse range (or is currently defusing), and
+        # do not spend the charge if the spike area is already covered.
+        near_defuser = any(
+            max(abs(int(d.pos[0]) - pr), abs(int(d.pos[1]) - pc)) <= 1
+            for d in alive_defenders
+        )
+        active_defuser = any(
+            int(getattr(d, "defuse_timer", 0)) > 0 for d in alive_defenders
+        )
+        spike_area = {
+            (rr, cc)
+            for rr in range(pr - 1, pr + 2)
+            for cc in range(pc - 1, pc + 2)
+            if 0 <= rr < grid.shape[0]
+            and 0 <= cc < grid.shape[1]
+            and int(grid[rr, cc]) != 1
+        }
+        smoke_covers_spike = bool(spike_area & smoke_cells)
+        if (
+            str(getattr(char, "ability_name", "")).upper() == "SMOKE"
+            and int(getattr(char, "smoke_charges", 0)) > 0
+            and (near_defuser or active_defuser)
+            and not smoke_covers_spike
+        ):
+            if self.verbose:
+                print(
+                    f"[GC RETAKE SMOKE] {char.name} cover spike="
+                    f"{tuple(planted_pos)}"
+                )
+            return list(char.pos), {
+                "ability": "SMOKE",
+                "target": (pr, pc),
+            }
 
         move_ticks_needed = max(0, raw_dist - 1) if raw_dist >= 0 else 10**9
         latest_safe_total = (

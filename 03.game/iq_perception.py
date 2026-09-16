@@ -275,7 +275,17 @@ class IQPerceptionEngine:
             else:
                 pos = self._blur_pos(game, viewer, real.pos, ENEMY_POSITION_MAX_ERROR, "enemy", real.name)
                 hp, alive = self._enemy_hp(game, viewer, real), _alive(real)
-            proxy = PerceivedCharacter(real, pos=pos, hp=hp, is_alive=alive)
+            # Spike ownership is team-private information. Keep it on the
+            # real character for game resolution, but never expose enemy
+            # ownership through the AI perception copy.
+            proxy_overrides = {
+                "pos": pos,
+                "hp": hp,
+                "is_alive": alive,
+            }
+            if real.team != viewer.team:
+                proxy_overrides["has_spike"] = False
+            proxy = PerceivedCharacter(real, **proxy_overrides)
             if real.team != viewer.team and self._omit_enemy(game, viewer, real):
                 proxy.is_alive = False
             proxies.append(proxy)
@@ -340,7 +350,17 @@ class IQPerceptionEngine:
         if "round_timer" in state:
             state["round_timer"] = self._timer(state["round_timer"], viewer)
 
+        # Before plant, the legacy spotted_info represented the living
+        # carrier's location and therefore leaked carrier identity.
+        # Dropped/planted spike positions remain separate explicit signals.
         spotted = state.get("spotted_info")
+        if not bool(game_view.is_planted):
+            spotted = {
+                "spotted": 0.0,
+                "site_r": 0.0,
+                "site_c": 0.0,
+            }
+            state["spotted_info"] = spotted
         if isinstance(spotted, dict) and float(spotted.get("spotted", 0.0)) > 0:
             spotted = dict(spotted)
             shifted = self._blur_pos(

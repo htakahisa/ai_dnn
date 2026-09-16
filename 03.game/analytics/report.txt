@@ -2,11 +2,11 @@
 【1. チームデータ】
 ================================================================================
 
-◆ とうやまゲーミング
-  選手: Tortlilyan, いぐるん, えんぺん, ろびぃな, 夢の街
-
 ◆ Ghost Champions
   選手: Absol, SugarZ3ro, SyouTa, Xdll, eKo
+
+◆ とうやまゲーミング
+  選手: Tortlilyan, いぐるん, えんぺん, ろびぃな, 夢の街
 
 
 ================================================================================
@@ -14,92 +14,350 @@
 ================================================================================
 
 最終結果: とうやまゲーミング が勝利
-マップスコア: 2勝 vs 0勝
-実施マップ数: 2
+マップスコア: 1勝 vs 2勝
+実施マップ数: 3
 
 
 ================================================================================
 【3. プレイヤー成績（全マップ合計）】
 ================================================================================
 
-▼ とうやまゲーミング
-選手名             K   D   KD比     
-----------------------------------------
-いぐるん            41  19  2.16    
-      Role:シーカー       Gunfights:84 (48-16-20) Assist:9 Cover:7
-      1v1:0-0-0 WinRate:0.0%
-Tortlilyan      30  14  2.14    
-      Role:タイガー       Gunfights:78 (51-9-18) Assist:8 Cover:14
-      1v1:0-0-0 WinRate:0.0%
-えんぺん            30  19  1.58    
-      Role:フラッシュ      Gunfights:64 (46-11-7) Assist:9 Cover:11
-      1v1:0-0-0 WinRate:0.0%
-ろびぃな            29  20  1.45    
-      Role:スモーカー      Gunfights:68 (39-11-18) Assist:11 Cover:4
-      1v1:0-0-0 WinRate:0.0%
-夢の街             22  24  0.92    
-      Role:フラッシュ      Gunfights:67 (29-19-19) Assist:9 Cover:7
-      1v1:0-0-0 WinRate:0.0%
-
 ▼ Ghost Champions
 選手名             K   D   KD比     
 ----------------------------------------
-SyouTa          27  28  0.96    
-      Role:スモーカー      Gunfights:55 (20-27-8) Assist:3 Cover:4
-      1v1:0-0-0 WinRate:0.0%
-eKo             26  33  0.79    
-      Role:シーカー       Gunfights:57 (14-30-13) Assist:1 Cover:3
-      1v1:0-0-0 WinRate:0.0%
-Absol           18  30  0.60    
-      Role:フラッシュ      Gunfights:65 (17-26-22) Assist:7 Cover:4
-      1v1:0-0-0 WinRate:0.0%
-Xdll            15  30  0.50    
-      Role:シーカー       Gunfights:51 (14-29-8) Assist:5 Cover:7
-      1v1:0-0-0 WinRate:0.0%
-SugarZ3ro       10  31  0.32    
-      Role:スモーカー      Gunfights:51 (12-25-14) Assist:7 Cover:1
-      1v1:0-0-0 WinRate:0.0%
+Xdll            46  45  1.02    
+      Role:シーカー       Gunfights:98 (37-41-20) Assist:10 Cover:2
+      1v1:25-13-8 WinRate:65.8%
+      FirstK:17 FirstD:9 PreAim:31.5deg
+eKo             45  45  1.00    
+      Role:シーカー       Gunfights:98 (35-36-27) Assist:5 Cover:6
+      1v1:13-10-3 WinRate:56.5%
+      FirstK:6 FirstD:2 PreAim:32.0deg
+Absol           38  43  0.88    
+      Role:フラッシュ      Gunfights:115 (34-41-40) Assist:12 Cover:7
+      1v1:11-18-5 WinRate:37.9%
+      FirstK:6 FirstD:8 PreAim:28.6deg
+SyouTa          32  42  0.76    
+      Role:スモーカー      Gunfights:85 (27-37-21) Assist:6 Cover:10
+      1v1:13-16-6 WinRate:44.8%
+      FirstK:1 FirstD:2 PreAim:30.1deg
+SugarZ3ro       18  50  0.36    
+      Role:スモーカー      Gunfights:90 (21-39-30) Assist:8 Cover:7
+      1v1:7-15-9 WinRate:31.8%
+      FirstK:2 FirstD:9 PreAim:28.9deg
+
+▼ とうやまゲーミング
+選手名             K   D   KD比     
+----------------------------------------
+えんぺん            56  32  1.75    
+      Role:フラッシュ      Gunfights:132 (81-27-24) Assist:17 Cover:18
+      1v1:15-10-4 WinRate:60.0%
+      FirstK:5 FirstD:0 PreAim:35.8deg
+いぐるん            54  31  1.74    
+      Role:シーカー       Gunfights:129 (66-23-40) Assist:13 Cover:10
+      1v1:22-13-7 WinRate:62.9%
+      FirstK:12 FirstD:5 PreAim:54.4deg
+Tortlilyan      42  31  1.35    
+      Role:タイガー       Gunfights:122 (70-23-29) Assist:13 Cover:18
+      1v1:11-12-2 WinRate:47.8%
+      FirstK:0 FirstD:2 PreAim:46.1deg
+夢の街             38  44  0.86    
+      Role:フラッシュ      Gunfights:130 (59-35-36) Assist:20 Cover:7
+      1v1:18-19-12 WinRate:48.6%
+      FirstK:10 FirstD:8 PreAim:42.0deg
+ろびぃな            35  41  0.85    
+      Role:スモーカー      Gunfights:110 (49-30-31) Assist:23 Cover:2
+      1v1:6-15-6 WinRate:28.6%
+      FirstK:3 FirstD:17 PreAim:31.3deg
 
 
 ================================================================================
 【4. マップ別分析】
 ================================================================================
 
-▼ Map 1: とうやまゲーミング vs Ghost Champions
-  結果: とうやまゲーミング 勝利
+R1: attacker (detonated) attack=split site=A def_setup=- (A-Mid-B)
+R2: attacker (defender_wipe) attack=split site=A def_setup=- (A-Mid-B)
+R3: attacker (defender_wipe) attack=split site=B def_setup=- (A-Mid-B)
+R4: defender (defused) attack=fake site=B def_setup=- (A-Mid-B)
+R5: defender (defused) attack=fake site=A def_setup=- (A-Mid-B)
+R6: defender (defused) attack=split site=B def_setup=- (A-Mid-B)
+R7: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R8: attacker (detonated) attack=split site=A def_setup=- (A-Mid-B)
+R9: defender (defused) attack=fake site=B def_setup=- (A-Mid-B)
+R10: defender (time_expired) attack=fake site=B def_setup=- (A-Mid-B)
+R11: attacker (detonated) attack=fake site=A def_setup=- (A-Mid-B)
+R12: attacker (defender_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R13: defender (attacker_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R14: defender (time_expired) attack=fake site=B def_setup=- (A-Mid-B)
+R15: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R16: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R17: defender (time_expired) attack=default site=A def_setup=- (A-Mid-B)
+R18: defender (time_expired) attack=default site=A def_setup=- (A-Mid-B)
+R19: defender (defused) attack=default site=B def_setup=- (A-Mid-B)
+R20: defender (defused) attack=default site=A def_setup=- (A-Mid-B)
+R21: defender (time_expired) attack=default site=A def_setup=- (A-Mid-B)
+▼ Map 1: Ghost Champions vs とうやまゲーミング
+  結果: Ghost Champions 勝利
   スコア: 13 - 8
-  初期攻撃側: とうやまゲーミング
-
-  とうやまゲーミング:
-    いぐるん            K:21 D:12
-    えんぺん            K:19 D:14
-    Tortlilyan      K:17 D:9 
-    夢の街             K:15 D:15
-    ろびぃな            K:11 D:13
-  Ghost Champions:
-    eKo             K:19 D:18
-    SyouTa          K:13 D:17
-    Absol           K:13 D:16
-    Xdll            K:11 D:16
-    SugarZ3ro       K:7  D:16
-
-▼ Map 2: とうやまゲーミング vs Ghost Champions
-  結果: とうやまゲーミング 勝利
-  スコア: 13 - 3
   初期攻撃側: Ghost Champions
+  Losing team (とうやまゲーミング) round reasons:
+    attacker_wipe: 1
+    defender_wipe: 2
+    defused: 4
+    time_expired: 1
 
-  とうやまゲーミング:
-    いぐるん            K:20 D:7 
-    ろびぃな            K:18 D:7 
-    Tortlilyan      K:13 D:5 
-    えんぺん            K:11 D:5 
-    夢の街             K:7  D:9 
+  Team / half statistics:
+    Ghost Champions:
+      First half (Attacker): rounds 6/12 win rate 50.0%
+        Absol: K:19 D:7 GF:31 1v1:8-5-0 FirstK:3 FirstD:1 PreAim:30.9deg A:2 C:4
+        SugarZ3ro: K:3 D:11 GF:17 1v1:1-5-1 FirstK:0 FirstD:4 PreAim:34.2deg A:1 C:1
+        SyouTa: K:7 D:10 GF:20 1v1:2-3-2 FirstK:0 FirstD:0 PreAim:39.7deg A:2 C:2
+        Xdll: K:5 D:10 GF:15 1v1:2-3-2 FirstK:1 FirstD:3 PreAim:43.2deg A:4 C:0
+        eKo: K:4 D:9 GF:19 1v1:1-1-1 FirstK:0 FirstD:0 PreAim:64.3deg A:2 C:2
+      Second half (Defender): rounds 7/9 win rate 77.8%
+        Absol: K:4 D:5 GF:14 1v1:0-2-1 FirstK:1 FirstD:0 PreAim:21.2deg A:4 C:1
+        SugarZ3ro: K:3 D:7 GF:11 1v1:2-0-1 FirstK:1 FirstD:0 PreAim:13.7deg A:2 C:0
+        SyouTa: K:4 D:5 GF:8 1v1:0-2-0 FirstK:0 FirstD:0 PreAim:17.8deg A:1 C:1
+        Xdll: K:10 D:4 GF:14 1v1:6-1-1 FirstK:5 FirstD:2 PreAim:10.0deg A:1 C:0
+        eKo: K:9 D:2 GF:14 1v1:2-0-0 FirstK:0 FirstD:0 PreAim:14.7deg A:0 C:3
+    とうやまゲーミング:
+      First half (Defender): rounds 6/12 win rate 50.0%
+        Tortlilyan: K:9 D:7 GF:23 1v1:4-4-0 FirstK:0 FirstD:0 PreAim:19.4deg A:1 C:5
+        いぐるん: K:7 D:4 GF:17 1v1:4-1-2 FirstK:1 FirstD:0 PreAim:41.7deg A:0 C:1
+        えんぺん: K:8 D:8 GF:29 1v1:3-1-1 FirstK:2 FirstD:0 PreAim:19.3deg A:5 C:1
+        ろびぃな: K:16 D:8 GF:29 1v1:2-2-1 FirstK:1 FirstD:0 PreAim:24.8deg A:6 C:2
+        夢の街: K:7 D:11 GF:18 1v1:4-6-2 FirstK:4 FirstD:4 PreAim:21.5deg A:3 C:0
+      Second half (Attacker): rounds 2/9 win rate 22.2%
+        Tortlilyan: K:5 D:7 GF:13 1v1:0-1-0 FirstK:0 FirstD:1 PreAim:76.8deg A:1 C:1
+        いぐるん: K:6 D:5 GF:18 1v1:1-1-2 FirstK:1 FirstD:1 PreAim:46.4deg A:2 C:1
+        えんぺん: K:8 D:4 GF:20 1v1:4-2-0 FirstK:0 FirstD:0 PreAim:46.2deg A:2 C:2
+        ろびぃな: K:1 D:8 GF:13 1v1:0-4-0 FirstK:1 FirstD:5 PreAim:33.5deg A:4 C:0
+        夢の街: K:3 D:6 GF:17 1v1:0-2-1 FirstK:0 FirstD:0 PreAim:53.3deg A:2 C:1
+  Attacker side: rounds 8/21 win rate 38.1%
+    Plant:14/21 (66.7%) PostPlant:8/14 (57.1%)
+    Absol: K:19 D:7 GF:31 A:2 C:4
+    SugarZ3ro: K:3 D:11 GF:17 A:1 C:1
+    SyouTa: K:7 D:10 GF:21 A:2 C:2
+    Tortlilyan: K:5 D:7 GF:14 A:1 C:1
+    Xdll: K:5 D:10 GF:16 A:4 C:0
+    eKo: K:4 D:9 GF:20 A:2 C:2
+    いぐるん: K:6 D:5 GF:19 A:2 C:1
+    えんぺん: K:8 D:4 GF:21 A:2 C:2
+    ろびぃな: K:1 D:8 GF:13 A:4 C:0
+    夢の街: K:3 D:6 GF:17 A:2 C:1
+  Defender side: rounds 13/21 win rate 61.9%
+    PlantedAgainst:14/21 (66.7%) Retake:6/14 (42.9%)
+    Absol: K:4 D:5 GF:14 A:4 C:1
+    SugarZ3ro: K:3 D:7 GF:12 A:2 C:0
+    SyouTa: K:4 D:5 GF:10 A:1 C:1
+    Tortlilyan: K:9 D:7 GF:24 A:1 C:5
+    Xdll: K:10 D:4 GF:15 A:1 C:0
+    eKo: K:9 D:2 GF:14 A:0 C:3
+    いぐるん: K:7 D:4 GF:18 A:0 C:1
+    えんぺん: K:8 D:8 GF:30 A:5 C:1
+    ろびぃな: K:16 D:8 GF:30 A:6 C:2
+    夢の街: K:7 D:11 GF:18 A:3 C:0
   Ghost Champions:
-    SyouTa          K:14 D:11
-    eKo             K:7  D:15
-    Absol           K:5  D:14
-    Xdll            K:4  D:14
-    SugarZ3ro       K:3  D:15
+    Absol           K:23 D:12
+    Xdll            K:15 D:14
+    eKo             K:13 D:11
+    SyouTa          K:11 D:15
+    SugarZ3ro       K:6  D:18
+  とうやまゲーミング:
+    ろびぃな            K:17 D:16
+    えんぺん            K:16 D:12
+    Tortlilyan      K:14 D:14
+    いぐるん            K:13 D:9 
+    夢の街             K:10 D:17
+
+R1: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R2: defender (attacker_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R3: defender (attacker_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R4: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R5: defender (attacker_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R6: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R7: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R8: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R9: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R10: defender (time_expired) attack=fake site=B def_setup=- (A-Mid-B)
+R11: defender (defused) attack=default site=A def_setup=- (A-Mid-B)
+R12: defender (attacker_wipe) attack=fake site=A def_setup=- (A-Mid-B)
+R13: defender (defused) attack=default site=B def_setup=- (A-Mid-B)
+R14: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R15: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R16: attacker (defender_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R17: defender (defused) attack=fake site=B def_setup=- (A-Mid-B)
+R18: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R19: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R20: defender (attacker_wipe) attack=split site=B def_setup=- (A-Mid-B)
+▼ Map 2: Ghost Champions vs とうやまゲーミング
+  結果: とうやまゲーミング 勝利
+  スコア: 7 - 13
+  初期攻撃側: とうやまゲーミング
+  Losing team (Ghost Champions) round reasons:
+    attacker_wipe: 4
+    defender_wipe: 1
+    defused: 1
+    time_expired: 1
+
+  Team / half statistics:
+    Ghost Champions:
+      First half (Defender): rounds 6/12 win rate 50.0%
+        Absol: K:2 D:8 GF:22 1v1:0-2-2 FirstK:2 FirstD:2 PreAim:22.5deg A:2 C:0
+        SugarZ3ro: K:8 D:8 GF:15 1v1:1-2-0 FirstK:1 FirstD:0 PreAim:7.8deg A:0 C:3
+        SyouTa: K:4 D:7 GF:11 1v1:1-2-0 FirstK:1 FirstD:0 PreAim:21.5deg A:0 C:2
+        Xdll: K:10 D:8 GF:14 1v1:3-0-1 FirstK:2 FirstD:0 PreAim:12.3deg A:2 C:0
+        eKo: K:22 D:8 GF:22 1v1:2-0-0 FirstK:4 FirstD:0 PreAim:3.5deg A:2 C:1
+      Second half (Attacker): rounds 1/8 win rate 12.5%
+        Absol: K:6 D:8 GF:16 1v1:1-3-0 FirstK:0 FirstD:1 PreAim:31.2deg A:1 C:2
+        SugarZ3ro: K:1 D:7 GF:15 1v1:1-2-2 FirstK:0 FirstD:2 PreAim:54.6deg A:2 C:0
+        SyouTa: K:5 D:6 GF:15 1v1:5-3-1 FirstK:0 FirstD:1 PreAim:36.9deg A:0 C:1
+        Xdll: K:2 D:7 GF:15 1v1:2-3-1 FirstK:1 FirstD:2 PreAim:53.7deg A:1 C:0
+        eKo: K:0 D:8 GF:9 1v1:0-3-1 FirstK:0 FirstD:1 PreAim:54.8deg A:1 C:0
+    とうやまゲーミング:
+      First half (Attacker): rounds 6/12 win rate 50.0%
+        Tortlilyan: K:15 D:8 GF:34 1v1:4-1-1 FirstK:0 FirstD:0 PreAim:51.9deg A:4 C:8
+        いぐるん: K:11 D:7 GF:28 1v1:2-2-0 FirstK:2 FirstD:2 PreAim:43.6deg A:1 C:2
+        えんぺん: K:8 D:10 GF:20 1v1:0-1-0 FirstK:0 FirstD:0 PreAim:50.0deg A:4 C:6
+        ろびぃな: K:0 D:12 GF:13 1v1:0-2-1 FirstK:0 FirstD:8 PreAim:16.8deg A:4 C:0
+        夢の街: K:5 D:9 GF:29 1v1:0-1-1 FirstK:0 FirstD:0 PreAim:44.7deg A:7 C:3
+      Second half (Defender): rounds 7/8 win rate 87.5%
+        Tortlilyan: K:6 D:1 GF:13 1v1:1-1-0 FirstK:0 FirstD:0 PreAim:9.9deg A:2 C:2
+        いぐるん: K:12 D:4 GF:20 1v1:10-3-0 FirstK:4 FirstD:1 PreAim:32.5deg A:2 C:1
+        えんぺん: K:6 D:2 GF:16 1v1:1-1-0 FirstK:1 FirstD:0 PreAim:11.8deg A:1 C:1
+        ろびぃな: K:5 D:3 GF:15 1v1:0-1-1 FirstK:0 FirstD:0 PreAim:27.0deg A:2 C:0
+        夢の街: K:7 D:4 GF:19 1v1:2-3-4 FirstK:2 FirstD:0 PreAim:33.4deg A:0 C:0
+  Attacker side: rounds 7/20 win rate 35.0%
+    Plant:10/20 (50.0%) PostPlant:7/10 (70.0%)
+    Absol: K:6 D:8 GF:16 A:1 C:2
+    SugarZ3ro: K:1 D:7 GF:15 A:2 C:0
+    SyouTa: K:5 D:6 GF:15 A:0 C:1
+    Tortlilyan: K:15 D:8 GF:34 A:4 C:8
+    Xdll: K:2 D:7 GF:15 A:1 C:0
+    eKo: K:0 D:8 GF:9 A:1 C:0
+    いぐるん: K:11 D:7 GF:28 A:1 C:2
+    えんぺん: K:8 D:10 GF:20 A:4 C:6
+    ろびぃな: K:0 D:12 GF:13 A:4 C:0
+    夢の街: K:5 D:9 GF:29 A:7 C:3
+  Defender side: rounds 13/20 win rate 65.0%
+    PlantedAgainst:10/20 (50.0%) Retake:3/10 (30.0%)
+    Absol: K:2 D:8 GF:22 A:2 C:0
+    SugarZ3ro: K:8 D:8 GF:15 A:0 C:3
+    SyouTa: K:4 D:7 GF:11 A:0 C:2
+    Tortlilyan: K:6 D:1 GF:13 A:2 C:2
+    Xdll: K:10 D:8 GF:14 A:2 C:0
+    eKo: K:22 D:8 GF:22 A:2 C:1
+    いぐるん: K:12 D:4 GF:20 A:2 C:1
+    えんぺん: K:6 D:2 GF:16 A:1 C:1
+    ろびぃな: K:5 D:3 GF:15 A:2 C:0
+    夢の街: K:7 D:4 GF:19 A:0 C:0
+  Ghost Champions:
+    eKo             K:22 D:16
+    Xdll            K:12 D:15
+    SyouTa          K:9  D:13
+    SugarZ3ro       K:9  D:15
+    Absol           K:8  D:16
+  とうやまゲーミング:
+    いぐるん            K:23 D:11
+    Tortlilyan      K:21 D:9 
+    えんぺん            K:14 D:12
+    夢の街             K:12 D:13
+    ろびぃな            K:5  D:15
+
+R1: defender (defused) attack=fake site=A def_setup=- (A-Mid-B)
+R2: defender (attacker_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R3: defender (attacker_wipe) attack=fake site=A def_setup=- (A-Mid-B)
+R4: attacker (defender_wipe) attack=split site=A def_setup=- (A-Mid-B)
+R5: attacker (detonated) attack=split site=A def_setup=- (A-Mid-B)
+R6: defender (attacker_wipe) attack=fake site=A def_setup=- (A-Mid-B)
+R7: attacker (defender_wipe) attack=split site=A def_setup=- (A-Mid-B)
+R8: defender (attacker_wipe) attack=fake site=A def_setup=- (A-Mid-B)
+R9: attacker (defender_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R10: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R11: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R12: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R13: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R14: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R15: defender (defused) attack=default site=B def_setup=- (A-Mid-B)
+R16: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R17: defender (attacker_wipe) attack=fake site=B def_setup=- (A-Mid-B)
+R18: attacker (defender_wipe) attack=default site=A def_setup=- (A-Mid-B)
+R19: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R20: defender (attacker_wipe) attack=default site=B def_setup=- (A-Mid-B)
+R21: attacker (defender_wipe) attack=default site=B def_setup=- (A-Mid-B)
+▼ Map 3: Ghost Champions vs とうやまゲーミング
+  結果: とうやまゲーミング 勝利
+  スコア: 8 - 13
+  初期攻撃側: Ghost Champions
+  Losing team (Ghost Champions) round reasons:
+    attacker_wipe: 3
+    defender_wipe: 3
+    defused: 1
+    detonated: 1
+
+  Team / half statistics:
+    Ghost Champions:
+      First half (Attacker): rounds 4/12 win rate 33.3%
+        Absol: K:3 D:9 GF:21 1v1:2-6-2 FirstK:0 FirstD:2 PreAim:38.9deg A:3 C:0
+        SugarZ3ro: K:3 D:11 GF:21 1v1:2-5-4 FirstK:0 FirstD:3 PreAim:42.4deg A:2 C:3
+        SyouTa: K:5 D:9 GF:17 1v1:2-5-2 FirstK:0 FirstD:1 PreAim:51.3deg A:3 C:4
+        Xdll: K:10 D:9 GF:24 1v1:9-5-2 FirstK:3 FirstD:2 PreAim:54.2deg A:1 C:2
+        eKo: K:4 D:11 GF:19 1v1:2-4-1 FirstK:0 FirstD:1 PreAim:50.6deg A:0 C:0
+      Second half (Defender): rounds 4/9 win rate 44.4%
+        Absol: K:4 D:6 GF:11 1v1:0-0-0 FirstK:0 FirstD:2 PreAim:23.3deg A:0 C:0
+        SugarZ3ro: K:0 D:6 GF:10 1v1:0-1-1 FirstK:0 FirstD:0 PreAim:21.9deg A:1 C:0
+        SyouTa: K:7 D:5 GF:11 1v1:3-1-0 FirstK:0 FirstD:0 PreAim:17.9deg A:0 C:0
+        Xdll: K:9 D:7 GF:14 1v1:3-1-1 FirstK:5 FirstD:0 PreAim:12.0deg A:1 C:0
+        eKo: K:6 D:7 GF:14 1v1:6-2-0 FirstK:2 FirstD:0 PreAim:12.6deg A:0 C:0
+    とうやまゲーミング:
+      First half (Defender): rounds 8/12 win rate 66.7%
+        Tortlilyan: K:1 D:3 GF:13 1v1:0-2-0 FirstK:0 FirstD:0 PreAim:9.0deg A:1 C:0
+        いぐるん: K:9 D:7 GF:22 1v1:5-5-3 FirstK:2 FirstD:0 PreAim:40.7deg A:6 C:1
+        えんぺん: K:17 D:4 GF:25 1v1:6-2-2 FirstK:2 FirstD:0 PreAim:23.8deg A:2 C:5
+        ろびぃな: K:9 D:4 GF:18 1v1:3-2-2 FirstK:1 FirstD:0 PreAim:33.7deg A:2 C:0
+        夢の街: K:13 D:7 GF:26 1v1:11-6-4 FirstK:4 FirstD:3 PreAim:26.4deg A:2 C:0
+      Second half (Attacker): rounds 5/9 win rate 55.6%
+        Tortlilyan: K:6 D:5 GF:24 1v1:2-3-1 FirstK:0 FirstD:1 PreAim:61.9deg A:4 C:2
+        いぐるん: K:9 D:4 GF:22 1v1:0-1-0 FirstK:2 FirstD:1 PreAim:95.7deg A:2 C:4
+        えんぺん: K:9 D:4 GF:20 1v1:1-3-0 FirstK:0 FirstD:0 PreAim:58.2deg A:3 C:3
+        ろびぃな: K:4 D:6 GF:21 1v1:1-4-1 FirstK:0 FirstD:4 PreAim:54.5deg A:5 C:0
+        夢の街: K:3 D:7 GF:21 1v1:1-1-0 FirstK:0 FirstD:1 PreAim:71.7deg A:6 C:3
+  Attacker side: rounds 9/21 win rate 42.9%
+    Plant:11/21 (52.4%) PostPlant:9/11 (81.8%)
+    Absol: K:3 D:9 GF:21 A:3 C:0
+    SugarZ3ro: K:3 D:11 GF:21 A:2 C:3
+    SyouTa: K:5 D:9 GF:17 A:3 C:4
+    Tortlilyan: K:6 D:5 GF:24 A:4 C:2
+    Xdll: K:10 D:9 GF:24 A:1 C:2
+    eKo: K:4 D:11 GF:19 A:0 C:0
+    いぐるん: K:9 D:4 GF:22 A:2 C:4
+    えんぺん: K:9 D:4 GF:20 A:3 C:3
+    ろびぃな: K:4 D:6 GF:21 A:5 C:0
+    夢の街: K:3 D:7 GF:21 A:6 C:3
+  Defender side: rounds 12/21 win rate 57.1%
+    PlantedAgainst:11/21 (52.4%) Retake:2/11 (18.2%)
+    Absol: K:4 D:6 GF:11 A:0 C:0
+    SugarZ3ro: K:0 D:6 GF:10 A:1 C:0
+    SyouTa: K:7 D:5 GF:11 A:0 C:0
+    Tortlilyan: K:1 D:3 GF:13 A:1 C:0
+    Xdll: K:9 D:7 GF:14 A:1 C:0
+    eKo: K:6 D:7 GF:14 A:0 C:0
+    いぐるん: K:9 D:7 GF:22 A:6 C:1
+    えんぺん: K:17 D:4 GF:25 A:2 C:5
+    ろびぃな: K:9 D:4 GF:18 A:2 C:0
+    夢の街: K:13 D:7 GF:26 A:2 C:0
+  Ghost Champions:
+    Xdll            K:19 D:16
+    SyouTa          K:12 D:14
+    eKo             K:10 D:18
+    Absol           K:7  D:15
+    SugarZ3ro       K:3  D:17
+  とうやまゲーミング:
+    えんぺん            K:26 D:8 
+    いぐるん            K:18 D:11
+    夢の街             K:16 D:14
+    ろびぃな            K:13 D:10
+    Tortlilyan      K:7  D:8 
 
 ================================================================================
 【プレイヤーレーティング】
@@ -107,16 +365,16 @@ SugarZ3ro       10  31  0.32
 
 選手名             チーム               Rating      脅威度
 ------------------------------------------------------------
-Tortlilyan      とうやまゲーミング         2555.5     54.5
-いぐるん            とうやまゲーミング         2551.4     58.1
-えんぺん            とうやまゲーミング         2341.0     48.8
-ろびぃな            とうやまゲーミング         2164.3     47.2
-夢の街             とうやまゲーミング         2117.3     39.7
-SyouTa          Ghost Champions   1273.1     29.1
-eKo             Ghost Champions   1202.8     27.2
-Absol           Ghost Champions   1128.8     23.7
-Xdll            Ghost Champions   1090.1     22.1
-SugarZ3ro       Ghost Champions   1023.2     19.4
+いぐるん            とうやまゲーミング         2159.5     48.5
+えんぺん            とうやまゲーミング         2027.1     48.9
+Tortlilyan      とうやまゲーミング         1941.0     42.6
+夢の街             とうやまゲーミング         1822.9     37.0
+ろびぃな            とうやまゲーミング         1795.0     36.4
+Xdll            Ghost Champions   1590.6     33.8
+eKo             Ghost Champions   1565.2     33.4
+SyouTa          Ghost Champions   1483.7     29.3
+Absol           Ghost Champions   1458.5     31.3
+SugarZ3ro       Ghost Champions   1317.9     23.4
 
 
 ================================================================================
@@ -125,22 +383,22 @@ SugarZ3ro       Ghost Champions   1023.2     19.4
 
 【とうやまゲーミング の勝因】
 
-最強選手: Tortlilyan (Rating: 2555.5)
-  脅威度スコア: 54.5/100
-  KD比: 2.14
+最強選手: いぐるん (Rating: 2159.5)
+  脅威度スコア: 48.5/100
+  KD比: 1.74
 
-チーム平均Rating: 2345.9 vs 1143.6
-  評価差: +1202.3
+チーム平均Rating: 1949.1 vs 1483.2
+  評価差: +465.9
 
-→ とうやまゲーミング は総合的に圧倒的に強かった。全選手がバランス良く活躍。
+→ とうやまゲーミング が接戦を制した。主力選手の活躍が決定打。
 
 【Ghost Champions の敗因】
 
-最弱リンク: SugarZ3ro (Rating: 1023.2)
-  KD比: 0.32
-  → デス数が多く、チームの足を引っ張った。
+最弱リンク: SugarZ3ro (Rating: 1317.9)
+  KD比: 0.36
+ → デス数が多く、チームの足を引っ張った。
 
-チーム平均Rating: 1143.6
+チーム平均Rating: 1483.2
 
 → 全体的に実力不足。パフォーマンス向上が課題。
 
@@ -152,27 +410,26 @@ SugarZ3ro       Ghost Champions   1023.2     19.4
 【Ghost Champions への改善提案】
 
 1. 低パフォーマンス選手への対策
-   - SyouTa (Rating: 1273.1)
-     → 攻撃性を上げ、敵への圧力をかける。
-   - eKo (Rating: 1202.8)
-     → 攻撃性を上げ、敵への圧力をかける。
-   - Absol (Rating: 1128.8)
-     → 攻撃性を上げ、敵への圧力をかける。
-   - Xdll (Rating: 1090.1)
-     → 攻撃性を上げ、敵への圧力をかける。
-   - SugarZ3ro (Rating: 1023.2)
-     → 不要なデスを減らす。ポジショニングを改善し、敵と無理に交戦しない。
+   - SyouTa (Rating: 1483.7)
+   → 攻撃性を上げ、敵への圧力をかける。
+   - Absol (Rating: 1458.5)
+   → 攻撃性を上げ、敵への圧力をかける。
+   - SugarZ3ro (Rating: 1317.9)
+   → 不要なデスを減らす。ポジショニングを改善し、敵と無理に交戦しない。
 
 2. チーム安定性向上
-   現在の平均安定性スコア: 97.4/100
-   現在のチーム平均カバー数/ラウンド: 1.6/37.0
-   現在のチーム平均KD: 0.5
-   →カバーを取り合う、ダブルピークなど、ミクロの連携で改善する可能性。 
+   現在の平均安定性スコア: 95.2/100
+   現在のチーム平均カバー数/ラウンド: 1.8/62.0
+   現在のチーム平均KD: 0.6
+     アタッカー時プラント成功率: 18/32 (56.2%)
+   → シリーズ全体でプラントの成功率は56.2%と非常に高い。
+    → 個人の撃ち合いで負けている。単独勝負ではなくダブルピークなどを意識する。
+    → カバーを取り合う、ダブルピークなど、ミクロの連携で改善する可能性。 
 
 3. 相手のMVP対策
-   相手の最強選手: Tortlilyan (Rating: 2555.5)
-   → この選手に集中的にマークをつけ、無理をさせるプレイを徹底する。
+   相手の最強選手: いぐるん (Rating: 2159.5)
+  → この選手に集中的にマークをつけ、無理をさせるプレイを徹底する。
 
 4. 戦術的改善
-   → 次のマッチでは、チームの弱点を補強した編成を検討する。
-   → 強い相手チームに対しては、敵の主力選手を積極的に狙う戦術を採用。
+  → 次のマッチでは、チームの弱点を補強した編成を検討する。
+  → 強い相手チームに対しては、敵の主力選手を積極的に狙う戦術を採用。

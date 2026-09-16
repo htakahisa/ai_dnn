@@ -4,6 +4,7 @@ from collections import defaultdict
 import math
 
 from game_core import FACING_VECTORS
+from analytics.tactical_classifier import TacticalRoundTracker
 
 
 class CombatTracker:
@@ -27,6 +28,9 @@ class CombatTracker:
         self.round_records = []
         self._round_had_kill = False
         self._round_had_death = False
+        self.tactics = None
+        self._round_start_stats = {}
+        self._round_start_context = {}
 
     @staticmethod
     def _new_stats():
@@ -50,8 +54,27 @@ class CombatTracker:
             "covers": 0,
         }
 
-    def register_players(self, chars):
+    def register_players(self, chars, team_names=None):
         self._all_chars = list(chars)
+        team_names = team_names or {}
+        self._round_start_stats = {
+            name: dict(self.stats[name]) for name in self.stats
+        }
+        self._round_start_context = {
+            str(char.name): {
+                "team": str(team_names.get(char.team, char.team)),
+                "side": "attacker" if char.team == "A" else "defender",
+            }
+            for char in chars
+        }
+
+    def begin_round_tactics(self, width, plant_cells, chars):
+        self.tactics = TacticalRoundTracker(width, plant_cells)
+        self.tactics.begin_round(chars)
+
+    def observe_tactics(self, chars, tick):
+        if self.tactics is not None:
+            self.tactics.observe(chars, tick)
         for char in chars:
             row = self.stats[str(char.name)]
             row["role"] = str(getattr(char, "role", ""))
@@ -60,12 +83,38 @@ class CombatTracker:
             side_row["role"] = row["role"]
 
     def record_round_result(self, winning_team, reason, planted, tactic=None):
+        if self.tactics is not None:
+            generic_tactic = self.tactics.finish(
+                getattr(self, "_planted_pos", None),
+                getattr(self, "_target_plant_pos", None),
+            )
+            # The controller snapshot is useful for fields such as the
+            # defender setup, but its attacker strategy is often just the
+            # controller's current macro label.  An empty/unknown label is
+            # exposed by the snapshot as ``default`` and used to overwrite
+            # the controller-independent movement classification here.  Keep
+            # the observed classification when it is more informative.
+            supplied = dict(tactic or {})
+            supplied_strategy = str(
+                supplied.get("attacker_strategy", "") or ""
+            ).strip().lower()
+            observed_strategy = str(
+                generic_tactic.get("attacker_strategy", "") or ""
+            ).strip().lower()
+            if (
+                supplied_strategy == "default"
+                and observed_strategy
+                and observed_strategy != "default"
+            ):
+                supplied.pop("attacker_strategy", None)
+            tactic = {**generic_tactic, **supplied}
         self.round_records.append({
             "round_number": len(self.round_records) + 1,
             "winner": "attacker" if winning_team == "A" else "defender",
             "reason": str(reason),
             "planted": bool(planted),
             "tactic": tactic or {},
+            "players": self._round_player_deltas(),
         })
         self.side_stats["attacker"]["rounds_played"] += 1
         self.side_stats["defender"]["rounds_played"] += 1
@@ -81,6 +130,24 @@ class CombatTracker:
             else:
                 self.side_stats["defender"]["retakes_won"] += 1
 
+    def _round_player_deltas(self):
+        result = {}
+        fields = (
+            "kills", "deaths", "gunfights_participated", "gunfights_won",
+            "gunfights_lost", "gunfights_draw", "one_v_one_participated",
+            "one_v_one_won", "one_v_one_lost", "one_v_one_draw", "assists",
+            "covers", "first_kills", "first_deaths", "preaim_angle_sum",
+            "preaim_angle_count",
+        )
+        for name, context in self._round_start_context.items():
+            before = self._round_start_stats.get(name, {})
+            after = self.stats.get(name, {})
+            row = {field: after.get(field, 0) - before.get(field, 0) for field in fields}
+            row.update(context)
+            row["role"] = after.get("role", "")
+            result[name] = row
+        return result
+
     def begin_round(self):
         """Clear transient combat links while retaining map totals."""
         self.active.clear()
@@ -88,6 +155,7 @@ class CombatTracker:
         self._pending_cover.clear()
         self._round_had_kill = False
         self._round_had_death = False
+        self.tactics = None
 
     def record_contribution(self, assister, victim, tick, method):
         if assister is None or victim is None or assister is victim:
@@ -103,6 +171,7 @@ class CombatTracker:
             (str(killer.name), str(victim.name), int(tick))
         )
         side = "attacker" if victim.team == "A" else "defender"
+        self.stats[str(victim.name)]["deaths"] += 1
         self.side_stats[side]["players"][str(victim.name)]["deaths"] += 1
         if not self._round_had_death:
             self._round_had_death = True
@@ -115,6 +184,7 @@ class CombatTracker:
         killer_name = str(killer.name)
         victim_name = str(victim.name)
         killer_side = "attacker" if killer.team == "A" else "defender"
+        self.stats[killer_name]["kills"] += 1
         self.side_stats[killer_side]["players"][killer_name]["kills"] += 1
         if not self._round_had_kill:
             self._round_had_kill = True
