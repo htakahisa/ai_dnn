@@ -1,0 +1,14 @@
+{
+    "Tortlilyan": {
+        "frames": [
+            "image/ace_touyama01.png",
+            "image/ace_touyama02.png"
+        ],
+        "frame_interval_ms": 500,
+        "duration_ms": 2000,
+        "sound": [
+            "sound/ace_touyama.mp3",
+            0.5
+        ]
+    }
+}
