@@ -1,0 +1,16 @@
+{
+  "episodes": 200,
+  "seed": 4026091700,
+  "opponent_stats": [
+    100.0,
+    60.0,
+    40.0
+  ],
+  "round_win_rate": 0.315,
+  "plant_rate": 0.665,
+  "registered_plant_rate": 0.665,
+  "guard_position_tick_rate": 0.6813045048764126,
+  "mean_ticks": 116.72,
+  "meets_win_rate_target": false,
+  "target_win_rate": 0.5
+}

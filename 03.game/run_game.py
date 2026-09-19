@@ -36,6 +36,7 @@ from ghost_champions_v1_macro import GhostChampionsV1AttackerController, GhostCh
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
+from fnatic_v1_rules import FnaticV1AttackerController, FnaticV1DefenderController
 
 from game_core import (
     Character,
@@ -74,6 +75,13 @@ def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
 
     if normalized == "fnatic_v1":
+        return DualRoleTeamAI(
+            name="Fnatic v1",
+            attacker_factory=FnaticV1AttackerController,
+            defender_factory=FnaticV1DefenderController,
+        )
+
+    if normalized == "fnatic_legacy_v1":
         return DualRoleTeamAI(
             name="Fnatic v1",
             attacker_factory=lambda: PolicyAttackerController(
@@ -325,6 +333,14 @@ class VisualFPSBattle(
 
         chars = []
         for char in getattr(self, "chars", []):
+            visible_to = ["A", "D"]
+            if char.is_alive:
+                visible_to = []
+                for viewer_team in ("A", "D"):
+                    if char.team == viewer_team or self.is_visible_to_team(
+                        char, viewer_team
+                    ):
+                        visible_to.append(viewer_team)
             chars.append({
                 "name": str(char.name),
                 "display_name": str(getattr(char, "display_name", char.name)),
@@ -336,6 +352,13 @@ class VisualFPSBattle(
                 "has_spike": bool(getattr(char, "has_spike", False)),
                 "blind": int(getattr(char, "blind_remaining", 0)),
                 "revealed": bool(getattr(char, "los_revealed", False)),
+                "ultimate": str(getattr(char, "ultimate_name", "")),
+                "ultimate_points": int(getattr(char, "ultimate_points", 0)),
+                "ultimate_cost": int(getattr(char, "ultimate_cost", 0)),
+                "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
+                # Per-team visibility is stored for fog-of-war replay views.
+                # Own players are always visible to their own team.
+                "visible_to": visible_to,
             })
 
         def projectile(item):
@@ -358,6 +381,10 @@ class VisualFPSBattle(
             "target_plant_pos": pos(getattr(self, "target_plant_pos", None)),
             "planted_pos": pos(getattr(self, "planted_pos", None)),
             "spike_pos": pos(getattr(self, "spike_pos", None)),
+            "available_orbs": [
+                list(map(int, cell))
+                for cell in sorted(getattr(self, "available_orbs", set()))
+            ],
             "chars": chars,
             "smokes": [
                 {"cells": [list(map(int, cell)) for cell in smoke.get("cells", [])],
@@ -374,6 +401,24 @@ class VisualFPSBattle(
                 {"cells": [list(map(int, cell)) for cell in item.get("cells", [])],
                  "remaining_ticks": int(item.get("remaining_ticks", 0))}
                 for item in getattr(self, "recon_bursts", [])
+            ],
+            "monitor_drones": [
+                {
+                    "name": str(drone.name),
+                    "team": str(drone.team),
+                    "pos": pos(drone.pos),
+                    "hp": int(drone.hp),
+                    "target": drone.target_name,
+                }
+                for drone in getattr(self, "monitor_drones", [])
+                if drone.is_alive
+            ],
+            "tunnel_bursts": [
+                {
+                    "cells": [list(map(int, cell)) for cell in item.get("cells", [])],
+                    "remaining_ticks": int(item.get("remaining_ticks", 0)),
+                }
+                for item in getattr(self, "tunnel_bursts", [])
             ],
         })
 
@@ -663,6 +708,7 @@ class VisualFPSBattle(
                     has_spike=has_spike,
                     kills=saved["kills"],
                     deaths=saved["deaths"],
+                    ultimate_points=saved.get("ultimate_points", 0),
                     mental_pressure=self._mental_pressure_for_player(name, "A"),
                 )
             )
@@ -716,6 +762,7 @@ class VisualFPSBattle(
                     "#27ae60",
                     kills=saved["kills"],
                     deaths=saved["deaths"],
+                    ultimate_points=saved.get("ultimate_points", 0),
                     mental_pressure=self._mental_pressure_for_player(name, "D"),
                 )
             )
@@ -759,7 +806,12 @@ class VisualFPSBattle(
         self.recon_projectiles = []
         self.flash_bursts = []
         self.recon_bursts = []
+        self.monitor_drones = []
+        self.monitor_drone_serial = 0
+        self.tunnel_bursts = []
+        self.available_orbs = set(zip(*np.where(self.grid == 5)))
         self.ability_mode = None
+        self.ultimate_mode = None
 
         if hasattr(self.defender_controller, "reset_round"):
             self.defender_controller.reset_round()

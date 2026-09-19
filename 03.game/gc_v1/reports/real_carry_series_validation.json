@@ -1,0 +1,268 @@
+{
+  "maps": 8,
+  "candidate": "gc_v1/data/attacker_carry_gc_real_data/dqn_attacker_carry_gc_ep80.pt",
+  "baseline": {
+    "rounds": 141,
+    "attacks": 74,
+    "wins": 12,
+    "plants": 31,
+    "registered": 27,
+    "gc_score": 37,
+    "plant_rate": 0.4189189189189189,
+    "attack_win_rate": 0.16216216216216217,
+    "round_win_rate": 0.2624113475177305
+  },
+  "retrained": {
+    "rounds": 165,
+    "attacks": 84,
+    "wins": 23,
+    "plants": 52,
+    "registered": 32,
+    "gc_score": 66,
+    "plant_rate": 0.6190476190476191,
+    "attack_win_rate": 0.27380952380952384,
+    "round_win_rate": 0.4
+  },
+  "comparisons": [
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_171242.json",
+      "map": 1,
+      "baseline": {
+        "seed": 182968165,
+        "score": [
+          0,
+          13
+        ],
+        "gc_score": 0,
+        "rounds": 13,
+        "attacks": 12,
+        "wins": 0,
+        "plants": 1,
+        "registered": 1
+      },
+      "retrained": {
+        "seed": 182968165,
+        "score": [
+          13,
+          7
+        ],
+        "gc_score": 13,
+        "rounds": 20,
+        "attacks": 12,
+        "wins": 6,
+        "plants": 9,
+        "registered": 8
+      }
+    },
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_171242.json",
+      "map": 2,
+      "baseline": {
+        "seed": 1098246839,
+        "score": [
+          1,
+          13
+        ],
+        "gc_score": 1,
+        "rounds": 14,
+        "attacks": 2,
+        "wins": 0,
+        "plants": 2,
+        "registered": 2
+      },
+      "retrained": {
+        "seed": 1098246839,
+        "score": [
+          8,
+          13
+        ],
+        "gc_score": 8,
+        "rounds": 21,
+        "attacks": 9,
+        "wins": 2,
+        "plants": 5,
+        "registered": 4
+      }
+    },
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_165457.json",
+      "map": 1,
+      "baseline": {
+        "seed": 1562627217,
+        "score": [
+          7,
+          13
+        ],
+        "gc_score": 7,
+        "rounds": 20,
+        "attacks": 12,
+        "wins": 2,
+        "plants": 6,
+        "registered": 6
+      },
+      "retrained": {
+        "seed": 1562627217,
+        "score": [
+          5,
+          13
+        ],
+        "gc_score": 5,
+        "rounds": 18,
+        "attacks": 12,
+        "wins": 3,
+        "plants": 6,
+        "registered": 6
+      }
+    },
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_165457.json",
+      "map": 2,
+      "baseline": {
+        "seed": 678513998,
+        "score": [
+          9,
+          13
+        ],
+        "gc_score": 9,
+        "rounds": 22,
+        "attacks": 10,
+        "wins": 4,
+        "plants": 6,
+        "registered": 6
+      },
+      "retrained": {
+        "seed": 678513998,
+        "score": [
+          6,
+          13
+        ],
+        "gc_score": 6,
+        "rounds": 19,
+        "attacks": 7,
+        "wins": 1,
+        "plants": 4,
+        "registered": 4
+      }
+    },
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_073721.json",
+      "map": 1,
+      "baseline": {
+        "seed": 2129567386,
+        "score": [
+          2,
+          13
+        ],
+        "gc_score": 2,
+        "rounds": 15,
+        "attacks": 12,
+        "wins": 1,
+        "plants": 3,
+        "registered": 3
+      },
+      "retrained": {
+        "seed": 2129567386,
+        "score": [
+          6,
+          13
+        ],
+        "gc_score": 6,
+        "rounds": 19,
+        "attacks": 12,
+        "wins": 3,
+        "plants": 4,
+        "registered": 3
+      }
+    },
+    {
+      "series": "series_Ghost_Champions_vs_Touyama_Gaming_0-2_20260917_073721.json",
+      "map": 2,
+      "baseline": {
+        "seed": 2414421000,
+        "score": [
+          5,
+          13
+        ],
+        "gc_score": 5,
+        "rounds": 18,
+        "attacks": 6,
+        "wins": 1,
+        "plants": 1,
+        "registered": 1
+      },
+      "retrained": {
+        "seed": 2414421000,
+        "score": [
+          6,
+          13
+        ],
+        "gc_score": 6,
+        "rounds": 19,
+        "attacks": 7,
+        "wins": 0,
+        "plants": 2,
+        "registered": 1
+      }
+    },
+    {
+      "series": "series_Carnal_Lust_Syndicate_vs_Ghost_Champions_2-0_20260917_160845.json",
+      "map": 1,
+      "baseline": {
+        "seed": 1096229214,
+        "score": [
+          13,
+          7
+        ],
+        "gc_score": 7,
+        "rounds": 20,
+        "attacks": 8,
+        "wins": 1,
+        "plants": 6,
+        "registered": 4
+      },
+      "retrained": {
+        "seed": 1096229214,
+        "score": [
+          14,
+          12
+        ],
+        "gc_score": 12,
+        "rounds": 26,
+        "attacks": 13,
+        "wins": 5,
+        "plants": 11,
+        "registered": 2
+      }
+    },
+    {
+      "series": "series_Carnal_Lust_Syndicate_vs_Ghost_Champions_2-0_20260917_160845.json",
+      "map": 2,
+      "baseline": {
+        "seed": 2889505887,
+        "score": [
+          13,
+          6
+        ],
+        "gc_score": 6,
+        "rounds": 19,
+        "attacks": 12,
+        "wins": 3,
+        "plants": 6,
+        "registered": 4
+      },
+      "retrained": {
+        "seed": 2889505887,
+        "score": [
+          13,
+          10
+        ],
+        "gc_score": 10,
+        "rounds": 23,
+        "attacks": 12,
+        "wins": 3,
+        "plants": 11,
+        "registered": 4
+      }
+    }
+  ]
+}

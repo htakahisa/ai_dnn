@@ -246,6 +246,7 @@ class AnalyticsViewer(tk.Tk):
         ReplayViewer(
             self,
             map_data.replay_frames,
+            map_options=maps,
             title=f"Replay - Map {map_data.number} ({map_data.team1} vs {map_data.team2})",
         )
 

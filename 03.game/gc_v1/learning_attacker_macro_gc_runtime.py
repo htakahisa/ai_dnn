@@ -29,6 +29,7 @@ import numpy as np
 import torch
 
 from game_core import PLANT_REQUIRED_TICKS
+from positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
 
 # Keep this import exact: runtime must use the same observation/action semantics
 # as the final Macro model.
@@ -466,6 +467,34 @@ class LearningAttackerMacroGCController:
                 abs(int(attacker.pos[1]) - int(holder.pos[1])),
             ) <= max_distance
         ]
+
+    def _macro_cover_escorts(self, holder, game_state):
+        """Reserve cover from the main group, preserving independent routes.
+
+        If the entire main escort group is dead, one nearby independent
+        player can take over. Names are used because perceived chars are proxies.
+        """
+        escorts = [c for c in self._real_attackers(game_state)
+                   if getattr(c, "is_alive", True) and c.name != holder.name]
+        independent_roles = {
+            "SUPPORT", "FAKE_SELL", "OPPOSITE_SCOUT",
+            "OPPOSITE_SCOUT_LURK", "OPPOSITE_SCOUT_DEEP", "MID_CONTROL",
+            "A_SCOUT", "B_SCOUT",
+        }
+        fake_sellers = set(getattr(self.env, "_fake_group_names", set()))
+        fake_rotating = (str(self.env.current_strategy).startswith("FAKE_")
+                         and getattr(self.env, "_fake_phase", None) == "ROTATE")
+        main = [c for c in escorts
+                if self.env.assignment.get(c.name, (None, None, "MAIN"))[2]
+                not in independent_roles
+                and self.env.assignment.get(c.name, (None, None, None))[1:]
+                != ("INFO", "MAIN_LEAD")
+                and not (fake_rotating and c.name in fake_sellers)]
+        if main or not escorts:
+            return main
+        return [min(escorts, key=lambda c: (
+            max(abs(c.pos[0] - holder.pos[0]), abs(c.pos[1] - holder.pos[1])),
+            c.name))]
 
     def _fallback_progress_target(self, char, holder, game_state):
         """Choose a concrete attack-progress target after an unconfirmed hold."""
@@ -1223,7 +1252,8 @@ class LearningAttackerMacroGCController:
         # "seven cells from an open site, then runs to the opposite site"
         # failure.  A 12-cell lock gives the carrier time to plant while still
         # allowing rotations earlier in the round.
-        current_target = getattr(self.game, "target_plant_pos", None)
+        current_target = (team_plant_target(self.game) if getattr(self, "learned_positioning", False)
+                          else getattr(self.game, "target_plant_pos", None))
         carrier = next(
             (
                 c for c in getattr(self.game, "chars", [])
@@ -1257,13 +1287,18 @@ class LearningAttackerMacroGCController:
         if not plant_cells:
             return
 
+        plant_cells = preferred_plant_cells(grid, plant_cells)
+
         origin = tuple(carrier.pos) if carrier is not None else plant_cells[0]
         chosen = min(
             plant_cells,
             key=lambda p: abs(p[0] - origin[0]) + abs(p[1] - origin[1]),
         )
 
-        self.game.target_plant_pos = tuple(chosen)
+        if getattr(self, "learned_positioning", False):
+            set_team_plant_target(self.game, chosen)
+        else:
+            self.game.target_plant_pos = tuple(chosen)
 
     # ------------------------------------------------------------------
     # Public coordinate API
@@ -1310,7 +1345,9 @@ class LearningAttackerMacroGCController:
 
         # Start commitment the moment the living carrier actually reaches any
         # legal plant cell.  From here the carrier cannot be Macro-routed away.
-        if self._plant_commit_holder is None and self._holder_on_plant_cell(holder, game_state):
+        learned_positioning = getattr(self, "learned_positioning", False)
+        if (not learned_positioning and self._plant_commit_holder is None
+                and self._holder_on_plant_cell(holder, game_state)):
             self._start_plant_commit(holder, game_state)
 
         if self._plant_commit_holder is not None:
@@ -1321,35 +1358,37 @@ class LearningAttackerMacroGCController:
         # This must run before abilities, escort support, and Macro movement.
         # A carrier that cannot complete the shortest remaining plant route has
         # no time left for a rotate, fake, hold, or opening ability.
-        hard_deadline = self._hard_plant_deadline_result(char, holder, game_state)
+        hard_deadline = (self._hard_plant_deadline_result(char, holder, game_state)
+                         if not learned_positioning else None)
         if hard_deadline is not None:
             return hard_deadline
 
         # Final anti-throw guard.  Once the selected site has a real attacker
         # presence, the carrier is never allowed to follow an opposite-site
         # enemy or a stale Macro waypoint instead of planting.
-        direct_plant = self._direct_carrier_plant_result(char, holder, game_state)
+        direct_plant = (self._direct_carrier_plant_result(char, holder, game_state)
+                        if not learned_positioning else None)
         if direct_plant is not None:
             return direct_plant
 
-        emergency = self._emergency_plant_result(char, holder, game_state)
+        emergency = (self._emergency_plant_result(char, holder, game_state)
+                     if not learned_positioning else None)
         if emergency is not None:
             return emergency
 
+        self._sync_tick_once(game_state)
+
         if self._is_special_phase_result(base_result):
             return base_result
-
-        self._sync_tick_once(game_state)
 
         # Hard safety fallback while the retrained escort policy is still
         # being produced: the carrier does not continue alone, and only the
         # nearest living escort is asked to close the gap.  This prevents all
         # four escorts from independently choosing other macro targets.
-        support = self._carrier_supporters(holder, game_state)
-        escorts = [
-            attacker for attacker in self._real_attackers(game_state)
-            if attacker is not holder and bool(getattr(attacker, "is_alive", True))
-        ]
+        escorts = self._macro_cover_escorts(holder, game_state)
+        escort_names = {c.name for c in escorts}
+        support = [c for c in self._carrier_supporters(holder, game_state)
+                   if c.name in escort_names]
         if escorts and not support:
             nearest_escort = min(
                 escorts,
@@ -1388,16 +1427,14 @@ class LearningAttackerMacroGCController:
         # the carrier waits for the normal two-player support shape unless an
         # immediate threat requires a combat reaction.
         if self._attacker_has_confirmed_threat(game_state):
-            support = self._carrier_supporters(holder, game_state)
-            living_escorts = max(0, len(self._real_attackers(game_state)) - 1)
-            required_support = min(2, living_escorts)
+            required_support = min(2, len(escorts))
             if (
-                char is holder
+                char.name == holder.name
                 and len(support) < required_support
                 and not self._carrier_in_immediate_danger(holder, game_state)
             ):
                 return list(map(int, char.pos)), "MOVE"
-            if char is not holder and len(support) < required_support:
+            if char.name in escort_names and len(support) < required_support:
                 carrier_dist = max(
                     abs(int(char.pos[0]) - int(holder.pos[0])),
                     abs(int(char.pos[1]) - int(holder.pos[1])),
@@ -1429,7 +1466,7 @@ class LearningAttackerMacroGCController:
         # have fallen behind continue moving so this does not create a halt.
         strategy = str(self.env.current_strategy or "")
         is_rush = strategy.endswith("_RUSH")
-        if not is_rush and char is not holder:
+        if not is_rush and char.name in escort_names:
             carrier_dist = max(
                 abs(int(char.pos[0]) - int(holder.pos[0])),
                 abs(int(char.pos[1]) - int(holder.pos[1])),

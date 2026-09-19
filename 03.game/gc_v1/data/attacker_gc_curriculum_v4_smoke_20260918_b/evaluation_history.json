@@ -1,0 +1,172 @@
+[
+  {
+    "episodes": 3,
+    "seeds": [
+      3026091700,
+      5026091700,
+      6026091700
+    ],
+    "opponent_stats": [
+      100,
+      60,
+      40
+    ],
+    "round_win_rate": 0.3333333333333333,
+    "worst_round_win_rate": 0.0,
+    "plant_rate": 0.3333333333333333,
+    "registered_plant_rate": 0.3333333333333333,
+    "worst_registered_plant_rate": 0.0,
+    "guard_position_tick_rate": 0.15396113602391628,
+    "mean_ticks": 110.66666666666667,
+    "per_seed": [
+      {
+        "episodes": 1,
+        "seed": 3026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 1.0,
+        "plant_rate": 1.0,
+        "registered_plant_rate": 1.0,
+        "guard_position_tick_rate": 0.4618834080717489,
+        "mean_ticks": 132.0,
+        "carry_no_entry_rate": 0.0,
+        "carry_spawn_tick_rate": 0.3333333333333333,
+        "timeout_rate": 0.0,
+        "combat_stop_rate": 0.5714285714285714,
+        "postplant_win_rate": 1.0
+      },
+      {
+        "episodes": 1,
+        "seed": 5026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 0.0,
+        "plant_rate": 0.0,
+        "registered_plant_rate": 0.0,
+        "guard_position_tick_rate": 0.0,
+        "mean_ticks": 100.0,
+        "carry_no_entry_rate": 1.0,
+        "carry_spawn_tick_rate": 0.45,
+        "timeout_rate": 1.0,
+        "combat_stop_rate": 0.0,
+        "postplant_win_rate": 0.0
+      },
+      {
+        "episodes": 1,
+        "seed": 6026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 0.0,
+        "plant_rate": 0.0,
+        "registered_plant_rate": 0.0,
+        "guard_position_tick_rate": 0.0,
+        "mean_ticks": 100.0,
+        "carry_no_entry_rate": 1.0,
+        "carry_spawn_tick_rate": 1.0,
+        "timeout_rate": 1.0,
+        "combat_stop_rate": 0.0,
+        "postplant_win_rate": 0.0
+      }
+    ],
+    "carry_no_entry_rate": 0.6666666666666666,
+    "carry_spawn_tick_rate": 0.5944444444444444,
+    "timeout_rate": 0.6666666666666666,
+    "combat_stop_rate": 0.19047619047619047,
+    "postplant_win_rate": 0.3333333333333333,
+    "episode": 0
+  },
+  {
+    "episodes": 3,
+    "seeds": [
+      3026091700,
+      5026091700,
+      6026091700
+    ],
+    "opponent_stats": [
+      100,
+      60,
+      40
+    ],
+    "round_win_rate": 0.0,
+    "worst_round_win_rate": 0.0,
+    "plant_rate": 0.3333333333333333,
+    "registered_plant_rate": 0.3333333333333333,
+    "worst_registered_plant_rate": 0.0,
+    "guard_position_tick_rate": 0.14285714285714285,
+    "mean_ticks": 107.0,
+    "per_seed": [
+      {
+        "episodes": 1,
+        "seed": 3026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 0.0,
+        "plant_rate": 1.0,
+        "registered_plant_rate": 1.0,
+        "guard_position_tick_rate": 0.42857142857142855,
+        "mean_ticks": 121.0,
+        "carry_no_entry_rate": 0.0,
+        "carry_spawn_tick_rate": 0.3387096774193548,
+        "timeout_rate": 0.0,
+        "combat_stop_rate": 0.2222222222222222,
+        "postplant_win_rate": 0.0
+      },
+      {
+        "episodes": 1,
+        "seed": 5026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 0.0,
+        "plant_rate": 0.0,
+        "registered_plant_rate": 0.0,
+        "guard_position_tick_rate": 0.0,
+        "mean_ticks": 100.0,
+        "carry_no_entry_rate": 0.0,
+        "carry_spawn_tick_rate": 0.6527777777777778,
+        "timeout_rate": 1.0,
+        "combat_stop_rate": 1.0,
+        "postplant_win_rate": 0.0
+      },
+      {
+        "episodes": 1,
+        "seed": 6026091700,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "round_win_rate": 0.0,
+        "plant_rate": 0.0,
+        "registered_plant_rate": 0.0,
+        "guard_position_tick_rate": 0.0,
+        "mean_ticks": 100.0,
+        "carry_no_entry_rate": 0.0,
+        "carry_spawn_tick_rate": 0.6025641025641025,
+        "timeout_rate": 1.0,
+        "combat_stop_rate": 1.0,
+        "postplant_win_rate": 0.0
+      }
+    ],
+    "carry_no_entry_rate": 0.0,
+    "carry_spawn_tick_rate": 0.5313505192537451,
+    "timeout_rate": 0.6666666666666666,
+    "combat_stop_rate": 0.7407407407407408,
+    "postplant_win_rate": 0.0,
+    "episode": 4
+  }
+]

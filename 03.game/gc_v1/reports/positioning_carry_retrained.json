@@ -1,0 +1,44 @@
+{
+  "phase": "carry",
+  "model": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_positioning_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+  "seed": 20260917,
+  "positioning_version": 2,
+  "start_mode": "mixed",
+  "metrics": {
+    "episodes": 120,
+    "plant_rate": 0.9666666666666667,
+    "preferred_plant_rate": 0.9333333333333333,
+    "target_plant_rate": 0.9333333333333333,
+    "avg_reward": 15.059149999999997,
+    "per_pattern": {
+      "5": {
+        "episodes": 30,
+        "plant_rate": 0.9666666666666667,
+        "preferred_plant_rate": 0.9666666666666667,
+        "target_plant_rate": 0.9666666666666667,
+        "avg_reward": 14.345666666666666
+      },
+      "6": {
+        "episodes": 30,
+        "plant_rate": 1.0,
+        "preferred_plant_rate": 1.0,
+        "target_plant_rate": 1.0,
+        "avg_reward": 14.586299999999998
+      },
+      "7": {
+        "episodes": 30,
+        "plant_rate": 0.9666666666666667,
+        "preferred_plant_rate": 0.9666666666666667,
+        "target_plant_rate": 0.9666666666666667,
+        "avg_reward": 15.850233333333334
+      },
+      "8": {
+        "episodes": 30,
+        "plant_rate": 0.9333333333333333,
+        "preferred_plant_rate": 0.8,
+        "target_plant_rate": 0.8,
+        "avg_reward": 15.454399999999993
+      }
+    }
+  }
+}

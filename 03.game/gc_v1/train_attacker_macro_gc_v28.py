@@ -88,7 +88,7 @@ from macro_config_gc import (
     validate_macro_config,
 )
 from character_stats_gc import GC_ROSTER_ORDER
-from game_core import ROUND_DURATION_TICKS
+from game_core import ROUND_DURATION_TICKS, PLANT_REQUIRED_TICKS
 
 
 # ============================================================================
@@ -102,7 +102,7 @@ PRINT_INTERVAL = 50
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-DATA_DIR = Path("data") / "attacker_macro_gc_data"
+DATA_DIR = HERE / "data" / "attacker_macro_gc_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 MODEL_BEST_PATH = DATA_DIR / "dqn_attacker_macro_gc_best_by_eval.pt"
@@ -111,8 +111,10 @@ MODEL_FINAL_PATH = DATA_DIR / "dqn_attacker_macro_gc_final.pt"
 
 SEED = 20260811
 
-MAX_MACRO_STEPS = 24
 LOW_LEVEL_TICKS_PER_MACRO_STEP = 3
+MAX_MACRO_STEPS = (
+    ROUND_DURATION_TICKS + LOW_LEVEL_TICKS_PER_MACRO_STEP - 1
+) // LOW_LEVEL_TICKS_PER_MACRO_STEP
 
 GAMMA = 0.985
 LR = 2e-4
@@ -287,11 +289,13 @@ PLANT_FAST_BONUS_MIN_TIME_RATIO = 0.35
 # direct plant after an area is controlled, not only the eventual plant.
 CARRIER_SUPPORT_RADIUS = 3
 CARRIER_MIN_SUPPORTERS = 1
-CARRIER_SUPPORT_STEP_REWARD = 0.10
-CARRIER_UNSUPPORTED_STEP_PENALTY = -0.18
+CARRIER_IDEAL_SUPPORTERS = 2
+CARRIER_SUPPORT_STEP_REWARD = 0.12
+CARRIER_SECOND_SUPPORT_STEP_REWARD = 0.12
+CARRIER_UNSUPPORTED_STEP_PENALTY = -0.35
 CARRIER_CONTROLLED_SITE_PROGRESS_REWARD = 0.24
 CARRIER_CONTROLLED_SITE_RETREAT_PENALTY = -0.28
-CARRIER_DEATH_EXTRA_PENALTY = -2.0
+CARRIER_DEATH_EXTRA_PENALTY = -4.0
 CONTROLLED_SITE_THRESHOLD = 0.45
 
 # Split成立判定:
@@ -351,6 +355,8 @@ FAKE_FOLLOWUP_WINDOW_MACRO_STEPS = 6
 # 「Entryへ実際に到達した時刻」を記録する。
 # 深いEntryは時間が掛かるのでv3より同期窓を少し広げる。
 SPLIT_ENTRY_WINDOW_MACRO_STEPS = 4
+# Real battle ticks, not model decision steps. Waiting must remain bounded.
+SPLIT_SYNC_WAIT_MAX_TICKS = 5
 
 # v5: 情報不足のまま深くコミットすることへの軽いコスト。
 # 開幕Rush自体は残すため、序盤は免除する。
@@ -652,6 +658,11 @@ def _site_cells(side):
     }[side]
 
 
+def _plant_cells_for_side(side):
+    """Actual legal plant cells, not the entire site-area macro marker."""
+    return [p for p in PLANT_CELLS if side_of_pos(p) == side]
+
+
 def _staging_cells(side):
     return {
         SIDE_A: TACTICAL_CELLS["A_STAGING"],
@@ -764,7 +775,7 @@ def target_for_side(side, phase, origin):
         return choose_weighted_candidate(_deep_control_cells(side), origin, +0.5)
 
     if phase == "SITE":
-        return choose_weighted_candidate(_site_cells(side), origin, +0.8)
+        return choose_weighted_candidate(_plant_cells_for_side(side), origin, +0.8)
 
     if phase == "LURK":
         return choose_weighted_candidate(_lurk_cells(side), origin, 0.0)
@@ -885,6 +896,7 @@ class MacroEnv:
         self.defender_setup = "BALANCED"
         self.planted = False
         self.plant_site = None
+        self._reset_plant_progress()
         self.done = False
         self.success = False
         self.reason = ""
@@ -941,6 +953,9 @@ class MacroEnv:
         self._fake_side = None
         self._fake_real_side = None
         self._fake_sell_dwell = 0
+        self._fake_sell_last_tick = None
+        self._fake_effect_baseline = set()
+        self._fake_entry_effect = None
         self._fake_group_names = set()
         self._fake_rotate_names = set()
         self._fake_execute_start_step = None
@@ -956,6 +971,7 @@ class MacroEnv:
         # v6: Supportごとに今回使うSplit Entryを固定する。
         # 横Entry / 180度背面Entryが複数あっても一貫して同じEntryへ向かう。
         self._split_planned_entry = {}
+        self._split_entry_wait_started = {}
 
         self._lurk_touched = False
         self._cut_touched = False
@@ -1115,6 +1131,7 @@ class MacroEnv:
         self.reason = ""
         self.planted = False
         self.plant_site = None
+        self._reset_plant_progress()
         self.rotate_count = 0
         self.rehit_count = 0
         self.fake_value = 0.0
@@ -1159,6 +1176,9 @@ class MacroEnv:
         self._fake_side = None
         self._fake_real_side = None
         self._fake_sell_dwell = 0
+        self._fake_sell_last_tick = None
+        self._fake_effect_baseline = set()
+        self._fake_entry_effect = None
         self._fake_group_names = set()
         self._fake_rotate_names = set()
         self._fake_execute_start_step = None
@@ -1174,6 +1194,7 @@ class MacroEnv:
         # v6: Supportごとに今回使うSplit Entryを固定する。
         # 横Entry / 180度背面Entryが複数あっても一貫して同じEntryへ向かう。
         self._split_planned_entry = {}
+        self._split_entry_wait_started = {}
 
         self._lurk_touched = False
         self._cut_touched = False
@@ -1460,7 +1481,7 @@ class MacroEnv:
         carrier = self._carrier()
         if carrier is None or side not in {SIDE_A, SIDE_B}:
             return None
-        cells = _site_cells(side)
+        cells = _plant_cells_for_side(side)
         if not cells:
             return None
         return min(
@@ -1481,6 +1502,8 @@ class MacroEnv:
         support_count = self._carrier_support_count()
         if support_count >= CARRIER_MIN_SUPPORTERS:
             reward += CARRIER_SUPPORT_STEP_REWARD
+            if support_count >= CARRIER_IDEAL_SUPPORTERS:
+                reward += CARRIER_SECOND_SUPPORT_STEP_REWARD
         else:
             reward += CARRIER_UNSUPPORTED_STEP_PENALTY
 
@@ -1550,6 +1573,62 @@ class MacroEnv:
             return SIDE_B, SIDE_A
         return None, None
 
+    def _fake_group_targets(self, key, side, cells, followup):
+        """One stable waypoint with distinct nearby slots for the main group.
+
+        Choose using static distances only, never hidden defender positions.
+        Cached per Fake sequence: repeated updates cannot redraw the route.
+        """
+        plans = getattr(self, "_fake_route_targets", {})
+        self._fake_route_targets = plans
+        living = self._living_attackers()
+        carrier = self._carrier()
+        if key in plans:
+            targets = plans[key]
+            anchor = self._fake_route_anchors[key]
+            if carrier is not None and targets.get(carrier.name) != anchor:
+                old_slot = targets.get(carrier.name, carrier.pos)
+                for name, target in list(targets.items()):
+                    if target == anchor:
+                        targets[name] = old_slot
+                targets[carrier.name] = anchor
+            return targets
+        main = [a for a in living if a.name not in self._fake_group_names]
+        if not main:
+            main = living
+        if not main:
+            return {}
+        origin = carrier.pos if carrier is not None else main[0].pos
+        candidates = [tuple(p) for p in cells if walkable(p)]
+        if not candidates:
+            return {a.name: a.pos for a in living}
+        anchor = min(candidates, key=lambda p: (
+            max(nearest_distance(a.pos, [p]) for a in main)
+            + nearest_distance(p, followup),
+            nearest_distance(origin, [p]), p))
+        anchors = getattr(self, "_fake_route_anchors", {})
+        self._fake_route_anchors = anchors
+        anchors[key] = anchor
+        dm = dist_map_for_cells("fake_slots", (anchor,))
+        slots = [tuple(map(int, p)) for p in zip(*np.where((dm >= 0) & (dm <= 3)))
+                 if (side == SIDE_MID or side_of_pos(p) == side)]
+        used = set()
+        targets = {}
+        order = sorted(living, key=lambda a: (
+            0 if carrier is not None and a.name == carrier.name else
+            1 if a.name not in self._fake_group_names else 2, a.name))
+        for a in order:
+            if carrier is not None and a.name == carrier.name:
+                target = anchor
+            else:
+                available = [p for p in slots if p not in used]
+                target = min(available, key=lambda p: (
+                    int(dm[p]), nearest_distance(a.pos, [p]), p)) if available else a.pos
+            targets[a.name] = target
+            used.add(target)
+        plans[key] = targets
+        return targets
+
     def _set_fake_phase_targets(self, phase):
         """Fake内部フェーズに応じて5人のassignment/targetを更新する。"""
         fake_side, real_side = self._fake_sides()
@@ -1561,6 +1640,11 @@ class MacroEnv:
         self._fake_phase_start_step = self.macro_step
 
         if phase == "SELL":
+            self._fake_route_targets = {}
+            self._fake_route_anchors = {}
+            main_targets = self._fake_group_targets(
+                "WAIT", SIDE_MID, _staging_cells(SIDE_MID),
+                _staging_cells(real_side))
             # Fake役はFake側Forwardへ。
             # Carrierを含むRotate役はMid stagingで待機してSpikeを守る。
             for a in living:
@@ -1575,32 +1659,30 @@ class MacroEnv:
                     self.assignment[a.name] = (
                         SIDE_MID, "STAGING", "FAKE_WAIT"
                     )
-                    self.targets[a.name] = (
-                        target_for_side(SIDE_MID, "STAGING", a.pos) or a.pos
-                    )
+                    self.targets[a.name] = main_targets[a.name]
 
         elif phase == "ROTATE":
+            main_targets = self._fake_group_targets(
+                "STAGING", real_side, _staging_cells(real_side),
+                _forward_control_cells(real_side))
             # Fakeを十分見せたら全員を反対サイト側へ移す。
             # まずStagingを経由し、まとまって再展開する。
             for a in living:
                 self.assignment[a.name] = (
                     real_side, "STAGING", "FAKE_ROTATE"
                 )
-                self.targets[a.name] = (
-                    target_for_side(real_side, "STAGING", a.pos)
-                    or target_for_side(real_side, "SITE", a.pos)
-                    or a.pos
-                )
+                self.targets[a.name] = main_targets[a.name]
 
         elif phase == "EXECUTE":
+            main_targets = self._fake_group_targets(
+                "SITE", real_side, _plant_cells_for_side(real_side),
+                _plant_cells_for_side(real_side))
             self._fake_execute_start_step = self.macro_step
             for a in living:
                 self.assignment[a.name] = (
                     real_side, "SITE", "FAKE_EXECUTE"
                 )
-                self.targets[a.name] = (
-                    target_for_side(real_side, "SITE", a.pos) or a.pos
-                )
+                self.targets[a.name] = main_targets[a.name]
 
     def _fake_phase_age(self):
         if self._fake_phase_start_step is None:
@@ -1608,7 +1690,7 @@ class MacroEnv:
         return max(0, self.macro_step - self._fake_phase_start_step)
 
     def _fake_sell_trigger_ready(self):
-        """Pressure OR Forward Control + 人数 + 滞在でSELL成立を判定する。"""
+        """Pressure/control alone cannot replace an actual sustained sell."""
         fake_side, _real_side = self._fake_sides()
         if fake_side is None:
             return False
@@ -1620,10 +1702,14 @@ class MacroEnv:
             and side_of_pos(a.pos) == fake_side
         )
 
-        if fake_side_players >= FAKE_SELL_MIN_PLAYERS:
-            self._fake_sell_dwell += 1
-        else:
-            self._fake_sell_dwell = max(0, self._fake_sell_dwell - 1)
+        # Once per low-level tick; repeated queries must not accelerate SELL.
+        if getattr(self, "_fake_sell_last_tick", None) != self.tick:
+            self._fake_sell_last_tick = self.tick
+            if fake_side_players >= min(FAKE_SELL_MIN_PLAYERS,
+                                       len(self._fake_group_names)):
+                self._fake_sell_dwell += 1
+            else:
+                self._fake_sell_dwell = 0
 
         pressure_ready = (
             self.pressure[fake_side] >= FAKE_TRIGGER_PRESSURE
@@ -1631,10 +1717,12 @@ class MacroEnv:
         control_ready = (
             self.control[f"{fake_side}_FORWARD"]
             >= FAKE_FORWARD_TRIGGER_CONTROL
-            and fake_side_players >= FAKE_SELL_MIN_PLAYERS
-            and self._fake_sell_dwell >= FAKE_SELL_DWELL_STEPS
         )
-        return bool(pressure_ready or control_ready)
+        return bool((pressure_ready or control_ready)
+                    and fake_side_players >= min(FAKE_SELL_MIN_PLAYERS,
+                                                 len(self._fake_group_names))
+                    and fake_side_players > 0
+                    and self._fake_sell_dwell >= FAKE_SELL_DWELL_STEPS)
 
     def _advance_fake_rotate_targets(self):
         """v8: Fake ROTATE中、Staging到着後はForwardへ自動進行する。
@@ -1681,11 +1769,9 @@ class MacroEnv:
                     "FORWARD",
                     "FAKE_ROTATE",
                 )
-                self.targets[a.name] = (
-                    target_for_side(real_side, "FORWARD", a.pos)
-                    or target_for_side(real_side, "SITE", a.pos)
-                    or a.pos
-                )
+                self.targets[a.name] = self._fake_group_targets(
+                    "FORWARD", real_side, _forward_control_cells(real_side),
+                    _plant_cells_for_side(real_side))[a.name]
 
     def _update_fake_option_phase(self):
         """低レベルtickごとにFake Optionを進行させる。"""
@@ -1727,15 +1813,29 @@ class MacroEnv:
                 int(real_count),
             )
 
-            if real_count >= FAKE_REDEPLOY_MIN_PLAYERS:
+            carrier = self._carrier()
+            main_ready = [a for a in self._living_attackers()
+                          if a.name not in self._fake_group_names
+                          and side_of_pos(a.pos) == real_side]
+            carrier_ready = (carrier is not None
+                             and side_of_pos(carrier.pos) == real_side)
+            main_cover_ready = (carrier is not None and any(
+                a.name != carrier.name
+                and nearest_distance(a.pos, [carrier.pos]) <= 3
+                for a in main_ready))
+            alone = len(self._living_attackers()) == 1
+            if (real_count >= min(FAKE_REDEPLOY_MIN_PLAYERS,
+                                  len(self._living_attackers()))
+                    and carrier_ready and (main_cover_ready or alone)):
                 self._diag_fake_opposite_redeploy = True
                 self._fake_completed = True
                 self.fake_value = max(self.fake_value, 1.0)
                 self._set_fake_phase_targets("EXECUTE")
 
         elif self._fake_phase == "EXECUTE":
-            # targetsはSITEのまま維持。
-            pass
+            self.targets.update(self._fake_group_targets(
+                "SITE", real_side, _plant_cells_for_side(real_side),
+                _plant_cells_for_side(real_side)))
 
     def _pick_nearest_name(self, units, cells, excluded=None):
         """cellsへのBFS距離が最短の生存unit名を返す。"""
@@ -2189,6 +2289,7 @@ class MacroEnv:
 
             cfg = GC_MACRO_GROUP_SIZES[strategy]
             main, support = self._split_names(int(cfg["main"]))
+            self._split_entry_wait_started = {}
 
             # 新しいSplit sequenceならplanned Entryも作り直す。
             self._split_planned_entry = {}
@@ -2230,6 +2331,12 @@ class MacroEnv:
             self._fake_completed = False
             self._fake_trigger_step = None
             self._fake_sell_dwell = 0
+            self._fake_sell_last_tick = None
+            self._fake_effect_baseline = {
+                d.name for d in self.defenders
+                if d.is_alive and side_of_pos(d.pos) == SIDE_B
+            }
+            self._fake_entry_effect = None
             self._fake_execute_start_step = None
             self._fake_phase_start_step = self.macro_step
 
@@ -2248,6 +2355,12 @@ class MacroEnv:
             self._fake_completed = False
             self._fake_trigger_step = None
             self._fake_sell_dwell = 0
+            self._fake_sell_last_tick = None
+            self._fake_effect_baseline = {
+                d.name for d in self.defenders
+                if d.is_alive and side_of_pos(d.pos) == SIDE_A
+            }
+            self._fake_entry_effect = None
             self._fake_execute_start_step = None
             self._fake_phase_start_step = self.macro_step
 
@@ -2363,12 +2476,29 @@ class MacroEnv:
 
             if role == "MAIN":
                 if phase == "DEEP":
+                    support = [u for u in self._living_attackers()
+                               if self.assignment.get(u.name, (None, None, None))[2]
+                               == "SUPPORT"]
+                    support_ready = any(
+                        self.assignment[u.name][1] == "SITE"
+                        or (self.assignment[u.name][1] == "SPLIT_ENTRY"
+                            and nearest_distance(u.pos,
+                                                 [self.targets[u.name]]) <= 1)
+                        for u in support)
+                    waits = getattr(self, "_split_entry_wait_started", {})
+                    self._split_entry_wait_started = waits
+                    started = waits.setdefault(a.name, self.tick)
+                    if (support and not support_ready
+                            and self.tick - started < SPLIT_SYNC_WAIT_MAX_TICKS):
+                        return
                     self.assignment[a.name] = (target_side, "SITE", role)
 
             elif role == "SUPPORT":
                 main_ready = (
                     self.pressure[target_side] >= SPLIT_MAIN_READY_PRESSURE
                     or self.control[f"{target_side}_FORWARD"] >= 0.45
+                    or any(u.name in getattr(self, "_split_entry_wait_started", {})
+                           for u in self._living_attackers())
                 )
                 if phase == "STAGING" and main_ready:
                     entry_name = (
@@ -2526,6 +2656,7 @@ class MacroEnv:
         ) or a.pos
 
     def _move_attackers_one_tick(self):
+        self._plant_action_holder = None
         occupied = {a.pos for a in self.attackers if a.is_alive}
         order = self._living_attackers()
 
@@ -2551,6 +2682,12 @@ class MacroEnv:
             random.shuffle(order)
 
         for a in order:
+            # Arrival is MOVE, not PLANT. Only a carrier already on a legal
+            # cell at tick start can spend this tick planting. Macro cannot
+            # move it away between the four consecutive plant actions.
+            if a.has_spike and tuple(a.pos) in set(PLANT_CELLS):
+                self._plant_action_holder = a.name
+                continue
             self._advance_assignment_phase_if_needed(a)
             target = self.targets.get(a.name, a.pos)
 
@@ -2825,31 +2962,40 @@ class MacroEnv:
                     if survivors:
                         min(survivors, key=lambda a: nearest_distance(a.pos, [victim.pos])).has_spike = True
 
+    def _reset_plant_progress(self):
+        self._plant_action_holder = None
+        self._plant_progress_holder = None
+        self._plant_progress_pos = None
+        self._plant_progress = 0
+        self._plant_last_tick = None
+
     def _check_plant(self):
         carrier = self._carrier()
-        if carrier is None:
+        if (carrier is None or tuple(carrier.pos) not in set(PLANT_CELLS)
+                or getattr(self, "_plant_action_holder", None) != carrier.name):
+            self._reset_plant_progress()
             return False
 
         side = side_of_pos(carrier.pos)
         if side not in {SIDE_A, SIDE_B}:
+            self._reset_plant_progress()
             return False
 
-        if tuple(carrier.pos) not in set(_site_cells(side)):
-            return False
-
-        # 周辺Defenderが少ないほどplant成功しやすい。
-        nearby_defenders = sum(
-            1
-            for d in self.defenders
-            if d.is_alive and side_of_pos(d.pos) == side
-        )
-        local_attackers = sum(
-            1
-            for a in self._living_attackers()
-            if side_of_pos(a.pos) == side
-        )
-
-        if local_attackers >= max(1, nearby_defenders):
+        pos = tuple(carrier.pos)
+        if (self._plant_progress_holder != carrier.name
+                or self._plant_progress_pos != pos
+                or (self._plant_last_tick is not None
+                    and self.tick - self._plant_last_tick > 1)):
+            self._plant_progress = 0
+            self._plant_last_tick = None
+        if self._plant_last_tick != self.tick:
+            self._plant_progress += 1
+        self._plant_progress_holder = carrier.name
+        self._plant_progress_pos = pos
+        self._plant_last_tick = self.tick
+        # Completion on the last action tick is legal, after it is not.
+        if (self._plant_progress >= PLANT_REQUIRED_TICKS
+                and self.tick <= ROUND_DURATION_TICKS):
             self.planted = True
             self.plant_site = side
             self.success = True
@@ -4274,8 +4420,12 @@ class MacroEnv:
         if self._smart_rotate_completed:
             bonus += PLANT_AFTER_SMART_ROTATE_BONUS
 
+        # Own redeployment is not evidence that the enemy was fooled. This
+        # ground-truth evaluation is reward-only; it never enters observations
+        # or runtime decisions. Sample at first real-side entry, not a retake.
+        fake_effect = float(getattr(self, "_fake_entry_effect", None) or 0.0)
         if self._fake_completed:
-            bonus += PLANT_AFTER_FAKE_BONUS
+            bonus += PLANT_AFTER_FAKE_BONUS * fake_effect
 
         if self._split_completed:
             bonus += PLANT_AFTER_SPLIT_BONUS
@@ -4290,7 +4440,7 @@ class MacroEnv:
         if self.curriculum_mode == "SPLIT" and self._split_completed:
             bonus += 0.8
         elif self.curriculum_mode == "FAKE" and self._fake_completed:
-            bonus += 0.8
+            bonus += 0.8 * fake_effect
         elif self.curriculum_mode == "ROTATE" and self._smart_rotate_completed:
             bonus += 0.8
 
@@ -4461,6 +4611,18 @@ class MacroEnv:
                                 {x.pos for x in self.defenders if x is not d and x.is_alive},
                             )
 
+            if (self.current_strategy in {"FAKE_A_TO_B", "FAKE_B_TO_A"}
+                    and getattr(self, "_fake_entry_effect", None) is None):
+                fake_side, real_side = self._fake_sides()
+                if any(a.name not in self._fake_group_names
+                       and a.pos in set(_site_cells(real_side))
+                       for a in self._living_attackers()):
+                    baseline = getattr(self, "_fake_effect_baseline", set())
+                    moved = sum(d.is_alive and d.name in baseline
+                                and side_of_pos(d.pos) == fake_side
+                                for d in self.defenders)
+                    self._fake_entry_effect = min(1.0, moved / 2.0)
+
             if self._check_plant():
                 break
 
@@ -4486,13 +4648,13 @@ class MacroEnv:
         reward += 0.18 * max(0, before["living_d"] - living_d_now)
         # Player deaths are much more damaging than a small loss of tempo;
         # make the macro learn safer regrouping and supported entries.
-        reward -= 0.60 * max(0, before["living_a"] - living_a_now)
+        reward -= 1.20 * max(0, before["living_a"] - living_a_now)
 
         if self.done:
             if self.success:
                 reward += self._plant_completion_bonus()
             else:
-                reward -= 4.5
+                reward -= 6.0
                 if self.reason in {"timeout", "macro_timeout"}:
                     reward -= 1.5
 
@@ -4524,6 +4686,8 @@ class MacroEnv:
             "rotate_count": self.rotate_count,
             "rehit_count": self.rehit_count,
             "fake_value": self.fake_value,
+            "fake_entry_effect": self._fake_entry_effect,
+            "plant_progress": self._plant_progress,
             "split_sync": self.split_sync_score,
             "map_control": self.map_control_score,
             "defender_setup": self.defender_setup,
@@ -5318,6 +5482,9 @@ def checkpoint_dict(model, episode, eval_result=None):
         "episode": int(episode),
         "eval_result": dict(eval_result or {}),
         "macro_map_version": 22,
+        "coordination_reward_version": 2,
+        "round_duration_ticks": ROUND_DURATION_TICKS,
+        "plant_required_ticks": PLANT_REQUIRED_TICKS,
         "roster_order": list(GC_ROSTER_ORDER),
     }
 

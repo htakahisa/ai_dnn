@@ -1,0 +1,96 @@
+{
+  "episodes": 150,
+  "seeds": [
+    4026091700,
+    7026091700,
+    8026091700
+  ],
+  "opponent_stats": [
+    100.0,
+    60.0,
+    40.0
+  ],
+  "round_win_rate": 0.15333333333333335,
+  "worst_round_win_rate": 0.1,
+  "plant_rate": 0.32666666666666666,
+  "registered_plant_rate": 0.24,
+  "worst_registered_plant_rate": 0.18,
+  "guard_position_tick_rate": 0.6328377011536254,
+  "mean_ticks": 85.88,
+  "per_seed": [
+    {
+      "episodes": 50,
+      "seed": 4026091700,
+      "opponent_stats": [
+        100.0,
+        60.0,
+        40.0
+      ],
+      "round_win_rate": 0.16,
+      "plant_rate": 0.36,
+      "registered_plant_rate": 0.26,
+      "guard_position_tick_rate": 0.6657091561938959,
+      "mean_ticks": 88.36,
+      "carry_no_entry_rate": 0.42,
+      "carry_spawn_tick_rate": 0.20379656160458454,
+      "carry_reversal_tick_rate": 0.09312320916905444,
+      "carry_quiet_stall_tick_rate": 0.17836676217765043,
+      "timeout_rate": 0.24,
+      "combat_stop_rate": 0.3897216274089936,
+      "postplant_win_rate": 0.4444444444444444
+    },
+    {
+      "episodes": 50,
+      "seed": 7026091700,
+      "opponent_stats": [
+        100.0,
+        60.0,
+        40.0
+      ],
+      "round_win_rate": 0.1,
+      "plant_rate": 0.26,
+      "registered_plant_rate": 0.18,
+      "guard_position_tick_rate": 0.6403669724770642,
+      "mean_ticks": 82.88,
+      "carry_no_entry_rate": 0.38,
+      "carry_spawn_tick_rate": 0.18432285603414825,
+      "carry_reversal_tick_rate": 0.10632518432285604,
+      "carry_quiet_stall_tick_rate": 0.14008537058595266,
+      "timeout_rate": 0.12,
+      "combat_stop_rate": 0.36384976525821594,
+      "postplant_win_rate": 0.3076923076923077
+    },
+    {
+      "episodes": 50,
+      "seed": 8026091700,
+      "opponent_stats": [
+        100.0,
+        60.0,
+        40.0
+      ],
+      "round_win_rate": 0.2,
+      "plant_rate": 0.36,
+      "registered_plant_rate": 0.28,
+      "guard_position_tick_rate": 0.592436974789916,
+      "mean_ticks": 86.4,
+      "carry_no_entry_rate": 0.38,
+      "carry_spawn_tick_rate": 0.17353262850893184,
+      "carry_reversal_tick_rate": 0.0925993437841779,
+      "carry_quiet_stall_tick_rate": 0.15020051039008386,
+      "timeout_rate": 0.08,
+      "combat_stop_rate": 0.40480961923847697,
+      "postplant_win_rate": 0.5
+    }
+  ],
+  "postplant_win_rate": 0.42857142857142855,
+  "carry_no_entry_rate": 0.39333333333333337,
+  "carry_spawn_tick_rate": 0.18721734871588822,
+  "carry_reversal_tick_rate": 0.09734924575869612,
+  "carry_quiet_stall_tick_rate": 0.15621754771789564,
+  "timeout_rate": 0.14666666666666667,
+  "combat_stop_rate": 0.3861270039685622,
+  "meets_win_rate_target": false,
+  "entry_quality_passed": false,
+  "ready_for_match_validation": false,
+  "target_win_rate": 0.5
+}

@@ -36,7 +36,7 @@ map_data_guard_gc.py の同じ数字5～9を対応Guard候補として使う。
 登録設置パターンへフォールバックする。
 --------------------------------------------------------------------------
 
-優先順位ツリー(_build_observation / decide_move):
+旧モデルの優先順位ツリー(_build_observation / decide_move):
     1. 解除進行中(game_state["defender_defuse_info"]、LOS不要)
     2. 敵目撃情報(sighting)
     3. どちらも無い場合、担当ガードポジションへ向かい到着後は静止
@@ -46,6 +46,8 @@ map_data_guard_gc.py の同じ数字5～9を対応Guard候補として使う。
 --------------------------------------------------------------------------
 
 OBS_DIM=34: train_attacker_guard.py と完全に一致させること。
+再学習版(positioning_version=1)は34次元を維持し、予備次元33に設置パターンを
+追加する。到着判定は登録座標そのもの。移動・静止はDQNの選択をそのまま使う。
 
 このチーム(5人)で1つのコントローラーインスタンスを共有する想定
 (重み共有Dueling DQN)。
@@ -70,16 +72,24 @@ from character_stats_gc import (
 from map_data_guard_gc import NEW_MAZE_STR as GUARD_MAZE_STR
 from map_data_guard_plant_gc import NEW_MAZE_STR as GUARD_PLANT_MAZE_STR
 try:
+    from .positioning_gc import guard_candidates
+except ImportError:
+    from positioning_gc import guard_candidates
+try:
     from .postplant_utils import postplant_watch_cells
+    from .ultimate_tactics_gc import build_ultimate_action
 except ImportError:
     from postplant_utils import postplant_watch_cells
+    from ultimate_tactics_gc import build_ultimate_action
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 34
-ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+LEGACY_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+ACTION_DIM = 11
+ULTIMATE_ACTION_INDEX = 10
 
 ABILITY_RANGE = 8
 GUARD_POS_REACH_RADIUS = 1
@@ -145,11 +155,12 @@ def _line_cells(p1, p2):
             y0 += sy
 
 
-def _has_los(grid, p1, p2):
-    for r, c in _line_cells(p1, p2):
+def _has_los(grid, p1, p2, smoke_cells=()):
+    cells = _line_cells(p1, p2)
+    for r, c in cells:
         if grid[r, c] == 1:
             return False
-    return True
+    return len(cells) <= 2 or not any(cell in smoke_cells for cell in cells)
 
 
 def _bfs_distance_map(grid, goal):
@@ -305,7 +316,7 @@ class _TeamMemory:
     def reset(self):
         self.last_seen_enemy = None
 
-    def update(self, grid, my_team, chars):
+    def update(self, grid, my_team, chars, smoke_cells=()):
         allies = [c for c in chars if c.team == my_team and c.is_alive]
         enemies = [c for c in chars if c.team != my_team]
 
@@ -315,7 +326,7 @@ class _TeamMemory:
                 if not e.is_alive:
                     continue
                 if (
-                    _has_los(grid, tuple(a.pos), tuple(e.pos))
+                    _has_los(grid, tuple(a.pos), tuple(e.pos), smoke_cells)
                     and e not in visible_enemies
                 ):
                     visible_enemies.append(e)
@@ -372,8 +383,18 @@ class LearningAttackerGuardGCController:
         self.greedy = greedy
         self.verbose = verbose
         self.model = AttackerGuardDuelingDQN().to(DEVICE)
+        self.positioning_version = 0
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)
+            self.positioning_version = int(checkpoint.get("positioning_version", 0))
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
+            action_dim = int(checkpoint.get("n_actions", LEGACY_ACTION_DIM))
+            expected_actions = ACTION_DIM if self.positioning_version >= 3 else LEGACY_ACTION_DIM
+            if action_dim != expected_actions:
+                raise ValueError(
+                    f"guard action count mismatch: {action_dim} != {expected_actions}"
+                )
+            self.model = AttackerGuardDuelingDQN(action_dim=action_dim).to(DEVICE)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningAttackerGuardGCController] loaded: {model_path}")
@@ -442,6 +463,8 @@ class LearningAttackerGuardGCController:
 
         teammates = [c for c in chars if c.team == char.team and c.is_alive]
         teammates = sorted(teammates, key=lambda c: c.name)
+        if getattr(self, "positioning_version", 0) >= 1:
+            candidates = guard_candidates(grid, marker, len(teammates))
 
         # 各候補へのBFS距離マップを一度だけ作り、実際の歩行距離で割当する。
         candidate_maps = {pos: _bfs_distance_map(grid, pos) for pos in candidates}
@@ -479,12 +502,12 @@ class LearningAttackerGuardGCController:
                 f"pattern={marker} assignments={self._assigned_guard_positions}"
             )
 
-    def _maybe_advance_tick(self, char, grid, chars):
+    def _maybe_advance_tick(self, char, grid, chars, smoke_cells=()):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
         チーム共有メモリを1回だけ更新する。"""
-        if char.name in self._processed_this_tick:
+        if not self._processed_this_tick or char.name in self._processed_this_tick:
             self._processed_this_tick.clear()
-            self.team_memory.update(grid, char.team, chars)
+            self.team_memory.update(grid, char.team, chars, smoke_cells)
         self._processed_this_tick.add(char.name)
 
     def _update_sighting_dist_map(self, grid):
@@ -501,6 +524,40 @@ class LearningAttackerGuardGCController:
             )
             self._sighting_dist_map_source = sighting_pos
 
+    def _guard_position_step(self, char, grid, chars):
+        """Return one step toward the assigned post-plant guard position.
+
+        This is deliberately used only before arrival.  It prevents the
+        spike-watch rule from stopping a player in an intermediate position.
+        """
+        target = self._assigned_guard_positions.get(char.name)
+        dist_map = self._assigned_dist_maps.get(char.name)
+        if target is None or dist_map is None:
+            return None
+        r, c = int(char.pos[0]), int(char.pos[1])
+        if int(dist_map[r, c]) <= GUARD_POS_REACH_RADIUS:
+            return None
+
+        occupied = {
+            tuple(map(int, other.pos))
+            for other in chars
+            if other is not char and getattr(other, "is_alive", True)
+        }
+        current = int(dist_map[r, c])
+        candidates = []
+        for dr, dc in CARDINAL:
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+                continue
+            if grid[nr, nc] == 1 or (nr, nc) in occupied:
+                continue
+            distance = int(dist_map[nr, nc])
+            if 0 <= distance < current:
+                candidates.append((distance, (nr, nc)))
+        if not candidates:
+            return None
+        return list(min(candidates, key=lambda item: (item[0], item[1]))[1])
+
     def _active_defuse_info(self, game_state):
         """game_state["defender_defuse_info"](LOS不要、battle_logic.py提供)
         から、現在解除中の敵がいれば進捗率を返す。"""
@@ -508,6 +565,7 @@ class LearningAttackerGuardGCController:
         for _name, (timer, required) in info.items():
             if timer > 0:
                 return {
+                    "name": _name,
                     "progress_ratio": min(timer / required if required else 0.0, 1.0)
                 }
         return None
@@ -538,7 +596,9 @@ class LearningAttackerGuardGCController:
 
         enemies = [e for e in chars if e.team != char.team]
         visible_enemies = [
-            e for e in enemies if e.is_alive and _has_los(grid, char.pos, e.pos)
+            e for e in enemies if e.is_alive and _has_los(
+                grid, char.pos, e.pos, game_state.get("smoke_cells", ())
+            )
         ]
         obs[9] = 1.0 if visible_enemies else 0.0
 
@@ -564,9 +624,9 @@ class LearningAttackerGuardGCController:
             )
             else 0.0
         )
-        # 味方スモーク展開中フラグ。game_state に smokes が含まれないため
-        # 常に0とする(learning_defender_search_gc.py と同じ簡略化方針)。
-        obs[13] = 0.0
+        # 再学習版は学習時と同じく、smoke_cellsによる展開中フラグを使う。
+        obs[13] = (float(bool(game_state.get("smoke_cells", ())))
+                   if getattr(self, "positioning_version", 0) >= 1 else 0.0)
 
         dist_here = (
             self.spike_dist_map[r0, c0] if self.spike_dist_map is not None else -1
@@ -577,7 +637,10 @@ class LearningAttackerGuardGCController:
         best_dr, best_dc = _bfs_best_direction(self.spike_dist_map, grid, r0, c0)
         obs[15] = float(best_dr)
         obs[16] = float(best_dc)
-        obs[17] = 1.0 if unit_has_spike_los else 0.0
+        if active_defuse_info is not None and getattr(self, "positioning_version", 0) >= 2:
+            obs[17] = float(any(e.name == active_defuse_info["name"] for e in visible_enemies))
+        else:
+            obs[17] = 1.0 if unit_has_spike_los else 0.0
 
         if self.team_memory.last_seen_enemy is not None:
             ls = self.team_memory.last_seen_enemy
@@ -613,20 +676,23 @@ class LearningAttackerGuardGCController:
         best_dr, best_dc = _bfs_best_direction(dist_map, grid, r0, c0)
         obs[30] = float(best_dr)
         obs[31] = float(best_dc)
-        obs[32] = 1.0 if bfs_dist <= GUARD_POS_REACH_RADIUS else 0.0
+        radius = 0 if getattr(self, "positioning_version", 0) >= 1 else GUARD_POS_REACH_RADIUS
+        obs[32] = 1.0 if bfs_dist <= radius else 0.0
 
-        obs[33] = 0.0  # 予備次元
+        obs[33] = ((self._active_guard_pattern - 4) / 5.0
+                   if getattr(self, "positioning_version", 0) >= 1 else 0.0)
 
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     # train_attacker_guard.py の build_action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement=False):
+    def _action_mask(self, char, grid, chars, lock_movement=False, ultimate_target=None):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         敵を視認している間は静止させ、射撃の当たりやすさを優先する
         (「多少の索敵は許容するが強く抑制」は学習側の報酬設計で反映済み。
         本ファイル側のマスクは敵視認時のみの固定で足りる)。"""
-        mask = np.ones(ACTION_DIM, dtype=bool)
+        action_count = ACTION_DIM if self.positioning_version >= 3 else LEGACY_ACTION_DIM
+        mask = np.ones(action_count, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
             tuple(o.pos)
@@ -654,9 +720,21 @@ class LearningAttackerGuardGCController:
             for move_idx in range(5):
                 mask[move_idx * 2 + 1] = False
 
+        if self.positioning_version >= 3:
+            mask[ULTIMATE_ACTION_INDEX] = build_ultimate_action(
+                grid, char, chars, destination=ultimate_target
+            ) is not None
+
         return mask
 
     # -- メイン ----------------------------------------------------------
+    def _select_action(self, obs, mask):
+        device = DEVICE
+        with torch.no_grad():
+            q = self.model(torch.from_numpy(obs).float().unsqueeze(0).to(device)).squeeze(0)
+            q = q.masked_fill(~torch.from_numpy(mask).to(device), -1e9)
+        return int(torch.argmax(q).item())
+
     def decide_move(self, char, game_state):
         if not char.is_alive:
             return list(char.pos)
@@ -677,29 +755,57 @@ class LearningAttackerGuardGCController:
 
         self._ensure_spike_dist_map(grid, planted_pos)
         self._ensure_guard_assignment(char, grid, chars, planted_pos)
-        self._maybe_advance_tick(char, grid, chars)
+        self._maybe_advance_tick(char, grid, chars, game_state.get("smoke_cells", ()))
         self._update_sighting_dist_map(grid)
 
         watch_cells = postplant_watch_cells(grid, planted_pos)
         unit_has_spike_los = any(
-            _has_los(grid, tuple(char.pos), cell) for cell in watch_cells
+            _has_los(grid, tuple(char.pos), cell, game_state.get("smoke_cells", ()))
+            for cell in watch_cells
         )
         active_defuse_info = self._active_defuse_info(game_state)
 
         obs, visible_enemies = self._build_observation(
             char, game_state, unit_has_spike_los, active_defuse_info, detonate_timer
         )
-        mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        # Reach the learned strong position first.  The old spike-watch
+        # override below is intentionally not allowed to interrupt this route.
+        # A visible enemy or active defuse remains higher priority so that a
+        # player does not walk into an active duel/defuse situation blindly.
+        learned_positioning = getattr(self, "positioning_version", 0) >= 1
+        if not learned_positioning and not visible_enemies and active_defuse_info is None:
+            guard_step = self._guard_position_step(char, grid, chars)
+            if guard_step is not None:
+                if self.verbose:
+                    print(
+                        f"[ATTACKER GUARD GC] {char.name} "
+                        f"moving_to_guard={tuple(self._assigned_guard_positions[char.name])} "
+                        f"step={tuple(guard_step)} spike_los={unit_has_spike_los}"
+                    )
+                return guard_step
 
-        with torch.no_grad():
-            q_values = self.model(obs_t).squeeze(0).clone()
-            q_values[~mask_t] = -1e9
-            action_idx = int(torch.argmax(q_values).item())
+        ultimate_target = self._assigned_guard_positions.get(char.name, planted_pos)
+        mask = self._action_mask(
+            char, grid, chars,
+            lock_movement=bool(visible_enemies) and not learned_positioning,
+            ultimate_target=ultimate_target,
+        )
+
+        action_idx = self._select_action(obs, mask)
+
+        if self.positioning_version >= 3 and action_idx == ULTIMATE_ACTION_INDEX:
+            ultimate = build_ultimate_action(
+                grid, char, chars, destination=ultimate_target
+            )
+            if ultimate is not None:
+                return list(char.pos), ultimate
 
         if self.verbose:
+            device = DEVICE
+            with torch.no_grad():
+                q_values = self.model(torch.from_numpy(obs).float().unsqueeze(0).to(device)).squeeze(0)
+                q_values = q_values.masked_fill(~torch.from_numpy(mask).to(device), -1e9)
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 f.write(
                     f"{char.name},{tuple(char.pos)},planted={tuple(planted_pos)},"
@@ -712,7 +818,8 @@ class LearningAttackerGuardGCController:
         move_offset = MOVES[move_idx]
         # 設置マスまたは周囲8マスへ射線が通る場所を確保できたら、
         # 解除に来る敵を待ち構える。能力使用はその場で実行する。
-        if unit_has_spike_los and not use_ability:
+        if (not learned_positioning and unit_has_spike_los
+                and not use_ability and active_defuse_info is None):
             move_offset = MOVES[0]
         next_pos = [char.pos[0] + move_offset[0], char.pos[1] + move_offset[1]]
 

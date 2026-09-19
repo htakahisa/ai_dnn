@@ -51,8 +51,10 @@ from character_stats_gc import (
 )
 try:
     from .tactical_ability import choose_pre_entry_ability
+    from .ultimate_tactics_gc import build_ultimate_action
 except ImportError:
     from tactical_ability import choose_pre_entry_ability
+    from ultimate_tactics_gc import build_ultimate_action
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -63,12 +65,24 @@ DEBUG_LOG_PATH = "attacker_carry_gc_debug.log"
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 29
-ACTION_DIM = 11
+REAL_OBS_DIM = 31  # v3: nearby support and our own plant progress.
+TACTICAL_OBS_DIM = 39  # v4: own Macro role/waypoint and actual shooting eligibility.
+NAVIGATION_OBS_DIM = 57  # v5: legal neighbor costs, actual move history and deadline.
+SCREENING_OBS_DIM = 61  # v6: own-team screen in front of the spike carrier.
+FORMATION_OBS_DIM = 65  # v7: persistent designated entry screener and readiness.
+ENTRY_SYNC_OBS_DIM = 66  # v8: explicit two-tick entry synchronization state.
+LEGACY_ACTION_DIM = 11
+ACTION_DIM = 12
 PLANT_ACTION_INDEX = 10
+ULTIMATE_ACTION_INDEX = 11
 
 # 本番map_data.pyには5/6/7は存在しないが、train_attacker_carry.pyとの対称性のため
 # 同じ集合定義を維持する(判定は常にFalseになるだけで実害はない)。
 SITE_VALUES = frozenset({2, 5})
+try:
+    from .positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
+except ImportError:
+    from positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
 
 ABILITY_RANGE = 8
 SIGHTING_STALENESS_CAP = 20
@@ -313,13 +327,23 @@ class LearningAttackerCarryGCController:
         checkpoint = torch.load(
             model_path, map_location=self.device, weights_only=False
         )
+        self.positioning_version = int(checkpoint.get("positioning_version", 0))
+        self.model_episode = checkpoint.get("episode")
+        self.model_path = str(model_path)
 
         ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         ckpt_n_actions = int(checkpoint.get("n_actions", ACTION_DIM))
-        if ckpt_obs_dim != OBS_DIM or ckpt_n_actions != ACTION_DIM:
+        expected_obs_dim = (ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
+                            FORMATION_OBS_DIM if self.positioning_version >= 7 else
+                            SCREENING_OBS_DIM if self.positioning_version >= 6 else
+                            NAVIGATION_OBS_DIM if self.positioning_version >= 5 else
+                            TACTICAL_OBS_DIM if self.positioning_version >= 4 else
+                            REAL_OBS_DIM if self.positioning_version >= 3 else OBS_DIM)
+        expected_actions = ACTION_DIM if self.positioning_version >= 9 else LEGACY_ACTION_DIM
+        if ckpt_obs_dim != expected_obs_dim or ckpt_n_actions != expected_actions:
             raise ValueError(
                 f"チェックポイントの観測/行動空間がこのコントローラーと不一致です: "
-                f"obs_dim={ckpt_obs_dim}(期待値{OBS_DIM}) n_actions={ckpt_n_actions}(期待値{ACTION_DIM})。"
+                f"obs_dim={ckpt_obs_dim}(期待値{expected_obs_dim}) n_actions={ckpt_n_actions}(期待値{ACTION_DIM})。"
                 f"train_attacker_carry.pyのバージョンが古い可能性があります。"
             )
 
@@ -386,6 +410,12 @@ class LearningAttackerCarryGCController:
     def set_game(self, game):
         self.game = game
         grid = game.grid
+        # IQ creates a new view for every actor, but the immutable grid is shared.
+        if getattr(self, "_navigation_grid", None) is grid:
+            return
+        self._navigation_grid = grid
+        self._intent_distance_cache = {}
+        self._navigation_history = {}
         self._plant_cells = [
             (r, c)
             for r in range(grid.shape[0])
@@ -408,6 +438,7 @@ class LearningAttackerCarryGCController:
         }
 
     def reset_round(self):
+        self._navigation_history = {}
         self._sighting = None
         self._target_dist_map = None
         self._cached_target_pos = None
@@ -476,8 +507,15 @@ class LearningAttackerCarryGCController:
         elapsed_ticks,
         max_ticks,
         reached_waypoint,
+        target_plant_pos=None,
     ):
-        obs = np.zeros(OBS_DIM, dtype=np.float32)
+        modern = self.positioning_version >= 3
+        obs_dim = (ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
+                   FORMATION_OBS_DIM if self.positioning_version >= 7 else
+                   SCREENING_OBS_DIM if self.positioning_version >= 6 else
+                   NAVIGATION_OBS_DIM if self.positioning_version >= 5 else
+                   TACTICAL_OBS_DIM if self.positioning_version >= 4 else REAL_OBS_DIM if modern else OBS_DIM)
+        obs = np.zeros(obs_dim, dtype=np.float32)
         grid = self.game.grid
         height, width = grid.shape
         r0, c0 = int(char.pos[0]), int(char.pos[1])
@@ -485,7 +523,11 @@ class LearningAttackerCarryGCController:
         obs[0] = char.pos[0] / height
         obs[1] = char.pos[1] / width
         obs[2] = char.hp / char.max_hp if char.max_hp else 0.0
-        obs[3] = 1.0 if getattr(char, "moved_this_tick", False) else 0.0
+        # move_character() clears moved_this_tick before asking the policy.
+        # Training observes the move from the preceding completed tick.
+        obs[3] = float(bool(getattr(char, "moved_last_tick",
+                                    getattr(char, "moved_this_tick", False))
+                            if modern else getattr(char, "moved_this_tick", False)))
 
         ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}.get(
             char.ability_name
@@ -571,21 +613,74 @@ class LearningAttackerCarryGCController:
         # --- 優先(代表)地点への誘導特徴量。checkpointのpriority_cells由来の
         # マルチソースBFS(self._priority_dist_map)を参照する。target_plant_pos
         # (dist_map)とは独立した、常時提供される追加ガイダンス。---
-        p_dist = (
-            self._priority_dist_map[r0, c0]
-            if self._priority_dist_map is not None
-            else -1
-        )
+        priority_map = self._priority_dist_map
+        priority_max = self._priority_max_dist
+        if self.positioning_version >= 2 and target_plant_pos is not None:
+            priority_map = self._get_target_dist_map(target_plant_pos)
+            priority_max = height + width
+        p_dist = priority_map[r0, c0] if priority_map is not None else -1
         if p_dist < 0:
-            p_dist = self._priority_max_dist
-        obs[25] = min(p_dist, self._priority_max_dist) / max(1, self._priority_max_dist)
-        p_best_dr, p_best_dc = _bfs_best_direction(self._priority_dist_map, r0, c0)
+            p_dist = priority_max
+        obs[25] = min(p_dist, priority_max) / max(1, priority_max)
+        p_best_dr, p_best_dc = _bfs_best_direction(priority_map, r0, c0)
         obs[26] = float(p_best_dr)
         obs[27] = float(p_best_dc)
 
         # サイト別ウェイポイント通過済みフラグ(train_attacker_carry.pyのobs[28]と同一)。
         obs[28] = 1.0 if reached_waypoint else 0.0
 
+        if modern:
+            from game_core import PLANT_REQUIRED_TICKS
+            obs[29] = sum(max(abs(t.pos[0] - r0), abs(t.pos[1] - c0)) <= 3
+                          for t in teammates) / 4.0
+            obs[30] = min(1.0, max(0.0, getattr(char, "plant_timer", 0))
+                          / max(1, PLANT_REQUIRED_TICKS))
+
+        if self.positioning_version >= 4:
+            try:
+                from .navigation_intent_gc import intent_features
+            except ImportError:
+                from navigation_intent_gc import intent_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs[REAL_OBS_DIM:TACTICAL_OBS_DIM] = intent_features(self.game, char, chars, cache)
+        if self.positioning_version >= 5:
+            try:
+                from .navigation_intent_gc import navigation_context_features, navigation_intent
+            except ImportError:
+                from navigation_intent_gc import navigation_context_features, navigation_intent
+            history = self.__dict__.setdefault("_navigation_history", {})
+            goal = navigation_intent(self.game, char)[0]
+            obs[TACTICAL_OBS_DIM:NAVIGATION_OBS_DIM] = navigation_context_features(
+                self.game, char, chars, dist_map, history, goal
+            )
+        if self.positioning_version >= 6:
+            try:
+                from .navigation_intent_gc import carrier_screening_features
+            except ImportError:
+                from navigation_intent_gc import carrier_screening_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs[NAVIGATION_OBS_DIM:SCREENING_OBS_DIM] = carrier_screening_features(
+                self.game, char, chars, cache, escort=False
+            )
+        if self.positioning_version >= 7:
+            try:
+                from .navigation_intent_gc import carrier_formation_features
+            except ImportError:
+                from navigation_intent_gc import carrier_formation_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs[SCREENING_OBS_DIM:FORMATION_OBS_DIM] = carrier_formation_features(
+                self.game, char, chars, cache, escort=False
+            )
+        if self.positioning_version >= 8:
+            try:
+                from .navigation_intent_gc import carrier_entry_sync_feature
+            except ImportError:
+                from navigation_intent_gc import carrier_entry_sync_feature
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs[FORMATION_OBS_DIM] = carrier_entry_sync_feature(
+                self.game, char, chars, cache,
+                obs[TACTICAL_OBS_DIM + 14],
+            )
         return obs
 
     def _build_mask(self, char, chars, on_site):
@@ -596,7 +691,8 @@ class LearningAttackerCarryGCController:
             for o in chars
             if o is not char and getattr(o, "is_alive", True)
         }
-        mask = np.ones(ACTION_DIM, dtype=bool)
+        action_dim = ACTION_DIM if self.positioning_version >= 9 else LEGACY_ACTION_DIM
+        mask = np.ones(action_dim, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         for move_idx, (dr, dc) in enumerate(MOVES):
             nr, nc = r + dr, c + dc
@@ -621,7 +717,38 @@ class LearningAttackerCarryGCController:
 
         mask[PLANT_ACTION_INDEX] = bool(on_site)
 
+        if self.positioning_version >= 5:
+            # The actual engine spends an ability tick standing still. Legacy
+            # move+ability indices could execute either STAY or MOVE depending
+            # on target availability. New policies have one explicit ability
+            # action (1); moves are 2/4/6/8 and planting remains 10.
+            mask[[3, 5, 7, 9]] = False
+            mask[1] = mask[1] and self._learned_ability_target(char, chars) is not None
+
+        if self.positioning_version >= 9:
+            try:
+                from .navigation_intent_gc import navigation_intent
+            except ImportError:
+                from navigation_intent_gc import navigation_intent
+            goal = navigation_intent(self.game, char)[0]
+            mask[ULTIMATE_ACTION_INDEX] = build_ultimate_action(
+                grid, char, chars, destination=goal
+            ) is not None
+
         return mask
+
+    def _learned_ability_target(self, char, chars):
+        visible = [c for c in chars if c.team != char.team and getattr(c, "is_alive", True)
+                   and _has_los(self.game.grid, char.pos, c.pos, self._smoke_cells())
+                   and max(abs(c.pos[0] - char.pos[0]), abs(c.pos[1] - char.pos[1])) <= ABILITY_RANGE]
+        if visible:
+            nearest = min(visible, key=lambda c: max(abs(c.pos[0] - char.pos[0]), abs(c.pos[1] - char.pos[1])))
+            return tuple(map(int, nearest.pos))
+        if self._sighting is not None:
+            pos = self._sighting["pos"]
+            if max(abs(pos[0] - char.pos[0]), abs(pos[1] - char.pos[1])) <= ABILITY_RANGE:
+                return pos
+        return None
 
     def _select_action(self, obs, mask):
         with torch.no_grad():
@@ -733,15 +860,30 @@ class LearningAttackerCarryGCController:
 
         # --- ここからキャリア(DQN) ---
         target_plant_pos = game_state.get("target_plant_pos")
+        if self.positioning_version >= 1:
+            target_plant_pos = team_plant_target(self.game) or target_plant_pos
         if target_plant_pos is None:
             # 実ゲームでは通常発生しないが、念のためのフォールバック。
             target_plant_pos = self._plant_cells[0] if self._plant_cells else (r, c)
         target_plant_pos = (int(target_plant_pos[0]), int(target_plant_pos[1]))
+        if self.positioning_version >= 1:
+            site_left = target_plant_pos[1] < grid.shape[1] // 2
+            candidates = preferred_plant_cells(grid, [
+                p for p in self._plant_cells
+                if (p[1] < grid.shape[1] // 2) == site_left
+            ])
+            if target_plant_pos not in candidates and candidates:
+                distances = _bfs_distance_map(grid, (r, c))
+                reachable = [p for p in candidates if distances[p] >= 0]
+                if reachable:
+                    target_plant_pos = min(reachable, key=lambda p: (distances[p], p))
+                    set_team_plant_target(self.game, target_plant_pos)
 
         # ラウンド開始時(_active_waypoint_site未設定)にサイトを判定し、
         # 対応するウェイポイントが存在すればまずそこへの距離マップを使う。
         # train_attacker_carry.py CarryEnv.reset()と同一の判定基準(列がwidth//2未満=左)。
-        if self._active_waypoint_site is None:
+        target_site = "left" if target_plant_pos[1] < grid.shape[1] // 2 else "right"
+        if self._active_waypoint_site != target_site:
             width = grid.shape[1]
             self._active_waypoint_site = (
                 "left" if target_plant_pos[1] < width // 2 else "right"
@@ -767,6 +909,15 @@ class LearningAttackerCarryGCController:
         else:
             dist_map = self._waypoint_dist_maps[self._active_waypoint_site]
 
+        if self.positioning_version >= 4:
+            try:
+                from .navigation_intent_gc import navigation_intent
+            except ImportError:
+                from navigation_intent_gc import navigation_intent
+            route_goal, _, _ = navigation_intent(self.game, char)
+            if route_goal is not None:
+                dist_map = self._get_target_dist_map(route_goal)
+
         on_site = int(grid[r, c]) in SITE_VALUES
 
         self._update_sighting(char, chars, smoke_cells)
@@ -779,7 +930,7 @@ class LearningAttackerCarryGCController:
             last_seen=self._sighting["pos"] if self._sighting else None,
             max_range=ABILITY_RANGE,
         )
-        if pre_entry_ability is not None:
+        if pre_entry_ability is not None and self.positioning_version < 5:
             return list(char.pos), {
                 "ability": pre_entry_ability[0],
                 "target": pre_entry_ability[1],
@@ -798,15 +949,27 @@ class LearningAttackerCarryGCController:
             elapsed_ticks,
             max_ticks,
             self._reached_waypoint,
+            target_plant_pos,
         )
         mask = self._build_mask(char, chars, on_site)
         action_idx = self._select_action(obs, mask)
+
+        if self.positioning_version >= 9 and action_idx == ULTIMATE_ACTION_INDEX:
+            ultimate = build_ultimate_action(
+                grid, char, chars, destination=route_goal or target_plant_pos
+            )
+            if ultimate is not None:
+                return list(char.pos), ultimate
         decoded = self._decode_action(action_idx)
 
         if decoded == "PLANT":
             # PLANTはマスク上、on_site==Trueの時のみ選択され得る。
             # 移動・アビリティ使用は行わない(battle_logic.pyのPLANT分岐と同一仕様)。
             return list(char.pos), "PLANT"
+
+        if self.positioning_version >= 5 and action_idx == 1:
+            target = self._learned_ability_target(char, chars)
+            return list(char.pos), {"ability": char.ability_name, "target": target}
 
         (dr, dc), use_ability = decoded
 

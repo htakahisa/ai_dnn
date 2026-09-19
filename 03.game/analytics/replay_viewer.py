@@ -17,16 +17,18 @@ from map_data import NEW_MAZE_STR
 
 
 class ReplayViewer(tk.Toplevel):
-    def __init__(self, parent, replay_frames, *, title="Match Replay"):
+    def __init__(self, parent, replay_frames, *, title="Match Replay", map_options=None):
         super().__init__(parent)
         self.title(title)
         self.geometry("980x720")
         self.frames = list(replay_frames or [])
+        self.map_options = list(map_options or [])
         self.index = 0
         self.playing = False
         self._updating_timeline = False
         self.speed = tk.DoubleVar(value=1.0)
         self.status = tk.StringVar(value="")
+        self.view_mode = tk.StringVar(value="ALL")
 
         rows = [line.strip() for line in NEW_MAZE_STR.strip().splitlines() if line.strip()]
         self.grid = [list(map(int, row)) for row in rows]
@@ -36,8 +38,30 @@ class ReplayViewer(tk.Toplevel):
         self.canvas.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         controls = ttk.Frame(self, padding=(8, 0, 8, 8))
         controls.pack(fill=tk.X)
+        if len(self.map_options) > 1:
+            ttk.Label(controls, text="Map").pack(side=tk.LEFT, padx=(0, 4))
+            self.map_var = tk.StringVar()
+            self.map_combo = ttk.Combobox(
+                controls,
+                textvariable=self.map_var,
+                values=[
+                    f"Map {getattr(item, 'number', index + 1)}"
+                    for index, item in enumerate(self.map_options)
+                ],
+                state="readonly",
+                width=10,
+            )
+            self.map_combo.pack(side=tk.LEFT, padx=(0, 12))
+            self.map_combo.current(0)
+            self.map_combo.bind("<<ComboboxSelected>>", self._map_changed)
         self.play_button = ttk.Button(controls, text="Play", command=self.toggle_play)
         self.play_button.pack(side=tk.LEFT)
+        ttk.Label(controls, text="View").pack(side=tk.LEFT, padx=(12, 4))
+        for label, mode in (("All", "ALL"), ("Attackers", "A"), ("Defenders", "D")):
+            ttk.Button(
+                controls, text=label,
+                command=lambda selected=mode: self.set_view_mode(selected),
+            ).pack(side=tk.LEFT, padx=1)
         ttk.Button(controls, text="|<", command=lambda: self.seek(0)).pack(side=tk.LEFT, padx=4)
         ttk.Label(controls, text="Speed").pack(side=tk.LEFT, padx=(12, 4))
         ttk.Combobox(
@@ -51,6 +75,24 @@ class ReplayViewer(tk.Toplevel):
         self.timeline.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=12)
         ttk.Label(controls, textvariable=self.status, width=34).pack(side=tk.RIGHT)
         self.protocol("WM_DELETE_WINDOW", self.close)
+        self.draw_frame()
+
+    def _map_changed(self, _event=None):
+        selected = self.map_combo.current()
+        if not (0 <= selected < len(self.map_options)):
+            return
+        self.playing = False
+        self.play_button.configure(text="Play")
+        self.frames = list(
+            getattr(self.map_options[selected], "replay_frames", []) or []
+        )
+        self.index = 0
+        self.timeline.configure(to=max(0, len(self.frames) - 1))
+        self._updating_timeline = True
+        try:
+            self.timeline.set(0)
+        finally:
+            self._updating_timeline = False
         self.draw_frame()
 
     def close(self):
@@ -92,6 +134,24 @@ class ReplayViewer(tk.Toplevel):
     def _scale_changed(self, value):
         if not self.playing and not self._updating_timeline:
             self.seek(float(value))
+
+    def set_view_mode(self, mode):
+        mode = str(mode).upper()
+        if mode not in {"ALL", "A", "D"}:
+            return
+        self.view_mode.set(mode)
+        self.draw_frame()
+
+    def _char_visible(self, char):
+        mode = self.view_mode.get()
+        if mode == "ALL" or char.get("team") == mode:
+            return True
+        visible_to = char.get("visible_to")
+        if isinstance(visible_to, (list, tuple, set)):
+            return mode in visible_to
+        # Old replay files only have the historical global reveal flag. It is
+        # not team-perfect, but remains a useful backwards-compatible view.
+        return bool(char.get("revealed", False))
 
     def draw_frame(self):
         self.canvas.delete("all")
@@ -164,6 +224,8 @@ class ReplayViewer(tk.Toplevel):
                     fill=color, outline="#fbbf24",
                 )
         for char in frame.get("chars", []):
+            if not self._char_visible(char):
+                continue
             r, c = char.get("pos") or (0, 0)
             if not char.get("alive", False):
                 self.canvas.create_text(
@@ -190,5 +252,6 @@ class ReplayViewer(tk.Toplevel):
         self.status.set(
             f"Frame {self.index + 1}/{len(self.frames)}  "
             f"R{frame.get('round', '-')}/T{frame.get('tick', '-')}  "
-            f"Score {frame.get('attacker_wins', 0)}-{frame.get('defender_wins', 0)}"
+            f"Score {frame.get('attacker_wins', 0)}-{frame.get('defender_wins', 0)}  "
+            f"View {self.view_mode.get()}"
         )

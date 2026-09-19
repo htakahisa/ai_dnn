@@ -28,6 +28,7 @@ from ghost_champions_v1 import (
 from learning_attacker_macro_gc_runtime import (
     LearningAttackerMacroGCController,
 )
+from gc_v1.positioning_gc import team_plant_target
 
 _opening_import_error = None
 try:
@@ -62,6 +63,9 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         except Exception as exc:
             self.macro_controller = None
             print(f"[GC Macro][WARN] attacker macro disabled: {exc}")
+        if self.macro_controller is not None:
+            self.macro_controller.learned_positioning = (
+                getattr(self.carry, "positioning_version", 0) >= 1)
 
     def set_game(self, game):
         parent = getattr(super(), "set_game", None)
@@ -78,7 +82,36 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         if self.macro_controller is not None:
             self.macro_controller.reset_round()
 
+    def _cover_result(self, char, game_state, result):
+        if getattr(getattr(self, "escort", None), "positioning_version", 0) >= 2:
+            return result
+        # The team macro owns pre-plant roles. Generic escort nudges otherwise
+        # recall fake sellers / split support and destroy the selected plan.
+        if (getattr(self, "macro_controller", None) is not None
+                and not game_state.get("is_planted")
+                and any(getattr(c, "team", None) == "A"
+                        and getattr(c, "is_alive", True)
+                        and getattr(c, "has_spike", False)
+                        for c in game_state.get("chars", []))):
+            return result
+        return super()._cover_result(char, game_state, result)
+
     def decide_move(self, char, game_state):
+        learned_carry = getattr(getattr(self, "carry", None), "positioning_version", 0) >= 1
+        if learned_carry and not game_state.get("is_planted"):
+            game_state = dict(game_state)
+            target = team_plant_target(getattr(self, "game", None))
+            if target is not None:
+                game_state["target_plant_pos"] = target
+        if (self.macro_controller is not None
+                and learned_carry
+                and not game_state.get("is_planted")
+                and any(getattr(c, "has_spike", False) and c.is_alive
+                        for c in game_state.get("chars", []))):
+            self.macro_controller._sync_tick_once(game_state)
+            target = team_plant_target(getattr(self, "game", None))
+            if target is not None:
+                game_state["target_plant_pos"] = target
         # Existing phase router first decides Carry/Escort/Retrieve/Guard.
         base_result = super().decide_move(char, game_state)
 
@@ -87,6 +120,8 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
 
         # Guard owns post-plant.
         if bool(game_state.get("is_planted", False)):
+            if getattr(getattr(self, "guard", None), "positioning_version", 0) >= 1:
+                return base_result
             micro_cover = self._micro_cover_result(char, game_state)
             if micro_cover is not None:
                 return micro_cover
@@ -105,12 +140,23 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         if holder is None:
             return base_result
 
+        # Macro selects the target site; retrained Carry owns its route and
+        # planting. Its training includes the complete spawn-to-site approach.
+        if (char is holder and getattr(self.carry, "positioning_version", 0) >= 1):
+            return base_result
+
+        # Intent-trained Escort executes its own actions. Macro has already
+        # published its role/waypoint at _sync_tick_once above; overriding this
+        # result would make the recorded DQN action differ from its execution.
+        if char is not holder and getattr(self.escort, "positioning_version", 0) >= 2:
+            return base_result
+
         coordinated = self.macro_controller.coordinate(
             char,
             game_state,
             base_result,
         )
-        return self._cover_result(char, game_state, coordinated)
+        return coordinated
 
 
 class GhostChampionsV1DefenderController(_BaseGCDefender):

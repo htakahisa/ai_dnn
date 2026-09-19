@@ -23,7 +23,7 @@ from map_data_defender_setup import (
 from gc_v1.map_data_defender_setup_positions_gc import (
     get_gc_setup_position_candidates,
 )
-from party_presets import all_preset_names, get_preset
+from party_presets import all_preset_names, canonical_preset_name, get_preset
 
 
 GC_ROSTER_ORDER = ["Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"]
@@ -216,7 +216,8 @@ def _normalize_pos(pos):
     )
 
 
-def _build_obs(char, player_index, selected_indices, opponent_name, variation_index):
+def _build_obs(char, player_index, selected_indices, opponent_name, variation_index,
+               opponent_index=None, opponent_dim=None):
     player_one_hot = np.zeros(PLAYER_COUNT, dtype=np.float32)
     player_one_hot[player_index] = 1.0
 
@@ -232,8 +233,10 @@ def _build_obs(char, player_index, selected_indices, opponent_name, variation_in
         rr, cc = _normalize_pos(pos)
         candidate_features.extend((rr, cc))
 
-    opponent_one_hot = np.zeros(OPPONENT_DIM, dtype=np.float32)
-    opponent_idx = OPPONENT_INDEX.get(str(opponent_name))
+    dimension = OPPONENT_DIM if opponent_dim is None else int(opponent_dim)
+    opponent_one_hot = np.zeros(dimension, dtype=np.float32)
+    slots = OPPONENT_INDEX if opponent_index is None else opponent_index
+    opponent_idx = slots.get(canonical_preset_name(opponent_name))
     if opponent_idx is not None:
         opponent_one_hot[opponent_idx] = 1.0
 
@@ -249,8 +252,9 @@ def _build_obs(char, player_index, selected_indices, opponent_name, variation_in
         variation_one_hot,
     ]).astype(np.float32)
 
-    if obs.shape != (OBS_DIM,):
-        raise RuntimeError(f"Setup OBS mismatch: {obs.shape} != {(OBS_DIM,)}")
+    expected_dim = OBS_DIM - OPPONENT_DIM + dimension
+    if obs.shape != (expected_dim,):
+        raise RuntimeError(f"Setup OBS mismatch: {obs.shape} != {(expected_dim,)}")
     return obs
 
 
@@ -290,7 +294,11 @@ class LearningDefenderSetupGCRuntime:
                 "GC Setup reachability threshold mismatch: "
                 f"checkpoint={int(ck_max_dist)} current={MAX_CANDIDATE_BFS_DISTANCE}"
             )
-        if ck_obs != OBS_DIM:
+        ck_opponents = checkpoint.get("opponent_names")
+        fixed_dim = OBS_DIM - OPPONENT_DIM
+        self.opponent_dim = len(ck_opponents) if ck_opponents is not None else ck_obs - fixed_dim
+        self.obs_dim = fixed_dim + self.opponent_dim
+        if self.opponent_dim < 0 or ck_obs != self.obs_dim:
             raise RuntimeError(
                 f"GC Setup OBS_DIM mismatch: checkpoint={ck_obs} current={OBS_DIM}"
             )
@@ -299,19 +307,22 @@ class LearningDefenderSetupGCRuntime:
                 f"GC Setup ACTION_DIM mismatch: checkpoint={ck_action} current={ACTION_DIM}"
             )
 
-        ck_opponents = checkpoint.get("opponent_names")
+        # Preserve checkpoint slot order: sorting translated names reshuffles
+        # the one-hot layout even though OBS_DIM remains unchanged.
+        self.opponent_index = {
+            canonical_preset_name(name): i
+            for i, name in enumerate(ck_opponents if ck_opponents is not None else [])
+        }
         if ck_opponents is not None:
             # A preset can be renamed without changing the one-hot layout.
             # The model only requires the same number and ordering of slots;
             # disabling the whole planner for a label-only change makes every
             # GC defender stand still during Setup and silently falls back to
             # the current position.
-            if len(ck_opponents) != len(OPPONENT_NAMES):
-                raise RuntimeError("GC Setup opponent preset dimension changed")
             if list(ck_opponents) != list(OPPONENT_NAMES) and self.verbose:
                 print(
-                    "[GC D-SETUP][WARN] opponent preset names changed; "
-                    "using the compatible one-hot slot layout"
+                    "[GC D-SETUP] preserving checkpoint opponent slots; "
+                    "unknown opponents use a zero vector"
                 )
         ck_variations = checkpoint.get("setup_variations")
         if ck_variations is not None and list(ck_variations) != list(SETUP_VARIATIONS):
@@ -323,7 +334,7 @@ class LearningDefenderSetupGCRuntime:
             if normalized != self.candidates:
                 raise RuntimeError("GC Setup candidate positions changed")
 
-        self.model = SetupQNet().to(self.device)
+        self.model = SetupQNet(obs_dim=self.obs_dim).to(self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
 
@@ -396,7 +407,9 @@ class LearningDefenderSetupGCRuntime:
 
         for player_index, name in enumerate(GC_ROSTER_ORDER):
             char = by_name[name]
-            obs = _build_obs(char, player_index, selected, self.opponent_name, self.variation_index)
+            obs = _build_obs(char, player_index, selected, self.opponent_name,
+                             self.variation_index, self.opponent_index,
+                             self.opponent_dim)
 
             valid = _valid_action_mask(
                 player_index,

@@ -2,7 +2,7 @@
 
 固定チーム(Xdll/SyouTa/Absol/eKo/SugarZ3ro)専用の
 Attacker「carry phase」学習スクリプト。
-スパイクをスポーンからプラント可能地点まで運び、自動発火するプラントを
+スパイクをスポーンからプラント可能地点まで運び、明示的なプラント行動を
 完了させることを目的とする。学習対象はスパイク保持者(キャリア)のみ。
 
 train_attacker_guard.py / train_defender_search.py と同一規約:
@@ -27,11 +27,9 @@ train_attacker_guard.py / train_defender_search.py と同一規約:
 (実ゲームのinit_round()と同じ考え方)。毎tick最寄り地点を再計算しないため、
 移動中に目標がすり替わってジグザグ移動を誘発することがない。
 
-マップは map_data_carry_gc.py を使用する。同ファイルは map_data.py 上のプラント
-可能マス(2)の一部に、学習専用の優先(代表)地点マーカー(5)を追加したもの。
-5は本番map_data.pyには存在しないため、優先地点は学習済みチェックポイントに
-座標(priority_cells)として保存し、本番実行時はgridの値に依存せずその座標を使う
-(learning_attacker_carry.py側で対応予定)。
+地形と経路マーカーは map_data_carry_gc.py を使用する。優先設置位置は
+map_data_guard_plant_gc.py の5～9を共有し、対応するGuard配置と結び付ける。
+優先地点はチェックポイントに座標(priority_cells)として保存する。
 
 保存先: gc_v1/data/attacker_carry_gc_data/
 チェックポイントは {"model_state_dict","obs_dim","n_actions","episode",
@@ -41,7 +39,7 @@ train_attacker_guard.py / train_defender_search.py と同一規約:
 import os
 import sys
 import random
-from collections import deque, namedtuple
+from collections import Counter, deque, namedtuple
 
 import numpy as np
 import torch
@@ -54,6 +52,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data_carry_gc import NEW_MAZE_STR
+from positioning_gc import (POSITIONING_VERSION, REGISTERED_PLANT_CELLS,
+                            PLANT_PATTERNS, validate_tactical_maps)
 from character_stats_gc import CHARACTER_TABLE as GC_STATS_TABLE
 
 from game_core import (
@@ -84,7 +84,8 @@ EPISODE_COUNT = 8000
 # ---------------------------------------------------------------------------
 # 保存先
 # ---------------------------------------------------------------------------
-DATA_DIR = "data/attacker_carry_gc_data/"
+HERE = Path(__file__).resolve().parent
+DATA_DIR = HERE / "data" / "attacker_carry_gc_data"
 os.makedirs(DATA_DIR, exist_ok=True)
 MODEL_SAVE_PATH = os.path.join(DATA_DIR, "dqn_attacker_carry_gc_best_by_eval.pt")
 MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_attacker_carry_gc_latest.pt")
@@ -92,7 +93,7 @@ MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_attacker_carry_gc_latest.pt")
 # ---------------------------------------------------------------------------
 # 基本設定
 # ---------------------------------------------------------------------------
-DEVICE = torch.device("cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
@@ -121,10 +122,14 @@ SIGHTING_STALENESS_CAP = 20
 HANDOFF_AUGMENT_PROB = 0.0  # GC実戦方針: Absolを常にスパイクキャリアーにする
 
 # 敵(Defender)側の既定ステータス(当面ヒューリスティックのため簡易値のまま)
-DEFAULT_ACCURACY = 0.50
-DEFAULT_DODGE = 0.12
-DEFAULT_HS_RATE = 0.20
+DEFAULT_ACCURACY = 0.90
+DEFAULT_DODGE = 0.30
+DEFAULT_HS_RATE = 0.50
 DEFAULT_REACTION = 100.0
+CURRICULUM_START_ACCURACY = 0.50
+CURRICULUM_START_DODGE = 0.12
+CURRICULUM_START_HS_RATE = 0.20
+CURRICULUM_FULL_STRENGTH_RATIO = 0.55
 
 # ---------------------------------------------------------------------------
 # gc_v1 固定チーム定義(train_defender_search.py / train_attacker_guard.py と同一)
@@ -211,7 +216,7 @@ PLANTABLE_WAIT_PENALTY = -0.08  # 設置可能なのにPLANTしないTick
 PLANTABLE_WAIT_GROWTH = -0.025  # 待つほど追加で悪化（2Tick目以降）
 MAX_PLANTABLE_WAIT_PENALTY = -0.30
 TIME_EXPIRE_PENALTY = -0.5  # ラウンド時間切れ(未設置=Defender有利)
-TEAM_WIPE_PENALTY = -0.2  # 味方(エスコート込み)全滅だがキャリアは生存継続中
+TEAM_WIPE_PENALTY = -1.5  # Losing all escorts leaves the carrier in a near-lost round.
 WAYPOINT_REACHED_REWARD = (
     0.10  # サイト別ウェイポイント(6=右/7=左)を初通過した時の一度きりのボーナス
 )
@@ -223,7 +228,16 @@ WAYPOINT_REACHED_REWARD = (
 
 
 # Retraining reward profile: carrier death is a round-defining failure.
-DEATH_PENALTY = -3.0
+DEATH_PENALTY = -6.0
+PROGRESS_REWARD = 0.08
+PLANTABLE_ARRIVAL_REWARD = 0.75
+PLANT_TICK_BONUS = 0.40
+PLANT_SUCCESS_REWARD = 5.0
+TIME_EXPIRE_PENALTY = -2.0
+CARRIER_SUPPORT_RADIUS = 3
+CARRIER_SECOND_SUPPORT_REWARD = 0.015
+CARRIER_UNSUPPORTED_PENALTY = -0.05
+CARRIER_EXPOSED_UNSUPPORTED_PENALTY = -0.15
 
 
 def _parse_grid(maze_str):
@@ -247,12 +261,15 @@ PLANT_CELLS = [
     for c in range(WIDTH)
     if int(GRID[r, c]) in SITE_VALUES
 ]
-# 優先(代表)地点: 本番map_data.pyには存在しない、map_data_carry_gc.py専用のマーカー(5)。
+# 優先地点: map_data_guard_plant_gc.pyの設置パターン5～9。
 # 学習済みチェックポイントには座標として保存し、本番実行時はgridの値に依存せず
 # その座標リストをそのまま使う(learning_attacker_carry.py側で対応予定)。
-PRIORITY_CELLS = [
-    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if int(GRID[r, c]) == 5
-]
+validate_tactical_maps(GRID)
+# The post-plant map is the source of truth for strategically useful plants.
+# Carry's 6/7 route markers still describe the approach to each site.
+PRIORITY_CELLS = list(REGISTERED_PLANT_CELLS)
+PREFERRED_PLANT_SUCCESS_BONUS = 2.0
+TARGET_PLANT_SUCCESS_BONUS = 3.0
 
 # サイト別ウェイポイント(右=6/左=7)。
 # 同じ値は複数配置可能。対応サイトでは候補群のどれか1つを通れば達成とする。
@@ -604,9 +621,19 @@ def _build_fixed_attackers(carrier_name, handoff=False):
     return attackers
 
 
-def _build_defenders():
+def _build_defenders(opponent_strength=1.0):
     """敵(Defender)側は当面ヒューリスティック対応のため、DEFENDER_SPAWNSから
     配置する。プラント前提のため常時ランダム索敵移動+近接時アビリティ。"""
+    strength = max(0.0, min(1.0, float(opponent_strength)))
+    accuracy = CURRICULUM_START_ACCURACY + strength * (
+        DEFAULT_ACCURACY - CURRICULUM_START_ACCURACY
+    )
+    dodge = CURRICULUM_START_DODGE + strength * (
+        DEFAULT_DODGE - CURRICULUM_START_DODGE
+    )
+    hs_rate = CURRICULUM_START_HS_RATE + strength * (
+        DEFAULT_HS_RATE - CURRICULUM_START_HS_RATE
+    )
     d_spawns = random.sample(DEFENDER_SPAWNS, min(N_DEFENDERS, len(DEFENDER_SPAWNS)))
     return [
         UnitStub(
@@ -615,9 +642,9 @@ def _build_defenders():
             pos,
             "NONE",
             random.choice(["FLASH", "SMOKE", "RECON", "NONE"]),
-            DEFAULT_ACCURACY,
-            DEFAULT_DODGE,
-            DEFAULT_HS_RATE,
+            accuracy,
+            dodge,
+            hs_rate,
             DEFAULT_REACTION,
         )
         for i, pos in enumerate(d_spawns)
@@ -699,12 +726,14 @@ def _escort_move(unit, carrier, all_units, occupied, smoke_cells):
         return _random_step(tuple(unit.pos), occupied)
 
     dist = max(abs(carrier.pos[0] - unit.pos[0]), abs(carrier.pos[1] - unit.pos[1]))
-    if random.random() < 0.3:
-        return _random_step(tuple(unit.pos), occupied)
-    if dist > 5:
+    # Carry学習中も実戦の3マスカバー条件を成立させる。護衛が5マス以上
+    # 離れるまで追従しない旧挙動では、キャリアー側だけが孤立罰を受け続けた。
+    if dist > 2:
         return _bfs_next_step(
             tuple(unit.pos), tuple(carrier.pos), occupied, allow_adjacent_goal=True
         )
+    if random.random() < 0.1:
+        return _random_step(tuple(unit.pos), occupied)
     return _random_step(tuple(unit.pos), occupied)
 
 
@@ -814,6 +843,7 @@ def build_observation(
     elapsed_ticks,
     dist_map,
     reached_waypoint=True,
+    target_plant_pos=None,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(carrier.pos[0]), int(carrier.pos[1])
@@ -875,11 +905,14 @@ def build_observation(
     # --- 優先(代表)地点への誘導特徴量。map_data_carry_gc.pyの5マーカー(PRIORITY_CELLS)
     # からのマルチソースBFS(PRIORITY_DIST_MAP)を参照する。target_plant_pos(dist_map)
     # とは独立した、常時提供される追加ガイダンス。---
-    p_dist = PRIORITY_DIST_MAP[r0, c0]
+    priority_map = (PLANT_DIST_MAPS[target_plant_pos] if target_plant_pos is not None
+                    else PRIORITY_DIST_MAP)
+    priority_max = HEIGHT + WIDTH if target_plant_pos is not None else PRIORITY_MAX_DIST
+    p_dist = priority_map[r0, c0]
     if p_dist < 0:
-        p_dist = PRIORITY_MAX_DIST
-    obs[25] = min(p_dist, PRIORITY_MAX_DIST) / max(1, PRIORITY_MAX_DIST)
-    p_best_dr, p_best_dc = bfs_best_direction(PRIORITY_DIST_MAP, r0, c0)
+        p_dist = priority_max
+    obs[25] = min(p_dist, priority_max) / max(1, priority_max)
+    p_best_dr, p_best_dc = bfs_best_direction(priority_map, r0, c0)
     obs[26] = float(p_best_dr)
     obs[27] = float(p_best_dc)
 
@@ -950,21 +983,27 @@ class CarryEnv:
         self._prev_hp = {}
         self.active_waypoint_site = None
         self.reached_waypoint = True
+        self.opponent_strength = 1.0
+        self.reached_plantable_cell = False
         # 設置可能マス上でPLANTせず待った連続Tick数
         self.plantable_wait_ticks = 0
 
-    def reset(self):
+    def set_training_progress(self, progress):
+        progress = max(0.0, min(1.0, float(progress)))
+        self.opponent_strength = min(
+            1.0,
+            progress / max(1e-6, CURRICULUM_FULL_STRENGTH_RATIO),
+        )
+
+    def reset(self, pattern_marker=None):
         self.sighting.reset()
         self.smokes = []
         self.elapsed_ticks = 0
         self.plant_progress = 0
         self.plantable_wait_ticks = 0
+        self.reached_plantable_cell = False
         self.match_over_reason = None
-        # 意図的に_prev_distを初期化しない。_compute_reward側のgetattr(self,"_prev_dist",cur_dist)
-        # が「属性が存在しない場合のみ」cur_distへフォールバックする仕様を利用し、
-        # 最初のtickではprev_dist==cur_distとなってdelta=0(報酬なし)になるようにする。
-        # ここでNoneを代入すると、getattrが「属性は存在する(値がNone)」と判定してしまい、
-        # フォールバックが効かずPROGRESS_REWARDが永久に発火しなくなる。
+        # 距離ポテンシャルは、以下の目標決定後に初期位置から初期化する。
 
         handoff = random.random() < HANDOFF_AUGMENT_PROB
         if handoff:
@@ -973,12 +1012,13 @@ class CarryEnv:
             carrier_name = GC_SPIKE_HOLDER
 
         self.attackers = _build_fixed_attackers(carrier_name, handoff=handoff)
-        self.defenders = _build_defenders()
+        self.defenders = _build_defenders(self.opponent_strength)
         self.carrier = next(a for a in self.attackers if a.name == carrier_name)
 
         # 実ゲームのinit_round()と同じ考え方: ラウンド開始時に1点だけ選んで固定する。
         # 以降このエピソード中は目標がすり替わらない(target_plant_posに対応)。
-        self.target_plant_pos = random.choice(PLANT_CELLS)
+        pattern = random.choice(list(PLANT_PATTERNS)) if pattern_marker is None else pattern_marker
+        self.target_plant_pos = random.choice(PLANT_PATTERNS[pattern])
 
         # サイト(左/右)を判定し、対応するウェイポイントが存在すれば
         # まずそこへの距離マップを使う(通過後にstep()側でplant距離マップへ切り替え)。
@@ -992,6 +1032,9 @@ class CarryEnv:
         else:
             self.reached_waypoint = True
             self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
+
+        # Reset the potential every episode, including handoff augmentation.
+        self._prev_dist = self.dist_map[tuple(self.carrier.pos)]
 
         self.sighting.update(self.carrier, self.defenders, self._smoke_cells())
 
@@ -1024,6 +1067,7 @@ class CarryEnv:
             self.elapsed_ticks,
             self.dist_map,
             self.reached_waypoint,
+            self.target_plant_pos,
         )
         occupied = {
             tuple(u.pos) for u in self.attackers + self.defenders if u.is_alive
@@ -1363,6 +1407,34 @@ class CarryEnv:
             # 既に死亡している状態が続くことは想定していない(即終了するため)
             return reward, True
 
+        preferred_now = tuple(self.carrier.pos) in PRIORITY_CELLS
+        if preferred_now and not self.reached_plantable_cell:
+            self.reached_plantable_cell = True
+            reward += PLANTABLE_ARRIVAL_REWARD
+
+        # Prefer waiting for a trade partner over exposing the spike alone.
+        support_count = sum(
+            1
+            for teammate in self.attackers
+            if teammate is not self.carrier
+            and teammate.is_alive
+            and max(
+                abs(teammate.pos[0] - self.carrier.pos[0]),
+                abs(teammate.pos[1] - self.carrier.pos[1]),
+            ) <= CARRIER_SUPPORT_RADIUS
+        )
+        if support_count == 0:
+            reward += CARRIER_UNSUPPORTED_PENALTY
+            smoke_cells = self._smoke_cells()
+            if any(
+                defender.is_alive
+                and has_los(self.carrier.pos, defender.pos, smoke_cells)
+                for defender in self.defenders
+            ):
+                reward += CARRIER_EXPOSED_UNSUPPORTED_PENALTY
+        elif support_count >= 2:
+            reward += CARRIER_SECOND_SUPPORT_REWARD
+
         # 被ダメージペナルティ
         hp_lost = max(
             0, self._prev_hp.get(self.carrier.name, self.carrier.hp) - self.carrier.hp
@@ -1397,7 +1469,11 @@ class CarryEnv:
 
         # 設置可能マスに立っているのにPLANTしない行動を明確に罰する。
         # これにより「サイトで時間を使ってから最後に設置」のQ値局所解を抑える。
-        if on_site_before_action and not plant_action_chosen:
+        # Crossing a normal plantable cell on the way to a stronger plant must
+        # not be punished. Emergency planting remains rewarded and legal.
+        urgent = MAX_TICKS - self.elapsed_ticks <= PLANT_REQUIRED_TICKS + 2
+        at_target = tuple(self.carrier.pos) == self.target_plant_pos
+        if on_site_before_action and not plant_action_chosen and (at_target or urgent):
             self.plantable_wait_ticks += 1
             wait_penalty = PLANTABLE_WAIT_PENALTY + PLANTABLE_WAIT_GROWTH * max(
                 0, self.plantable_wait_ticks - 1
@@ -1409,10 +1485,15 @@ class CarryEnv:
             self.plantable_wait_ticks = 0
 
         if plant_tick_progress:
-            reward += PLANT_TICK_BONUS
+            reward += (PLANT_TICK_BONUS if at_target or urgent
+                       else 0.10 if preferred_now else 0.05)
 
         if plant_completed:
             reward += PLANT_SUCCESS_REWARD
+            if preferred_now:
+                reward += PREFERRED_PLANT_SUCCESS_BONUS
+            if at_target:
+                reward += TARGET_PLANT_SUCCESS_BONUS
             self.match_over_reason = "planted"
             return reward, True
 
@@ -1497,8 +1578,19 @@ def train(
     lr=1e-4,
     buffer_size=200_000,
     target_update_every=1000,
+    output_dir=None,
+    eval_episodes=40,
+    init_model=None,
 ):
+    from positioning_evaluation_gc import evaluate_carry
+    save_dir = Path(output_dir) if output_dir is not None else DATA_DIR
+    save_dir.mkdir(parents=True, exist_ok=True)
+    best_path = save_dir / Path(MODEL_SAVE_PATH).name
+    latest_path = save_dir / Path(MODEL_LATEST_PATH).name
     policy_net = AttackerCarryDuelingDQN().to(DEVICE)
+    if init_model is not None:
+        checkpoint = torch.load(init_model, map_location=DEVICE, weights_only=False)
+        policy_net.load_state_dict(checkpoint["model_state_dict"])
     target_net = AttackerCarryDuelingDQN().to(DEVICE)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
@@ -1508,9 +1600,11 @@ def train(
     env = CarryEnv()
 
     global_step = 0
-    best_avg_reward = -float("inf")
+    best_eval_score = (-1.0, -1.0, -1.0, -float("inf"))
+    evaluation = None
     episode_reward_history = deque(maxlen=100)
     episode_success_history = deque(maxlen=100)  # match_over_reason=="planted"の割合
+    episode_reason_history = deque(maxlen=100)
 
     def _save_checkpoint(path, episode_no, success_rate_value):
         """learning_attacker_carry.py(推論側)が期待するdict形式で保存する。
@@ -1519,10 +1613,13 @@ def train(
         torch.save(
             {
                 "model_state_dict": policy_net.state_dict(),
+                "positioning_version": POSITIONING_VERSION,
+                "evaluation": evaluation,
                 "obs_dim": OBS_DIM,
                 "n_actions": ACTION_DIM,
                 "episode": episode_no,
                 "success_rate": success_rate_value,
+                "opponent_strength": float(env.opponent_strength),
                 "priority_cells": list(PRIORITY_CELLS),
                 "has_priority_cells": bool(PRIORITY_CELLS),
                 "waypoint_cells": {
@@ -1536,9 +1633,12 @@ def train(
     start_time = time.perf_counter()
 
     for episode in range(1, episodes + 1):
+        training_progress = (episode - 1) / max(1, episodes - 1)
+        env.set_training_progress(training_progress)
         obs, mask = env.reset()
         episode_reward_total = 0.0
-        epsilon = epsilon_by_episode(episode)
+        epsilon = epsilon_by_episode(episode, total_episodes=episodes,
+                                     eps_start=0.3 if init_model is not None else 1.0)
 
         for tick in range(MAX_TICKS):
             action = select_action(policy_net, obs, mask, epsilon)
@@ -1562,6 +1662,7 @@ def train(
         episode_success_history.append(
             1.0 if env.match_over_reason == "planted" else 0.0
         )
+        episode_reason_history.append(env.match_over_reason or "unknown")
         avg_reward = sum(episode_reward_history) / len(episode_reward_history)
         success_rate = sum(episode_success_history) / len(episode_success_history)
 
@@ -1569,25 +1670,46 @@ def train(
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
             start_time = time.perf_counter()
+            reason_counts = Counter(episode_reason_history)
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} elapse={elapsed_time:.1f} "
                 f"avg100={avg_reward:.3f} success100={success_rate:.3f} "
-                f"epsilon={epsilon_by_episode(episode):.3f} "
-                f"buffer={len(buffer)} reason={env.match_over_reason}"
+                f"epsilon={epsilon:.3f} "
+                f"enemy={env.opponent_strength:.2f} buffer={len(buffer)} "
+                f"reason={env.match_over_reason} reasons100={dict(reason_counts)}"
             )
 
-        if avg_reward > best_avg_reward and len(episode_reward_history) >= 50:
-            best_avg_reward = avg_reward
-            _save_checkpoint(MODEL_SAVE_PATH, episode, success_rate)
-            print(
-                f"[SAVE] best model updated: avg100={avg_reward:.3f} success100={success_rate:.3f} -> {MODEL_SAVE_PATH}"
-            )
+        if episode % 100 == 0 or episode == episodes:
+            evaluation = evaluate_carry(sys.modules[__name__], policy_net, eval_episodes)
+            score = (evaluation["plant_rate"], evaluation["preferred_plant_rate"],
+                     evaluation["target_plant_rate"], evaluation["avg_reward"])
+            _save_checkpoint(latest_path, episode, success_rate)
+            print(f"[EVAL] ep={episode} plant={score[0]:.3f} preferred={score[1]:.3f} "
+                  f"target={evaluation['target_plant_rate']:.3f}")
+            # Evaluation always uses full-strength opponents, including during
+            # the training curriculum, so early robust checkpoints are eligible.
+            if score[0] > 0.0 and score > best_eval_score:
+                best_eval_score = score
+                _save_checkpoint(best_path, episode, success_rate)
+                print(f"[SAVE] best evaluated model -> {best_path}")
 
-        if episode % 100 == 0:
-            _save_checkpoint(MODEL_LATEST_PATH, episode, success_rate)
-
+    _save_checkpoint(latest_path, episodes, success_rate)
     print("[DONE] training finished.")
 
 
 if __name__ == "__main__":
-    train()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
+    parser.add_argument("--output-dir")
+    parser.add_argument("--seed", type=int, default=20260917)
+    parser.add_argument("--eval-episodes", type=int, default=40)
+    parser.add_argument("--init-model", type=Path)
+    args = parser.parse_args()
+    if args.episodes < 1 or args.eval_episodes < 1:
+        parser.error("episode counts must be positive")
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    train(episodes=args.episodes, output_dir=args.output_dir, eval_episodes=args.eval_episodes,
+          init_model=args.init_model)

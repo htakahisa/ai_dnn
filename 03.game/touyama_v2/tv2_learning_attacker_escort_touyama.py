@@ -89,8 +89,8 @@ def decode_action(action_idx):
     base_idx, facing_idx = divmod(idx, len(FACING_DIRS))
     return base_idx, FACING_DIRS[facing_idx]
 
-BLIND_DURATION_TICKS = 3
-REVEAL_DURATION_TICKS = 5
+BLIND_DURATION_TICKS = 10
+REVEAL_DURATION_TICKS = 15
 # HUNT(タイガー/Tortlilyan)を含む4種。HUNTはアビリティ行動を持たないため
 # total_charges<=0判定で自動的にマスクされる(game_core.pyの仕様上、
 # タイガー役はflash/smoke/recon_chargesが全て0で初期化されるため)。

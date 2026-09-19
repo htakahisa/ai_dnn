@@ -40,10 +40,11 @@ DEFAULT_CONTROLLER_DISPLAY = "Toru AI v3.1"
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
-DEFAULT_TEAM_RATING = 2500.0
+# 1500が基準。2000対1500の期待勝率は約95%となるElo尺度。
+DEFAULT_TEAM_RATING = 1500.0
 RATING_K_FACTOR = 40.0
 UNUSED = "（未使用）"
-MAX_TEAM_SLOTS = 16
+MAX_TEAM_SLOTS = 20
 
 
 class TeamPlayerKey(str):
@@ -210,7 +211,11 @@ def timestamp() -> str:
 def save_json(prefix: str, data: dict[str, Any]) -> Path:
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     path = RESULT_DIR / f"{safe_name(prefix)}_{timestamp()}.json"
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    # json.dumps(...)+write_text は、巨大な総当たり結果の場合に
+    # シリアライズ済み文字列を丸ごとメモリ上に作るため、ピーク使用量が
+    # 大きくなる。ファイルへ直接書き出してピークを抑える。
+    with path.open("w", encoding="utf-8") as stream:
+        json.dump(data, stream, ensure_ascii=False, indent=2)
     return path
 
 
@@ -1405,7 +1410,6 @@ def run_round_robin(
         }
         for name in team_names
     }
-    matches: list[dict[str, Any]] = []
     completed_series: list[SeriesResult] = []
 
     pair_list = list(combinations(team_names, 2))
@@ -1426,7 +1430,6 @@ def run_round_robin(
             context_label=context,
         )
         completed_series.append(series)
-        matches.append(asdict(series))
 
         table[series.winner]["series_wins"] += 1
         table[series.loser]["series_losses"] += 1
@@ -1453,6 +1456,11 @@ def run_round_robin(
             name.lower(),
         ),
     )
+    # completed_series と matches の二重保持を避ける。ここで一度だけ辞書化し、
+    # 元の SeriesResult は保存処理前に解放してメモリを返せるようにする。
+    matches = [asdict(item) for item in completed_series]
+    player_leaderboards = build_player_leaderboards(completed_series)
+    del completed_series
     data = {
         "mode": "round_robin",
         "seed_mode": seed_mode,
@@ -1470,7 +1478,7 @@ def run_round_robin(
         "standings": table,
         "ranking": ranking,
         "matches": matches,
-        "player_leaderboards": build_player_leaderboards(completed_series),
+        "player_leaderboards": player_leaderboards,
     }
     path = save_json(f"round_robin_{ranking[0]}", data)
     emit(("competition_done", data, str(path)))
@@ -1490,6 +1498,7 @@ class TeamRatingStore:
         self.ratings: dict[str, float] = {}
         self.history: list[dict[str, Any]] = []
         self._needs_migration = False
+        self._rating_scale_migrated = False
         self._load()
 
         changed = False
@@ -1498,6 +1507,10 @@ class TeamRatingStore:
                 self.ratings[name] = self.default_rating
                 changed = True
         if changed or self._needs_migration or not self.path.exists():
+            if self._rating_scale_migrated:
+                backup = self.path.with_suffix(".2500.bak")
+                if not backup.exists():
+                    backup.write_bytes(self.path.read_bytes())
             self.save()
 
     def _load(self) -> None:
@@ -1505,13 +1518,21 @@ class TeamRatingStore:
             return
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self.default_rating = float(data.get("default_rating", DEFAULT_TEAM_RATING))
+            saved_default = float(data.get(
+                "default_rating",
+                2500.0 if data.get("version", 1) == 1 else DEFAULT_TEAM_RATING,
+            ))
+            # 旧尺度からの平行移動で、順位・レート差・期待勝率を維持する。
+            offset = DEFAULT_TEAM_RATING - saved_default if saved_default == 2500.0 else 0.0
+            self.default_rating = saved_default + offset
+            self._rating_scale_migrated = bool(offset)
+            self._needs_migration = bool(offset)
             self.ratings = {}
             for name, value in data.get("ratings", {}).items():
                 canonical = canonical_preset_name(name)
                 if str(name) != canonical:
                     self._needs_migration = True
-                rating = float(value)
+                rating = float(value) + offset
                 # If both spellings exist, keep the newer canonical entry and
                 # otherwise migrate the old value instead of resetting it.
                 if canonical in self.ratings:
@@ -1523,6 +1544,16 @@ class TeamRatingStore:
             for event in data.get("history", []):
                 if isinstance(event, dict):
                     migrated = dict(event)
+                    if offset:
+                        for key in ("before", "after"):
+                            value = migrated.get(key)
+                            if isinstance(value, dict):
+                                migrated[key] = {
+                                    name: round(float(rating) + offset, 3)
+                                    for name, rating in value.items()
+                                }
+                            elif value is not None:
+                                migrated[key] = round(float(value) + offset, 3)
                     if "team" in migrated:
                         if str(migrated["team"]) != canonical_preset_name(migrated["team"]):
                             self._needs_migration = True
@@ -1538,7 +1569,7 @@ class TeamRatingStore:
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         data = {
-            "version": 1,
+            "version": 2,
             "default_rating": self.default_rating,
             "k_factor": RATING_K_FACTOR,
             "ratings": {
@@ -2395,6 +2426,12 @@ class CompetitionApp:
         win.title("Team Rating Ranking / History")
         win.geometry("980x680")
         win.minsize(760, 520)
+
+        tk.Label(
+            win,
+            text="レートの目安：1500 = 平均的な強さ / 2000超 = 化け物級",
+            font=("Arial", 10),
+        ).pack(fill="x", padx=10, pady=(8, 0))
 
         top = tk.Frame(win)
         top.pack(fill="x", padx=10, pady=8)

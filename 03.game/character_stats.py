@@ -125,9 +125,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "Lysoar": CharacterStats(
         "Lysoar", 0.33, 0.17, 105, 0.71, 100, "スモーカー", 50, 7, 2
     ),
-    "Smoggy": CharacterStats(
-        "Smoggy", 0.38, 0.19, 75, 0.73, 120, "スモーカー", 50, 8, 6
-    ),
+    "Smoggy": CharacterStats("Smoggy", 0.38, 0.19, 75, 0.73, 120, "タイガー", 50, 8, 6),
     "CHICHOO": CharacterStats(
         "CHICHOO", 0.32, 0.18, 80, 0.74, 100, "スモーカー", 50, 9, 8
     ),
@@ -190,7 +188,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "Katarina", 0.41, 0.18, 86, 0.81, 170, "スモーカー", 110, 10, 6
     ),
     "SereNa": CharacterStats(
-        "SereNa", 0.29, 0.19, 119, 0.9, 139, "シーカー", 120, 10, 6
+        "SereNa", 0.29, 0.19, 119, 0.9, 139, "タイガー", 120, 10, 6
     ),
     "cNed": CharacterStats("cNed", 0.41, 0.12, 85, 0.95, 155, "タイガー", 180, 0, 8),
     "soulcas": CharacterStats(
@@ -244,7 +242,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "S1Mon", 0.35, 0.15, 95, 0.8, 135, "フラッシュ", 110, 10, 10
     ),
     "koldamenta": CharacterStats(
-        "koldamenta", 0.2, 0.25, 105, 0.75, 115, "シーカー", 50, 9, 7
+        "koldamenta", 0.2, 0.25, 105, 0.75, 115, "タイガー", 50, 9, 7
     ),
     "PatMen": CharacterStats("PatMen", 0.33, 0.2, 80, 0.8, 125, "スモーカー", 55, 5, 8),
     "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "シーカー", 60, 5, 8),

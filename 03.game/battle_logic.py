@@ -4,6 +4,7 @@ import math
 import random
 from pathlib import Path
 import numpy as np
+import json
 
 from analytics.combat_tracker import CombatTracker
 
@@ -26,6 +27,8 @@ from game_core import (
     EXPLOSION_DURATION_TICKS,
     FACING_VECTORS,
     SHOOTING_SITE_DIGREE,
+    ORB_COLLECT_REQUIRED_TICKS,
+    ORB_ULTIMATE_POINTS,
 )
 
 try:
@@ -53,7 +56,7 @@ _mixer_ready = False
 # デバッグ用。一時的に全ラウンド終了時のACE特別演出を確認する。
 # 確認後はFalseへ戻す。
 DEBUG_FORCE_ACE_EFFECT = False
-DEBUG_ACE_CHARACTER_NAME = "Tortlilyan"  #確認したいキャラ名指定
+DEBUG_ACE_CHARACTER_NAME = "Tortlilyan"  # 確認したいキャラ名指定
 
 
 def _load_ace_effects():
@@ -168,12 +171,19 @@ class BattleLogicMixin:
             "attacker_strategy": attack_type,
             "attacker_strategy_raw": attack_strategy,
             "final_attack_site": (
-                "A" if (self.planted_pos or self.target_plant_pos)[1] < self.width / 2
-                else "B"
-            ) if (self.planted_pos or self.target_plant_pos) else None,
+                (
+                    "A"
+                    if (self.planted_pos or self.target_plant_pos)[1] < self.width / 2
+                    else "B"
+                )
+                if (self.planted_pos or self.target_plant_pos)
+                else None
+            ),
             "defender_initial_setup": f"{left}-{mid}-{right}",
             "defender_initial_setup_axis": "A-Mid-B",
-            "defender_strategy": "fast_retake" if self.is_planted and self.battle_tick < 20 else "retake",
+            "defender_strategy": (
+                "fast_retake" if self.is_planted and self.battle_tick < 20 else "retake"
+            ),
         }
 
     def _facing_angle_diff(self, shooter, target):
@@ -385,6 +395,7 @@ class BattleLogicMixin:
         # 「移動→停止」は、前Tick moved=True かつ今Tick moved=False で判定する。
         char.moved_last_tick = bool(getattr(char, "moved_this_tick", False))
         char.moved_this_tick = False
+        char.collecting_orb_this_tick = False
         char.stopped_after_move_this_tick = False
 
         # Smoke境界通過も今Tick単位で記録する。
@@ -443,6 +454,11 @@ class BattleLogicMixin:
             # GC Macro Plant Commitment: pre-plant remaining round time.
             "round_timer": self.round_timer,
             "smoke_cells": self._smoke_cells(),
+            "available_orbs": set(getattr(self, "available_orbs", set())),
+            "ultimate_points": int(char.ultimate_points),
+            "ultimate_cost": int(char.ultimate_cost),
+            "ultimate_name": char.ultimate_name,
+            "orb_collect_timer": int(char.orb_collect_timer),
         }
 
         if char.team == "A":
@@ -459,7 +475,11 @@ class BattleLogicMixin:
                 second_elem = result[1]
 
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
-                if isinstance(second_elem, dict) and "ability" in second_elem:
+                if isinstance(second_elem, dict) and "ultimate" in second_elem:
+                    ability_payload = second_elem
+                    facing_payload = second_elem
+                    action_type = "ULTIMATE"
+                elif isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
                     facing_payload = second_elem
                     action_type = "ABILITY"
@@ -510,7 +530,11 @@ class BattleLogicMixin:
                 second_elem = result[1]
 
                 # ケース1: 辞書型アビリティ（新しいcontrollers.py）
-                if isinstance(second_elem, dict) and "ability" in second_elem:
+                if isinstance(second_elem, dict) and "ultimate" in second_elem:
+                    ability_payload = second_elem
+                    facing_payload = second_elem
+                    action_type = "ULTIMATE"
+                elif isinstance(second_elem, dict) and "ability" in second_elem:
                     ability_payload = second_elem
                     facing_payload = second_elem
                     action_type = "ABILITY"
@@ -533,9 +557,31 @@ class BattleLogicMixin:
                 next_pos = result
                 action_type = "MOVE"
 
+        controller = (
+            self.attacker_controller if char.team == "A" else self.defender_controller
+        )
+        if isinstance(controller, UserInputController) and char.is_collecting_orb:
+            next_pos = char.pos
+            action_type = "COLLECT_ORB"
+
+        if action_type != "COLLECT_ORB":
+            char.is_collecting_orb = False
+            char.orb_collect_timer = 0
+            char.collecting_orb_pos = None
+
         # ---------------------------------------------------------------------
         # アクションタイプに応じたシステム処理
         # ---------------------------------------------------------------------
+        if action_type == "ULTIMATE":
+            char.is_planting = False
+            char.plant_timer = 0
+            if self.active_defuser_name == char.name:
+                self.active_defuser_name = None
+            char.defuse_timer = 0
+            self.execute_ai_ultimate(char, ability_payload)
+            self._finalize_movement_transition_state(char)
+            return
+
         if action_type == "ABILITY":
             # アビリティ使用Tickは移動・設置・解除を行わない。
             char.is_planting = False
@@ -545,6 +591,40 @@ class BattleLogicMixin:
             char.defuse_timer = 0
             self.execute_ai_ability(char, ability_payload)
             char.moved_this_tick = False
+            self._finalize_movement_transition_state(char)
+            return
+
+        if action_type == "COLLECT_ORB":
+            orb_pos = tuple(char.pos)
+            available_orbs = getattr(self, "available_orbs", set())
+            if orb_pos in available_orbs:
+                if char.collecting_orb_pos != orb_pos:
+                    char.orb_collect_timer = 0
+                char.collecting_orb_pos = orb_pos
+                char.is_collecting_orb = True
+                char.collecting_orb_this_tick = True
+                char.orb_collect_timer += 1
+                char.is_planting = False
+                char.plant_timer = 0
+                if self.active_defuser_name == char.name:
+                    self.active_defuser_name = None
+                char.defuse_timer = 0
+                if char.orb_collect_timer >= ORB_COLLECT_REQUIRED_TICKS:
+                    char.ultimate_points = min(
+                        char.ultimate_cost,
+                        char.ultimate_points + ORB_ULTIMATE_POINTS,
+                    )
+                    self._save_ultimate_points(char)
+                    available_orbs.discard(orb_pos)
+                    char.orb_collect_timer = 0
+                    char.collecting_orb_pos = None
+                    char.is_collecting_orb = False
+                self._finalize_movement_transition_state(char)
+                return
+
+            char.orb_collect_timer = 0
+            char.collecting_orb_pos = None
+            char.is_collecting_orb = False
             self._finalize_movement_transition_state(char)
             return
 
@@ -622,9 +702,7 @@ class BattleLogicMixin:
         # 明示された視点方向は、移動できたかどうかとは独立して適用する。
         # 壁・味方・範囲外を選んだターンでも、AIが選んだ敵/警戒方向を維持する。
         explicit_facing = (
-            facing_payload.get("facing")
-            if isinstance(facing_payload, dict)
-            else None
+            facing_payload.get("facing") if isinstance(facing_payload, dict) else None
         )
         if explicit_facing in FACING_VECTORS and not char.facing_forced_this_tick:
             char.facing = explicit_facing
@@ -658,7 +736,10 @@ class BattleLogicMixin:
                 # facing_payloadで明示的にfacingが指定されていれば、移動方向とは
                 # 無関係にそちらを優先する(例: 前進しながら後ろを向く、等)。
                 # 指定が無ければ従来通り移動方向から自動計算する。
-                if explicit_facing not in FACING_VECTORS and not char.facing_forced_this_tick:
+                if (
+                    explicit_facing not in FACING_VECTORS
+                    and not char.facing_forced_this_tick
+                ):
                     new_facing = self._facing_from_delta(
                         nr - old_pos[0], nc - old_pos[1], char.facing
                     )
@@ -701,9 +782,13 @@ class BattleLogicMixin:
                     reason = "defused"
                 elif self.is_planted and self.detonate_timer <= 0:
                     reason = "detonated"
-                elif self.is_planted and not any(c.is_alive for c in self.chars if c.team == "D"):
+                elif self.is_planted and not any(
+                    c.is_alive for c in self.chars if c.team == "D"
+                ):
                     reason = "defender_wipe"
-                elif not self.is_planted and not any(c.is_alive for c in self.chars if c.team == "A"):
+                elif not self.is_planted and not any(
+                    c.is_alive for c in self.chars if c.team == "A"
+                ):
                     reason = "attacker_wipe"
                 elif not self.is_planted and self.round_timer <= 0:
                     reason = "time_expired"
@@ -864,9 +949,7 @@ class BattleLogicMixin:
             None,
         )
         if ace_player is not None:
-            effect = ACE_EFFECTS.get(
-                getattr(ace_player, "base_name", ace_player.name)
-            )
+            effect = ACE_EFFECTS.get(getattr(ace_player, "base_name", ace_player.name))
             self.special_round_banner = {
                 "type": "ACE",
                 "name": ace_player.display_name,
@@ -903,6 +986,10 @@ class BattleLogicMixin:
         target.deaths += 1
         shooter.kills += 1
         shooter.round_kills += 1
+        shooter.ultimate_points = min(
+            shooter.ultimate_cost,
+            shooter.ultimate_points + 1,
+        )
         self._play_kill_sound(shooter)
 
         tracker = getattr(self, "analytics_tracker", None)
@@ -925,10 +1012,15 @@ class BattleLogicMixin:
         self.match_stats.setdefault(shooter.name, {"kills": 0, "deaths": 0})[
             "kills"
         ] = shooter.kills
+        self._save_ultimate_points(shooter)
         if tracker is not None:
             tracker.record_kill(shooter, target, self.battle_tick)
         target.is_planting = False
         target.plant_timer = 0
+        target.is_collecting_orb = False
+        target.collecting_orb_this_tick = False
+        target.orb_collect_timer = 0
+        target.collecting_orb_pos = None
         if self.active_defuser_name == target.name:
             self.active_defuser_name = None
         if target.has_spike:
@@ -972,7 +1064,11 @@ class BattleLogicMixin:
             current_los_revealed_names = self._current_los_revealed_names()
 
         for shooter in alive_at_tick_start:
-            if shooter.plant_timer > 0 or shooter.defuse_timer > 0:
+            if (
+                shooter.plant_timer > 0
+                or shooter.defuse_timer > 0
+                or getattr(shooter, "collecting_orb_this_tick", False)
+            ):
                 continue
 
             if engagements is not None:
@@ -989,6 +1085,13 @@ class BattleLogicMixin:
                     if target.team != shooter.team
                     and self.check_line_of_sight(shooter, target)
                 ]
+            possible_targets.extend(
+                drone
+                for drone in getattr(self, "monitor_drones", [])
+                if drone.is_alive
+                and drone.team != shooter.team
+                and self.check_line_of_sight(shooter, drone)
+            )
             # 視認できていても、射手と標的の間に別プレイヤーがいれば撃てない。
             possible_targets = [
                 target
@@ -1007,7 +1110,7 @@ class BattleLogicMixin:
             defusers = [
                 target
                 for target in possible_targets
-                if self.is_planted and target.defuse_timer > 0
+                if self.is_planted and getattr(target, "defuse_timer", 0) > 0
             ]
             target_pool = defusers if defusers else possible_targets
             target = min(
@@ -1081,11 +1184,16 @@ class BattleLogicMixin:
             # HS% has no 100% cap; values above 1.0 intentionally guarantee HS.
             shooter_hs_rate = max(0.0, shooter_hs_rate)
 
-            effective_dodge = target.dodge_rate * (
-                REVEALED_DODGE_MULTIPLIER
-                if self._is_revealed_for_shot(target, current_los_revealed_names)
-                else 1.0
-            )
+            # 解除中はその場に留まり、回避行動を取れない。解除者の
+            # 元の回避率やリビール補正にかかわらず、被弾率を通常値にする。
+            if self.is_planted and getattr(target, "defuse_timer", 0) > 0:
+                effective_dodge = 0.0
+            else:
+                effective_dodge = target.dodge_rate * (
+                    REVEALED_DODGE_MULTIPLIER
+                    if self._is_revealed_for_shot(target, current_los_revealed_names)
+                    else 1.0
+                )
             hit_chance = shooter_accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
@@ -1109,7 +1217,11 @@ class BattleLogicMixin:
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = random.random() < hit_chance
-            headshot = hit and random.random() < shooter_hs_rate
+            headshot = (
+                hit
+                and not getattr(target, "is_ultimate_drone", False)
+                and random.random() < shooter_hs_rate
+            )
             damage = (HEADSHOT_DAMAGE if headshot else BODY_DAMAGE) if hit else 0
 
             shot = {
@@ -1123,7 +1235,7 @@ class BattleLogicMixin:
             }
             executed_shots.append(shot)
 
-            if damage > 0:
+            if damage > 0 and not getattr(target, "is_ultimate_drone", False):
                 tracker = getattr(self, "analytics_tracker", None)
                 if tracker is not None:
                     tracker.record_contribution(
@@ -1138,7 +1250,16 @@ class BattleLogicMixin:
             if damage > 0:
                 target.hp = max(0, target.hp - damage)
                 if target.hp <= 0:
-                    self._kill_character(shooter, target)
+                    if getattr(target, "is_ultimate_drone", False):
+                        target.is_alive = False
+                    else:
+                        self._kill_character(shooter, target)
+
+        self.monitor_drones = [
+            drone
+            for drone in getattr(self, "monitor_drones", [])
+            if drone.is_alive
+        ]
 
         self.last_shots = executed_shots
         self.last_shot = executed_shots[-1] if executed_shots else None
@@ -1164,7 +1285,10 @@ class BattleLogicMixin:
             tracker.observe_tactics(self.chars, self.battle_tick)
         # すべての持続効果をTick数で管理する。
         for char in self.chars:
-            char.blind_remaining = max(0, char.blind_remaining - 1)
+            if getattr(char, "tunnel_blind_applied_tick", None) == self.battle_tick:
+                char.tunnel_blind_applied_tick = None
+            else:
+                char.blind_remaining = max(0, char.blind_remaining - 1)
             char.reveal_remaining = max(0, char.reveal_remaining - 1)
         for burst in self.flash_bursts:
             burst["remaining_ticks"] -= 1
@@ -1176,8 +1300,14 @@ class BattleLogicMixin:
         self.recon_bursts = [
             burst for burst in self.recon_bursts if burst["remaining_ticks"] > 0
         ]
+        for burst in self.tunnel_bursts:
+            burst["remaining_ticks"] -= 1
+        self.tunnel_bursts = [
+            burst for burst in self.tunnel_bursts if burst["remaining_ticks"] > 0
+        ]
         self._advance_flash_projectiles()
         self._advance_recon_projectiles()
+        self._advance_monitor_drones()
         for smoke in self.smokes:
             smoke["remaining_ticks"] -= 1
         self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
@@ -1393,7 +1523,8 @@ class BattleLogicMixin:
                     )
                     if self._analytics_post_setup_ticks == 10:
                         self._analytics_initial_defender_positions = [
-                            tuple(c.pos) for c in self.chars
+                            tuple(c.pos)
+                            for c in self.chars
                             if c.team == "D" and c.is_alive
                         ]
                     self.process_battle()

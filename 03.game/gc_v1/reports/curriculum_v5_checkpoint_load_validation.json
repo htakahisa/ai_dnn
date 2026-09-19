@@ -1,0 +1,2889 @@
+{
+  "models": {
+    "carry": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5_smoke_20260918\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "episode": 0
+    },
+    "escort": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5_smoke_20260918\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "episode": 0
+    },
+    "guard": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5_smoke_20260918\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "episode": 0
+    }
+  },
+  "episodes": [
+    {
+      "seed": 3026091700,
+      "result": {
+        "attacker_win": true,
+        "planted": true,
+        "registered": true,
+        "ticks": 102,
+        "guard_ticks": 87,
+        "guard_position_ticks": 13,
+        "opponent_stats": [
+          100,
+          60,
+          40
+        ],
+        "combat_ticks": 7,
+        "combat_stop_ticks": 4,
+        "carry_ticks": 48,
+        "carry_spawn_ticks": 14,
+        "carry_reversals": 1,
+        "carry_quiet_stalls": 11,
+        "carry_entry_tick": 38,
+        "plant_tick": 48,
+        "timed_out": false,
+        "postplant_win": true
+      },
+      "stays": 15,
+      "at_waypoint": 1,
+      "quiet_stays": 12,
+      "reversals": 1,
+      "actions": {
+        "2": 14,
+        "0": 11,
+        "6": 18,
+        "8": 1,
+        "10": 4
+      },
+      "trace": [
+        {
+          "tick": 0,
+          "name": "Absol",
+          "before": [
+            23,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 31,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -3.6413228511810303,
+            -3.5852317810058594,
+            -3.508287191390991,
+            -3.0472447872161865,
+            -3.9559781551361084,
+            -3.7533419132232666,
+            -2.729593276977539,
+            -3.2175638675689697,
+            -3.505239486694336,
+            -3.4209885597229004,
+            -4.403356075286865
+          ]
+        },
+        {
+          "tick": 1,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -3.8202385902404785,
+            -4.156768798828125,
+            -3.839864730834961,
+            -4.258816242218018,
+            -4.207311630249023,
+            -4.171331405639648,
+            -3.9394493103027344,
+            -4.269062519073486,
+            -3.166548728942871,
+            -3.4217257499694824,
+            -4.88147497177124
+          ]
+        },
+        {
+          "tick": 2,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -4.487259387969971,
+            -4.6690850257873535,
+            -4.505052089691162,
+            -4.764585494995117,
+            -4.87312650680542,
+            -4.702598571777344,
+            -4.640081882476807,
+            -4.779689311981201,
+            -3.820355176925659,
+            -3.943720579147339,
+            -5.354496955871582
+          ]
+        },
+        {
+          "tick": 3,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -5.149454116821289,
+            -5.2892656326293945,
+            -5.201930522918701,
+            -5.394927024841309,
+            -5.507142543792725,
+            -5.337808132171631,
+            -5.307943344116211,
+            -5.403769493103027,
+            -4.477989196777344,
+            -4.567668914794922,
+            -6.000709056854248
+          ]
+        },
+        {
+          "tick": 4,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -5.826266765594482,
+            -5.938258171081543,
+            -5.897623538970947,
+            -6.04213285446167,
+            -6.16375732421875,
+            -5.9994330406188965,
+            -5.981849670410156,
+            -6.048471450805664,
+            -5.156615257263184,
+            -5.2147040367126465,
+            -6.667646884918213
+          ]
+        },
+        {
+          "tick": 5,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -6.278660774230957,
+            -6.3487162590026855,
+            -6.395519256591797,
+            -6.4383111000061035,
+            -6.530914783477783,
+            -6.39178991317749,
+            -6.439625263214111,
+            -6.4474592208862305,
+            -5.616313934326172,
+            -5.622937202453613,
+            -7.035928726196289
+          ]
+        },
+        {
+          "tick": 6,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -6.790861129760742,
+            -6.815395355224609,
+            -6.956309795379639,
+            -6.892536640167236,
+            -6.951938152313232,
+            -6.835972785949707,
+            -7.00435209274292,
+            -6.922024250030518,
+            -6.108753681182861,
+            -6.074010848999023,
+            -7.457482814788818
+          ]
+        },
+        {
+          "tick": 7,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -7.4683942794799805,
+            -7.466492652893066,
+            -7.639235973358154,
+            -7.530465126037598,
+            -7.614771366119385,
+            -7.500016212463379,
+            -7.681303024291992,
+            -7.562936782836914,
+            -6.785492897033691,
+            -6.717255115509033,
+            -8.115503311157227
+          ]
+        },
+        {
+          "tick": 8,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            20
+          ],
+          "goal": [
+            14,
+            38
+          ],
+          "target": [
+            10,
+            42
+          ],
+          "strategy": "REHIT_A",
+          "role": "REHIT",
+          "assignment": [
+            "A",
+            "RESET",
+            "REHIT"
+          ],
+          "distance_before": 30,
+          "distance_after": 30,
+          "final_distance": 34,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -8.080710411071777,
+            -8.046235084533691,
+            -8.265024185180664,
+            -8.096904754638672,
+            -8.213315963745117,
+            -8.09288215637207,
+            -8.307718276977539,
+            -8.134237289428711,
+            -7.39060115814209,
+            -7.287230014801025,
+            -8.697842597961426
+          ]
+        },
+        {
+          "tick": 9,
+          "name": "Absol",
+          "before": [
+            22,
+            20
+          ],
+          "after": [
+            22,
+            19
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 29,
+          "distance_after": 28,
+          "final_distance": 31,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            -5.507011413574219,
+            -5.789834499359131,
+            -5.345792293548584,
+            -5.185324192047119,
+            -5.583145618438721,
+            -6.070363521575928,
+            -4.387067794799805,
+            -5.582111835479736,
+            -5.896175384521484,
+            -5.803710460662842,
+            -6.557602882385254
+          ]
+        },
+        {
+          "tick": 10,
+          "name": "Absol",
+          "before": [
+            22,
+            19
+          ],
+          "after": [
+            22,
+            18
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 28,
+          "distance_after": 27,
+          "final_distance": 30,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            1.9308085441589355,
+            0.5600823163986206,
+            2.1078572273254395,
+            1.5189142227172852,
+            1.583344578742981,
+            -0.08472025394439697,
+            4.625525951385498,
+            1.1900752782821655,
+            0.6939443945884705,
+            0.1450817584991455,
+            -0.2809373140335083
+          ]
+        },
+        {
+          "tick": 11,
+          "name": "Absol",
+          "before": [
+            22,
+            18
+          ],
+          "after": [
+            22,
+            17
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 27,
+          "distance_after": 26,
+          "final_distance": 29,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            6.651762008666992,
+            4.666879177093506,
+            7.017499923706055,
+            5.929263114929199,
+            6.156917572021484,
+            3.7752039432525635,
+            10.404054641723633,
+            5.695432186126709,
+            4.889043807983398,
+            4.003107070922852,
+            3.965310573577881
+          ]
+        },
+        {
+          "tick": 12,
+          "name": "Absol",
+          "before": [
+            22,
+            17
+          ],
+          "after": [
+            22,
+            16
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 26,
+          "distance_after": 25,
+          "final_distance": 28,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            10.70201301574707,
+            8.48000431060791,
+            11.150494575500488,
+            9.956498146057129,
+            9.854531288146973,
+            7.426364898681641,
+            15.05527114868164,
+            9.939937591552734,
+            8.608444213867188,
+            7.776704788208008,
+            8.036701202392578
+          ]
+        },
+        {
+          "tick": 13,
+          "name": "Absol",
+          "before": [
+            22,
+            16
+          ],
+          "after": [
+            22,
+            15
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 25,
+          "distance_after": 24,
+          "final_distance": 27,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            13.808640480041504,
+            12.095929145812988,
+            14.541629791259766,
+            13.762175559997559,
+            12.775157928466797,
+            11.091524124145508,
+            18.133258819580078,
+            13.82423210144043,
+            11.733238220214844,
+            11.432966232299805,
+            11.78535270690918
+          ]
+        },
+        {
+          "tick": 14,
+          "name": "Absol",
+          "before": [
+            22,
+            15
+          ],
+          "after": [
+            22,
+            14
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 24,
+          "distance_after": 23,
+          "final_distance": 26,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            15.816311836242676,
+            14.501058578491211,
+            16.840482711791992,
+            16.247766494750977,
+            14.77117919921875,
+            13.574796676635742,
+            19.7193603515625,
+            16.242359161376953,
+            13.934947967529297,
+            13.891596794128418,
+            14.210769653320312
+          ]
+        },
+        {
+          "tick": 15,
+          "name": "Absol",
+          "before": [
+            22,
+            14
+          ],
+          "after": [
+            22,
+            13
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 23,
+          "distance_after": 22,
+          "final_distance": 25,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            17.14910316467285,
+            16.206512451171875,
+            18.29583740234375,
+            17.93831443786621,
+            16.115549087524414,
+            15.366751670837402,
+            20.365964889526367,
+            17.827598571777344,
+            15.617700576782227,
+            15.685832977294922,
+            15.96243667602539
+          ]
+        },
+        {
+          "tick": 16,
+          "name": "Absol",
+          "before": [
+            22,
+            13
+          ],
+          "after": [
+            22,
+            12
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 22,
+          "distance_after": 21,
+          "final_distance": 24,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            17.370737075805664,
+            16.86104393005371,
+            18.382572174072266,
+            18.457544326782227,
+            16.433366775512695,
+            16.152103424072266,
+            19.638078689575195,
+            18.257997512817383,
+            16.33051872253418,
+            16.463558197021484,
+            16.654823303222656
+          ]
+        },
+        {
+          "tick": 17,
+          "name": "Absol",
+          "before": [
+            22,
+            12
+          ],
+          "after": [
+            22,
+            11
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 21,
+          "distance_after": 20,
+          "final_distance": 23,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            17.38092041015625,
+            17.295751571655273,
+            18.105260848999023,
+            18.696807861328125,
+            16.62039566040039,
+            16.675840377807617,
+            19.069257736206055,
+            18.557077407836914,
+            16.71114158630371,
+            16.978776931762695,
+            16.896947860717773
+          ]
+        },
+        {
+          "tick": 18,
+          "name": "Absol",
+          "before": [
+            22,
+            11
+          ],
+          "after": [
+            21,
+            11
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 20,
+          "distance_after": 19,
+          "final_distance": 22,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            17.231306076049805,
+            17.65343475341797,
+            17.816823959350586,
+            18.836387634277344,
+            16.729755401611328,
+            17.19151496887207,
+            18.49462127685547,
+            18.725366592407227,
+            16.838640213012695,
+            17.418596267700195,
+            17.110050201416016
+          ]
+        },
+        {
+          "tick": 19,
+          "name": "Absol",
+          "before": [
+            21,
+            11
+          ],
+          "after": [
+            21,
+            11
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 19,
+          "distance_after": 19,
+          "final_distance": 22,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            23.434871673583984,
+            23.628957748413086,
+            19.426626205444336,
+            22.376771926879883,
+            19.049419403076172,
+            21.247783660888672,
+            24.727102279663086,
+            25.07753562927246,
+            23.23200225830078,
+            23.440305709838867,
+            20.70024871826172
+          ]
+        },
+        {
+          "tick": 20,
+          "name": "Absol",
+          "before": [
+            21,
+            11
+          ],
+          "after": [
+            21,
+            10
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 19,
+          "distance_after": 18,
+          "final_distance": 21,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            22.905420303344727,
+            23.177715301513672,
+            18.937583923339844,
+            21.96564483642578,
+            18.613933563232422,
+            20.846275329589844,
+            24.230653762817383,
+            24.658056259155273,
+            22.678632736206055,
+            22.99248695373535,
+            20.301353454589844
+          ]
+        },
+        {
+          "tick": 21,
+          "name": "Absol",
+          "before": [
+            21,
+            10
+          ],
+          "after": [
+            21,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 18,
+          "distance_after": 17,
+          "final_distance": 20,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            26.883010864257812,
+            26.785913467407227,
+            24.901996612548828,
+            27.033323287963867,
+            25.79182243347168,
+            25.17177963256836,
+            28.432151794433594,
+            28.524478912353516,
+            26.770614624023438,
+            26.140853881835938,
+            25.704744338989258
+          ]
+        },
+        {
+          "tick": 22,
+          "name": "Absol",
+          "before": [
+            21,
+            9
+          ],
+          "after": [
+            20,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 17,
+          "distance_after": 16,
+          "final_distance": 19,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            27.009172439575195,
+            26.820219039916992,
+            27.966039657592773,
+            27.679893493652344,
+            26.440778732299805,
+            25.96469497680664,
+            27.265077590942383,
+            27.387508392333984,
+            27.283266067504883,
+            26.520904541015625,
+            26.160436630249023
+          ]
+        },
+        {
+          "tick": 23,
+          "name": "Absol",
+          "before": [
+            20,
+            9
+          ],
+          "after": [
+            19,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 16,
+          "distance_after": 15,
+          "final_distance": 18,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            27.316089630126953,
+            27.08497428894043,
+            28.341156005859375,
+            27.970949172973633,
+            26.75355339050293,
+            26.21770668029785,
+            27.534618377685547,
+            27.64475440979004,
+            27.604705810546875,
+            26.792238235473633,
+            26.521060943603516
+          ]
+        },
+        {
+          "tick": 24,
+          "name": "Absol",
+          "before": [
+            19,
+            9
+          ],
+          "after": [
+            18,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 15,
+          "distance_after": 14,
+          "final_distance": 17,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            27.751970291137695,
+            27.319751739501953,
+            28.848081588745117,
+            28.15852928161621,
+            27.195175170898438,
+            26.424942016601562,
+            27.92954444885254,
+            27.85971450805664,
+            28.002948760986328,
+            26.991708755493164,
+            26.8477840423584
+          ]
+        },
+        {
+          "tick": 25,
+          "name": "Absol",
+          "before": [
+            18,
+            9
+          ],
+          "after": [
+            17,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 14,
+          "distance_after": 13,
+          "final_distance": 16,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            28.51668357849121,
+            27.644113540649414,
+            29.726919174194336,
+            28.37366485595703,
+            27.91046905517578,
+            26.655677795410156,
+            28.661598205566406,
+            28.187562942504883,
+            28.65283966064453,
+            27.23501205444336,
+            27.25387954711914
+          ]
+        },
+        {
+          "tick": 26,
+          "name": "Absol",
+          "before": [
+            17,
+            9
+          ],
+          "after": [
+            17,
+            8
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 13,
+          "distance_after": 12,
+          "final_distance": 15,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            29.132890701293945,
+            27.823223114013672,
+            30.431257247924805,
+            28.430797576904297,
+            28.493303298950195,
+            26.749282836914062,
+            29.239885330200195,
+            28.361093521118164,
+            29.173816680908203,
+            27.337574005126953,
+            27.516891479492188
+          ]
+        },
+        {
+          "tick": 27,
+          "name": "Absol",
+          "before": [
+            17,
+            8
+          ],
+          "after": [
+            17,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 12,
+          "distance_after": 13,
+          "final_distance": 16,
+          "engaged": false,
+          "planting": 0,
+          "action": 8,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            29.54245376586914,
+            28.370134353637695,
+            30.845983505249023,
+            29.020977020263672,
+            28.922046661376953,
+            27.29932403564453,
+            29.6082763671875,
+            28.87771224975586,
+            29.700998306274414,
+            27.916746139526367,
+            28.055925369262695
+          ]
+        },
+        {
+          "tick": 28,
+          "name": "Absol",
+          "before": [
+            17,
+            9
+          ],
+          "after": [
+            16,
+            9
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 13,
+          "distance_after": 12,
+          "final_distance": 15,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            28.33321762084961,
+            27.129531860351562,
+            29.53018569946289,
+            27.72634506225586,
+            27.73552131652832,
+            26.096494674682617,
+            28.43272590637207,
+            27.669960021972656,
+            28.418540954589844,
+            26.680294036865234,
+            26.881818771362305
+          ]
+        },
+        {
+          "tick": 29,
+          "name": "Absol",
+          "before": [
+            16,
+            9
+          ],
+          "after": [
+            16,
+            8
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 12,
+          "distance_after": 11,
+          "final_distance": 14,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            28.59880256652832,
+            28.58739471435547,
+            27.144805908203125,
+            29.40944480895996,
+            27.834951400756836,
+            27.1933650970459,
+            30.230093002319336,
+            30.326797485351562,
+            28.582277297973633,
+            28.163877487182617,
+            28.13400650024414
+          ]
+        },
+        {
+          "tick": 30,
+          "name": "Absol",
+          "before": [
+            16,
+            8
+          ],
+          "after": [
+            16,
+            7
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 11,
+          "distance_after": 10,
+          "final_distance": 13,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            29.239118576049805,
+            29.27347183227539,
+            27.856971740722656,
+            30.12249183654785,
+            28.482540130615234,
+            27.86996078491211,
+            30.81747055053711,
+            30.986478805541992,
+            29.223520278930664,
+            28.851734161376953,
+            28.8048095703125
+          ]
+        },
+        {
+          "tick": 31,
+          "name": "Absol",
+          "before": [
+            16,
+            7
+          ],
+          "after": [
+            16,
+            6
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 10,
+          "distance_after": 9,
+          "final_distance": 12,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            29.94744300842285,
+            30.043262481689453,
+            28.653091430664062,
+            30.90150260925293,
+            29.18922996520996,
+            28.63364601135254,
+            31.456920623779297,
+            31.715667724609375,
+            29.93900489807129,
+            29.624305725097656,
+            29.530065536499023
+          ]
+        },
+        {
+          "tick": 32,
+          "name": "Absol",
+          "before": [
+            16,
+            6
+          ],
+          "after": [
+            15,
+            6
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 9,
+          "distance_after": 8,
+          "final_distance": 11,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            30.308643341064453,
+            29.019004821777344,
+            31.702476501464844,
+            29.669240951538086,
+            29.686086654663086,
+            27.872779846191406,
+            30.28953742980957,
+            29.50713539123535,
+            30.5863037109375,
+            28.566364288330078,
+            28.843332290649414
+          ]
+        },
+        {
+          "tick": 33,
+          "name": "Absol",
+          "before": [
+            15,
+            6
+          ],
+          "after": [
+            15,
+            6
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 8,
+          "distance_after": 8,
+          "final_distance": 11,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            30.881412506103516,
+            31.063373565673828,
+            29.683218002319336,
+            32.013553619384766,
+            30.179729461669922,
+            29.652509689331055,
+            32.4301643371582,
+            32.7741584777832,
+            30.887428283691406,
+            30.651369094848633,
+            30.5985164642334
+          ]
+        },
+        {
+          "tick": 34,
+          "name": "Absol",
+          "before": [
+            15,
+            6
+          ],
+          "after": [
+            15,
+            5
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 8,
+          "distance_after": 7,
+          "final_distance": 10,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            30.122833251953125,
+            30.31987762451172,
+            28.778427124023438,
+            31.301956176757812,
+            29.4748477935791,
+            28.905532836914062,
+            31.829063415527344,
+            32.12610626220703,
+            30.19635009765625,
+            29.907852172851562,
+            29.97226905822754
+          ]
+        },
+        {
+          "tick": 35,
+          "name": "Absol",
+          "before": [
+            15,
+            5
+          ],
+          "after": [
+            15,
+            4
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 7,
+          "distance_after": 6,
+          "final_distance": 9,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            32.03385543823242,
+            32.24086380004883,
+            31.298404693603516,
+            33.215110778808594,
+            31.344560623168945,
+            30.85451316833496,
+            33.42953109741211,
+            33.81848907470703,
+            31.85609245300293,
+            31.840124130249023,
+            31.601102828979492
+          ]
+        },
+        {
+          "tick": 36,
+          "name": "Absol",
+          "before": [
+            15,
+            4
+          ],
+          "after": [
+            15,
+            4
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 6,
+          "distance_after": 6,
+          "final_distance": 9,
+          "engaged": false,
+          "planting": 0,
+          "action": 0,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            32.530433654785156,
+            32.79890060424805,
+            31.88833236694336,
+            33.784427642822266,
+            31.825244903564453,
+            31.40424156188965,
+            33.86311340332031,
+            34.34429931640625,
+            32.34673309326172,
+            32.39778518676758,
+            32.10808563232422
+          ]
+        },
+        {
+          "tick": 37,
+          "name": "Absol",
+          "before": [
+            15,
+            4
+          ],
+          "after": [
+            15,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 6,
+          "distance_after": 5,
+          "final_distance": 8,
+          "engaged": false,
+          "planting": 0,
+          "action": 6,
+          "mask": [
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            31.97732925415039,
+            32.25182342529297,
+            31.1820068359375,
+            33.262996673583984,
+            31.33232307434082,
+            30.853191375732422,
+            33.45365524291992,
+            33.88269805908203,
+            31.85742950439453,
+            31.850814819335938,
+            31.676006317138672
+          ]
+        },
+        {
+          "tick": 38,
+          "name": "Absol",
+          "before": [
+            15,
+            3
+          ],
+          "after": [
+            14,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 5,
+          "distance_after": 4,
+          "final_distance": 7,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            34.46834182739258,
+            32.02762985229492,
+            36.405826568603516,
+            32.51119613647461,
+            33.8138427734375,
+            30.592485427856445,
+            34.266746520996094,
+            32.418243408203125,
+            34.51612854003906,
+            31.401477813720703,
+            31.91841697692871
+          ]
+        },
+        {
+          "tick": 39,
+          "name": "Absol",
+          "before": [
+            14,
+            3
+          ],
+          "after": [
+            13,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 4,
+          "distance_after": 3,
+          "final_distance": 6,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            35.05129623413086,
+            32.224945068359375,
+            37.15000915527344,
+            32.595542907714844,
+            34.355281829833984,
+            30.7085018157959,
+            34.81195068359375,
+            32.62688064575195,
+            34.98677444458008,
+            31.534021377563477,
+            32.20600128173828
+          ]
+        },
+        {
+          "tick": 40,
+          "name": "Absol",
+          "before": [
+            13,
+            3
+          ],
+          "after": [
+            12,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 3,
+          "distance_after": 2,
+          "final_distance": 5,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            35.726314544677734,
+            32.49457931518555,
+            37.96053695678711,
+            32.74729537963867,
+            34.99195098876953,
+            30.898656845092773,
+            35.454078674316406,
+            32.90822219848633,
+            35.5291633605957,
+            31.728761672973633,
+            32.567161560058594
+          ]
+        },
+        {
+          "tick": 41,
+          "name": "Absol",
+          "before": [
+            12,
+            3
+          ],
+          "after": [
+            11,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 2,
+          "distance_after": 1,
+          "final_distance": 4,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            36.455116271972656,
+            32.86107635498047,
+            38.795188903808594,
+            33.0089225769043,
+            35.68844985961914,
+            31.194820404052734,
+            36.15639114379883,
+            33.28597640991211,
+            36.135562896728516,
+            32.024559020996094,
+            33.014461517333984
+          ]
+        },
+        {
+          "tick": 42,
+          "name": "Absol",
+          "before": [
+            11,
+            3
+          ],
+          "after": [
+            10,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 1,
+          "distance_after": 2,
+          "final_distance": 3,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "q": [
+            36.46598815917969,
+            34.73773193359375,
+            38.18558883666992,
+            35.42485809326172,
+            36.08696365356445,
+            33.3512077331543,
+            36.33592987060547,
+            35.26923751831055,
+            36.44572448730469,
+            34.27867126464844,
+            34.572242736816406
+          ]
+        },
+        {
+          "tick": 43,
+          "name": "Absol",
+          "before": [
+            10,
+            3
+          ],
+          "after": [
+            9,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 2,
+          "distance_after": 3,
+          "final_distance": 2,
+          "engaged": false,
+          "planting": 0,
+          "action": 2,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "q": [
+            31.774616241455078,
+            30.411508560180664,
+            33.16255187988281,
+            31.14824104309082,
+            32.458900451660156,
+            29.951229095458984,
+            31.266324996948242,
+            30.051992416381836,
+            32.19706726074219,
+            30.005504608154297,
+            30.338438034057617
+          ]
+        },
+        {
+          "tick": 44,
+          "name": "Absol",
+          "before": [
+            9,
+            3
+          ],
+          "after": [
+            9,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 3,
+          "distance_after": 3,
+          "final_distance": 2,
+          "engaged": false,
+          "planting": 1,
+          "action": 10,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true
+          ],
+          "q": [
+            35.96030044555664,
+            39.818302154541016,
+            27.401363372802734,
+            35.93708419799805,
+            33.88206100463867,
+            39.28767776489258,
+            36.07960891723633,
+            42.01617431640625,
+            35.65726089477539,
+            38.67786407470703,
+            37.849308013916016
+          ]
+        },
+        {
+          "tick": 45,
+          "name": "Absol",
+          "before": [
+            9,
+            3
+          ],
+          "after": [
+            9,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 3,
+          "distance_after": 3,
+          "final_distance": 2,
+          "engaged": false,
+          "planting": 2,
+          "action": 10,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true
+          ],
+          "q": [
+            34.592586517333984,
+            38.18368911743164,
+            25.971588134765625,
+            34.22541427612305,
+            32.2368278503418,
+            37.70249557495117,
+            34.90330123901367,
+            40.44099426269531,
+            34.2355842590332,
+            37.136878967285156,
+            36.57313537597656
+          ]
+        },
+        {
+          "tick": 46,
+          "name": "Absol",
+          "before": [
+            9,
+            3
+          ],
+          "after": [
+            9,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 3,
+          "distance_after": 3,
+          "final_distance": 2,
+          "engaged": false,
+          "planting": 3,
+          "action": 10,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true
+          ],
+          "q": [
+            33.29465866088867,
+            36.7904052734375,
+            25.01119613647461,
+            32.8858642578125,
+            30.73995590209961,
+            36.348426818847656,
+            33.97593688964844,
+            39.155357360839844,
+            32.66862487792969,
+            35.78133010864258,
+            35.27252960205078
+          ]
+        },
+        {
+          "tick": 47,
+          "name": "Absol",
+          "before": [
+            9,
+            3
+          ],
+          "after": [
+            9,
+            3
+          ],
+          "goal": [
+            11,
+            2
+          ],
+          "target": [
+            8,
+            4
+          ],
+          "strategy": "A_SPLIT",
+          "role": "MAIN",
+          "assignment": [
+            "A",
+            "DEEP",
+            "MAIN"
+          ],
+          "distance_before": 3,
+          "distance_after": 3,
+          "final_distance": 2,
+          "engaged": false,
+          "planting": 0,
+          "action": 10,
+          "mask": [
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true
+          ],
+          "q": [
+            33.29642105102539,
+            36.41652297973633,
+            25.469022750854492,
+            32.641258239746094,
+            30.70937156677246,
+            36.05742263793945,
+            34.220462799072266,
+            38.556148529052734,
+            32.546226501464844,
+            35.34097671508789,
+            34.6807975769043
+          ]
+        }
+      ]
+    }
+  ]
+}

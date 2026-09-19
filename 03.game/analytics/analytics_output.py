@@ -223,9 +223,7 @@ def generate_section_4_map_analysis(series: MatchSeries, player_ratings: list) -
                 f"attack={tactic.get('attacker_strategy', 'unknown')} "
                 f"site={tactic.get('final_attack_site', '-') } "
                 f"def_setup={tactic.get('defender_initial_setup', 'unknown') } "
-                f"({tactic.get('defender_initial_setup_axis', 'A-Mid-B')}) "
-                f"fake_effect={float(tactic.get('fake_effect_score', 0.0) or 0.0):.1f} "
-                f"displaced={int(tactic.get('defenders_displaced_from_final', 0) or 0)}"
+                f"({tactic.get('defender_initial_setup_axis', 'A-Mid-B')})"
             )
         output.append(f"▼ Map {map_data.number}: {map_data.team1} vs {map_data.team2}")
         output.append(f"  結果: {map_data.winner} 勝利")
@@ -556,9 +554,7 @@ def generate_section_6_improvements(
         )
 
     retakes_won, planted_against = team_retake_stats(series, loser)
-    retake_rate = (
-        retakes_won / planted_against * 100 if planted_against else 0.0
-    )
+    retake_rate = retakes_won / planted_against * 100 if planted_against else 0.0
     output.append(
         f"   リテイク成功率: {retakes_won}/{planted_against} ({retake_rate:.1f}%)"
     )
@@ -660,9 +656,10 @@ def team_retake_stats(series: MatchSeries, team_name: str):
         for round_info in map_data.round_records:
             if not round_info.get("planted", False):
                 continue
-            if _attacker_team_for_round(
-                map_data, round_info.get("round_number", 0)
-            ) == team_name:
+            if (
+                _attacker_team_for_round(map_data, round_info.get("round_number", 0))
+                == team_name
+            ):
                 continue
             planted_against += 1
             if str(round_info.get("winner", "")).lower() in {
@@ -688,7 +685,8 @@ def build_improvement_suggestions(series: MatchSeries) -> list[str]:
             1
             for map_data in series.maps
             for round_info in map_data.round_records
-            if _attacker_team_for_round(map_data, round_info.get("round_number", 0)) == team
+            if _attacker_team_for_round(map_data, round_info.get("round_number", 0))
+            == team
         )
         plants = attacker_plant_count(series, team)
         if attacking_rounds and plants / attacking_rounds * 100 <= 30.0:
@@ -713,31 +711,6 @@ def build_improvement_suggestions(series: MatchSeries) -> list[str]:
             )
 
     return suggestions or ["現時点で大きな改善提案はありません。"]
-
-
-def fake_effect_stats(series: MatchSeries, team_name: str) -> dict:
-    """Aggregate observed fake/rotate displacement for one attacking team."""
-    rows = []
-    for map_data in series.maps:
-        for record in map_data.round_records:
-            if _attacker_team_for_round(map_data, record.get("round_number", 0)) != team_name:
-                continue
-            tactic = record.get("tactic", {}) or {}
-            strategy = str(tactic.get("attacker_strategy", "")).lower()
-            if not bool(tactic.get("fake_or_rotate")) and strategy not in {"fake", "rotate"}:
-                continue
-            rows.append(tactic)
-
-    if not rows:
-        return {"rounds": 0, "average_score": 0.0, "average_rate": 0.0, "effective_rounds": 0}
-    scores = [float(row.get("fake_effect_score", 0.0) or 0.0) for row in rows]
-    rates = [float(row.get("fake_effect_rate", 0.0) or 0.0) for row in rows]
-    return {
-        "rounds": len(rows),
-        "average_score": sum(scores) / len(scores),
-        "average_rate": sum(rates) / len(rates),
-        "effective_rounds": sum(score >= 1.0 for score in scores),
-    }
 
 
 def _team_improvement_suggestions(series: MatchSeries, team: str) -> list[str]:
@@ -767,21 +740,10 @@ def _team_improvement_suggestions(series: MatchSeries, team: str) -> list[str]:
             f"リテイク成功率が{retake_rate:.1f}%（{retakes_won}/{planted_against}）です。リテイクが課題かもしれません。"
         )
 
-    fake_stats = fake_effect_stats(series, team)
-    if fake_stats["rounds"] >= 1:
-        if fake_stats["average_rate"] < 30.0:
-            suggestions.append(
-                f"フェイク／ローテートの効果が低めです（平均{fake_stats['average_score']:.1f}人、移動率{fake_stats['average_rate']:.1f}%）。実行するサイトと本命サイトの timing を見直しましょう。"
-            )
-        elif fake_stats["average_rate"] >= 50.0:
-            suggestions.append(
-                f"フェイク／ローテートは効果的です（平均{fake_stats['average_score']:.1f}人、移動率{fake_stats['average_rate']:.1f}%）。この timing を基本形として維持しましょう。"
-            )
-
     preaim_count = sum(int(getattr(p, "preaim_angle_count", 0)) for p in players)
     preaim_total = sum(float(getattr(p, "preaim_angle_sum", 0.0)) for p in players)
     preaim_angle = preaim_total / preaim_count if preaim_count else 0.0
-    if preaim_count and preaim_angle >= 45.0:
+    if preaim_count and preaim_angle >= 35.0:
         suggestions.append(
             f"チーム全体的にプリエイムを意識しましょう（平均ずれ角度 {preaim_angle:.1f}度）。"
         )
@@ -794,7 +756,9 @@ def _team_improvement_suggestions(series: MatchSeries, team: str) -> list[str]:
         if value is not None:
             consistency.append(float(value))
     if consistency and sum(consistency) / len(consistency) < 60.0:
-        suggestions.append("選手ごとの成績のブレが大きいため、ラウンドごとの再現性を高めましょう。")
+        suggestions.append(
+            "選手ごとの成績のブレが大きいため、ラウンドごとの再現性を高めましょう。"
+        )
 
     kd_values = [float(p.kd_ratio) for p in players]
     avg_kd = sum(kd_values) / len(kd_values) if kd_values else 0.0
@@ -803,14 +767,20 @@ def _team_improvement_suggestions(series: MatchSeries, team: str) -> list[str]:
     one_v_one_total = one_v_one_won + one_v_one_lost
     one_v_one_rate = one_v_one_won / one_v_one_total if one_v_one_total else 0.0
     if one_v_one_total and one_v_one_rate < 0.8:
-        suggestions.append("1v1の勝率が低いため、単独勝負ではなくダブルピークを意識しましょう。")
+        suggestions.append(
+            "1v1の勝率が低いため、単独勝負ではなくダブルピークを意識しましょう。"
+        )
 
     covers = sum(int(p.covers) for p in players)
     total_rounds = max(1, series.total_rounds)
     if covers < total_rounds / 5 and avg_kd < 0.9:
-        suggestions.append("カバーを取り合い、ダブルピークなどのミクロの連携を増やしましょう。")
+        suggestions.append(
+            "カバーを取り合い、ダブルピークなどのミクロの連携を増やしましょう。"
+        )
     elif covers > total_rounds / 7 and avg_kd < 0.9:
-        suggestions.append("カバーとダブルピークは機能しています。フラッシュ後のピークなど次の連携を意識しましょう。")
+        suggestions.append(
+            "カバーとダブルピークは機能しています。フラッシュ後のピークなど次の連携を意識しましょう。"
+        )
 
     return suggestions
 

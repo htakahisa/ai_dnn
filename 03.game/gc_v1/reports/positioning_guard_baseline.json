@@ -1,0 +1,59 @@
+{
+  "phase": "guard",
+  "model": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+  "seed": 20260917,
+  "positioning_version": 0,
+  "start_mode": "mixed",
+  "metrics": {
+    "episodes": 120,
+    "win_rate": 0.8916666666666667,
+    "arrival_rate": 0.16483516483516483,
+    "off_position_starts": 364,
+    "position_tick_rate": 0.12213811793290347,
+    "avg_guard_distance": 3.0615363050182225,
+    "avg_reward": 18.86233333333333,
+    "defused": 10,
+    "per_pattern": {
+      "5": {
+        "episodes": 30,
+        "win_rate": 0.8,
+        "arrival_rate": 0.30434782608695654,
+        "off_position_starts": 92,
+        "position_tick_rate": 0.18410041841004185,
+        "avg_guard_distance": 2.2194909344490936,
+        "avg_reward": 10.73683333333333,
+        "defused": 5
+      },
+      "6": {
+        "episodes": 30,
+        "win_rate": 0.9666666666666667,
+        "arrival_rate": 0.09183673469387756,
+        "off_position_starts": 98,
+        "position_tick_rate": 0.10264414248990085,
+        "avg_guard_distance": 4.535806096217407,
+        "avg_reward": 23.871333333333325,
+        "defused": 1
+      },
+      "7": {
+        "episodes": 30,
+        "win_rate": 0.9333333333333333,
+        "arrival_rate": 0.10309278350515463,
+        "off_position_starts": 97,
+        "position_tick_rate": 0.10948379351740696,
+        "avg_guard_distance": 3.428091236494598,
+        "avg_reward": 25.274833333333333,
+        "defused": 0
+      },
+      "8": {
+        "episodes": 30,
+        "win_rate": 0.8666666666666667,
+        "arrival_rate": 0.16883116883116883,
+        "off_position_starts": 77,
+        "position_tick_rate": 0.08967795210569778,
+        "avg_guard_distance": 2.2810900082576384,
+        "avg_reward": 15.566333333333331,
+        "defused": 4
+      }
+    }
+  }
+}

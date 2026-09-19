@@ -137,12 +137,12 @@ GC_MACRO_GROUP_SIZES = {
     },
     # Fake時の初動人数
     "FAKE_A_TO_B": {
-        "fake": 3,
-        "rotate": 2,
+        "fake": 2,
+        "rotate": 3,
     },
     "FAKE_B_TO_A": {
-        "fake": 3,
-        "rotate": 2,
+        "fake": 2,
+        "rotate": 3,
     },
 }
 

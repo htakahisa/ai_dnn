@@ -54,8 +54,8 @@ COMBOS = [
         "name": "悪魔率いる天才集団",
         "players": ("Demon1", "jawgemo", "Ethan", "Boostio", "C0M"),
         "bonuses": {
-            "reaction": 15,
-            "hs_rate": 0.15,
+            "reaction": 35,
+            "hs_rate": 0.5,
             "iq": 30,
             "mental": -3,
         },
@@ -71,7 +71,7 @@ COMBOS = [
         "name": "ベテランより奇人に",
         "players": ("Ethan", "Boostio"),
         "player_bonuses": {
-            "Ethan": {"accuracy": 0.15, "iq": -10},
+            "Ethan": {"hs_rate": 0.15, "iq": -10},
             "Boostio": {"iq": 30},
         },
         "renames": {},
@@ -363,7 +363,7 @@ COMBOS = [
         "renames": {},
     },
     {
-        "name": "VisionStrikers",
+        "name": "Vision Strikers",
         "players": ("stax", "Mako", "Buzz", "Rb", "Zest"),
         "bonuses": {
             "accuracy": 0.7,
@@ -414,6 +414,36 @@ COMBOS = [
         "name": "ロッチー",
         "players": ("Rossy", "CHICHOO"),
         "bonuses": {"accuracy": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "血も涙もないその目よりも",
+        "players": ("Rossy", "SereNa"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "煙たい煙草吸うよりも",
+        "players": ("Smoggy", "SereNa"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "びしょびしょの紫の布よりも",
+        "players": ("CHICHOO", "SereNa"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "西風吹く教会よりも",
+        "players": ("koldamenta", "SereNa"),
+        "bonuses": {"hs_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "目の前にあるご馳走を食べましょう",
+        "players": ("koldamenta", "Rossy", "CHICHOO", "Smoggy", "SereNa"),
+        "bonuses": {"reaction": 50, "condition_bonus": 0.1},
         "renames": {},
     },
     {
@@ -497,6 +527,19 @@ COMBOS = [
             "SugarZ3ro": {"iq": 50, "mental": -1},
         },
         "renames": {},
+    },
+    {
+        "name": "化け物の呼び声",
+        "players": ("alecks", "something"),
+        "player_bonuses": {
+            "something": {
+                "dodge_rate": -0.2,
+                "reaction": -30,
+                "hs_rate": 0.5,
+                "accuracy": 0.4,
+            },
+        },
+        "renames": {"something": "cgrs"},
     },
 ]
 

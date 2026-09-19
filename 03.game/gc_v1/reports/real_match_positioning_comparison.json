@@ -1,0 +1,127 @@
+{
+  "evaluation_context": "independent_map",
+  "maps_to_win": 1,
+  "results": [
+    {
+      "report": "real_match_before.json",
+      "seed": 1562627217,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 3,
+      "plant_rate": 0.25,
+      "registered_plants": 2,
+      "score": [
+        4,
+        13
+      ]
+    },
+    {
+      "report": "real_match_target_fixed.json",
+      "seed": 1562627217,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 6,
+      "plant_rate": 0.5,
+      "registered_plants": 6,
+      "score": [
+        5,
+        13
+      ]
+    },
+    {
+      "report": "real_match_legacy.json",
+      "seed": 1562627217,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 5,
+      "plant_rate": 0.4166666666666667,
+      "registered_plants": 2,
+      "score": [
+        8,
+        13
+      ]
+    },
+    {
+      "report": "real_match_shared_target.json",
+      "seed": 1562627217,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 6,
+      "plant_rate": 0.5,
+      "registered_plants": 6,
+      "score": [
+        6,
+        13
+      ]
+    },
+    {
+      "report": "real_match_shared_target_map2.json",
+      "seed": 678513998,
+      "map_number": 2,
+      "attack_rounds": 8,
+      "plants": 2,
+      "plant_rate": 0.25,
+      "registered_plants": 2,
+      "score": [
+        7,
+        13
+      ]
+    },
+    {
+      "seed": 20260918,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 0,
+      "plant_rate": 0.0,
+      "registered_plants": 0,
+      "score": [
+        1,
+        13
+      ],
+      "models": {
+        "carry": {
+          "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+          "sha256": "e966439ad3ecc2302b01ab638b5ce5945cc3736ded1802cb2390e3367d3ea620",
+          "positioning_version": 2,
+          "episode": 200
+        },
+        "guard": {
+          "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+          "sha256": "ac97fb63917c94f1a6f85b4f8946ad36ae27cf14742952d359db629299cc7834",
+          "positioning_version": 2,
+          "episode": 500
+        }
+      },
+      "report": "real_match_before_holdout.json",
+      "target_behavior": "old_target_behavior_reproduced_in_process"
+    },
+    {
+      "seed": 20260918,
+      "map_number": 1,
+      "attack_rounds": 12,
+      "plants": 4,
+      "plant_rate": 0.3333333333333333,
+      "registered_plants": 3,
+      "score": [
+        1,
+        13
+      ],
+      "models": {
+        "carry": {
+          "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+          "sha256": "e966439ad3ecc2302b01ab638b5ce5945cc3736ded1802cb2390e3367d3ea620",
+          "positioning_version": 2,
+          "episode": 200
+        },
+        "guard": {
+          "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+          "sha256": "ac97fb63917c94f1a6f85b4f8946ad36ae27cf14742952d359db629299cc7834",
+          "positioning_version": 2,
+          "episode": 500
+        }
+      },
+      "report": "real_match_shared_target_holdout.json",
+      "target_behavior": "shared_team_target"
+    }
+  ]
+}

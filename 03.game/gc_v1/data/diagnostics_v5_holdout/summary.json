@@ -1,0 +1,234 @@
+{
+  "models": {
+    "carry": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "episode": 1750,
+      "sha256": "a93efc8948d2055b59e2397f593a8a2e127359bbc75d39d4f83595dcfd8d6d17",
+      "positioning_version": 5
+    },
+    "escort": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "episode": 1750,
+      "sha256": "9d693dbab192668c504f6ddb31b5cb8caf176ff60219f250312dd8979cbc0a67",
+      "positioning_version": 3
+    },
+    "guard": {
+      "path": "gc_v1\\data\\attacker_gc_curriculum_v5\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "episode": 1750,
+      "sha256": "a37d7f95a7a1c38fe56be481250fd9135326ab214817bc276cdcca9d1d3be796",
+      "positioning_version": 2
+    }
+  },
+  "episodes": 30,
+  "ticks": 1681,
+  "wins": 5,
+  "plants": 10,
+  "timeouts": [
+    4026091700,
+    4026091706,
+    4026091709,
+    7026091701
+  ],
+  "quiet_stays": 334,
+  "quiet_stays_with_legal_progress": 224,
+  "blocked_move_count": 0,
+  "incorrectly_masked_progress": [],
+  "quiet_stay_blockers": {
+    "SyouTa": 14,
+    "Xdll": 66,
+    "eKo": 11,
+    "SugarZ3ro": 15
+  },
+  "quiet_stay_visible_flags": {
+    "(False, False)": 329,
+    "(True, True)": 1,
+    "(True, False)": 4
+  },
+  "final_approach_stays": [
+    {
+      "tick": 32,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        2
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 33,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        2
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 34,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        2
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 35,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        2
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 36,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        2
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 33,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        3
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 34,
+      "pos": [
+        10,
+        3
+      ],
+      "goal": [
+        10,
+        3
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 3
+    },
+    {
+      "tick": 44,
+      "pos": [
+        11,
+        6
+      ],
+      "goal": [
+        11,
+        6
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 0,
+      "final_distance": 7
+    },
+    {
+      "tick": 57,
+      "pos": [
+        7,
+        4
+      ],
+      "goal": [
+        8,
+        4
+      ],
+      "target": [
+        8,
+        4
+      ],
+      "action": 10,
+      "final_distance": 1
+    },
+    {
+      "tick": 34,
+      "pos": [
+        9,
+        9
+      ],
+      "goal": [
+        9,
+        9
+      ],
+      "target": [
+        10,
+        42
+      ],
+      "action": 1,
+      "final_distance": 40
+    }
+  ],
+  "quiet_stay_assignments": {
+    "['B', 'SITE', 'ROTATE']": 13,
+    "['B', 'DEEP', 'MAIN']": 73,
+    "['B', 'SITE', 'MAIN']": 3,
+    "['A', 'SITE', 'MAIN']": 10,
+    "['A', 'DEEP', 'MAIN']": 65,
+    "['A', 'SITE', 'ROTATE']": 3,
+    "['MID', 'DEEP', 'MID']": 28,
+    "['B', 'RESET', 'REHIT']": 8,
+    "['B', 'SITE', 'MID']": 4,
+    "['MID', 'STAGING', 'FAKE_WAIT']": 81,
+    "['B', 'STAGING', 'DEFAULT_MAIN']": 21,
+    "['A', 'STAGING', 'DEFAULT_MAIN']": 2,
+    "['A', 'FORWARD', 'DEFAULT_MAIN']": 23
+  }
+}

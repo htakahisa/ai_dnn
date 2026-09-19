@@ -60,8 +60,10 @@ import torch
 import torch.nn as nn
 try:
     from .tactical_ability import choose_pre_entry_ability
+    from .ultimate_tactics_gc import build_ultimate_action
 except ImportError:
     from tactical_ability import choose_pre_entry_ability
+    from ultimate_tactics_gc import build_ultimate_action
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -70,10 +72,10 @@ from character_stats_gc import (
 # ---------------------------------------------------------------------------
 # 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)
 # ---------------------------------------------------------------------------
-ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(
-    6
-)
-N_ACTIONS = 6
+ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
+ACTION_ULTIMATE = 6
+LEGACY_N_ACTIONS = 6
+N_ACTIONS = 7
 _MOVE_DELTA = {
     ACTION_UP: (-1, 0),
     ACTION_DOWN: (1, 0),
@@ -82,8 +84,8 @@ _MOVE_DELTA = {
     ACTION_STAY: (0, 0),
 }
 
-BLIND_DURATION_TICKS = 3
-REVEAL_DURATION_TICKS = 5
+BLIND_DURATION_TICKS = 10
+REVEAL_DURATION_TICKS = 15
 # HUNT(タイガー役)を含む4種。HUNTはアビリティ行動を持たないため
 # total_charges<=0判定で自動的にマスクされる(game_core.pyの仕様上、
 # タイガー役はflash/smoke/recon_chargesが全て0で初期化されるため)。
@@ -95,6 +97,13 @@ DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0
 
 OBS_DIM = 41  # train_attacker_escort.py(gc_v1版) EscortEnv._obs_dim() と一致
+TACTICAL_OBS_DIM = 49  # v2: own Macro role/waypoint and shooting eligibility.
+NAVIGATION_OBS_DIM = 67  # v3: neighbor costs, executed history and deadline.
+SCREENING_OBS_DIM = 71  # v4: carrier approach and forward-screen state.
+FORMATION_OBS_DIM = 75  # v5: designated screener, exact formation target and readiness.
+CLEARANCE_OBS_DIM = 76  # v6: designated Escort blocks Carrier's progress cell.
+DIRECTIONAL_CLEARANCE_OBS_DIM = 80  # v7: legal U/D/L/R route-clearing moves.
+ENTRY_SUPPORT_OBS_DIM = 84  # v8: safe U/D/L/R moves toward the forward screen.
 
 
 # ---------------------------------------------------------------------------
@@ -214,13 +223,22 @@ class LearningAttackerEscortGCController:
         checkpoint = torch.load(
             model_path, map_location=self.device, weights_only=False
         )
+        self.positioning_version = int(checkpoint.get("positioning_version", 0))
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
-        if obs_dim != OBS_DIM or n_actions != N_ACTIONS:
+        expected_dim = (ENTRY_SUPPORT_OBS_DIM if self.positioning_version >= 8 else
+                        DIRECTIONAL_CLEARANCE_OBS_DIM if self.positioning_version >= 7 else
+                        CLEARANCE_OBS_DIM if self.positioning_version >= 6 else
+                        FORMATION_OBS_DIM if self.positioning_version >= 5 else
+                        SCREENING_OBS_DIM if self.positioning_version >= 4 else
+                        NAVIGATION_OBS_DIM if self.positioning_version >= 3 else
+                        TACTICAL_OBS_DIM if self.positioning_version >= 2 else OBS_DIM)
+        expected_actions = N_ACTIONS if self.positioning_version >= 8 else LEGACY_N_ACTIONS
+        if obs_dim != expected_dim or n_actions != expected_actions:
             raise ValueError(
                 f"チェックポイントの観測/行動空間がこのコントローラーと不一致です: "
-                f"obs_dim={obs_dim}(期待値{OBS_DIM}) n_actions={n_actions}(期待値{N_ACTIONS})。"
+                f"obs_dim={obs_dim}(期待値{expected_dim}) n_actions={n_actions}(期待値{N_ACTIONS})。"
                 f"train_attacker_escort.pyのバージョンが古い可能性があります。"
             )
 
@@ -248,8 +266,16 @@ class LearningAttackerEscortGCController:
     # ------------------------------------------------------------------
     # ラウンド開始時にrun_game.pyから呼ばれる(hasattr判定で自動検出される)
     # ------------------------------------------------------------------
+    def set_game(self, game):
+        if getattr(self, "_intent_grid", None) is not game.grid:
+            self._intent_distance_cache = {}
+            self._navigation_history = {}
+            self._intent_grid = game.grid
+        self.game = game
+
     def reset_round(self):
         self._char_state.clear()
+        self._navigation_history = {}
 
     # ------------------------------------------------------------------
     # 内部ヘルパー
@@ -409,6 +435,15 @@ class LearningAttackerEscortGCController:
         r, c = int(char.pos[0]), int(char.pos[1])
 
         carry_pos, goal = self._resolve_carry_and_goal(char, game_state)
+        if self.positioning_version >= 3:
+            try:
+                from .navigation_intent_gc import navigation_intent
+            except ImportError:
+                from navigation_intent_gc import navigation_intent
+            carrier = next((c for c in chars if c.team == char.team and getattr(c, "has_spike", False)
+                            and getattr(c, "is_alive", True)), None)
+            if carrier is not None:
+                goal = navigation_intent(self.game, carrier)[0] or goal
         cr, cc = carry_pos
         next_step = self._predict_carry_next_step(grid, carry_pos, goal)
         carry_dist_map = self._get_carry_dist_map(grid, carry_pos)
@@ -537,15 +572,99 @@ class LearningAttackerEscortGCController:
             f"観測次元がOBS_DIM({OBS_DIM})と不一致: {obs_arr.shape[0]}。"
             f"train_attacker_escort.pyとのズレを確認してください。"
         )
+        if self.positioning_version >= 2:
+            try:
+                from .navigation_intent_gc import intent_features
+            except ImportError:
+                from navigation_intent_gc import intent_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, intent_features(self.game, char, chars, cache)))
+        if self.positioning_version >= 3:
+            try:
+                from .navigation_intent_gc import navigation_context_features, navigation_intent
+            except ImportError:
+                from navigation_intent_gc import navigation_context_features, navigation_intent
+            own_goal = navigation_intent(self.game, char)[0]
+            distance = self._intent_distance_cache.get(own_goal)
+            history = self.__dict__.setdefault("_navigation_history", {})
+            obs_arr = np.concatenate((obs_arr, navigation_context_features(self.game, char, chars, distance, history, own_goal)))
+        if self.positioning_version >= 4:
+            try:
+                from .navigation_intent_gc import carrier_screening_features
+            except ImportError:
+                from navigation_intent_gc import carrier_screening_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, carrier_screening_features(
+                self.game, char, chars, cache, escort=True
+            )))
+        if self.positioning_version >= 5:
+            try:
+                from .navigation_intent_gc import carrier_formation_features
+            except ImportError:
+                from navigation_intent_gc import carrier_formation_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, carrier_formation_features(
+                self.game, char, chars, cache, escort=True
+            )))
+        if self.positioning_version >= 6:
+            try:
+                from .navigation_intent_gc import carrier_route_blocking_feature
+            except ImportError:
+                from navigation_intent_gc import carrier_route_blocking_feature
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, np.array([
+                carrier_route_blocking_feature(self.game, char, chars, cache)
+            ], dtype=np.float32)))
+        if self.positioning_version >= 7:
+            try:
+                from .navigation_intent_gc import carrier_route_clearance_features
+            except ImportError:
+                from navigation_intent_gc import carrier_route_clearance_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, carrier_route_clearance_features(
+                self.game, char, chars, cache
+            )))
+        if self.positioning_version >= 8:
+            try:
+                from .navigation_intent_gc import carrier_safe_screen_advance_features
+            except ImportError:
+                from navigation_intent_gc import carrier_safe_screen_advance_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, carrier_safe_screen_advance_features(
+                self.game, char, chars, cache
+            )))
         return obs_arr
+
+    def _ultimate_action(self, char, chars):
+        try:
+            from .navigation_intent_gc import (carrier_screening_status,
+                                               navigation_intent)
+        except ImportError:
+            from navigation_intent_gc import carrier_screening_status, navigation_intent
+        destination = navigation_intent(self.game, char)[0]
+        carrier = next((c for c in chars if c.team == char.team
+                        and getattr(c, "is_alive", True)
+                        and getattr(c, "has_spike", False)), None)
+        if carrier is not None:
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            status = carrier_screening_status(self.game, carrier, chars, cache)
+            designated = status.get("designated")
+            if designated is not None and designated.name == char.name:
+                destination = status.get("formation_target") or destination
+        return build_ultimate_action(self.game.grid, char, chars, destination=destination)
 
     def _action_mask(self, char, grid, chars):
         r, c = int(char.pos[0]), int(char.pos[1])
-        mask = np.ones(N_ACTIONS, dtype=bool)
+        action_count = N_ACTIONS if self.positioning_version >= 8 else LEGACY_N_ACTIONS
+        mask = np.ones(action_count, dtype=bool)
         for a, (dr, dc) in _MOVE_DELTA.items():
             if a == ACTION_STAY:
                 continue
             if self._is_wall(grid, r + dr, c + dc):
+                mask[a] = False
+            elif self.positioning_version >= 3 and any(
+                    other.name != char.name and getattr(other, "is_alive", True)
+                    and tuple(other.pos) == (r + dr, c + dc) for other in chars):
                 mask[a] = False
 
         total_charges = (
@@ -566,11 +685,23 @@ class LearningAttackerEscortGCController:
             if enemy_char is None:
                 mask[ACTION_ABILITY] = False
 
+        if self.positioning_version >= 8:
+            mask[ACTION_ULTIMATE] = self._ultimate_action(char, chars) is not None
+
         return mask
 
     # ------------------------------------------------------------------
     # コントローラー本体
     # ------------------------------------------------------------------
+    def _select_action(self, obs, mask):
+        if (not self.greedy) and np.random.random() < self.epsilon:
+            valid = np.flatnonzero(mask)
+            return int(np.random.choice(valid)) if len(valid) else ACTION_STAY
+        with torch.no_grad():
+            state = torch.as_tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+            q = self.policy_net(state).squeeze(0).cpu().numpy()
+        return int(np.argmax(np.where(mask, q, -1e9)))
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
@@ -599,7 +730,7 @@ class LearningAttackerEscortGCController:
             destination=tuple(carrier.pos) if carrier is not None else None,
             max_range=ABILITY_RANGE,
         )
-        if pre_entry_ability is not None:
+        if pre_entry_ability is not None and self.positioning_version < 1:
             return list(char.pos), {
                 "ability": pre_entry_ability[0],
                 "target": pre_entry_ability[1],
@@ -608,18 +739,16 @@ class LearningAttackerEscortGCController:
         obs = self._build_obs(char, game_state, st)
         mask = self._action_mask(char, grid, chars)
 
-        if (not self.greedy) and np.random.random() < self.epsilon:
-            action = int(np.random.choice(np.flatnonzero(mask)))
-        else:
-            with torch.no_grad():
-                state_t = torch.as_tensor(
-                    obs, dtype=torch.float32, device=self.device
-                ).unsqueeze(0)
-                q = self.policy_net(state_t).squeeze(0).cpu().numpy()
-            q = np.where(mask, q, -1e9)
-            action = int(np.argmax(q))
+        action = self._select_action(obs, mask)
 
         r, c = int(char.pos[0]), int(char.pos[1])
+
+        if self.positioning_version >= 8 and action == ACTION_ULTIMATE:
+            ultimate = self._ultimate_action(char, chars)
+            if ultimate is not None:
+                st["last_delta"] = (0.0, 0.0)
+                st["stuck"] += 1
+                return list(char.pos), ultimate
 
         if action == ACTION_ABILITY:
             enemy_char, _ = self._nearest_visible_enemy(
@@ -641,7 +770,7 @@ class LearningAttackerEscortGCController:
 
         # Absol(スパイクキャリアー)を先頭に保つ。escortがキャリアーを
         # 追い越す移動は止め、2マス以上後ろから追従させる。
-        if carrier is not None:
+        if carrier is not None and self.positioning_version < 1:
             cur_dist = max(abs(carrier.pos[0] - r), abs(carrier.pos[1] - c))
             next_dist = max(abs(carrier.pos[0] - nr), abs(carrier.pos[1] - nc))
             if next_dist < 2 or (cur_dist <= 2 and next_dist <= cur_dist):

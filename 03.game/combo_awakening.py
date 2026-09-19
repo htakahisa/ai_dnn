@@ -82,6 +82,7 @@ class ComboAwakeningMixin:
             "reaction": "反応速度",
             "iq": "IQ",
             "max_hp": "最大HP",
+            "condition_bonus": "調子補正",
         }
         parts = []
         if isinstance(common_bonuses, dict):
@@ -90,7 +91,7 @@ class ComboAwakeningMixin:
                 if canonical:
                     amount = float(value)
                     if (
-                        canonical in ("accuracy", "hs_rate", "dodge_rate")
+                        canonical in ("accuracy", "hs_rate", "dodge_rate", "condition_bonus")
                         and abs(amount) <= 1
                     ):
                         shown = amount * 100

@@ -147,10 +147,11 @@ HANDOFF_AUGMENT_PROB = 0.0  # GC実戦方針: Absolを常に先頭キャリア�
 CARRIER_SUPPORT_RADIUS = 3
 CARRIER_MIN_SUPPORTERS = 1
 CARRIER_IDEAL_SUPPORTERS = 2
-CARRIER_SUPPORT_REWARD = 0.16
-CARRIER_SECOND_SUPPORT_REWARD = 0.10
-CARRIER_CLOSE_SUPPORT_REWARD = 0.10
-CARRIER_UNSUPPORTED_PENALTY = 0.14
+CARRIER_SUPPORT_REWARD = 0.24
+CARRIER_SECOND_SUPPORT_REWARD = 0.18
+CARRIER_CLOSE_SUPPORT_REWARD = 0.14
+CARRIER_UNSUPPORTED_PENALTY = 0.30
+COORDINATED_ENGAGEMENT_REWARD = 0.08
 
 # Training-opponent baseline.  Keep the opponent policy itself unchanged for
 # now; only make its combat stats representative of the requested target.
@@ -1189,6 +1190,39 @@ class EscortEnv:
                 for i in alive_escorts:
                     rewards[i] -= CARRIER_UNSUPPORTED_PENALTY
 
+        # Reward an actual double peek/crossfire: at least two attackers must
+        # see the same enemy during this tick. Proximity alone is not enough.
+        coordinated_escorts = set()
+        smoke_cells = self._smoke_cell_set()
+        for enemy_idx in range(self.n_enemies):
+            if not self.enemy_alive[enemy_idx]:
+                continue
+            participants = []
+            if self.carry_alive and _has_los(
+                self.grid,
+                smoke_cells,
+                self.carry_pos,
+                self.enemy_pos[enemy_idx],
+            ):
+                participants.append(("carry", 0))
+            participants.extend(
+                ("escort", i)
+                for i in range(self.n_escorts)
+                if self.escort_alive[i]
+                and _has_los(
+                    self.grid,
+                    smoke_cells,
+                    self.escort_pos[i],
+                    self.enemy_pos[enemy_idx],
+                )
+            )
+            if len(participants) >= 2:
+                coordinated_escorts.update(
+                    idx for kind, idx in participants if kind == "escort"
+                )
+        for escort_idx in coordinated_escorts:
+            rewards[escort_idx] += COORDINATED_ENGAGEMENT_REWARD
+
         kill_bonus_targets = self._resolve_combat()
 
         dead_escorts = [
@@ -1404,7 +1438,11 @@ def main():
     parser.add_argument(
         "--save-dir",
         type=str,
-        default="data/attacker_escort_gc_data/",
+        default=str(
+            Path(__file__).resolve().parent
+            / "data"
+            / "attacker_escort_gc_data"
+        ),
     )
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -1413,7 +1451,7 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(args.save_dir, exist_ok=True)
 
     env = EscortEnv(max_ticks=args.max_ticks, seed=args.seed)

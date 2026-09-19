@@ -10,6 +10,7 @@ from map_data_defender_setup import (
 import math
 from pathlib import Path
 import tkinter as tk
+from party_presets import get_team_short_name
 
 from controllers import UserInputController
 from game_core import (
@@ -18,6 +19,7 @@ from game_core import (
     FACING_VECTORS, FACING_INDICATOR_LENGTH_RATIO,
     EXPLOSION_DURATION_TICKS, EXPLOSION_START_RADIUS, EXPLOSION_MAX_RADIUS,
     EXPLOSION_FILL_COLOR, EXPLOSION_OUTLINE_COLOR, EXPLOSION_OUTLINE_WIDTH,
+    ORB_COLLECT_REQUIRED_TICKS,
 )
 
 class RenderingUIMixin:
@@ -85,6 +87,7 @@ class RenderingUIMixin:
         ctrl.selected_char = character.name
         self.active_user_team = team
         self.ability_mode = None
+        self.ultimate_mode = None
         return True
     def _is_character_selected(self, character):
         ctrl = self._controller_for_team(character.team)
@@ -134,7 +137,22 @@ class RenderingUIMixin:
         if selected and plant_bounds and plant_bounds[0] <= event.x <= plant_bounds[2] and plant_bounds[1] <= event.y <= plant_bounds[3]:
             selected.is_planting = not selected.is_planting
             selected.plant_timer = 0
+            selected.is_collecting_orb = False
             self.ability_mode = None
+            self.ultimate_mode = None
+            self.draw()
+            return
+
+        orb_bounds = self._orb_button_bounds()
+        if selected and orb_bounds and orb_bounds[0] <= event.x <= orb_bounds[2] and orb_bounds[1] <= event.y <= orb_bounds[3]:
+            selected.is_collecting_orb = not selected.is_collecting_orb
+            if not selected.is_collecting_orb:
+                selected.orb_collect_timer = 0
+                selected.collecting_orb_pos = None
+            selected.is_planting = False
+            selected.plant_timer = 0
+            self.ability_mode = None
+            self.ultimate_mode = None
             self.draw()
             return
 
@@ -154,6 +172,28 @@ class RenderingUIMixin:
                     }[ability_name]
                     if charges > 0:
                         self.ability_mode = (ability_name, selected.team, selected.name)
+                        self.ultimate_mode = None
+                self.draw()
+                return
+
+        if selected:
+            ultimate_name = selected.ultimate_name
+            panel = self._ultimate_button_bounds()
+            if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
+                if selected.ultimate_points >= selected.ultimate_cost:
+                    if ultimate_name == "ESCAPE":
+                        armed = self.ultimate_mode == (
+                            ultimate_name, selected.team, selected.name
+                        )
+                        self.ultimate_mode = None if armed else (
+                            ultimate_name, selected.team, selected.name
+                        )
+                        self.ability_mode = None
+                    else:
+                        self.execute_ai_ultimate(
+                            selected,
+                            {"ultimate": ultimate_name},
+                        )
                 self.draw()
                 return
 
@@ -163,6 +203,21 @@ class RenderingUIMixin:
         c = map_x // self.cell_size
         r = event.y // self.cell_size
         if not (0 <= r < self.height and 0 <= c < self.width):
+            return
+
+        if self.ultimate_mode:
+            ultimate_name, team, owner_name = self.ultimate_mode
+            owner = next(
+                (ch for ch in self.chars if ch.name == owner_name and ch.is_alive),
+                None,
+            )
+            if owner and owner.team == team and self.grid[r, c] != 1:
+                self.execute_ai_ultimate(
+                    owner,
+                    {"ultimate": ultimate_name, "target": (r, c)},
+                )
+            self.ultimate_mode = None
+            self.draw()
             return
 
         if self.ability_mode:
@@ -209,6 +264,7 @@ class RenderingUIMixin:
             ctrl = self._controller_for_team(clicked_char.team)
             ctrl.handle_click(r, c, self.grid, self.chars, clicked_char.team)
             self.ability_mode = None
+            self.ultimate_mode = None
         else:
             active_team = getattr(self, "active_user_team", None)
             ctrl = self._controller_for_team(active_team) if active_team in ("A", "D") else None
@@ -221,6 +277,7 @@ class RenderingUIMixin:
 
             if ctrl is not None:
                 ctrl.handle_click(r, c, self.grid, self.chars, active_team)
+                self.ultimate_mode = None
 
         self.draw()
 
@@ -265,12 +322,20 @@ class RenderingUIMixin:
         r, c = selected.pos
         return self.grid[r, c] == 2
 
+    def _can_selected_collect_orb(self):
+        selected = self._selected_user_character()
+        return bool(
+            selected
+            and selected.is_alive
+            and tuple(selected.pos) in getattr(self, "available_orbs", set())
+        )
+
 
     def _bottom_control_layout(self):
         total_w, h = min(690, self.map_pixel_width - 20), 68
         x1 = self.map_offset_x + (self.map_pixel_width - total_w) / 2
         y1 = self.map_pixel_height + 28
-        if self._can_selected_plant():
+        if self._can_selected_plant() or self._can_selected_collect_orb():
             gap, plant_w = 10, 150
             return (x1, y1, x1 + total_w - plant_w - gap, y1 + h), (x1 + total_w - plant_w, y1, x1 + total_w, y1 + h)
         return (x1, y1, x1 + total_w, y1 + h), None
@@ -279,11 +344,25 @@ class RenderingUIMixin:
     def _ability_panel_bounds(self):
         if not self._selected_user_character():
             return None
-        return self._bottom_control_layout()[0]
+        x1, y1, x2, y2 = self._bottom_control_layout()[0]
+        midpoint = (x1 + x2) / 2
+        return (x1, y1, midpoint - 4, y2)
+
+    def _ultimate_button_bounds(self):
+        if not self._selected_user_character():
+            return None
+        x1, y1, x2, y2 = self._bottom_control_layout()[0]
+        midpoint = (x1 + x2) / 2
+        return (midpoint + 4, y1, x2, y2)
 
 
     def _plant_button_bounds(self):
         if not self._can_selected_plant():
+            return None
+        return self._bottom_control_layout()[1]
+
+    def _orb_button_bounds(self):
+        if not self._can_selected_collect_orb():
             return None
         return self._bottom_control_layout()[1]
 
@@ -441,7 +520,10 @@ class RenderingUIMixin:
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
             self.canvas.create_text(
                 x0 + 43, y + 91,
-                text=f"{label}  {status}", anchor="w",
+                text=(
+                    f"{label} {status}  |  ULT "
+                    f"{char.ultimate_points}/{char.ultimate_cost}"
+                ), anchor="w",
                 fill=muted, font=("Arial", 7, "bold")
             )
 
@@ -591,12 +673,26 @@ class RenderingUIMixin:
         self._draw_team_panel("A", 0, "ATTACKERS", "#c0392b")
         self._draw_team_panel("D", self.map_offset_x + self.map_pixel_width, "DEFENDERS", "#27ae60")
 
-        color_map = {"0":"white", "1":"#34495e", "2":"#fff9c4", "3":"#ffcccc", "4":"#ccffcc"}
+        color_map = {"0":"white", "1":"#34495e", "2":"#fff9c4", "3":"#ffcccc", "4":"#ccffcc", "5":"white"}
         for r in range(self.height):
             for c in range(self.width):
                 x1 = self._map_x(c * self.cell_size)
                 color = color_map.get(str(self.grid[r, c]), "white")
                 self.canvas.create_rectangle(x1, r*self.cell_size, x1+self.cell_size, (r+1)*self.cell_size, fill=color, outline="#eee")
+
+        # Ult orb spawn tiles stay walkable; only uncollected round orbs are drawn.
+        for orb_row, orb_col in getattr(self, "available_orbs", set()):
+            x1 = self._map_x(orb_col * self.cell_size)
+            y1 = orb_row * self.cell_size
+            cx, cy = x1 + self.cell_size / 2, y1 + self.cell_size / 2
+            radius = self.cell_size * 0.34
+            self.canvas.create_polygon(
+                cx, cy - radius,
+                cx + radius, cy,
+                cx, cy + radius,
+                cx - radius, cy,
+                fill="#b06cff", outline="#5b2c83", width=2,
+            )
 
         # Defender Setup Phase中だけ、通常床だがSetup進入禁止のセルを薄黄色表示。
         if getattr(self, "in_defender_setup_phase", False):
@@ -734,6 +830,31 @@ class RenderingUIMixin:
             self.canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
                                     fill="#fff7bf", outline="#f1c40f", width=2, stipple="gray50")
 
+        for burst in getattr(self, "tunnel_bursts", []):
+            for rr, cc in burst["cells"]:
+                x1 = self._map_x(cc * self.cell_size)
+                y1 = rr * self.cell_size
+                self.canvas.create_rectangle(
+                    x1, y1, x1 + self.cell_size, y1 + self.cell_size,
+                    fill="#663399", outline="", stipple="gray50",
+                )
+
+        for drone in getattr(self, "monitor_drones", []):
+            if not drone.is_alive:
+                continue
+            rr, cc = drone.pos
+            cx = self._map_x((cc + 0.5) * self.cell_size)
+            cy = (rr + 0.5) * self.cell_size
+            radius = self.cell_size * 0.33
+            self.canvas.create_oval(
+                cx - radius, cy - radius, cx + radius, cy + radius,
+                fill="#58d3f7", outline="#12394a", width=2,
+            )
+            self.canvas.create_text(
+                cx, cy, text=str(int(drone.hp)), fill="#08202a",
+                font=("Arial", 6, "bold"),
+            )
+
         selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
         viewer_team = self.get_viewer_team()
         visible_chars = [
@@ -842,7 +963,7 @@ class RenderingUIMixin:
                 text_cx = (x1 + 70 + x2) / 2
                 if ability_name == "HUNT":
                     state = "HUNT / ハンター（常時発動）"
-                    help_text = "Hit% +10ポイント・HS% +5ポイント"
+                    help_text = "キル時 HP +50"
                 else:
                     label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
                     state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
@@ -851,6 +972,38 @@ class RenderingUIMixin:
                 self.canvas.create_text(text_cx, y1+22, text=state,
                                         fill=accent if charges else "#777", font=("Arial", 10, "bold"))
                 self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
+
+                ultimate_bounds = self._ultimate_button_bounds()
+                if ultimate_bounds:
+                    ux1, uy1, ux2, uy2 = ultimate_bounds
+                    ultimate_name = selected.ultimate_name
+                    ready = selected.ultimate_points >= selected.ultimate_cost
+                    ultimate_armed = self.ultimate_mode == (
+                        ultimate_name, selected.team, selected.name
+                    )
+                    ult_accent = "#b06cff" if ready else "#59616c"
+                    self.canvas.create_rectangle(
+                        ux1, uy1, ux2, uy2, fill="#1b1426",
+                        outline=ult_accent if ready or ultimate_armed else "#536273",
+                        width=2,
+                    )
+                    self.canvas.create_text(
+                        (ux1 + ux2) / 2, uy1 + 22,
+                        text=(
+                            f"{ultimate_name}  "
+                            f"{selected.ultimate_points}/{selected.ultimate_cost}"
+                        ),
+                        fill=ult_accent, font=("Arial", 10, "bold"),
+                    )
+                    ult_help = (
+                        "行き先を選択（再クリックで解除）"
+                        if ultimate_armed
+                        else ("クリックして発動" if ready else "ポイント不足")
+                    )
+                    self.canvas.create_text(
+                        (ux1 + ux2) / 2, uy1 + 48,
+                        text=ult_help, fill="white", font=("Arial", 8),
+                    )
 
                 plant_bounds = self._plant_button_bounds()
                 if plant_bounds:
@@ -865,6 +1018,34 @@ class RenderingUIMixin:
                     self.canvas.create_rectangle(px1+14, py2-20, px2-14, py2-12, fill="#4b3a22", outline="")
                     self.canvas.create_rectangle(px1+14, py2-20, px1+14+(px2-px1-28)*progress, py2-12,
                                                 fill="#f39c12", outline="")
+
+                orb_bounds = self._orb_button_bounds()
+                if orb_bounds:
+                    ox1, oy1, ox2, oy2 = orb_bounds
+                    collecting = selected.is_collecting_orb
+                    self.canvas.create_rectangle(
+                        ox1, oy1, ox2, oy2, fill="#241536",
+                        outline="#b06cff" if collecting else "#6d4a91", width=2,
+                    )
+                    self.canvas.create_text(
+                        (ox1 + ox2) / 2, oy1 + 22,
+                        text="COLLECTING..." if collecting else "ORB +2",
+                        fill="#d9b3ff", font=("Arial", 10, "bold"),
+                    )
+                    progress = min(
+                        1.0,
+                        selected.orb_collect_timer
+                        / max(1, ORB_COLLECT_REQUIRED_TICKS),
+                    )
+                    self.canvas.create_rectangle(
+                        ox1 + 14, oy2 - 20, ox2 - 14, oy2 - 12,
+                        fill="#49325f", outline="",
+                    )
+                    self.canvas.create_rectangle(
+                        ox1 + 14, oy2 - 20,
+                        ox1 + 14 + (ox2 - ox1 - 28) * progress, oy2 - 12,
+                        fill="#b06cff", outline="",
+                    )
 
         if self.match_over:
             self._draw_victory_overlay()
@@ -897,12 +1078,12 @@ class RenderingUIMixin:
 
         self.canvas.create_text(
             total_w / 2 - score_half_w - gap, score_y,
-            text=self.attacker_team_name, fill="#c0392b", font=("Arial", 15, "bold"),
+            text=get_team_short_name(self.attacker_team_name), fill="#c0392b", font=("Arial", 15, "bold"),
             anchor="e",
         )
         self.canvas.create_text(
             total_w / 2 + score_half_w + gap, score_y,
-            text=self.defender_team_name, fill="#27ae60", font=("Arial", 15, "bold"),
+            text=get_team_short_name(self.defender_team_name), fill="#27ae60", font=("Arial", 15, "bold"),
             anchor="w",
         )
 

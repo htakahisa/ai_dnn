@@ -106,11 +106,7 @@ class DefenderRetakeDuelingDQN(nn.Module):
 # ---------------------------------------------------------------------------
 # 補助関数(LOS / BFS)。abilities_los.py / train_defender_retake.py の複製実装。
 #
-# 注意: game_state には smokes(煙リスト)が含まれないため、この推論用LOSは
-# 壁のみを考慮する(スモークによる遮蔽は考慮しない)。同様に
-# ally_ability_active の判定もエネミー側デバフ状態のみで代用し、
-# 味方スモーク展開中フラグは常に0として扱う(learning_defender_search.py
-# と同じ簡略化方針)。
+# 実戦ではgame_stateのsmoke_cellsを使い、ゲーム本体と同じ遮蔽を適用する。
 # ---------------------------------------------------------------------------
 def _line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
@@ -133,11 +129,12 @@ def _line_cells(p1, p2):
             y0 += sy
 
 
-def _has_los(grid, p1, p2):
-    for r, c in _line_cells(p1, p2):
+def _has_los(grid, p1, p2, smoke_cells=()):
+    cells = _line_cells(p1, p2)
+    for r, c in cells:
         if grid[r, c] == 1:
             return False
-    return True
+    return len(cells) <= 2 or not any(cell in smoke_cells for cell in cells)
 
 
 def _bfs_distance_map(grid, goal):
@@ -455,7 +452,7 @@ class LearningDefenderRetakeGCController:
         visible_enemies = [
             e
             for e in enemies
-            if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
+            if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos), smoke_cells)
         ]
 
         # ------------------------------------------------------------------
@@ -478,18 +475,25 @@ class LearningDefenderRetakeGCController:
             d = int(self._dist_map[ur, uc])
             return d if d >= 0 else 10**9
 
+        defusing_defenders = [
+            d for d in alive_defenders if int(getattr(d, "defuse_timer", 0)) > 0
+        ]
         designated_defuser = (
-            min(alive_defenders, key=lambda d: (_retake_dist(d), d.name))
+            min(defusing_defenders or alive_defenders, key=lambda d: (_retake_dist(d), d.name))
             if alive_defenders else None
         )
         is_designated = designated_defuser is char
 
-        # Smoke the spike before the first defuse tick.  A retake smoke is a
-        # cover action, not a blind reaction to a visible enemy: cast it when
-        # an ally is already in defuse range (or is currently defusing), and
-        # do not spend the charge if the spike area is already covered.
+        # A defuse is consecutive: turning to fight or selecting an ability
+        # resets its progress. Keep the same defuser committed once started.
+        if is_designated and cheb_dist <= 1 and int(getattr(char, "defuse_timer", 0)) > 0:
+            return list(char.pos), "DEFUSE"
+
+        # Smoke the spike before the first defuse tick.  Entry range is used
+        # here rather than only the 1-cell defuse range: waiting until the
+        # defuser is already exposed at the spike was too late in practice.
         near_defuser = any(
-            max(abs(int(d.pos[0]) - pr), abs(int(d.pos[1]) - pc)) <= 1
+            max(abs(int(d.pos[0]) - pr), abs(int(d.pos[1]) - pc)) <= ENTRY_READY_RADIUS
             for d in alive_defenders
         )
         active_defuser = any(
@@ -582,6 +586,11 @@ class LearningDefenderRetakeGCController:
                 )
             return forced_next
 
+        # Inside smoke, start the protected defuse without waiting for the
+        # network/deadline. Adjacent enemies remain visible by game rules.
+        if is_designated and cheb_dist <= 1 and (r0, c0) in smoke_cells and not visible_enemies:
+            return list(char.pos), "DEFUSE"
+
         # 遠距離からは全員BFS最短。サイト近辺(3マス以内)に入ってからDQNへ戻す。
         if raw_dist > ENTRY_READY_RADIUS:
             forced_next = _bfs_next_step_avoiding_occupied(
@@ -596,14 +605,51 @@ class LearningDefenderRetakeGCController:
                     )
                 return forced_next
 
-        # サイト近辺では従来DQNを使う。
         time_critical = detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
-        lock_movement = (not time_critical) and bool(visible_enemies)
+
+        # A defender who sees an enemy while isolated should not take the
+        # first unsupported duel.  Move toward the spike/retake group until
+        # another defender is within the entry radius.  Once supported, the
+        # established rule of holding still during a visible gunfight applies.
+        nearby_allies = [
+            d for d in alive_defenders
+            if d is not char
+            and max(abs(int(d.pos[0]) - r0), abs(int(d.pos[1]) - c0)) <= ENTRY_READY_RADIUS
+        ]
+        if (
+            visible_enemies
+            and not nearby_allies
+            and getattr(char, "blind_remaining", 0) <= 0
+            and not time_critical
+            and raw_dist > 1
+        ):
+            regroup_next = _bfs_next_step_avoiding_occupied(
+                self._dist_map, grid, char, chars
+            )
+            if regroup_next != [r0, c0]:
+                if self.verbose:
+                    print(
+                        f"[GC RETAKE REGROUP] {char.name} isolated="
+                        f"{tuple(char.pos)} -> {tuple(regroup_next)}"
+                    )
+                return regroup_next
+
+        # サイト近辺では従来DQNを使う。
+        lock_movement = (
+            not time_critical
+            and bool(visible_enemies)
+            and bool(nearby_allies)
+        )
 
         # Hold the angle during a real gunfight.  Keep the deadline exception:
         # a nearly detonated spike still has to be defused even if an enemy is
         # visible.  A blinded defender is also allowed to reposition.
-        if visible_enemies and getattr(char, "blind_remaining", 0) <= 0 and not time_critical:
+        if (
+            visible_enemies
+            and nearby_allies
+            and getattr(char, "blind_remaining", 0) <= 0
+            and not time_critical
+        ):
             nearest = min(
                 visible_enemies,
                 key=lambda e: max(

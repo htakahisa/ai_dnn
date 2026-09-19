@@ -6,9 +6,15 @@
 """
 
 import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from party_presets import normalize_team_names
 
 
 @dataclass
@@ -179,7 +185,7 @@ class MatchSeries:
 def load_series_json(json_path: str) -> MatchSeries:
     """JSON ファイルから MatchSeries を構築"""
     with open(json_path, encoding="utf-8") as f:
-        data = json.load(f)
+        data = normalize_team_names(json.load(f))
 
     series = MatchSeries(
         team1=data.get("team1", ""),

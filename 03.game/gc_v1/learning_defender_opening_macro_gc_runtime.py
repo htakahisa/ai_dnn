@@ -88,10 +88,14 @@ def _default_model_candidates():
         # Also tolerate running the file from 03.game root during testing.
         data_dir = here / "gc_v1" / "data" / "defender_opening_macro_gc_data"
 
+    # The opening-only trainer's ``best_win_rate`` is not a full-round win
+    # rate; it is based on opening-plan reward. Prefer the completed/latest
+    # checkpoint so an old episode-20 ``best`` model cannot silently override
+    # a newly completed training run.
     return (
-        data_dir / "dqn_defender_opening_macro_gc_best.pt",
-        data_dir / "dqn_defender_opening_macro_gc_latest.pt",
         data_dir / "dqn_defender_opening_macro_gc_final.pt",
+        data_dir / "dqn_defender_opening_macro_gc_latest.pt",
+        data_dir / "dqn_defender_opening_macro_gc_best.pt",
     )
 
 

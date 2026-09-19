@@ -11,6 +11,8 @@ STAT_LABELS = {
     "max_hp": "最大HP",
     "reaction": "反応速度",
     "mental": "メンタル",
+    "condition_bonus": "調子補正",
+    "調子補正": "調子補正",
 }
 
 CONDITION_LABELS = {
@@ -32,6 +34,9 @@ def _number_text(value):
 
 def format_stat_bonus(stat_name, value):
     label = STAT_LABELS.get(stat_name, stat_name)
+
+    if stat_name in ("condition_bonus", "調子補正"):
+        return f"調子補正 {float(value) * 100:+g}ポイント"
 
     if stat_name in RATE_STATS:
         amount = round(float(value) * 100)

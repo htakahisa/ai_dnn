@@ -1,4 +1,6 @@
-"""Ability projectiles, smoke behavior, line of sight, flash, and recon."""
+"""Ability and ultimate effects, projectiles, smoke, and line of sight."""
+
+from collections import deque
 
 from game_core import (
     FLASH_SPEED_CELLS_PER_TICK,
@@ -10,10 +12,287 @@ from game_core import (
     RECON_REVEAL_SIZE,
     REVEAL_DURATION_TICKS,
     SMOKE_DURATION_TICKS,
+    FACING_VECTORS,
+    MONITOR_COLLISION_REVEAL_TICKS,
+    MONITOR_DRONE_HP,
+    RAID_DISTANCE_CELLS,
+    TUNNEL_BLIND_TICKS,
+    TUNNEL_BURST_DURATION_TICKS,
+    TUNNEL_HALF_WIDTH,
 )
 
 
+ULTIMATE_FACING_STEPS = {
+    "N": (-1, 0),
+    "NE": (-1, 1),
+    "E": (0, 1),
+    "SE": (1, 1),
+    "S": (1, 0),
+    "SW": (1, -1),
+    "W": (0, -1),
+    "NW": (-1, -1),
+}
+
+
+class MonitorDrone:
+    """Shootable Seeker ultimate unit."""
+
+    def __init__(self, owner, index, target_name=None):
+        self.name = f"{owner.name}:MONITOR:{index}"
+        self.owner_name = owner.name
+        self.team = owner.team
+        self.pos = list(owner.pos)
+        self.hp = MONITOR_DRONE_HP
+        self.max_hp = MONITOR_DRONE_HP
+        self.is_alive = True
+        self.is_ultimate_drone = True
+        self.target_name = target_name
+        self.dodge_rate = 0.0
+        self.moved_this_tick = False
+        self.defuse_timer = 0
+        self.reveal_remaining = 0
+        self.los_revealed = False
+        self.forced_facing_next_tick = None
+
+
 class AbilityLosMixin:
+
+    def _save_ultimate_points(self, owner):
+        saved = self.match_stats.setdefault(
+            owner.name,
+            {"kills": owner.kills, "deaths": owner.deaths},
+        )
+        saved["ultimate_points"] = int(owner.ultimate_points)
+
+    def _spend_ultimate(self, owner):
+        owner.ultimate_points = 0
+        self._save_ultimate_points(owner)
+
+    def execute_ai_ultimate(self, owner, ultimate_action):
+        """Execute an ultimate requested by a controller.
+
+        Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL", ...}``.
+        ESCAPE additionally requires a destination in ``target``.
+        """
+        if not owner.is_alive or not isinstance(ultimate_action, dict):
+            return False
+
+        ultimate_name = str(ultimate_action.get("ultimate", "")).upper()
+        if ultimate_name != owner.ultimate_name:
+            return False
+        if owner.ultimate_points < owner.ultimate_cost:
+            return False
+
+        if ultimate_name == "RAID":
+            step = ULTIMATE_FACING_STEPS.get(owner.facing)
+            if step is None:
+                return False
+            destination = tuple(owner.pos)
+            old_pos = tuple(owner.pos)
+            for distance in range(1, RAID_DISTANCE_CELLS + 1):
+                candidate = (
+                    old_pos[0] + step[0] * distance,
+                    old_pos[1] + step[1] * distance,
+                )
+                if not (
+                    0 <= candidate[0] < self.height
+                    and 0 <= candidate[1] < self.width
+                ):
+                    break
+                if self.grid[candidate[0], candidate[1]] == 1:
+                    break
+                if self._is_position_occupied(owner, candidate, old_pos):
+                    break
+                destination = candidate
+            if destination == old_pos:
+                return False
+            owner.pos = [destination[0], destination[1]]
+            owner.moved_this_tick = True
+            self._update_occupancy_after_move(old_pos, destination)
+            self._spend_ultimate(owner)
+            return True
+
+        if ultimate_name == "ESCAPE":
+            target = ultimate_action.get("target")
+            if not isinstance(target, (list, tuple)) or len(target) != 2:
+                return False
+            destination = (int(target[0]), int(target[1]))
+            old_pos = tuple(owner.pos)
+            if not (
+                0 <= destination[0] < self.height
+                and 0 <= destination[1] < self.width
+            ):
+                return False
+            if self.grid[destination[0], destination[1]] == 1:
+                return False
+            if self._is_position_occupied(owner, destination, old_pos):
+                return False
+            owner.pos = [destination[0], destination[1]]
+            owner.moved_this_tick = destination != old_pos
+            self._update_occupancy_after_move(old_pos, destination)
+            self._spend_ultimate(owner)
+            return True
+
+        if ultimate_name == "MONITOR":
+            enemies = sorted(
+                (
+                    char
+                    for char in self.chars
+                    if char.is_alive and char.team != owner.team
+                ),
+                key=lambda char: (
+                    max(
+                        abs(int(char.pos[0]) - int(owner.pos[0])),
+                        abs(int(char.pos[1]) - int(owner.pos[1])),
+                    ),
+                    str(char.name),
+                ),
+            )
+            targets = [enemy.name for enemy in enemies[:2]]
+            if len(targets) == 1:
+                targets.append(targets[0])
+            while len(targets) < 2:
+                targets.append(None)
+            start_index = int(getattr(self, "monitor_drone_serial", 0))
+            self.monitor_drone_serial = start_index + 2
+            self.monitor_drones.extend(
+                MonitorDrone(owner, start_index + index, targets[index])
+                for index in range(2)
+            )
+            self._spend_ultimate(owner)
+            return True
+
+        if ultimate_name == "TUNNEL":
+            cells = self._tunnel_cells(tuple(owner.pos), owner.facing)
+            if not cells:
+                return False
+            self.tunnel_bursts.append(
+                {
+                    "cells": cells,
+                    "remaining_ticks": TUNNEL_BURST_DURATION_TICKS,
+                    "owner": owner.name,
+                    "team": owner.team,
+                }
+            )
+            for char in self.chars:
+                if char.is_alive and char.team != owner.team and tuple(char.pos) in cells:
+                    char.blind_remaining = max(
+                        char.blind_remaining,
+                        TUNNEL_BLIND_TICKS,
+                    )
+                    # TUNNEL is cast before process_battle() decrements statuses.
+                    # Preserve the full 15 effective ticks, including this one.
+                    char.tunnel_blind_applied_tick = self.battle_tick + 1
+            self._spend_ultimate(owner)
+            return True
+
+        return False
+
+    def _tunnel_cells(self, start, facing):
+        """Wide, wall-piercing Paranoia-style corridor in facing direction."""
+        vector = FACING_VECTORS.get(facing)
+        if vector is None:
+            return set()
+        fx, fy = vector
+        sr, sc = start
+        cells = set()
+        for row in range(self.height):
+            for col in range(self.width):
+                dr, dc = row - sr, col - sc
+                forward = dc * fx + dr * fy
+                sideways = abs(dc * (-fy) + dr * fx)
+                if forward > 0.0 and sideways <= TUNNEL_HALF_WIDTH:
+                    cells.add((row, col))
+        return cells
+
+    def _drone_next_step(self, start, goal):
+        """One wall-aware cardinal step. Players and other drones are passable."""
+        if start == goal:
+            return start
+        queue = deque([start])
+        parent = {start: None}
+        while queue:
+            row, col = queue.popleft()
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nxt = (row + dr, col + dc)
+                if nxt in parent:
+                    continue
+                if not (0 <= nxt[0] < self.height and 0 <= nxt[1] < self.width):
+                    continue
+                if self.grid[nxt[0], nxt[1]] == 1:
+                    continue
+                parent[nxt] = (row, col)
+                if nxt == goal:
+                    step = nxt
+                    while parent[step] is not None and parent[step] != start:
+                        step = parent[step]
+                    return step
+                queue.append(nxt)
+        return start
+
+    def _advance_monitor_drones(self):
+        live_drones = [drone for drone in self.monitor_drones if drone.is_alive]
+        reserved_targets = {
+            drone.target_name for drone in live_drones if drone.target_name is not None
+        }
+        for drone in live_drones:
+            enemies = [
+                char
+                for char in self.chars
+                if char.is_alive and char.team != drone.team
+            ]
+            target = next(
+                (enemy for enemy in enemies if enemy.name == drone.target_name),
+                None,
+            )
+            if target is None and enemies:
+                candidates = [
+                    enemy for enemy in enemies if enemy.name not in reserved_targets
+                ] or enemies
+                target = min(
+                    candidates,
+                    key=lambda enemy: (
+                        max(
+                            abs(int(enemy.pos[0]) - int(drone.pos[0])),
+                            abs(int(enemy.pos[1]) - int(drone.pos[1])),
+                        ),
+                        str(enemy.name),
+                    ),
+                )
+                drone.target_name = target.name
+                reserved_targets.add(target.name)
+
+            old_pos = tuple(drone.pos)
+            if target is not None:
+                new_pos = self._drone_next_step(old_pos, tuple(target.pos))
+                drone.pos = [new_pos[0], new_pos[1]]
+            drone.moved_this_tick = tuple(drone.pos) != old_pos
+
+            collided = next(
+                (
+                    enemy
+                    for enemy in enemies
+                    if tuple(enemy.pos) == tuple(drone.pos)
+                ),
+                None,
+            )
+            if collided is not None:
+                collided.reveal_remaining = max(
+                    collided.reveal_remaining,
+                    MONITOR_COLLISION_REVEAL_TICKS,
+                )
+                drone.is_alive = False
+                continue
+
+            for enemy in enemies:
+                if self.check_cell_line_of_sight(
+                    tuple(drone.pos), tuple(enemy.pos), block_smoke=True
+                ):
+                    enemy.reveal_remaining = max(enemy.reveal_remaining, 1)
+
+        self.monitor_drones = [
+            drone for drone in self.monitor_drones if drone.is_alive
+        ]
 
     def execute_ai_ability(self, owner, ability_action):
         """AIコントローラーから受け取ったアビリティ要求を実行する。"""

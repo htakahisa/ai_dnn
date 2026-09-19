@@ -856,10 +856,10 @@ def _ghost_champions_roster():
 
 
 def _touyama_gaming_roster():
-    preset = get_preset("とうやまゲーミング")
+    preset = get_preset("Touyama Gaming")
     if preset is None or len(tuple(preset.players)) != 5:
         raise RuntimeError(
-            'party_presets.py に「とうやまゲーミング」の5人ロスターが必要です'
+            'party_presets.py に「Touyama Gaming」の5人ロスターが必要です'
         )
     return list(preset.players), preset
 
@@ -1402,7 +1402,7 @@ def main():
         default="touyama_gaming_v2",
         help=(
             "Training/evaluation opponent. Touyama Gaming v2 uses the "
-            "とうやまゲーミング preset roster."
+            "Touyama Gaming preset roster."
         ),
     )
     args = p.parse_args()

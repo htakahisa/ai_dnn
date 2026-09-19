@@ -1,0 +1,98 @@
+{
+  "episode": 2000,
+  "evaluation": {
+    "episodes": 90,
+    "seeds": [
+      3026091700,
+      5026091700,
+      6026091700
+    ],
+    "opponent_stats": [
+      100.0,
+      60.0,
+      40.0
+    ],
+    "round_win_rate": 0.20000000000000004,
+    "worst_round_win_rate": 0.16666666666666666,
+    "plant_rate": 0.38888888888888884,
+    "registered_plant_rate": 0.38888888888888884,
+    "worst_registered_plant_rate": 0.36666666666666664,
+    "guard_position_tick_rate": 0.4134351624513682,
+    "mean_ticks": 96.92222222222222,
+    "per_seed": [
+      {
+        "episodes": 30,
+        "seed": 3026091700,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.23333333333333334,
+        "plant_rate": 0.4,
+        "registered_plant_rate": 0.4,
+        "guard_position_tick_rate": 0.45531197301854975,
+        "mean_ticks": 100.33333333333333,
+        "carry_no_entry_rate": 0.5,
+        "carry_spawn_tick_rate": 0.17121803207628955,
+        "timeout_rate": 0.4666666666666667,
+        "combat_stop_rate": 0.2543103448275862,
+        "postplant_win_rate": 0.5833333333333334
+      },
+      {
+        "episodes": 30,
+        "seed": 5026091700,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.16666666666666666,
+        "plant_rate": 0.36666666666666664,
+        "registered_plant_rate": 0.36666666666666664,
+        "guard_position_tick_rate": 0.32296819787985864,
+        "mean_ticks": 95.73333333333333,
+        "carry_no_entry_rate": 0.36666666666666664,
+        "carry_spawn_tick_rate": 0.15417256011315417,
+        "timeout_rate": 0.4,
+        "combat_stop_rate": 0.21161825726141079,
+        "postplant_win_rate": 0.45454545454545453
+      },
+      {
+        "episodes": 30,
+        "seed": 6026091700,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.2,
+        "plant_rate": 0.4,
+        "registered_plant_rate": 0.4,
+        "guard_position_tick_rate": 0.4620253164556962,
+        "mean_ticks": 94.7,
+        "carry_no_entry_rate": 0.5,
+        "carry_spawn_tick_rate": 0.2701705855232826,
+        "timeout_rate": 0.3333333333333333,
+        "combat_stop_rate": 0.24242424242424243,
+        "postplant_win_rate": 0.5
+      }
+    ],
+    "postplant_win_rate": 0.5142857142857142,
+    "carry_no_entry_rate": 0.45555555555555555,
+    "carry_spawn_tick_rate": 0.19852039257090878,
+    "timeout_rate": 0.39999999999999997,
+    "combat_stop_rate": 0.2361176148377465,
+    "episode": 2000,
+    "entry_quality_passed": false
+  },
+  "models": {
+    "carry": "dqn_attacker_carry_gc_latest.pt",
+    "escort": "dqn_attacker_escort_gc_latest.pt",
+    "guard": "dqn_attacker_guard_gc_latest.pt"
+  },
+  "macro_source": {
+    "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_macro_gc_data\\dqn_attacker_macro_gc_final.pt",
+    "sha256": "308fa4f5eca1ccebfa9df996b79a58618ada94a9760d2c8abcb537f2353ef95e"
+  }
+}

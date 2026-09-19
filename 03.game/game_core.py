@@ -4,6 +4,7 @@ Generated from run_game(6).py without changing gameplay values.
 """
 
 import importlib.util
+import math
 import random
 from pathlib import Path
 
@@ -20,13 +21,13 @@ DEFUSE_REQUIRED_TICKS = 6
 SMOKE_DURATION_TICKS = 25
 MOVING_ACCURACY = 0.30
 MOVING_TARGET_HIT_MULTIPLIER = 0.70
-BLIND_DURATION_TICKS = 3
+BLIND_DURATION_TICKS = 10
 FLASH_BURST_DURATION_TICKS = 2
 BLIND_ACCURACY_MULTIPLIER = 0.10
 FLASH_SPEED_CELLS_PER_TICK = 3
 FLASH_MAX_FLIGHT_TICKS = 5
 RECON_SPEED_CELLS_PER_TICK = 3
-REVEAL_DURATION_TICKS = 5
+REVEAL_DURATION_TICKS = 15
 REVEALED_DODGE_MULTIPLIER = 0.50
 RECON_REVEAL_SIZE = 9
 COMBO_DISPLAY_TICKS = 3
@@ -36,6 +37,28 @@ SPIKE_DETONATION_TICKS = 55
 RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
+
+# Ultimate / orb system. One tick is 100 ms, so an orb takes three seconds.
+ORB_COLLECT_REQUIRED_TICKS = 30
+ORB_ULTIMATE_POINTS = 2
+ULTIMATE_COSTS = {
+    "タイガー": 3,
+    "スモーカー": 6,
+    "シーカー": 8,
+    "フラッシュ": 5,
+}
+ULTIMATE_NAMES = {
+    "タイガー": "RAID",
+    "スモーカー": "ESCAPE",
+    "シーカー": "MONITOR",
+    "フラッシュ": "TUNNEL",
+}
+RAID_DISTANCE_CELLS = 5
+MONITOR_DRONE_HP = 200
+MONITOR_COLLISION_REVEAL_TICKS = 10
+TUNNEL_BLIND_TICKS = 15
+TUNNEL_HALF_WIDTH = 2.5
+TUNNEL_BURST_DURATION_TICKS = 2
 
 # 向き(facing)関連
 FACING_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
@@ -65,7 +88,7 @@ EXPLOSION_OUTLINE_WIDTH = 3
 
 # とるようパラメータ
 ABILITY_TYPES = ["flash", "smoke", "recon", "none"]
-FLASH_BLIND_TICKS = 3
+FLASH_BLIND_TICKS = 10
 SMOKE_RADIUS = 2
 RECON_RADIUS = 4
 DEFUSE_REQUIRED = 6
@@ -412,6 +435,7 @@ class Character:
         has_spike=False,
         kills=0,
         deaths=0,
+        ultimate_points=0,
         mental_pressure=0.0,
     ):
         self.name = name
@@ -431,6 +455,7 @@ class Character:
         self.hp = MAX_HP
         self.kills = kills
         self.deaths = deaths
+        self.ultimate_points = max(0, int(ultimate_points))
         # 覚醒条件用。試合通算キルとは別に、各ラウンド開始時に0から数える。
         self.round_kills = 0
 
@@ -493,6 +518,8 @@ class Character:
             )
         else:
             self.condition_modifier = 0.0
+        self.condition_bonus = 0.0
+        self.sampled_condition_modifier = self.condition_modifier
         condition_multiplier = 1.0 + self.condition_modifier
         self.accuracy = max(
             0.0,
@@ -508,6 +535,9 @@ class Character:
             "シーカー": "RECON",
             "タイガー": "HUNT",
         }.get(self.role, "FLASH")
+        self.ultimate_name = ULTIMATE_NAMES.get(self.role, "TUNNEL")
+        self.ultimate_cost = ULTIMATE_COSTS.get(self.role, 5)
+        self.ultimate_points = min(self.ultimate_points, self.ultimate_cost)
         self.moved_this_tick = False
         self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
@@ -515,6 +545,10 @@ class Character:
         self.blind_remaining = 0.0
         self.reveal_remaining = 0.0
         self.los_revealed = False
+        self.orb_collect_timer = 0
+        self.collecting_orb_pos = None
+        self.is_collecting_orb = False
+        self.collecting_orb_this_tick = False
         # このラウンドで発動しているプレイヤーコンボ名。
         self.active_combos = []
         self.active_awakening = None
@@ -601,11 +635,26 @@ def _canonical_combo_stat_key(key):
         "mentality": "mental",
         "form_variance": "form_variance",
         "condition_variance": "form_variance",
+        "condition_bonus": "condition_bonus",
+        "調子補正": "condition_bonus",
         "consistency": "form_variance",
         "調子の波": "form_variance",
         "メンタル": "mental",
     }
     return aliases.get(normalized)
+
+
+def _refresh_condition_modifier(character):
+    """Apply only the changed condition portion, preserving other stat bonuses."""
+    old = float(getattr(character, "condition_modifier", 0.0))
+    sampled = float(getattr(character, "sampled_condition_modifier", old))
+    new = max(-0.40, min(0.40, sampled + character.condition_bonus))
+    character.condition_modifier = new
+    for attr, base_attr in (("accuracy", "base_accuracy_before_condition"),
+                           ("hs_rate", "base_hs_rate_before_condition")):
+        current = float(getattr(character, attr))
+        base = float(getattr(character, base_attr, current / max(0.01, 1.0 + old)))
+        setattr(character, attr, max(0.0, current + base * (new - old)))
 
 
 def _apply_combo_bonus(character, stat_key, value):
@@ -616,6 +665,9 @@ def _apply_combo_bonus(character, stat_key, value):
     try:
         amount = float(value)
     except (TypeError, ValueError):
+        return False
+
+    if not math.isfinite(amount):
         return False
 
     if attr in ("accuracy", "hs_rate", "dodge_rate"):
@@ -649,9 +701,15 @@ def _apply_combo_bonus(character, stat_key, value):
                 float(getattr(character, "mental", 5.0)) + amount,
             ),
         )
+    elif attr == "condition_bonus":
+        if not hasattr(character, "sampled_condition_modifier"):
+            character.sampled_condition_modifier = float(getattr(character, "condition_modifier", 0.0))
+        character.condition_bonus = float(getattr(character, "condition_bonus", 0.0)) + amount
+        _refresh_condition_modifier(character)
     elif attr == "form_variance":
         old_max_delta = float(getattr(character, "max_condition_delta", 0.0))
-        old_modifier = float(getattr(character, "condition_modifier", 0.0))
+        old_modifier = float(getattr(character, "sampled_condition_modifier",
+                                     getattr(character, "condition_modifier", 0.0)))
         old_ratio = old_modifier / old_max_delta if old_max_delta > 0.0 else 0.0
         character.form_variance = max(
             0.0,
@@ -660,21 +718,12 @@ def _apply_combo_bonus(character, stat_key, value):
         character.max_condition_delta = (character.form_variance / 10.0) * 0.40
         # Keep the current good/bad direction while applying the new swing
         # amplitude immediately to this active round.
-        character.condition_modifier = max(
+        character.sampled_condition_modifier = max(
             -character.max_condition_delta,
             min(character.max_condition_delta, old_ratio * character.max_condition_delta),
         )
-        multiplier = 1.0 + character.condition_modifier
-        character.accuracy = max(
-            0.0,
-            float(getattr(character, "base_accuracy_before_condition", character.accuracy))
-            * multiplier,
-        )
-        character.hs_rate = max(
-            0.0,
-            float(getattr(character, "base_hs_rate_before_condition", character.hs_rate))
-            * multiplier,
-        )
+        character.condition_bonus = float(getattr(character, "condition_bonus", 0.0))
+        _refresh_condition_modifier(character)
     elif attr == "max_hp":
         old_max = character.max_hp
         character.max_hp = max(1, int(round(character.max_hp + amount)))

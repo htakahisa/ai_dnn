@@ -10,6 +10,9 @@ class TacticalRoundTracker:
     def reset(self):
         self.start_positions = {}
         self.first_site_tick = {}
+        self.rush_entry_tick = None
+        self.rush_entry_site = None
+        self.rush_entry_spread = None
         self.visited_sites = set()
         self.max_spread = 0
         self.ticks = 0
@@ -57,6 +60,29 @@ class TacticalRoundTracker:
             for site in self.visited_sites:
                 self.first_site_tick.setdefault(site, self.ticks)
 
+            # A rush is a fast, compact group entry.  Use the first moment
+            # when at least 80% of the original attackers are in one site;
+            # this remains useful if one player dies on the way in.  The
+            # previous implementation used the final round length, so a
+            # genuine early rush was commonly recorded as ``default``.
+            rush_threshold = max(4, int(len(self.start_positions) * 0.8))
+            if self.rush_entry_tick is None:
+                for site in ("A", "B"):
+                    members = [c for c in attackers if self._site(c.pos) == site]
+                    if len(members) < rush_threshold:
+                        continue
+                    positions = [tuple(map(int, c.pos)) for c in members]
+                    group_spread = max(
+                        max(abs(a[0] - b[0]), abs(a[1] - b[1]))
+                        for a in positions
+                        for b in positions
+                    )
+                    if group_spread <= 8:
+                        self.rush_entry_tick = self.ticks
+                        self.rush_entry_site = site
+                        self.rush_entry_spread = group_spread
+                        break
+
     def finish(self, planted_pos=None, target_pos=None):
         final_pos = planted_pos or target_pos
         final_site = self._site(final_pos)
@@ -67,10 +93,14 @@ class TacticalRoundTracker:
         )
         if visited_other:
             tactic = "fake"
+        elif (
+            self.rush_entry_tick is not None
+            and self.rush_entry_tick <= 35
+            and self.rush_entry_site == final_site
+        ):
+            tactic = "rush"
         elif self.max_spread >= max(8, self.width // 4):
             tactic = "split"
-        elif self.ticks <= 35:
-            tactic = "rush"
         else:
             tactic = "default"
 
@@ -112,5 +142,8 @@ class TacticalRoundTracker:
             "final_attack_site": final_site,
             "visited_sites": sorted(self.visited_sites),
             "max_attacker_spread": self.max_spread,
+            "rush_entry_tick": self.rush_entry_tick,
+            "rush_entry_site": self.rush_entry_site,
+            "rush_entry_spread": self.rush_entry_spread,
             **fake_effect,
         }

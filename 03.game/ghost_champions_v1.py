@@ -15,14 +15,14 @@ def _paths(data_dir, *names):
 CARRY = _paths("attacker_carry_gc_data","dqn_attacker_carry_gc_best_by_eval.pt","dqn_attacker_carry_gc_latest.pt")
 ESCORT = _paths("attacker_escort_gc_data","dqn_attacker_escort_gc_best_by_eval.pt","dqn_attacker_escort_gc_latest.pt")
 RETRIEVE = _paths("attacker_retrieve_gc_data","dqn_attacker_retrieve_gc_best_by_eval.pt","dqn_attacker_retrieve_gc_latest.pt","dqn_attacker_retrieve_gc_final.pt")
-GUARD = _paths("attacker_guard_gc_data","dqn_attacker_guard_gc_8000_backup.pt","dqn_attacker_guard_gc_best_by_eval.pt","dqn_attacker_guard_gc_latest.pt")
+GUARD = _paths("attacker_guard_gc_data","dqn_attacker_guard_gc_best_by_eval.pt","dqn_attacker_guard_gc_latest.pt","dqn_attacker_guard_gc_8000_backup.pt")
 SEARCH = _paths("defender_search_gc_data","dqn_defender_search_gc_best_by_eval.pt","dqn_defender_search_gc_latest.pt")
 RETAKE = _paths("defender_retake_gc_data","dqn_defender_retake_gc_best_by_eval.pt","dqn_defender_retake_gc_final.pt")
 
 def _first_existing(paths):
     return next((p for p in paths if p.exists()), None)
 
-def _load(module_name, class_names, model_paths, greedy=True):
+def _load(module_name, class_names, model_paths, greedy=True, **controller_kwargs):
     path = _first_existing(model_paths)
     if path is None:
         print(f"[GC v1][WARN] model missing: {module_name}")
@@ -32,8 +32,11 @@ def _load(module_name, class_names, model_paths, greedy=True):
         cls = next((getattr(mod,n,None) for n in class_names if getattr(mod,n,None) is not None), None)
         if cls is None:
             raise AttributeError(f"class not found: {class_names}")
-        ctrl = cls(model_path=str(path), greedy=greedy)
-        print(f"[GC v1] loaded {cls.__name__}: {path}")
+        ctrl = cls(model_path=str(path), greedy=greedy, **controller_kwargs)
+        metadata = (f" (positioning_version={getattr(ctrl, 'positioning_version', 0)}, "
+                    f"episode={getattr(ctrl, 'model_episode', None)})"
+                    if module_name == "learning_attacker_carry_gc" else "")
+        print(f"[GC v1] loaded {cls.__name__}: {path}{metadata}")
         return ctrl
     except Exception as e:
         print(f"[GC v1][WARN] load failed {module_name}: {e}")
@@ -46,7 +49,7 @@ class GhostChampionsV1AttackerController(BaseController):
         self.carry = _load("learning_attacker_carry_gc",("LearningAttackerCarryGCController","LearningAttackerCarryController"),CARRY,greedy)
         self.escort = _load("learning_attacker_escort_gc",("LearningAttackerEscortGCController","LearningAttackerEscortController"),ESCORT,greedy)
         self.retrieve = _load("learning_attacker_retrieve_gc",("LearningAttackerRetrieveGCController","LearningAttackerRetrieveTouyamaController"),RETRIEVE,greedy)
-        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy)
+        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=True)
         self.site_ability_used_by_team = False
         print(f"[GC v1][A] carry={self.carry is not None} escort={self.escort is not None} retrieve={self.retrieve is not None} guard={self.guard is not None}")
 
@@ -111,7 +114,9 @@ class GhostChampionsV1AttackerController(BaseController):
         if carrier is None or len(alive_attackers) <= 1:
             return result
         escorts = [c for c in alive_attackers if c is not carrier]
-        support_distance = 6
+        # Three cells is close enough to trade immediately; six was only
+        # visual proximity and still left the carrier effectively isolated.
+        support_distance = 3
         supporters = [
             c for c in escorts
             if max(
@@ -144,10 +149,10 @@ class GhostChampionsV1AttackerController(BaseController):
         preferred = (cr - (1 if vr > 0 else -1 if vr < 0 else 0) * 2,
                      cc - (1 if vc > 0 else -1 if vc < 0 else 0) * 2)
         goals = []
-        for r in range(max(0, cr - 4), min(grid.shape[0], cr + 5)):
-            for c in range(max(0, cc - 4), min(grid.shape[1], cc + 5)):
+        for r in range(max(0, cr - 3), min(grid.shape[0], cr + 4)):
+            for c in range(max(0, cc - 3), min(grid.shape[1], cc + 4)):
                 dist = max(abs(r - cr), abs(c - cc))
-                if 2 <= dist <= 4 and grid[r, c] != 1 and (r, c) not in occupied:
+                if 1 <= dist <= 3 and grid[r, c] != 1 and (r, c) not in occupied:
                     goals.append((r, c))
         if not goals:
             return result

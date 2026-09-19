@@ -1,0 +1,8 @@
+{
+  "model": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+  "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_positioning_v2_before_real_training.pt",
+  "episode": 80,
+  "positioning_version": 3,
+  "sha256": "e0ac2f45d6097b28eae2eb475981428b1c5eb7b34163b69115920f4bb59f6718",
+  "validation": "gc_v1/reports/real_carry_series_validation.json"
+}
