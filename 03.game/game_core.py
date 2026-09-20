@@ -552,7 +552,10 @@ class Character:
         # このラウンドで発動しているプレイヤーコンボ名。
         self.active_combos = []
         self.active_awakening = None
-        self.triggered_awakening_events = set()
+        # event_name -> {"ticks_remaining": int, "snapshot": dict}
+        self.active_awakenings = {}
+        # event_name -> 発動済み回数（escapefromthebattle等の再発動判定に使用）
+        self.awakening_activation_counts = {}
 
         # とるよう設定
         self.ability_type = "none"  # "flash" / "smoke" / "recon" / "none"
@@ -562,6 +565,12 @@ class Character:
         # 被弾した場合、次のTickだけ強制的にこの方向(8方向)を向く。
         self.forced_facing_next_tick = None
         self.facing_forced_this_tick = False
+
+        # 覚醒・コンボで一時的に上昇させる、1Tickあたりの移動マス数。既定は1。
+        self.move_steps_per_tick = 1
+
+        # 覚醒等でスモーク越しに視認・射撃できるようになったかどうか。既定はFalse。
+        self.sees_through_smoke = False
 
     @property
     def condition_text(self):
@@ -640,6 +649,9 @@ def _canonical_combo_stat_key(key):
         "consistency": "form_variance",
         "調子の波": "form_variance",
         "メンタル": "mental",
+        "move_steps": "move_steps_per_tick",
+        "move_steps_per_tick": "move_steps_per_tick",
+        "移動マス数": "move_steps_per_tick",
     }
     return aliases.get(normalized)
 
@@ -706,6 +718,9 @@ def _apply_combo_bonus(character, stat_key, value):
             character.sampled_condition_modifier = float(getattr(character, "condition_modifier", 0.0))
         character.condition_bonus = float(getattr(character, "condition_bonus", 0.0)) + amount
         _refresh_condition_modifier(character)
+    elif attr == "move_steps_per_tick":
+        current_steps = int(getattr(character, "move_steps_per_tick", 1))
+        character.move_steps_per_tick = max(1, current_steps + int(round(amount)))
     elif attr == "form_variance":
         old_max_delta = float(getattr(character, "max_condition_delta", 0.0))
         old_modifier = float(getattr(character, "sampled_condition_modifier",
