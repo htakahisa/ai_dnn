@@ -150,13 +150,29 @@ AWAKENING_EVENTS = [
         "effect_text": "かすかな匂いを嗅ぎつけスモーク越しに敵を攻撃する。",
     },
     {
-        "name": "見渡す限り、逃さない",
+        "name": "見渡す限り、逃さないピヨ",
         "player": "とりさん",
         "condition": "own_charge_depleted",
-        "duration_ticks": 20,
+        "duration_ticks": 30,
         "recharge_on_expire": True,
         "bonuses": {},
-        "effect_text": "リコン使用から20Tick後、再びリコンが使用可能になる。",
+        "effect_text": "リコン使用から30Tick後、再びリコンが使用可能になる。",
+    },
+    {
+        "name": "にゃんだお前は!? やっつけるニャ!",
+        "player": "ねこさん",
+        "condition": "enemy_in_straight_line",
+        "condition_value": 3,
+        "bonuses": {"hs_rate": 3, "accuracy": 3, "reaction": 300},
+        "leap_on_kill": True,
+        "effect_text": "直線上下左右3マス以内の敵に飛びかかり攻撃。撃破すると相手の位置へ移動しスモークを焚く。",
+    },
+    {
+        "name": "もふもふガード",
+        "player": "ひつじさん",
+        "condition": "iron_will_triggered",
+        "bonuses": {},
+        "effect_text": "強烈な一撃を受けるも、もふもふの毛で受け止めた。",
     },
 ]
 

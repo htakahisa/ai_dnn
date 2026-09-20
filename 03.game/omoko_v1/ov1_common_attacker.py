@@ -15,9 +15,9 @@ from ov1_character_stats import ROSTER_ORDER
 from player_combos import COMBOS
 from party_presets import get_preset
 
-_TEAM_PRESET = get_preset("おもこゲーミング")
+_TEAM_PRESET = get_preset("Omoko Gaming")
 if _TEAM_PRESET is None:
-    raise RuntimeError("party_presets.py に「おもこゲーミング」プリセットが見つかりません。")
+    raise RuntimeError("party_presets.py に「Omoko Gaming」プリセットが見つかりません。")
 
 SPIKE_HOLDER = _TEAM_PRESET.spike_holder  # 通常ラウンド開始時の既定キャリア(party_presets.py準拠)
 

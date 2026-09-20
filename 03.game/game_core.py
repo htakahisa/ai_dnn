@@ -487,6 +487,10 @@ class Character:
         # 常時 Hit/HS 上昇は廃止。キル時HP+50は battle_logic._kill_character() 側で処理する。
         self.hunter_active = self.role == "タイガー"
 
+        # ひつじさんの固有パッシブ「気合の鉢巻」：
+        # 最大HPの状態から致死ダメージを受けた場合のみ、1ラウンドに1度だけHP1で耐える。
+        self.iron_will_charges = 1 if self.base_name == "ひつじさん" else 0
+
         # コンディションは現在の素の命中率・HS率へ乗算する。
         # 命中率とHS率には同じ係数を使用し、選手全体の調子として一貫させる。
         self.base_accuracy_before_condition = self.accuracy

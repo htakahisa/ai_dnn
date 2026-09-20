@@ -488,6 +488,18 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "おもこと森で出会った",
+        "players": ("ねこさん", "いぬさん", "おもこ", "ひつじさん", "とりさん"),
+        "player_bonuses": {
+            "ねこさん": {"hs_rate": 0.1, "dodge_rate": 0.1,  "accuracy": 0.1, "reaction": 10},
+            "いぬさん": {"hs_rate": 0.1, "dodge_rate": 0.1,  "accuracy": 0.1, "reaction": 10},
+            "おもこ": {"hs_rate": 0.0, "dodge_rate": 0.0,  "accuracy": 0.0, "reaction": 10},
+            "とりさん": {"hs_rate": 0.1, "dodge_rate": 0.1,  "accuracy": 0.1, "reaction": 10},
+            "ひつじさん": {"hs_rate": 0.1, "dodge_rate": 0.1,  "accuracy": 0.1, "reaction": 10},
+        },
+        "renames": {},
+    },
+    {
         "name": "1st contact",
         "players": ("Lar0k",),
         "bonuses": {

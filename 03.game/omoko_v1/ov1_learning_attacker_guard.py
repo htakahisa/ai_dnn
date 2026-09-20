@@ -68,7 +68,7 @@ from ov1_character_stats import (
     ROSTER_ORDER,
 )
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
-from ov1_train_attacker_guard import GUARD_WATCH_POINTS_BY_NAME
+from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -458,10 +458,9 @@ class Ov1LearningAttackerGuardController:
         r0, c0 = int(char.pos[0]), int(char.pos[1])
 
         obs = np.zeros(OBS_DIM, dtype=np.float32)
-        own_watch_points = GUARD_WATCH_POINTS_BY_NAME.get(char.name, [])
         nearest_watch = (
-            _nearest_visible_watch_point(grid, (r0, c0), own_watch_points, smoke_cells)
-            if own_watch_points else None
+            _nearest_visible_watch_point(grid, (r0, c0), GUARD_WATCH_POINT_CELLS, smoke_cells)
+            if GUARD_WATCH_POINT_CELLS else None
         )
 
         obs[0] = r0 / height

@@ -64,10 +64,12 @@ from ov1_character_stats import (
     ROSTER_ORDER,
 )
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
+from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
 from ov1_train_attacker_escort import (
     LINEUP_ABILITY_MARKERS,
     LINEUP_TRIGGER_RADIUS,
     FLASH_RANGE,
+    DEFENDER_SPAWN_VALUE,
 )
 
 # ---------------------------------------------------------------------------
@@ -120,32 +122,22 @@ ESCORT_HOLD_TICKS_DEFAULT = 3  # train_attacker_escort.pyのESCORT_HOLD_TICKSと
                                  # チェックポイントにhold_ticksが保存されていればそちらを優先する。
 
 
-def _parse_watch_points(maze_str):
-    lines = [line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()]
-    if not lines or len({len(line) for line in lines}) != 1:
-        raise ValueError("escort mapの行長が一致していません")
-    return {
-        marker: (r, c)
-        for r, line in enumerate(lines)
-        for c, marker in enumerate(line)
-        if marker.islower()
-    }
-
-
-def _parse_position_hints(maze_str):
-    """大文字マーカー(S/R/Fを除く)から、対応する警戒点(同じ文字の小文字)への
-    推奨立ち位置ヒント一覧を作る。1つの警戒点に複数ヒントがあってもよい。"""
-    lines = [line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()]
-    if not lines or len({len(line) for line in lines}) != 1:
-        raise ValueError("escort mapの行長が一致していません")
-    hints = {}
-    for r, line in enumerate(lines):
-        for c, marker in enumerate(line):
-            if marker in LINEUP_ABILITY_MARKERS:
-                continue
-            if marker.isalpha() and not marker.islower():
-                hints.setdefault(marker.lower(), []).append((r, c))
-    return hints
+def _parse_defender_watch_points(defender_maze_str, escort_maze_str):
+    """守備配置想定マップ(ov1_map_data_defender_simulate.py)上のDefenderスポーン
+    候補(DEFENDER_SPAWN_VALUE)のうち、escort map側で壁でないセルを、
+    escortが警戒してfacingする対象点として返す。"""
+    defender_lines = [line.strip() for line in defender_maze_str.strip("\n").split("\n") if line.strip()]
+    escort_lines = [line.strip() for line in escort_maze_str.strip("\n").split("\n") if line.strip()]
+    if len(defender_lines) != len(escort_lines):
+        raise ValueError("defender simulate mapとescort mapの行数が一致していません")
+    points = []
+    for r, (d_line, e_line) in enumerate(zip(defender_lines, escort_lines)):
+        if len(d_line) != len(e_line):
+            raise ValueError("defender simulate mapとescort mapの行長が一致していません")
+        for c, marker in enumerate(d_line):
+            if marker == str(DEFENDER_SPAWN_VALUE) and e_line[c] != "1":
+                points.append((r, c))
+    return points
 
 
 def _parse_ability_lineup_points(maze_str):
@@ -162,17 +154,9 @@ def _parse_ability_lineup_points(maze_str):
     return points
 
 
-WATCH_POINTS = tuple(
-    _parse_watch_points(ESCORT_MAZE_STR)[name]
-    for name in sorted(_parse_watch_points(ESCORT_MAZE_STR))
-)
+WATCH_POINTS = tuple(sorted(_parse_defender_watch_points(DEFENDER_SIM_MAZE_STR, ESCORT_MAZE_STR)))
 ABILITY_LINEUP_POINTS = _parse_ability_lineup_points(ESCORT_MAZE_STR)
-_WATCH_POINTS_BY_LETTER = _parse_watch_points(ESCORT_MAZE_STR)
-_POSITION_HINTS_BY_LETTER = _parse_position_hints(ESCORT_MAZE_STR)
-WATCH_POINT_HINTS = {
-    pos: _POSITION_HINTS_BY_LETTER.get(letter, [])
-    for letter, pos in _WATCH_POINTS_BY_LETTER.items()
-}
+WATCH_POINT_HINTS = {}
 POSITION_HINT_DECAY = (1.0, 0.9, 0.75)  # train_attacker_escort.pyのPOSITION_HINT_DECAYと同一値
 
 
@@ -622,6 +606,67 @@ class Ov1LearningAttackerEscortController:
                 best_char, best_dist = c, dist
         return best_char, best_dist
 
+    # ------------------------------------------------------------------
+    # おもこ専用: 「にげるっすー!」覚醒中は、視認可能な敵がいる限り
+    # 壁のみ考慮したLOSが通らないマスへの移動を最優先させる。
+    # ------------------------------------------------------------------
+    _OMOKO_ESCAPE_AWAKENING_NAME = "にげるっすー!"
+
+    def _omoko_escape_active(self, char):
+        return (
+            getattr(char, "base_name", char.name) == "おもこ"
+            and self._OMOKO_ESCAPE_AWAKENING_NAME in getattr(char, "active_awakenings", {})
+        )
+
+    def _visible_enemy_positions(self, grid, chars, my_team, pos):
+        return [
+            (int(c.pos[0]), int(c.pos[1]))
+            for c in chars
+            if getattr(c, "is_alive", True)
+            and getattr(c, "team", None) != my_team
+            and _has_los_walls_only(grid, pos, (int(c.pos[0]), int(c.pos[1])))
+        ]
+
+    def _find_escape_cell(self, grid, pos, chars, my_team, search_limit=80):
+        visited = {pos}
+        queue = deque([pos])
+        checked = 0
+        while queue and checked < search_limit:
+            cur = queue.popleft()
+            checked += 1
+            if cur != pos and not self._visible_enemy_positions(grid, chars, my_team, cur):
+                return cur
+            r, c = cur
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nxt = (r + dr, c + dc)
+                if nxt in visited or self._is_wall(grid, *nxt):
+                    continue
+                visited.add(nxt)
+                queue.append(nxt)
+        return None
+
+    def _omoko_escape_step(self, char, grid, chars):
+        if not self._omoko_escape_active(char):
+            return None
+        pos = (int(char.pos[0]), int(char.pos[1]))
+        if not self._visible_enemy_positions(grid, chars, char.team, pos):
+            return None
+        safe_cell = self._find_escape_cell(grid, pos, chars, char.team)
+        if safe_cell is None or safe_cell == pos:
+            return None
+        dist_map = _build_distance_map_walls_only(grid, [safe_cell])
+        r, c = pos
+        best_cell, best_dist = pos, dist_map[r, c]
+        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nr, nc = r + dr, c + dc
+            if self._is_wall(grid, nr, nc):
+                continue
+            d = dist_map[nr, nc]
+            if np.isfinite(d) and d < best_dist:
+                best_dist = d
+                best_cell = (nr, nc)
+        return [best_cell[0], best_cell[1]]
+
     def _available_lineup_cell(self, ability, grid, pos, carry_pos):
         """ov1_train_attacker_escort.pyの_available_lineup_cell()・
         _apply_ability()内フォールバックと同一ロジック。「キャリアーが
@@ -639,7 +684,7 @@ class Ov1LearningAttackerEscortController:
                 continue
             carry_near = carry_pos is not None and _chebyshev(carry_pos, cell) <= LINEUP_TRIGGER_RADIUS
             los_ready = _chebyshev(pos, cell) <= max_range and _has_los_walls_only(grid, pos, cell)
-            if carry_near or los_ready:
+            if carry_near and los_ready:
                 candidates.append(cell)
         if not candidates:
             return None
@@ -882,6 +927,12 @@ class Ov1LearningAttackerEscortController:
 
         self._maybe_advance_tick(char, grid, chars)
         self._refresh_watch_assignments(grid, chars, char.team)
+
+        escape_step = self._omoko_escape_step(char, grid, chars)
+        if escape_step is not None:
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return escape_step
 
         carry_pos, _goal = self._resolve_carry_and_goal(char, game_state)
         obs = self._build_obs(char, game_state, st)

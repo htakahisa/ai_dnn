@@ -146,19 +146,11 @@ DEFUSE_LOSS_PENALTY = -1.0   # 解除完了によるDefender勝利
 WIPE_LOSS_PENALTY = -0.5     # 自チーム全滅(解除は時間の問題)による実質敗北
 
 # ============================================================================
-# 警戒ポイント(watch points): 各サイトで「敵はここから来るはず」という座標を
-# 手動指定する(ov1_train_attacker_carry.pyのSMOKE_LINEUP_CELLS_BY_SITEと同じ
-# 考え方)。視認できる場合はそこへfacingを向ける学習をshapingで後押しし、
-# 一つも視認できない場合のみ、最寄りの警戒ポイントへ近づくよう弱く後押しする。
-# 未設定(空リスト)のサイトはこの機能が発火しない。マップを見ながら
-# 座標を埋めること(SITE_PLANT_POSと同じインデックス順)。
-GUARD_WATCH_POINTS_BY_NAME = {
-    "いぬさん": [(9, 3),(2, 38)],
-    "ねこさん": [(9, 3), (2, 38)],
-    "おもこ": [(9, 3), (2, 38)],
-    "ひつじさん": [(11, 7), (2, 38)],
-    "とりさん": [(11, 7), (2, 38)],
-}
+# 警戒ポイント(watch points): map_data_guard.py の 9 マーカーから自動抽出する
+# (実際の抽出は _GUARD_GRID 読み込み後、GUARD_POSITION_CELLSの近くで行う)。
+# 名前に依存しないグローバル座標リストとして扱い、各キャラは自分の現在地から
+# 見て最も近い(かつ視認できる)1点をfacingで警戒する。
+# ============================================================================
 
 
 # ============================================================================
@@ -327,6 +319,12 @@ if len(GUARD_POSITION_CELLS) < N_ATTACKERS:
         f"固定チーム{N_ATTACKERS}人分を配置できません。"
     )
 
+GUARD_WATCH_POINT_CELLS = [
+    (r, c) for r in range(HEIGHT) for c in range(WIDTH) if _GUARD_GRID[r, c] == 9
+]
+if not GUARD_WATCH_POINT_CELLS:
+    print("[WARN] map_data_guard.pyに警戒ポイント(9)が見つかりません。警戒ポイント機能は無効化されます。")
+
 
 def _assign_guard_positions_for_site(plant_pos, num_positions=N_ATTACKERS):
     """プラント地点にChebyshev距離が近い順でガードポジション(6)をnum_positions個選ぶ。"""
@@ -372,10 +370,7 @@ def _multi_source_bfs_distance_map(source_cells):
     return dist
 
 
-WATCH_POINT_DIST_MAPS_BY_NAME = {
-    name: _multi_source_bfs_distance_map(points)
-    for name, points in GUARD_WATCH_POINTS_BY_NAME.items()
-}
+WATCH_POINT_DIST_MAP = _multi_source_bfs_distance_map(GUARD_WATCH_POINT_CELLS)
 
 
 # ============================================================================
@@ -745,11 +740,10 @@ class GuardEnv:
             "progress_ratio": min(defuser.defuse_timer / DEFUSE_REQUIRED_TICKS, 1.0),
         }
 
-    def _nearest_visible_watch_point(self, name, pos, smoke_cells):
-        """自分(name)に紐づく警戒ポイントのうち、現在位置から視認できる
+    def _nearest_visible_watch_point(self, pos, smoke_cells):
+        """マップ上の全警戒ポイント(9)のうち、現在位置から視認できる
         ものだけを候補にし、最も近い1点を返す(無ければNone)。"""
-        watch_points = GUARD_WATCH_POINTS_BY_NAME.get(name, [])
-        visible = [wp for wp in watch_points if has_los(pos, wp, smoke_cells)]
+        visible = [wp for wp in GUARD_WATCH_POINT_CELLS if has_los(pos, wp, smoke_cells)]
         if not visible:
             return None
         return min(visible, key=lambda wp: max(abs(wp[0] - pos[0]), abs(wp[1] - pos[1])))
@@ -763,7 +757,7 @@ class GuardEnv:
             if not a.is_alive:
                 continue
             unit_has_spike_los = has_los(a.pos, self.planted_pos, smoke_cells)
-            watch_point_info = self._nearest_visible_watch_point(a.name, a.pos, smoke_cells)
+            watch_point_info = self._nearest_visible_watch_point(a.pos, smoke_cells)
             obs_dict[a.name] = build_observation(
                 a, self.attackers, self.defenders, self.guard_memory,
                 smoke_cells, self._own_smoke_active("A"), self.detonate_timer,
@@ -879,7 +873,7 @@ class GuardEnv:
             # 警戒ポイント判定はこのtickのfacing決定と同じ時点(移動前)の位置で
             # 行う。実際の敵が見えている間は通常の交戦報酬(命中率経由)に完全に
             # 委ね、このshapingは加えない。
-            nearest_watch = self._nearest_visible_watch_point(a.name, a.pos, smoke_cells)
+            nearest_watch = self._nearest_visible_watch_point(a.pos, smoke_cells)
             nearest_watch_by_name[a.name] = nearest_watch
             if nearest_watch is not None and not has_enemy_los:
                 watch_alignment_info[a.name] = (facing, tuple(a.pos), nearest_watch)
@@ -1191,9 +1185,9 @@ class GuardEnv:
                     elif a.moved_this_tick:
                         r += HOLD_POSITION_PENALTY
                     else:
-                        watch_pts = GUARD_WATCH_POINTS_BY_NAME.get(a.name)
-                        if watch_pts and has_los(a.pos, watch_pts[0], smoke_cells):
-                            facing_ok = _direction_alignment(a.facing, tuple(a.pos), watch_pts[0]) > 0.5
+                        nearest_wp = self._nearest_visible_watch_point(tuple(a.pos), smoke_cells)
+                        if nearest_wp is not None:
+                            facing_ok = _direction_alignment(a.facing, tuple(a.pos), nearest_wp) > 0.5
                             r += HOLD_POSITION_BONUS if facing_ok else HOLD_POSITION_BONUS * 0.2
                         else:
                             r += HOLD_POSITION_BONUS
@@ -1212,9 +1206,9 @@ class GuardEnv:
                     r += GUARD_WATCH_ALIGN_WEIGHT * _direction_alignment(align_facing, align_from, align_to)
             elif (
                 mode == "position"
-                and GUARD_WATCH_POINTS_BY_NAME.get(a.name)
+                and GUARD_WATCH_POINT_CELLS
             ):
-                wdist_map = WATCH_POINT_DIST_MAPS_BY_NAME.get(a.name)
+                wdist_map = WATCH_POINT_DIST_MAP
                 wdist = wdist_map[r0, c0] if wdist_map is not None else None
                 if wdist is not None and wdist < 0:
                     wdist = None

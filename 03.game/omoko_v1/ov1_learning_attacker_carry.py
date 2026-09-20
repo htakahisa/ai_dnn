@@ -82,7 +82,7 @@ SMOKE_LINEUP_CELLS_BY_SITE = _marker_cells_by_site(
     CARRY_MAZE_STR, SMOKE_LINEUP_VALUE_BY_SITE
 )
 
-ABILITY_RANGE = 8
+ABILITY_RANGE = 7
 SIGHTING_STALENESS_CAP = 20
 
 # train_attacker_carry.py の game_core定数と一致させる(自己完結ルールのため複製)
@@ -91,7 +91,7 @@ PLANT_REQUIRED_TICKS = 4
 
 # --- 本番プレイ時のサイト選択・target選定をAI側に委ねる ---------------------
 AI_CONTROLLED_SITE_SELECTION = True    # Trueのとき、下の確率で選択する
-SITE_SELECTION_WEIGHTS = {"left": 0.0, "right": 1.0}
+SITE_SELECTION_WEIGHTS = {"left": 1.0, "right": 0.0}
 
 
 # ============================================================================
@@ -334,6 +334,13 @@ class Ov1LearningAttackerCarryController:
         self._target_dist_map = None
         self._cached_target_pos = None
         self._cell_openness = {}
+        # 直前tickのキャリア名。スパイクは死亡時のみ落ちるため、これが変化した
+        # ("キャリア交代"が起きた)瞬間を、拾い直し後に残りの中継点を
+        # スキップして直接設置目標へ向かわせる判定に使う。
+        self._carrier_name = None
+        # 同一ラウンド内でreset_round()が再度呼ばれても初期化をスキップするための
+        # ラウンド識別キー(フェーズ切り替え等からの意図しない再初期化を防ぐ)。
+        self._last_reset_round_key = None
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
@@ -380,6 +387,20 @@ class Ov1LearningAttackerCarryController:
                 self._priority_cells_by_site[site_key].append(cell)
 
     def reset_round(self):
+        # フェーズ切り替え(retrieve→carry復帰など)で同一ラウンド内に
+        # reset_round()が再度呼ばれると、既に通過した中継点を無視して
+        # 再び中継点へ向かってしまう(スパイクを落として拾い直した後、
+        # 中継点へ逆戻りする不具合)。本物のgameのcurrent_roundが
+        # 変わっていない場合は、既存のサイト・中継点・目標地点の状態を
+        # 維持し、初期化をスキップする。
+        current_round_key = (
+            getattr(self._real_game, "current_round", None)
+            if self._real_game is not None else None
+        )
+        if current_round_key is not None and current_round_key == self._last_reset_round_key:
+            return
+        self._last_reset_round_key = current_round_key
+
         self._sighting = None
         self._active_site = None
         self._active_target = None
@@ -387,6 +408,7 @@ class Ov1LearningAttackerCarryController:
         self._waypoint_index = 0
         self._target_dist_map = None
         self._cached_target_pos = None
+        self._carrier_name = None
 
         if AI_CONTROLLED_SITE_SELECTION and self._real_game is not None:
             chosen_site = self._choose_weighted_site()
@@ -681,6 +703,14 @@ class Ov1LearningAttackerCarryController:
             return next_pos
 
         # --- ここからキャリア ---
+        # スパイクが途中で落とされ、別キャラが拾い直した場合(=キャリア交代。
+        # スパイクは死亡時のみ落ちるため、名前が変われば必ず交代とみなせる)は、
+        # 中継点への経路をやり直さず、残りの中継点をスキップして直接
+        # 設置目標(_active_target)へ向かわせる。
+        if self._carrier_name is not None and self._carrier_name != char.name:
+            self._reached_waypoint = True
+        self._carrier_name = char.name
+
         if self._active_target is None:
             # AI_CONTROLLED_SITE_SELECTION=Falseの場合などのフォールバック。
             fallback = game_state.get("target_plant_pos")

@@ -1044,6 +1044,9 @@ class BattleLogicMixin:
             self.spike_pos = tuple(target.pos)
             target.has_spike = False
 
+        if hasattr(self, "_maybe_trigger_leap_awakening"):
+            self._maybe_trigger_leap_awakening(shooter, target)
+
         # 1人生存になった瞬間を記録しておき、ラウンド終了時にクラッチ判定へ使う。
         self._ensure_round_tracking_state()
         for watch_team in ("A", "D"):
@@ -1279,10 +1282,18 @@ class BattleLogicMixin:
             )
 
             if damage > 0:
+                pre_damage_hp = target.hp
                 target.hp = max(0, target.hp - damage)
                 if target.hp <= 0:
                     if getattr(target, "is_ultimate_drone", False):
                         target.is_alive = False
+                    elif (
+                        getattr(target, "iron_will_charges", 0) > 0
+                        and pre_damage_hp >= target.max_hp
+                    ):
+                        target.iron_will_charges -= 1
+                        target.hp = 1
+                        target.iron_will_triggered_this_tick = True
                     else:
                         self._kill_character(shooter, target)
 
@@ -1384,6 +1395,8 @@ class BattleLogicMixin:
         self._check_awakening_events()
         # 次Tickへ持ち越さないよう、判定後にリセットする。
         self.smoke_thrown_this_tick = False
+        for char in self.chars:
+            char.iron_will_triggered_this_tick = False
 
         # 射撃を解決してから解除完了を判定する。
         self._resolve_defuse_completion()

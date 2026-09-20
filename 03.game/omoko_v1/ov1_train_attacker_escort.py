@@ -317,15 +317,15 @@ def _build_distance_map_walls_only(grid, source_cells):
 
 def _parse_escort_map(maze_str):
     """地形数字をgridへ変換する。
-    小文字 = 警戒点。対応する大文字(同じ文字) = その警戒点へLOSを通すための
-    推奨立ち位置ヒント(1つの警戒点に複数個あってもよい)。
-    S/R/F = 定点アビリティ位置(警戒点ヒントとは無関係の別体系)。
+    S/R/F = 定点アビリティ位置。
+    警戒点(旧: 小文字の射線ポイント/大文字の立ち位置ヒント)は現在の仕組みでは
+    有効化が難しいため廃止した。代わりにEscortEnv.__init__で
+    ov1_map_data_defender_simulate.pyの守備配置(defender_spawns)を
+    警戒対象点として使う。
     """
     lines = [line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()]
     if not lines or len({len(line) for line in lines}) != 1:
         raise ValueError("escort mapの行長が一致していません")
-    watch_points = {}
-    position_hints = {}
     ability_lineup_points = {ability: [] for ability in LINEUP_ABILITY_MARKERS.values()}
     grid_rows = []
     for r, line in enumerate(lines):
@@ -336,16 +336,10 @@ def _parse_escort_map(maze_str):
             elif marker in LINEUP_ABILITY_MARKERS:
                 row.append(0)
                 ability_lineup_points[LINEUP_ABILITY_MARKERS[marker]].append((r, c))
-            elif marker.isalpha():
-                row.append(0)
-                if marker.islower():
-                    watch_points[marker] = (r, c)
-                else:
-                    position_hints.setdefault(marker.lower(), []).append((r, c))
             else:
                 raise ValueError(f"escort mapに不正な文字があります: {marker!r}")
         grid_rows.append(row)
-    return np.array(grid_rows, dtype=np.int32), watch_points, position_hints, ability_lineup_points
+    return np.array(grid_rows, dtype=np.int32), ability_lineup_points
 
 
 # ---------------------------------------------------------------------------
@@ -405,17 +399,7 @@ class EscortEnv:
         hold_ticks=ESCORT_HOLD_TICKS,
         seed=None,
     ):
-        self.grid, self.watch_points_by_name, self.position_hints_by_letter, self.ability_lineup_points = (
-            _parse_escort_map(maze_str)
-        )
-        self.watch_points = tuple(
-            self.watch_points_by_name[name]
-            for name in sorted(self.watch_points_by_name)
-        )
-        self.watch_point_hints = {
-            pos: self.position_hints_by_letter.get(letter, [])
-            for letter, pos in self.watch_points_by_name.items()
-        }
+        self.grid, self.ability_lineup_points = _parse_escort_map(maze_str)
         self.height, self.width = self.grid.shape
 
         self.max_ticks = max_ticks
@@ -457,6 +441,11 @@ class EscortEnv:
             (r, c) for r in range(self.height) for c in range(self.width)
             if _DEFENDER_SIM_GRID[r, c] == DEFENDER_SPAWN_VALUE and self.grid[r, c] != 1
         ]
+        # 警戒点(旧: escort map上のa-A射線ポイント)は仕組み上有効化が難しいため廃止し、
+        # 代わりにov1_map_data_defender_simulate.pyの守備配置(defender_spawns)を
+        # escortが警戒してfacingする対象点として使う。
+        self.watch_points = tuple(self.defender_spawns)
+        self.watch_point_hints = {}
         self.walkable_cells = list(zip(*np.where(self.grid != 1)))
 
         self.rng = random.Random(seed)
@@ -811,7 +800,7 @@ class EscortEnv:
                 _chebyshev(pos, cell) <= max_range
                 and _has_los(self.grid, smoke_cells, pos, cell)
             )
-            if carry_near or los_ready:
+            if carry_near and los_ready:
                 candidates.append(cell)
         if not candidates:
             return None

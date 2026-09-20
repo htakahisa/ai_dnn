@@ -5,6 +5,7 @@ from game_core import (
     PLAYER_COMBOS,
     AWAKENING_EVENTS,
     COMBO_DISPLAY_TICKS,
+    SMOKE_DURATION_TICKS,
     _character_stats,
     _clamp_rate,
     _canonical_combo_stat_key,
@@ -342,6 +343,12 @@ class ComboAwakeningMixin:
                 getattr(self, "smoke_thrown_this_tick", False)
             )
 
+        if condition == "iron_will_triggered":
+            # このTickに「気合の鉢巻」(HP1で耐える効果)が発動した瞬間に発動する。
+            return char.is_alive and bool(
+                getattr(char, "iron_will_triggered_this_tick", False)
+            )
+
         if condition == "own_charge_depleted":
             # 自身のロール対応アビリティのチャージが0の間、発動し続ける。
             charge_attr = {
@@ -352,6 +359,26 @@ class ComboAwakeningMixin:
             if charge_attr is None:
                 return False
             return char.is_alive and getattr(char, charge_attr, 0) <= 0
+
+        if condition == "enemy_in_straight_line":
+            # 自身のマスから上下左右方向(直線)へcondition_value以内の敵がいれば発動。
+            try:
+                max_distance = int(value)
+            except (TypeError, ValueError):
+                max_distance = 3
+            if not char.is_alive:
+                return False
+            for other in self.chars:
+                if other.team == char.team or not other.is_alive:
+                    continue
+                dr = other.pos[0] - char.pos[0]
+                dc = other.pos[1] - char.pos[1]
+                in_line = (dr == 0 and 0 < abs(dc) <= max_distance) or (
+                    dc == 0 and 0 < abs(dr) <= max_distance
+                )
+                if in_line and self.check_line_of_sight(char, other):
+                    return True
+            return False
 
         if condition == "escapefromthebattle":
             # このTickに射手/標的として交戦し、なおかつ生存している場合に発動。
@@ -461,6 +488,45 @@ class ComboAwakeningMixin:
                     "players": (char.base_name,),
                     "display_players": (char.display_name,),
                     "effect_text": effect_text,
+                }
+            )
+
+    def _maybe_trigger_leap_awakening(self, shooter, target):
+        """leap_on_kill指定の覚醒が有効な撃破時、相手の位置へ移動し
+        キャラ自身のアビリティとは別枠でその場にスモークを焚く。
+        1ラウンドにつき1度だけ発動する。"""
+        active = getattr(shooter, "active_awakenings", None)
+        if not active or not shooter.is_alive:
+            return
+
+        used_names = getattr(shooter, "_leap_awakenings_used", None)
+        if used_names is None:
+            used_names = set()
+            shooter._leap_awakenings_used = used_names
+
+        for event in AWAKENING_EVENTS:
+            if not isinstance(event, dict) or not event.get("leap_on_kill"):
+                continue
+            event_name = str(event.get("name", ""))
+            if event_name not in active or event_name in used_names:
+                continue
+
+            used_names.add(event_name)
+            impact = (int(target.pos[0]), int(target.pos[1]))
+            shooter.pos = [impact[0], impact[1]]
+            cells = {
+                (rr, cc)
+                for rr in range(impact[0] - 1, impact[0] + 2)
+                for cc in range(impact[1] - 1, impact[1] + 2)
+                if 0 <= rr < self.height
+                and 0 <= cc < self.width
+                and self.grid[rr, cc] != 1
+            }
+            self.smokes.append(
+                {
+                    "cells": cells,
+                    "remaining_ticks": SMOKE_DURATION_TICKS,
+                    "owner": shooter.name,
                 }
             )
 
