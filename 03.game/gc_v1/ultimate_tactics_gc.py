@@ -1,4 +1,9 @@
-"""Observable target construction for GC learned ultimate actions."""
+"""Observable context and target construction for GC learned ultimate actions."""
+
+import numpy as np
+
+
+ULTIMATE_CONTEXT_DIM = 4
 
 FACING_STEPS = {
     "N": (-1, 0), "NE": (-1, 1), "E": (0, 1), "SE": (1, 1),
@@ -9,6 +14,38 @@ FACING_STEPS = {
 def ultimate_ready(char):
     return (getattr(char, "ultimate_cost", 0) > 0
             and getattr(char, "ultimate_points", 0) >= char.ultimate_cost)
+
+
+def ultimate_context_features(char, engaged=False, objective_window=False, urgent=False):
+    """Return learned cast context without exposing hidden opponent state.
+
+    Context order is ready, direct combat, objective timing, and urgency.  The
+    action mask still owns executability; these values let one shared output
+    distinguish a useful cast from merely having enough points.
+    """
+    return np.asarray((
+        float(ultimate_ready(char)),
+        float(bool(engaged)),
+        float(bool(objective_window)),
+        float(bool(urgent)),
+    ), dtype=np.float32)
+
+
+def tactical_ultimate_window(char, context):
+    """Whether an observable context is a suitable training label for the ult."""
+    if context is None or len(context) < ULTIMATE_CONTEXT_DIM or context[0] <= 0:
+        return False
+    engaged, objective, urgent = (bool(context[1]), bool(context[2]), bool(context[3]))
+    name = str(getattr(char, "ultimate_name", "")).upper()
+    if name == "RAID":
+        return engaged or objective
+    if name == "ESCAPE":
+        return objective or (engaged and urgent)
+    if name == "MONITOR":
+        return objective and not engaged
+    if name == "TUNNEL":
+        return engaged or objective
+    return False
 
 
 def _occupied(chars, owner):

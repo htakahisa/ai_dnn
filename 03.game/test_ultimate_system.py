@@ -6,6 +6,7 @@ from abilities_los import AbilityLosMixin
 from battle_logic import BattleLogicMixin
 from game_core import Character, ORB_COLLECT_REQUIRED_TICKS
 from map_data import NEW_MAZE_STR
+from gc_v1.ultimate_tactics_gc import build_ultimate_action
 
 
 class FixedController:
@@ -60,6 +61,23 @@ def make_character(name, team, pos, points=0):
 
 
 class UltimateSystemTests(unittest.TestCase):
+    def test_gc_learned_ultimate_payloads_are_executable(self):
+        grid = np.zeros((9, 12), dtype=np.int32)
+        tiger = make_character("something", "A", (4, 1), 3)
+        tiger.facing = "E"
+        smoker = make_character("Demon1", "A", (2, 2), 6)
+        seeker = make_character("Leo", "A", (3, 2), 8)
+        flash = make_character("Chronicle", "A", (5, 2), 5)
+        chars = [tiger, smoker, seeker, flash]
+
+        self.assertEqual(build_ultimate_action(grid, tiger, chars), {"ultimate": "RAID"})
+        self.assertEqual(
+            build_ultimate_action(grid, smoker, chars, destination=(7, 10)),
+            {"ultimate": "ESCAPE", "target": (7, 10)},
+        )
+        self.assertEqual(build_ultimate_action(grid, seeker, chars), {"ultimate": "MONITOR"})
+        self.assertEqual(build_ultimate_action(grid, flash, chars), {"ultimate": "TUNNEL"})
+
     def test_role_ultimate_costs(self):
         expected = {
             "something": ("RAID", 3),
@@ -72,7 +90,7 @@ class UltimateSystemTests(unittest.TestCase):
             self.assertEqual((char.ultimate_name, char.ultimate_cost), (ultimate, cost))
             self.assertEqual(char.ultimate_points, cost)
 
-    def test_map_has_two_orb_spawn_cells(self):
+    def test_map_has_configured_orb_spawn_cells(self):
         rows = [line for line in NEW_MAZE_STR.strip().splitlines() if line]
         cells = [
             (row, col)
@@ -80,7 +98,7 @@ class UltimateSystemTests(unittest.TestCase):
             for col, value in enumerate(values)
             if value == "5"
         ]
-        self.assertEqual(cells, [(14, 20), (14, 36)])
+        self.assertEqual(cells, [(16, 23), (17, 8), (20, 42)])
 
     def test_raid_stops_before_wall_and_spends_points(self):
         game = UltimateTestGame()

@@ -10,10 +10,41 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "gc_v1"))
 import train_attacker_gc_real_curriculum as curriculum
+import evaluate_gc_curriculum_checkpoint as checkpoint_evaluator
 import navigation_intent_gc as intent
 
 
 class RealCurriculumTests(unittest.TestCase):
+    def test_checkpoint_evaluator_builds_current_phase_architectures(self):
+        policies = {
+            "carry": curriculum.runtime.AttackerCarryDuelingDQN(
+                curriculum.runtime.FACING_HEAD_OBS_DIM,
+                curriculum.runtime.ACTION_DIM,
+            ),
+            "escort": curriculum.escort_runtime.DuelingQNetwork(
+                curriculum.escort_runtime.FACING_HEAD_OBS_DIM,
+                curriculum.escort_runtime.N_ACTIONS,
+            ),
+            "guard": curriculum.guard_runtime.AttackerGuardDuelingDQN(
+                curriculum.guard_runtime.ULTIMATE_CONTEXT_OBS_DIM,
+                curriculum.guard_runtime.ACTION_DIM,
+            ),
+        }
+        checkpoints = {
+            phase: {"model_state_dict": policy.state_dict()}
+            for phase, policy in policies.items()
+        }
+        rebuilt = checkpoint_evaluator.build_policies(checkpoints)
+        for phase in curriculum.PHASES:
+            self.assertEqual(
+                rebuilt[phase].advantage_head[-1].out_features,
+                policies[phase].advantage_head[-1].out_features,
+            )
+            self.assertEqual(
+                rebuilt[phase].feature[0].in_features,
+                policies[phase].feature[0].in_features,
+            )
+
     def test_navigation_loop_does_not_repeat_progress_reward(self):
         tracker = curriculum.ProgressTracker()
         self.assertGreater(tracker.step("Absol", (2, 2), 10, 9, False), 0)
@@ -65,6 +96,34 @@ class RealCurriculumTests(unittest.TestCase):
                 "escort", directional_obs, np.ones(6, dtype=bool),
                 NS(game=object()), (object(), {"chars": []}))
         self.assertEqual(action, curriculum.escort_runtime.ACTION_LEFT)
+
+        support_obs = np.zeros(84, dtype=np.float32)
+        support_obs[80:84] = (0, 0, 0, 1)
+        support_obs[49:53] = (1, 1, 1, -1)
+        with patch.object(curriculum, "can_engage", return_value=False):
+            action = curriculum.observable_teacher_action(
+                "escort", support_obs, np.ones(7, dtype=bool),
+                NS(game=object()), (object(), {"chars": []}))
+        self.assertEqual(action, curriculum.escort_runtime.ACTION_RIGHT)
+
+        commitment_obs = np.zeros(94, dtype=np.float32)
+        commitment_obs[84:90] = (0, 0, 0, 1, 1, 0)
+        with patch.object(curriculum, "can_engage", return_value=False):
+            action = curriculum.observable_teacher_action(
+                "escort", commitment_obs, np.ones(7, dtype=bool),
+                NS(game=object()), (object(), {"chars": []}))
+        self.assertEqual(action, curriculum.escort_runtime.ACTION_RIGHT)
+
+    def test_ultimate_teacher_requires_the_explicit_tactical_context(self):
+        from types import SimpleNamespace as NS
+        char = NS(ultimate_name="TUNNEL", ultimate_points=5, ultimate_cost=5)
+        obs = np.zeros(curriculum.runtime.ULTIMATE_CONTEXT_OBS_DIM, dtype=np.float32)
+        obs[-4:] = (1, 0, 0, 0)
+        self.assertFalse(curriculum.ultimate_teacher_needed(
+            "carry", char, {"chars": []}, object(), obs))
+        obs[-4:] = (1, 1, 0, 0)
+        self.assertTrue(curriculum.ultimate_teacher_needed(
+            "carry", char, {"chars": []}, object(), obs))
 
     def test_observable_combat_teacher_stops_all_three_phases(self):
         from types import SimpleNamespace as NS
@@ -133,7 +192,8 @@ class RealCurriculumTests(unittest.TestCase):
         for old_dim, new_dim, actions in ((31, 39, 11), (41, 49, 6), (39, 57, 11),
                                           (49, 67, 6), (57, 61, 11), (67, 71, 6),
                                           (61, 65, 11), (65, 66, 11),
-                                          (71, 75, 6), (75, 76, 6), (76, 80, 6)):
+                                          (71, 75, 6), (75, 76, 6), (76, 80, 6),
+                                          (80, 84, 6), (84, 90, 7), (90, 94, 7)):
             source = curriculum.escort_runtime.DuelingQNetwork(old_dim, actions)
             extended = curriculum.escort_runtime.DuelingQNetwork(new_dim, actions)
             extended.load_state_dict(curriculum.expand_policy_state({"model_state_dict": source.state_dict()}, new_dim))
@@ -164,6 +224,11 @@ class RealCurriculumTests(unittest.TestCase):
             game, ahead, [carrier, ahead, behind], {}, True)
         self.assertEqual(formation[0], 1)  # selected MAIN escort
         self.assertEqual(formation[1], 1)  # exactly three route cells ahead
+        np.testing.assert_array_equal(
+            intent.carrier_screen_commitment_features(
+                game, ahead, [carrier, ahead, behind], {}),
+            np.array((0, 0, 0, 1, 1, 1), dtype=np.float32),
+        )
         status = intent.carrier_screening_status(game, carrier, [carrier, ahead, behind], {})
         self.assertFalse(intent.designated_route_blocking(status, carrier))
         ahead.pos = (2, 4)
@@ -176,11 +241,37 @@ class RealCurriculumTests(unittest.TestCase):
                 game, ahead, [carrier, ahead, behind], {}),
             np.array((1, 1, 0, 1), dtype=np.float32),
         )
+        np.testing.assert_array_equal(
+            intent.carrier_safe_screen_advance_features(
+                game, ahead, [carrier, ahead, behind], {}),
+            np.array((0, 0, 0, 1), dtype=np.float32),
+        )
+        np.testing.assert_array_equal(
+            intent.carrier_screen_commitment_features(
+                game, ahead, [carrier, ahead, behind], {}),
+            np.array((0, 0, 0, 1, 1, 0), dtype=np.float32),
+        )
         ahead.pos = (2, 1)
         behind.pos = (2, 5)
         # The assignment is stable while strategy/carrier/group stay unchanged.
         status = intent.carrier_screening_status(game, carrier, [carrier, ahead, behind], {})
         self.assertEqual(status["designated"].name, "Xdll")
+
+    def test_screen_commitment_starts_before_legacy_formation_range(self):
+        from types import SimpleNamespace as NS
+        grid = np.zeros((5, 50), dtype=int)
+        carrier = NS(name="carry", team="A", pos=(2, 3), is_alive=True, has_spike=True)
+        escort = NS(name="escort", team="A", pos=(2, 1), is_alive=True, has_spike=False)
+        env = NS(current_strategy="A_RUSH", targets={"carry": (2, 38), "escort": (2, 38)},
+                 assignment={"carry": ("A", "SITE", "MAIN"),
+                             "escort": ("A", "SITE", "MAIN")})
+        game = NS(grid=grid, target_plant_pos=(2, 38),
+                  attacker_controller=NS(macro_controller=NS(env=env)))
+        status = intent.carrier_screening_status(game, carrier, [carrier, escort], {})
+        self.assertGreater(status["final_distance"], intent.FORMATION_MAX_FINAL_DISTANCE)
+        commitment = intent.carrier_screen_commitment_features(
+            game, escort, [carrier, escort], {})
+        np.testing.assert_array_equal(commitment, (0, 0, 0, 1, 1, 0))
 
     def test_screening_assignment_follows_mid_group_and_skips_fake_sell(self):
         from types import SimpleNamespace as NS
@@ -288,6 +379,53 @@ class RealCurriculumTests(unittest.TestCase):
         torch.testing.assert_close(policy.feature[0].weight[:, :65], old_column)
         self.assertFalse(torch.equal(policy.feature[0].weight[:, 65], new_column))
 
+    def test_v17_updates_only_coordination_inputs_and_ultimate_output(self):
+        source = curriculum.escort_runtime.DuelingQNetwork(80, 6)
+        policy = curriculum.escort_runtime.DuelingQNetwork(94, 7)
+        checkpoint = {"model_state_dict": source.state_dict()}
+        policy.load_state_dict(curriculum.expand_policy_state(checkpoint, 94, 7))
+
+        old_feature = policy.feature[0].weight[:, :76].detach().clone()
+        old_action_weight = policy.advantage_head[-1].weight[:6].detach().clone()
+        old_action_bias = policy.advantage_head[-1].bias[:6].detach().clone()
+        curriculum.restrict_policy_updates(policy, range(76, 94), (6,))
+        optimizer = torch.optim.Adam(
+            [p for p in policy.parameters() if p.requires_grad], lr=0.01)
+        obs = torch.randn(16, 94)
+        obs[:, 76:94] = 1
+        loss = -policy(obs)[:, 6].mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        torch.testing.assert_close(policy.feature[0].weight[:, :76], old_feature)
+        torch.testing.assert_close(policy.advantage_head[-1].weight[:6], old_action_weight)
+        torch.testing.assert_close(policy.advantage_head[-1].bias[:6], old_action_bias)
+
+    def test_balanced_ultimate_classification_separates_cast_and_save(self):
+        policy = curriculum.escort_runtime.DuelingQNetwork(94, 7)
+        curriculum.restrict_policy_updates(policy, range(76, 94), (6,))
+        optimizer = torch.optim.Adam(
+            [p for p in policy.parameters() if p.requires_grad], lr=0.01)
+        positive = np.zeros(94, dtype=np.float32)
+        negative = np.zeros(94, dtype=np.float32)
+        positive[90:94] = (1, 1, 0, 1)
+        negative[90:94] = (1, 0, 0, 0)
+        mask = np.ones(7, dtype=bool)
+
+        def margins():
+            with torch.no_grad():
+                q = policy(torch.from_numpy(np.stack((positive, negative))))
+                return (q[:, 6] - q[:, :6].max(dim=1).values).numpy()
+
+        before = margins()
+        for _ in range(20):
+            curriculum.optimize_ultimate_classification(
+                policy, optimizer, [(positive, mask)], [(negative, mask)], 6, 2.0)
+        after = margins()
+        self.assertGreater(after[0], before[0])
+        self.assertLess(after[1], before[1])
+
     def test_navigation_history_reports_executed_loop_and_local_occupancy(self):
         from types import SimpleNamespace as NS
         grid = np.zeros((5, 5), dtype=int)
@@ -353,6 +491,17 @@ class RealCurriculumTests(unittest.TestCase):
         self.assertGreater(curriculum.selection_score(progress, .25, .1), curriculum.selection_score(failed, .25, .1))
         passed = dict(progress, carry_no_entry_rate=.2, timeout_rate=.05, worst_round_win_rate=.1)
         self.assertGreater(curriculum.selection_score(passed, .25, .1), curriculum.selection_score(progress, .25, .1))
+
+    def test_checkpoint_selection_protects_worst_registered_plant_rate(self):
+        baseline = dict(carry_no_entry_rate=.4, timeout_rate=.2,
+                        no_entry_carrier_death_rate=.5,
+                        worst_registered_plant_rate=.3,
+                        worst_round_win_rate=.2, round_win_rate=.2,
+                        carry_spawn_tick_rate=.1)
+        regressed = dict(baseline, worst_registered_plant_rate=.1,
+                         worst_round_win_rate=.4, round_win_rate=.4)
+        self.assertGreater(curriculum.selection_score(baseline, .25, .1),
+                           curriculum.selection_score(regressed, .25, .1))
 
     def test_new_carry_ability_actions_have_one_stationary_meaning(self):
         from types import SimpleNamespace as NS
@@ -511,6 +660,112 @@ class RealCurriculumTests(unittest.TestCase):
         state = {"grid": np.zeros((5, 5), dtype=int), "chars": [char, carrier]}
         with patch.object(rt, "choose_pre_entry_ability", return_value=None):
             self.assertEqual(controller.decide_move(char, state), [1, 2])
+
+    def test_carry_and_escort_use_factorized_facing_heads(self):
+        carry = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        escort = curriculum.escort_runtime.DuelingQNetwork(
+            curriculum.escort_runtime.FACING_HEAD_OBS_DIM,
+            curriculum.escort_runtime.N_ACTIONS,
+        )
+        carry_obs = torch.zeros((2, curriculum.runtime.FACING_HEAD_OBS_DIM))
+        escort_obs = torch.zeros((2, curriculum.escort_runtime.FACING_HEAD_OBS_DIM))
+        self.assertEqual(tuple(carry(carry_obs).shape), (2, curriculum.runtime.ACTION_DIM))
+        self.assertEqual(tuple(escort(escort_obs).shape), (2, curriculum.escort_runtime.N_ACTIONS))
+        self.assertEqual(tuple(carry.facing_values(carry_obs, [0, 1]).shape), (2, 8))
+        self.assertEqual(tuple(escort.facing_values(escort_obs, [0, 1]).shape), (2, 8))
+
+    def test_facing_supervision_updates_only_factorized_output_shape(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        optimizer = torch.optim.Adam(policy.parameters(), lr=0.01)
+        before = policy.facing_head.weight.detach().clone()
+        sample = (
+            np.ones(curriculum.runtime.FACING_HEAD_OBS_DIM, dtype=np.float32),
+            2,
+            curriculum.FACING_DIRS.index("E"),
+        )
+        loss = curriculum.optimize_facing(policy, optimizer, [sample], 1.0)
+        self.assertIsNotNone(loss)
+        self.assertFalse(torch.equal(before, policy.facing_head.weight))
+
+    def test_facing_only_training_preserves_every_movement_tensor(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        movement_before = {
+            name: parameter.detach().clone()
+            for name, parameter in policy.named_parameters()
+            if not name.startswith("facing_head.")
+        }
+        q_before = policy(
+            torch.ones((1, curriculum.runtime.FACING_HEAD_OBS_DIM))
+        ).detach().clone()
+        facing_before = policy.facing_head.weight.detach().clone()
+        curriculum.restrict_policy_to_facing_head(policy)
+        optimizer = torch.optim.Adam(
+            [parameter for parameter in policy.parameters() if parameter.requires_grad],
+            lr=0.01,
+        )
+        sample = (
+            np.ones(curriculum.runtime.FACING_HEAD_OBS_DIM, dtype=np.float32),
+            2,
+            curriculum.FACING_DIRS.index("E"),
+        )
+        for _ in range(3):
+            curriculum.optimize_facing(policy, optimizer, [sample], 1.0)
+
+        for name, before in movement_before.items():
+            torch.testing.assert_close(dict(policy.named_parameters())[name], before)
+        torch.testing.assert_close(
+            policy(torch.ones((1, curriculum.runtime.FACING_HEAD_OBS_DIM))),
+            q_before,
+        )
+        self.assertFalse(torch.equal(policy.facing_head.weight, facing_before))
+
+    def test_facing_teacher_prioritizes_visible_enemy_then_phase_goal(self):
+        from types import SimpleNamespace as NS
+        char = NS(name="carry", pos=[2, 2], team="A", facing="N")
+        enemy = NS(name="enemy", pos=[2, 4], team="D", is_alive=True)
+        state = {"grid": np.zeros((6, 6), dtype=int), "chars": [char, enemy],
+                 "smoke_cells": set()}
+        with patch.object(curriculum.runtime, "_has_los", return_value=True):
+            label = curriculum.observable_facing_teacher(
+                "carry", char, state, NS(_sighting=None), goal=(0, 2)
+            )
+        self.assertEqual(curriculum.FACING_DIRS[label], "E")
+
+        state["chars"] = [char]
+        label = curriculum.observable_facing_teacher(
+            "escort", char, state, NS(), goal=(0, 2)
+        )
+        self.assertEqual(curriculum.FACING_DIRS[label], "N")
+
+    def test_escort_returns_learned_facing_without_expanding_action_space(self):
+        from types import SimpleNamespace as NS
+        rt = curriculum.escort_runtime
+        controller = rt.LearningAttackerEscortGCController.__new__(rt.LearningAttackerEscortGCController)
+        controller.positioning_version = 11
+        controller._char_state = {}
+        controller._build_obs = Mock(return_value=np.zeros(rt.FACING_HEAD_OBS_DIM, dtype=np.float32))
+        controller._action_mask = Mock(return_value=np.ones(rt.N_ACTIONS, dtype=bool))
+        controller._select_action = Mock(return_value=rt.ACTION_UP)
+        controller._select_facing = Mock(return_value="E")
+        char = NS(name="escort", pos=[2, 2], team="A", is_alive=True, facing="N",
+                  facing_forced_this_tick=False)
+        carrier = NS(name="carry", pos=[2, 3], team="A", is_alive=True, has_spike=True)
+        state = {"grid": np.zeros((5, 5), dtype=int), "chars": [char, carrier]}
+        with patch.object(rt, "choose_pre_entry_ability", return_value=None):
+            self.assertEqual(
+                controller.decide_move(char, state),
+                ([1, 2], {"facing": "E"}),
+            )
+        self.assertEqual(char.facing, "E")
 
 
 if __name__ == "__main__":

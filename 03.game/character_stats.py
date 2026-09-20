@@ -47,7 +47,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "Jinggg": CharacterStats("Jinggg", 0.3, 0.26, 68, 0.71, 90, "タイガー", 50, 4, 3),
     "d4v41": CharacterStats("d4v41", 0.35, 0.17, 70, 0.71, 105, "シーカー", 40, 5, 3),
-    "Sato": CharacterStats("Sato", 0.4, 0.19, 67, 0.73, 105, "フラッシュ", 60, 6, 7),
+    "Sato": CharacterStats("Sato", 0.4, 0.19, 67, 0.73, 105, "タイガー", 60, 6, 7),
     "jawgemo": CharacterStats(
         "jawgemo", 0.28, 0.31, 93, 0.67, 135, "タイガー", 75, 8, 9
     ),

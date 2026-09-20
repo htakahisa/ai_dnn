@@ -8,6 +8,43 @@ import torch
 import train_attacker_gc_real_curriculum as trainer
 
 
+def build_policies(checkpoints):
+    """Build the current runtime architectures and expand older checkpoints."""
+    policies = {
+        "carry": trainer.runtime.AttackerCarryDuelingDQN(
+            obs_dim=trainer.runtime.FACING_HEAD_OBS_DIM,
+            action_dim=trainer.runtime.ACTION_DIM,
+        ),
+        "escort": trainer.escort_runtime.DuelingQNetwork(
+            trainer.escort_runtime.FACING_HEAD_OBS_DIM,
+            trainer.escort_runtime.N_ACTIONS,
+        ),
+        "guard": trainer.guard_runtime.AttackerGuardDuelingDQN(
+            obs_dim=trainer.guard_runtime.ULTIMATE_CONTEXT_OBS_DIM,
+            action_dim=trainer.guard_runtime.ACTION_DIM,
+        ),
+    }
+    for phase in trainer.PHASES:
+        policy = policies[phase]
+        state = trainer.expand_policy_state(
+            checkpoints[phase],
+            policy.feature[0].in_features,
+            policy.advantage_head[-1].out_features,
+        )
+        incompatible = policy.load_state_dict(state, strict=False)
+        allowed_missing = (
+            phase in trainer.FACING_PHASES
+            and all(key.startswith("facing_head.") for key in incompatible.missing_keys)
+        )
+        if (incompatible.missing_keys and not allowed_missing) or incompatible.unexpected_keys:
+            raise RuntimeError(
+                f"{phase} checkpoint keys mismatch: "
+                f"missing={list(incompatible.missing_keys)}, "
+                f"unexpected={list(incompatible.unexpected_keys)}"
+            )
+    return policies
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--models-dir", type=Path, required=True)
@@ -24,16 +61,14 @@ def main():
                    for p, path in sources.items()}
     if len({c.get("episode") for c in checkpoints.values()}) != 1:
         raise ValueError("checkpoint set is not synchronized")
-    policies = {
-        "carry": trainer.runtime.AttackerCarryDuelingDQN(checkpoints["carry"]["obs_dim"]),
-        "escort": trainer.escort_runtime.DuelingQNetwork(checkpoints["escort"]["obs_dim"], 6),
-        "guard": trainer.guard_runtime.AttackerGuardDuelingDQN(),
-    }
-    for phase in trainer.PHASES:
-        policies[phase].load_state_dict(checkpoints[phase]["model_state_dict"])
+    policies = build_policies(checkpoints)
     session = trainer.CurriculumSession(sources, policies, 0.99)
     for phase in trainer.PHASES:
         session.controllers[phase].positioning_version = checkpoints[phase].get("positioning_version", 0)
+        if phase in trainer.FACING_PHASES:
+            session.controllers[phase].facing_head_enabled = (
+                int(checkpoints[phase].get("facing_head_version", 0)) >= 1
+            )
     report = trainer.evaluate_multi(session, args.episodes, args.seeds, (100, 60, 40))
     report["checkpoint_episode"] = checkpoints["carry"].get("episode")
     content = json.dumps(report, ensure_ascii=False, indent=2)

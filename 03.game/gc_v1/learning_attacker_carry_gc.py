@@ -50,11 +50,13 @@ from character_stats_gc import (
     GC_ROSTER_ORDER,
 )
 try:
+    from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 except ImportError:
+    from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -71,6 +73,9 @@ NAVIGATION_OBS_DIM = 57  # v5: legal neighbor costs, actual move history and dea
 SCREENING_OBS_DIM = 61  # v6: own-team screen in front of the spike carrier.
 FORMATION_OBS_DIM = 65  # v7: persistent designated entry screener and readiness.
 ENTRY_SYNC_OBS_DIM = 66  # v8: explicit two-tick entry synchronization state.
+ULTIMATE_CONTEXT_OBS_DIM = 70  # v10: ready/combat/objective/urgency cast context.
+FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
+FACING_HEAD_VERSION = 1
 LEGACY_ACTION_DIM = 11
 ACTION_DIM = 12
 PLANT_ACTION_INDEX = 10
@@ -108,12 +113,25 @@ class AttackerCarryDuelingDQN(nn.Module):
         self.advantage_head = nn.Sequential(
             nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
         )
+        # Keep facing factorized from the base action.  The selected action is
+        # still an input because moving, planting, and casting call for
+        # different view directions in the same observed state.
+        self.facing_head = nn.Linear(hidden + action_dim, len(FACING_DIRS))
+        self.action_dim = action_dim
 
     def forward(self, x):
         f = self.feature(x)
         v = self.value_head(f)
         a = self.advantage_head(f)
         return v + (a - a.mean(dim=1, keepdim=True))
+
+    def facing_values(self, x, actions):
+        features = self.feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        action_onehot = torch.nn.functional.one_hot(
+            actions, num_classes=self.action_dim
+        ).to(dtype=features.dtype)
+        return self.facing_head(torch.cat((features, action_onehot), dim=1))
 
 
 # ============================================================================
@@ -333,7 +351,9 @@ class LearningAttackerCarryGCController:
 
         ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         ckpt_n_actions = int(checkpoint.get("n_actions", ACTION_DIM))
-        expected_obs_dim = (ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
+        expected_obs_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+                            ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
+                            ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
                             FORMATION_OBS_DIM if self.positioning_version >= 7 else
                             SCREENING_OBS_DIM if self.positioning_version >= 6 else
                             NAVIGATION_OBS_DIM if self.positioning_version >= 5 else
@@ -350,7 +370,20 @@ class LearningAttackerCarryGCController:
         self.policy_net = AttackerCarryDuelingDQN(
             obs_dim=ckpt_obs_dim, action_dim=ckpt_n_actions
         ).to(self.device)
-        self.policy_net.load_state_dict(checkpoint["model_state_dict"])
+        incompatible = self.policy_net.load_state_dict(
+            checkpoint["model_state_dict"], strict=False
+        )
+        unexpected = list(incompatible.unexpected_keys)
+        missing = [key for key in incompatible.missing_keys
+                   if not key.startswith("facing_head.")]
+        if missing or unexpected:
+            raise RuntimeError(
+                f"Carry checkpoint keys mismatch: missing={missing}, unexpected={unexpected}"
+            )
+        self.facing_head_enabled = (
+            int(checkpoint.get("facing_head_version", 0)) >= FACING_HEAD_VERSION
+            and not incompatible.missing_keys
+        )
         self.policy_net.eval()
 
         # 優先(代表)地点はチェックポイントに座標として保存されている。
@@ -510,7 +543,9 @@ class LearningAttackerCarryGCController:
         target_plant_pos=None,
     ):
         modern = self.positioning_version >= 3
-        obs_dim = (ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
+        obs_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+                   ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
+                   ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
                    FORMATION_OBS_DIM if self.positioning_version >= 7 else
                    SCREENING_OBS_DIM if self.positioning_version >= 6 else
                    NAVIGATION_OBS_DIM if self.positioning_version >= 5 else
@@ -681,6 +716,25 @@ class LearningAttackerCarryGCController:
                 self.game, char, chars, cache,
                 obs[TACTICAL_OBS_DIM + 14],
             )
+        if self.positioning_version >= 10:
+            try:
+                from .navigation_intent_gc import can_engage, carrier_screening_status
+            except ImportError:
+                from navigation_intent_gc import can_engage, carrier_screening_status
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            status = carrier_screening_status(self.game, char, chars, cache)
+            final_distance = int(status.get("final_distance", -1))
+            obs[ENTRY_SYNC_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+                char,
+                engaged=can_engage(self.game, char, chars),
+                objective_window=0 <= final_distance <= 10,
+                urgent=(char.max_hp > 0 and char.hp / char.max_hp <= 0.45),
+            )
+        if self.positioning_version >= 11:
+            append_facing_onehot(
+                obs[ULTIMATE_CONTEXT_OBS_DIM:FACING_HEAD_OBS_DIM],
+                getattr(char, "facing", "N"),
+            )
         return obs
 
     def _build_mask(self, char, chars, on_site):
@@ -761,6 +815,18 @@ class LearningAttackerCarryGCController:
                 valid = np.flatnonzero(mask)
                 return int(np.random.choice(valid)) if len(valid) else 0
             return int(np.argmax(q_values))
+
+    def _select_facing(self, obs, action_idx):
+        if not getattr(self, "facing_head_enabled", False):
+            return None
+        with torch.no_grad():
+            obs_t = torch.as_tensor(
+                obs, dtype=torch.float32, device=self.device
+            ).unsqueeze(0)
+            values = self.policy_net.facing_values(
+                obs_t, torch.tensor([action_idx], device=self.device)
+            ).squeeze(0)
+        return FACING_DIRS[int(values.argmax().item())]
 
     @staticmethod
     def _decode_action(action_idx):
@@ -953,12 +1019,20 @@ class LearningAttackerCarryGCController:
         )
         mask = self._build_mask(char, chars, on_site)
         action_idx = self._select_action(obs, mask)
+        facing = self._select_facing(obs, action_idx)
+        if facing is not None and not getattr(char, "facing_forced_this_tick", False):
+            # Ability/ultimate/plant return before battle_logic's MOVE-facing
+            # path, so apply the learned result here as well.  Forced facing
+            # from taking damage remains authoritative for that tick.
+            char.facing = facing
 
         if self.positioning_version >= 9 and action_idx == ULTIMATE_ACTION_INDEX:
             ultimate = build_ultimate_action(
                 grid, char, chars, destination=route_goal or target_plant_pos
             )
             if ultimate is not None:
+                if facing is not None:
+                    ultimate = dict(ultimate, facing=facing)
                 return list(char.pos), ultimate
         decoded = self._decode_action(action_idx)
 
@@ -969,7 +1043,10 @@ class LearningAttackerCarryGCController:
 
         if self.positioning_version >= 5 and action_idx == 1:
             target = self._learned_ability_target(char, chars)
-            return list(char.pos), {"ability": char.ability_name, "target": target}
+            payload = {"ability": char.ability_name, "target": target}
+            if facing is not None:
+                payload["facing"] = facing
+            return list(char.pos), payload
 
         (dr, dc), use_ability = decoded
 
@@ -1006,10 +1083,13 @@ class LearningAttackerCarryGCController:
                     target_pos = random.choice(self._plant_cells)
 
                 if target_pos is not None:
-                    return list(char.pos), {
+                    payload = {
                         "ability": char.ability_name,
                         "target": target_pos,
                     }
+                    if facing is not None:
+                        payload["facing"] = facing
+                    return list(char.pos), payload
 
         next_pos = [r + dr, c + dc]
-        return next_pos
+        return next_pos if facing is None else (next_pos, {"facing": facing})

@@ -59,11 +59,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 try:
+    from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 except ImportError:
+    from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -104,6 +106,10 @@ FORMATION_OBS_DIM = 75  # v5: designated screener, exact formation target and re
 CLEARANCE_OBS_DIM = 76  # v6: designated Escort blocks Carrier's progress cell.
 DIRECTIONAL_CLEARANCE_OBS_DIM = 80  # v7: legal U/D/L/R route-clearing moves.
 ENTRY_SUPPORT_OBS_DIM = 84  # v8: safe U/D/L/R moves toward the forward screen.
+SCREEN_COMMITMENT_OBS_DIM = 90  # v9: exact U/D/L/R screen step plus active/ready.
+ULTIMATE_CONTEXT_OBS_DIM = 94  # v9: ready/combat/objective/urgency cast context.
+FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
+FACING_HEAD_VERSION = 1
 
 
 # ---------------------------------------------------------------------------
@@ -188,12 +194,22 @@ class DuelingQNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden // 2, n_actions),
         )
+        self.facing_head = nn.Linear(hidden + n_actions, len(FACING_DIRS))
+        self.action_dim = n_actions
 
     def forward(self, x):
         feat = self.feature(x)
         value = self.value_head(feat)
         advantage = self.advantage_head(feat)
         return value + (advantage - advantage.mean(dim=1, keepdim=True))
+
+    def facing_values(self, x, actions):
+        features = self.feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        action_onehot = torch.nn.functional.one_hot(
+            actions, num_classes=self.action_dim
+        ).to(dtype=features.dtype)
+        return self.facing_head(torch.cat((features, action_onehot), dim=1))
 
 
 class LearningAttackerEscortGCController:
@@ -227,7 +243,9 @@ class LearningAttackerEscortGCController:
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
-        expected_dim = (ENTRY_SUPPORT_OBS_DIM if self.positioning_version >= 8 else
+        expected_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+                        ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 9 else
+                        ENTRY_SUPPORT_OBS_DIM if self.positioning_version >= 8 else
                         DIRECTIONAL_CLEARANCE_OBS_DIM if self.positioning_version >= 7 else
                         CLEARANCE_OBS_DIM if self.positioning_version >= 6 else
                         FORMATION_OBS_DIM if self.positioning_version >= 5 else
@@ -243,7 +261,20 @@ class LearningAttackerEscortGCController:
             )
 
         self.policy_net = DuelingQNetwork(obs_dim, n_actions).to(self.device)
-        self.policy_net.load_state_dict(checkpoint["model_state_dict"])
+        incompatible = self.policy_net.load_state_dict(
+            checkpoint["model_state_dict"], strict=False
+        )
+        unexpected = list(incompatible.unexpected_keys)
+        missing = [key for key in incompatible.missing_keys
+                   if not key.startswith("facing_head.")]
+        if missing or unexpected:
+            raise RuntimeError(
+                f"Escort checkpoint keys mismatch: missing={missing}, unexpected={unexpected}"
+            )
+        self.facing_head_enabled = (
+            int(checkpoint.get("facing_head_version", 0)) >= FACING_HEAD_VERSION
+            and not incompatible.missing_keys
+        )
         self.policy_net.eval()
 
         if self.verbose:
@@ -633,6 +664,41 @@ class LearningAttackerEscortGCController:
             obs_arr = np.concatenate((obs_arr, carrier_safe_screen_advance_features(
                 self.game, char, chars, cache
             )))
+        if self.positioning_version >= 9:
+            try:
+                from .navigation_intent_gc import (can_engage,
+                                                   carrier_screen_commitment_features,
+                                                   carrier_screening_status)
+            except ImportError:
+                from navigation_intent_gc import (can_engage,
+                                                  carrier_screen_commitment_features,
+                                                  carrier_screening_status)
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, carrier_screen_commitment_features(
+                self.game, char, chars, cache
+            )))
+            carrier = next((c for c in chars if c.team == char.team
+                            and getattr(c, "is_alive", True)
+                            and getattr(c, "has_spike", False)), None)
+            objective_window = False
+            if carrier is not None:
+                status = carrier_screening_status(self.game, carrier, chars, cache)
+                designated = status.get("designated")
+                objective_window = bool(
+                    designated is not None and designated.name == char.name
+                    and 0 <= status.get("final_distance", -1) <= 16
+                    and not status.get("screen_ready", False)
+                )
+            obs_arr = np.concatenate((obs_arr, ultimate_context_features(
+                char,
+                engaged=can_engage(self.game, char, chars),
+                objective_window=objective_window,
+                urgent=(char.max_hp > 0 and char.hp / char.max_hp <= 0.45),
+            )))
+        if self.positioning_version >= 11:
+            facing_obs = np.zeros(len(FACING_DIRS), dtype=np.float32)
+            append_facing_onehot(facing_obs, getattr(char, "facing", "N"))
+            obs_arr = np.concatenate((obs_arr, facing_obs))
         return obs_arr
 
     def _ultimate_action(self, char, chars):
@@ -702,6 +768,18 @@ class LearningAttackerEscortGCController:
             q = self.policy_net(state).squeeze(0).cpu().numpy()
         return int(np.argmax(np.where(mask, q, -1e9)))
 
+    def _select_facing(self, obs, action):
+        if not getattr(self, "facing_head_enabled", False):
+            return None
+        with torch.no_grad():
+            state = torch.as_tensor(
+                obs, dtype=torch.float32, device=self.device
+            ).unsqueeze(0)
+            values = self.policy_net.facing_values(
+                state, torch.tensor([action], device=self.device)
+            ).squeeze(0)
+        return FACING_DIRS[int(values.argmax().item())]
+
     def decide_move(self, char, game_state):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
@@ -740,6 +818,9 @@ class LearningAttackerEscortGCController:
         mask = self._action_mask(char, grid, chars)
 
         action = self._select_action(obs, mask)
+        facing = self._select_facing(obs, action)
+        if facing is not None and not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
 
         r, c = int(char.pos[0]), int(char.pos[1])
 
@@ -748,6 +829,8 @@ class LearningAttackerEscortGCController:
             if ultimate is not None:
                 st["last_delta"] = (0.0, 0.0)
                 st["stuck"] += 1
+                if facing is not None:
+                    ultimate = dict(ultimate, facing=facing)
                 return list(char.pos), ultimate
 
         if action == ACTION_ABILITY:
@@ -758,12 +841,16 @@ class LearningAttackerEscortGCController:
                 st["last_delta"] = (0.0, 0.0)
                 st["stuck"] += 1
                 target = (int(enemy_char.pos[0]), int(enemy_char.pos[1]))
-                return list(char.pos), {"ability": char.ability_name, "target": target}
+                payload = {"ability": char.ability_name, "target": target}
+                if facing is not None:
+                    payload["facing"] = facing
+                return list(char.pos), payload
             # 射程内に有効な標的がいない場合、実チャージを無駄撃ちしないよう
             # STAYにフォールバックする。
             st["last_delta"] = (0.0, 0.0)
             st["stuck"] += 1
-            return [r, c]
+            current = [r, c]
+            return current if facing is None else (current, {"facing": facing})
 
         dr, dc = _MOVE_DELTA[action]
         nr, nc = r + dr, c + dc
@@ -781,8 +868,10 @@ class LearningAttackerEscortGCController:
         if action == ACTION_STAY or self._is_wall(grid, nr, nc):
             st["last_delta"] = (0.0, 0.0)
             st["stuck"] += 1
-            return [r, c]
+            current = [r, c]
+            return current if facing is None else (current, {"facing": facing})
 
         st["last_delta"] = (float(dr), float(dc))
         st["stuck"] = 0
-        return [nr, nc]
+        next_pos = [nr, nc]
+        return next_pos if facing is None else (next_pos, {"facing": facing})

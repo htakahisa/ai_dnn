@@ -77,16 +77,17 @@ except ImportError:
     from positioning_gc import guard_candidates
 try:
     from .postplant_utils import postplant_watch_cells
-    from .ultimate_tactics_gc import build_ultimate_action
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 except ImportError:
     from postplant_utils import postplant_watch_cells
-    from ultimate_tactics_gc import build_ultimate_action
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 34
+ULTIMATE_CONTEXT_OBS_DIM = 38  # v4: ready/combat/objective/urgency cast context.
 LEGACY_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ACTION_DIM = 11
 ULTIMATE_ACTION_INDEX = 10
@@ -389,12 +390,21 @@ class LearningAttackerGuardGCController:
             self.positioning_version = int(checkpoint.get("positioning_version", 0))
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             action_dim = int(checkpoint.get("n_actions", LEGACY_ACTION_DIM))
+            obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
             expected_actions = ACTION_DIM if self.positioning_version >= 3 else LEGACY_ACTION_DIM
+            expected_obs_dim = (ULTIMATE_CONTEXT_OBS_DIM
+                                if self.positioning_version >= 4 else OBS_DIM)
             if action_dim != expected_actions:
                 raise ValueError(
                     f"guard action count mismatch: {action_dim} != {expected_actions}"
                 )
-            self.model = AttackerGuardDuelingDQN(action_dim=action_dim).to(DEVICE)
+            if obs_dim != expected_obs_dim:
+                raise ValueError(
+                    f"guard observation count mismatch: {obs_dim} != {expected_obs_dim}"
+                )
+            self.model = AttackerGuardDuelingDQN(
+                obs_dim=obs_dim, action_dim=action_dim
+            ).to(DEVICE)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningAttackerGuardGCController] loaded: {model_path}")
@@ -581,7 +591,9 @@ class LearningAttackerGuardGCController:
         height, width = grid.shape
         r0, c0 = int(char.pos[0]), int(char.pos[1])
 
-        obs = np.zeros(OBS_DIM, dtype=np.float32)
+        obs_dim = (ULTIMATE_CONTEXT_OBS_DIM
+                   if getattr(self, "positioning_version", 0) >= 4 else OBS_DIM)
+        obs = np.zeros(obs_dim, dtype=np.float32)
 
         obs[0] = r0 / height
         obs[1] = c0 / width
@@ -681,6 +693,16 @@ class LearningAttackerGuardGCController:
 
         obs[33] = ((self._active_guard_pattern - 4) / 5.0
                    if getattr(self, "positioning_version", 0) >= 1 else 0.0)
+
+        if getattr(self, "positioning_version", 0) >= 4:
+            progress = (active_defuse_info.get("progress_ratio", 0.0)
+                        if active_defuse_info is not None else 0.0)
+            obs[OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+                char,
+                engaged=bool(visible_enemies),
+                objective_window=active_defuse_info is not None,
+                urgent=(progress >= 0.5 or detonate_timer <= 12),
+            )
 
         return obs, visible_enemies
 
@@ -785,7 +807,8 @@ class LearningAttackerGuardGCController:
                     )
                 return guard_step
 
-        ultimate_target = self._assigned_guard_positions.get(char.name, planted_pos)
+        assigned_guard_positions = getattr(self, "_assigned_guard_positions", {})
+        ultimate_target = assigned_guard_positions.get(char.name, planted_pos)
         mask = self._action_mask(
             char, grid, chars,
             lock_movement=bool(visible_enemies) and not learned_positioning,
@@ -794,7 +817,7 @@ class LearningAttackerGuardGCController:
 
         action_idx = self._select_action(obs, mask)
 
-        if self.positioning_version >= 3 and action_idx == ULTIMATE_ACTION_INDEX:
+        if getattr(self, "positioning_version", 0) >= 3 and action_idx == ULTIMATE_ACTION_INDEX:
             ultimate = build_ultimate_action(
                 grid, char, chars, destination=ultimate_target
             )

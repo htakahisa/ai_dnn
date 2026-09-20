@@ -157,7 +157,7 @@ COMBOS = [
     {
         "name": "生意気なドラゴンテイル",
         "players": ("Canezerra", "Nanasaki"),
-        "bonuses": {"accuracy": 0.2, "hs_rate": 0.15},
+        "bonuses": {"accuracy": 0.1, "hs_rate": 0.05},
         "renames": {},
     },
     {
@@ -286,6 +286,30 @@ COMBOS = [
         "name": "誰なん君たち",
         "players": ("Tortlilyan", "まーやまくん", "おもこ"),
         "bonuses": {"accuracy": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "もはや日本語もいます",
+        "players": ("まーやまくん", "おもこ"),
+        "bonuses": {"dodge_rate": 0.15},
+        "renames": {},
+    },
+    {
+        "name": "岸さんの仰る通り、ふわふわしてるだけかと",
+        "players": ("Retloff", "おもこ"),
+        "bonuses": {"dodge_rate": 0.15},
+        "renames": {},
+    },
+    {
+        "name": "なんか浮いてる奴もいて",
+        "players": ("Retloff", "まーやまくん", "おもこ"),
+        "bonuses": {"dodge_rate": 0.2},
+        "renames": {},
+    },
+    {
+        "name": "熟練のコンビ",
+        "players": ("Mazino", "tex"),
+        "bonuses": {"dodge_rate": 0.05, "accuracy": 0.05},
         "renames": {},
     },
     {
@@ -512,7 +536,7 @@ COMBOS = [
         "name": "All for Lar0k",
         "players": ("Lar0k", "lovers rock", "Loita", "Crewn", "Rosé"),
         "player_bonuses": {
-            "Lar0k": {"accuracy": 0.45, "hs_rate": 0.45, "reaction": 45}
+            "Lar0k": {"accuracy": 0.55, "hs_rate": 0.55, "reaction": 55}
         },
         "renames": {},
     },
@@ -538,8 +562,45 @@ COMBOS = [
                 "hs_rate": 0.5,
                 "accuracy": 0.4,
             },
+            "alecks": {"dodge_rate": -0.2, "iq": -30, "hs_rate": 0.5, "accuracy": 0.4},
         },
-        "renames": {"something": "cgrs"},
+        "renames": {"something": "cgrs", "alecks": "-怪獣-alecks"},
+    },
+    {
+        "name": "我々が交わることが2度とないようにしたつもりだった",
+        "players": ("mindfreak", "cgrs"),
+        "player_bonuses": {
+            "mindfreak": {"mental": -3},
+            "cgrs": {"mental": 5},
+        },
+        "renames": {},
+    },
+    {
+        "name": "この血を欲するのは誰かと聞いたはずだ",
+        "players": ("Wo0t", "cgrs"),
+        "player_bonuses": {
+            "Wo0t": {"hs_rate": -0.4},
+            "cgrs": {"hs_rate": 0.6},
+        },
+        "renames": {},
+    },
+    {
+        "name": "あの時俺にこのゲームは難しすぎると言ったな",
+        "players": ("-怪獣-alecks", "cgrs"),
+        "player_bonuses": {
+            "-怪獣-alecks": {"iq": -30},
+            "cgrs": {"iq": 50},
+        },
+        "renames": {},
+    },
+    {
+        "name": "卵が先か鶏が先か",
+        "players": ("eggsterr", "cgrs"),
+        "player_bonuses": {
+            "eggsterr": {"reaction": 50},
+            "cgrs": {"reaction": 50},
+        },
+        "renames": {},
     },
 ]
 

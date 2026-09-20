@@ -250,7 +250,14 @@ def train(args):
     checkpoint = torch.load(args.init_model, map_location="cpu", weights_only=False)
     source_hash = hashlib.sha256(args.init_model.read_bytes()).hexdigest()
     policy = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM)
-    policy.load_state_dict(expanded_state(checkpoint))
+    incompatible = policy.load_state_dict(expanded_state(checkpoint), strict=False)
+    missing = [key for key in incompatible.missing_keys
+               if not key.startswith("facing_head.")]
+    if missing or incompatible.unexpected_keys:
+        raise RuntimeError(
+            f"Carry checkpoint keys mismatch: missing={missing}, "
+            f"unexpected={list(incompatible.unexpected_keys)}"
+        )
     target = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM)
     target.load_state_dict(policy.state_dict())
     optimizer = torch.optim.Adam(policy.parameters(), lr=args.lr)

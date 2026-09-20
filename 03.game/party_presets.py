@@ -191,6 +191,14 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="SereNa",
         description="圧倒的なミクロ、瞬発的なフィジカル",
     ),
+    "Alien Rex": TeamPreset(
+        name="Alien Rex",
+        short_name="ARX",
+        players=("alecks", "mindfreak", "Wo0t", "something", "eggseterr"),
+        igl="mindfreak",
+        spike_holder="Wo0t",
+        description="開始時、somethingがcgrsに変化",
+    ),
 }
 
 # Backward-compatible team-name migration. Historical ratings, brackets, and
