@@ -26,6 +26,7 @@ from game_core import PLAYER_COMBOS, get_character_combat_stats
 CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
     "Touyama Gaming v2": "touyama_gaming_v2",
+    "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3.1": "toru_ai_v3.1",

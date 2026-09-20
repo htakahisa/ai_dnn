@@ -2,6 +2,7 @@
 
 import math
 import random
+import json
 from pathlib import Path
 import numpy as np
 
@@ -670,11 +671,27 @@ class BattleLogicMixin:
                     #     "forced=", char.facing_forced_this_tick,
                     # )
                     char.facing = new_facing
-                char.pos = [nr, nc]
+
+                dr, dc = nr - old_pos[0], nc - old_pos[1]
                 self._update_occupancy_after_move(
                     old_pos,
                     (nr, nc),
                 )
+                char.pos = [nr, nc]
+
+                # 覚醒等でmove_steps_per_tickが2以上のキャラは、
+                # コントローラーが選んだ1手の方向へそのまま延長して進む。
+                extra_steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+                for _ in range(extra_steps):
+                    prev = tuple(char.pos)
+                    cand_r, cand_c = prev[0] + dr, prev[1] + dc
+                    cand_in_bounds = 0 <= cand_r < self.height and 0 <= cand_c < self.width
+                    if not cand_in_bounds or self.grid[cand_r, cand_c] == 1:
+                        break
+                    if self._is_position_occupied(char, (cand_r, cand_c), prev):
+                        break
+                    self._update_occupancy_after_move(prev, (cand_r, cand_c))
+                    char.pos = [cand_r, cand_c]
 
         char.moved_this_tick = tuple(char.pos) != old_pos
         self._finalize_movement_transition_state(char)
@@ -989,6 +1006,20 @@ class BattleLogicMixin:
                     if target.team != shooter.team
                     and self.check_line_of_sight(shooter, target)
                 ]
+
+            # 覚醒等でスモーク越しに撃てる射手は、スモークのみに遮られている
+            # 敵も追加でターゲット候補にする（壁・他プレイヤーの遮蔽は後段で判定）。
+            if getattr(shooter, "sees_through_smoke", False):
+                already_targeted = set(possible_targets)
+                possible_targets = possible_targets + [
+                    target
+                    for target in alive_at_tick_start
+                    if target.team != shooter.team
+                    and target not in already_targeted
+                    and self.check_cell_line_of_sight(
+                        tuple(shooter.pos), tuple(target.pos), block_smoke=False
+                    )
+                ]
             # 視認できていても、射手と標的の間に別プレイヤーがいれば撃てない。
             possible_targets = [
                 target
@@ -1166,6 +1197,7 @@ class BattleLogicMixin:
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
             char.reveal_remaining = max(0, char.reveal_remaining - 1)
+        self._advance_timed_awakenings()
         for burst in self.flash_bursts:
             burst["remaining_ticks"] -= 1
         self.flash_bursts = [
@@ -1220,6 +1252,8 @@ class BattleLogicMixin:
 
         # 射撃結果で条件を満たした覚醒イベントを判定する。
         self._check_awakening_events()
+        # 次Tickへ持ち越さないよう、判定後にリセットする。
+        self.smoke_thrown_this_tick = False
 
         # 射撃を解決してから解除完了を判定する。
         self._resolve_defuse_completion()

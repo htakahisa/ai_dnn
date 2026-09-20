@@ -132,6 +132,32 @@ AWAKENING_EVENTS = [
             "reaction": 77,
         },
     },
+    {
+        "name": "にげるっすー!",
+        "player": "おもこ",  
+        "condition": "escapefromthebattle",
+        "duration_ticks": 5,
+        "bonuses": {"move_steps_per_tick": 3, "dodge_rate": 0.33},
+        "effect_text": "風に乗って逃げるおもこ。移動速度、回避率が上昇中。",
+    },
+    {
+        "name": "ん? だれかいるワン!",
+        "player": "いぬさん",
+        "condition": "smoke_thrown",
+        "duration_ticks": 15,
+        "refreshable": True,
+        "grants_smoke_vision": True,
+        "effect_text": "かすかな匂いを嗅ぎつけスモーク越しに敵を攻撃する。",
+    },
+    {
+        "name": "見渡す限り、逃さない",
+        "player": "とりさん",
+        "condition": "own_charge_depleted",
+        "duration_ticks": 20,
+        "recharge_on_expire": True,
+        "bonuses": {},
+        "effect_text": "リコン使用から20Tick後、再びリコンが使用可能になる。",
+    },
 ]
 
 

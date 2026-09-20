@@ -50,6 +50,7 @@ class AbilityLosMixin:
                 }
             )
             owner.smoke_charges -= 1
+            self.smoke_thrown_this_tick = True
             return True
 
         if ability_name == "FLASH" and owner.flash_charges > 0:
@@ -154,7 +155,10 @@ class AbilityLosMixin:
 
         視認用 check_line_of_sight() の仕様は変更しない。
         """
-        if not self.check_line_of_sight(shooter, target):
+        ignore_smoke = getattr(shooter, "sees_through_smoke", False)
+        if not self.check_cell_line_of_sight(
+            tuple(shooter.pos), tuple(target.pos), block_smoke=not ignore_smoke
+        ):
             return False
 
         line_cells = self._line_cells(tuple(shooter.pos), tuple(target.pos))

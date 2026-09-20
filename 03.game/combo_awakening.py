@@ -12,6 +12,39 @@ from game_core import (
     _normalize_hs_rate,
 )
 
+# duration_ticks未指定の覚醒は999Tickとして扱う（ラウンド内では実質切れない＝既存互換）。
+_DEFAULT_AWAKENING_DURATION_TICKS = 999
+
+# 覚醒発動前にスナップショットし、Tick切れ時に元へ戻す対象の属性。
+_AWAKENING_SNAPSHOT_KEYS = (
+    "accuracy",
+    "hs_rate",
+    "dodge_rate",
+    "reaction",
+    "iq",
+    "effective_iq",
+    "mental",
+    "move_steps_per_tick",
+    "max_hp",
+    "role",
+    "ability_name",
+    "hunter_active",
+    "smoke_charges",
+    "flash_charges",
+    "recon_charges",
+    "display_name",
+    "sees_through_smoke",
+)
+
+
+def _snapshot_character_awakening_state(char):
+    return {key: getattr(char, key, None) for key in _AWAKENING_SNAPSHOT_KEYS}
+
+
+def _restore_character_awakening_state(char, snapshot):
+    for key, value in snapshot.items():
+        setattr(char, key, value)
+
 
 class ComboAwakeningMixin:
     def _apply_player_combos(self):
@@ -196,6 +229,8 @@ class ComboAwakeningMixin:
             生存している敵人数が condition_value 以下
         - whathappend
             覚醒者がラウンドでキルした時、味方より敵の人数が多い場合
+        - smoke_thrown
+            このTickに誰かがスモークを使用した(味方・敵問わず)
         """
         condition = str(event.get("condition", "")).strip()
         value = event.get("condition_value")
@@ -300,6 +335,34 @@ class ComboAwakeningMixin:
             except (TypeError, ValueError):
                 return False
 
+        if condition == "smoke_thrown":
+            # このTickに誰か(味方・敵問わず)がスモークを使用した瞬間に発動する。
+            return char.is_alive and bool(
+                getattr(self, "smoke_thrown_this_tick", False)
+            )
+
+        if condition == "own_charge_depleted":
+            # 自身のロール対応アビリティのチャージが0の間、発動し続ける。
+            charge_attr = {
+                "SMOKE": "smoke_charges",
+                "FLASH": "flash_charges",
+                "RECON": "recon_charges",
+            }.get(char.ability_name)
+            if charge_attr is None:
+                return False
+            return char.is_alive and getattr(char, charge_attr, 0) <= 0
+
+        if condition == "escapefromthebattle":
+            # このTickに射手/標的として交戦し、なおかつ生存している場合に発動。
+            # (命中・回避・被弾いずれでも「交戦した」とみなす。倒されていれば False)
+            if not char.is_alive:
+                return False
+            last_shots = getattr(self, "last_shots", None) or []
+            return any(
+                shot.get("shooter") is char or shot.get("target") is char
+                for shot in last_shots
+            )
+
         # end
         return False
 
@@ -310,10 +373,33 @@ class ComboAwakeningMixin:
             player = str(event.get("player", ""))
             event_name = str(event.get("name", "名称未設定の覚醒"))
             char = next((c for c in self.chars if c.base_name == player), None)
-            if char is None or event_name in char.triggered_awakening_events:
+            if char is None:
                 continue
+
+            if event_name in char.active_awakenings:
+                # refreshable指定があれば、発動中でも条件を再度満たした時点で
+                # タイマーをdurationへ再セットする（スナップショット・効果は再適用しない）。
+                if event.get("refreshable") and self._awakening_condition_met(
+                    event, char
+                ):
+                    try:
+                        refreshed_duration = int(
+                            event.get(
+                                "duration_ticks", _DEFAULT_AWAKENING_DURATION_TICKS
+                            )
+                        )
+                    except (TypeError, ValueError):
+                        refreshed_duration = _DEFAULT_AWAKENING_DURATION_TICKS
+                    char.active_awakenings[event_name]["ticks_remaining"] = max(
+                        1, refreshed_duration
+                    )
+                continue
+
             if not self._awakening_condition_met(event, char):
                 continue
+
+            snapshot = _snapshot_character_awakening_state(char)
+
             preset = event.get("transform_to")
             if preset:
                 self._apply_awakening_preset(char, str(preset))
@@ -341,10 +427,25 @@ class ComboAwakeningMixin:
             if isinstance(bonuses, dict):
                 for key, value in bonuses.items():
                     _apply_combo_bonus(char, key, value)
+            if event.get("grants_smoke_vision"):
+                char.sees_through_smoke = True
             if event.get("rename"):
                 char.display_name = str(event["rename"])
+
+            try:
+                duration = int(
+                    event.get("duration_ticks", _DEFAULT_AWAKENING_DURATION_TICKS)
+                )
+            except (TypeError, ValueError):
+                duration = _DEFAULT_AWAKENING_DURATION_TICKS
+            char.active_awakenings[event_name] = {
+                "ticks_remaining": max(1, duration),
+                "snapshot": snapshot,
+            }
+            char.awakening_activation_counts[event_name] = (
+                char.awakening_activation_counts.get(event_name, 0) + 1
+            )
             char.active_awakening = event_name
-            char.triggered_awakening_events.add(event_name)
 
             # 覚醒した瞬間に、プレイヤーコンボと同じ上部パネルへ表示する。
             # 同一Tickに複数人が覚醒した場合も、追加された順に3Tickずつ表示される。
@@ -361,3 +462,39 @@ class ComboAwakeningMixin:
                     "effect_text": effect_text,
                 }
             )
+
+    def _advance_timed_awakenings(self):
+        """Tick制限のある覚醒を1Tick進め、切れたら発動前の状態へ戻す。"""
+        for char in self.chars:
+            active = getattr(char, "active_awakenings", None)
+            if not active:
+                continue
+            expired_names = []
+            for event_name, state in active.items():
+                state["ticks_remaining"] -= 1
+                if state["ticks_remaining"] <= 0:
+                    expired_names.append(event_name)
+            for event_name in expired_names:
+                state = active.pop(event_name)
+                _restore_character_awakening_state(char, state["snapshot"])
+                event_def = next(
+                    (
+                        e
+                        for e in AWAKENING_EVENTS
+                        if isinstance(e, dict) and str(e.get("name")) == event_name
+                    ),
+                    None,
+                )
+                if event_def and event_def.get("recharge_on_expire"):
+                    charge_attr = {
+                        "SMOKE": "smoke_charges",
+                        "FLASH": "flash_charges",
+                        "RECON": "recon_charges",
+                    }.get(char.ability_name)
+                    if charge_attr:
+                        setattr(
+                            char,
+                            charge_attr,
+                            min(1, getattr(char, charge_attr, 0) + 1),
+                        )
+            char.active_awakening = next(iter(active), None)
