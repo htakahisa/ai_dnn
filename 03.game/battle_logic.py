@@ -1113,15 +1113,21 @@ class BattleLogicMixin:
                 and self.check_line_of_sight(shooter, drone)
             )
 
-            # 覚醒等でスモーク越しに撃てる射手は、スモークのみに遮られている
-            # 敵も追加でターゲット候補にする（壁・他プレイヤーの遮蔽は後段で判定）。
-            if getattr(shooter, "sees_through_smoke", False):
+            # 覚醒でスモーク越しに撃てる射手、またはリコンで検知中の敵は、
+            # スモークのみに遮られている場合も候補にする（壁・他プレイヤーの
+            # 遮蔽は後段で判定）。
+            if any(
+                self.can_ignore_smoke_for_shot(shooter, target)
+                for target in alive_at_tick_start
+                if target.team != shooter.team
+            ):
                 already_targeted = set(possible_targets)
                 possible_targets = possible_targets + [
                     target
                     for target in alive_at_tick_start
                     if target.team != shooter.team
                     and target not in already_targeted
+                    and self.can_ignore_smoke_for_shot(shooter, target)
                     and self.check_cell_line_of_sight(
                         tuple(shooter.pos), tuple(target.pos), block_smoke=False
                     )

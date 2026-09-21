@@ -425,6 +425,19 @@ class AbilityLosMixin:
 
         return self._smoke_allows_line(line_cells, self._smoke_cells())
 
+    def can_ignore_smoke_for_shot(self, shooter, target):
+        """Return whether this shot may treat smoke as transparent.
+
+        An awakened shooter can always see through smoke.  Independently, a
+        target currently revealed by recon is visible to every teammate even
+        through smoke.  This intentionally affects only smoke: walls and
+        living characters on the firing line are still checked separately.
+        """
+        return bool(
+            getattr(shooter, "sees_through_smoke", False)
+            or getattr(target, "reveal_remaining", 0) > 0
+        )
+
     def check_shot_line_of_sight(self, shooter, target):
         """射撃専用の射線判定。
 
@@ -434,7 +447,7 @@ class AbilityLosMixin:
 
         視認用 check_line_of_sight() の仕様は変更しない。
         """
-        ignore_smoke = getattr(shooter, "sees_through_smoke", False)
+        ignore_smoke = self.can_ignore_smoke_for_shot(shooter, target)
         if not self.check_cell_line_of_sight(
             tuple(shooter.pos), tuple(target.pos), block_smoke=not ignore_smoke
         ):

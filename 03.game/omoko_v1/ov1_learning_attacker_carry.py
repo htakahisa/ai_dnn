@@ -167,6 +167,23 @@ def _has_los(grid, p1, p2, smoke_cells=None):
     return True
 
 
+def _smoke_visible_enemy(char, chars, grid, smoke_cells):
+    """Return the nearest enemy visible through smoke to a smoke-vision user."""
+    if not getattr(char, "sees_through_smoke", False) or not smoke_cells:
+        return None
+    pos = (int(char.pos[0]), int(char.pos[1]))
+    candidates = []
+    for enemy in chars:
+        if not getattr(enemy, "is_alive", True) or enemy.team == char.team:
+            continue
+        line = _line_cells(pos, tuple(enemy.pos))
+        if len(line) <= 2 or not any(cell in smoke_cells for cell in line):
+            continue
+        if all(grid[row, col] != 1 for row, col in line):
+            candidates.append(enemy)
+    return min(candidates, key=lambda e: max(abs(e.pos[0] - pos[0]), abs(e.pos[1] - pos[1]))) if candidates else None
+
+
 def _bfs_distance_map(grid, goal):
     height, width = grid.shape
     dist = np.full((height, width), -1, dtype=np.int32)
@@ -770,6 +787,10 @@ class Ov1LearningAttackerCarryController:
         grid = self.game.grid
         r, c = int(char.pos[0]), int(char.pos[1])
         smoke_cells = self._smoke_cells()
+
+        smoke_enemy = _smoke_visible_enemy(char, chars, grid, smoke_cells)
+        if smoke_enemy is not None:
+            return [r, c], {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
 
         occupied = {
             tuple(o.pos) for o in chars

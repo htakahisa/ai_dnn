@@ -66,7 +66,7 @@ from game_core import (
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
-from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS
+from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS, _facing_towards
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -145,6 +145,23 @@ def _has_los(grid, p1, p2, smoke_cells=None):
         if any(cell in smoke_cells for cell in line_cells):
             return False
     return True
+
+
+def _smoke_visible_enemy(char, chars, grid, smoke_cells):
+    """Return the nearest enemy visible through smoke to a smoke-vision user."""
+    if not getattr(char, "sees_through_smoke", False) or not smoke_cells:
+        return None
+    pos = (int(char.pos[0]), int(char.pos[1]))
+    candidates = []
+    for enemy in chars:
+        if not getattr(enemy, "is_alive", True) or enemy.team == char.team:
+            continue
+        line = _line_cells(pos, tuple(enemy.pos))
+        if len(line) <= 2 or not any(cell in smoke_cells for cell in line):
+            continue
+        if all(grid[row, col] != 1 for row, col in line):
+            candidates.append(enemy)
+    return min(candidates, key=lambda e: max(abs(e.pos[0] - pos[0]), abs(e.pos[1] - pos[1]))) if candidates else None
 
 
 def _bfs_distance_map(grid, goal):
@@ -399,23 +416,30 @@ class Ov1LearningAttackerGuardController:
                 (grid.shape[0] // 2, grid.shape[1] // 2)
             ]
 
-        pr, pc = int(planted_pos[0]), int(planted_pos[1])
+        # 候補は壁を考慮したプラント地点からのBFS距離で選ぶ。
+        # 座標上は近くても壁の反対側にある候補を選ばない。
+        plant_dist_map = _bfs_distance_map(grid, planted_pos)
+        unreachable = grid.shape[0] * grid.shape[1] + 1
         candidates = sorted(
             candidates,
-            key=lambda p: max(abs(p[0] - pr), abs(p[1] - pc)),
+            key=lambda p: (
+                int(plant_dist_map[p[0], p[1]])
+                if plant_dist_map[p[0], p[1]] >= 0 else unreachable,
+                p,
+            ),
         )
+        # train側の SITE_GUARD_POSITIONS と同じく、先頭の固定ロースター人数分だけを使う。
+        candidates = candidates[:len(ROSTER_ORDER)]
 
         teammates = [c for c in chars if c.team == char.team and c.is_alive]
-        pool = list(candidates)
-        for teammate in sorted(teammates, key=lambda c: c.name):
-            if pool:
-                pos = min(
-                    pool,
-                    key=lambda p: max(abs(p[0] - teammate.pos[0]), abs(p[1] - teammate.pos[1])),
-                )
-                pool.remove(pos)
+        # 学習時は ROSTER_ORDER の i 番目に i 番目の配置点を割り当てている。
+        # 推論時も同じ対応にして、担当地点の観測を入れ替えない。
+        roster_index = {name: idx for idx, name in enumerate(ROSTER_ORDER)}
+        for teammate in sorted(teammates, key=lambda c: (roster_index.get(c.name, len(roster_index)), c.name)):
+            if candidates:
+                pos = candidates[roster_index.get(teammate.name, 0) % len(candidates)]
             else:
-                pos = candidates[hash(teammate.name) % len(candidates)]
+                pos = (grid.shape[0] // 2, grid.shape[1] // 2)
             self._assigned_dist_maps[teammate.name] = _bfs_distance_map(grid, pos)
 
         self._assignment_done = True
@@ -548,7 +572,7 @@ class Ov1LearningAttackerGuardController:
 
     # -- 行動マスク ---------------------------------------------------------
     # train_attacker_guard.py の build_action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement=False):
+    def _action_mask(self, char, grid, chars, lock_movement=False, progress_dist_map=None):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         敵を視認している間は静止させ、射撃の当たりやすさを優先する
         (「多少の索敵は許容するが強く抑制」は学習側の報酬設計で反映済み。
@@ -573,6 +597,27 @@ class Ov1LearningAttackerGuardController:
             if not walkable:
                 base_mask[move_idx * 2] = False
                 base_mask[move_idx * 2 + 1] = False
+                continue
+
+        # 初期の持ち場移動は、BFS距離が必ず減る手だけに限定する。
+        # 味方に道を塞がれて短縮手がない場合だけはstayを残す。
+        if progress_dist_map is not None:
+            current_dist = int(progress_dist_map[r, c])
+            progress_moves = []
+            if current_dist > GUARD_POS_REACH_RADIUS:
+                for move_idx, (dr, dc) in enumerate(MOVES[1:], start=1):
+                    nr, nc = r + dr, c + dc
+                    if (
+                        0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
+                        and grid[nr, nc] != 1 and (nr, nc) not in occupied
+                        and 0 <= int(progress_dist_map[nr, nc]) < current_dist
+                    ):
+                        progress_moves.append(move_idx)
+            if progress_moves:
+                for move_idx in range(len(MOVES)):
+                    if move_idx not in progress_moves:
+                        base_mask[move_idx * 2] = False
+                        base_mask[move_idx * 2 + 1] = False
 
         if _ability_charge(char) <= 0 or char.ability_name == "HUNT":
             for move_idx in range(5):
@@ -601,6 +646,10 @@ class Ov1LearningAttackerGuardController:
 
         smoke_cells = game_state.get("smoke_cells")
 
+        smoke_enemy = _smoke_visible_enemy(char, chars, grid, smoke_cells)
+        if smoke_enemy is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
+
         self._ensure_spike_dist_map(grid, planted_pos)
         self._ensure_guard_assignment(char, grid, chars, planted_pos)
         self._maybe_advance_tick(char, grid, chars, smoke_cells)
@@ -614,7 +663,17 @@ class Ov1LearningAttackerGuardController:
         )
         # 敵を視認したら止まるロジックはoff (学習によって促す)
         # mask = self._action_mask(char, grid, chars, lock_movement=bool(visible_enemies))
-        mask = self._action_mask(char, grid, chars, lock_movement=False)
+        positioning_map = None
+        if (
+            not visible_enemies
+            and self.team_memory.last_seen_enemy is None
+            and active_defuse_info is None
+        ):
+            positioning_map = self._assigned_dist_maps.get(char.name)
+        mask = self._action_mask(
+            char, grid, chars, lock_movement=False,
+            progress_dist_map=positioning_map,
+        )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)

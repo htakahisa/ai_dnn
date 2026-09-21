@@ -150,6 +150,23 @@ def _has_los(grid, p1, p2):
     return True
 
 
+def _smoke_visible_enemy(char, chars, grid, smoke_cells):
+    """Return the nearest enemy visible through smoke to a smoke-vision user."""
+    if not getattr(char, "sees_through_smoke", False) or not smoke_cells:
+        return None
+    pos = (int(char.pos[0]), int(char.pos[1]))
+    candidates = []
+    for enemy in chars:
+        if not getattr(enemy, "is_alive", True) or enemy.team == char.team:
+            continue
+        line = _line_cells(pos, tuple(enemy.pos))
+        if len(line) <= 2 or not any(cell in smoke_cells for cell in line):
+            continue
+        if all(grid[row, col] != 1 for row, col in line):
+            candidates.append(enemy)
+    return min(candidates, key=lambda e: max(abs(e.pos[0] - pos[0]), abs(e.pos[1] - pos[1]))) if candidates else None
+
+
 def _bfs_distance_map(grid, goal):
     """goalから各床マスへの最短距離マップ(壁越え不可)。到達不能マスは-1。
     train_defender_retake.py の bfs_distance_map と同一ロジック。"""
@@ -546,6 +563,12 @@ class Ov1LearningDefenderRetakeController:
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         detonate_timer = float(game_state.get("detonate_timer", 0.0))
+
+        smoke_enemy = _smoke_visible_enemy(
+            char, chars, grid, game_state.get("smoke_cells") or set()
+        )
+        if smoke_enemy is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
 
         self._ensure_dist_map(grid, planted_pos)
         self._maybe_advance_tick(char, grid, chars)

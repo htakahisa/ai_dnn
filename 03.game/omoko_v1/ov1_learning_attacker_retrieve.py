@@ -57,9 +57,8 @@ RetrieveEnv._build_obs() と要素・並び順を完全一致させている:
 行動空間(N_ACTIONS=6)も train_attacker_retrieve.py と完全一致:
     0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=STAY, 5=ABILITY
 
-行動マスクは、学習側が2エージェント構成になったことで占有マスも
-明示的に禁止する仕様に変わったため、推論側もチーム問わず生存キャラが
-占有する全マスを禁止する(実ゲームの衝突判定と一致)。
+移動行動は、壁・占有マスを避けたうえで落下スパイクへのBFS距離が
+必ず減る方向だけを許可する。STAYとABILITYはこの移動制限の対象外。
 
 チェックポイントは train_attacker_retrieve.py の _save_checkpoint() が
 保存する dict 形式
@@ -162,6 +161,23 @@ def _has_los(grid, p1, p2):
         if grid[r, c] == 1:
             return False
     return True
+
+
+def _smoke_visible_enemy(char, chars, grid, smoke_cells):
+    """Return the nearest enemy visible through smoke to a smoke-vision user."""
+    if not getattr(char, "sees_through_smoke", False) or not smoke_cells:
+        return None
+    pos = (int(char.pos[0]), int(char.pos[1]))
+    candidates = []
+    for enemy in chars:
+        if not getattr(enemy, "is_alive", True) or enemy.team == char.team:
+            continue
+        line = _line_cells(pos, tuple(enemy.pos))
+        if len(line) <= 2 or not any(cell in smoke_cells for cell in line):
+            continue
+        if all(grid[row, col] != 1 for row, col in line):
+            candidates.append(enemy)
+    return min(candidates, key=lambda e: max(abs(e.pos[0] - pos[0]), abs(e.pos[1] - pos[1]))) if candidates else None
 
 
 def _bfs_distance_map(grid, goal):
@@ -380,12 +396,11 @@ class Ov1LearningAttackerRetrieveController:
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(self, char, grid, chars):
-        """壁・占有マスへの移動 / チャージ0でのABILITYは禁止する。
-        train_attacker_retrieve.py が2エージェント構成になり占有マスを
-        明示的にマスクする仕様へ変わったことに合わせる。"""
+        """BFS距離が減る移動だけを許可し、STAY/ABILITYは別に扱う。"""
         mask = np.zeros(N_ACTIONS, dtype=bool)
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
+        current_dist = int(self._dist_map[r, c])
         occupied = {
             tuple(o.pos) for o in chars if o is not char and getattr(o, "is_alive", True)
         }
@@ -398,7 +413,12 @@ class Ov1LearningAttackerRetrieveController:
                 and grid[nr, nc] != 1
                 and (nr, nc) not in occupied
             )
-            mask[a] = walkable
+            next_dist = int(self._dist_map[nr, nc]) if walkable else -1
+            mask[a] = bool(
+                walkable
+                and current_dist >= 0
+                and 0 <= next_dist < current_dist
+            )
         mask[4] = True  # STAY は常に許可
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
         return np.repeat(mask, len(FACING_DIRS))
@@ -431,23 +451,10 @@ class Ov1LearningAttackerRetrieveController:
             e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
 
-        # A visible enemy is an immediate firefight.  Moving in this tick
-        # lowers automatic-fire accuracy, so match carry/escort behaviour:
-        # use the one available ability first, otherwise hold position and
-        # face the closest target.  This intentionally precedes the DQN
-        # route decision; the learned retrieve policy resumes once LOS ends.
-        if visible_enemies:
-            nearest = min(
-                visible_enemies,
-                key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
-            )
-            if _ability_charge(char) > 0 and char.ability_name != "HUNT":
-                return list(char.pos), {
-                    "ability": char.ability_name,
-                    "target": (int(nearest.pos[0]), int(nearest.pos[1])),
-                }
-            return list(char.pos), {"facing": _facing_towards(char.pos, nearest.pos)}
-
+        # Keep the retrieve decision on the learned policy even while an enemy
+        # is visible.  The training environment exposes visible enemies in
+        # the observation but does not force STAY, so stopping here creates a
+        # train/inference mismatch and can cause a timeout near the spike.
         # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
         # なので、呼ばれたキャラは役割区分なくそのままモデルの判断に従う。
         obs = self._build_observation(char, grid, chars, visible_enemies, self._team_sighting)

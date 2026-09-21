@@ -437,19 +437,29 @@ class RetrieveEnv:
         return obs_arr
 
     def _action_mask_for(self, unit):
-        """壁・占有マスへの移動 / チャージ0でのABILITYは禁止する。
-        以前は"味方に塞がれたセルへの移動は物理的には選べる"扱いだったが、
-        2エージェント構成になったことで衝突を明示的に防ぐ必要があるため、
-        占有マスもマスクする(実ゲームのoccupied判定と一致させる)。"""
+        """移動は、落下スパイクへのBFS距離が減る歩行可能マスだけを許可する。
+
+        壁・占有マスへの移動と、同距離・遠回り方向への移動を禁止する。
+        STAYとABILITYは移動制限の対象外とし、交戦時の停止射撃や
+        アビリティ使用を妨げない。"""
         mask = [True] * N_ACTIONS
         r, c = unit.pos
+        current_dist = int(self.dist_map[r, c])
         occupied = self._occupied_cells(exclude=unit)
         for i, (dr, dc) in enumerate(CARDINAL):
             nr, nc = r + dr, c + dc
-            if not (0 <= nr < HEIGHT and 0 <= nc < WIDTH) or GRID[nr, nc] == 1:
-                mask[i] = False
-            elif (nr, nc) in occupied:
-                mask[i] = False
+            walkable = (
+                0 <= nr < HEIGHT
+                and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and (nr, nc) not in occupied
+            )
+            next_dist = int(self.dist_map[nr, nc]) if walkable else -1
+            mask[i] = bool(
+                walkable
+                and current_dist >= 0
+                and 0 <= next_dist < current_dist
+            )
         if unit.charge <= 0:
             mask[ACTION_ABILITY] = False
         return np.repeat(np.array(mask, dtype=bool), len(FACING_DIRS))

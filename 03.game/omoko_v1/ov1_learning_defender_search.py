@@ -68,6 +68,15 @@ BASE_ACTION_DIM = 10
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80
 
+
+def _facing_towards(from_pos, to_pos):
+    """Return the eight-way facing from ``from_pos`` toward ``to_pos``."""
+    dr = int(to_pos[0]) - int(from_pos[0])
+    dc = int(to_pos[1]) - int(from_pos[1])
+    vertical = "N" if dr < 0 else "S" if dr > 0 else ""
+    horizontal = "E" if dc > 0 else "W" if dc < 0 else ""
+    return vertical + horizontal if vertical and horizontal else vertical or horizontal or "N"
+
 # 観測エンコード用。ov1_train_defender_search.pyのALL_FACINGSと同一の並び
 # (FACING_DIRSと同一)。action decode用の変数と混同しないよう別名で持つ。
 ALL_FACINGS = FACING_DIRS
@@ -158,6 +167,23 @@ def _has_los(grid, p1, p2):
         if grid[r, c] == 1:
             return False
     return True
+
+
+def _smoke_visible_enemy(char, chars, grid, smoke_cells):
+    """Return the nearest enemy visible through smoke to a smoke-vision user."""
+    if not getattr(char, "sees_through_smoke", False) or not smoke_cells:
+        return None
+    pos = (int(char.pos[0]), int(char.pos[1]))
+    candidates = []
+    for enemy in chars:
+        if not getattr(enemy, "is_alive", True) or enemy.team == char.team:
+            continue
+        line = _line_cells(pos, tuple(enemy.pos))
+        if len(line) <= 2 or not any(cell in smoke_cells for cell in line):
+            continue
+        if all(grid[row, col] != 1 for row, col in line):
+            candidates.append(enemy)
+    return min(candidates, key=lambda e: max(abs(e.pos[0] - pos[0]), abs(e.pos[1] - pos[1]))) if candidates else None
 
 
 def _bfs_distance_map(grid, goal):
@@ -827,6 +853,12 @@ class Ov1LearningDefenderSearchController:
         # 万一プラント後にも呼ばれた場合は安全側としてその場に留まる。
         if is_planted:
             return list(char.pos)
+
+        smoke_enemy = _smoke_visible_enemy(
+            char, chars, grid, game_state.get("smoke_cells") or set()
+        )
+        if smoke_enemy is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
 
         # --- Defender Setup Phase(配置フェーズ) ---
         # battle_logic._move_character_during_defender_setup からは

@@ -327,10 +327,16 @@ if not GUARD_WATCH_POINT_CELLS:
 
 
 def _assign_guard_positions_for_site(plant_pos, num_positions=N_ATTACKERS):
-    """プラント地点にChebyshev距離が近い順でガードポジション(6)をnum_positions個選ぶ。"""
+    """プラント地点への実際のBFS距離が近い順にガードポジションを選ぶ。"""
+    plant_dist_map = bfs_distance_map(plant_pos)
+    unreachable = HEIGHT * WIDTH + 1
     ordered = sorted(
         GUARD_POSITION_CELLS,
-        key=lambda cell: max(abs(cell[0] - plant_pos[0]), abs(cell[1] - plant_pos[1])),
+        key=lambda cell: (
+            int(plant_dist_map[cell[0], cell[1]])
+            if plant_dist_map[cell[0], cell[1]] >= 0 else unreachable,
+            cell,
+        ),
     )
     return ordered[:num_positions]
 
@@ -624,7 +630,7 @@ def decode_action(action_idx):
     return MOVES[move_idx], bool(use_ability), FACING_DIRS[facing_idx]
 
 
-def build_action_mask(unit, occupied, lock_movement=False):
+def build_action_mask(unit, occupied, lock_movement=False, progress_dist_map=None):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
     敵を視認している間は静止させ、射撃の当たりやすさを優先する。
     向き(facing)は移動・アビリティとは無関係に常に自由選択できるため、
@@ -646,6 +652,27 @@ def build_action_mask(unit, occupied, lock_movement=False):
         if not walkable:
             base_mask[move_idx * 2] = False
             base_mask[move_idx * 2 + 1] = False
+            continue
+
+    # 配置へ向かう間だけは、BFS距離を厳密に縮める一手だけを許可する。
+    # 味方に道を塞がれて短縮手がない場合だけはstayを残し、無効な全マスクを避ける。
+    if progress_dist_map is not None:
+        current_dist = int(progress_dist_map[r, c])
+        progress_moves = []
+        if current_dist > GUARD_POS_REACH_RADIUS:
+            for move_idx, (dr, dc) in enumerate(MOVES[1:], start=1):
+                nr, nc = r + dr, c + dc
+                if (
+                    0 <= nr < HEIGHT and 0 <= nc < WIDTH
+                    and GRID[nr, nc] != 1 and (nr, nc) not in occupied
+                    and 0 <= int(progress_dist_map[nr, nc]) < current_dist
+                ):
+                    progress_moves.append(move_idx)
+        if progress_moves:
+            for move_idx in range(len(MOVES)):
+                if move_idx not in progress_moves:
+                    base_mask[move_idx * 2] = False
+                    base_mask[move_idx * 2 + 1] = False
 
     if unit.charges <= 0 or unit.role in ("HUNT", "NONE"):
         for move_idx in range(5):
@@ -771,7 +798,17 @@ class GuardEnv:
             )
             # 敵を視認したら止まるロジックはoff (学習によって促す)
             # mask_dict[a.name] = build_action_mask(a, own_occupied, lock_movement=has_enemy_los)
-            mask_dict[a.name] = build_action_mask(a, own_occupied, lock_movement=False)
+            positioning_map = None
+            if (
+                not has_enemy_los
+                and self.guard_memory.last_seen_enemy is None
+                and active_defuse is None
+            ):
+                positioning_map = a.assigned_guard_dist_map
+            mask_dict[a.name] = build_action_mask(
+                a, own_occupied, lock_movement=False,
+                progress_dist_map=positioning_map,
+            )
         return obs_dict, mask_dict
 
     # -- メインステップ ---------------------------------------------------

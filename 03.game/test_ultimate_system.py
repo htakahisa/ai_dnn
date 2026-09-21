@@ -171,6 +171,26 @@ class UltimateSystemTests(unittest.TestCase):
 
         self.assertEqual(sorted(drone.hp for drone in game.monitor_drones), [160, 200])
 
+    def test_recon_revealed_enemy_can_be_shot_through_smoke_only(self):
+        game = UltimateTestGame()
+        shooter = make_character("something", "A", (4, 2))
+        target = make_character("Demon1", "D", (4, 8))
+        game.chars = [shooter, target]
+        game.smokes = [{"cells": {(4, 5)}, "remaining_ticks": 10}]
+
+        self.assertFalse(game.check_shot_line_of_sight(shooter, target))
+
+        target.reveal_remaining = 3
+        self.assertTrue(game.check_shot_line_of_sight(shooter, target))
+
+        ally = make_character("Leo", "A", (4, 6))
+        game.chars.append(ally)
+        self.assertFalse(game.check_shot_line_of_sight(shooter, target))
+
+        game.chars.remove(ally)
+        game.grid[4, 4] = 1
+        self.assertFalse(game.check_shot_line_of_sight(shooter, target))
+
     def test_orb_collection_takes_thirty_consecutive_ticks_and_can_cancel(self):
         game = UltimateTestGame()
         collector = make_character("Demon1", "A", (2, 2))
