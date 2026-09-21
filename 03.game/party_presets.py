@@ -204,7 +204,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="SPS",
         players=("A-Train", "Deep", "Homelander", "Stormfront", "Blacknoir"),
         igl="Homelander",
-        spike_holder="ATrain",
+        spike_holder="A-Train",
         description="勝つためなら手段を選ばない、堕落した5人のヒーロー",
     ),
     "Alien Rex": TeamPreset(
