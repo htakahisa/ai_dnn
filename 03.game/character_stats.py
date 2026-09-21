@@ -251,10 +251,10 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "PatMen": CharacterStats("PatMen", 0.33, 0.2, 80, 0.8, 125, "スモーカー", 55, 5, 8),
     "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "シーカー", 60, 5, 8),
     "Homelander" : CharacterStats("Homelander", 1.0, 1.0, 100, 1.0, 200, "タイガー", 200, 0, 10),
-    "Stormfront" : CharacterStats("Stormfront", 0.9, 0.9, 90, 0.9, 190, "フラッシュ", 190, 9, 9), 
-    "Noir" : CharacterStats("Noir", 0.8, 0.80, 80, 0.8, 180, "シーカー", 180, 8, 0),  
-    "ATrain" : CharacterStats("ATrain", 0.3, 0.3, 95, 0.9, 160, "シーカー", 195, 10, 0),  
-    "Deep" : CharacterStats("Deep", 0.7, 0.7, 70, 0.7, 170, "シーカー", 170, 7, 7),  
+    "Stormfront" : CharacterStats("Stormfront", 0.9, 0.9, 120, 0.9, 190, "フラッシュ", 190, 9, 9), 
+    "Blacknoir" : CharacterStats("Blacknoir", 0.8, 0.80, 140, 0.8, 180, "シーカー", 180, 8, 0),  
+    "A-Train" : CharacterStats("A-Train", 0.3, 0.8, 160, 0.9, 210, "シーカー", 195, 10, 0),  
+    "Deep" : CharacterStats("Deep", 0.7, 0.7, 170, 0.7, 170, "シーカー", 170, 7, 7),  
 }
 
 

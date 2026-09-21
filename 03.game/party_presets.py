@@ -199,13 +199,13 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="SereNa",
         description="圧倒的なミクロ、瞬発的なフィジカル",
     ),
-    "THE BOYS": TeamPreset(
-        name="THE BOYS",
-        short_name="TB",
-        players=("Homelander", "Stormfront", "Noir", "ATrain", "Deep"),
+    "SUPES": TeamPreset(
+        name="SUPES",
+        short_name="SPS",
+        players=("A-Train", "Deep", "Homelander", "Stormfront", "Blacknoir"),
         igl="Homelander",
         spike_holder="ATrain",
-        description="勝つためなら手段を選ばない、堕落した5人のヒーロー。",
+        description="勝つためなら手段を選ばない、堕落した5人のヒーロー",
     ),
     "Alien Rex": TeamPreset(
         name="Alien Rex",
