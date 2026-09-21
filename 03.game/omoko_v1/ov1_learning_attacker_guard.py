@@ -63,10 +63,8 @@ from game_core import (
     DEFUSE_REQUIRED_TICKS,
     FACING_VECTORS,
 )
-from ov1_character_stats import (
-    CHARACTER_TABLE as STATS_TABLE,
-    ROSTER_ORDER,
-)
+from character_stats import CHARACTER_TABLE as STATS_TABLE
+from ov1_roster import ROSTER_ORDER
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
 from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS
 

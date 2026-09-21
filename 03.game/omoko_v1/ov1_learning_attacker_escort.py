@@ -59,10 +59,8 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
-from ov1_character_stats import (
-    CHARACTER_TABLE as STATS_TABLE,
-    ROSTER_ORDER,
-)
+from character_stats import CHARACTER_TABLE as STATS_TABLE
+from ov1_roster import ROSTER_ORDER
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
 from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
 from ov1_train_attacker_escort import (
@@ -95,6 +93,15 @@ def decode_action(action_idx):
     idx = int(action_idx)
     base_idx, facing_idx = divmod(idx, len(FACING_DIRS))
     return base_idx, FACING_DIRS[facing_idx]
+
+
+def _facing_towards(from_pos, to_pos):
+    """Return the eight-way facing direction from ``from_pos`` to ``to_pos``."""
+    dr = int(to_pos[0]) - int(from_pos[0])
+    dc = int(to_pos[1]) - int(from_pos[1])
+    vertical = "N" if dr < 0 else "S" if dr > 0 else ""
+    horizontal = "E" if dc > 0 else "W" if dc < 0 else ""
+    return vertical + horizontal if vertical and horizontal else vertical or horizontal or "N"
 
 BLIND_DURATION_TICKS = 3
 REVEAL_DURATION_TICKS = 5
@@ -928,6 +935,31 @@ class Ov1LearningAttackerEscortController:
         self._maybe_advance_tick(char, grid, chars)
         self._refresh_watch_assignments(grid, chars, char.team)
 
+        # 「ん? だれかいるワン!」の覚醒中だけ、スモークをまたいで
+        # 射線が通る敵を発見したら射撃を優先する。通常の視界判定や、
+        # 敵がいない時のスモーク越し定点アビリティには介入しない。
+        smoke_cells = set(game_state.get("smoke_cells", set()))
+        if getattr(char, "sees_through_smoke", False) and smoke_cells:
+            pos = (int(char.pos[0]), int(char.pos[1]))
+            smoke_targets = [
+                enemy
+                for enemy in chars
+                if getattr(enemy, "is_alive", True)
+                and getattr(enemy, "team", None) != char.team
+                and _has_los_walls_only(grid, pos, (int(enemy.pos[0]), int(enemy.pos[1])))
+                and any(cell in smoke_cells for cell in _line_cells(pos, tuple(enemy.pos)))
+            ]
+            if smoke_targets:
+                target = min(
+                    smoke_targets,
+                    key=lambda enemy: _chebyshev(pos, (int(enemy.pos[0]), int(enemy.pos[1]))),
+                )
+                st["last_delta"] = (0.0, 0.0)
+                st["stuck"] += 1
+                return [pos[0], pos[1]], {
+                    "facing": _facing_towards(pos, tuple(target.pos))
+                }
+
         escape_step = self._omoko_escape_step(char, grid, chars)
         if escape_step is not None:
             st["last_delta"] = (0.0, 0.0)
@@ -949,6 +981,14 @@ class Ov1LearningAttackerEscortController:
 
         action, facing = decode_action(action_idx)
         r, c = int(char.pos[0]), int(char.pos[1])
+
+        # Keep inference deterministic with the combat action mask used during
+        # training, including pre-existing checkpoints.
+        visible_enemy, _ = self._nearest_visible_enemy(grid, chars, char.team, (r, c))
+        if visible_enemy is not None and action != ACTION_ABILITY:
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return [r, c], {"facing": _facing_towards((r, c), tuple(visible_enemy.pos))}
 
         if action == ACTION_ABILITY:
             enemy_range = FLASH_RANGE if char.ability_name == "FLASH" else ABILITY_RANGE

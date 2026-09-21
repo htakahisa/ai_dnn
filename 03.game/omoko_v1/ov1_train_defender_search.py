@@ -72,7 +72,7 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR, DEFENDER_SETUP_TICK
 
 
 from ov1_map_data_search import SEARCH_MAZE_STR
-from ov1_character_stats import CHARACTER_TABLE as STATS_TABLE
+from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
 from ov1_common_defender import (

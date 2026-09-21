@@ -77,10 +77,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ov1_character_stats import (
-    CHARACTER_TABLE as STATS_TABLE,
-    ROSTER_ORDER,
-)
+from character_stats import CHARACTER_TABLE as STATS_TABLE
+from ov1_roster import ROSTER_ORDER
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -192,6 +190,15 @@ def _ability_charge(char):
         "SMOKE": getattr(char, "smoke_charges", 0),
         "RECON": getattr(char, "recon_charges", 0),
     }.get(char.ability_name, 0)
+
+
+def _facing_towards(from_pos, to_pos):
+    """Return the eight-way facing which points from ``from_pos`` at ``to_pos``."""
+    dr = int(to_pos[0]) - int(from_pos[0])
+    dc = int(to_pos[1]) - int(from_pos[1])
+    vertical = "N" if dr < 0 else "S" if dr > 0 else ""
+    horizontal = "E" if dc > 0 else "W" if dc < 0 else ""
+    return vertical + horizontal if vertical and horizontal else vertical or horizontal or "N"
 
 
 def _decode_action(action_idx):
@@ -423,6 +430,23 @@ class Ov1LearningAttackerRetrieveController:
         visible_enemies = [
             e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
+
+        # A visible enemy is an immediate firefight.  Moving in this tick
+        # lowers automatic-fire accuracy, so match carry/escort behaviour:
+        # use the one available ability first, otherwise hold position and
+        # face the closest target.  This intentionally precedes the DQN
+        # route decision; the learned retrieve policy resumes once LOS ends.
+        if visible_enemies:
+            nearest = min(
+                visible_enemies,
+                key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
+            )
+            if _ability_charge(char) > 0 and char.ability_name != "HUNT":
+                return list(char.pos), {
+                    "ability": char.ability_name,
+                    "target": (int(nearest.pos[0]), int(nearest.pos[1])),
+                }
+            return list(char.pos), {"facing": _facing_towards(char.pos, nearest.pos)}
 
         # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
         # なので、呼ばれたキャラは役割区分なくそのままモデルの判断に従う。

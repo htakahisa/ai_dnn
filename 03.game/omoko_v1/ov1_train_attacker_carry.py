@@ -50,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # --- after ---
 from ov1_map_data_carry import NEW_MAZE_STR
 from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
-from ov1_character_stats import CHARACTER_TABLE as STATS_TABLE
+from character_stats import CHARACTER_TABLE as STATS_TABLE
 
 from game_core import (
     MAX_HP,
@@ -113,7 +113,7 @@ FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 24
 
 # サイト別中継地点: 右サイト=6, 左サイト=7。同じ値を複数配置した場合は、
-# マップ上の走査順で全地点を順番に通過する。
+# ラウンド開始時にその中から1地点をランダム選択し、その地点だけを通過する。
 WAYPOINT_VALUE_BY_SITE = {"right": 6, "left": 7}
 
 # スモーク事前設置(lineup)用の定点は、マップ上の値8(left)/9(right)から読む。
@@ -689,7 +689,7 @@ def decode_action(action_idx):
     return decoded, FACING_DIRS[facing_idx]
 
 
-def build_action_mask(unit, on_target, ability_available=True):
+def build_action_mask(unit, on_target, ability_available=True, enemy_visible=False):
     """向き(facing)は移動・アビリティとは無関係に常に自由選択できるため、
     base(0-2)側のマスクをfacing方向数だけ展開する
     (ov1_train_defender_search.pyと同一規約)。
@@ -699,6 +699,10 @@ def build_action_mask(unit, on_target, ability_available=True):
     if unit.charges <= 0 or unit.ability_name in ("HUNT", "NONE") or not ability_available:
         base_mask[ACTION_ABILITY] = False
     base_mask[ACTION_PLANT] = bool(on_target)
+    if enemy_visible:
+        # NONE means hold position in CarryEnv.step() while fighting.  Moving
+        # along the route is deliberately unavailable until LOS is broken.
+        base_mask[ACTION_PLANT] = False
     return np.repeat(base_mask, len(FACING_DIRS))
 
 
@@ -726,6 +730,8 @@ class CarryEnv:
         self.active_site = None
         self.target_plant_pos = None
         self.reached_waypoint = True
+        # 選択済み中継地点のインデックス。同じサイトに複数の中継地点が
+        # あっても、1ラウンドではこの1地点だけを経由する。
         self.waypoint_index = 0
         self.smoke_lineup_used = False
 
@@ -766,7 +772,8 @@ class CarryEnv:
             chokepoint_bias_strength=DEFENDER_CHOKEPOINT_BIAS_STRENGTH,
         )
 
-        self.waypoint_index = 0
+        waypoint_cells = WAYPOINT_CELLS_BY_SITE.get(self.active_site, [])
+        self.waypoint_index = random.randrange(len(waypoint_cells)) if waypoint_cells else 0
         if self.active_site in WAYPOINT_CELLS_BY_SITE:
             self.reached_waypoint = False
             self.dist_map = WAYPOINT_DIST_MAPS[self.active_site][self.waypoint_index]
@@ -888,12 +895,16 @@ class CarryEnv:
         on_target = self.carrier.is_alive and self._plantable_cell(self.carrier.pos)
         next_step = self._carrier_lookahead_step()
         ability_available = self.carrier.is_alive and self._carrier_ability_target_available()
+        enemy_visible = any(
+            d.is_alive and has_los(self.carrier.pos, d.pos, smoke_cells)
+            for d in self.defenders
+        )
         obs = build_observation(
             self.carrier, self.defenders, smoke_cells, self._own_smoke_active(),
             self.elapsed_ticks, self.dist_map, self.reached_waypoint, on_target,
             next_step=next_step,
         )
-        mask = build_action_mask(self.carrier, on_target, ability_available)
+        mask = build_action_mask(self.carrier, on_target, ability_available, enemy_visible)
         return obs, mask
 
     def step(self, action_idx):
@@ -963,9 +974,9 @@ class CarryEnv:
             ]
             carrier_had_visible_enemy = bool(visible_enemies)
 
-            if decoded == "PLANT":
+            if decoded == "PLANT" or (carrier_had_visible_enemy and decoded == "NONE"):
                 move_plans.append((self.carrier, tuple(self.carrier.pos)))
-                plant_action_chosen = True
+                plant_action_chosen = decoded == "PLANT"
             else:
                 own_occupied = occupied - {tuple(self.carrier.pos)}
                 goal = self._current_nav_goal()
@@ -1092,12 +1103,8 @@ class CarryEnv:
             waypoint_dist = max(abs(wr - waypoint_cell[0]), abs(wc - waypoint_cell[1]))
             if waypoint_dist <= 1:
                 waypoint_bonus = WAYPOINT_REACHED_REWARD
-                self.waypoint_index += 1
-                if self.waypoint_index >= len(WAYPOINT_CELLS_BY_SITE[self.active_site]):
-                    self.reached_waypoint = True
-                    self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
-                else:
-                    self.dist_map = WAYPOINT_DIST_MAPS[self.active_site][self.waypoint_index]
+                self.reached_waypoint = True
+                self.dist_map = PLANT_DIST_MAPS[self.target_plant_pos]
 
         reward, done = self._compute_reward(
             ability_whiff, ability_overlap, plant_tick_progress, plant_completed,

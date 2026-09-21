@@ -47,10 +47,8 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR
 
 
 from ov1_map_data_search import SEARCH_MAZE_STR
-from ov1_character_stats import (
-    CHARACTER_TABLE as STATS_TABLE,
-    ROSTER_ORDER,
-)
+from character_stats import CHARACTER_TABLE as STATS_TABLE
+from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_search import DEFENSE_WATCH_POINTS, DEFENSE_WATCH_FACING
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

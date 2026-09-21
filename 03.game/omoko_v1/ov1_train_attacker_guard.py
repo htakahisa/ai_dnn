@@ -66,7 +66,7 @@ from game_core import (
 )
 
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
-from ov1_character_stats import CHARACTER_TABLE as STATS_TABLE
+from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
 from ov1_common_attacker import (

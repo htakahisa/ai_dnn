@@ -85,13 +85,29 @@ SMOKE_LINEUP_CELLS_BY_SITE = _marker_cells_by_site(
 ABILITY_RANGE = 7
 SIGHTING_STALENESS_CAP = 20
 
+
+def _facing_towards(from_pos, to_pos):
+    """Return the eight-way facing that gives the stationary shooter the target."""
+    dr = int(to_pos[0]) - int(from_pos[0])
+    dc = int(to_pos[1]) - int(from_pos[1])
+    vertical = "N" if dr < 0 else "S" if dr > 0 else ""
+    horizontal = "E" if dc > 0 else "W" if dc < 0 else ""
+    return vertical + horizontal if vertical and horizontal else vertical or horizontal or "N"
+
 # train_attacker_carry.py の game_core定数と一致させる(自己完結ルールのため複製)
 ROUND_DURATION_TICKS = 100
 PLANT_REQUIRED_TICKS = 4
 
 # --- 本番プレイ時のサイト選択・target選定をAI側に委ねる ---------------------
 AI_CONTROLLED_SITE_SELECTION = True    # Trueのとき、下の確率で選択する
-SITE_SELECTION_WEIGHTS = {"left": 1.0, "right": 0.0}
+SITE_SELECTION_WEIGHTS = {"left": 0.5, "right": 0.5}
+
+# In-match route adaptation: rounds 1-6 explore evenly; later rounds favour
+# the routes which have converted into attacker round wins.
+ROUTE_WARMUP_ROUNDS = 6
+ROUTE_EXPLORE_RATE = 0.15
+ROUTE_PRIOR_WINS = 1.0
+ROUTE_PRIOR_GAMES = 2.0
 
 
 # ============================================================================
@@ -330,6 +346,8 @@ class Ov1LearningAttackerCarryController:
         self._active_site = None
         self._active_target = None        # このラウンドのナビゲーション最終目標(優先設置場所)
         self._reached_waypoint = True
+        # 選択済み中継地点のインデックス。同じサイトに複数の中継地点が
+        # あっても、1ラウンドではこの1地点だけを経由する。
         self._waypoint_index = 0
         self._target_dist_map = None
         self._cached_target_pos = None
@@ -341,6 +359,10 @@ class Ov1LearningAttackerCarryController:
         # 同一ラウンド内でreset_round()が再度呼ばれても初期化をスキップするための
         # ラウンド識別キー(フェーズ切り替え等からの意図しない再初期化を防ぐ)。
         self._last_reset_round_key = None
+        # {(site, waypoint_index): {"wins": int, "games": int}}
+        # Deliberately in-memory: every new map starts with fresh evidence.
+        self._route_stats = {}
+        self._pending_route_result = None
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
@@ -400,6 +422,7 @@ class Ov1LearningAttackerCarryController:
         if current_round_key is not None and current_round_key == self._last_reset_round_key:
             return
         self._last_reset_round_key = current_round_key
+        self._record_pending_route_result(current_round_key)
 
         self._sighting = None
         self._active_site = None
@@ -411,7 +434,7 @@ class Ov1LearningAttackerCarryController:
         self._carrier_name = None
 
         if AI_CONTROLLED_SITE_SELECTION and self._real_game is not None:
-            chosen_site = self._choose_weighted_site()
+            chosen_site, waypoint_index = self._choose_route(current_round_key)
 
             candidates = self._priority_cells_by_site.get(chosen_site) or []
             if not candidates:
@@ -432,14 +455,82 @@ class Ov1LearningAttackerCarryController:
                 # 表示整合のため本物のgameにも書き込む(内部ロジックはself._active_target
                 # を直接参照するため、これ自体は必須ではない)。
                 self._real_game.target_plant_pos = target
-                self._waypoint_index = 0
-                if chosen_site in self._waypoint_dist_maps:
+                self._waypoint_index = waypoint_index
+                if self._waypoint_dist_maps.get(chosen_site):
                     self._reached_waypoint = False
                 else:
                     self._reached_waypoint = True
+                self._pending_route_result = {
+                    "round": current_round_key,
+                    "attacker_wins_before": int(getattr(self._real_game, "attacker_wins", 0)),
+                    "route": (chosen_site, self._waypoint_index),
+                }
                 self._log(
-                    f"[SITE OVERRIDE] chosen_site={chosen_site} target={target}"
+                    f"[SITE OVERRIDE] chosen_site={chosen_site} waypoint={self._waypoint_index} "
+                    f"target={target} route_stats={self._route_stats}"
                 )
+
+    def _record_pending_route_result(self, current_round):
+        """Commit the previous route only when its immediately next round begins."""
+        pending = self._pending_route_result
+        if pending is None or self._real_game is None:
+            return
+        self._pending_route_result = None
+        previous_round = pending.get("round")
+        # An inactive attacker controller is not reset during a side swap.
+        # Do not attribute later results from the opposite half to this route.
+        if current_round is None or previous_round is None or current_round != previous_round + 1:
+            return
+        won = int(getattr(self._real_game, "attacker_wins", 0)) > int(
+            pending["attacker_wins_before"]
+        )
+        route = pending["route"]
+        stats = self._route_stats.setdefault(route, {"wins": 0, "games": 0})
+        stats["games"] += 1
+        stats["wins"] += int(won)
+        self._log(
+            f"[ROUTE RESULT] round={previous_round} route={route} won={won} "
+            f"wins={stats['wins']} games={stats['games']}"
+        )
+
+    def _choose_route(self, current_round):
+        """Choose a (site, waypoint index) pair from the enabled site set."""
+        enabled_sites = [
+            site for site in ("left", "right")
+            if max(0.0, float(SITE_SELECTION_WEIGHTS.get(site, 0.0))) > 0.0
+            and (self._priority_cells_by_site.get(site) or self._plant_cells_by_site.get(site))
+        ]
+        if not enabled_sites:
+            enabled_sites = [
+                site for site in ("left", "right")
+                if self._priority_cells_by_site.get(site) or self._plant_cells_by_site.get(site)
+            ]
+        routes = [
+            (site, index)
+            for site in enabled_sites
+            for index in range(max(1, len(self.waypoint_cells_by_site.get(site, []))))
+        ]
+        if not routes:
+            return self._choose_weighted_site(), 0
+
+        if current_round is None or current_round <= ROUTE_WARMUP_ROUNDS:
+            fewest_games = min(self._route_stats.get(route, {}).get("games", 0) for route in routes)
+            return random.choice([
+                route for route in routes
+                if self._route_stats.get(route, {}).get("games", 0) == fewest_games
+            ])
+
+        def estimated_win_rate(route):
+            stats = self._route_stats.get(route, {})
+            return (float(stats.get("wins", 0)) + ROUTE_PRIOR_WINS) / (
+                float(stats.get("games", 0)) + ROUTE_PRIOR_GAMES
+            )
+
+        if random.random() < ROUTE_EXPLORE_RATE:
+            return random.choice(routes)
+        best_rate = max(estimated_win_rate(route) for route in routes)
+        best_routes = [route for route in routes if estimated_win_rate(route) == best_rate]
+        return random.choice(best_routes)
 
     @staticmethod
     def _choose_weighted_site():
@@ -699,6 +790,12 @@ class Ov1LearningAttackerCarryController:
             ability = self._escort_ability_action(char, visible_enemies)
             if ability is not None:
                 return list(char.pos), {"ability": ability[0], "target": ability[1]}
+            if visible_enemies:
+                nearest = min(
+                    visible_enemies,
+                    key=lambda o: max(abs(o.pos[0] - r), abs(o.pos[1] - c)),
+                )
+                return [r, c], {"facing": _facing_towards(char.pos, nearest.pos)}
             next_pos = self._decide_escort_move(char, carrier, occupied)
             return next_pos
 
@@ -720,7 +817,10 @@ class Ov1LearningAttackerCarryController:
             )
             width = grid.shape[1]
             self._active_site = "left" if self._active_target[1] < width // 2 else "right"
-            self._waypoint_index = 0
+            waypoint_cells = self.waypoint_cells_by_site.get(self._active_site, [])
+            self._waypoint_index = (
+                random.randrange(len(waypoint_cells)) if waypoint_cells else 0
+            )
             self._reached_waypoint = self._active_site not in self._waypoint_dist_maps
 
         # 中継地点通過判定(未通過の場合のみ)。
@@ -728,9 +828,7 @@ class Ov1LearningAttackerCarryController:
             waypoint_cell = self.waypoint_cells_by_site[self._active_site][self._waypoint_index]
             waypoint_dist = max(abs(r - waypoint_cell[0]), abs(c - waypoint_cell[1]))
             if waypoint_dist <= 1:
-                self._waypoint_index += 1
-                if self._waypoint_index >= len(self.waypoint_cells_by_site[self._active_site]):
-                    self._reached_waypoint = True
+                self._reached_waypoint = True
 
         goal = (
             self.waypoint_cells_by_site[self._active_site][self._waypoint_index]
@@ -781,6 +879,23 @@ class Ov1LearningAttackerCarryController:
             or (char.ability_name == "FLASH" and self._sighting is not None)
         )
 
+        # A visible enemy is an immediate firefight.  Do not advance with the
+        # spike while the automatic shooting system needs a stationary shooter.
+        # ABILITY, when legal, remains the first option; otherwise hold and aim.
+        if visible_enemies:
+            nearest = min(
+                visible_enemies,
+                key=lambda o: max(abs(o.pos[0] - r), abs(o.pos[1] - c)),
+            )
+            charges = {
+                "SMOKE": getattr(char, "smoke_charges", 0),
+                "FLASH": getattr(char, "flash_charges", 0),
+                "RECON": getattr(char, "recon_charges", 0),
+            }.get(char.ability_name, 0)
+            if ability_available and charges > 0 and char.ability_name != "HUNT":
+                return [r, c], {"ability": char.ability_name, "target": tuple(map(int, nearest.pos))}
+            return [r, c], {"facing": _facing_towards(char.pos, nearest.pos)}
+
         obs = self._build_observation(
             char, chars, smoke_cells, dist_map, elapsed_ticks, self._reached_waypoint, on_target,
             next_step=next_pos,
@@ -811,7 +926,9 @@ class Ov1LearningAttackerCarryController:
                 target_pos = random.choice(self._plant_cells)
 
             if target_pos is not None:
-                return next_pos, {"ability": char.ability_name, "target": target_pos}
+                # Abilities are a stationary action.  Moving here made the
+                # carrier use moving-shot accuracy in the same tick.
+                return [r, c], {"ability": char.ability_name, "target": target_pos}
 
         # 向き(facing)は移動方向とは無関係にDQNが選択する。battle_logic.pyが
         # 移動と同時にこのfacing指定を適用する(被弾直後の強制向きが最優先)。

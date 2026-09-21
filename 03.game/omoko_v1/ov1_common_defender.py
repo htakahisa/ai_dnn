@@ -25,7 +25,7 @@ controllers.py / battle_logic.py / abilities_los.py 等は引き続き
 一切importしない。
 """
 
-from ov1_character_stats import ROSTER_ORDER
+from ov1_roster import ROSTER_ORDER
 
 COMBO_NAME = "ふわんだりぃず"
 COMBO_MEMBERS = {}

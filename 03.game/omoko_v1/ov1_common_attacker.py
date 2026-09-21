@@ -11,9 +11,9 @@ omoko_v1固定チーム定義・実効ステータス計算を集約したファ
 abilities_los.py 等は引き続き一切importしない。
 """
 
-from ov1_character_stats import ROSTER_ORDER
 from player_combos import COMBOS
 from party_presets import get_preset
+from ov1_roster import ROSTER_ORDER
 
 _TEAM_PRESET = get_preset("Omoko Gaming")
 if _TEAM_PRESET is None:

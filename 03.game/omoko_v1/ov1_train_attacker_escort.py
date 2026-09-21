@@ -107,7 +107,7 @@ from game_core import (
     FLASH_MAX_FLIGHT_TICKS,
 )
 
-from ov1_character_stats import CHARACTER_TABLE as STATS_TABLE
+from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
 from ov1_common_attacker import (
@@ -788,7 +788,6 @@ class EscortEnv:
         または「escort自身から射程内・射線が通っている」のいずれかを満たす
         ことである。1定点=1回のみ使用可能なため、self.lineup_used_cells
         (このエピソード中に使用済みの定点集合)で連携する。"""
-        smoke_cells = self._smoke_cell_set()
         max_range = FLASH_RANGE if ability == "FLASH" else ABILITY_RANGE
         used = self.lineup_used_cells.get(ability, set())
         candidates = []
@@ -798,7 +797,9 @@ class EscortEnv:
             carry_near = self.carry_alive and _chebyshev(self.carry_pos, cell) <= LINEUP_TRIGGER_RADIUS
             los_ready = (
                 _chebyshev(pos, cell) <= max_range
-                and _has_los(self.grid, smoke_cells, pos, cell)
+                # 定点アビリティの発射可否は推論側と揃え、スモークでは
+                # 制限しない。壁だけは投射経路を遮るため、従来どおり不可。
+                and _has_los(self.grid, set(), pos, cell)
             )
             if carry_near and los_ready:
                 candidates.append(cell)

@@ -52,7 +52,7 @@ from game_core import (
     SHOOTING_SITE_DIGREE,
 )
 
-from ov1_character_stats import CHARACTER_TABLE as STATS_TABLE
+from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, soft_update
 from ov1_common_defender import ROSTER_ORDER, ROLE_TO_ABILITY, compute_effective_stats

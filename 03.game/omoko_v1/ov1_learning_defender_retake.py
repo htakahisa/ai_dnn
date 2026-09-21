@@ -44,10 +44,8 @@ from game_core import (
     DEFUSE_REQUIRED_TICKS,
     SPIKE_DETONATION_TICKS,
 )
-from ov1_character_stats import (
-    CHARACTER_TABLE as STATS_TABLE,
-    ROSTER_ORDER,
-)
+from character_stats import CHARACTER_TABLE as STATS_TABLE
+from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_retake import KNOWN_ENTRY_POINTS_LEFT, KNOWN_ENTRY_POINTS_RIGHT, ENTRY_CORRIDOR_RADIUS
 from ov1_train_defender_retake import _facing_from_delta, _facing_towards
 
