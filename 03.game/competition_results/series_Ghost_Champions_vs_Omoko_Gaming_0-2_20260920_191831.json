@@ -1,0 +1,6109 @@
+{
+  "mode": "series",
+  "seed_mode": "random",
+  "base_seed": null,
+  "team_controllers": {
+    "Ghost Champions": "ghost_champions_v1",
+    "おもこゲーミング": "toru_ai_v3.1"
+  },
+  "rating_enabled": false,
+  "team1": "Ghost Champions",
+  "team2": "Omoko Gaming",
+  "maps_to_win": 2,
+  "team1_wins": 0,
+  "team2_wins": 2,
+  "winner": "Omoko Gaming",
+  "loser": "Ghost Champions",
+  "maps": [
+    {
+      "number": 1,
+      "seed": 565851728,
+      "team1": "Ghost Champions",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 0,
+      "winner": "Omoko Gaming",
+      "mvp1": {
+        "name": "Xdll",
+        "kills": 0,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "いぬさん",
+        "kills": 0,
+        "deaths": 0
+      },
+      "initial_attacker": "Ghost Champions",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Xdll",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "SyouTa",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "Absol",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "eKo",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "いぬさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "ねこさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "おもこ",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "ひつじさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "とりさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        }
+      ],
+      "total_rounds": 0,
+      "gunfights": [],
+      "assist_events": [],
+      "cover_events": [],
+      "attacker_side_stats": {
+        "rounds_played": 0,
+        "rounds_won": 0,
+        "plants": 0,
+        "plants_against": 0,
+        "postplant_wins": 0,
+        "retakes_won": 0,
+        "players": {}
+      },
+      "defender_side_stats": {
+        "rounds_played": 0,
+        "rounds_won": 0,
+        "plants": 0,
+        "plants_against": 0,
+        "postplant_wins": 0,
+        "retakes_won": 0,
+        "players": {}
+      },
+      "round_records": [],
+      "replay_frames": [
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 19,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                2,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 18,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                2,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                2,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 17,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                3,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                2,
+                24
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 16,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                3,
+                16
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                2,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                1,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                2,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 15,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                16
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                3,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                1,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                3,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 14,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                15
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                4,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                1,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                4,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 13,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                14
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                5,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                5,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 12,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                13
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 11,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                12
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                24
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                24
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SW",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 10,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                11
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 9,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                10
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                26
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 8,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                9
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SW",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                27
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 7,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                8
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SW",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                6,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                28
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 6,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                7
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SW",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                7,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                29
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 5,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            10,
+            41
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "D",
+              "pos": [
+                4,
+                6
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SW",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "D",
+              "pos": [
+                7,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "D",
+              "pos": [
+                2,
+                30
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "SE",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "D",
+              "pos": [
+                6,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A",
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "seed": 1078350734,
+      "team1": "Ghost Champions",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 0,
+      "winner": "Omoko Gaming",
+      "mvp1": {
+        "name": "Xdll",
+        "kills": 0,
+        "deaths": 0
+      },
+      "mvp2": {
+        "name": "いぬさん",
+        "kills": 0,
+        "deaths": 0
+      },
+      "initial_attacker": "Omoko Gaming",
+      "overtime": false,
+      "player_stats": [
+        {
+          "name": "Xdll",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "SyouTa",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "Absol",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "eKo",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "SugarZ3ro",
+          "team": "Ghost Champions",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "いぬさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "ねこさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "おもこ",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "ひつじさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        },
+        {
+          "name": "とりさん",
+          "team": "Omoko Gaming",
+          "kills": 0,
+          "deaths": 0,
+          "role": "",
+          "gunfights_participated": 0,
+          "gunfights_won": 0,
+          "gunfights_lost": 0,
+          "gunfights_draw": 0,
+          "one_v_one_participated": 0,
+          "one_v_one_won": 0,
+          "one_v_one_lost": 0,
+          "one_v_one_draw": 0,
+          "assists": 0,
+          "covers": 0,
+          "first_kills": 0,
+          "first_deaths": 0,
+          "preaim_angle_sum": 0.0,
+          "preaim_angle_count": 0
+        }
+      ],
+      "total_rounds": 0,
+      "gunfights": [],
+      "assist_events": [],
+      "cover_events": [],
+      "attacker_side_stats": {
+        "rounds_played": 0,
+        "rounds_won": 0,
+        "plants": 0,
+        "plants_against": 0,
+        "postplant_wins": 0,
+        "retakes_won": 0,
+        "players": {}
+      },
+      "defender_side_stats": {
+        "rounds_played": 0,
+        "rounds_won": 0,
+        "plants": 0,
+        "plants_against": 0,
+        "postplant_wins": 0,
+        "retakes_won": 0,
+        "players": {}
+      },
+      "round_records": [],
+      "replay_frames": [
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 19,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            5,
+            40
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "D",
+              "pos": [
+                2,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 18,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            5,
+            40
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "D",
+              "pos": [
+                3,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "D",
+              "pos": [
+                2,
+                23
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 17,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            5,
+            40
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "D",
+              "pos": [
+                3,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "D",
+              "pos": [
+                2,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "D",
+              "pos": [
+                2,
+                24
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 16,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            5,
+            40
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "D",
+              "pos": [
+                4,
+                17
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "D",
+              "pos": [
+                3,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "D",
+              "pos": [
+                2,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "D",
+              "pos": [
+                2,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "D",
+              "pos": [
+                2,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "E",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        },
+        {
+          "round": 1,
+          "tick": 0,
+          "setup": true,
+          "setup_ticks_remaining": 15,
+          "round_timer": 100,
+          "detonate_timer": 55,
+          "attacker_wins": 0,
+          "defender_wins": 0,
+          "planted": false,
+          "round_over": false,
+          "target_plant_pos": [
+            5,
+            40
+          ],
+          "planted_pos": null,
+          "spike_pos": null,
+          "available_orbs": [
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              8
+            ],
+            [
+              20,
+              42
+            ]
+          ],
+          "chars": [
+            {
+              "name": "いぬさん",
+              "display_name": "いぬさん",
+              "team": "A",
+              "pos": [
+                23,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ねこさん",
+              "display_name": "ねこさん",
+              "team": "A",
+              "pos": [
+                23,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": true,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "おもこ",
+              "display_name": "おもこ",
+              "team": "A",
+              "pos": [
+                23,
+                20
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "ひつじさん",
+              "display_name": "ひつじさん",
+              "team": "A",
+              "pos": [
+                23,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "とりさん",
+              "display_name": "とりさん",
+              "team": "A",
+              "pos": [
+                23,
+                22
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "A"
+              ]
+            },
+            {
+              "name": "Xdll",
+              "display_name": "Xdll",
+              "team": "D",
+              "pos": [
+                4,
+                16
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SyouTa",
+              "display_name": "SyouTa",
+              "team": "D",
+              "pos": [
+                3,
+                18
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "Absol",
+              "display_name": "Absol",
+              "team": "D",
+              "pos": [
+                2,
+                19
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "W",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "TUNNEL",
+              "ultimate_points": 0,
+              "ultimate_cost": 5,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "eKo",
+              "display_name": "eKo",
+              "team": "D",
+              "pos": [
+                1,
+                21
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "N",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "MONITOR",
+              "ultimate_points": 0,
+              "ultimate_cost": 8,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            },
+            {
+              "name": "SugarZ3ro",
+              "display_name": "SugarZ3ro",
+              "team": "D",
+              "pos": [
+                3,
+                25
+              ],
+              "hp": 100.0,
+              "alive": true,
+              "facing": "S",
+              "has_spike": false,
+              "blind": 0,
+              "revealed": false,
+              "ultimate": "ESCAPE",
+              "ultimate_points": 0,
+              "ultimate_cost": 6,
+              "orb_collect_timer": 0,
+              "visible_to": [
+                "D"
+              ]
+            }
+          ],
+          "smokes": [],
+          "flash_projectiles": [],
+          "recon_projectiles": [],
+          "flash_bursts": [],
+          "recon_bursts": [],
+          "monitor_drones": [],
+          "tunnel_bursts": []
+        }
+      ]
+    }
+  ],
+  "total_rounds": 0,
+  "player_leaderboards": {
+    "kd_top5": [
+      {
+        "player": "Xdll",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SyouTa",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "Absol",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "eKo",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      }
+    ],
+    "mvp_top5": [
+      {
+        "player": "Xdll",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "いぬさん",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SyouTa",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "Absol",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "eKo",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      }
+    ],
+    "kills_top5": [
+      {
+        "player": "Xdll",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SyouTa",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "Absol",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "eKo",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      }
+    ],
+    "kills_per_map_top5": [
+      {
+        "player": "Xdll",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SyouTa",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "Absol",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "eKo",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      }
+    ],
+    "all_players": [
+      {
+        "player": "Xdll",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SyouTa",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "Absol",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "eKo",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "SugarZ3ro",
+        "team": "Ghost Champions",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "いぬさん",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 2,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "ねこさん",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "おもこ",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "ひつじさん",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      },
+      {
+        "player": "とりさん",
+        "team": "Omoko Gaming",
+        "kills": 0,
+        "deaths": 0,
+        "maps": 2,
+        "mvps": 0,
+        "kd": 0.0,
+        "kills_per_map": 0.0
+      }
+    ]
+  },
+  "rating_system": {
+    "default_rating": 1500.0,
+    "k_factor": 40.0,
+    "persistent_file": "competition_results\\team_ratings.json"
+  },
+  "rating_updates": [],
+  "ratings_after_competition": {
+    "Alien Rex": 1500.0,
+    "BBL": 1500.0,
+    "Blood Moon": 1500.0,
+    "Carnal Lust Syndicate": 1500.0,
+    "Dragon Tail": 1500.0,
+    "EG2023": 1500.0,
+    "Eine Kleine": 1500.0,
+    "Fnatic2023": 1500.0,
+    "Furina Classic": 1500.0,
+    "Furina Tartaglia": 1500.0,
+    "Ghost Champions": 1500.0,
+    "Japan All-Stars": 1500.0,
+    "Leo And Friends": 1500.0,
+    "Meta Beat": 1500.0,
+    "Queen's Flower Gambit": 1500.0,
+    "radiantdancer": 1500.0,
+    "Team Elites": 1500.0,
+    "Touyama Gaming": 1500.0,
+    "Vision Strikers": 1500.0,
+    "おもこゲーミング": 1500.0
+  }
+}

@@ -35,7 +35,10 @@ from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerControl
 from omoko_v1.ov1_defender_controller import Ov1DefenderController
 from omoko_v1.ov1_attacker_controller import Ov1AttackerController
 
-from ghost_champions_v1_macro import GhostChampionsV1AttackerController, GhostChampionsV1DefenderController
+from ghost_champions_v1_macro import (
+    GhostChampionsV1AttackerController,
+    GhostChampionsV1DefenderController,
+)
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
@@ -68,8 +71,7 @@ FNATIC_V1_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 # Attacker = PPO強化学習
 # Defender = 現在のDAgger模倣学習
 FNATIC_V2_ATTACKER_MODEL_PATH = (
-    "ppo_attacker_checkpoints/"
-    "policy_fnatic_attacker_ppo_best.pt"
+    "ppo_attacker_checkpoints/" "policy_fnatic_attacker_ppo_best.pt"
 )
 FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
@@ -128,14 +130,14 @@ def _build_team_ai(key):
             attacker_factory=lambda: TouyamaAttackerController(),
             defender_factory=lambda: TouyamaDefenderController(),
         )
-    
+
     if normalized == "touyama_gaming_v2":
         return DualRoleTeamAI(
             name="Touyama Gaming v2",
             attacker_factory=lambda: Tv2TouyamaAttackerController(),
             defender_factory=lambda: Tv2TouyamaDefenderController(),
         )
-    
+
     if normalized == "omoko_gaming_v1":
         return DualRoleTeamAI(
             name="Omoko Gaming v1",
@@ -193,6 +195,7 @@ def _build_team_ai(key):
 
     raise ValueError(f"不明なTeam AIです: {key}")
 
+
 class VisualFPSBattle(
     ComboAwakeningMixin,
     AbilityLosMixin,
@@ -244,6 +247,7 @@ class VisualFPSBattle(
             for name, value in dict(saved_mental_fatigue or {}).items()
         }
         self.team_round_loss_streak = {}
+        self.awakening_mental_debuffs = {}
         self.attacker_roster = list(attacker_roster) if attacker_roster else None
         self.defender_roster = list(defender_roster) if defender_roster else None
         self.spike_holder_name = spike_holder_name
@@ -329,15 +333,14 @@ class VisualFPSBattle(
 
         setup_errors = validate_against_map(self.maze_str)
         if setup_errors:
-            raise ValueError(
-                "Defender Setup map mismatch: " + "; ".join(setup_errors)
-            )
+            raise ValueError("Defender Setup map mismatch: " + "; ".join(setup_errors))
         self.defender_setup_phase = DefenderSetupPhase()
 
         self.init_round()
 
     def _record_replay_frame(self):
         """Append a JSON-safe snapshot of the current match state."""
+
         def pos(value):
             return list(map(int, value)) if value is not None else None
 
@@ -351,25 +354,27 @@ class VisualFPSBattle(
                         char, viewer_team
                     ):
                         visible_to.append(viewer_team)
-            chars.append({
-                "name": str(char.name),
-                "display_name": str(getattr(char, "display_name", char.name)),
-                "team": str(char.team),
-                "pos": pos(char.pos),
-                "hp": float(getattr(char, "hp", 0)),
-                "alive": bool(getattr(char, "is_alive", False)),
-                "facing": str(getattr(char, "facing", "")),
-                "has_spike": bool(getattr(char, "has_spike", False)),
-                "blind": int(getattr(char, "blind_remaining", 0)),
-                "revealed": bool(getattr(char, "los_revealed", False)),
-                "ultimate": str(getattr(char, "ultimate_name", "")),
-                "ultimate_points": int(getattr(char, "ultimate_points", 0)),
-                "ultimate_cost": int(getattr(char, "ultimate_cost", 0)),
-                "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
-                # Per-team visibility is stored for fog-of-war replay views.
-                # Own players are always visible to their own team.
-                "visible_to": visible_to,
-            })
+            chars.append(
+                {
+                    "name": str(char.name),
+                    "display_name": str(getattr(char, "display_name", char.name)),
+                    "team": str(char.team),
+                    "pos": pos(char.pos),
+                    "hp": float(getattr(char, "hp", 0)),
+                    "alive": bool(getattr(char, "is_alive", False)),
+                    "facing": str(getattr(char, "facing", "")),
+                    "has_spike": bool(getattr(char, "has_spike", False)),
+                    "blind": int(getattr(char, "blind_remaining", 0)),
+                    "revealed": bool(getattr(char, "los_revealed", False)),
+                    "ultimate": str(getattr(char, "ultimate_name", "")),
+                    "ultimate_points": int(getattr(char, "ultimate_points", 0)),
+                    "ultimate_cost": int(getattr(char, "ultimate_cost", 0)),
+                    "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
+                    # Per-team visibility is stored for fog-of-war replay views.
+                    # Own players are always visible to their own team.
+                    "visible_to": visible_to,
+                }
+            )
 
         def projectile(item):
             return {
@@ -377,60 +382,93 @@ class VisualFPSBattle(
                 "progress": int(item.get("progress", 0)),
             }
 
-        self.replay_frames.append({
-            "round": int(getattr(self, "current_round", 0)),
-            "tick": int(getattr(self, "battle_tick", 0)),
-            "setup": bool(getattr(self, "in_defender_setup_phase", False)),
-            "setup_ticks_remaining": int(getattr(self, "defender_setup_ticks_remaining", 0)),
-            "round_timer": int(getattr(self, "round_timer", 0)),
-            "detonate_timer": int(getattr(self, "detonate_timer", 0)),
-            "attacker_wins": int(getattr(self, "attacker_wins", 0)),
-            "defender_wins": int(getattr(self, "defender_wins", 0)),
-            "planted": bool(getattr(self, "is_planted", False)),
-            "round_over": bool(getattr(self, "round_over", False)),
-            "target_plant_pos": pos(getattr(self, "target_plant_pos", None)),
-            "planted_pos": pos(getattr(self, "planted_pos", None)),
-            "spike_pos": pos(getattr(self, "spike_pos", None)),
-            "available_orbs": [
-                list(map(int, cell))
-                for cell in sorted(getattr(self, "available_orbs", set()))
-            ],
-            "chars": chars,
-            "smokes": [
-                {"cells": [list(map(int, cell)) for cell in smoke.get("cells", [])],
-                 "remaining_ticks": int(smoke.get("remaining_ticks", smoke.get("remaining", 0)))}
-                for smoke in getattr(self, "smokes", [])
-            ],
-            "flash_projectiles": [projectile(item) for item in getattr(self, "flash_projectiles", [])],
-            "recon_projectiles": [projectile(item) for item in getattr(self, "recon_projectiles", [])],
-            "flash_bursts": [
-                {"pos": pos(item.get("pos")), "remaining_ticks": int(item.get("remaining_ticks", 0))}
-                for item in getattr(self, "flash_bursts", [])
-            ],
-            "recon_bursts": [
-                {"cells": [list(map(int, cell)) for cell in item.get("cells", [])],
-                 "remaining_ticks": int(item.get("remaining_ticks", 0))}
-                for item in getattr(self, "recon_bursts", [])
-            ],
-            "monitor_drones": [
-                {
-                    "name": str(drone.name),
-                    "team": str(drone.team),
-                    "pos": pos(drone.pos),
-                    "hp": int(drone.hp),
-                    "target": drone.target_name,
-                }
-                for drone in getattr(self, "monitor_drones", [])
-                if drone.is_alive
-            ],
-            "tunnel_bursts": [
-                {
-                    "cells": [list(map(int, cell)) for cell in item.get("cells", [])],
-                    "remaining_ticks": int(item.get("remaining_ticks", 0)),
-                }
-                for item in getattr(self, "tunnel_bursts", [])
-            ],
-        })
+        self.replay_frames.append(
+            {
+                "round": int(getattr(self, "current_round", 0)),
+                "tick": int(getattr(self, "battle_tick", 0)),
+                "setup": bool(getattr(self, "in_defender_setup_phase", False)),
+                "setup_ticks_remaining": int(
+                    getattr(self, "defender_setup_ticks_remaining", 0)
+                ),
+                "round_timer": int(getattr(self, "round_timer", 0)),
+                "detonate_timer": int(getattr(self, "detonate_timer", 0)),
+                "attacker_wins": int(getattr(self, "attacker_wins", 0)),
+                "defender_wins": int(getattr(self, "defender_wins", 0)),
+                "planted": bool(getattr(self, "is_planted", False)),
+                "round_over": bool(getattr(self, "round_over", False)),
+                "target_plant_pos": pos(getattr(self, "target_plant_pos", None)),
+                "planted_pos": pos(getattr(self, "planted_pos", None)),
+                "spike_pos": pos(getattr(self, "spike_pos", None)),
+                "available_orbs": [
+                    list(map(int, cell))
+                    for cell in sorted(getattr(self, "available_orbs", set()))
+                ],
+                "chars": chars,
+                "smokes": [
+                    {
+                        "cells": [
+                            list(map(int, cell)) for cell in smoke.get("cells", [])
+                        ],
+                        "remaining_ticks": int(
+                            smoke.get("remaining_ticks", smoke.get("remaining", 0))
+                        ),
+                    }
+                    for smoke in getattr(self, "smokes", [])
+                ],
+                "flash_projectiles": [
+                    projectile(item) for item in getattr(self, "flash_projectiles", [])
+                ],
+                "recon_projectiles": [
+                    projectile(item) for item in getattr(self, "recon_projectiles", [])
+                ],
+                "flash_bursts": [
+                    {
+                        "pos": pos(item.get("pos")),
+                        "remaining_ticks": int(item.get("remaining_ticks", 0)),
+                    }
+                    for item in getattr(self, "flash_bursts", [])
+                ],
+                "recon_bursts": [
+                    {
+                        "cells": [
+                            list(map(int, cell)) for cell in item.get("cells", [])
+                        ],
+                        "remaining_ticks": int(item.get("remaining_ticks", 0)),
+                    }
+                    for item in getattr(self, "recon_bursts", [])
+                ],
+                "monitor_drones": [
+                    {
+                        "name": str(drone.name),
+                        "team": str(drone.team),
+                        "pos": pos(drone.pos),
+                        "hp": int(drone.hp),
+                        "target": drone.target_name,
+                    }
+                    for drone in getattr(self, "monitor_drones", [])
+                    if drone.is_alive
+                ],
+                "escape_portals": [
+                    {
+                        "pos": pos(item.get("pos")),
+                        "owner": str(item.get("owner", "")),
+                        "team": str(item.get("team", "")),
+                        "remaining_ticks": int(item.get("remaining_ticks", 0)),
+                    }
+                    for item in getattr(self, "escape_portals", [])
+                ],
+                "tunnel_bursts": [
+                    {
+                        "cells": [
+                            list(map(int, cell)) for cell in item.get("cells", [])
+                        ],
+                        "phase": str(item.get("phase", "warning")),
+                        "remaining_ticks": int(item.get("remaining_ticks", 0)),
+                    }
+                    for item in getattr(self, "tunnel_bursts", [])
+                ],
+            }
+        )
 
     def _apply_igl_iq_bonus(self):
         """IGL本人を含む全員へ補正し、最終IQを0～300へ制限する。"""
@@ -675,9 +713,7 @@ class VisualFPSBattle(
         if self.attacker_roster and area_3:
             configured_holder = self.spike_holder_name
             configured_name = (
-                str(configured_holder)
-                if configured_holder is not None
-                else None
+                str(configured_holder) if configured_holder is not None else None
             )
             roster_index = next(
                 (
@@ -730,10 +766,7 @@ class VisualFPSBattle(
         if self.chars and self.attacker_roster and configured_name is not None:
             attackers = [char for char in self.chars if char.team == "A"]
             configured_char = next(
-                (
-                    char for char in attackers
-                    if str(char.name) == configured_name
-                ),
+                (char for char in attackers if str(char.name) == configured_name),
                 None,
             )
             if configured_char is not None:
@@ -778,7 +811,9 @@ class VisualFPSBattle(
             )
 
         # IQを含むコンボ補正を先に適用し、その後でIGL倍率を計算する。
+        self._apply_round_awakening_state()
         self._apply_player_combos()
+        self._apply_round_start_effects()
         self._apply_igl_iq_bonus()
         if self.analytics_tracker is not None:
             self.analytics_tracker.register_players(
@@ -818,6 +853,7 @@ class VisualFPSBattle(
         self.recon_bursts = []
         self.monitor_drones = []
         self.monitor_drone_serial = 0
+        self.escape_portals = []
         self.tunnel_bursts = []
         self.available_orbs = set(zip(*np.where(self.grid == 5)))
         self.ability_mode = None

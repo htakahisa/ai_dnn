@@ -14,8 +14,20 @@ class CombatTracker:
     def __init__(self):
         self.stats = defaultdict(self._new_stats)
         self.side_stats = {
-            "attacker": {"rounds_played": 0, "rounds_won": 0, "plants": 0, "postplant_wins": 0, "players": defaultdict(self._new_stats)},
-            "defender": {"rounds_played": 0, "rounds_won": 0, "plants_against": 0, "retakes_won": 0, "players": defaultdict(self._new_stats)},
+            "attacker": {
+                "rounds_played": 0,
+                "rounds_won": 0,
+                "plants": 0,
+                "postplant_wins": 0,
+                "players": defaultdict(self._new_stats),
+            },
+            "defender": {
+                "rounds_played": 0,
+                "rounds_won": 0,
+                "plants_against": 0,
+                "retakes_won": 0,
+                "players": defaultdict(self._new_stats),
+            },
         }
         self.gunfights = []
         self.active = []
@@ -57,9 +69,7 @@ class CombatTracker:
     def register_players(self, chars, team_names=None):
         self._all_chars = list(chars)
         team_names = team_names or {}
-        self._round_start_stats = {
-            name: dict(self.stats[name]) for name in self.stats
-        }
+        self._round_start_stats = {name: dict(self.stats[name]) for name in self.stats}
         self._round_start_context = {
             str(char.name): {
                 "team": str(team_names.get(char.team, char.team)),
@@ -82,7 +92,9 @@ class CombatTracker:
             side_row = self.side_stats[side]["players"][str(char.name)]
             side_row["role"] = row["role"]
 
-    def record_round_result(self, winning_team, reason, planted, tactic=None):
+    def record_round_result(
+        self, winning_team, reason, planted, tactic=None, special=None
+    ):
         if self.tactics is not None:
             generic_tactic = self.tactics.finish(
                 getattr(self, "_planted_pos", None),
@@ -95,12 +107,12 @@ class CombatTracker:
             # the controller-independent movement classification here.  Keep
             # the observed classification when it is more informative.
             supplied = dict(tactic or {})
-            supplied_strategy = str(
-                supplied.get("attacker_strategy", "") or ""
-            ).strip().lower()
-            observed_strategy = str(
-                generic_tactic.get("attacker_strategy", "") or ""
-            ).strip().lower()
+            supplied_strategy = (
+                str(supplied.get("attacker_strategy", "") or "").strip().lower()
+            )
+            observed_strategy = (
+                str(generic_tactic.get("attacker_strategy", "") or "").strip().lower()
+            )
             if (
                 supplied_strategy == "default"
                 and observed_strategy
@@ -108,14 +120,17 @@ class CombatTracker:
             ):
                 supplied.pop("attacker_strategy", None)
             tactic = {**generic_tactic, **supplied}
-        self.round_records.append({
+        record = {
             "round_number": len(self.round_records) + 1,
             "winner": "attacker" if winning_team == "A" else "defender",
             "reason": str(reason),
             "planted": bool(planted),
             "tactic": tactic or {},
             "players": self._round_player_deltas(),
-        })
+        }
+        if isinstance(special, dict) and special.get("type") in {"ACE", "CLUTCH"}:
+            record["special"] = str(special["type"])
+        self.round_records.append(record)
         self.side_stats["attacker"]["rounds_played"] += 1
         self.side_stats["defender"]["rounds_played"] += 1
         if winning_team == "A":
@@ -133,16 +148,29 @@ class CombatTracker:
     def _round_player_deltas(self):
         result = {}
         fields = (
-            "kills", "deaths", "gunfights_participated", "gunfights_won",
-            "gunfights_lost", "gunfights_draw", "one_v_one_participated",
-            "one_v_one_won", "one_v_one_lost", "one_v_one_draw", "assists",
-            "covers", "first_kills", "first_deaths", "preaim_angle_sum",
+            "kills",
+            "deaths",
+            "gunfights_participated",
+            "gunfights_won",
+            "gunfights_lost",
+            "gunfights_draw",
+            "one_v_one_participated",
+            "one_v_one_won",
+            "one_v_one_lost",
+            "one_v_one_draw",
+            "assists",
+            "covers",
+            "first_kills",
+            "first_deaths",
+            "preaim_angle_sum",
             "preaim_angle_count",
         )
         for name, context in self._round_start_context.items():
             before = self._round_start_stats.get(name, {})
             after = self.stats.get(name, {})
-            row = {field: after.get(field, 0) - before.get(field, 0) for field in fields}
+            row = {
+                field: after.get(field, 0) - before.get(field, 0) for field in fields
+            }
             row.update(context)
             row["role"] = after.get("role", "")
             result[name] = row
@@ -167,9 +195,7 @@ class CombatTracker:
     def record_death(self, victim, killer, tick):
         if victim is None or killer is None or victim.team == killer.team:
             return
-        self._pending_cover.append(
-            (str(killer.name), str(victim.name), int(tick))
-        )
+        self._pending_cover.append((str(killer.name), str(victim.name), int(tick)))
         side = "attacker" if victim.team == "A" else "defender"
         self.stats[str(victim.name)]["deaths"] += 1
         self.side_stats[side]["players"][str(victim.name)]["deaths"] += 1
@@ -211,13 +237,15 @@ class CombatTracker:
             if assister is not None:
                 side = "attacker" if assister.team == "A" else "defender"
                 self.side_stats[side]["players"][assister_name]["assists"] += 1
-            self.assist_events.append({
-                "assister": assister_name,
-                "victim": victim_name,
-                "killer": killer_name,
-                "tick_difference": delta,
-                "method": method,
-            })
+            self.assist_events.append(
+                {
+                    "assister": assister_name,
+                    "victim": victim_name,
+                    "killer": killer_name,
+                    "tick_difference": delta,
+                    "method": method,
+                }
+            )
 
         remaining = []
         for enemy_name, ally_name, death_tick in self._pending_cover:
@@ -225,12 +253,14 @@ class CombatTracker:
             if 0 <= delta <= self.WINDOW_TICKS and enemy_name == victim_name:
                 self.stats[killer_name]["covers"] += 1
                 self.side_stats[killer_side]["players"][killer_name]["covers"] += 1
-                self.cover_events.append({
-                    "coverer": killer_name,
-                    "ally": ally_name,
-                    "enemy_killed": victim_name,
-                    "tick_difference": delta,
-                })
+                self.cover_events.append(
+                    {
+                        "coverer": killer_name,
+                        "ally": ally_name,
+                        "enemy_killed": victim_name,
+                        "tick_difference": delta,
+                    }
+                )
             elif delta <= self.WINDOW_TICKS:
                 remaining.append((enemy_name, ally_name, death_tick))
         self._pending_cover = remaining
@@ -276,9 +306,10 @@ class CombatTracker:
             winner = None
 
         individual = {}
-        is_one_v_one = sum(char.team == "A" for char in chars) == 1 and sum(
-            char.team == "D" for char in chars
-        ) == 1
+        is_one_v_one = (
+            sum(char.team == "A" for char in chars) == 1
+            and sum(char.team == "D" for char in chars) == 1
+        )
         for char in chars:
             if winner is None:
                 outcome = "draw"
@@ -288,48 +319,60 @@ class CombatTracker:
             row = self.stats[str(char.name)]
             row["gunfights_participated"] += 1
             row[
-                "gunfights_won" if outcome == "win"
-                else "gunfights_lost" if outcome == "loss"
-                else "gunfights_draw"
+                (
+                    "gunfights_won"
+                    if outcome == "win"
+                    else "gunfights_lost" if outcome == "loss" else "gunfights_draw"
+                )
             ] += 1
             if is_one_v_one:
                 row["one_v_one_participated"] += 1
                 row[
-                    "one_v_one_won" if outcome == "win"
-                    else "one_v_one_lost" if outcome == "loss"
-                    else "one_v_one_draw"
+                    (
+                        "one_v_one_won"
+                        if outcome == "win"
+                        else "one_v_one_lost" if outcome == "loss" else "one_v_one_draw"
+                    )
                 ] += 1
             side = "attacker" if char.team == "A" else "defender"
             side_row = self.side_stats[side]["players"][str(char.name)]
             side_row["gunfights_participated"] += 1
             side_row[
-                "gunfights_won" if outcome == "win"
-                else "gunfights_lost" if outcome == "loss"
-                else "gunfights_draw"
+                (
+                    "gunfights_won"
+                    if outcome == "win"
+                    else "gunfights_lost" if outcome == "loss" else "gunfights_draw"
+                )
             ] += 1
             if is_one_v_one:
                 side_row["one_v_one_participated"] += 1
                 side_row[
-                    "one_v_one_won" if outcome == "win"
-                    else "one_v_one_lost" if outcome == "loss"
-                    else "one_v_one_draw"
+                    (
+                        "one_v_one_won"
+                        if outcome == "win"
+                        else "one_v_one_lost" if outcome == "loss" else "one_v_one_draw"
+                    )
                 ] += 1
 
-        self.gunfights.append({
-            "gunfight_id": session["id"],
-            "timestamp": session["start_tick"],
-            "result": result,
-            "attacker_players": [
-                name for name in participants
-                if name in chars_by_name and chars_by_name[name].team == "A"
-            ],
-            "defender_players": [
-                name for name in participants
-                if name in chars_by_name and chars_by_name[name].team == "D"
-            ],
-            "individual_results": individual,
-            "end_reason": reason,
-        })
+        self.gunfights.append(
+            {
+                "gunfight_id": session["id"],
+                "timestamp": session["start_tick"],
+                "result": result,
+                "attacker_players": [
+                    name
+                    for name in participants
+                    if name in chars_by_name and chars_by_name[name].team == "A"
+                ],
+                "defender_players": [
+                    name
+                    for name in participants
+                    if name in chars_by_name and chars_by_name[name].team == "D"
+                ],
+                "individual_results": individual,
+                "end_reason": reason,
+            }
+        )
 
     def tick(self, pairs, chars, tick):
         self._all_chars = list(chars)
@@ -364,16 +407,15 @@ class CombatTracker:
                     side_row["preaim_angle_sum"] += angle
                     side_row["preaim_angle_count"] += 1
             overlaps = [
-                i for i, session in enumerate(self.active)
+                i
+                for i, session in enumerate(self.active)
                 if session["participants"] & component
             ]
             if overlaps:
                 base = overlaps[0]
                 session = self.active[base]
                 for index in reversed(overlaps[1:]):
-                    session["participants"].update(
-                        self.active[index]["participants"]
-                    )
+                    session["participants"].update(self.active[index]["participants"])
                     self.active.pop(index)
                     if index < base:
                         base -= 1
@@ -382,13 +424,15 @@ class CombatTracker:
                 session["last_los_tick"] = int(tick)
                 matched.add(base)
             else:
-                self.active.append({
-                    "id": self._next_id,
-                    "participants": set(component),
-                    "start_tick": int(tick),
-                    "last_los_tick": int(tick),
-                    "no_los": 0,
-                })
+                self.active.append(
+                    {
+                        "id": self._next_id,
+                        "participants": set(component),
+                        "start_tick": int(tick),
+                        "last_los_tick": int(tick),
+                        "no_los": 0,
+                    }
+                )
                 self._next_id += 1
                 matched.add(len(self.active) - 1)
 

@@ -38,8 +38,8 @@ RECON_BURST_DISPLAY_TICKS = 1
 SMOKE_WARNING_TICKS = 3
 ROUND_TRANSITION_TICKS = 2
 
-# Ultimate / orb system. One tick is 100 ms, so an orb takes three seconds.
-ORB_COLLECT_REQUIRED_TICKS = 30
+# Ultimate / orb system.
+ORB_COLLECT_REQUIRED_TICKS = 5
 ORB_ULTIMATE_POINTS = 2
 ULTIMATE_COSTS = {
     "タイガー": 3,
@@ -54,11 +54,13 @@ ULTIMATE_NAMES = {
     "フラッシュ": "TUNNEL",
 }
 RAID_DISTANCE_CELLS = 5
+ESCAPE_WARP_DELAY_TICKS = 10
 MONITOR_DRONE_HP = 200
 MONITOR_COLLISION_REVEAL_TICKS = 10
 TUNNEL_BLIND_TICKS = 15
 TUNNEL_HALF_WIDTH = 2.5
-TUNNEL_BURST_DURATION_TICKS = 2
+TUNNEL_WARNING_TICKS = 5
+TUNNEL_ACTIVE_TICKS = 3
 
 # 向き(facing)関連
 FACING_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
@@ -572,6 +574,7 @@ class Character:
 
         # 覚醒・コンボで一時的に上昇させる、1Tickあたりの移動マス数。既定は1。
         self.move_steps_per_tick = 1
+        self.movement_disabled_remaining = 0
 
         # 覚醒等でスモーク越しに視認・射撃できるようになったかどうか。既定はFalse。
         self.sees_through_smoke = False

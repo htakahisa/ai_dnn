@@ -7,6 +7,7 @@ from iq_perception import (
     PerceivedCharacter,
     PerceivedGameView,
 )
+from controllers import UserInputController
 
 
 class PrivateInfoController:
@@ -87,6 +88,8 @@ class DualRoleTeamAI:
 
     def _wrap(self, controller):
         if isinstance(controller, IQAwareController):
+            return controller
+        if isinstance(controller, UserInputController):
             return controller
         if not self.use_iq_perception:
             return PrivateInfoController(controller)

@@ -215,6 +215,14 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="Wo0t",
         description="開始時、somethingがcgrsに変化",
     ),
+    "Meta Beat": TeamPreset(
+        name="Meta Beat",
+        short_name="MB",
+        players=("icy", "SiuFatBB", "t3xture", "Asuna", "Zekken"),
+        igl="SiuFatBB",
+        spike_holder="t3xture",
+        description="相手にどんどんデバフをかけていく害悪デッキ",
+    ),
 }
 
 # Backward-compatible team-name migration. Historical ratings, brackets, and

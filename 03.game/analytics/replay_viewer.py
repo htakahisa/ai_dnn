@@ -17,11 +17,20 @@ from map_data import NEW_MAZE_STR
 
 
 class ReplayViewer(tk.Toplevel):
-    def __init__(self, parent, replay_frames, *, title="Match Replay", map_options=None):
+    def __init__(
+        self,
+        parent,
+        replay_frames,
+        *,
+        title="Match Replay",
+        map_options=None,
+        round_records=None,
+    ):
         super().__init__(parent)
         self.title(title)
         self.geometry("980x720")
         self.frames = list(replay_frames or [])
+        self.round_records = list(round_records or [])
         self.map_options = list(map_options or [])
         self.index = 0
         self.playing = False
@@ -30,7 +39,9 @@ class ReplayViewer(tk.Toplevel):
         self.status = tk.StringVar(value="")
         self.view_mode = tk.StringVar(value="ALL")
 
-        rows = [line.strip() for line in NEW_MAZE_STR.strip().splitlines() if line.strip()]
+        rows = [
+            line.strip() for line in NEW_MAZE_STR.strip().splitlines() if line.strip()
+        ]
         self.grid = [list(map(int, row)) for row in rows]
         self.cell = 18
 
@@ -59,23 +70,117 @@ class ReplayViewer(tk.Toplevel):
         ttk.Label(controls, text="View").pack(side=tk.LEFT, padx=(12, 4))
         for label, mode in (("All", "ALL"), ("Attackers", "A"), ("Defenders", "D")):
             ttk.Button(
-                controls, text=label,
+                controls,
+                text=label,
                 command=lambda selected=mode: self.set_view_mode(selected),
             ).pack(side=tk.LEFT, padx=1)
-        ttk.Button(controls, text="|<", command=lambda: self.seek(0)).pack(side=tk.LEFT, padx=4)
+        ttk.Button(controls, text="|<", command=lambda: self.seek(0)).pack(
+            side=tk.LEFT, padx=4
+        )
+        ttk.Button(controls, text="Round -", command=lambda: self.seek_round(-1)).pack(
+            side=tk.LEFT, padx=2
+        )
+        ttk.Button(controls, text="Round +", command=lambda: self.seek_round(1)).pack(
+            side=tk.LEFT, padx=2
+        )
         ttk.Label(controls, text="Speed").pack(side=tk.LEFT, padx=(12, 4))
         ttk.Combobox(
-            controls, textvariable=self.speed, values=(0.25, 0.5, 1.0, 2.0, 4.0),
-            width=5, state="readonly",
+            controls,
+            textvariable=self.speed,
+            values=(0.25, 0.5, 1.0, 2.0, 4.0),
+            width=5,
+            state="readonly",
         ).pack(side=tk.LEFT)
-        self.timeline = ttk.Scale(
-            controls, from_=0, to=max(0, len(self.frames) - 1),
-            orient=tk.HORIZONTAL, command=self._scale_changed,
+        self.timeline_marks = tk.Canvas(
+            controls,
+            height=22,
+            highlightthickness=0,
+            bg="#e5e7eb",
         )
-        self.timeline.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=12)
+        self.timeline_marks.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+        self.timeline_marks.bind("<Button-1>", self._timeline_clicked)
+        self.timeline_marks.bind(
+            "<Configure>", lambda _event: self._draw_timeline_marks()
+        )
+        self.timeline = ttk.Scale(
+            controls,
+            from_=0,
+            to=max(0, len(self.frames) - 1),
+            orient=tk.HORIZONTAL,
+            command=self._scale_changed,
+        )
+        self.timeline.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 12))
         ttk.Label(controls, textvariable=self.status, width=34).pack(side=tk.RIGHT)
         self.protocol("WM_DELETE_WINDOW", self.close)
+        self._draw_timeline_marks()
         self.draw_frame()
+
+    def _round_starts(self):
+        starts = {}
+        for index, frame in enumerate(self.frames):
+            round_number = frame.get("round")
+            if round_number is not None and round_number not in starts:
+                starts[round_number] = index
+        return starts
+
+    def _round_specials(self):
+        return {
+            int(record.get("round_number")): str(record.get("special", "")).upper()
+            for record in self.round_records
+            if record.get("round_number") is not None
+        }
+
+    def _draw_timeline_marks(self):
+        self.timeline_marks.delete("all")
+        if not self.frames:
+            return
+        self.timeline_marks.update_idletasks()
+        width = max(1, self.timeline_marks.winfo_width())
+        total = max(1, len(self.frames) - 1)
+        starts = self._round_starts()
+        rounds = sorted(starts.items())
+        specials = self._round_specials()
+        for offset, (round_number, start) in enumerate(rounds):
+            end = (
+                rounds[offset + 1][1] if offset + 1 < len(rounds) else len(self.frames)
+            )
+            left = start / total * width
+            right = max(left + 2, (end - 1) / total * width)
+            special = specials.get(int(round_number), "")
+            color = (
+                "#facc15"
+                if special == "ACE"
+                else "#ef4444" if special == "CLUTCH" else "#94a3b8"
+            )
+            self.timeline_marks.create_rectangle(
+                left, 2, right, 20, fill=color, outline=""
+            )
+            self.timeline_marks.create_text(
+                (left + right) / 2,
+                11,
+                text=str(round_number),
+                fill="#111827",
+                font=("Arial", 8, "bold"),
+            )
+
+    def _timeline_clicked(self, event):
+        if not self.frames:
+            return
+        width = max(1, self.timeline_marks.winfo_width())
+        self.seek(event.x / width * max(0, len(self.frames) - 1))
+
+    def seek_round(self, delta):
+        starts = self._round_starts()
+        if not starts:
+            return
+        rounds = sorted(starts)
+        current_round = self.frames[self.index].get("round")
+        try:
+            current_index = rounds.index(current_round)
+        except ValueError:
+            current_index = 0
+        target_index = max(0, min(len(rounds) - 1, current_index + int(delta)))
+        self.seek(starts[rounds[target_index]])
 
     def _map_changed(self, _event=None):
         selected = self.map_combo.current()
@@ -86,6 +191,9 @@ class ReplayViewer(tk.Toplevel):
         self.frames = list(
             getattr(self.map_options[selected], "replay_frames", []) or []
         )
+        self.round_records = list(
+            getattr(self.map_options[selected], "round_records", []) or []
+        )
         self.index = 0
         self.timeline.configure(to=max(0, len(self.frames) - 1))
         self._updating_timeline = True
@@ -93,6 +201,7 @@ class ReplayViewer(tk.Toplevel):
             self.timeline.set(0)
         finally:
             self._updating_timeline = False
+        self._draw_timeline_marks()
         self.draw_frame()
 
     def close(self):
@@ -166,38 +275,55 @@ class ReplayViewer(tk.Toplevel):
                 else:
                     fill = "#f8fafc"
                 self.canvas.create_rectangle(
-                    c * self.cell, r * self.cell, (c + 1) * self.cell,
-                    (r + 1) * self.cell, fill=fill, outline="#cbd5e1",
+                    c * self.cell,
+                    r * self.cell,
+                    (c + 1) * self.cell,
+                    (r + 1) * self.cell,
+                    fill=fill,
+                    outline="#cbd5e1",
                 )
         target = frame.get("target_plant_pos")
         if target:
             r, c = target
             self.canvas.create_rectangle(
-                c * self.cell + 2, r * self.cell + 2,
-                (c + 1) * self.cell - 2, (r + 1) * self.cell - 2,
-                outline="#eab308", width=2,
+                c * self.cell + 2,
+                r * self.cell + 2,
+                (c + 1) * self.cell - 2,
+                (r + 1) * self.cell - 2,
+                outline="#eab308",
+                width=2,
             )
         for smoke in frame.get("smokes", []):
             for r, c in smoke.get("cells", []):
                 self.canvas.create_oval(
-                    c * self.cell + 1, r * self.cell + 1,
-                    (c + 1) * self.cell - 1, (r + 1) * self.cell - 1,
-                    fill="#d97706", outline="#f59e0b",
+                    c * self.cell + 1,
+                    r * self.cell + 1,
+                    (c + 1) * self.cell - 1,
+                    (r + 1) * self.cell - 1,
+                    fill="#d97706",
+                    outline="#f59e0b",
                 )
         for burst in frame.get("recon_bursts", []):
             for r, c in burst.get("cells", []):
                 self.canvas.create_rectangle(
-                    c * self.cell + 4, r * self.cell + 4,
-                    (c + 1) * self.cell - 4, (r + 1) * self.cell - 4,
-                    fill="#38bdf8", outline="",
+                    c * self.cell + 4,
+                    r * self.cell + 4,
+                    (c + 1) * self.cell - 4,
+                    (r + 1) * self.cell - 4,
+                    fill="#38bdf8",
+                    outline="",
                 )
         for burst in frame.get("flash_bursts", []):
             if burst.get("pos"):
                 r, c = burst["pos"]
                 self.canvas.create_oval(
-                    c * self.cell - 3, r * self.cell - 3,
-                    (c + 1) * self.cell + 3, (r + 1) * self.cell + 3,
-                    fill="#fef08a", outline="#facc15", width=2,
+                    c * self.cell - 3,
+                    r * self.cell - 3,
+                    (c + 1) * self.cell + 3,
+                    (r + 1) * self.cell + 3,
+                    fill="#fef08a",
+                    outline="#facc15",
+                    width=2,
                 )
         for projectiles, color in (
             (frame.get("flash_projectiles", []), "#fde047"),
@@ -210,43 +336,87 @@ class ReplayViewer(tk.Toplevel):
                 progress = min(int(projectile.get("progress", 0)), len(path) - 1)
                 r, c = path[progress]
                 self.canvas.create_oval(
-                    c * self.cell + 5, r * self.cell + 5,
-                    (c + 1) * self.cell - 5, (r + 1) * self.cell - 5,
-                    fill=color, outline="#111827",
+                    c * self.cell + 5,
+                    r * self.cell + 5,
+                    (c + 1) * self.cell - 5,
+                    (r + 1) * self.cell - 5,
+                    fill=color,
+                    outline="#111827",
                 )
-        for marker, color in ((frame.get("spike_pos"), "#111827"), (frame.get("planted_pos"), "#7c2d12")):
+        for marker, color in (
+            (frame.get("spike_pos"), "#111827"),
+            (frame.get("planted_pos"), "#7c2d12"),
+        ):
             if marker:
                 r, c = marker
                 self.canvas.create_polygon(
-                    c * self.cell + self.cell // 2, r * self.cell + 3,
-                    c * self.cell + self.cell - 3, r * self.cell + self.cell - 4,
-                    c * self.cell + 3, r * self.cell + self.cell - 4,
-                    fill=color, outline="#fbbf24",
+                    c * self.cell + self.cell // 2,
+                    r * self.cell + 3,
+                    c * self.cell + self.cell - 3,
+                    r * self.cell + self.cell - 4,
+                    c * self.cell + 3,
+                    r * self.cell + self.cell - 4,
+                    fill=color,
+                    outline="#fbbf24",
                 )
+        for portal in frame.get("escape_portals", []):
+            if not portal.get("pos"):
+                continue
+            r, c = portal["pos"]
+            self.canvas.create_oval(
+                c * self.cell + 1,
+                r * self.cell + 1,
+                (c + 1) * self.cell - 1,
+                (r + 1) * self.cell - 1,
+                fill="#dff8ff",
+                outline="#38bdf8",
+                width=2,
+            )
+            self.canvas.create_oval(
+                c * self.cell + 6,
+                r * self.cell + 6,
+                (c + 1) * self.cell - 6,
+                (r + 1) * self.cell - 6,
+                fill="#f8fdff",
+                outline="#bae6fd",
+            )
         for char in frame.get("chars", []):
             if not self._char_visible(char):
                 continue
             r, c = char.get("pos") or (0, 0)
             if not char.get("alive", False):
                 self.canvas.create_text(
-                    (c + 0.5) * self.cell, (r + 0.5) * self.cell,
-                    text="X", fill="#ef4444", font=("Arial", 12, "bold"),
+                    (c + 0.5) * self.cell,
+                    (r + 0.5) * self.cell,
+                    text="X",
+                    fill="#ef4444",
+                    font=("Arial", 12, "bold"),
                 )
                 continue
             color = "#ef4444" if char.get("team") == "A" else "#22c55e"
             self.canvas.create_oval(
-                c * self.cell + 2, r * self.cell + 2,
-                (c + 1) * self.cell - 2, (r + 1) * self.cell - 2,
-                fill=color, outline="#111827", width=1,
+                c * self.cell + 2,
+                r * self.cell + 2,
+                (c + 1) * self.cell - 2,
+                (r + 1) * self.cell - 2,
+                fill=color,
+                outline="#111827",
+                width=1,
             )
             if char.get("has_spike"):
                 self.canvas.create_text(
-                    (c + 0.5) * self.cell, (r + 0.5) * self.cell,
-                    text="S", fill="white", font=("Arial", 9, "bold"),
+                    (c + 0.5) * self.cell,
+                    (r + 0.5) * self.cell,
+                    text="S",
+                    fill="white",
+                    font=("Arial", 9, "bold"),
                 )
             self.canvas.create_text(
-                (c + 0.5) * self.cell, r * self.cell - 2,
-                text=char.get("name", ""), anchor="s", fill="#111827",
+                (c + 0.5) * self.cell,
+                r * self.cell - 2,
+                text=char.get("name", ""),
+                anchor="s",
+                fill="#111827",
                 font=("Arial", 7),
             )
         self.status.set(

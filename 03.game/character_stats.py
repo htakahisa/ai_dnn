@@ -80,10 +80,6 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     "おもこ": CharacterStats(
         "おもこ", 0.67, 0.67, 67, 0.67, 67, "フラッシュ", 67, 0, 8
     ),
-    "ねこさん": CharacterStats("ねこさん",0.4,0.3,80,0.75,150,"スモーカー",50,9, 5),
-    "いぬさん": CharacterStats("いぬさん",0.3,0.25,80,0.85,140,"フラッシュ",50,4, 5),
-    "とりさん": CharacterStats("とりさん",0.45,0.5,50,0.7,145,"シーカー",50,7, 5),
-    "ひつじさん": CharacterStats("ひつじさん",0.35,0.2,135,0.88,135,"スモーカー",50,5, 5),
     "Meteor": CharacterStats(
         "Meteor", 0.37, 0.29, 73, 0.78, 95, "フラッシュ", 75, 8, 9
     ),
@@ -250,11 +246,32 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "PatMen": CharacterStats("PatMen", 0.33, 0.2, 80, 0.8, 125, "スモーカー", 55, 5, 8),
     "eKo": CharacterStats("eKo", 0.3, 0.21, 85, 0.76, 110, "シーカー", 60, 5, 8),
-    "Homelander" : CharacterStats("Homelander", 1.0, 1.0, 100, 1.0, 200, "タイガー", 200, 0, 10),
-    "Stormfront" : CharacterStats("Stormfront", 0.9, 0.9, 120, 0.9, 190, "フラッシュ", 190, 9, 9), 
-    "Blacknoir" : CharacterStats("Blacknoir", 0.8, 0.80, 140, 0.8, 180, "シーカー", 180, 8, 0),  
-    "A-Train" : CharacterStats("A-Train", 0.3, 0.8, 160, 0.9, 210, "シーカー", 195, 10, 0),  
-    "Deep" : CharacterStats("Deep", 0.7, 0.7, 170, 0.7, 170, "シーカー", 170, 7, 7),  
+    "SiuFatBB": CharacterStats(
+        "SiuFatBB", 0.2, 0.25, 95, 0.7, 85, "シーカー", 150, 7, 9
+    ),
+    "ねこさん": CharacterStats(
+        "ねこさん", 0.2, 0.2, 80, 0.65, 120, "スモーカー", 50, 9, 5
+    ),
+    "いぬさん": CharacterStats(
+        "いぬさん", 0.18, 0.18, 80, 0.7, 115, "フラッシュ", 50, 4, 5
+    ),
+    "とりさん": CharacterStats(
+        "とりさん", 0.25, 0.25, 50, 0.55, 125, "シーカー", 50, 7, 5
+    ),
+    "ひつじさん": CharacterStats(
+        "ひつじさん", 0.3, 0.15, 135, 0.68, 110, "スモーカー", 50, 5, 5
+    ),
+    "Homelander": CharacterStats(
+        "Homelander", 1, 1, 100, 1, 200, "タイガー", 200, 0, 10
+    ),
+    "Stormfront": CharacterStats(
+        "Stormfront", 0.7, 0.7, 120, 0.9, 190, "フラッシュ", 190, 9, 9
+    ),
+    "Blacknoir": CharacterStats(
+        "Blacknoir", 1, 0.5, 140, 1, 170, "シーカー", 180, 8, 0
+    ),
+    "A-Train": CharacterStats("A-Train", 0.3, 1, 160, 0.8, 210, "シーカー", 195, 10, 0),
+    "Deep": CharacterStats("Deep", 0.8, 0.7, 170, 0.7, 170, "シーカー", 170, 7, 7),
 }
 
 

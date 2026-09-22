@@ -52,10 +52,18 @@ class AnalyticsViewer(tk.Tk):
     def _build_widgets(self):
         toolbar = ttk.Frame(self, padding=8)
         toolbar.pack(fill=tk.X)
-        ttk.Button(toolbar, text="Refresh", command=self.refresh_results).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="Analyze selected match", command=self.analyze_selected).pack(side=tk.LEFT, padx=8)
-        ttk.Button(toolbar, text="Replay selected match", command=self.open_replay).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(toolbar, text="Open results folder", command=self.open_results_folder).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Refresh", command=self.refresh_results).pack(
+            side=tk.LEFT
+        )
+        ttk.Button(
+            toolbar, text="Analyze selected match", command=self.analyze_selected
+        ).pack(side=tk.LEFT, padx=8)
+        ttk.Button(
+            toolbar, text="Replay selected match", command=self.open_replay
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(
+            toolbar, text="Open results folder", command=self.open_results_folder
+        ).pack(side=tk.LEFT)
         ttk.Label(toolbar, textvariable=self.status_var).pack(side=tk.RIGHT)
 
         splitter = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -70,7 +78,12 @@ class AnalyticsViewer(tk.Tk):
         ttk.Label(left, textvariable=self.file_count_var).pack(anchor=tk.W)
         file_frame = ttk.Frame(left)
         file_frame.pack(fill=tk.BOTH, expand=True, pady=(6, 0))
-        self.file_tree = ttk.Treeview(file_frame, columns=("modified", "size"), show="tree headings", selectmode="browse")
+        self.file_tree = ttk.Treeview(
+            file_frame,
+            columns=("modified", "size"),
+            show="tree headings",
+            selectmode="browse",
+        )
         self.file_tree.heading("#0", text="File")
         self.file_tree.heading("modified", text="Modified")
         self.file_tree.heading("size", text="Size")
@@ -78,7 +91,9 @@ class AnalyticsViewer(tk.Tk):
         self.file_tree.column("modified", width=145)
         self.file_tree.column("size", width=75, anchor=tk.E)
         self.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scroll = ttk.Scrollbar(file_frame, orient=tk.VERTICAL, command=self.file_tree.yview)
+        scroll = ttk.Scrollbar(
+            file_frame, orient=tk.VERTICAL, command=self.file_tree.yview
+        )
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.file_tree.configure(yscrollcommand=scroll.set)
         self.file_tree.bind("<<TreeviewSelect>>", self._on_selection)
@@ -96,16 +111,25 @@ class AnalyticsViewer(tk.Tk):
         self.tabs.add(self.rounds_tab, text="Rounds")
         self.tabs.add(self.suggestions_tab, text="Suggestions")
         self.tabs.add(self.report_tab, text="Full report")
-        self.report_text = ScrolledText(self.report_tab, wrap=tk.NONE, font=("Consolas", 10), undo=False)
+        self.report_text = ScrolledText(
+            self.report_tab, wrap=tk.NONE, font=("Consolas", 10), undo=False
+        )
         self.report_text.pack(fill=tk.BOTH, expand=True)
         self.report_text.configure(state=tk.DISABLED)
         self._show_empty_state()
 
     def _show_empty_state(self):
-        for tab in (self.overview_tab, self.players_tab, self.rounds_tab, self.suggestions_tab):
+        for tab in (
+            self.overview_tab,
+            self.players_tab,
+            self.rounds_tab,
+            self.suggestions_tab,
+        ):
             for child in tab.winfo_children():
                 child.destroy()
-        ttk.Label(self.overview_tab, text="Select a match and click Analyze selected match.").pack(anchor=tk.W)
+        ttk.Label(
+            self.overview_tab, text="Select a match and click Analyze selected match."
+        ).pack(anchor=tk.W)
         ttk.Label(self.players_tab, text="No match analyzed.").pack(anchor=tk.W)
         ttk.Label(self.rounds_tab, text="No match analyzed.").pack(anchor=tk.W)
         ttk.Label(self.suggestions_tab, text="No match analyzed.").pack(anchor=tk.W)
@@ -133,32 +157,168 @@ class AnalyticsViewer(tk.Tk):
         return tree
 
     def _populate_structured_views(self, series):
-        for tab in (self.overview_tab, self.players_tab, self.rounds_tab, self.suggestions_tab):
+        for tab in (
+            self.overview_tab,
+            self.players_tab,
+            self.rounds_tab,
+            self.suggestions_tab,
+        ):
             for child in tab.winfo_children():
                 child.destroy()
-        ttk.Label(self.overview_tab, text=f"{series.team1}  {series.team1_wins}  -  {series.team2_wins}  {series.team2}", font=("Segoe UI", 18, "bold")).pack(anchor=tk.W)
-        ttk.Label(self.overview_tab, text=f"Winner: {series.winner or '-'}    Maps: {series.total_maps}    Total rounds: {series.total_rounds}").pack(anchor=tk.W, pady=(4, 12))
-        map_tree = self._make_tree(self.overview_tab, ("map", "teams", "score", "winner", "attacker", "rounds"), ("Map", "Teams", "Score", "Winner", "Initial attacker", "Rounds"), (70, 360, 90, 180, 180, 80))
+        ttk.Label(
+            self.overview_tab,
+            text=f"{series.team1}  {series.team1_wins}  -  {series.team2_wins}  {series.team2}",
+            font=("Segoe UI", 18, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.overview_tab,
+            text=f"Winner: {series.winner or '-'}    Maps: {series.total_maps}    Total rounds: {series.total_rounds}",
+        ).pack(anchor=tk.W, pady=(4, 12))
+        map_tree = self._make_tree(
+            self.overview_tab,
+            ("map", "teams", "score", "winner", "attacker", "rounds"),
+            ("Map", "Teams", "Score", "Winner", "Initial attacker", "Rounds"),
+            (70, 360, 90, 180, 180, 80),
+        )
         for m in series.maps:
-            map_tree.insert("", tk.END, values=(m.number, f"{m.team1} vs {m.team2}", f"{m.score1} - {m.score2}", m.winner, m.initial_attacker, m.total_rounds))
+            map_tree.insert(
+                "",
+                tk.END,
+                values=(
+                    m.number,
+                    f"{m.team1} vs {m.team2}",
+                    f"{m.score1} - {m.score2}",
+                    m.winner,
+                    m.initial_attacker,
+                    m.total_rounds,
+                ),
+            )
 
-        ttk.Label(self.players_tab, text="Series aggregate", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, pady=(0, 6))
-        columns = ("team", "player", "role", "kda", "kd", "fights", "fight_wr", "1v1", "assists", "covers", "fkfd", "preaim")
-        headings = ("Team", "Player", "Role", "K / D / A", "K/D", "Fights", "Fight win", "1v1 W/L", "Assists", "Covers", "FK / FD", "Preaim")
-        player_tree = self._make_tree(self.players_tab, columns, headings, (150, 150, 100, 100, 65, 70, 80, 70, 70, 70, 70, 80))
+        ttk.Label(
+            self.players_tab, text="Series aggregate", font=("Segoe UI", 13, "bold")
+        ).pack(anchor=tk.W, pady=(0, 6))
+        columns = (
+            "team",
+            "player",
+            "role",
+            "kda",
+            "kd",
+            "fights",
+            "fight_wr",
+            "1v1",
+            "assists",
+            "covers",
+            "fkfd",
+            "preaim",
+        )
+        headings = (
+            "Team",
+            "Player",
+            "Role",
+            "K / D / A",
+            "K/D",
+            "Fights",
+            "Fight win",
+            "1v1 W/L",
+            "Assists",
+            "Covers",
+            "FK / FD",
+            "Preaim",
+        )
+        player_tree = self._make_tree(
+            self.players_tab,
+            columns,
+            headings,
+            (150, 150, 100, 100, 65, 70, 80, 70, 70, 70, 70, 80),
+        )
         for p in _team_stat_rows(series):
             fights = p.gunfights_won + p.gunfights_lost + p.gunfights_draw
-            preaim = "-" if not p.preaim_angle_count else f"{p.preaim_angle_sum / p.preaim_angle_count:.1f}°"
-            player_tree.insert("", tk.END, values=(p.team, p.name, p.role or "-", f"{p.kills} / {p.deaths} / {p.assists}", f"{p.kd_ratio:.2f}", fights, _pct(p.gunfights_won, p.gunfights_lost), f"{p.one_v_one_won} / {p.one_v_one_lost}", p.assists, p.covers, f"{p.first_kills} / {p.first_deaths}", preaim))
+            preaim = (
+                "-"
+                if not p.preaim_angle_count
+                else f"{p.preaim_angle_sum / p.preaim_angle_count:.1f}°"
+            )
+            player_tree.insert(
+                "",
+                tk.END,
+                values=(
+                    p.team,
+                    p.name,
+                    p.role or "-",
+                    f"{p.kills} / {p.deaths} / {p.assists}",
+                    f"{p.kd_ratio:.2f}",
+                    fights,
+                    _pct(p.gunfights_won, p.gunfights_lost),
+                    f"{p.one_v_one_won} / {p.one_v_one_lost}",
+                    p.assists,
+                    p.covers,
+                    f"{p.first_kills} / {p.first_deaths}",
+                    preaim,
+                ),
+            )
 
-        ttk.Label(self.rounds_tab, text="All recorded rounds", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, pady=(0, 6))
-        round_tree = self._make_tree(self.rounds_tab, ("map", "round", "winner", "reason", "attacker", "site", "attack", "def_setup", "fake_score", "displaced", "plant", "defuse"), ("Map", "Round", "Winner", "Reason", "Attacker", "Site", "Attack tactic", "Defender setup", "Fake score", "Moved", "Plant", "Defuse"), (55, 65, 150, 150, 150, 65, 120, 150, 85, 65, 65, 65))
+        ttk.Label(
+            self.rounds_tab, text="All recorded rounds", font=("Segoe UI", 13, "bold")
+        ).pack(anchor=tk.W, pady=(0, 6))
+        round_tree = self._make_tree(
+            self.rounds_tab,
+            (
+                "map",
+                "round",
+                "winner",
+                "reason",
+                "attacker",
+                "site",
+                "attack",
+                "def_setup",
+                "fake_score",
+                "displaced",
+                "plant",
+                "defuse",
+            ),
+            (
+                "Map",
+                "Round",
+                "Winner",
+                "Reason",
+                "Attacker",
+                "Site",
+                "Attack tactic",
+                "Defender setup",
+                "Fake score",
+                "Moved",
+                "Plant",
+                "Defuse",
+            ),
+            (55, 65, 150, 150, 150, 65, 120, 150, 85, 65, 65, 65),
+        )
         for m in series.maps:
             for r in m.round_records:
                 tactic = r.get("tactic", {}) or {}
-                round_tree.insert("", tk.END, values=(m.number, r.get("round_number", "-"), r.get("winner", "-"), r.get("reason", r.get("win_reason", "-")), r.get("attacker_team", "-"), tactic.get("final_attack_site", r.get("site", "-")), tactic.get("attacker_strategy", r.get("attack_tactic", "-")), tactic.get("defender_initial_setup", r.get("def_setup", "-")), f"{float(tactic.get('fake_effect_score', 0.0) or 0.0):.1f}", tactic.get("defenders_displaced_from_final", 0), "Yes" if r.get("planted") else "No", "Yes" if r.get("defused") else "No"))
+                round_tree.insert(
+                    "",
+                    tk.END,
+                    values=(
+                        m.number,
+                        r.get("round_number", "-"),
+                        r.get("winner", "-"),
+                        r.get("reason", r.get("win_reason", "-")),
+                        r.get("attacker_team", "-"),
+                        tactic.get("final_attack_site", r.get("site", "-")),
+                        tactic.get("attacker_strategy", r.get("attack_tactic", "-")),
+                        tactic.get("defender_initial_setup", r.get("def_setup", "-")),
+                        f"{float(tactic.get('fake_effect_score', 0.0) or 0.0):.1f}",
+                        tactic.get("defenders_displaced_from_final", 0),
+                        "Yes" if r.get("planted") else "No",
+                        "Yes" if r.get("defused") else "No",
+                    ),
+                )
 
-        ttk.Label(self.suggestions_tab, text="Improvement suggestions", font=("Segoe UI", 15, "bold")).pack(anchor=tk.W, pady=(0, 10))
+        ttk.Label(
+            self.suggestions_tab,
+            text="Improvement suggestions",
+            font=("Segoe UI", 15, "bold"),
+        ).pack(anchor=tk.W, pady=(0, 10))
         for suggestion in build_improvement_suggestions(series):
             ttk.Label(
                 self.suggestions_tab,
@@ -175,10 +335,27 @@ class AnalyticsViewer(tk.Tk):
             self.status_var.set(str(self.results_dir))
             self._show_empty_state()
             return
-        self.result_paths = sorted((p for p in self.results_dir.iterdir() if p.is_file() and p.suffix.lower() == ".json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        self.result_paths = sorted(
+            (
+                p
+                for p in self.results_dir.iterdir()
+                if p.is_file() and p.suffix.lower() == ".json"
+            ),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
         for i, path in enumerate(self.result_paths):
             stat = path.stat()
-            self.file_tree.insert("", tk.END, iid=str(i), text=path.name, values=(datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"), f"{stat.st_size / 1024:.1f} KB"))
+            self.file_tree.insert(
+                "",
+                tk.END,
+                iid=str(i),
+                text=path.name,
+                values=(
+                    datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                    f"{stat.st_size / 1024:.1f} KB",
+                ),
+            )
         self.file_count_var.set(f"{len(self.result_paths)} files")
         self.status_var.set("List refreshed")
         if self.result_paths:
@@ -211,11 +388,16 @@ class AnalyticsViewer(tk.Tk):
             series = load_series_json(str(path))
             self.loaded_series = series
             self._populate_structured_views(series)
-            self._set_report(f"File: {path.name}\nModified: {datetime.fromtimestamp(path.stat().st_mtime):%Y-%m-%d %H:%M:%S}\n{'=' * 100}\n\n" + generate_full_report(series))
+            self._set_report(
+                f"File: {path.name}\nModified: {datetime.fromtimestamp(path.stat().st_mtime):%Y-%m-%d %H:%M:%S}\n{'=' * 100}\n\n"
+                + generate_full_report(series)
+            )
             self.tabs.select(self.overview_tab)
             self.status_var.set("Analysis complete")
         except Exception as exc:
-            self._set_report(f"Analysis failed for {path}\n\n{exc}\n\n{traceback.format_exc()}")
+            self._set_report(
+                f"Analysis failed for {path}\n\n{exc}\n\n{traceback.format_exc()}"
+            )
             self.status_var.set("Analysis error")
             messagebox.showerror("Analysis error", str(exc))
 
@@ -246,6 +428,7 @@ class AnalyticsViewer(tk.Tk):
         ReplayViewer(
             self,
             map_data.replay_frames,
+            round_records=map_data.round_records,
             map_options=maps,
             title=f"Replay - Map {map_data.number} ({map_data.team1} vs {map_data.team2})",
         )

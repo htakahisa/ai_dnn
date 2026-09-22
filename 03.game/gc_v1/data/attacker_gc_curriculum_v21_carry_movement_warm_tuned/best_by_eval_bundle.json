@@ -1,0 +1,1019 @@
+{
+  "episode": 1500,
+  "evaluation": {
+    "episodes": 120,
+    "seeds": [
+      3126092100,
+      5126092100,
+      6126092100,
+      4126092100,
+      7126092100,
+      8126092100
+    ],
+    "opponent_stats": [
+      100.0,
+      60.0,
+      40.0
+    ],
+    "round_win_rate": 0.16666666666666666,
+    "worst_round_win_rate": 0.05,
+    "plant_rate": 0.30833333333333335,
+    "registered_plant_rate": 0.30833333333333335,
+    "worst_registered_plant_rate": 0.2,
+    "worst_carry_no_entry_rate": 0.65,
+    "worst_timeout_rate": 0.05,
+    "worst_carrier_preentry_death_rate": 0.75,
+    "worst_no_entry_carrier_death_rate": 0.65,
+    "guard_position_tick_rate": 0.7160685151404578,
+    "mean_ticks": 68.31666666666668,
+    "per_seed": [
+      {
+        "episodes": 20,
+        "seed": 3126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.15,
+        "plant_rate": 0.3,
+        "registered_plant_rate": 0.3,
+        "guard_position_tick_rate": 0.6587926509186351,
+        "mean_ticks": 69.35,
+        "carry_no_entry_rate": 0.55,
+        "carry_spawn_tick_rate": 0.24748743718592964,
+        "carry_reversal_tick_rate": 0.04271356783919598,
+        "carry_quiet_stall_tick_rate": 0.04773869346733668,
+        "timeout_rate": 0.0,
+        "carrier_preentry_death_rate": 0.65,
+        "no_entry_carrier_death_rate": 0.55,
+        "no_entry_team_wipe_rate": 0.55,
+        "no_entry_other_rate": 0.0,
+        "mean_death_support_near": 0.3076923076923077,
+        "mean_death_support_ahead": 0.0,
+        "mean_first_threat_support_near": 0.3333333333333333,
+        "mean_first_threat_support_ahead": 0.13333333333333333,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.71900826446281,
+        "screened_approach_ticks": 242,
+        "screened_approach_success_ticks": 174,
+        "formation_ready_approach_rate": 0.42517006802721086,
+        "formation_approach_ticks": 294,
+        "formation_ready_ticks": 125,
+        "entry_formation_ready_rate": 0.09615384615384616,
+        "entry_formation_ticks": 52,
+        "entry_formation_ready_ticks": 5,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 0,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.04081632653061224,
+        "designated_route_block_ticks": 12,
+        "designated_route_clear_rate": 0.4375,
+        "designated_route_clear_opportunities": 32,
+        "designated_route_clear_moves": 14,
+        "screen_guidance_follow_rate": 0.6145833333333334,
+        "screen_guidance_opportunities": 384,
+        "screen_guidance_follows": 236,
+        "ultimate_use_rate": 0.020581113801452784,
+        "ultimate_ready_ticks": 826,
+        "ultimate_uses": 17,
+        "tactical_ultimate_rate": 0.35294117647058826,
+        "tactical_ultimate_uses": 6,
+        "preentry_ultimate_uses": 17,
+        "ultimate_uses_by_phase": {
+          "carry": 8,
+          "escort": 9,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 6,
+          "escort": 0,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 796,
+          "escort": 2466
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 712,
+          "escort": 238
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.8944723618090452,
+          "escort": 0.09651257096512571
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 179,
+          "escort": 2402
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 150,
+          "escort": 222
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.8379888268156425,
+          "escort": 0.09242298084929226
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 367.31199999999995,
+          "escort": 1469.3579999999974
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 328.5159999999999,
+          "escort": 135.95600000000002
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.8943786208999432,
+          "escort": 0.09252748479267833
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 26,
+            "movement": 536,
+            "team_sighting": 127,
+            "visible_enemy": 107
+          },
+          "escort": {
+            "escort_outward": 1972,
+            "team_sighting": 340,
+            "visible_enemy": 154
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 20,
+            "movement": 534,
+            "team_sighting": 54,
+            "visible_enemy": 104
+          },
+          "escort": {
+            "escort_outward": 197,
+            "team_sighting": 32,
+            "visible_enemy": 9
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.7692307692307693,
+            "movement": 0.996268656716418,
+            "team_sighting": 0.4251968503937008,
+            "visible_enemy": 0.9719626168224299
+          },
+          "escort": {
+            "escort_outward": 0.09989858012170386,
+            "team_sighting": 0.09411764705882353,
+            "visible_enemy": 0.05844155844155844
+          }
+        },
+        "combat_stop_rate": 0.8837209302325582,
+        "postplant_win_rate": 0.5
+      },
+      {
+        "episodes": 20,
+        "seed": 5126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.1,
+        "plant_rate": 0.2,
+        "registered_plant_rate": 0.2,
+        "guard_position_tick_rate": 0.7692307692307693,
+        "mean_ticks": 64.95,
+        "carry_no_entry_rate": 0.5,
+        "carry_spawn_tick_rate": 0.24742268041237114,
+        "carry_reversal_tick_rate": 0.04768041237113402,
+        "carry_quiet_stall_tick_rate": 0.01804123711340206,
+        "timeout_rate": 0.0,
+        "carrier_preentry_death_rate": 0.45,
+        "no_entry_carrier_death_rate": 0.45,
+        "no_entry_team_wipe_rate": 0.45,
+        "no_entry_other_rate": 0.05,
+        "mean_death_support_near": 0.3333333333333333,
+        "mean_death_support_ahead": 0.0,
+        "mean_first_threat_support_near": 0.2727272727272727,
+        "mean_first_threat_support_ahead": 0.09090909090909091,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.34782608695652173,
+        "screened_approach_ticks": 322,
+        "screened_approach_success_ticks": 112,
+        "formation_ready_approach_rate": 0.19137466307277629,
+        "formation_approach_ticks": 371,
+        "formation_ready_ticks": 71,
+        "entry_formation_ready_rate": 0.02040816326530612,
+        "entry_formation_ticks": 49,
+        "entry_formation_ready_ticks": 1,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 1,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.016172506738544475,
+        "designated_route_block_ticks": 6,
+        "designated_route_clear_rate": 0.4166666666666667,
+        "designated_route_clear_opportunities": 24,
+        "designated_route_clear_moves": 10,
+        "screen_guidance_follow_rate": 0.5631578947368421,
+        "screen_guidance_opportunities": 570,
+        "screen_guidance_follows": 321,
+        "ultimate_use_rate": 0.0149812734082397,
+        "ultimate_ready_ticks": 1068,
+        "ultimate_uses": 16,
+        "tactical_ultimate_rate": 0.75,
+        "tactical_ultimate_uses": 12,
+        "preentry_ultimate_uses": 16,
+        "ultimate_uses_by_phase": {
+          "carry": 6,
+          "escort": 10,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 6,
+          "escort": 6,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 776,
+          "escort": 2722
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 730,
+          "escort": 306
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.9407216494845361,
+          "escort": 0.112417340191036
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 105,
+          "escort": 2670
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 83,
+          "escort": 306
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.7904761904761904,
+          "escort": 0.1146067415730337
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 323.38599999999997,
+          "escort": 1573.1899999999966
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 299.9459999999999,
+          "escort": 174.64000000000001
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.9275169611547808,
+          "escort": 0.11101011320946637
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 13,
+            "movement": 634,
+            "team_sighting": 68,
+            "visible_enemy": 61
+          },
+          "escort": {
+            "escort_outward": 2352,
+            "team_sighting": 279,
+            "visible_enemy": 91
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 8,
+            "movement": 632,
+            "team_sighting": 32,
+            "visible_enemy": 58
+          },
+          "escort": {
+            "escort_outward": 284,
+            "team_sighting": 17,
+            "visible_enemy": 5
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.6153846153846154,
+            "movement": 0.9968454258675079,
+            "team_sighting": 0.47058823529411764,
+            "visible_enemy": 0.9508196721311475
+          },
+          "escort": {
+            "escort_outward": 0.12074829931972789,
+            "team_sighting": 0.06093189964157706,
+            "visible_enemy": 0.054945054945054944
+          }
+        },
+        "combat_stop_rate": 0.883495145631068,
+        "postplant_win_rate": 0.25
+      },
+      {
+        "episodes": 20,
+        "seed": 6126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.05,
+        "plant_rate": 0.35,
+        "registered_plant_rate": 0.35,
+        "guard_position_tick_rate": 0.6815415821501014,
+        "mean_ticks": 70.2,
+        "carry_no_entry_rate": 0.45,
+        "carry_spawn_tick_rate": 0.2691823899371069,
+        "carry_reversal_tick_rate": 0.05157232704402516,
+        "carry_quiet_stall_tick_rate": 0.0440251572327044,
+        "timeout_rate": 0.05,
+        "carrier_preentry_death_rate": 0.45,
+        "no_entry_carrier_death_rate": 0.45,
+        "no_entry_team_wipe_rate": 0.45,
+        "no_entry_other_rate": 0.0,
+        "mean_death_support_near": 0.0,
+        "mean_death_support_ahead": 0.1111111111111111,
+        "mean_first_threat_support_near": 0.0,
+        "mean_first_threat_support_ahead": 0.09090909090909091,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.5785953177257525,
+        "screened_approach_ticks": 299,
+        "screened_approach_success_ticks": 173,
+        "formation_ready_approach_rate": 0.20916905444126074,
+        "formation_approach_ticks": 349,
+        "formation_ready_ticks": 73,
+        "entry_formation_ready_rate": 0.2,
+        "entry_formation_ticks": 50,
+        "entry_formation_ready_ticks": 10,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 1,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.03724928366762178,
+        "designated_route_block_ticks": 13,
+        "designated_route_clear_rate": 0.4666666666666667,
+        "designated_route_clear_opportunities": 30,
+        "designated_route_clear_moves": 14,
+        "screen_guidance_follow_rate": 0.5237154150197628,
+        "screen_guidance_opportunities": 506,
+        "screen_guidance_follows": 265,
+        "ultimate_use_rate": 0.01566820276497696,
+        "ultimate_ready_ticks": 1085,
+        "ultimate_uses": 17,
+        "tactical_ultimate_rate": 0.5294117647058824,
+        "tactical_ultimate_uses": 9,
+        "preentry_ultimate_uses": 17,
+        "ultimate_uses_by_phase": {
+          "carry": 6,
+          "escort": 11,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 5,
+          "escort": 4,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 795,
+          "escort": 2682
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 735,
+          "escort": 188
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.9245283018867925,
+          "escort": 0.07009694258016405
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 112,
+          "escort": 2660
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 86,
+          "escort": 188
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.7678571428571429,
+          "escort": 0.07067669172932331
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 324.1359999999999,
+          "escort": 1559.803999999997
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 294.7499999999999,
+          "escort": 104.88799999999999
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.9093405237307796,
+          "escort": 0.06724434608450817
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 36,
+            "movement": 626,
+            "team_sighting": 81,
+            "visible_enemy": 52
+          },
+          "escort": {
+            "escort_outward": 2369,
+            "team_sighting": 173,
+            "visible_enemy": 140
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 30,
+            "movement": 619,
+            "team_sighting": 38,
+            "visible_enemy": 48
+          },
+          "escort": {
+            "escort_outward": 180,
+            "team_sighting": 8,
+            "visible_enemy": 0
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.8333333333333334,
+            "movement": 0.9888178913738019,
+            "team_sighting": 0.4691358024691358,
+            "visible_enemy": 0.9230769230769231
+          },
+          "escort": {
+            "escort_outward": 0.07598142676234698,
+            "team_sighting": 0.046242774566473986,
+            "visible_enemy": 0.0
+          }
+        },
+        "combat_stop_rate": 0.9217391304347826,
+        "postplant_win_rate": 0.14285714285714285
+      },
+      {
+        "episodes": 20,
+        "seed": 4126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.15,
+        "plant_rate": 0.2,
+        "registered_plant_rate": 0.2,
+        "guard_position_tick_rate": 0.6657754010695187,
+        "mean_ticks": 62.35,
+        "carry_no_entry_rate": 0.65,
+        "carry_spawn_tick_rate": 0.2572614107883817,
+        "carry_reversal_tick_rate": 0.0677731673582296,
+        "carry_quiet_stall_tick_rate": 0.040110650069156296,
+        "timeout_rate": 0.0,
+        "carrier_preentry_death_rate": 0.75,
+        "no_entry_carrier_death_rate": 0.65,
+        "no_entry_team_wipe_rate": 0.65,
+        "no_entry_other_rate": 0.0,
+        "mean_death_support_near": 0.26666666666666666,
+        "mean_death_support_ahead": 0.0,
+        "mean_first_threat_support_near": 0.375,
+        "mean_first_threat_support_ahead": 0.0625,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.5060728744939271,
+        "screened_approach_ticks": 247,
+        "screened_approach_success_ticks": 125,
+        "formation_ready_approach_rate": 0.3356164383561644,
+        "formation_approach_ticks": 292,
+        "formation_ready_ticks": 98,
+        "entry_formation_ready_rate": 0.4888888888888889,
+        "entry_formation_ticks": 45,
+        "entry_formation_ready_ticks": 22,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 0,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.05821917808219178,
+        "designated_route_block_ticks": 17,
+        "designated_route_clear_rate": 0.42105263157894735,
+        "designated_route_clear_opportunities": 38,
+        "designated_route_clear_moves": 16,
+        "screen_guidance_follow_rate": 0.6083916083916084,
+        "screen_guidance_opportunities": 429,
+        "screen_guidance_follows": 261,
+        "ultimate_use_rate": 0.022511848341232227,
+        "ultimate_ready_ticks": 844,
+        "ultimate_uses": 19,
+        "tactical_ultimate_rate": 0.47368421052631576,
+        "tactical_ultimate_uses": 9,
+        "preentry_ultimate_uses": 19,
+        "ultimate_uses_by_phase": {
+          "carry": 5,
+          "escort": 14,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 2,
+          "escort": 7,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 723,
+          "escort": 2360
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 693,
+          "escort": 158
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.9585062240663901,
+          "escort": 0.06694915254237288
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 130,
+          "escort": 2346
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 119,
+          "escort": 158
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.9153846153846154,
+          "escort": 0.06734867860187553
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 323.25,
+          "escort": 1394.9839999999976
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 308.98799999999994,
+          "escort": 94.634
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.9558793503480276,
+          "escort": 0.06783877091063421
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 24,
+            "movement": 556,
+            "team_sighting": 47,
+            "visible_enemy": 96
+          },
+          "escort": {
+            "escort_outward": 2018,
+            "team_sighting": 230,
+            "visible_enemy": 112
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 19,
+            "movement": 555,
+            "team_sighting": 25,
+            "visible_enemy": 94
+          },
+          "escort": {
+            "escort_outward": 131,
+            "team_sighting": 20,
+            "visible_enemy": 7
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.7916666666666666,
+            "movement": 0.9982014388489209,
+            "team_sighting": 0.5319148936170213,
+            "visible_enemy": 0.9791666666666666
+          },
+          "escort": {
+            "escort_outward": 0.06491575817641229,
+            "team_sighting": 0.08695652173913043,
+            "visible_enemy": 0.0625
+          }
+        },
+        "combat_stop_rate": 0.922077922077922,
+        "postplant_win_rate": 0.75
+      },
+      {
+        "episodes": 20,
+        "seed": 7126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.25,
+        "plant_rate": 0.45,
+        "registered_plant_rate": 0.45,
+        "guard_position_tick_rate": 0.799650043744532,
+        "mean_ticks": 74.85,
+        "carry_no_entry_rate": 0.35,
+        "carry_spawn_tick_rate": 0.27926829268292686,
+        "carry_reversal_tick_rate": 0.05365853658536585,
+        "carry_quiet_stall_tick_rate": 0.07926829268292683,
+        "timeout_rate": 0.05,
+        "carrier_preentry_death_rate": 0.35,
+        "no_entry_carrier_death_rate": 0.35,
+        "no_entry_team_wipe_rate": 0.3,
+        "no_entry_other_rate": 0.0,
+        "mean_death_support_near": 0.0,
+        "mean_death_support_ahead": 0.0,
+        "mean_first_threat_support_near": 0.375,
+        "mean_first_threat_support_ahead": 0.0,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.5163934426229508,
+        "screened_approach_ticks": 244,
+        "screened_approach_success_ticks": 126,
+        "formation_ready_approach_rate": 0.2829581993569132,
+        "formation_approach_ticks": 311,
+        "formation_ready_ticks": 88,
+        "entry_formation_ready_rate": 0.29850746268656714,
+        "entry_formation_ticks": 67,
+        "entry_formation_ready_ticks": 20,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 3,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.0,
+        "designated_route_block_ticks": 0,
+        "designated_route_clear_rate": 0.13953488372093023,
+        "designated_route_clear_opportunities": 43,
+        "designated_route_clear_moves": 6,
+        "screen_guidance_follow_rate": 0.4547563805104408,
+        "screen_guidance_opportunities": 431,
+        "screen_guidance_follows": 196,
+        "ultimate_use_rate": 0.018943170488534396,
+        "ultimate_ready_ticks": 1003,
+        "ultimate_uses": 19,
+        "tactical_ultimate_rate": 0.47368421052631576,
+        "tactical_ultimate_uses": 9,
+        "preentry_ultimate_uses": 19,
+        "ultimate_uses_by_phase": {
+          "carry": 5,
+          "escort": 14,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 4,
+          "escort": 5,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 820,
+          "escort": 2798
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 782,
+          "escort": 240
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.9536585365853658,
+          "escort": 0.08577555396711938
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 75,
+          "escort": 2785
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 55,
+          "escort": 238
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.7333333333333333,
+          "escort": 0.08545780969479354
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 308.42199999999985,
+          "escort": 1629.5279999999966
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 289.27399999999983,
+          "escort": 136.16
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.9379162316566262,
+          "escort": 0.08355793824960374
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 86,
+            "movement": 651,
+            "team_sighting": 40,
+            "visible_enemy": 43
+          },
+          "escort": {
+            "escort_outward": 2480,
+            "team_sighting": 175,
+            "visible_enemy": 143
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 79,
+            "movement": 648,
+            "team_sighting": 15,
+            "visible_enemy": 40
+          },
+          "escort": {
+            "escort_outward": 220,
+            "team_sighting": 13,
+            "visible_enemy": 7
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.9186046511627907,
+            "movement": 0.9953917050691244,
+            "team_sighting": 0.375,
+            "visible_enemy": 0.9302325581395349
+          },
+          "escort": {
+            "escort_outward": 0.08870967741935484,
+            "team_sighting": 0.07428571428571429,
+            "visible_enemy": 0.04895104895104895
+          }
+        },
+        "combat_stop_rate": 0.9183673469387755,
+        "postplant_win_rate": 0.5555555555555556
+      },
+      {
+        "episodes": 20,
+        "seed": 8126092100,
+        "opponent_stats": [
+          100.0,
+          60.0,
+          40.0
+        ],
+        "round_win_rate": 0.3,
+        "plant_rate": 0.35,
+        "registered_plant_rate": 0.35,
+        "guard_position_tick_rate": 0.7214206437291898,
+        "mean_ticks": 68.2,
+        "carry_no_entry_rate": 0.5,
+        "carry_spawn_tick_rate": 0.2700135685210312,
+        "carry_reversal_tick_rate": 0.037991858887381276,
+        "carry_quiet_stall_tick_rate": 0.051560379918588875,
+        "timeout_rate": 0.0,
+        "carrier_preentry_death_rate": 0.55,
+        "no_entry_carrier_death_rate": 0.5,
+        "no_entry_team_wipe_rate": 0.5,
+        "no_entry_other_rate": 0.0,
+        "mean_death_support_near": 0.09090909090909091,
+        "mean_death_support_ahead": 0.09090909090909091,
+        "mean_first_threat_support_near": 0.09090909090909091,
+        "mean_first_threat_support_ahead": 0.09090909090909091,
+        "death_screen_ready_rate": 0.0,
+        "first_threat_screen_ready_rate": 0.0,
+        "screened_approach_rate": 0.6186770428015564,
+        "screened_approach_ticks": 257,
+        "screened_approach_success_ticks": 159,
+        "formation_ready_approach_rate": 0.2958199356913183,
+        "formation_approach_ticks": 311,
+        "formation_ready_ticks": 92,
+        "entry_formation_ready_rate": 0.2037037037037037,
+        "entry_formation_ticks": 54,
+        "entry_formation_ready_ticks": 11,
+        "entry_sync_hold_rate": 0.0,
+        "entry_sync_ticks": 1,
+        "entry_sync_hold_ticks": 0,
+        "designated_route_block_rate": 0.04180064308681672,
+        "designated_route_block_ticks": 13,
+        "designated_route_clear_rate": 0.3939393939393939,
+        "designated_route_clear_opportunities": 33,
+        "designated_route_clear_moves": 13,
+        "screen_guidance_follow_rate": 0.580568720379147,
+        "screen_guidance_opportunities": 422,
+        "screen_guidance_follows": 245,
+        "ultimate_use_rate": 0.026350461133069828,
+        "ultimate_ready_ticks": 759,
+        "ultimate_uses": 20,
+        "tactical_ultimate_rate": 0.45,
+        "tactical_ultimate_uses": 9,
+        "preentry_ultimate_uses": 20,
+        "ultimate_uses_by_phase": {
+          "carry": 9,
+          "escort": 11,
+          "guard": 0
+        },
+        "tactical_ultimate_uses_by_phase": {
+          "carry": 5,
+          "escort": 4,
+          "guard": 0
+        },
+        "facing_decisions_by_phase": {
+          "carry": 737,
+          "escort": 2496
+        },
+        "facing_teacher_matches_by_phase": {
+          "carry": 704,
+          "escort": 143
+        },
+        "facing_teacher_match_rate_by_phase": {
+          "carry": 0.9552238805970149,
+          "escort": 0.057291666666666664
+        },
+        "facing_confident_decisions_by_phase": {
+          "carry": 106,
+          "escort": 2485
+        },
+        "facing_confident_matches_by_phase": {
+          "carry": 87,
+          "escort": 138
+        },
+        "facing_confident_match_rate_by_phase": {
+          "carry": 0.8207547169811321,
+          "escort": 0.055533199195171024
+        },
+        "facing_confidence_mass_by_phase": {
+          "carry": 307.89199999999994,
+          "escort": 1451.6999999999973
+        },
+        "facing_weighted_matches_by_phase": {
+          "carry": 291.90199999999993,
+          "escort": 82.424
+        },
+        "facing_weighted_match_rate_by_phase": {
+          "carry": 0.9480662050329336,
+          "escort": 0.05677757112351048
+        },
+        "facing_context_counts_by_phase": {
+          "carry": {
+            "hold": 34,
+            "movement": 588,
+            "team_sighting": 47,
+            "visible_enemy": 68
+          },
+          "escort": {
+            "escort_outward": 2194,
+            "team_sighting": 201,
+            "visible_enemy": 101
+          }
+        },
+        "facing_context_matches_by_phase": {
+          "carry": {
+            "hold": 26,
+            "movement": 587,
+            "team_sighting": 24,
+            "visible_enemy": 67
+          },
+          "escort": {
+            "escort_outward": 120,
+            "team_sighting": 18,
+            "visible_enemy": 5
+          }
+        },
+        "facing_context_match_rate_by_phase": {
+          "carry": {
+            "hold": 0.7647058823529411,
+            "movement": 0.9982993197278912,
+            "team_sighting": 0.5106382978723404,
+            "visible_enemy": 0.9852941176470589
+          },
+          "escort": {
+            "escort_outward": 0.054694621695533276,
+            "team_sighting": 0.08955223880597014,
+            "visible_enemy": 0.04950495049504951
+          }
+        },
+        "combat_stop_rate": 0.9112903225806451,
+        "postplant_win_rate": 0.8571428571428571
+      }
+    ],
+    "postplant_win_rate": 0.5135135135135135,
+    "screened_approach_rate": 0.5394165114835506,
+    "formation_ready_approach_rate": 0.2837136929460581,
+    "entry_formation_ready_rate": 0.21766561514195584,
+    "entry_sync_hold_rate": 0.0,
+    "designated_route_block_rate": 0.03163900414937759,
+    "designated_route_clear_rate": 0.365,
+    "designated_route_clear_opportunities": 200,
+    "designated_route_clear_moves": 73,
+    "screen_guidance_follow_rate": 0.5557986870897156,
+    "screen_guidance_opportunities": 2742,
+    "screen_guidance_follows": 1524,
+    "ultimate_use_rate": 0.019337511190689348,
+    "ultimate_ready_ticks": 5585,
+    "ultimate_uses": 108,
+    "tactical_ultimate_rate": 0.5,
+    "tactical_ultimate_uses": 54,
+    "preentry_ultimate_uses": 108,
+    "ultimate_uses_by_phase": {
+      "carry": 39,
+      "escort": 69,
+      "guard": 0
+    },
+    "tactical_ultimate_uses_by_phase": {
+      "carry": 28,
+      "escort": 26,
+      "guard": 0
+    },
+    "facing_teacher_match_rate_by_phase": {
+      "carry": 0.9373789541639768,
+      "escort": 0.08200206132440092
+    },
+    "facing_decisions_by_phase": {
+      "carry": 4647,
+      "escort": 15524
+    },
+    "facing_teacher_matches_by_phase": {
+      "carry": 4356,
+      "escort": 1273
+    },
+    "facing_confident_match_rate_by_phase": {
+      "carry": 0.8203677510608204,
+      "escort": 0.08144383633046651
+    },
+    "facing_confident_decisions_by_phase": {
+      "carry": 707,
+      "escort": 15348
+    },
+    "facing_confident_matches_by_phase": {
+      "carry": 580,
+      "escort": 1250
+    },
+    "facing_weighted_match_rate_by_phase": {
+      "carry": 0.9278437657017657,
+      "escort": 0.0802662183138216
+    },
+    "facing_confidence_mass_by_phase": {
+      "carry": 1954.3979999999997,
+      "escort": 9078.563999999982
+    },
+    "facing_weighted_matches_by_phase": {
+      "carry": 1813.3759999999993,
+      "escort": 728.702
+    },
+    "facing_context_counts_by_phase": {
+      "carry": {
+        "hold": 219,
+        "movement": 3591,
+        "team_sighting": 410,
+        "visible_enemy": 427
+      },
+      "escort": {
+        "escort_outward": 13385,
+        "team_sighting": 1398,
+        "visible_enemy": 741
+      }
+    },
+    "facing_context_matches_by_phase": {
+      "carry": {
+        "hold": 182,
+        "movement": 3575,
+        "team_sighting": 188,
+        "visible_enemy": 411
+      },
+      "escort": {
+        "escort_outward": 1132,
+        "team_sighting": 108,
+        "visible_enemy": 33
+      }
+    },
+    "facing_context_match_rate_by_phase": {
+      "carry": {
+        "hold": 0.8310502283105022,
+        "movement": 0.9955444165970482,
+        "team_sighting": 0.4585365853658537,
+        "visible_enemy": 0.9625292740046838
+      },
+      "escort": {
+        "escort_outward": 0.084572282405678,
+        "team_sighting": 0.07725321888412018,
+        "visible_enemy": 0.044534412955465584
+      }
+    },
+    "carry_no_entry_rate": 0.5,
+    "carry_spawn_tick_rate": 0.26177262992129124,
+    "carry_reversal_tick_rate": 0.050231645014221976,
+    "carry_quiet_stall_tick_rate": 0.046790735080685854,
+    "timeout_rate": 0.016666666666666666,
+    "carrier_preentry_death_rate": 0.5333333333333333,
+    "no_entry_carrier_death_rate": 0.4916666666666667,
+    "no_entry_team_wipe_rate": 0.48333333333333334,
+    "no_entry_other_rate": 0.008333333333333333,
+    "mean_death_support_near": 0.1664335664335664,
+    "mean_death_support_ahead": 0.03367003367003367,
+    "mean_first_threat_support_near": 0.24116161616161613,
+    "mean_first_threat_support_ahead": 0.07809343434343435,
+    "death_screen_ready_rate": 0.0,
+    "first_threat_screen_ready_rate": 0.0,
+    "combat_stop_rate": 0.9067817996492918,
+    "episode": 1500,
+    "entry_quality_passed": false
+  },
+  "models": {
+    "carry": "dqn_attacker_carry_gc_best_by_eval.pt",
+    "escort": "dqn_attacker_escort_gc_best_by_eval.pt",
+    "guard": "dqn_attacker_guard_gc_best_by_eval.pt"
+  },
+  "macro_source": {
+    "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_macro_gc_data\\dqn_attacker_macro_gc_final.pt",
+    "sha256": "308fa4f5eca1ccebfa9df996b79a58618ada94a9760d2c8abcb537f2353ef95e"
+  },
+  "runtime_data_fingerprint": {
+    "character_stats.py": "f6d1b42a5d9b563da39c7983b3d456419bf39ce1b0cc00b2ef2345d663826190",
+    "player_combos.py": "ab7a4d994c9d7805d2a54e81618294aa09e3b2c54e15ce336bc71a2917bc6053",
+    "awakening_events.py": "ece380d4967d13145a19569cb80f84cfd06608585ef64af6af8b202b16ade197"
+  }
+}

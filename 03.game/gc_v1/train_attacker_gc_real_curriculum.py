@@ -7,11 +7,12 @@ never overwritten. All three best checkpoints come from the same evaluation.
 from __future__ import annotations
 
 import argparse
-from collections import deque
+from collections import Counter, deque
 import contextlib
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 import random
 import time
@@ -34,6 +35,7 @@ from carry_route_priority import current_carry_route_priority
 from positioning_gc import REGISTERED_PLANT_CELLS, team_plant_target
 from navigation_intent_gc import (
     navigation_intent,
+    own_macro,
     can_engage,
     carrier_screening_status,
     carrier_screen_commitment_features,
@@ -51,7 +53,29 @@ from ultimate_tactics_gc import tactical_ultimate_window
 PHASES = ("carry", "escort", "guard")
 VERSIONS = {"carry": 11, "escort": 11, "guard": 4}
 FACING_PHASES = ("carry", "escort")
-TRAINING_REVISION = "phase_specific_facing_heads_v19_head_only"
+TRAINING_REVISION = "independent_confident_facing_v20"
+FACING_PARAMETER_PREFIXES = (
+    "facing_head.",
+    "facing_feature.",
+    "facing_output.",
+)
+MOVEMENT_ACTION_ROWS = {
+    # Carry v5+ has explicit STAY/ABILITY/PLANT/ULT actions.  Only these five
+    # rows control displacement; ability, plant, ultimate, and facing tensors
+    # therefore remain bit-for-bit fixed during movement-only training.
+    "carry": (0, 2, 4, 6, 8),
+    "escort": (
+        escort_runtime.ACTION_UP,
+        escort_runtime.ACTION_DOWN,
+        escort_runtime.ACTION_LEFT,
+        escort_runtime.ACTION_RIGHT,
+        escort_runtime.ACTION_STAY,
+    ),
+}
+RUNTIME_DATA_FILES = tuple(
+    ROOT / name
+    for name in ("character_stats.py", "player_combos.py", "awakening_events.py")
+)
 
 CARRY_ROUTE_PRIORITY = current_carry_route_priority()
 
@@ -62,6 +86,7 @@ CARRY_QUIET_STALL_PENALTY = 0.08
 LATE_ROUND_THRESHOLD = 30
 LATE_QUIET_STALL_EXTRA_PENALTY = 0.12
 TIMEOUT_PENALTY = 20.0
+FAKE_WAIT_SUPPORT_RADIUS = 4
 
 
 def expand_policy_state(checkpoint, obs_dim, action_dim=None):
@@ -80,6 +105,16 @@ def expand_policy_state(checkpoint, obs_dim, action_dim=None):
         extended = weights.new_zeros((weights.shape[0], obs_dim))
         extended[:, : weights.shape[1]] = weights
         state["feature.0.weight"] = extended
+    facing_weights = state.get("facing_feature.0.weight")
+    if facing_weights is not None:
+        if facing_weights.shape[1] > obs_dim:
+            raise ValueError(
+                "source facing observation dimension is larger than requested"
+            )
+        if facing_weights.shape[1] < obs_dim:
+            extended = facing_weights.new_zeros((facing_weights.shape[0], obs_dim))
+            extended[:, : facing_weights.shape[1]] = facing_weights
+            state["facing_feature.0.weight"] = extended
     if action_dim is not None:
         out_weight = state["advantage_head.2.weight"]
         out_bias = state["advantage_head.2.bias"]
@@ -110,6 +145,24 @@ def expand_policy_state(checkpoint, obs_dim, action_dim=None):
                     :, hidden:
                 ]
                 state["facing_head.weight"] = extended_facing
+        facing_output_weight = state.get("facing_output.weight")
+        if facing_output_weight is not None:
+            facing_hidden = state["facing_feature.2.bias"].shape[0]
+            if facing_output_weight.shape[1] != facing_hidden + action_dim:
+                if facing_output_weight.shape[1] != facing_hidden + old_action_dim:
+                    raise ValueError(
+                        "source independent facing action input is inconsistent"
+                    )
+                extended_facing = facing_output_weight.new_zeros(
+                    (facing_output_weight.shape[0], facing_hidden + action_dim)
+                )
+                extended_facing[:, :facing_hidden] = facing_output_weight[
+                    :, :facing_hidden
+                ]
+                extended_facing[
+                    :, facing_hidden : facing_hidden + old_action_dim
+                ] = facing_output_weight[:, facing_hidden:]
+                state["facing_output.weight"] = extended_facing
     return state
 
 
@@ -133,8 +186,8 @@ def restrict_policy_updates(policy, input_columns=(), action_rows=()):
         parameter.requires_grad_(False)
     # A newly introduced facing head must remain trainable even when a
     # curriculum run intentionally protects the deployed movement policy.
-    if hasattr(policy, "facing_head"):
-        for parameter in policy.facing_head.parameters():
+    if hasattr(policy, "facing_parameters"):
+        for parameter in policy.facing_parameters():
             parameter.requires_grad_(True)
     if input_columns:
         feature_weight = policy.feature[0].weight
@@ -157,12 +210,76 @@ def restrict_policy_updates(policy, input_columns=(), action_rows=()):
 
 def restrict_policy_to_facing_head(policy):
     """Freeze every movement parameter and train only the factorized facing head."""
-    if not hasattr(policy, "facing_head"):
+    if not hasattr(policy, "facing_parameters"):
         raise ValueError("facing-only training requires a factorized facing head")
     for parameter in policy.parameters():
         parameter.requires_grad_(False)
-    for parameter in policy.facing_head.parameters():
+    for parameter in policy.facing_parameters():
         parameter.requires_grad_(True)
+
+
+def restrict_policy_to_movement_rows(policy, rows):
+    """Train only selected displacement rows in the final advantage layer."""
+    rows = tuple(map(int, rows))
+    if not rows:
+        raise ValueError("movement-only training requires at least one action row")
+    output = policy.advantage_head[-1]
+    if min(rows) < 0 or max(rows) >= output.out_features:
+        raise ValueError(f"movement rows are outside action space: {rows}")
+    for parameter in policy.parameters():
+        parameter.requires_grad_(False)
+    output.weight.requires_grad_(True)
+    output.bias.requires_grad_(True)
+    weight_mask = torch.zeros_like(output.weight)
+    bias_mask = torch.zeros_like(output.bias)
+    weight_mask[list(rows)] = 1
+    bias_mask[list(rows)] = 1
+    output.weight.register_hook(lambda gradient: gradient * weight_mask)
+    output.bias.register_hook(lambda gradient: gradient * bias_mask)
+
+
+def reset_movement_rows(policy, rows):
+    """Reinitialize displacement rows while preserving every other tensor."""
+    rows = tuple(map(int, rows))
+    output = policy.advantage_head[-1]
+    with torch.no_grad():
+        fresh_weight = torch.empty(
+            (len(rows), output.in_features),
+            dtype=output.weight.dtype,
+            device=output.weight.device,
+        )
+        torch.nn.init.kaiming_uniform_(fresh_weight, a=math.sqrt(5))
+        output.weight[list(rows)] = fresh_weight
+        if output.bias is not None:
+            bound = 1 / math.sqrt(output.in_features)
+            output.bias[list(rows)].uniform_(-bound, bound)
+
+
+def movement_only_transitions(rows, allowed_actions):
+    """Exclude ability/objective transitions from movement-row TD updates."""
+    allowed = set(map(int, allowed_actions))
+    return [(name, row) for name, row in rows if int(row[1]) in allowed]
+
+
+def movement_only_demonstrations(rows, allowed_actions):
+    """Keep only navigation labels that directly supervise displacement."""
+    allowed = set(map(int, allowed_actions))
+    return [row for row in rows if int(row[1]) in allowed]
+
+
+def is_facing_parameter(name):
+    return str(name).startswith(FACING_PARAMETER_PREFIXES)
+
+
+def runtime_data_fingerprint():
+    """Fingerprint mutable roster data so one run cannot mix data revisions."""
+    missing = [str(path) for path in RUNTIME_DATA_FILES if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(f"runtime data files are missing: {missing}")
+    return {
+        str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in RUNTIME_DATA_FILES
+    }
 
 
 class ProgressTracker:
@@ -210,13 +327,20 @@ def combat_reward(phase, action, engaged):
     return 0.02 if stationary else -0.12
 
 
-def n_step_transitions(rows, gamma, horizon):
+def n_step_transitions(rows, gamma, horizon, allowed_start_actions=None):
     """Back up rewards within one actor/phase segment, never across terminal."""
+    allowed = (
+        None
+        if allowed_start_actions is None
+        else set(map(int, allowed_start_actions))
+    )
     by_actor = {}
     for name, row in rows:
         by_actor.setdefault(name, []).append(row)
     for actor_rows in by_actor.values():
         for start, first in enumerate(actor_rows):
+            if allowed is not None and int(first[1]) not in allowed:
+                continue
             reward, ticks = 0.0, 0
             for row in actor_rows[start : start + horizon]:
                 reward += gamma**ticks * row[2]
@@ -298,6 +422,11 @@ def observable_teacher_action(phase, obs, mask, controller, context, view=None):
         return stay if mask[stay] else None
     if phase == "guard":
         return None
+    fake_wait_action = fake_wait_support_teacher_action(
+        phase, char, state, view, controller, mask
+    )
+    if fake_wait_action is not None:
+        return fake_wait_action
     if phase == "escort" and len(obs) >= escort_runtime.SCREEN_COMMITMENT_OBS_DIM:
         commitment = obs[
             escort_runtime.ENTRY_SUPPORT_OBS_DIM : escort_runtime.SCREEN_COMMITMENT_OBS_DIM
@@ -404,6 +533,42 @@ def observable_teacher_action(phase, obs, mask, controller, context, view=None):
     return navigation_teacher_action(phase, obs, mask, final_approach=final)
 
 
+def fake_wait_support_teacher_action(phase, char, state, view, controller, mask):
+    """Training-only label: keep a fake's waiting guard near the Spike holder."""
+    if phase != "escort":
+        return None
+    carrier = next(
+        (
+            ally for ally in state.get("chars", ())
+            if ally.team == char.team
+            and ally.name != char.name
+            and getattr(ally, "is_alive", True)
+            and getattr(ally, "has_spike", False)
+        ),
+        None,
+    )
+    if carrier is None:
+        return None
+    if (
+        navigation_intent(view, carrier)[2] != "FAKE_WAIT"
+        or navigation_intent(view, char)[2] != "FAKE_WAIT"
+    ):
+        return None
+    distance = controller._get_carry_dist_map(
+        view.grid, tuple(map(int, carrier.pos))
+    )
+    pos = tuple(map(int, char.pos))
+    current = float(distance[pos])
+    if not np.isfinite(current) or current <= FAKE_WAIT_SUPPORT_RADIUS:
+        return None
+    choices = []
+    for action, (dr, dc) in enumerate(((-1, 0), (1, 0), (0, -1), (0, 1))):
+        nxt = (pos[0] + dr, pos[1] + dc)
+        if mask[action] and float(distance[nxt]) < current:
+            choices.append((float(distance[nxt]), action))
+    return min(choices)[1] if choices else None
+
+
 def ultimate_context_from_observation(phase, obs):
     start = {
         "carry": runtime.ENTRY_SYNC_OBS_DIM,
@@ -508,12 +673,20 @@ def optimize_facing(policy, optimizer, samples, weight, batch_size=64):
     if not samples or weight <= 0 or not hasattr(policy, "facing_values"):
         return None
     batch = random.sample(list(samples), min(batch_size, len(samples)))
-    obs, actions, targets = zip(*batch)
+    normalized = [
+        (*sample, 1.0) if len(sample) == 3 else sample
+        for sample in batch
+    ]
+    obs, actions, targets, confidences = zip(*normalized)
     obs_tensor = torch.from_numpy(np.asarray(obs, dtype=np.float32))
     action_tensor = torch.tensor(actions, dtype=torch.long)
     target_tensor = torch.tensor(targets, dtype=torch.long)
     logits = policy.facing_values(obs_tensor, action_tensor)
-    loss = weight * torch.nn.functional.cross_entropy(logits, target_tensor)
+    confidence_tensor = torch.tensor(confidences, dtype=torch.float32)
+    losses = torch.nn.functional.cross_entropy(
+        logits, target_tensor, reduction="none"
+    )
+    loss = weight * (losses * confidence_tensor).sum() / confidence_tensor.sum().clamp_min(1e-6)
     optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(policy.parameters(), 5.0)
@@ -587,12 +760,281 @@ def selection_score(metrics, max_no_entry, max_timeout):
     )
 
 
+def carry_movement_selection_score(metrics, max_no_entry, max_timeout):
+    """Select Carry displacement without hiding entry failures behind wins."""
+    no_entry = metrics.get("worst_carry_no_entry_rate", metrics["carry_no_entry_rate"])
+    timeout = metrics.get("worst_timeout_rate", metrics["timeout_rate"])
+    violation = max(0.0, no_entry - max_no_entry) + max(
+        0.0, timeout - max_timeout
+    )
+    return (
+        int(violation <= 1e-12),
+        -violation,
+        -no_entry,
+        -timeout,
+        metrics.get("worst_registered_plant_rate", 0.0),
+        metrics.get("worst_round_win_rate", 0.0),
+        metrics.get("round_win_rate", 0.0),
+        -metrics.get("carry_spawn_tick_rate", 1.0),
+        -metrics.get("carry_reversal_tick_rate", 1.0),
+        -metrics.get("carry_quiet_stall_tick_rate", 1.0),
+    )
+
+
+def escort_support_selection_score(metrics, max_no_entry, max_timeout):
+    """Prefer preventing carrier deaths, while rejecting timeout regressions."""
+    no_entry = metrics.get("worst_carry_no_entry_rate", metrics["carry_no_entry_rate"])
+    timeout = metrics.get("worst_timeout_rate", metrics["timeout_rate"])
+    carrier_death = metrics.get(
+        "worst_carrier_preentry_death_rate",
+        metrics.get("carrier_preentry_death_rate", no_entry),
+    )
+    mean_carrier_death = metrics.get("carrier_preentry_death_rate", carrier_death)
+    violation = max(0.0, no_entry - max_no_entry) + max(
+        0.0, timeout - max_timeout
+    )
+    return (
+        int(violation <= 1e-12),
+        -carrier_death,
+        -mean_carrier_death,
+        -violation,
+        -no_entry,
+        -timeout,
+        metrics.get("worst_registered_plant_rate", 0.0),
+        metrics.get("worst_round_win_rate", 0.0),
+        metrics.get("round_win_rate", 0.0),
+        metrics.get("first_threat_screen_ready_rate", 0.0),
+        metrics.get("screened_approach_rate", 0.0),
+    )
+
+
+def carry_movement_guardrail_violated(
+    metrics,
+    baseline_metrics,
+    max_timeout,
+    max_quiet_stall_increase,
+):
+    """Detect sustained deployment regressions without changing inference behavior."""
+    timeout = metrics.get("worst_timeout_rate", metrics["timeout_rate"])
+    quiet_stall = metrics.get("carry_quiet_stall_tick_rate", 0.0)
+    baseline_quiet_stall = baseline_metrics.get("carry_quiet_stall_tick_rate", 0.0)
+    return (
+        timeout > max_timeout
+        or quiet_stall > baseline_quiet_stall + max_quiet_stall_increase
+    )
+
+
+def escort_support_guardrail_violated(
+    metrics,
+    baseline_metrics,
+    max_timeout,
+    max_carrier_death_increase,
+    max_plant_regression,
+    max_no_entry_increase=0.03,
+):
+    timeout = metrics.get("worst_timeout_rate", metrics["timeout_rate"])
+    baseline_timeout = baseline_metrics.get(
+        "worst_timeout_rate", baseline_metrics["timeout_rate"]
+    )
+    death = metrics.get(
+        "worst_carrier_preentry_death_rate",
+        metrics.get("carrier_preentry_death_rate", 1.0),
+    )
+    baseline_death = baseline_metrics.get(
+        "worst_carrier_preentry_death_rate",
+        baseline_metrics.get("carrier_preentry_death_rate", 1.0),
+    )
+    plant = metrics.get(
+        "worst_registered_plant_rate", metrics.get("registered_plant_rate", 0.0)
+    )
+    baseline_plant = baseline_metrics.get(
+        "worst_registered_plant_rate",
+        baseline_metrics.get("registered_plant_rate", 0.0),
+    )
+    no_entry = metrics.get(
+        "worst_carry_no_entry_rate", metrics.get("carry_no_entry_rate", 1.0)
+    )
+    baseline_no_entry = baseline_metrics.get(
+        "worst_carry_no_entry_rate", baseline_metrics.get("carry_no_entry_rate", 1.0)
+    )
+    return (
+        timeout > max(max_timeout, baseline_timeout + 0.02)
+        or death > baseline_death + max_carrier_death_increase
+        or plant < baseline_plant - max_plant_regression
+        or no_entry > baseline_no_entry + max_no_entry_increase
+    )
+
+
+def phase_facing_selection_score(
+    phase, metrics, baseline, max_no_entry, max_timeout, regression_tolerance=0.05
+):
+    """Select each phase head independently without accepting tactical collapse."""
+    facing = metrics.get("facing_confident_match_rate_by_phase", {}).get(
+        phase, 0.0
+    )
+    facing = metrics.get("facing_weighted_match_rate_by_phase", {}).get(
+        phase, facing
+    )
+    timeout_limit = max(max_timeout, baseline.get("worst_timeout_rate", max_timeout))
+    timeout_violation = max(0.0, metrics.get("worst_timeout_rate", 1.0) - timeout_limit)
+    if phase == "carry":
+        no_entry_limit = min(
+            1.0,
+            baseline.get("worst_carry_no_entry_rate", max_no_entry)
+            + regression_tolerance,
+        )
+        behavior_violation = max(
+            0.0,
+            metrics.get("worst_carry_no_entry_rate", 1.0) - no_entry_limit,
+        )
+        tie_break = -metrics.get("worst_carry_no_entry_rate", 1.0)
+    elif phase == "escort":
+        plant_floor = max(
+            0.0,
+            baseline.get("registered_plant_rate", 0.0) - regression_tolerance,
+        )
+        formation_floor = max(
+            0.0,
+            baseline.get("formation_ready_approach_rate", 0.0)
+            - regression_tolerance,
+        )
+        behavior_violation = max(
+            0.0, plant_floor - metrics.get("registered_plant_rate", 0.0)
+        ) + max(
+            0.0,
+            formation_floor - metrics.get("formation_ready_approach_rate", 0.0),
+        )
+        tie_break = metrics.get("registered_plant_rate", 0.0)
+    else:
+        raise ValueError(f"phase-specific facing selection is unsupported: {phase}")
+    violation = timeout_violation + behavior_violation
+    return (
+        int(violation == 0.0),
+        -violation,
+        facing,
+        metrics.get("worst_round_win_rate", 0.0),
+        tie_break,
+    )
+
+
+def phase_facing_ab_score(phase, metrics, baseline, regression_tolerance=0.05):
+    """Score one changed facing head while every other policy stays fixed.
+
+    Movement quality is not an objective here.  The candidate only has to avoid
+    regressing the unchanged baseline beyond the tolerance; facing accuracy is
+    then maximized among safe candidates.
+    """
+    facing = metrics.get("facing_weighted_match_rate_by_phase", {}).get(
+        phase, 0.0
+    )
+    violation = max(
+        0.0,
+        metrics.get("worst_timeout_rate", 1.0)
+        - baseline.get("worst_timeout_rate", 1.0)
+        - regression_tolerance,
+    )
+    violation += max(
+        0.0,
+        baseline.get("worst_round_win_rate", 0.0)
+        - metrics.get("worst_round_win_rate", 0.0)
+        - regression_tolerance,
+    )
+    if phase == "carry":
+        violation += max(
+            0.0,
+            metrics.get("worst_carry_no_entry_rate", 1.0)
+            - baseline.get("worst_carry_no_entry_rate", 1.0)
+            - regression_tolerance,
+        )
+        tie_break = -metrics.get("worst_carry_no_entry_rate", 1.0)
+    elif phase == "escort":
+        violation += max(
+            0.0,
+            baseline.get("registered_plant_rate", 0.0)
+            - metrics.get("registered_plant_rate", 0.0)
+            - regression_tolerance,
+        )
+        violation += max(
+            0.0,
+            baseline.get("formation_ready_approach_rate", 0.0)
+            - metrics.get("formation_ready_approach_rate", 0.0)
+            - regression_tolerance,
+        )
+        tie_break = metrics.get("registered_plant_rate", 0.0)
+    else:
+        raise ValueError(f"phase-specific facing selection is unsupported: {phase}")
+    return (
+        int(violation <= 1e-12),
+        -violation,
+        facing,
+        metrics.get("worst_round_win_rate", 0.0),
+        tie_break,
+    )
+
+
 def entry_quality_passed(metrics, max_no_entry, max_timeout):
     return (
         metrics.get("worst_carry_no_entry_rate", metrics["carry_no_entry_rate"])
         <= max_no_entry
         and metrics.get("worst_timeout_rate", metrics["timeout_rate"]) <= max_timeout
     )
+
+
+def screen_state_at_contact(status, previously_ready=False, alive_allies=None):
+    """Classify why the designated Escort was not screening at contact."""
+    if status is None or status.get("route_goal") is None:
+        return "no_route"
+    final_distance = status.get("final_distance", -1)
+    if final_distance > SCREEN_COMMITMENT_MAX_FINAL_DISTANCE:
+        return "before_commitment_window"
+    if final_distance <= FORMATION_MIN_FINAL_DISTANCE:
+        return "after_commitment_window"
+    if not status.get("formation_candidates"):
+        if alive_allies == 0:
+            return "no_alive_escort"
+        return "no_same_route_candidate"
+    if status.get("designated") is None:
+        return "no_reachable_designated"
+    if status.get("screen_ready"):
+        return "ready"
+    if previously_ready:
+        return "lost_after_ready"
+    if status.get("designated_distance", -1) > 1:
+        return "designated_lagging"
+    return "insufficient_lead"
+
+
+def screen_macro_context(game, carrier, alive_names=None, positions=None):
+    """Diagnostic only: summarize the current observable Macro assignments."""
+    macro = own_macro(game)
+    env = getattr(macro, "env", None)
+    assignments = getattr(env, "assignment", {})
+    def role(name):
+        assignment = assignments.get(name, ())
+        return assignment[2] if len(assignment) > 2 else "MAIN"
+
+    allies = [
+        c for c in game.chars
+        if c.team == "A"
+        and c.name != carrier.name
+        and (c.name in alive_names if alive_names is not None else c.is_alive)
+    ]
+    def distance(ally):
+        ally_pos = positions.get(ally.name, ally.pos) if positions else ally.pos
+        carrier_pos = positions.get(carrier.name, carrier.pos) if positions else carrier.pos
+        return max(
+            abs(int(ally_pos[0]) - int(carrier_pos[0])),
+            abs(int(ally_pos[1]) - int(carrier_pos[1])),
+        )
+
+    same_role = [ally for ally in allies if role(ally.name) == role(carrier.name)]
+    return {
+        "strategy": str(getattr(env, "current_strategy", "") or ""),
+        "carrier_role": role(carrier.name),
+        "alive_ally_roles": [role(c.name) for c in allies],
+        "nearest_ally_distance": min(map(distance, allies), default=None),
+        "nearest_same_role_distance": min(map(distance, same_role), default=None),
+    }
 
 
 def entered_site(row):
@@ -616,8 +1058,10 @@ def phase_of(char, planted, holder):
     return "carry" if char.name == holder.name else "escort"
 
 
-def observable_facing_teacher(phase, char, state, controller, goal=None):
-    """Return an observable training label; no counterpart runs at inference."""
+def observable_facing_target(
+    phase, char, state, controller, goal=None, action=None, team_sighting=None
+):
+    """Return ``(direction, confidence, source)`` using observable training data."""
     chars = state.get("chars", ())
     grid = state["grid"]
     smoke_cells = state.get("smoke_cells", set())
@@ -626,9 +1070,9 @@ def observable_facing_teacher(phase, char, state, controller, goal=None):
         for other in chars
         if getattr(other, "is_alive", True)
         and other.team != char.team
+        and tuple(other.pos) != tuple(char.pos)
         and runtime._has_los(grid, char.pos, other.pos, smoke_cells)
     ]
-    target = None
     if visible:
         target = min(
             visible,
@@ -637,16 +1081,62 @@ def observable_facing_teacher(phase, char, state, controller, goal=None):
                 abs(other.pos[1] - char.pos[1]),
             ),
         ).pos
-    elif phase == "carry" and getattr(controller, "_sighting", None) is not None:
-        target = controller._sighting["pos"]
-    elif goal is not None:
-        target = goal
-    facing = (
-        facing_towards(tuple(char.pos), tuple(target)) if target is not None else None
+        facing = facing_towards(tuple(char.pos), tuple(target))
+        return FACING_DIRS.index(facing), 1.0, "visible_enemy"
+
+    sighting = team_sighting or getattr(controller, "_sighting", None)
+    if (
+        sighting is not None
+        and sighting.get("pos") is not None
+        and tuple(sighting["pos"]) != tuple(char.pos)
+    ):
+        facing = facing_towards(tuple(char.pos), tuple(sighting["pos"]))
+        age = max(0, int(sighting.get("tick_ago", 0)))
+        confidence = max(0.35, 0.80 * (1.0 - age / 25.0))
+        return FACING_DIRS.index(facing), confidence, "team_sighting"
+
+    if phase == "escort":
+        carrier = next(
+            (
+                other
+                for other in chars
+                if getattr(other, "is_alive", True)
+                and other.team == char.team
+                and getattr(other, "has_spike", False)
+            ),
+            None,
+        )
+        if carrier is not None and tuple(carrier.pos) != tuple(char.pos):
+            # Screeners watch away from the protected carrier.  This is only a
+            # training label; inference remains entirely network-driven.
+            dr = int(char.pos[0]) - int(carrier.pos[0])
+            dc = int(char.pos[1]) - int(carrier.pos[1])
+            outward = (int(char.pos[0]) + dr, int(char.pos[1]) + dc)
+            facing = facing_towards(tuple(char.pos), outward)
+            return FACING_DIRS.index(facing), 0.55, "escort_outward"
+
+    movement = None
+    if action is not None:
+        if phase == "carry" and 0 <= int(action) < runtime.PLANT_ACTION_INDEX:
+            movement = runtime.MOVES[int(action) // 2]
+        elif phase == "escort" and 0 <= int(action) < 4:
+            movement = ((-1, 0), (1, 0), (0, -1), (0, 1))[int(action)]
+    if movement is not None and movement != (0, 0):
+        target = (int(char.pos[0]) + movement[0], int(char.pos[1]) + movement[1])
+        facing = facing_towards(tuple(char.pos), target)
+        return FACING_DIRS.index(facing), 0.35, "movement"
+
+    facing = getattr(char, "facing", "N")
+    return (
+        FACING_DIRS.index(facing) if facing in FACING_DIRS else 0,
+        0.15,
+        "hold",
     )
-    if facing is None:
-        facing = getattr(char, "facing", "N")
-    return FACING_DIRS.index(facing) if facing in FACING_DIRS else 0
+
+
+def observable_facing_teacher(phase, char, state, controller, goal=None):
+    """Backward-compatible direction-only wrapper used by focused tests."""
+    return observable_facing_target(phase, char, state, controller, goal)[0]
 
 
 class CurriculumSession(RealCarrySession):
@@ -676,11 +1166,18 @@ class CurriculumSession(RealCarrySession):
         self.teacher_probability = 0.0
         self.collect_demonstrations = False
         self.frozen_phases = set()
+        self.frozen_facing_phases = set()
         self.demonstrations = {phase: [] for phase in PHASES}
         self.ultimate_examples = {phase: [] for phase in PHASES}
         self.facing_examples = {phase: [] for phase in FACING_PHASES}
         self.facing_decisions = {phase: 0 for phase in FACING_PHASES}
         self.facing_teacher_matches = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confident_decisions = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confident_matches = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confidence_mass = {phase: 0.0 for phase in FACING_PHASES}
+        self.facing_weighted_matches = {phase: 0.0 for phase in FACING_PHASES}
+        self.facing_context_counts = {phase: {} for phase in FACING_PHASES}
+        self.facing_context_matches = {phase: {} for phase in FACING_PHASES}
         for phase, controller in self.controllers.items():
             controller.positioning_version = VERSIONS[phase]
             if phase == "guard":
@@ -758,7 +1255,7 @@ class CurriculumSession(RealCarrySession):
                 and random.random() < self.teacher_probability
             ):
                 action = teacher
-            elif random.random() < self.epsilon:
+            elif phase not in getattr(self, "frozen_phases", ()) and random.random() < self.epsilon:
                 action = (
                     int(random.choice(valid))
                     if len(valid)
@@ -788,27 +1285,32 @@ class CurriculumSession(RealCarrySession):
                 return None
             key = (phase, self.actor)
             context = getattr(self, "decision_context", None)
-            teacher = None
+            teacher = confidence = source = None
             if context is not None:
                 char, state = context
-                teacher = observable_facing_teacher(
+                teacher, confidence, source = observable_facing_target(
                     phase,
                     char,
                     state,
                     self.controllers[phase],
                     self.action_goals.get(key),
+                    action=action,
+                    team_sighting=getattr(
+                        self.controllers.get("carry"), "_sighting", None
+                    ),
                 )
                 if getattr(self, "collect_demonstrations", False):
                     self.facing_examples[phase].append(
-                        (obs.copy(), int(action), int(teacher))
+                        (obs.copy(), int(action), int(teacher), float(confidence))
                     )
             if (
                 teacher is not None
                 and getattr(self, "collect_demonstrations", False)
+                and phase not in getattr(self, "frozen_facing_phases", ())
                 and random.random() < self.teacher_probability
             ):
                 index = teacher
-            elif random.random() < self.epsilon:
+            elif phase not in getattr(self, "frozen_facing_phases", ()) and random.random() < self.epsilon:
                 index = random.randrange(len(FACING_DIRS))
             else:
                 with torch.no_grad():
@@ -822,6 +1324,17 @@ class CurriculumSession(RealCarrySession):
             if teacher is not None:
                 self.facing_decisions[phase] += 1
                 self.facing_teacher_matches[phase] += int(index == teacher)
+                if confidence >= 0.5:
+                    self.facing_confident_decisions[phase] += 1
+                    self.facing_confident_matches[phase] += int(index == teacher)
+                self.facing_confidence_mass[phase] += float(confidence)
+                self.facing_weighted_matches[phase] += float(confidence) * int(
+                    index == teacher
+                )
+                counts = self.facing_context_counts[phase]
+                matches = self.facing_context_matches[phase]
+                counts[source] = counts.get(source, 0) + 1
+                matches[source] = matches.get(source, 0) + int(index == teacher)
             return FACING_DIRS[index]
 
         return choose
@@ -862,6 +1375,12 @@ class CurriculumSession(RealCarrySession):
         self.facing_examples = {phase: [] for phase in FACING_PHASES}
         self.facing_decisions = {phase: 0 for phase in FACING_PHASES}
         self.facing_teacher_matches = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confident_decisions = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confident_matches = {phase: 0 for phase in FACING_PHASES}
+        self.facing_confidence_mass = {phase: 0.0 for phase in FACING_PHASES}
+        self.facing_weighted_matches = {phase: 0.0 for phase in FACING_PHASES}
+        self.facing_context_counts = {phase: {} for phase in FACING_PHASES}
+        self.facing_context_matches = {phase: {} for phase in FACING_PHASES}
         self.action_goals.clear()
         self.transitions = {phase: [] for phase in PHASES}
         self.arrived.clear()
@@ -908,6 +1427,15 @@ class CurriculumSession(RealCarrySession):
         first_carrier_threat_support_ahead = None
         carrier_preentry_death_screen_ready = False
         first_carrier_threat_screen_ready = False
+        carrier_preentry_death_screen_state = None
+        first_carrier_threat_screen_state = None
+        carrier_preentry_death_final_distance = None
+        first_carrier_threat_final_distance = None
+        carrier_preentry_death_alive_allies = None
+        first_carrier_threat_alive_allies = None
+        carrier_preentry_death_macro_context = None
+        first_carrier_threat_macro_context = None
+        screen_ready_seen = False
         screening_opportunities = screened_opportunities = 0
         formation_opportunities = formation_ready_opportunities = 0
         entry_formation_opportunities = entry_formation_ready_opportunities = 0
@@ -963,6 +1491,17 @@ class CurriculumSession(RealCarrySession):
                 carrier_screening_status(game, holder, game.chars, self.maps)
                 if holder is not None
                 else None
+            )
+            pre_alive_allies = (
+                sum(
+                    c.team == "A" and c.is_alive and c.name != holder.name
+                    for c in game.chars
+                )
+                if holder is not None
+                else 0
+            )
+            screen_ready_seen |= bool(
+                pre_screen_status and pre_screen_status.get("screen_ready")
             )
             pre_route_blocking = bool(
                 pre_screen_status is not None
@@ -1102,6 +1641,21 @@ class CurriculumSession(RealCarrySession):
                     first_carrier_threat_screen_ready = bool(
                         pre_screen_status and pre_screen_status["screen_ready"]
                     )
+                    first_carrier_threat_screen_state = screen_state_at_contact(
+                        pre_screen_status, screen_ready_seen, pre_alive_allies
+                    )
+                    first_carrier_threat_alive_allies = pre_alive_allies
+                    first_carrier_threat_macro_context = screen_macro_context(
+                        game,
+                        holder,
+                        {name for name, values in before.items() if values[4]},
+                        {name: values[0] for name, values in before.items()},
+                    )
+                    first_carrier_threat_final_distance = (
+                        pre_screen_status.get("final_distance")
+                        if pre_screen_status is not None
+                        else None
+                    )
                 if before[holder.name][4] and not holder.is_alive:
                     carrier_preentry_death = True
                     carrier_preentry_death_engaged = bool(
@@ -1112,6 +1666,22 @@ class CurriculumSession(RealCarrySession):
                     carrier_preentry_death_screen_ready = bool(
                         pre_screen_status and pre_screen_status["screen_ready"]
                     )
+                    carrier_preentry_death_screen_state = screen_state_at_contact(
+                        pre_screen_status, screen_ready_seen, pre_alive_allies
+                    )
+                    carrier_preentry_death_alive_allies = pre_alive_allies
+                    carrier_preentry_death_macro_context = screen_macro_context(
+                        game,
+                        holder,
+                        {name for name, values in before.items() if values[4]},
+                        {name: values[0] for name, values in before.items()},
+                    )
+                    carrier_preentry_death_final_distance = (
+                        pre_screen_status.get("final_distance")
+                        if pre_screen_status is not None
+                        else None
+                    )
+            screen_ready_seen |= bool(screen_status and screen_status.get("screen_ready"))
             # New Guard assignments are created on their first real decision.
             for name, goal in self.controllers[
                 "guard"
@@ -1294,6 +1864,33 @@ class CurriculumSession(RealCarrySession):
                         reward -= 0.6 * progress
                 elif phase == "escort" and holder_pos is not None:
                     route_goal = self.action_goals.get(key)
+                    if (
+                        holder is not None
+                        and holder.is_alive
+                        and char.is_alive
+                        and not fighting
+                        and navigation_intent(game, holder)[2] == "FAKE_WAIT"
+                        and navigation_intent(game, char)[2] == "FAKE_WAIT"
+                    ):
+                        # The fake sellers deliberately leave the Spike behind.
+                        # Teach a waiting teammate to *learn* to guard the holder
+                        # before contact, without overriding production actions.
+                        carrier_distance = self.distances(holder_pos)
+                        before_support = int(carrier_distance[pos])
+                        after_support = int(carrier_distance[tuple(char.pos)])
+                        if before_support >= 0 and after_support >= 0:
+                            reward += 0.45 * max(0, before_support - after_support)
+                            reward -= 0.65 * max(0, after_support - before_support)
+                            if (
+                                before_support > FAKE_WAIT_SUPPORT_RADIUS
+                                and after_support <= FAKE_WAIT_SUPPORT_RADIUS
+                            ):
+                                reward += 1.0
+                            elif (
+                                before_support <= FAKE_WAIT_SUPPORT_RADIUS
+                                and after_support > FAKE_WAIT_SUPPORT_RADIUS
+                            ):
+                                reward -= 1.5
                     pre_designated = (
                         pre_screen_status is not None
                         and pre_screen_status["designated"] is not None
@@ -1476,6 +2073,14 @@ class CurriculumSession(RealCarrySession):
             "first_carrier_threat_support_ahead": first_carrier_threat_support_ahead,
             "carrier_preentry_death_screen_ready": carrier_preentry_death_screen_ready,
             "first_carrier_threat_screen_ready": first_carrier_threat_screen_ready,
+            "carrier_preentry_death_screen_state": carrier_preentry_death_screen_state,
+            "first_carrier_threat_screen_state": first_carrier_threat_screen_state,
+            "carrier_preentry_death_final_distance": carrier_preentry_death_final_distance,
+            "first_carrier_threat_final_distance": first_carrier_threat_final_distance,
+            "carrier_preentry_death_alive_allies": carrier_preentry_death_alive_allies,
+            "first_carrier_threat_alive_allies": first_carrier_threat_alive_allies,
+            "carrier_preentry_death_macro_context": carrier_preentry_death_macro_context,
+            "first_carrier_threat_macro_context": first_carrier_threat_macro_context,
             "screened_approach_ticks": screening_opportunities,
             "screened_approach_success_ticks": screened_opportunities,
             "formation_approach_ticks": formation_opportunities,
@@ -1497,6 +2102,20 @@ class CurriculumSession(RealCarrySession):
             "tactical_ultimate_uses_by_phase": tactical_ultimate_uses_by_phase,
             "facing_decisions_by_phase": dict(self.facing_decisions),
             "facing_teacher_matches_by_phase": dict(self.facing_teacher_matches),
+            "facing_confident_decisions_by_phase": dict(
+                self.facing_confident_decisions
+            ),
+            "facing_confident_matches_by_phase": dict(self.facing_confident_matches),
+            "facing_confidence_mass_by_phase": dict(self.facing_confidence_mass),
+            "facing_weighted_matches_by_phase": dict(self.facing_weighted_matches),
+            "facing_context_counts_by_phase": {
+                phase: dict(values)
+                for phase, values in self.facing_context_counts.items()
+            },
+            "facing_context_matches_by_phase": {
+                phase: dict(values)
+                for phase, values in self.facing_context_matches.items()
+            },
             "no_entry_carrier_death": bool(no_entry and carrier_preentry_death),
             "no_entry_team_wipe": bool(no_entry and team_wiped),
             "no_entry_other": bool(
@@ -1518,6 +2137,60 @@ def evaluate(session, episodes, seed, final):
         np.random.set_state(np_state)
     death_rows = [r for r in rows if r.get("carrier_preentry_death")]
     threat_rows = [r for r in rows if r.get("first_carrier_threat_tick") is not None]
+    no_candidate_threat_rows = [
+        r for r in threat_rows
+        if r.get("first_carrier_threat_screen_state") == "no_same_route_candidate"
+    ]
+    no_candidate_death_rows = [
+        r for r in death_rows
+        if r.get("carrier_preentry_death_screen_state") == "no_same_route_candidate"
+    ]
+    fake_wait_no_candidate_threat_rows = [
+        r for r in no_candidate_threat_rows
+        if (r.get("first_carrier_threat_macro_context") or {}).get("carrier_role")
+        == "FAKE_WAIT"
+    ]
+    def screen_state_counts(event_rows, key):
+        states = [r.get(key) for r in event_rows]
+        return {
+            state: states.count(state)
+            for state in sorted(set(states) - {None})
+        }
+
+    def mean_contact_distance(event_rows, key):
+        distances = [r[key] for r in event_rows if r.get(key) is not None]
+        return float(np.mean(distances)) if distances else None
+    facing_context_counts = {
+        phase: {
+            source: sum(
+                r.get("facing_context_counts_by_phase", {})
+                .get(phase, {})
+                .get(source, 0)
+                for r in rows
+            )
+            for source in sorted(
+                {
+                    source
+                    for r in rows
+                    for source in r.get("facing_context_counts_by_phase", {})
+                    .get(phase, {})
+                }
+            )
+        }
+        for phase in FACING_PHASES
+    }
+    facing_context_matches = {
+        phase: {
+            source: sum(
+                r.get("facing_context_matches_by_phase", {})
+                .get(phase, {})
+                .get(source, 0)
+                for r in rows
+            )
+            for source in facing_context_counts[phase]
+        }
+        for phase in FACING_PHASES
+    }
     return {
         "episodes": episodes,
         "seed": seed,
@@ -1584,6 +2257,51 @@ def evaluate(session, episodes, seed, final):
             r.get("first_carrier_threat_screen_ready", False) for r in threat_rows
         )
         / max(1, len(threat_rows)),
+        "first_threat_screen_state_counts": screen_state_counts(
+            threat_rows, "first_carrier_threat_screen_state"
+        ),
+        "death_screen_state_counts": screen_state_counts(
+            death_rows, "carrier_preentry_death_screen_state"
+        ),
+        "no_candidate_threat_strategy_counts": dict(Counter(
+            (r.get("first_carrier_threat_macro_context") or {}).get("strategy", "")
+            for r in no_candidate_threat_rows
+        )),
+        "no_candidate_threat_ally_role_counts": dict(Counter(
+            role
+            for r in no_candidate_threat_rows
+            for role in (r.get("first_carrier_threat_macro_context") or {}).get(
+                "alive_ally_roles", ()
+            )
+        )),
+        "no_candidate_death_strategy_counts": dict(Counter(
+            (r.get("carrier_preentry_death_macro_context") or {}).get("strategy", "")
+            for r in no_candidate_death_rows
+        )),
+        "no_candidate_death_carrier_role_counts": dict(Counter(
+            (r.get("carrier_preentry_death_macro_context") or {}).get(
+                "carrier_role", ""
+            )
+            for r in no_candidate_death_rows
+        )),
+        "no_candidate_threat_carrier_role_counts": dict(Counter(
+            (r.get("first_carrier_threat_macro_context") or {}).get(
+                "carrier_role", ""
+            )
+            for r in no_candidate_threat_rows
+        )),
+        "fake_wait_threat_same_role_distance_counts": dict(Counter(
+            str((r.get("first_carrier_threat_macro_context") or {}).get(
+                "nearest_same_role_distance"
+            ))
+            for r in fake_wait_no_candidate_threat_rows
+        )),
+        "first_threat_final_distance_mean": mean_contact_distance(
+            threat_rows, "first_carrier_threat_final_distance"
+        ),
+        "death_final_distance_mean": mean_contact_distance(
+            death_rows, "carrier_preentry_death_final_distance"
+        ),
         "screened_approach_rate": sum(
             r.get("screened_approach_success_ticks", 0) for r in rows
         )
@@ -1681,6 +2399,71 @@ def evaluate(session, episodes, seed, final):
             )
             for phase in FACING_PHASES
         },
+        "facing_confident_decisions_by_phase": {
+            phase: sum(
+                r.get("facing_confident_decisions_by_phase", {}).get(phase, 0)
+                for r in rows
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_confident_matches_by_phase": {
+            phase: sum(
+                r.get("facing_confident_matches_by_phase", {}).get(phase, 0)
+                for r in rows
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_confident_match_rate_by_phase": {
+            phase: sum(
+                r.get("facing_confident_matches_by_phase", {}).get(phase, 0)
+                for r in rows
+            )
+            / max(
+                1,
+                sum(
+                    r.get("facing_confident_decisions_by_phase", {}).get(phase, 0)
+                    for r in rows
+                ),
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_confidence_mass_by_phase": {
+            phase: sum(
+                r.get("facing_confidence_mass_by_phase", {}).get(phase, 0.0)
+                for r in rows
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_weighted_matches_by_phase": {
+            phase: sum(
+                r.get("facing_weighted_matches_by_phase", {}).get(phase, 0.0)
+                for r in rows
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_weighted_match_rate_by_phase": {
+            phase: sum(
+                r.get("facing_weighted_matches_by_phase", {}).get(phase, 0.0)
+                for r in rows
+            )
+            / max(
+                1e-6,
+                sum(
+                    r.get("facing_confidence_mass_by_phase", {}).get(phase, 0.0)
+                    for r in rows
+                ),
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_context_counts_by_phase": facing_context_counts,
+        "facing_context_matches_by_phase": facing_context_matches,
+        "facing_context_match_rate_by_phase": {
+            phase: {
+                source: facing_context_matches[phase][source] / max(1, count)
+                for source, count in facing_context_counts[phase].items()
+            }
+            for phase in FACING_PHASES
+        },
         "combat_stop_rate": sum(r.get("combat_stop_ticks", 0) for r in rows)
         / max(1, sum(r.get("combat_ticks", 0) for r in rows)),
         "postplant_win_rate": sum(r.get("postplant_win", False) for r in rows)
@@ -1691,10 +2474,47 @@ def evaluate(session, episodes, seed, final):
 def evaluate_multi(session, episodes, seeds, final):
     """Evaluate independent seed blocks and report both mean and worst block."""
     blocks = [evaluate(session, episodes, int(seed), final) for seed in seeds]
+    def total_screen_states(key):
+        labels = sorted({label for block in blocks for label in block[key]})
+        return {
+            label: sum(block[key].get(label, 0) for block in blocks)
+            for label in labels
+        }
     plants = sum(b["episodes"] * b["plant_rate"] for b in blocks)
     postplant_wins = sum(
         b["episodes"] * b["plant_rate"] * b["postplant_win_rate"] for b in blocks
     )
+    facing_context_counts = {
+        phase: {
+            source: sum(
+                block.get("facing_context_counts_by_phase", {})
+                .get(phase, {})
+                .get(source, 0)
+                for block in blocks
+            )
+            for source in sorted(
+                {
+                    source
+                    for block in blocks
+                    for source in block.get("facing_context_counts_by_phase", {})
+                    .get(phase, {})
+                }
+            )
+        }
+        for phase in FACING_PHASES
+    }
+    facing_context_matches = {
+        phase: {
+            source: sum(
+                block.get("facing_context_matches_by_phase", {})
+                .get(phase, {})
+                .get(source, 0)
+                for block in blocks
+            )
+            for source in facing_context_counts[phase]
+        }
+        for phase in FACING_PHASES
+    }
     return {
         "episodes": episodes * len(blocks),
         "seeds": [int(s) for s in seeds],
@@ -1723,6 +2543,30 @@ def evaluate_multi(session, episodes, seeds, final):
         ),
         "mean_ticks": float(np.mean([b["mean_ticks"] for b in blocks])),
         "per_seed": blocks,
+        "first_threat_screen_state_counts": total_screen_states(
+            "first_threat_screen_state_counts"
+        ),
+        "death_screen_state_counts": total_screen_states(
+            "death_screen_state_counts"
+        ),
+        "no_candidate_threat_strategy_counts": total_screen_states(
+            "no_candidate_threat_strategy_counts"
+        ),
+        "no_candidate_threat_ally_role_counts": total_screen_states(
+            "no_candidate_threat_ally_role_counts"
+        ),
+        "no_candidate_death_strategy_counts": total_screen_states(
+            "no_candidate_death_strategy_counts"
+        ),
+        "no_candidate_death_carrier_role_counts": total_screen_states(
+            "no_candidate_death_carrier_role_counts"
+        ),
+        "no_candidate_threat_carrier_role_counts": total_screen_states(
+            "no_candidate_threat_carrier_role_counts"
+        ),
+        "fake_wait_threat_same_role_distance_counts": total_screen_states(
+            "fake_wait_threat_same_role_distance_counts"
+        ),
         "postplant_win_rate": float(postplant_wins / max(1, plants)),
         "screened_approach_rate": sum(
             b["screened_approach_success_ticks"] for b in blocks
@@ -1785,6 +2629,47 @@ def evaluate_multi(session, episodes, seeds, final):
             phase: sum(b["facing_teacher_matches_by_phase"][phase] for b in blocks)
             for phase in FACING_PHASES
         },
+        "facing_confident_match_rate_by_phase": {
+            phase: sum(b["facing_confident_matches_by_phase"][phase] for b in blocks)
+            / max(
+                1,
+                sum(b["facing_confident_decisions_by_phase"][phase] for b in blocks),
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_confident_decisions_by_phase": {
+            phase: sum(b["facing_confident_decisions_by_phase"][phase] for b in blocks)
+            for phase in FACING_PHASES
+        },
+        "facing_confident_matches_by_phase": {
+            phase: sum(b["facing_confident_matches_by_phase"][phase] for b in blocks)
+            for phase in FACING_PHASES
+        },
+        "facing_weighted_match_rate_by_phase": {
+            phase: sum(b["facing_weighted_matches_by_phase"][phase] for b in blocks)
+            / max(
+                1e-6,
+                sum(b["facing_confidence_mass_by_phase"][phase] for b in blocks),
+            )
+            for phase in FACING_PHASES
+        },
+        "facing_confidence_mass_by_phase": {
+            phase: sum(b["facing_confidence_mass_by_phase"][phase] for b in blocks)
+            for phase in FACING_PHASES
+        },
+        "facing_weighted_matches_by_phase": {
+            phase: sum(b["facing_weighted_matches_by_phase"][phase] for b in blocks)
+            for phase in FACING_PHASES
+        },
+        "facing_context_counts_by_phase": facing_context_counts,
+        "facing_context_matches_by_phase": facing_context_matches,
+        "facing_context_match_rate_by_phase": {
+            phase: {
+                source: facing_context_matches[phase][source] / max(1, count)
+                for source, count in facing_context_counts[phase].items()
+            }
+            for phase in FACING_PHASES
+        },
         **{
             key: float(np.mean([b[key] for b in blocks]))
             for key in (
@@ -1814,11 +2699,36 @@ def train(args):
     random.seed(args.seed)
     np.random.seed(args.seed & 0xFFFFFFFF)
     torch.manual_seed(args.seed)
+    data_fingerprint = runtime_data_fingerprint()
+
+    def ensure_runtime_data_unchanged():
+        current = runtime_data_fingerprint()
+        if current != data_fingerprint:
+            changed = sorted(
+                name
+                for name in set(data_fingerprint) | set(current)
+                if data_fingerprint.get(name) != current.get(name)
+            )
+            raise RuntimeError(
+                "runtime data changed during training; refusing a mixed-revision "
+                f"evaluation: {changed}"
+            )
+
     sources = {p: getattr(args, "init_" + p).resolve() for p in PHASES}
     checkpoints = {
         p: torch.load(s, map_location="cpu", weights_only=False)
         for p, s in sources.items()
     }
+    changed_source_data = [
+        phase for phase in PHASES
+        if checkpoints[phase].get("runtime_data_fingerprint") != data_fingerprint
+    ]
+    if changed_source_data:
+        print(
+            "[SOURCE DATA REVISION] "
+            + json.dumps({"phases": changed_source_data}),
+            flush=True,
+        )
     hashes = {p: hashlib.sha256(s.read_bytes()).hexdigest() for p, s in sources.items()}
     policies = {
         "carry": runtime.AttackerCarryDuelingDQN(
@@ -1842,7 +2752,7 @@ def train(args):
         missing = [
             key
             for key in incompatible.missing_keys
-            if not (phase in FACING_PHASES and key.startswith("facing_head."))
+            if not (phase in FACING_PHASES and is_facing_parameter(key))
         ]
         if missing or incompatible.unexpected_keys:
             raise RuntimeError(
@@ -1851,7 +2761,6 @@ def train(args):
             )
     import copy
 
-    targets = {p: copy.deepcopy(net) for p, net in policies.items()}
     feature_columns = {
         "carry": range(runtime.ENTRY_SYNC_OBS_DIM, runtime.FACING_HEAD_OBS_DIM),
         "escort": range(
@@ -1873,6 +2782,14 @@ def train(args):
         )
     for phase in args.facing_only_phases:
         restrict_policy_to_facing_head(policies[phase])
+    for phase in args.movement_only_phases:
+        rows = MOVEMENT_ACTION_ROWS[phase]
+        if phase in args.reset_movement_head_phases:
+            reset_movement_rows(policies[phase], rows)
+        restrict_policy_to_movement_rows(policies[phase], rows)
+    # A reset branch must start its target network from the same freshly
+    # initialized movement rows, not from the pre-reset source checkpoint.
+    targets = {p: copy.deepcopy(net) for p, net in policies.items()}
     optimizers = {
         p: torch.optim.Adam(
             [parameter for parameter in net.parameters() if parameter.requires_grad],
@@ -1887,6 +2804,9 @@ def train(args):
     ultimate_negatives = {p: deque(maxlen=10_000) for p in PHASES}
     session = CurriculumSession(sources, policies, args.gamma)
     session.frozen_phases = set(args.freeze_phases)
+    session.frozen_facing_phases = set(args.freeze_phases) | set(
+        args.movement_only_phases
+    )
     for phase in FACING_PHASES:
         if phase in session.frozen_phases:
             session.controllers[phase].facing_head_enabled = (
@@ -1900,13 +2820,59 @@ def train(args):
         "sha256": hashlib.sha256(macro_path.read_bytes()).hexdigest(),
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    if any(args.output_dir.iterdir()):
+    if args.overwrite_output and any(
+        args.output_dir.resolve() in source.parents for source in sources.values()
+    ):
+        raise ValueError("output-dir must not be a source checkpoint directory")
+    if any(args.output_dir.iterdir()) and not args.overwrite_output:
         raise ValueError(
-            "output-dir must be empty; use a new directory for each training run"
+            "output-dir must be empty unless --overwrite-output is explicit"
         )
     history, evaluations = [], []
-    best = (-1, -float("inf"), -float("inf"), -1, -1, -1, -1)
+    best = None
+    best_episode = None
+    baseline_metrics = None
+    evaluations_without_improvement = 0
+    guardrail_violations = 0
+    stop_reason = None
+    stopped_episode = None
+    best_facing_scores = {phase: None for phase in FACING_PHASES}
+    best_facing_episodes = {phase: None for phase in FACING_PHASES}
     started = time.monotonic()
+
+    def checkpoint_payload(phase, episode, metrics):
+        payload = (
+            dict(checkpoints[phase])
+            if "model_state_dict" in checkpoints[phase]
+            else {}
+        )
+        payload.update(
+                model_state_dict=policies[phase].state_dict(),
+                obs_dim=policies[phase].feature[0].in_features,
+                n_actions=policies[phase].advantage_head[-1].out_features,
+                positioning_version=VERSIONS[phase],
+                episode=episode,
+                training_environment="actual_engine_full_round_curriculum",
+                training_revision=(
+                    "escort_support_rows_v22"
+                    if set(args.movement_only_phases) == {"escort"}
+                    else "movement_rows_v21"
+                    if set(args.movement_only_phases) == {"carry"}
+                    else TRAINING_REVISION
+                ),
+                evaluation=metrics,
+                source_models={p: str(s) for p, s in sources.items()},
+                source_hashes=hashes,
+                source_runtime_data_fingerprints={
+                    p: checkpoints[p].get("runtime_data_fingerprint") for p in PHASES
+                },
+                macro_source=macro_source,
+                runtime_data_fingerprint=data_fingerprint,
+                training_parameters=vars_for_json(args),
+            )
+        if phase in FACING_PHASES:
+            payload["facing_head_version"] = runtime.FACING_HEAD_VERSION
+        return payload
 
     def save(kind, episode, metrics):
         args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -1915,29 +2881,10 @@ def train(args):
             "evaluation": metrics,
             "models": {},
             "macro_source": macro_source,
+            "runtime_data_fingerprint": data_fingerprint,
         }
         for phase in PHASES:
-            payload = (
-                dict(checkpoints[phase])
-                if "model_state_dict" in checkpoints[phase]
-                else {}
-            )
-            payload.update(
-                model_state_dict=policies[phase].state_dict(),
-                obs_dim=policies[phase].feature[0].in_features,
-                n_actions=policies[phase].advantage_head[-1].out_features,
-                positioning_version=VERSIONS[phase],
-                episode=episode,
-                training_environment="actual_engine_full_round_curriculum",
-                training_revision=TRAINING_REVISION,
-                evaluation=metrics,
-                source_models={p: str(s) for p, s in sources.items()},
-                source_hashes=hashes,
-                macro_source=macro_source,
-                training_parameters=vars_for_json(args),
-            )
-            if phase in FACING_PHASES:
-                payload["facing_head_version"] = runtime.FACING_HEAD_VERSION
+            payload = checkpoint_payload(phase, episode, metrics)
             filename = f"dqn_attacker_{phase}_gc_{kind}.pt"
             torch.save(payload, args.output_dir / filename)
             bundle["models"][phase] = filename
@@ -1945,11 +2892,29 @@ def train(args):
             json.dumps(bundle, indent=2), encoding="utf-8"
         )
 
+    def save_phase_facing(phase, episode, metrics, score):
+        filename = f"dqn_attacker_{phase}_gc_best_facing.pt"
+        payload = checkpoint_payload(phase, episode, metrics)
+        payload["phase_facing_selection_score"] = list(score)
+        torch.save(payload, args.output_dir / filename)
+        record = {
+            "phase": phase,
+            "episode": episode,
+            "model": filename,
+            "score": list(score),
+            "evaluation": metrics,
+            "runtime_data_fingerprint": data_fingerprint,
+        }
+        (args.output_dir / f"best_facing_{phase}.json").write_text(
+            json.dumps(record, indent=2), encoding="utf-8"
+        )
+
     for episode in range(args.episodes + 1):
         global_episode = args.episode_offset + episode
+        schedule_episode = episode if args.relative_schedules else global_episode
         if episode:
             stats = opponent_stats(
-                global_episode,
+                schedule_episode,
                 args.curriculum_episodes,
                 args.start_stats,
                 args.final_stats,
@@ -1957,19 +2922,27 @@ def train(args):
             # Expose the policy to the final opponent before the curriculum is
             # complete, avoiding a late collapse at the final-strength eval.
             if (
-                global_episode > args.curriculum_episodes // 2
+                schedule_episode > args.curriculum_episodes // 2
                 and random.random() < args.final_mix
             ):
                 stats = tuple(args.final_stats)
             # Keep exploration available when the opponent reaches full strength.
             epsilon = max(
                 0.03,
-                0.20 * (1.0 - (global_episode - 1) / max(1, args.curriculum_episodes)),
+                0.20
+                * (
+                    1.0
+                    - (schedule_episode - 1)
+                    / max(1, args.curriculum_episodes)
+                ),
             )
             teacher_probability = (
                 0.80
                 * max(
-                    0.0, 1.0 - (global_episode - 1) / args.navigation_bootstrap_episodes
+                    0.0,
+                    1.0
+                    - (schedule_episode - 1)
+                    / args.navigation_bootstrap_episodes,
                 )
                 if args.navigation_bootstrap_episodes
                 else 0.0
@@ -2023,45 +2996,83 @@ def train(args):
                         )
                     continue
                 transitions = session.transitions[phase]
+                phase_demonstrations = session.demonstrations[phase]
+                allowed_actions = None
+                if phase in args.movement_only_phases:
+                    allowed_actions = MOVEMENT_ACTION_ROWS[phase]
+                    phase_demonstrations = movement_only_demonstrations(
+                        phase_demonstrations, allowed_actions
+                    )
                 replays[phase].extend(
-                    n_step_transitions(transitions, args.gamma, args.n_step)
+                    n_step_transitions(
+                        transitions,
+                        args.gamma,
+                        args.n_step,
+                        allowed_start_actions=allowed_actions,
+                    )
                 )
-                demonstrations[phase].extend(session.demonstrations[phase])
+                demonstrations[phase].extend(phase_demonstrations)
                 if phase in FACING_PHASES:
                     facing_demonstrations[phase].extend(session.facing_examples[phase])
                 for obs, mask, tactical in session.ultimate_examples[phase]:
                     destination = ultimate_positives if tactical else ultimate_negatives
                     destination[phase].append((obs, mask))
-                for _ in range(min(args.max_updates, max(1, len(transitions) // 2))):
-                    optimize(
-                        policies[phase],
-                        targets[phase],
-                        optimizers[phase],
-                        replays[phase],
-                        args.gamma,
-                    )
-                    optimize_demonstrations(
-                        policies[phase],
-                        optimizers[phase],
-                        demonstrations[phase],
-                        args.navigation_demo_weight
-                        * max(teacher_probability, args.navigation_retention_weight),
-                    )
-                    if phase in FACING_PHASES:
+                update_transition_count = (
+                    len(movement_only_transitions(transitions, allowed_actions))
+                    if allowed_actions is not None
+                    else len(transitions)
+                )
+                updates = min(
+                    args.max_updates, max(1, update_transition_count // 2)
+                )
+                td_updates = updates
+                demo_updates = updates
+                if phase in args.movement_only_phases:
+                    td_updates = min(td_updates, args.movement_td_updates)
+                    demo_updates = min(demo_updates, args.movement_demo_updates)
+                for update_index in range(max(td_updates, demo_updates)):
+                    if update_index < td_updates:
+                        optimize(
+                            policies[phase],
+                            targets[phase],
+                            optimizers[phase],
+                            replays[phase],
+                            args.gamma,
+                        )
+                    if update_index < demo_updates:
+                        optimize_demonstrations(
+                            policies[phase],
+                            optimizers[phase],
+                            demonstrations[phase],
+                            args.navigation_demo_weight
+                            * max(
+                                teacher_probability,
+                                args.navigation_retention_weight,
+                            ),
+                        )
+                    if (
+                        update_index < td_updates
+                        and phase in FACING_PHASES
+                        and phase not in args.movement_only_phases
+                    ):
                         optimize_facing(
                             policies[phase],
                             optimizers[phase],
                             facing_demonstrations[phase],
                             args.facing_supervision_weight,
                         )
-                    optimize_ultimate_classification(
-                        policies[phase],
-                        optimizers[phase],
-                        ultimate_positives[phase],
-                        ultimate_negatives[phase],
-                        ultimate_rows[phase][0],
-                        args.ultimate_classification_weight,
-                    )
+                    if (
+                        update_index < td_updates
+                        and phase not in args.movement_only_phases
+                    ):
+                        optimize_ultimate_classification(
+                            policies[phase],
+                            optimizers[phase],
+                            ultimate_positives[phase],
+                            ultimate_negatives[phase],
+                            ultimate_rows[phase][0],
+                            args.ultimate_classification_weight,
+                        )
             if global_episode % 20 == 0:
                 for p in PHASES:
                     targets[p].load_state_dict(policies[p].state_dict())
@@ -2083,6 +3094,7 @@ def train(args):
             or global_episode % args.eval_interval == 0
             or episode == args.episodes
         ):
+            ensure_runtime_data_unchanged()
             metrics = evaluate_multi(
                 session, args.eval_episodes, args.eval_seeds, args.final_stats
             )
@@ -2091,13 +3103,66 @@ def train(args):
                 metrics, args.max_no_entry_rate, args.max_timeout_rate
             )
             evaluations.append(metrics)
-            score = selection_score(
-                metrics, args.max_no_entry_rate, args.max_timeout_rate
-            )
+            if set(args.movement_only_phases) == {"carry"}:
+                score = carry_movement_selection_score(
+                    metrics, args.max_no_entry_rate, args.max_timeout_rate
+                )
+            elif set(args.movement_only_phases) == {"escort"}:
+                score = escort_support_selection_score(
+                    metrics, args.max_no_entry_rate, args.max_timeout_rate
+                )
+            else:
+                score = selection_score(
+                    metrics, args.max_no_entry_rate, args.max_timeout_rate
+                )
             save("latest", global_episode, metrics)
-            if score > best:
+            improved = best is None or score > best
+            if improved:
                 best = score
+                best_episode = global_episode
+                evaluations_without_improvement = 0
                 save("best_by_eval", global_episode, metrics)
+            elif episode > 0:
+                evaluations_without_improvement += 1
+            if baseline_metrics is None:
+                baseline_metrics = metrics
+            if episode > 0 and set(args.movement_only_phases) == {"carry"}:
+                if carry_movement_guardrail_violated(
+                    metrics,
+                    baseline_metrics,
+                    args.max_timeout_rate,
+                    args.max_quiet_stall_increase,
+                ):
+                    guardrail_violations += 1
+                else:
+                    guardrail_violations = 0
+            elif episode > 0 and set(args.movement_only_phases) == {"escort"}:
+                if escort_support_guardrail_violated(
+                    metrics,
+                    baseline_metrics,
+                    args.max_timeout_rate,
+                    args.max_carrier_death_increase,
+                    args.max_plant_regression,
+                ):
+                    guardrail_violations += 1
+                else:
+                    guardrail_violations = 0
+            for phase in FACING_PHASES:
+                phase_score = phase_facing_selection_score(
+                    phase,
+                    metrics,
+                    baseline_metrics,
+                    args.max_no_entry_rate,
+                    args.max_timeout_rate,
+                    args.facing_regression_tolerance,
+                )
+                if (
+                    best_facing_scores[phase] is None
+                    or phase_score > best_facing_scores[phase]
+                ):
+                    best_facing_scores[phase] = phase_score
+                    best_facing_episodes[phase] = global_episode
+                    save_phase_facing(phase, global_episode, metrics, phase_score)
             print("[FINAL-STRENGTH EVAL] " + json.dumps(metrics), flush=True)
             (args.output_dir / "training_history.json").write_text(
                 json.dumps(history), encoding="utf-8"
@@ -2105,6 +3170,54 @@ def train(args):
             (args.output_dir / "evaluation_history.json").write_text(
                 json.dumps(evaluations, indent=2), encoding="utf-8"
             )
+            if episode < args.episodes:
+                if (
+                    args.movement_guardrail_patience > 0
+                    and guardrail_violations >= args.movement_guardrail_patience
+                ):
+                    stop_reason = "movement_guardrail"
+                elif (
+                    args.early_stop_patience > 0
+                    and evaluations_without_improvement >= args.early_stop_patience
+                ):
+                    stop_reason = "no_evaluation_improvement"
+                if stop_reason is not None:
+                    stopped_episode = global_episode
+                    print(
+                        "[EARLY STOP] "
+                        + json.dumps(
+                            {
+                                "reason": stop_reason,
+                                "episode": stopped_episode,
+                                "best_episode": best_episode,
+                                "evaluations_without_improvement": evaluations_without_improvement,
+                                "consecutive_guardrail_violations": guardrail_violations,
+                            }
+                        ),
+                        flush=True,
+                    )
+                    break
+    stop_report = {
+        "reason": stop_reason or "completed",
+        "stopped_episode": stopped_episode,
+        "last_evaluated_episode": evaluations[-1]["episode"],
+        "best_episode": best_episode,
+        "evaluations_without_improvement": evaluations_without_improvement,
+        "consecutive_guardrail_violations": guardrail_violations,
+        "early_stop_patience": args.early_stop_patience,
+        "movement_guardrail_patience": args.movement_guardrail_patience,
+        "max_timeout_rate": args.max_timeout_rate,
+        "max_quiet_stall_increase": args.max_quiet_stall_increase,
+        "max_carrier_death_increase": args.max_carrier_death_increase,
+        "max_plant_regression": args.max_plant_regression,
+        "baseline_quiet_stall_tick_rate": baseline_metrics.get(
+            "carry_quiet_stall_tick_rate", 0.0
+        ),
+    }
+    (args.output_dir / "training_stop.json").write_text(
+        json.dumps(stop_report, indent=2), encoding="utf-8"
+    )
+    ensure_runtime_data_unchanged()
     # Report fresh held-out rounds for the selected joint policy; never use this
     # seed to select another checkpoint or present training wins as validation.
     for phase in PHASES:
@@ -2134,6 +3247,62 @@ def train(args):
     )
     print("[HOLDOUT] " + json.dumps(holdout), flush=True)
 
+    # Compose independently selected Carry/Escort facing heads.  All movement
+    # tensors are frozen in facing-only runs, so this combines only phase-local
+    # view policies.  Evaluation seeds validate the combination; holdout remains
+    # a one-shot generalization report and never selects another checkpoint.
+    if args.facing_only_phases:
+        for phase in FACING_PHASES:
+            payload = torch.load(
+                args.output_dir / f"dqn_attacker_{phase}_gc_best_facing.pt",
+                weights_only=False,
+            )
+            policies[phase].load_state_dict(payload["model_state_dict"])
+            policies[phase].facing_head_version = int(
+                payload.get("facing_head_version", runtime.FACING_HEAD_VERSION)
+            )
+        guard_payload = torch.load(
+            args.output_dir / "dqn_attacker_guard_gc_best_by_eval.pt",
+            weights_only=False,
+        )
+        policies["guard"].load_state_dict(guard_payload["model_state_dict"])
+        composite_eval = evaluate_multi(
+            session, args.eval_episodes, args.eval_seeds, args.final_stats
+        )
+        composite_eval["selected_episodes_by_phase"] = dict(best_facing_episodes)
+        composite_episode = max(best_facing_episodes.values())
+        composite_bundle = {
+            "episode": composite_episode,
+            "selected_episodes_by_phase": dict(best_facing_episodes),
+            "evaluation": composite_eval,
+            "models": {},
+            "runtime_data_fingerprint": data_fingerprint,
+        }
+        for phase in PHASES:
+            filename = f"dqn_attacker_{phase}_gc_best_phase_facing.pt"
+            payload = checkpoint_payload(phase, composite_episode, composite_eval)
+            if phase in FACING_PHASES:
+                payload["selected_facing_episode"] = best_facing_episodes[phase]
+            torch.save(payload, args.output_dir / filename)
+            composite_bundle["models"][phase] = filename
+        (args.output_dir / "best_phase_facing_bundle.json").write_text(
+            json.dumps(composite_bundle, indent=2), encoding="utf-8"
+        )
+        ensure_runtime_data_unchanged()
+        composite_holdout = evaluate_multi(
+            session, args.holdout_episodes, args.holdout_seeds, args.final_stats
+        )
+        composite_holdout["selected_episodes_by_phase"] = dict(
+            best_facing_episodes
+        )
+        composite_holdout["entry_quality_passed"] = entry_quality_passed(
+            composite_holdout, args.max_no_entry_rate, args.max_timeout_rate
+        )
+        (args.output_dir / "holdout_phase_facing.json").write_text(
+            json.dumps(composite_holdout, indent=2), encoding="utf-8"
+        )
+        print("[PHASE-FACING HOLDOUT] " + json.dumps(composite_holdout), flush=True)
+
 
 def vars_for_json(args):
     return {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
@@ -2152,6 +3321,11 @@ def main():
             / f"dqn_attacker_{phase}_gc_best_by_eval.pt",
         )
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--overwrite-output",
+        action="store_true",
+        help="overwrite checkpoints and reports in an existing output directory",
+    )
     parser.add_argument("--episodes", type=int, default=10000)
     parser.add_argument(
         "--episode-offset",
@@ -2198,6 +3372,36 @@ def main():
     parser.add_argument("--max-no-entry-rate", type=float, default=0.25)
     parser.add_argument("--max-timeout-rate", type=float, default=0.10)
     parser.add_argument(
+        "--early-stop-patience",
+        type=int,
+        default=0,
+        help="stop after this many consecutive evaluations without a better checkpoint; zero disables",
+    )
+    parser.add_argument(
+        "--movement-guardrail-patience",
+        type=int,
+        default=0,
+        help="stop isolated movement training after this many consecutive safety regressions; zero disables",
+    )
+    parser.add_argument(
+        "--max-quiet-stall-increase",
+        type=float,
+        default=0.05,
+        help="maximum Carry quiet-stall increase over the episode-zero evaluation",
+    )
+    parser.add_argument(
+        "--max-carrier-death-increase",
+        type=float,
+        default=0.05,
+        help="maximum Escort worst-seed pre-entry carrier-death increase over baseline",
+    )
+    parser.add_argument(
+        "--max-plant-regression",
+        type=float,
+        default=0.05,
+        help="maximum Escort worst-seed registered-plant loss versus baseline",
+    )
+    parser.add_argument(
         "--navigation-bootstrap-episodes",
         type=int,
         default=500,
@@ -2221,6 +3425,12 @@ def main():
         type=float,
         default=0.5,
         help="cross-entropy weight for Carry/Escort phase-specific facing heads",
+    )
+    parser.add_argument(
+        "--facing-regression-tolerance",
+        type=float,
+        default=0.05,
+        help="maximum tolerated regression when selecting each phase's facing head",
     )
     parser.add_argument("--n-step", type=int, default=5)
     parser.add_argument(
@@ -2251,6 +3461,37 @@ def main():
         default=(),
         help="freeze movement/value/features and update only each phase's facing head",
     )
+    parser.add_argument(
+        "--movement-only-phases",
+        nargs="*",
+        choices=tuple(MOVEMENT_ACTION_ROWS),
+        default=(),
+        help="freeze all tensors except phase displacement rows in the final advantage layer",
+    )
+    parser.add_argument(
+        "--reset-movement-head-phases",
+        nargs="*",
+        choices=tuple(MOVEMENT_ACTION_ROWS),
+        default=(),
+        help="reinitialize selected displacement rows before movement-only training",
+    )
+    parser.add_argument(
+        "--movement-td-updates",
+        type=int,
+        default=1,
+        help="maximum TD optimizer steps per episode for a movement-only phase",
+    )
+    parser.add_argument(
+        "--movement-demo-updates",
+        type=int,
+        default=4,
+        help="maximum navigation-demo optimizer steps per episode for a movement-only phase",
+    )
+    parser.add_argument(
+        "--relative-schedules",
+        action="store_true",
+        help="restart curriculum/exploration/demo schedules for this additional run",
+    )
     args = parser.parse_args()
     if (
         min(
@@ -2268,24 +3509,33 @@ def main():
     if args.episode_offset < 0:
         parser.error("episode-offset must be nonnegative")
     total_episodes = args.episode_offset + args.episodes
-    if not 0 <= args.curriculum_episodes < total_episodes:
+    schedule_episodes = args.episodes if args.relative_schedules else total_episodes
+    if not 0 <= args.curriculum_episodes < schedule_episodes:
         parser.error(
-            "curriculum-episodes must be >= 0 and smaller than total episodes (offset + additional episodes)"
+            "curriculum-episodes must be >= 0 and smaller than the active schedule"
         )
     if (
         args.navigation_bootstrap_episodes < 0
         or args.navigation_demo_weight < 0
         or args.ultimate_classification_weight < 0
         or args.facing_supervision_weight < 0
+        or args.movement_td_updates < 0
+        or args.movement_demo_updates < 0
+        or args.early_stop_patience < 0
+        or args.movement_guardrail_patience < 0
+        or args.max_quiet_stall_increase < 0
+        or args.max_carrier_death_increase < 0
+        or args.max_plant_regression < 0
+        or not 0 <= args.facing_regression_tolerance <= 1
         or not 0 <= args.navigation_retention_weight <= 1
         or args.n_step < 1
     ):
         parser.error(
             "navigation bootstrap counts/weights must be nonnegative and n-step positive"
         )
-    if args.navigation_bootstrap_episodes >= total_episodes:
+    if args.navigation_bootstrap_episodes >= schedule_episodes:
         parser.error(
-            "navigation-bootstrap-episodes must be smaller than total episodes (reserve policy-only training)"
+            "navigation-bootstrap-episodes must be smaller than the active schedule (reserve policy-only training)"
         )
     if (
         not 0 < args.gamma <= 1
@@ -2308,6 +3558,22 @@ def main():
         parser.error("a phase cannot be both feature-only and facing-only")
     if set(args.action_only_phases) & set(args.facing_only_phases):
         parser.error("a phase cannot be both action-only and facing-only")
+    if set(args.movement_only_phases) & (
+        set(args.freeze_phases)
+        | set(args.feature_only_phases)
+        | set(args.action_only_phases)
+        | set(args.facing_only_phases)
+    ):
+        parser.error("a phase cannot use movement-only with another restricted mode")
+    if not set(args.reset_movement_head_phases) <= set(args.movement_only_phases):
+        parser.error("reset-movement-head-phases must be a subset of movement-only-phases")
+    if (
+        args.movement_guardrail_patience > 0
+        and set(args.movement_only_phases) not in ({"carry"}, {"escort"})
+    ):
+        parser.error(
+            "movement-guardrail-patience requires movement-only-phases carry or escort"
+        )
     seed_sets = [
         set(
             range(

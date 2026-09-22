@@ -118,19 +118,19 @@ COMBOS = [
     {
         "name": "黒い破片飛び散る夜空",
         "players": ("Meteor", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.35, "reaction": 25, "accuracy": -0.2},
+        "bonuses": {"hs_rate": 0.15, "reaction": -20, "accuracy": 0.2},
         "renames": {},
     },
     {
         "name": "赤い果実迫りゆく森林",
         "players": ("Zest", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.45, "reaction": 15, "accuracy": -0.2},
+        "bonuses": {"hs_rate": 0.25, "reaction": -30, "accuracy": 0.2},
         "renames": {},
     },
     {
         "name": "白き珊瑚浮かれ揺られ海洋",
         "players": ("WoohyuN", "Nanasaki"),
-        "bonuses": {"hs_rate": 0.55, "reaction": 5, "accuracy": -0.2},
+        "bonuses": {"hs_rate": 0.35, "reaction": -50, "accuracy": 0.2},
         "renames": {},
     },
     {
@@ -443,32 +443,33 @@ COMBOS = [
     {
         "name": "血も涙もないその目よりも",
         "players": ("Rossy", "SereNa"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.25},
         "renames": {},
     },
     {
         "name": "煙たい煙草吸うよりも",
         "players": ("Smoggy", "SereNa"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.25},
         "renames": {},
     },
     {
         "name": "びしょびしょの紫の布よりも",
         "players": ("CHICHOO", "SereNa"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.25},
         "renames": {},
     },
     {
         "name": "西風吹く教会よりも",
         "players": ("koldamenta", "SereNa"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.25},
         "renames": {},
     },
     {
         "name": "目の前にあるご馳走を食べましょう",
         "players": ("koldamenta", "Rossy", "CHICHOO", "Smoggy", "SereNa"),
-        "bonuses": {"reaction": 50, "condition_bonus": 0.1},
+        "bonuses": {"reaction": 50, "condition_bonus": 0.15},
         "renames": {},
+        "carnal_lust_syndicate_effect": True,
     },
     {
         "name": "問題児",
@@ -507,6 +508,20 @@ COMBOS = [
             "reaction": 10,
         },
         "renames": {},
+    },
+    {
+        "name": "閃光のコンビネーション",
+        "players": ("Asuna", "Zekken"),
+        "bonuses": {},
+        "renames": {},
+        "asuna_zekken_debuff_effect": True,
+    },
+    {
+        "name": "閃光のコンビネーション",
+        "players": ("Asuna", "Zekken"),
+        "bonuses": {},
+        "renames": {},
+        "asuna_zekken_debuff_effect": True,
     },
     {
         "name": "2nd cover",

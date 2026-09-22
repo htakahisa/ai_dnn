@@ -75,7 +75,7 @@ FORMATION_OBS_DIM = 65  # v7: persistent designated entry screener and readiness
 ENTRY_SYNC_OBS_DIM = 66  # v8: explicit two-tick entry synchronization state.
 ULTIMATE_CONTEXT_OBS_DIM = 70  # v10: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
-FACING_HEAD_VERSION = 1
+FACING_HEAD_VERSION = 2
 LEGACY_ACTION_DIM = 11
 ACTION_DIM = 12
 PLANT_ACTION_INDEX = 10
@@ -117,7 +117,21 @@ class AttackerCarryDuelingDQN(nn.Module):
         # still an input because moving, planting, and casting call for
         # different view directions in the same observed state.
         self.facing_head = nn.Linear(hidden + action_dim, len(FACING_DIRS))
+        # v2 deliberately does not consume ``self.feature``.  Facing can learn
+        # richer phase-specific cues without changing (or being bottlenecked by)
+        # the frozen movement representation.
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden),
+            nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden),
+            nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(
+            facing_hidden + action_dim, len(FACING_DIRS)
+        )
         self.action_dim = action_dim
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         f = self.feature(x)
@@ -126,12 +140,29 @@ class AttackerCarryDuelingDQN(nn.Module):
         return v + (a - a.mean(dim=1, keepdim=True))
 
     def facing_values(self, x, actions):
-        features = self.feature(x)
+        features = (
+            self.facing_feature(x)
+            if self.facing_head_version >= 2
+            else self.feature(x)
+        )
         actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
         action_onehot = torch.nn.functional.one_hot(
             actions, num_classes=self.action_dim
         ).to(dtype=features.dtype)
-        return self.facing_head(torch.cat((features, action_onehot), dim=1))
+        inputs = torch.cat((features, action_onehot), dim=1)
+        return (
+            self.facing_output(inputs)
+            if self.facing_head_version >= 2
+            else self.facing_head(inputs)
+        )
+
+    def facing_parameters(self):
+        modules = (
+            (self.facing_feature, self.facing_output)
+            if self.facing_head_version >= 2
+            else (self.facing_head,)
+        )
+        return [parameter for module in modules for parameter in module.parameters()]
 
 
 # ============================================================================
@@ -367,23 +398,31 @@ class LearningAttackerCarryGCController:
                 f"train_attacker_carry.pyのバージョンが古い可能性があります。"
             )
 
+        checkpoint_facing_version = int(checkpoint.get("facing_head_version", 0))
         self.policy_net = AttackerCarryDuelingDQN(
             obs_dim=ckpt_obs_dim, action_dim=ckpt_n_actions
         ).to(self.device)
+        self.policy_net.facing_head_version = checkpoint_facing_version
         incompatible = self.policy_net.load_state_dict(
             checkpoint["model_state_dict"], strict=False
         )
         unexpected = list(incompatible.unexpected_keys)
         missing = [key for key in incompatible.missing_keys
-                   if not key.startswith("facing_head.")]
+                   if not key.startswith(("facing_head.", "facing_feature.",
+                                          "facing_output."))]
         if missing or unexpected:
             raise RuntimeError(
                 f"Carry checkpoint keys mismatch: missing={missing}, unexpected={unexpected}"
             )
-        self.facing_head_enabled = (
-            int(checkpoint.get("facing_head_version", 0)) >= FACING_HEAD_VERSION
-            and not incompatible.missing_keys
+        required_prefixes = (
+            ("facing_feature.", "facing_output.")
+            if checkpoint_facing_version >= 2
+            else ("facing_head.",)
         )
+        missing_required = any(
+            key.startswith(required_prefixes) for key in incompatible.missing_keys
+        )
+        self.facing_head_enabled = checkpoint_facing_version >= 1 and not missing_required
         self.policy_net.eval()
 
         # 優先(代表)地点はチェックポイントに座標として保存されている。

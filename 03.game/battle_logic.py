@@ -233,7 +233,14 @@ class BattleLogicMixin:
         self._movement_occupancy_counts = None
 
     def _is_position_occupied(self, char, position, old_position):
-        """既存のany走査と同じ判定を、位置カウントからO(1)で返す。"""
+        """Return whether a character or reserved ESCAPE cell blocks position."""
+        if any(
+            tuple(portal.get("pos", ())) == position
+            and portal.get("owner") != char.name
+            for portal in getattr(self, "escape_portals", [])
+        ):
+            return True
+
         counts = getattr(self, "_movement_occupancy_counts", None)
         if counts is None:
             return any(
@@ -388,6 +395,23 @@ class BattleLogicMixin:
     def move_character(self, char):
         r, c = char.pos
         old_pos = tuple(char.pos)
+
+        if any(
+            portal.get("owner") == char.name
+            for portal in getattr(self, "escape_portals", [])
+        ):
+            char.moved_this_tick = False
+            char.moved_last_tick = False
+            char.stopped_after_move_this_tick = False
+            char.collecting_orb_this_tick = False
+            return
+
+        if getattr(char, "movement_disabled_remaining", 0) > 0:
+            char.movement_disabled_remaining -= 1
+            char.moved_this_tick = False
+            char.moved_last_tick = False
+            char.stopped_after_move_this_tick = False
+            return
 
         # ---------------------------------------------------------------------
         # Rush対策用の1Tick状態
@@ -766,7 +790,9 @@ class BattleLogicMixin:
                 for _ in range(extra_steps):
                     prev = tuple(char.pos)
                     cand_r, cand_c = prev[0] + dr, prev[1] + dc
-                    cand_in_bounds = 0 <= cand_r < self.height and 0 <= cand_c < self.width
+                    cand_in_bounds = (
+                        0 <= cand_r < self.height and 0 <= cand_c < self.width
+                    )
                     if not cand_in_bounds or self.grid[cand_r, cand_c] == 1:
                         break
                     if self._is_position_occupied(char, (cand_r, cand_c), prev):
@@ -816,6 +842,7 @@ class BattleLogicMixin:
                     reason,
                     self.is_planted,
                     self._analytics_tactic_snapshot(),
+                    self.special_round_banner,
                 )
                 self._analytics_attacker_wins = self.attacker_wins
                 self._analytics_defender_wins = self.defender_wins
@@ -1003,6 +1030,9 @@ class BattleLogicMixin:
         target.deaths += 1
         shooter.kills += 1
         shooter.round_kills += 1
+        awakening_handler = getattr(self, "_handle_awakening_kill", None)
+        if awakening_handler is not None:
+            awakening_handler(shooter)
         shooter.ultimate_points = min(
             shooter.ultimate_cost,
             shooter.ultimate_points + 1,
@@ -1022,6 +1052,10 @@ class BattleLogicMixin:
             # HUNT回復の上限はゲーム上の通常最大HP(100)を超えない。
             max_hp = min(100.0, float(getattr(shooter, "max_hp", 100)))
             shooter.hp = min(max_hp, float(shooter.hp) + 50.0)
+        # Carnal Lust Syndicateのコンボ効果：キル時にHPを30回復
+        if getattr(shooter, "carnal_lust_syndicate_active", False):
+            max_hp = min(100.0, float(getattr(shooter, "max_hp", 100)))
+            shooter.hp = min(max_hp, float(shooter.hp) + 30.0)
 
         self.match_stats.setdefault(target.name, {"kills": 0, "deaths": 0})[
             "deaths"
@@ -1304,9 +1338,7 @@ class BattleLogicMixin:
                         self._kill_character(shooter, target)
 
         self.monitor_drones = [
-            drone
-            for drone in getattr(self, "monitor_drones", [])
-            if drone.is_alive
+            drone for drone in getattr(self, "monitor_drones", []) if drone.is_alive
         ]
 
         self.last_shots = executed_shots
@@ -1333,10 +1365,7 @@ class BattleLogicMixin:
             tracker.observe_tactics(self.chars, self.battle_tick)
         # すべての持続効果をTick数で管理する。
         for char in self.chars:
-            if getattr(char, "tunnel_blind_applied_tick", None) == self.battle_tick:
-                char.tunnel_blind_applied_tick = None
-            else:
-                char.blind_remaining = max(0, char.blind_remaining - 1)
+            char.blind_remaining = max(0, char.blind_remaining - 1)
             char.reveal_remaining = max(0, char.reveal_remaining - 1)
         self._advance_timed_awakenings()
         for burst in self.flash_bursts:
@@ -1349,14 +1378,11 @@ class BattleLogicMixin:
         self.recon_bursts = [
             burst for burst in self.recon_bursts if burst["remaining_ticks"] > 0
         ]
-        for burst in self.tunnel_bursts:
-            burst["remaining_ticks"] -= 1
-        self.tunnel_bursts = [
-            burst for burst in self.tunnel_bursts if burst["remaining_ticks"] > 0
-        ]
+        self._advance_tunnel_bursts()
         self._advance_flash_projectiles()
         self._advance_recon_projectiles()
         self._advance_monitor_drones()
+        self._advance_escape_portals()
         for smoke in self.smokes:
             smoke["remaining_ticks"] -= 1
         self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
@@ -1414,6 +1440,9 @@ class BattleLogicMixin:
         if self.is_defused:
             self.defender_wins += 1
             self._record_round_mental_result("D")
+            awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+            if awakening_handler is not None:
+                awakening_handler("D")
             self._check_special_round_banner("D")
             if not self.headless:
                 self.label.config(
@@ -1427,6 +1456,9 @@ class BattleLogicMixin:
             if self.detonate_timer <= 0:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+                if awakening_handler is not None:
+                    awakening_handler("A")
                 self._check_special_round_banner("A")
                 self.explosion_effect = {
                     "pos": self.planted_pos,
@@ -1442,6 +1474,9 @@ class BattleLogicMixin:
             elif not alive_D:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+                if awakening_handler is not None:
+                    awakening_handler("A")
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
@@ -1488,6 +1523,9 @@ class BattleLogicMixin:
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")
+                awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+                if awakening_handler is not None:
+                    awakening_handler("D")
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
@@ -1499,6 +1537,9 @@ class BattleLogicMixin:
             elif not alive_A:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")
+                awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+                if awakening_handler is not None:
+                    awakening_handler("D")
                 self._check_special_round_banner("D")
                 if not self.headless:
                     self.label.config(
@@ -1510,6 +1551,9 @@ class BattleLogicMixin:
             elif not alive_D:
                 self.attacker_wins += 1
                 self._record_round_mental_result("A")
+                awakening_handler = getattr(self, "_handle_awakening_round_win", None)
+                if awakening_handler is not None:
+                    awakening_handler("A")
                 self._check_special_round_banner("A")
                 if not self.headless:
                     self.label.config(
@@ -1543,6 +1587,13 @@ class BattleLogicMixin:
             if self.defender_setup_phase.active:
                 self._run_defender_setup_tick()
             else:
+                # Carnal Lust Syndicateのコンボ効果：セットアップフェーズ終了後、毎tick1HP減少
+                for c in self.chars:
+                    if c.is_alive and getattr(c, "carnal_lust_syndicate_active", False):
+                        c.hp = max(0, c.hp - 1)
+                        if c.hp <= 0:
+                            c.is_alive = False
+                            c.just_died = True
                 self._build_occupancy_counts()
                 try:
                     for c in self._move_order():
@@ -1564,6 +1615,15 @@ class BattleLogicMixin:
                 if self.defender_setup_phase.active:
                     self._run_defender_setup_tick()
                 else:
+                    # Carnal Lust Syndicateのコンボ効果：セットアップフェーズ終了後、毎tick1HP減少
+                    for c in self.chars:
+                        if c.is_alive and getattr(
+                            c, "carnal_lust_syndicate_active", False
+                        ):
+                            c.hp = max(0, c.hp - 1)
+                            if c.hp <= 0:
+                                c.is_alive = False
+                                c.just_died = True
                     self._build_occupancy_counts()
                     try:
                         for c in self._move_order():

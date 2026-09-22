@@ -35,6 +35,9 @@ _AWAKENING_SNAPSHOT_KEYS = (
     "recon_charges",
     "display_name",
     "sees_through_smoke",
+    "abilities_per_round",
+    "ultimate_cost",
+    "start_round_with_full_ult",
 )
 
 
@@ -53,12 +56,17 @@ class ComboAwakeningMixin:
         self.active_player_combos = []
         for team in ("A", "D"):
             team_chars = [char for char in self.chars if char.team == team]
-            chars_by_name = {char.name: char for char in team_chars}
-            team_names = set(chars_by_name)
 
             for combo in PLAYER_COMBOS:
                 if not isinstance(combo, dict):
                     continue
+                chars_by_name = {}
+                for char in team_chars:
+                    chars_by_name[char.name] = char
+                    display_name = getattr(char, "display_name", None)
+                    if display_name:
+                        chars_by_name[display_name] = char
+                team_names = set(chars_by_name)
                 combo_name = str(combo.get("name", "名称未設定コンボ"))
                 required_players = tuple(str(name) for name in combo.get("players", ()))
                 if not required_players or not set(required_players).issubset(
@@ -88,7 +96,62 @@ class ComboAwakeningMixin:
                         char.display_name = str(renames[player_name])
                     if combo_name not in char.active_combos:
                         char.active_combos.append(combo_name)
+                    # Carnal Lust Syndicateの特殊効果フラグを設定
+                    if combo.get("carnal_lust_syndicate_effect", False):
+                        char.carnal_lust_syndicate_active = True
+                    # AsunaとZekkenの特殊効果：相手チームのランダムなプレイヤーのaccuracyを10%下げる
+                    if combo.get("asuna_zekken_debuff_effect", False):
+                        # 相手チームを判定
+                        opponent_team = "D" if team == "A" else "A"
+                        # 相手チームの生存プレイヤーを取得
+                        opponent_chars = [
+                            c
+                            for c in self.chars
+                            if c.team == opponent_team and c.is_alive
+                        ]
+                        if opponent_chars:
+                            # ランダムに1人選択
+                            random_opponent = random.choice(opponent_chars)
+                            # baseのaccuracyから10%削減（毎ラウンドbaseがリセットされるため、過去のデバフは自動的にクリアされる）
+                            from game_core import _clamp_rate
+
+                            new_accuracy = (
+                                random_opponent.base_accuracy_before_condition - 0.1
+                            )
+                            random_opponent.accuracy = _clamp_rate(
+                                new_accuracy, random_opponent.accuracy
+                            )
+                            # condition_modifierを再適用して正規化
+                            condition_multiplier = 1.0 + getattr(
+                                random_opponent, "condition_modifier", 0.0
+                            )
+                            random_opponent.accuracy *= condition_multiplier
                     affected.append(player_name)
+
+                # AsunaとZekkenの特殊効果：相手チームのランダムなプレイヤーのaccuracyを10%下げる
+                if combo.get("asuna_zekken_debuff_effect", False):
+                    # 相手チームの生存プレイヤーを取得
+                    opponent_team = "D" if team == "A" else "A"
+                    opponent_chars = [
+                        char
+                        for char in self.chars
+                        if char.team == opponent_team and char.is_alive
+                    ]
+                    if opponent_chars:
+                        # ランダムに1人選択
+                        random_opponent = random.choice(opponent_chars)
+                        # accuracyを10%（0.1）減少させる
+                        from game_core import _clamp_rate
+
+                        random_opponent.accuracy = _clamp_rate(
+                            random_opponent.accuracy - 0.1, random_opponent.accuracy
+                        )
+                        # デバフを記録して次のラウンドでリセットできるようにする
+                        if not hasattr(self, "asuna_zekken_debuffed_this_round"):
+                            self.asuna_zekken_debuffed_this_round = []
+                        self.asuna_zekken_debuffed_this_round.append(
+                            random_opponent.name
+                        )
 
                 self.active_player_combos.append(
                     {
@@ -100,10 +163,7 @@ class ComboAwakeningMixin:
                             chars_by_name[n].display_name for n in affected
                         ),
                         "effect_text": str(
-                            combo.get("effect_text")
-                            or self._describe_bonuses(
-                                common_bonuses, per_player_bonuses
-                            )
+                            combo.get("effect_text") or "相手ランダム1人の命中率-10%"
                         ),
                     }
                 )
@@ -125,7 +185,8 @@ class ComboAwakeningMixin:
                 if canonical:
                     amount = float(value)
                     if (
-                        canonical in ("accuracy", "hs_rate", "dodge_rate", "condition_bonus")
+                        canonical
+                        in ("accuracy", "hs_rate", "dodge_rate", "condition_bonus")
                         and abs(amount) <= 1
                     ):
                         shown = amount * 100
@@ -211,7 +272,7 @@ class ComboAwakeningMixin:
         char.flash_charges = 1 if char.ability_name == "FLASH" else 0
         char.recon_charges = 1 if char.ability_name == "RECON" else 0
 
-    def _awakening_condition_met(self, event, char):
+    def _awakening_condition_met(self, event, char, event_name):
         """覚醒イベントの発動条件を判定する。
 
         対応条件:
@@ -233,10 +294,15 @@ class ComboAwakeningMixin:
             覚醒者がラウンドでキルした時、味方より敵の人数が多い場合
         - smoke_thrown
             このTickに誰かがスモークを使用した(味方・敵問わず)
+        - permanent:
+            常時発動する覚醒イベント（まだトリガーされていなければ常にtrue）
         """
         condition = str(event.get("condition", "")).strip()
         value = event.get("condition_value")
 
+        if condition == "permanent":
+            # 常時発動する覚醒イベントは、まだトリガーされていなければ常にtrue
+            return event_name not in char.active_awakenings
         if condition == "all_allies_dead":
             allies = [c for c in self.chars if c.team == char.team and c is not char]
             return (
@@ -333,7 +399,11 @@ class ComboAwakeningMixin:
                     for candidate in self.chars
                     if candidate.team != char.team and candidate.is_alive
                 )
-                return char.is_alive and int(getattr(char, "round_kills", 0)) >= 1 and alive_ally < alive_enemies
+                return (
+                    char.is_alive
+                    and int(getattr(char, "round_kills", 0)) >= 1
+                    and alive_ally < alive_enemies
+                )
             except (TypeError, ValueError):
                 return False
 
@@ -394,6 +464,108 @@ class ComboAwakeningMixin:
         # end
         return False
 
+    def _handle_awakening_kill(self, killer):
+        """キルをトリガーにした覚醒イベントを処理する。"""
+        for event in AWAKENING_EVENTS:
+            if not isinstance(event, dict) or event.get("condition") != "on_kill":
+                continue
+            if str(event.get("player", "")) != str(getattr(killer, "base_name", "")):
+                continue
+
+            enemies = [
+                char
+                for char in self.chars
+                if char.team != killer.team and char.is_alive
+            ]
+            if not enemies:
+                continue
+            effect = event.get("kill_effect")
+            if effect == "random_enemy_stop":
+                target = random.choice(enemies)
+                target.movement_disabled_remaining = max(
+                    target.movement_disabled_remaining,
+                    int(event.get("duration_ticks", 5)),
+                )
+            elif effect == "nearest_enemy_reveal":
+                target = min(
+                    enemies,
+                    key=lambda char: (
+                        max(
+                            abs(char.pos[0] - killer.pos[0]),
+                            abs(char.pos[1] - killer.pos[1]),
+                        ),
+                        char.name,
+                    ),
+                )
+                target.reveal_remaining = max(
+                    target.reveal_remaining,
+                    int(event.get("duration_ticks", 5)) + 1,
+                )
+            self._enqueue_triggered_awakening_announcement(event, killer)
+
+    def _handle_awakening_round_win(self, winning_team):
+        """ラウンド勝利をトリガーにした覚醒イベントを処理する。"""
+        winners = [char for char in self.chars if char.team == winning_team]
+        for event in AWAKENING_EVENTS:
+            if not isinstance(event, dict) or event.get("condition") != "on_round_win":
+                continue
+            if not any(
+                str(getattr(char, "base_name", "")) == str(event.get("player", ""))
+                for char in winners
+            ):
+                continue
+            enemies = [char for char in self.chars if char.team != winning_team]
+            if (
+                not enemies
+                or event.get("round_win_effect") != "random_enemy_mental_down"
+            ):
+                continue
+            target = random.choice(enemies)
+            amount = float(event.get("mental_delta", -1))
+            debuffs = getattr(self, "awakening_mental_debuffs", None)
+            if debuffs is None:
+                self.awakening_mental_debuffs = {}
+                debuffs = self.awakening_mental_debuffs
+            debuffs[target.base_name] = max(
+                0.0,
+                float(debuffs.get(target.base_name, 0.0)) - min(0.0, amount),
+            )
+            target.mental = max(0.0, target.mental + amount)
+            self._enqueue_triggered_awakening_announcement(
+                event,
+                next(
+                    char
+                    for char in winners
+                    if str(getattr(char, "base_name", ""))
+                    == str(event.get("player", ""))
+                ),
+            )
+
+    def _enqueue_triggered_awakening_announcement(self, event, char):
+        """条件判定を経由しない覚醒効果も、通常の覚醒パネルへ表示する。"""
+        enqueue = getattr(self, "_enqueue_announcement", None)
+        if not callable(enqueue):
+            return
+        enqueue(
+            {
+                "type": "awakening",
+                "name": str(event.get("name", "名称未設定の覚醒")),
+                "team": char.team,
+                "players": (char.base_name,),
+                "display_players": (char.display_name,),
+                "effect_text": str(event.get("effect_text", "特殊効果")),
+            }
+        )
+
+    def _apply_round_awakening_state(self):
+        """ラウンド再生成後に、覚醒イベントの引継ぎ状態を反映する。"""
+        debuffs = getattr(self, "awakening_mental_debuffs", {})
+        for char in self.chars:
+            char.mental = max(
+                0.0,
+                char.mental - float(debuffs.get(char.base_name, 0.0)),
+            )
+
     def _check_awakening_events(self):
         for event in AWAKENING_EVENTS:
             if not isinstance(event, dict):
@@ -408,7 +580,7 @@ class ComboAwakeningMixin:
                 # refreshable指定があれば、発動中でも条件を再度満たした時点で
                 # タイマーをdurationへ再セットする（スナップショット・効果は再適用しない）。
                 if event.get("refreshable") and self._awakening_condition_met(
-                    event, char
+                    event, char, event_name
                 ):
                     try:
                         refreshed_duration = int(
@@ -423,7 +595,7 @@ class ComboAwakeningMixin:
                     )
                 continue
 
-            if not self._awakening_condition_met(event, char):
+            if not self._awakening_condition_met(event, char, event_name):
                 continue
 
             snapshot = _snapshot_character_awakening_state(char)
@@ -457,6 +629,21 @@ class ComboAwakeningMixin:
                     _apply_combo_bonus(char, key, value)
             if event.get("grants_smoke_vision"):
                 char.sees_through_smoke = True
+            # Stormfrontのアビリティ数増加処理
+            if event.get("abilities_per_round"):
+                char.abilities_per_round = event["abilities_per_round"]
+                # アビリティチャージを増やす
+                if char.ability_name == "SMOKE":
+                    char.smoke_charges = event["abilities_per_round"]
+                elif char.ability_name == "FLASH":
+                    char.flash_charges = event["abilities_per_round"]
+                elif char.ability_name == "RECON":
+                    char.recon_charges = event["abilities_per_round"]
+            # Stormfrontのウルトコスト減少処理
+            if event.get("ult_cost_reduction"):
+                char.ultimate_cost = max(
+                    1, char.ultimate_cost - event["ult_cost_reduction"]
+                )
             if event.get("rename"):
                 char.display_name = str(event["rename"])
 
@@ -490,6 +677,23 @@ class ComboAwakeningMixin:
                     "effect_text": effect_text,
                 }
             )
+
+    def _apply_round_start_effects(self):
+        """毎ラウンド開始時に、キャラクター固有のラウンド開始効果を適用する。"""
+        for char in self.chars:
+            if not char.is_alive:
+                continue
+            # Deepの毎ラウンドウルト満タン効果
+            if getattr(char, "start_round_with_full_ult", False):
+                char.ultimate_points = char.ultimate_cost
+            # Stormfrontの毎ラウンドアビリティ2つ所持効果
+            abilities_per_round = getattr(char, "abilities_per_round", 1)
+            if char.ability_name == "SMOKE":
+                char.smoke_charges = abilities_per_round
+            elif char.ability_name == "FLASH":
+                char.flash_charges = abilities_per_round
+            elif char.ability_name == "RECON":
+                char.recon_charges = abilities_per_round
 
     def _maybe_trigger_leap_awakening(self, shooter, target):
         """leap_on_kill指定の覚醒が有効な撃破時、相手の位置へ移動し

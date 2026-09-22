@@ -9,6 +9,7 @@ from game_core import (
     FLASH_BURST_DURATION_TICKS,
     RECON_BURST_DISPLAY_TICKS,
     BLIND_DURATION_TICKS,
+    ESCAPE_WARP_DELAY_TICKS,
     RECON_REVEAL_SIZE,
     REVEAL_DURATION_TICKS,
     SMOKE_DURATION_TICKS,
@@ -17,8 +18,9 @@ from game_core import (
     MONITOR_DRONE_HP,
     RAID_DISTANCE_CELLS,
     TUNNEL_BLIND_TICKS,
-    TUNNEL_BURST_DURATION_TICKS,
+    TUNNEL_ACTIVE_TICKS,
     TUNNEL_HALF_WIDTH,
+    TUNNEL_WARNING_TICKS,
 )
 
 
@@ -113,6 +115,11 @@ class AbilityLosMixin:
             return True
 
         if ultimate_name == "ESCAPE":
+            if any(
+                portal.get("owner") == owner.name
+                for portal in getattr(self, "escape_portals", [])
+            ):
+                return False
             target = ultimate_action.get("target")
             if not isinstance(target, (list, tuple)) or len(target) != 2:
                 return False
@@ -127,9 +134,17 @@ class AbilityLosMixin:
                 return False
             if self._is_position_occupied(owner, destination, old_pos):
                 return False
-            owner.pos = [destination[0], destination[1]]
-            owner.moved_this_tick = destination != old_pos
-            self._update_occupancy_after_move(old_pos, destination)
+            if not hasattr(self, "escape_portals"):
+                self.escape_portals = []
+            self.escape_portals.append(
+                {
+                    "pos": destination,
+                    "remaining_ticks": ESCAPE_WARP_DELAY_TICKS,
+                    "owner": owner.name,
+                    "team": owner.team,
+                }
+            )
+            owner.moved_this_tick = False
             self._spend_ultimate(owner)
             return True
 
@@ -169,20 +184,12 @@ class AbilityLosMixin:
             self.tunnel_bursts.append(
                 {
                     "cells": cells,
-                    "remaining_ticks": TUNNEL_BURST_DURATION_TICKS,
+                    "phase": "warning",
+                    "remaining_ticks": TUNNEL_WARNING_TICKS,
                     "owner": owner.name,
                     "team": owner.team,
                 }
             )
-            for char in self.chars:
-                if char.is_alive and char.team != owner.team and tuple(char.pos) in cells:
-                    char.blind_remaining = max(
-                        char.blind_remaining,
-                        TUNNEL_BLIND_TICKS,
-                    )
-                    # TUNNEL is cast before process_battle() decrements statuses.
-                    # Preserve the full 15 effective ticks, including this one.
-                    char.tunnel_blind_applied_tick = self.battle_tick + 1
             self._spend_ultimate(owner)
             return True
 
@@ -229,6 +236,74 @@ class AbilityLosMixin:
                     return step
                 queue.append(nxt)
         return start
+
+    def _advance_escape_portals(self):
+        """Hold ESCAPE's caster in place, then warp after ten full ticks."""
+        remaining_portals = []
+        chars_by_name = {char.name: char for char in self.chars}
+        for portal in getattr(self, "escape_portals", []):
+            owner = chars_by_name.get(portal.get("owner"))
+            if owner is None or not owner.is_alive:
+                continue
+
+            remaining = int(portal.get("remaining_ticks", 0))
+            if remaining > 0:
+                portal["remaining_ticks"] = remaining - 1
+                remaining_portals.append(portal)
+                continue
+
+            old_pos = tuple(owner.pos)
+            destination = tuple(portal["pos"])
+            smoke_cells = self._smoke_cells()
+            owner.was_in_smoke_before_move = old_pos in smoke_cells
+            owner.pos = [destination[0], destination[1]]
+            owner.moved_this_tick = destination != old_pos
+            owner.entered_smoke_this_tick = (
+                destination in smoke_cells and old_pos not in smoke_cells
+            )
+            owner.exited_smoke_this_tick = (
+                old_pos in smoke_cells and destination not in smoke_cells
+            )
+            owner.stopped_after_move_this_tick = False
+
+        self.escape_portals = remaining_portals
+
+    def _advance_tunnel_bursts(self):
+        """Advance TUNNEL's five-tick warning and three-tick active phases."""
+        remaining_bursts = []
+        for burst in self.tunnel_bursts:
+            phase = burst.get("phase", "warning")
+            remaining = int(burst.get("remaining_ticks", 0))
+
+            if phase == "warning":
+                if remaining > 0:
+                    burst["remaining_ticks"] = remaining - 1
+                    remaining_bursts.append(burst)
+                    continue
+                burst["phase"] = "active"
+                burst["remaining_ticks"] = TUNNEL_ACTIVE_TICKS
+                phase = "active"
+                remaining = TUNNEL_ACTIVE_TICKS
+
+            if phase == "active":
+                if remaining <= 0:
+                    continue
+                for char in self.chars:
+                    if (
+                        char.is_alive
+                        and char.team != burst.get("team")
+                        and tuple(char.pos) in burst["cells"]
+                    ):
+                        char.blind_remaining = max(
+                            char.blind_remaining,
+                            TUNNEL_BLIND_TICKS,
+                        )
+                        # Application occurs after the status decrement for this
+                        # battle tick, so no extra compensation tick is needed.
+                burst["remaining_ticks"] = remaining - 1
+                remaining_bursts.append(burst)
+
+        self.tunnel_bursts = remaining_bursts
 
     def _advance_monitor_drones(self):
         live_drones = [drone for drone in self.monitor_drones if drone.is_alive]

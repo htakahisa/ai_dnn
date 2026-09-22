@@ -26,6 +26,7 @@ class UltimateTestGame(AbilityLosMixin, BattleLogicMixin):
         self.match_stats = {}
         self.monitor_drones = []
         self.monitor_drone_serial = 0
+        self.escape_portals = []
         self.tunnel_bursts = []
         self.smokes = []
         self.flash_projectiles = []
@@ -111,7 +112,7 @@ class UltimateSystemTests(unittest.TestCase):
         self.assertEqual(tiger.pos, [4, 3])
         self.assertEqual(tiger.ultimate_points, 0)
 
-    def test_escape_teleports_to_selected_floor(self):
+    def test_escape_opens_portal_then_teleports_after_ten_ticks(self):
         game = UltimateTestGame()
         smoker = make_character("Demon1", "A", (2, 2), 6)
         game.chars = [smoker]
@@ -122,8 +123,39 @@ class UltimateSystemTests(unittest.TestCase):
                 {"ultimate": "ESCAPE", "target": (7, 10)},
             )
         )
-        self.assertEqual(smoker.pos, [7, 10])
+        self.assertEqual(smoker.pos, [2, 2])
         self.assertEqual(smoker.ultimate_points, 0)
+        self.assertEqual(game.escape_portals[0]["pos"], (7, 10))
+
+        game._advance_escape_portals()  # Activation tick.
+        for _ in range(9):
+            game.move_character(smoker)
+            game._advance_escape_portals()
+            self.assertEqual(smoker.pos, [2, 2])
+
+        game.move_character(smoker)
+        game._advance_escape_portals()
+        self.assertEqual(smoker.pos, [7, 10])
+        self.assertEqual(game.escape_portals, [])
+
+    def test_escape_portal_reserves_destination_while_caster_is_immobile(self):
+        game = UltimateTestGame()
+        smoker = make_character("Demon1", "A", (2, 2), 6)
+        teammate = make_character("Chronicle", "A", (7, 9))
+        game.chars = [smoker, teammate]
+
+        self.assertTrue(
+            game.execute_ai_ultimate(
+                smoker,
+                {"ultimate": "ESCAPE", "target": (7, 10)},
+            )
+        )
+        game.move_character(smoker)
+
+        self.assertEqual(smoker.pos, [2, 2])
+        self.assertTrue(
+            game._is_position_occupied(teammate, (7, 10), tuple(teammate.pos))
+        )
 
     def test_monitor_spawns_two_distinct_trackers_and_reveals(self):
         game = UltimateTestGame()
@@ -142,7 +174,7 @@ class UltimateSystemTests(unittest.TestCase):
         self.assertGreater(close_enemy.reveal_remaining, 0)
         self.assertGreater(far_enemy.reveal_remaining, 0)
 
-    def test_tunnel_blinds_only_forward_enemies_for_fifteen_ticks(self):
+    def test_tunnel_warns_five_ticks_then_blinds_for_three_active_ticks(self):
         game = UltimateTestGame()
         flash = make_character("Chronicle", "A", (4, 2), 5)
         flash.facing = "E"
@@ -152,10 +184,28 @@ class UltimateSystemTests(unittest.TestCase):
         game.chars = [flash, enemy_ahead, enemy_behind, ally]
 
         self.assertTrue(game.execute_ai_ultimate(flash, {"ultimate": "TUNNEL"}))
+        self.assertEqual(enemy_ahead.blind_remaining, 0)
+        self.assertEqual(game.tunnel_bursts[0]["phase"], "warning")
+
+        for _ in range(5):
+            game._advance_tunnel_bursts()
+            self.assertEqual(game.tunnel_bursts[0]["phase"], "warning")
+            self.assertEqual(enemy_ahead.blind_remaining, 0)
+
+        game._advance_tunnel_bursts()
+        self.assertEqual(game.tunnel_bursts[0]["phase"], "active")
         self.assertEqual(enemy_ahead.blind_remaining, 15)
         self.assertEqual(enemy_behind.blind_remaining, 0)
         self.assertEqual(ally.blind_remaining, 0)
         self.assertEqual(flash.ultimate_points, 0)
+
+        enemy_behind.pos = [5, 8]
+        game._advance_tunnel_bursts()
+        self.assertEqual(enemy_behind.blind_remaining, 15)
+        game._advance_tunnel_bursts()
+        self.assertEqual(game.tunnel_bursts[0]["remaining_ticks"], 0)
+        game._advance_tunnel_bursts()
+        self.assertEqual(game.tunnel_bursts, [])
 
     def test_monitor_drone_has_two_hundred_hp_and_can_be_shot(self):
         game = UltimateTestGame()
@@ -198,9 +248,9 @@ class UltimateSystemTests(unittest.TestCase):
         game.available_orbs = {(2, 2)}
         game.attacker_controller = FixedController("COLLECT_ORB")
 
-        for _ in range(10):
+        for _ in range(2):
             game.move_character(collector)
-        self.assertEqual(collector.orb_collect_timer, 10)
+        self.assertEqual(collector.orb_collect_timer, 2)
 
         game.attacker_controller.action = "MOVE"
         game.move_character(collector)

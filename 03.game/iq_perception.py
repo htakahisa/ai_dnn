@@ -10,7 +10,7 @@ IQ_CAP = 200.0
 # IQ情報誤差の調整値
 ALLY_POSITION_MAX_ERROR = 1
 ENEMY_POSITION_MAX_ERROR = 4
-DROPPED_SPIKE_MAX_ERROR = 2
+DROPPED_SPIKE_MAX_ERROR = 1
 PLANTED_SPIKE_MAX_ERROR = 2
 TARGET_PLANT_MAX_ERROR = 1
 SPOTTED_POSITION_MAX_ERROR = 3
@@ -43,7 +43,7 @@ def _effective_iq(viewer: Any) -> float:
 def _quality(viewer: Any) -> float:
     """IQ100前後でも試合が成立するよう、以前より緩やかな品質曲線を使う。"""
     x = max(0.0, min(1.0, _effective_iq(viewer) / IQ_CAP))
-    return x ** 1.3
+    return x**1.3
 
 
 def _seed(*parts: Any) -> int:
@@ -270,10 +270,14 @@ class IQPerceptionEngine:
             if real is viewer:
                 pos, hp, alive = list(real.pos), int(real.hp), _alive(real)
             elif real.team == viewer.team:
-                pos = self._blur_pos(game, viewer, real.pos, ALLY_POSITION_MAX_ERROR, "ally", real.name)
+                pos = self._blur_pos(
+                    game, viewer, real.pos, ALLY_POSITION_MAX_ERROR, "ally", real.name
+                )
                 hp, alive = int(real.hp), _alive(real)
             else:
-                pos = self._blur_pos(game, viewer, real.pos, ENEMY_POSITION_MAX_ERROR, "enemy", real.name)
+                pos = self._blur_pos(
+                    game, viewer, real.pos, ENEMY_POSITION_MAX_ERROR, "enemy", real.name
+                )
                 hp, alive = self._enemy_hp(game, viewer, real), _alive(real)
             # Spike ownership is team-private information. Keep it on the
             # real character for game resolution, but never expose enemy
@@ -298,11 +302,15 @@ class IQPerceptionEngine:
         # 設置済みスパイク位置をIQ誤差なしで正確に把握し続ける。
         # 未設置で地面に落ちているspike_posは、解除経験とは無関係なので
         # 従来どおりIQによる座標誤差を受ける。
+        # 攻め側（チームA）のプレイヤーが見る落としたスパイクの位置ずれは最大1マスに制限
+        spike_max_error = (
+            1 if str(getattr(viewer, "team", "")) == "A" else DROPPED_SPIKE_MAX_ERROR
+        )
         perceived_spike_pos = self._blur_pos(
             game,
             viewer,
             getattr(game, "spike_pos", None),
-            DROPPED_SPIKE_MAX_ERROR,
+            spike_max_error,
             "spike",
             "drop",
         )

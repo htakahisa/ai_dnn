@@ -3,6 +3,7 @@ from pathlib import Path
 import random
 import sys
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -12,9 +13,334 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "gc_v1"))
 import train_attacker_gc_real_curriculum as curriculum
 import evaluate_gc_curriculum_checkpoint as checkpoint_evaluator
 import navigation_intent_gc as intent
+import select_gc_carry_movement_v21 as movement_selector
+import select_gc_escort_support_v22 as escort_selector
 
 
 class RealCurriculumTests(unittest.TestCase):
+    def test_screen_contact_diagnostic_separates_timing_and_eligibility(self):
+        status = {
+            "route_goal": (4, 4),
+            "final_distance": 30,
+            "formation_candidates": [object()],
+            "designated": object(),
+            "designated_distance": 4,
+            "screen_ready": False,
+        }
+        diagnose = curriculum.screen_state_at_contact
+        self.assertEqual(diagnose(status), "designated_lagging")
+        self.assertEqual(diagnose(status, True), "lost_after_ready")
+        self.assertEqual(
+            diagnose({**status, "formation_candidates": []}),
+            "no_same_route_candidate",
+        )
+        self.assertEqual(
+            diagnose({**status, "formation_candidates": []}, alive_allies=0),
+            "no_alive_escort",
+        )
+        self.assertEqual(
+            diagnose({**status, "final_distance": 41}),
+            "before_commitment_window",
+        )
+        self.assertEqual(
+            diagnose({**status, "screen_ready": True}, True), "ready"
+        )
+
+    def test_fake_wait_teacher_brings_waiting_escort_toward_carrier(self):
+        carrier = SimpleNamespace(
+            name="carrier", team="A", pos=(2, 2), is_alive=True, has_spike=True
+        )
+        escort = SimpleNamespace(
+            name="escort", team="A", pos=(2, 8), is_alive=True, has_spike=False
+        )
+        rows, cols = np.indices((12, 12))
+        distances = abs(rows - 2) + abs(cols - 2)
+        controller = SimpleNamespace(
+            _get_carry_dist_map=lambda _grid, _pos: distances
+        )
+        view = SimpleNamespace(grid=np.zeros((12, 12)))
+        mask = np.ones(curriculum.escort_runtime.N_ACTIONS, dtype=bool)
+        with patch.object(
+            curriculum,
+            "navigation_intent",
+            side_effect=lambda _view, actor: (
+                None, None, "FAKE_SELL" if actor.name == "escort_seller" else "FAKE_WAIT"
+            ),
+        ):
+            action = curriculum.fake_wait_support_teacher_action(
+                "escort", escort, {"chars": [carrier, escort]}, view, controller, mask
+            )
+            self.assertEqual(action, curriculum.escort_runtime.ACTION_LEFT)
+            escort.name = "escort_seller"
+            self.assertIsNone(curriculum.fake_wait_support_teacher_action(
+                "escort", escort, {"chars": [carrier, escort]}, view, controller, mask
+            ))
+
+    def test_frozen_phase_uses_greedy_action_and_facing_during_training(self):
+        session = SimpleNamespace(
+            actor="carrier",
+            pending={},
+            collect_demonstrations=False,
+            frozen_phases={"carry"},
+            frozen_facing_phases={"carry"},
+            epsilon=1.0,
+            decision_context=None,
+            controllers={"carry": SimpleNamespace(facing_head_enabled=True)},
+            policies={},
+        )
+        session.policies["carry"] = Mock(
+            return_value=torch.tensor([[0.0, 0.0, 2.0]])
+        )
+        session.policies["carry"].facing_values = Mock(
+            return_value=torch.tensor([[0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+        )
+        action = curriculum.CurriculumSession.selector(session, "carry")(
+            np.zeros(3, dtype=np.float32), np.ones(3, dtype=bool)
+        )
+        facing = curriculum.CurriculumSession.facing_selector(session, "carry")(
+            np.zeros(3, dtype=np.float32), action
+        )
+        self.assertEqual(action, 2)
+        self.assertEqual(facing, curriculum.FACING_DIRS[2])
+
+    def test_escort_support_score_prefers_fewer_carrier_deaths(self):
+        baseline = {
+            "worst_carry_no_entry_rate": 0.45,
+            "carry_no_entry_rate": 0.40,
+            "worst_timeout_rate": 0.08,
+            "timeout_rate": 0.05,
+            "worst_carrier_preentry_death_rate": 0.44,
+            "carrier_preentry_death_rate": 0.40,
+            "worst_registered_plant_rate": 0.30,
+            "worst_round_win_rate": 0.20,
+            "round_win_rate": 0.25,
+        }
+        improved = {
+            **baseline,
+            "worst_carry_no_entry_rate": 0.40,
+            "worst_carrier_preentry_death_rate": 0.39,
+            "carrier_preentry_death_rate": 0.35,
+        }
+        self.assertGreater(
+            curriculum.escort_support_selection_score(improved, 0.30, 0.10),
+            curriculum.escort_support_selection_score(baseline, 0.30, 0.10),
+        )
+        lower_no_entry_but_more_deaths = {
+            **baseline,
+            "worst_carry_no_entry_rate": 0.40,
+            "worst_carrier_preentry_death_rate": 0.45,
+            "carrier_preentry_death_rate": 0.42,
+        }
+        self.assertGreater(
+            curriculum.escort_support_selection_score(baseline, 0.30, 0.10),
+            curriculum.escort_support_selection_score(
+                lower_no_entry_but_more_deaths, 0.30, 0.10
+            ),
+        )
+
+    def test_escort_support_guardrail_detects_death_plant_timeout_regressions(self):
+        baseline = {
+            "worst_timeout_rate": 0.08,
+            "timeout_rate": 0.05,
+            "worst_carrier_preentry_death_rate": 0.40,
+            "worst_registered_plant_rate": 0.35,
+            "worst_carry_no_entry_rate": 0.40,
+        }
+        self.assertFalse(
+            curriculum.escort_support_guardrail_violated(
+                baseline, baseline, 0.10, 0.05, 0.05
+            )
+        )
+        for changed in (
+            {"worst_timeout_rate": 0.11},
+            {"worst_carrier_preentry_death_rate": 0.46},
+            {"worst_registered_plant_rate": 0.29},
+            {"worst_carry_no_entry_rate": 0.44},
+        ):
+            self.assertTrue(
+                curriculum.escort_support_guardrail_violated(
+                    {**baseline, **changed}, baseline, 0.10, 0.05, 0.05
+                )
+            )
+
+    def test_escort_selector_rejects_changes_outside_movement_rows(self):
+        rows = curriculum.MOVEMENT_ACTION_ROWS["escort"]
+        base = {
+            phase: {
+                "model_state_dict": {
+                    "advantage_head.2.weight": torch.zeros(7, 2),
+                    "advantage_head.2.bias": torch.zeros(7),
+                    "facing_output.bias": torch.zeros(8),
+                }
+            }
+            for phase in curriculum.PHASES
+        }
+        candidate = {
+            phase: {
+                "model_state_dict": {
+                    name: tensor.clone()
+                    for name, tensor in base[phase]["model_state_dict"].items()
+                }
+            }
+            for phase in curriculum.PHASES
+        }
+        candidate["escort"]["model_state_dict"]["advantage_head.2.bias"][rows[0]] = 1
+        escort_selector.require_only_escort_movement_changed(base, candidate)
+        candidate["escort"]["model_state_dict"]["facing_output.bias"][0] = 1
+        with self.assertRaises(ValueError):
+            escort_selector.require_only_escort_movement_changed(base, candidate)
+
+    def test_escort_movement_training_preserves_facing_and_ability_rows(self):
+        policy = curriculum.escort_runtime.DuelingQNetwork(
+            curriculum.escort_runtime.FACING_HEAD_OBS_DIM,
+            curriculum.escort_runtime.N_ACTIONS,
+        )
+        before = {
+            name: tensor.detach().clone()
+            for name, tensor in policy.state_dict().items()
+        }
+        rows = curriculum.MOVEMENT_ACTION_ROWS["escort"]
+        curriculum.restrict_policy_to_movement_rows(policy, rows)
+        optimizer = torch.optim.Adam(
+            [p for p in policy.parameters() if p.requires_grad], lr=0.01
+        )
+        loss = policy(
+            torch.randn(8, curriculum.escort_runtime.FACING_HEAD_OBS_DIM)
+        )[:, 0].mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        frozen_rows = sorted(set(range(curriculum.escort_runtime.N_ACTIONS)) - set(rows))
+        for name, value in before.items():
+            after = policy.state_dict()[name]
+            if name in ("advantage_head.2.weight", "advantage_head.2.bias"):
+                self.assertTrue(torch.equal(value[frozen_rows], after[frozen_rows]))
+            else:
+                self.assertTrue(torch.equal(value, after), name)
+
+    def test_movement_only_restriction_updates_only_displacement_rows(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        before = {name: value.detach().clone() for name, value in policy.state_dict().items()}
+        rows = curriculum.MOVEMENT_ACTION_ROWS["carry"]
+        curriculum.restrict_policy_to_movement_rows(policy, rows)
+        optimizer = torch.optim.Adam(
+            [parameter for parameter in policy.parameters() if parameter.requires_grad],
+            lr=0.01,
+        )
+        loss = policy(torch.randn(8, curriculum.runtime.FACING_HEAD_OBS_DIM))[:, 0].mean()
+        optimizer.zero_grad()
+        loss.backward()
+        output = policy.advantage_head[-1]
+        frozen_rows = sorted(set(range(curriculum.runtime.ACTION_DIM)) - set(rows))
+        self.assertTrue(torch.equal(output.weight.grad[frozen_rows], torch.zeros_like(output.weight.grad[frozen_rows])))
+        self.assertTrue(torch.equal(output.bias.grad[frozen_rows], torch.zeros_like(output.bias.grad[frozen_rows])))
+        optimizer.step()
+        after = policy.state_dict()
+        for name, value in before.items():
+            if name not in ("advantage_head.2.weight", "advantage_head.2.bias"):
+                self.assertTrue(torch.equal(value, after[name]), name)
+        self.assertTrue(torch.equal(before["advantage_head.2.weight"][frozen_rows], after["advantage_head.2.weight"][frozen_rows]))
+        self.assertTrue(torch.equal(before["advantage_head.2.bias"][frozen_rows], after["advantage_head.2.bias"][frozen_rows]))
+
+    def test_reset_movement_rows_preserves_nonmovement_and_facing_tensors(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        before = {name: value.detach().clone() for name, value in policy.state_dict().items()}
+        rows = curriculum.MOVEMENT_ACTION_ROWS["carry"]
+        curriculum.reset_movement_rows(policy, rows)
+        after = policy.state_dict()
+        frozen_rows = sorted(set(range(curriculum.runtime.ACTION_DIM)) - set(rows))
+        self.assertFalse(torch.equal(before["advantage_head.2.weight"][list(rows)], after["advantage_head.2.weight"][list(rows)]))
+        self.assertTrue(torch.equal(before["advantage_head.2.weight"][frozen_rows], after["advantage_head.2.weight"][frozen_rows]))
+        self.assertTrue(torch.equal(before["advantage_head.2.bias"][frozen_rows], after["advantage_head.2.bias"][frozen_rows]))
+        for name, value in before.items():
+            if name not in ("advantage_head.2.weight", "advantage_head.2.bias"):
+                self.assertTrue(torch.equal(value, after[name]), name)
+
+    def test_movement_n_step_keeps_intervening_reward_but_not_ability_start(self):
+        mask = np.ones(3, dtype=bool)
+        obs = np.zeros(2, dtype=np.float32)
+        rows = [
+            ("carry", (obs, 0, 1.0, obs, mask, False, 1)),
+            ("carry", (obs, 1, 2.0, obs, mask, False, 1)),
+            ("carry", (obs, 2, 3.0, obs, mask, True, 1)),
+        ]
+        result = list(
+            curriculum.n_step_transitions(
+                rows, 0.5, 2, allowed_start_actions=(0, 2)
+            )
+        )
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0][1], 0)
+        self.assertAlmostEqual(result[0][2], 2.0)
+        self.assertEqual(result[1][1], 2)
+
+    def test_carry_movement_score_prioritizes_entry_failure_reduction(self):
+        baseline = {
+            "worst_carry_no_entry_rate": 0.45,
+            "carry_no_entry_rate": 0.40,
+            "worst_timeout_rate": 0.10,
+            "timeout_rate": 0.05,
+            "worst_registered_plant_rate": 0.30,
+            "worst_round_win_rate": 0.20,
+            "round_win_rate": 0.30,
+            "carry_spawn_tick_rate": 0.25,
+            "carry_reversal_tick_rate": 0.05,
+            "carry_quiet_stall_tick_rate": 0.05,
+        }
+        improved = {
+            **baseline,
+            "worst_carry_no_entry_rate": 0.35,
+            "round_win_rate": 0.20,
+        }
+        self.assertGreater(
+            curriculum.carry_movement_selection_score(improved, 0.30, 0.10),
+            curriculum.carry_movement_selection_score(baseline, 0.30, 0.10),
+        )
+
+    def test_carry_movement_guardrail_detects_timeout_or_stall_regression(self):
+        baseline = {
+            "timeout_rate": 0.04,
+            "worst_timeout_rate": 0.08,
+            "carry_quiet_stall_tick_rate": 0.05,
+        }
+        healthy = {
+            "timeout_rate": 0.05,
+            "worst_timeout_rate": 0.10,
+            "carry_quiet_stall_tick_rate": 0.10,
+        }
+        timeout_regression = {**healthy, "worst_timeout_rate": 0.11}
+        stall_regression = {**healthy, "carry_quiet_stall_tick_rate": 0.101}
+        self.assertFalse(
+            curriculum.carry_movement_guardrail_violated(
+                healthy, baseline, 0.10, 0.05
+            )
+        )
+        self.assertTrue(
+            curriculum.carry_movement_guardrail_violated(
+                timeout_regression, baseline, 0.10, 0.05
+            )
+        )
+        self.assertTrue(
+            curriculum.carry_movement_guardrail_violated(
+                stall_regression, baseline, 0.10, 0.05
+            )
+        )
+
+    def test_carry_movement_selector_keeps_baseline_on_tie(self):
+        baseline_score = (1, 0.0, -0.2)
+        score, label = movement_selector.select_candidate(
+            baseline_score,
+            {"warm": {"score": baseline_score}},
+        )
+        self.assertEqual(score, baseline_score)
+        self.assertEqual(label, "baseline")
+
     def test_checkpoint_evaluator_builds_current_phase_architectures(self):
         policies = {
             "carry": curriculum.runtime.AttackerCarryDuelingDQN(
@@ -683,15 +1009,43 @@ class RealCurriculumTests(unittest.TestCase):
             curriculum.runtime.ACTION_DIM,
         )
         optimizer = torch.optim.Adam(policy.parameters(), lr=0.01)
-        before = policy.facing_head.weight.detach().clone()
+        before = policy.facing_output.weight.detach().clone()
         sample = (
             np.ones(curriculum.runtime.FACING_HEAD_OBS_DIM, dtype=np.float32),
             2,
             curriculum.FACING_DIRS.index("E"),
+            0.75,
         )
         loss = curriculum.optimize_facing(policy, optimizer, [sample], 1.0)
         self.assertIsNotNone(loss)
-        self.assertFalse(torch.equal(before, policy.facing_head.weight))
+        self.assertFalse(torch.equal(before, policy.facing_output.weight))
+
+    def test_v2_facing_encoder_is_independent_from_movement_encoder(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        obs = torch.randn((3, curriculum.runtime.FACING_HEAD_OBS_DIM))
+        actions = torch.tensor([0, 2, 10])
+        before = policy.facing_values(obs, actions).detach().clone()
+        with torch.no_grad():
+            for parameter in policy.feature.parameters():
+                parameter.add_(torch.randn_like(parameter))
+        torch.testing.assert_close(policy.facing_values(obs, actions), before)
+
+    def test_v1_facing_checkpoint_path_remains_compatible(self):
+        policy = curriculum.runtime.AttackerCarryDuelingDQN(
+            curriculum.runtime.FACING_HEAD_OBS_DIM,
+            curriculum.runtime.ACTION_DIM,
+        )
+        policy.facing_head_version = 1
+        obs = torch.randn((2, curriculum.runtime.FACING_HEAD_OBS_DIM))
+        values = policy.facing_values(obs, [0, 1])
+        self.assertEqual(tuple(values.shape), (2, len(curriculum.FACING_DIRS)))
+        self.assertEqual(
+            list(policy.facing_parameters()),
+            list(policy.facing_head.parameters()),
+        )
 
     def test_facing_only_training_preserves_every_movement_tensor(self):
         policy = curriculum.runtime.AttackerCarryDuelingDQN(
@@ -701,12 +1055,16 @@ class RealCurriculumTests(unittest.TestCase):
         movement_before = {
             name: parameter.detach().clone()
             for name, parameter in policy.named_parameters()
-            if not name.startswith("facing_head.")
+            if not curriculum.is_facing_parameter(name)
         }
         q_before = policy(
             torch.ones((1, curriculum.runtime.FACING_HEAD_OBS_DIM))
         ).detach().clone()
-        facing_before = policy.facing_head.weight.detach().clone()
+        facing_before = {
+            name: parameter.detach().clone()
+            for name, parameter in policy.named_parameters()
+            if name.startswith(("facing_feature.", "facing_output."))
+        }
         curriculum.restrict_policy_to_facing_head(policy)
         optimizer = torch.optim.Adam(
             [parameter for parameter in policy.parameters() if parameter.requires_grad],
@@ -726,7 +1084,12 @@ class RealCurriculumTests(unittest.TestCase):
             policy(torch.ones((1, curriculum.runtime.FACING_HEAD_OBS_DIM))),
             q_before,
         )
-        self.assertFalse(torch.equal(policy.facing_head.weight, facing_before))
+        self.assertTrue(
+            any(
+                not torch.equal(dict(policy.named_parameters())[name], before)
+                for name, before in facing_before.items()
+            )
+        )
 
     def test_facing_teacher_prioritizes_visible_enemy_then_phase_goal(self):
         from types import SimpleNamespace as NS
@@ -745,6 +1108,140 @@ class RealCurriculumTests(unittest.TestCase):
             "escort", char, state, NS(), goal=(0, 2)
         )
         self.assertEqual(curriculum.FACING_DIRS[label], "N")
+
+    def test_facing_target_reports_context_and_confidence(self):
+        from types import SimpleNamespace as NS
+        char = NS(name="escort", pos=[2, 2], team="A", facing="N")
+        enemy = NS(name="enemy", pos=[2, 4], team="D", is_alive=True)
+        state = {"grid": np.zeros((6, 6), dtype=int), "chars": [char, enemy],
+                 "smoke_cells": set()}
+        with patch.object(curriculum.runtime, "_has_los", return_value=True):
+            label, confidence, source = curriculum.observable_facing_target(
+                "escort", char, state, NS(_sighting=None)
+            )
+        self.assertEqual(curriculum.FACING_DIRS[label], "E")
+        self.assertEqual((confidence, source), (1.0, "visible_enemy"))
+
+        state["chars"] = [char]
+        label, confidence, source = curriculum.observable_facing_target(
+            "escort",
+            char,
+            state,
+            NS(_sighting={"pos": (0, 2), "tick_ago": 5}),
+        )
+        self.assertEqual(curriculum.FACING_DIRS[label], "N")
+        self.assertAlmostEqual(confidence, 0.64)
+        self.assertEqual(source, "team_sighting")
+
+        label, confidence, source = curriculum.observable_facing_target(
+            "carry",
+            char,
+            state,
+            NS(_sighting={"pos": tuple(char.pos), "tick_ago": 0}),
+        )
+        self.assertEqual(curriculum.FACING_DIRS[label], "N")
+        self.assertEqual((confidence, source), (0.15, "hold"))
+
+        carrier = NS(name="carry", pos=[2, 3], team="A", is_alive=True,
+                     has_spike=True)
+        state["chars"] = [char, carrier]
+        label, confidence, source = curriculum.observable_facing_target(
+            "escort", char, state, NS(_sighting=None)
+        )
+        self.assertEqual(curriculum.FACING_DIRS[label], "W")
+        self.assertEqual((confidence, source), (0.55, "escort_outward"))
+
+    def test_phase_facing_selection_prefers_accuracy_only_inside_safety_limit(self):
+        baseline = {
+            "worst_timeout_rate": 0.08,
+            "worst_carry_no_entry_rate": 0.40,
+            "registered_plant_rate": 0.60,
+            "formation_ready_approach_rate": 0.50,
+        }
+        safe = {
+            **baseline,
+            "worst_round_win_rate": 0.40,
+            "facing_confident_match_rate_by_phase": {"carry": 0.60, "escort": 0.60},
+            "facing_weighted_match_rate_by_phase": {"carry": 0.60, "escort": 0.60},
+        }
+        accurate_but_unsafe = {
+            **safe,
+            "worst_carry_no_entry_rate": 0.55,
+            "facing_confident_match_rate_by_phase": {"carry": 0.95, "escort": 0.95},
+            "facing_weighted_match_rate_by_phase": {"carry": 0.95, "escort": 0.95},
+        }
+        self.assertGreater(
+            curriculum.phase_facing_selection_score(
+                "carry", safe, baseline, 0.40, 0.08, 0.05
+            ),
+            curriculum.phase_facing_selection_score(
+                "carry", accurate_but_unsafe, baseline, 0.40, 0.08, 0.05
+            ),
+        )
+
+        more_accurate_safe = {
+            **safe,
+            "facing_confident_match_rate_by_phase": {"carry": 0.75, "escort": 0.75},
+            "facing_weighted_match_rate_by_phase": {"carry": 0.75, "escort": 0.75},
+        }
+        self.assertGreater(
+            curriculum.phase_facing_selection_score(
+                "escort", more_accurate_safe, baseline, 0.40, 0.08, 0.05
+            ),
+            curriculum.phase_facing_selection_score(
+                "escort", safe, baseline, 0.40, 0.08, 0.05
+            ),
+        )
+
+    def test_phase_facing_ab_score_uses_relative_not_absolute_movement_quality(self):
+        baseline = {
+            "worst_timeout_rate": 0.20,
+            "worst_round_win_rate": 0.10,
+            "worst_carry_no_entry_rate": 0.50,
+            "registered_plant_rate": 0.30,
+            "formation_ready_approach_rate": 0.20,
+            "facing_weighted_match_rate_by_phase": {"carry": 0.10},
+        }
+        improved_facing = {
+            **baseline,
+            "worst_timeout_rate": 0.24,
+            "worst_carry_no_entry_rate": 0.53,
+            "facing_weighted_match_rate_by_phase": {"carry": 0.90},
+        }
+        self.assertGreater(
+            curriculum.phase_facing_ab_score(
+                "carry", improved_facing, baseline, 0.05
+            ),
+            curriculum.phase_facing_ab_score("carry", baseline, baseline, 0.05),
+        )
+        unsafe = {**improved_facing, "worst_timeout_rate": 0.31}
+        self.assertGreater(
+            curriculum.phase_facing_ab_score("carry", baseline, baseline, 0.05),
+            curriculum.phase_facing_ab_score("carry", unsafe, baseline, 0.05),
+        )
+
+    def test_runtime_data_fingerprint_covers_mutable_roster_inputs(self):
+        fingerprints = curriculum.runtime_data_fingerprint()
+        self.assertEqual(
+            set(fingerprints),
+            {"character_stats.py", "player_combos.py", "awakening_events.py"},
+        )
+        self.assertTrue(all(len(value) == 64 for value in fingerprints.values()))
+
+    def test_checkpoint_evaluator_rejects_runtime_data_revision_mismatch(self):
+        checkpoints = {
+            phase: {"runtime_data_fingerprint": {"character_stats.py": "old"}}
+            for phase in curriculum.PHASES
+        }
+        current = {"character_stats.py": "new"}
+        with patch.object(curriculum, "runtime_data_fingerprint", return_value=current):
+            with self.assertRaisesRegex(ValueError, "character_stats.py"):
+                checkpoint_evaluator.validate_runtime_data(checkpoints)
+            recorded, actual = checkpoint_evaluator.validate_runtime_data(
+                checkpoints, allow_mismatch=True
+            )
+        self.assertEqual(recorded, {"character_stats.py": "old"})
+        self.assertEqual(actual, current)
 
     def test_escort_returns_learned_facing_without_expanding_action_space(self):
         from types import SimpleNamespace as NS

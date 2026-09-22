@@ -831,13 +831,31 @@ class RenderingUIMixin:
                                     fill="#fff7bf", outline="#f1c40f", width=2, stipple="gray50")
 
         for burst in getattr(self, "tunnel_bursts", []):
+            warning = burst.get("phase", "warning") == "warning"
+            fill = "#c7a6df" if warning else "#4b0082"
+            stipple = "gray25" if warning else "gray50"
             for rr, cc in burst["cells"]:
                 x1 = self._map_x(cc * self.cell_size)
                 y1 = rr * self.cell_size
                 self.canvas.create_rectangle(
                     x1, y1, x1 + self.cell_size, y1 + self.cell_size,
-                    fill="#663399", outline="", stipple="gray50",
+                    fill=fill, outline="", stipple=stipple,
                 )
+
+        for portal in getattr(self, "escape_portals", []):
+            rr, cc = portal["pos"]
+            cx = self._map_x((cc + 0.5) * self.cell_size)
+            cy = (rr + 0.5) * self.cell_size
+            outer = self.cell_size * 0.45
+            inner = self.cell_size * 0.25
+            self.canvas.create_oval(
+                cx - outer, cy - outer, cx + outer, cy + outer,
+                fill="#dff8ff", outline="#67d5ff", width=2, stipple="gray25",
+            )
+            self.canvas.create_oval(
+                cx - inner, cy - inner, cx + inner, cy + inner,
+                fill="#f8fdff", outline="#b8efff", width=2,
+            )
 
         for drone in getattr(self, "monitor_drones", []):
             if not drone.is_alive:

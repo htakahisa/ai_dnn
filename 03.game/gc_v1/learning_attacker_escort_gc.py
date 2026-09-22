@@ -109,7 +109,7 @@ ENTRY_SUPPORT_OBS_DIM = 84  # v8: safe U/D/L/R moves toward the forward screen.
 SCREEN_COMMITMENT_OBS_DIM = 90  # v9: exact U/D/L/R screen step plus active/ready.
 ULTIMATE_CONTEXT_OBS_DIM = 94  # v9: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
-FACING_HEAD_VERSION = 1
+FACING_HEAD_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +195,18 @@ class DuelingQNetwork(nn.Module):
             nn.Linear(hidden // 2, n_actions),
         )
         self.facing_head = nn.Linear(hidden + n_actions, len(FACING_DIRS))
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden),
+            nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden),
+            nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(
+            facing_hidden + n_actions, len(FACING_DIRS)
+        )
         self.action_dim = n_actions
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         feat = self.feature(x)
@@ -204,12 +215,29 @@ class DuelingQNetwork(nn.Module):
         return value + (advantage - advantage.mean(dim=1, keepdim=True))
 
     def facing_values(self, x, actions):
-        features = self.feature(x)
+        features = (
+            self.facing_feature(x)
+            if self.facing_head_version >= 2
+            else self.feature(x)
+        )
         actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
         action_onehot = torch.nn.functional.one_hot(
             actions, num_classes=self.action_dim
         ).to(dtype=features.dtype)
-        return self.facing_head(torch.cat((features, action_onehot), dim=1))
+        inputs = torch.cat((features, action_onehot), dim=1)
+        return (
+            self.facing_output(inputs)
+            if self.facing_head_version >= 2
+            else self.facing_head(inputs)
+        )
+
+    def facing_parameters(self):
+        modules = (
+            (self.facing_feature, self.facing_output)
+            if self.facing_head_version >= 2
+            else (self.facing_head,)
+        )
+        return [parameter for module in modules for parameter in module.parameters()]
 
 
 class LearningAttackerEscortGCController:
@@ -260,21 +288,29 @@ class LearningAttackerEscortGCController:
                 f"train_attacker_escort.pyのバージョンが古い可能性があります。"
             )
 
+        checkpoint_facing_version = int(checkpoint.get("facing_head_version", 0))
         self.policy_net = DuelingQNetwork(obs_dim, n_actions).to(self.device)
+        self.policy_net.facing_head_version = checkpoint_facing_version
         incompatible = self.policy_net.load_state_dict(
             checkpoint["model_state_dict"], strict=False
         )
         unexpected = list(incompatible.unexpected_keys)
         missing = [key for key in incompatible.missing_keys
-                   if not key.startswith("facing_head.")]
+                   if not key.startswith(("facing_head.", "facing_feature.",
+                                          "facing_output."))]
         if missing or unexpected:
             raise RuntimeError(
                 f"Escort checkpoint keys mismatch: missing={missing}, unexpected={unexpected}"
             )
-        self.facing_head_enabled = (
-            int(checkpoint.get("facing_head_version", 0)) >= FACING_HEAD_VERSION
-            and not incompatible.missing_keys
+        required_prefixes = (
+            ("facing_feature.", "facing_output.")
+            if checkpoint_facing_version >= 2
+            else ("facing_head.",)
         )
+        missing_required = any(
+            key.startswith(required_prefixes) for key in incompatible.missing_keys
+        )
+        self.facing_head_enabled = checkpoint_facing_version >= 1 and not missing_required
         self.policy_net.eval()
 
         if self.verbose:

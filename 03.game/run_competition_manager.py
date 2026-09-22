@@ -2190,10 +2190,10 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
     preset = get_preset(team_name)
     validate_preset(preset)
     player_names = [str(name) for name in preset.players]
-    team_set = set(player_names)
 
     base_stats: dict[str, dict[str, float]] = {}
     combo_stats: dict[str, dict[str, float]] = {}
+    player_aliases: dict[str, str] = {}
     for name in player_names:
         raw = get_character_combat_stats(name)
         row = {
@@ -2205,29 +2205,36 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
         }
         base_stats[name] = dict(row)
         combo_stats[name] = dict(row)
+        player_aliases[name] = name
 
     active_combos: list[str] = []
     for combo in PLAYER_COMBOS:
         if not isinstance(combo, dict):
             continue
         required = tuple(str(x) for x in combo.get('players', ()))
-        if not required or not set(required).issubset(team_set):
+        aliases_to_players = {
+            alias: player_name
+            for player_name, alias in player_aliases.items()
+        }
+        if not required or not set(required).issubset(aliases_to_players):
             continue
         active_combos.append(str(combo.get('name', '名称未設定コンボ')))
 
         common = combo.get('bonuses', {})
         per_player = combo.get('player_bonuses', {})
+        renames = combo.get('renames', {})
         for name in required:
-            if name not in combo_stats:
-                continue
+            player_name = aliases_to_players[name]
             if isinstance(common, dict):
                 for key, value in common.items():
-                    _apply_combo_bonus_to_stats(combo_stats[name], key, value)
+                    _apply_combo_bonus_to_stats(combo_stats[player_name], key, value)
             if isinstance(per_player, dict):
                 bonuses = per_player.get(name, {})
                 if isinstance(bonuses, dict):
                     for key, value in bonuses.items():
-                        _apply_combo_bonus_to_stats(combo_stats[name], key, value)
+                        _apply_combo_bonus_to_stats(combo_stats[player_name], key, value)
+            if isinstance(renames, dict) and name in renames:
+                player_aliases[player_name] = str(renames[name])
 
     rows: list[dict[str, Any]] = []
     base_total = 0.0
