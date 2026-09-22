@@ -1,0 +1,24 @@
+﻿{
+    "timestamp":  "20260922_114636",
+    "source_episode":  1500,
+    "source_dir":  "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_curriculum_v22_escort_support_20260922_094149\\training",
+    "source_model":  "auto_selected_best",
+    "selection_violation":  0.013333333333333371,
+    "criteria_met":  false,
+    "metrics":  {
+                    "designated_route_clear_rate":  0.3772845953002611,
+                    "carry_no_entry_rate":  0.3566666666666667,
+                    "timeout_rate":  0.05666666666666667
+                },
+    "criteria":  {
+                     "max_no_entry_rate":  0.35,
+                     "max_timeout_rate":  0.05,
+                     "min_route_clear_rate":  0.5
+                 },
+    "gaps_to_criteria":  {
+                             "route_clear_gap":  0,
+                             "no_entry_gap":  0,
+                             "timeout_gap":  0
+                         },
+    "backup_path":  null
+}

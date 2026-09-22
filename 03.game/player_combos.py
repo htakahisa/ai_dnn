@@ -77,6 +77,12 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "ジャパンホープ",
+        "players": ("Laz", "Dep", "Meiy", "SugarZ3ro"),
+        "bonuses": {"hs_rate": 0.25, "iq": 30},
+        "renames": {},
+    },
+    {
         "name": "I AM THE HUNTER",
         "players": ("Laz", "Dep"),
         "bonuses": {"hs_rate": 0.1, "accuracy": 0.1, "reaction": 60},
@@ -84,12 +90,6 @@ COMBOS = [
             "Laz": "-ヘッドハンター-Laz",
             "Dep": "-ケルベロス-Dep",
         },
-    },
-    {
-        "name": "ジャパンホープ",
-        "players": ("Laz", "Dep", "Meiy", "SugarZ3ro"),
-        "bonuses": {"hs_rate": 0.25, "iq": 30},
-        "renames": {},
     },
     {
         "name": "レイキャビック戦士",
@@ -492,11 +492,36 @@ COMBOS = [
         "name": "おもこと森で出会った",
         "players": ("ねこさん", "いぬさん", "おもこ", "ひつじさん", "とりさん"),
         "player_bonuses": {
-            "ねこさん": {"hs_rate": 0.01, "dodge_rate": 0.01,  "accuracy": 0.01, "reaction": 1},
-            "いぬさん": {"hs_rate": 0.01, "dodge_rate": 0.01,  "accuracy": 0.01, "reaction": 1},
-            "おもこ": {"hs_rate": 0.0, "dodge_rate": 0.0,  "accuracy": 0.0, "reaction": 1},
-            "とりさん": {"hs_rate": 0.01, "dodge_rate": 0.01,  "accuracy": 0.01, "reaction": 1},
-            "ひつじさん": {"hs_rate": 0.01, "dodge_rate": 0.01,  "accuracy": 0.01, "reaction": 1},
+            "ねこさん": {
+                "hs_rate": 0.01,
+                "dodge_rate": 0.01,
+                "accuracy": 0.01,
+                "reaction": 1,
+            },
+            "いぬさん": {
+                "hs_rate": 0.01,
+                "dodge_rate": 0.01,
+                "accuracy": 0.01,
+                "reaction": 1,
+            },
+            "おもこ": {
+                "hs_rate": 0.0,
+                "dodge_rate": 0.0,
+                "accuracy": 0.0,
+                "reaction": 1,
+            },
+            "とりさん": {
+                "hs_rate": 0.01,
+                "dodge_rate": 0.01,
+                "accuracy": 0.01,
+                "reaction": 1,
+            },
+            "ひつじさん": {
+                "hs_rate": 0.01,
+                "dodge_rate": 0.01,
+                "accuracy": 0.01,
+                "reaction": 1,
+            },
         },
         "renames": {},
     },

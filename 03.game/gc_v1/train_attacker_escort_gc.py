@@ -105,6 +105,7 @@ from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
 )
+
 try:
     from .gc_combo_stats import build_combo_bonuses
 except ImportError:
@@ -794,18 +795,55 @@ class EscortEnv:
         obs.append(1.0 - min(1.0, self.tick / max(1, self.max_ticks)))
         obs.append(1.0 if self._blocking_escort_idx == i else 0.0)
 
+        # FAKE_WAITサポート特徴量を追加(positioning_version>=12の場合)
+        if hasattr(self, "positioning_version") and self.positioning_version >= 12:
+            try:
+                from .navigation_intent_gc import (
+                    fake_wait_support_features,
+                    _distance_map,
+                )
+            except ImportError:
+                from navigation_intent_gc import (
+                    fake_wait_support_features,
+                    _distance_map,
+                )
+
+            # 学習環境用のgameオブジェクトを模倣してキャラクター情報を生成
+            class MockChar:
+                def __init__(self, pos, name, has_spike, team):
+                    self.pos = pos
+                    self.name = name
+                    self.has_spike = has_spike
+                    self.team = team
+                    self.is_alive = True
+
+            # キャリアーと現在のエスコートをMockCharに変換
+            chars = []
+            # キャリアーを追加
+            chars.append(MockChar(self.carry_pos, "carrier", True, 0))
+            # 全エスコートを追加
+            for j in range(self.n_escorts):
+                if self.escort_alive[j]:
+                    chars.append(MockChar(self.escort_pos[j], f"escort_{j}", False, 0))
+            # 現在のエスコートのMockCharを取得
+            current_char = next(c for c in chars if c.name == f"escort_{i}")
+            # 距離キャッシュを用意
+            cache = {}
+            # fake_wait_support_featuresを計算
+            fake_features = fake_wait_support_features(self, current_char, chars, cache)
+            obs.extend(fake_features.tolist())
+
         return np.array(obs, dtype=np.float32)
 
-    @staticmethod
-    def _obs_dim():
-        # _get_obs() の要素数と一致させる(固定値なのでズレたら即バグに気づけるようassert)
-        # 内訳: 自己座標2 + キャリアーBFS距離/方向3 + キャリアー進行方向2
-        #      + 壁フラグ4 + BFS距離勾配4 + 斜め壁フラグ4 + 味方隣接フラグ4
-        #      + 距離帯逸脱1 + 敵情報6 + アビリティ状態(未使用フラグ1+種別onehot4)
-        #      + チーム効果1 + 直前移動2 + stuck1 + 残り時間1 + 被ブロック1
-        # = 2+3+2+4+4+4+4+1+6+5+1+2+1+1+1 = 41
-        # (汎用版からの変更点: アビリティ種別onehotが3種→4種(HUNT追加)になり40→41)
-        return 41
+    def _obs_dim(self):
+        # _get_obs() の要素数と一致させる
+        base_dim = 41  # 基本の観測次元数
+        # positioning_version>=12の場合はFAKE_WAIT_SUPPORT_DIM(6)を追加
+        if hasattr(self, "positioning_version") and self.positioning_version >= 12:
+            from navigation_intent_gc import FAKE_WAIT_SUPPORT_DIM
+
+            return base_dim + FAKE_WAIT_SUPPORT_DIM
+        return base_dim
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -1173,14 +1211,10 @@ class EscortEnv:
         alive_escorts = [i for i in range(self.n_escorts) if self.escort_alive[i]]
         if self.carry_alive and alive_escorts:
             cover_dist = {
-                i: _chebyshev(self.escort_pos[i], self.carry_pos)
-                for i in alive_escorts
+                i: _chebyshev(self.escort_pos[i], self.carry_pos) for i in alive_escorts
             }
             ordered = sorted(alive_escorts, key=lambda i: cover_dist[i])
-            supporters = [
-                i for i in ordered
-                if cover_dist[i] <= CARRIER_SUPPORT_RADIUS
-            ]
+            supporters = [i for i in ordered if cover_dist[i] <= CARRIER_SUPPORT_RADIUS]
             if len(supporters) >= CARRIER_MIN_SUPPORTERS:
                 rewards[supporters[0]] += CARRIER_SUPPORT_REWARD
                 rewards[supporters[0]] += CARRIER_CLOSE_SUPPORT_REWARD
@@ -1226,8 +1260,7 @@ class EscortEnv:
         kill_bonus_targets = self._resolve_combat()
 
         dead_escorts = [
-            i for i in alive_escorts_before_combat
-            if not self.escort_alive[i]
+            i for i in alive_escorts_before_combat if not self.escort_alive[i]
         ]
         if dead_escorts:
             # Death is a team-level safety failure, so every policy receives
@@ -1439,9 +1472,7 @@ def main():
         "--save-dir",
         type=str,
         default=str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "attacker_escort_gc_data"
+            Path(__file__).resolve().parent / "data" / "attacker_escort_gc_data"
         ),
     )
     parser.add_argument("--seed", type=int, default=0)

@@ -22,6 +22,7 @@ FORMATION_DIM = 4
 ROUTE_CLEARANCE_DIM = 4
 SAFE_SCREEN_ADVANCE_DIM = 4
 SCREEN_COMMITMENT_DIM = 6
+FAKE_WAIT_SUPPORT_DIM = 6
 FORMATION_LEAD_STEPS = 3
 FORMATION_READY_RADIUS = 1
 FORMATION_MIN_FINAL_DISTANCE = 2
@@ -109,6 +110,39 @@ def navigation_intent(game, char):
             if (goal[1] < grid.shape[1] // 2) == (plant[1] < grid.shape[1] // 2):
                 goal = plant
     return (tuple(goal) if goal is not None else None), strategy, role
+
+
+def fake_wait_support_features(game, char, chars, cache):
+    """Observable fake-wait bodyguard context; labels no production action."""
+    features = np.zeros(FAKE_WAIT_SUPPORT_DIM, dtype=np.float32)
+    carrier = next(
+        (ally for ally in chars if ally.team == char.team
+         and getattr(ally, "is_alive", True)
+         and getattr(ally, "has_spike", False)),
+        None,
+    )
+    if (carrier is None or carrier.name == char.name
+            or navigation_intent(game, carrier)[2] != "FAKE_WAIT"
+            or navigation_intent(game, char)[2] != "FAKE_WAIT"):
+        return features
+    distance = _distance_map(game, tuple(map(int, carrier.pos)), cache)
+    pos = tuple(map(int, char.pos))
+    current = int(distance[pos])
+    if current < 0:
+        return features
+    features[0] = 1.0
+    features[1] = min(1.0, current / sum(game.grid.shape))
+    occupied = {
+        tuple(map(int, ally.pos)) for ally in chars
+        if ally.name != char.name and getattr(ally, "is_alive", True)
+    }
+    for action, (dr, dc) in enumerate(CARDINAL):
+        nxt = (pos[0] + dr, pos[1] + dc)
+        if (0 <= nxt[0] < game.grid.shape[0]
+                and 0 <= nxt[1] < game.grid.shape[1]
+                and nxt not in occupied and 0 <= int(distance[nxt]) < current):
+            features[2 + action] = 1.0
+    return features
 
 
 def can_engage(game, char, chars):

@@ -109,6 +109,7 @@ ENTRY_SUPPORT_OBS_DIM = 84  # v8: safe U/D/L/R moves toward the forward screen.
 SCREEN_COMMITMENT_OBS_DIM = 90  # v9: exact U/D/L/R screen step plus active/ready.
 ULTIMATE_CONTEXT_OBS_DIM = 94  # v9: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
+FAKE_WAIT_SUPPORT_OBS_DIM = FACING_HEAD_OBS_DIM + 6  # v12: waiting bodyguard context.
 FACING_HEAD_VERSION = 2
 
 
@@ -271,7 +272,8 @@ class LearningAttackerEscortGCController:
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
-        expected_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+        expected_dim = (FAKE_WAIT_SUPPORT_OBS_DIM if self.positioning_version >= 12 else
+                        FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                         ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 9 else
                         ENTRY_SUPPORT_OBS_DIM if self.positioning_version >= 8 else
                         DIRECTIONAL_CLEARANCE_OBS_DIM if self.positioning_version >= 7 else
@@ -735,6 +737,15 @@ class LearningAttackerEscortGCController:
             facing_obs = np.zeros(len(FACING_DIRS), dtype=np.float32)
             append_facing_onehot(facing_obs, getattr(char, "facing", "N"))
             obs_arr = np.concatenate((obs_arr, facing_obs))
+        if self.positioning_version >= 12:
+            try:
+                from .navigation_intent_gc import fake_wait_support_features
+            except ImportError:
+                from navigation_intent_gc import fake_wait_support_features
+            cache = self.__dict__.setdefault("_intent_distance_cache", {})
+            obs_arr = np.concatenate((obs_arr, fake_wait_support_features(
+                self.game, char, chars, cache
+            )))
         return obs_arr
 
     def _ultimate_action(self, char, chars):

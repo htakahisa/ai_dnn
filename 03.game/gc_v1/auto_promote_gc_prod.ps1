@@ -21,8 +21,8 @@ $PROD_CARRY_MODEL = Join-Path $PROD_MODEL_DIR "dqn_attacker_carry_gc_final.pt"
 $PROD_ESCORT_MODEL = Join-Path $PROD_MODEL_DIR "dqn_attacker_escort_gc_final.pt"
 $PROD_GUARD_MODEL = Join-Path $PROD_MODEL_DIR "dqn_attacker_guard_gc_final.pt"
 
-# 学習済みv21モデルのソースパス（最新の学習ディレクトリに修正）
-$V21_SOURCE_DIR = "D:\git\ai_dnn\03.game\gc_v1\data\attacker_gc_curriculum_v22_escort_support_20260922_094149\training"
+# 学習済みソースパス（最新の学習ディレクトリに修正）
+$V21_SOURCE_DIR = "D:\git\ai_dnn\03.game\gc_v1\data\attacker_gc_escort_support_current\training"
 $SOURCE_CARRY_MODEL = Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_best_by_eval.pt"
 $SOURCE_EVAL_HISTORY = Join-Path $V21_SOURCE_DIR "evaluation_history.json"
 
