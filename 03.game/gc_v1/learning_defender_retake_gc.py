@@ -19,10 +19,11 @@ character_stats_gc.py 側の定義に基づき、run_game.py の既存エンジ�
 本ファイルではステータスの再計算は行わない。char.accuracy等の実値を
 そのまま利用する。
 
-行動空間は train_defender_retake.py と完全に同一(N_ACTIONS=7):
-    0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=STAY, 5=DEFUSE, 6=ABILITY
+行動空間は学習側と完全に同一(N_ACTIONS=9):
+    0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=STAY, 5=DEFUSE, 6=ABILITY,
+    7=ULTIMATE, 8=COLLECT_ORB
 観測ベクトルも同ファイルの build_observation() と要素・並び順を完全一致
-させている(OBS_DIM=37)。ここがずれると学習済み重みと整合しなくなるため、
+させている(OBS_DIM=53)。旧37次元チェックポイントにも読込互換性を持たせる。
 インデックスコメントを明示して対応関係を追跡できるようにしている。
 
 アビリティ使用時のターゲットは、学習環境(RetakeEnv.apply_ability)が
@@ -44,23 +45,44 @@ from game_core import (
     DEFUSE_REQUIRED_TICKS,
     SPIKE_DETONATION_TICKS,
 )
-from character_stats_gc import (
-    CHARACTER_TABLE as GC_STATS_TABLE,
-    GC_ROSTER_ORDER,
-)
-
 try:
-    from .gc_facing import facing_towards
+    from .character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from .gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from .ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        build_ultimate_action,
+        can_collect_orb,
+        orb_context_features,
+        ultimate_context_features,
+    )
 except ImportError:
-    from gc_facing import facing_towards
+    from character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        build_ultimate_action,
+        can_collect_orb,
+        orb_context_features,
+        ultimate_context_features,
+    )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 
-OBS_DIM = 37  # train_defender_retake.py の build_observation() と要素数を一致させること
-N_ACTIONS = 7  # 0-3:move, 4:stay, 5:DEFUSE, 6:ABILITY
+BASE_OBS_DIM = 37
+ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
+ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
+OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+LEGACY_N_ACTIONS = 7
+N_ACTIONS = 9
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
@@ -69,6 +91,9 @@ ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
 ACTION_DEFUSE = 5
 ACTION_ABILITY = 6
+ACTION_ULTIMATE = 7
+ACTION_COLLECT_ORB = 8
+FACING_HEAD_VERSION = 2
 
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "タイガー": 3}
 
@@ -95,12 +120,39 @@ class DefenderRetakeDuelingDQN(nn.Module):
         self.adv_head = nn.Sequential(
             nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, n_actions)
         )
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden),
+            nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden),
+            nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(
+            facing_hidden + n_actions, len(FACING_DIRS)
+        )
+        self.action_dim = n_actions
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         feat = self.feature(x)
         value = self.value_head(feat)
         adv = self.adv_head(feat)
         return value + adv - adv.mean(dim=1, keepdim=True)
+
+    def facing_values(self, x, actions):
+        features = self.facing_feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        action_onehot = torch.nn.functional.one_hot(
+            actions, num_classes=self.action_dim
+        ).to(dtype=features.dtype)
+        return self.facing_output(torch.cat((features, action_onehot), dim=1))
+
+    def facing_parameters(self):
+        return [
+            parameter
+            for module in (self.facing_feature, self.facing_output)
+            for parameter in module.parameters()
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -240,10 +292,53 @@ class LearningDefenderRetakeGCController:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
         self.greedy = greedy
         self.verbose = verbose
+        self.model_obs_dim = OBS_DIM
+        self.model_action_dim = N_ACTIONS
+        self.facing_head_enabled = False
+        self.model_episode = None
         self.model = DefenderRetakeDuelingDQN().to(DEVICE)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
-            self.model.load_state_dict(state_dict)
+            checkpoint = torch.load(
+                model_path, map_location=DEVICE, weights_only=False
+            )
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
+            self.model_obs_dim = int(state_dict["feature.0.weight"].shape[1])
+            self.model_action_dim = int(state_dict["adv_head.2.weight"].shape[0])
+            if self.model_action_dim not in (LEGACY_N_ACTIONS, N_ACTIONS):
+                raise ValueError(
+                    f"unsupported defender-retake action dimension: "
+                    f"{self.model_action_dim}"
+                )
+            self.model = DefenderRetakeDuelingDQN(
+                obs_dim=self.model_obs_dim, n_actions=self.model_action_dim
+            ).to(DEVICE)
+            incompatible = self.model.load_state_dict(state_dict, strict=False)
+            missing = [
+                key for key in incompatible.missing_keys
+                if not key.startswith(("facing_feature.", "facing_output."))
+            ]
+            if missing or incompatible.unexpected_keys:
+                raise RuntimeError(
+                    f"defender-retake checkpoint keys mismatch: "
+                    f"missing={missing} unexpected={list(incompatible.unexpected_keys)}"
+                )
+            facing_version = int(
+                checkpoint.get("facing_head_version", 0)
+                if isinstance(checkpoint, dict) else 0
+            )
+            self.model.facing_head_version = facing_version
+            self.facing_head_enabled = (
+                self.model_obs_dim == OBS_DIM
+                and self.model_action_dim == N_ACTIONS
+                and facing_version >= 1
+                and not any(
+                    key.startswith(("facing_feature.", "facing_output."))
+                    for key in incompatible.missing_keys
+                )
+            )
+            self.model_episode = (
+                checkpoint.get("episode") if isinstance(checkpoint, dict) else None
+            )
             if verbose:
                 print(f"[LearningDefenderRetakeGCController] loaded: {model_path}")
         except Exception as exc:
@@ -389,11 +484,30 @@ class LearningDefenderRetakeGCController:
         role_idx = 33 + ROLE_INDEX.get(char.role, 0)
         obs[role_idx] = 1.0
 
+        obs[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+            char,
+            engaged=bool(visible_enemies),
+            objective_window=True,
+            urgent=(
+                detonate_timer <= 20
+                or (char.max_hp > 0 and char.hp / char.max_hp <= 0.45)
+            ),
+        )
+        obs[ULTIMATE_CONTEXT_OBS_DIM:ORB_CONTEXT_OBS_DIM] = orb_context_features(
+            char, game_state.get("available_orbs", ())
+        )
+        append_facing_onehot(
+            obs[ORB_CONTEXT_OBS_DIM:OBS_DIM],
+            getattr(char, "facing", "S"),
+        )
+
         return obs
 
     # -- 行動マスク ---------------------------------------------------------
     # train_defender_retake.py の action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement):
+    def _action_mask(
+        self, char, grid, chars, lock_movement, available_orbs=()
+    ):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -420,8 +534,24 @@ class LearningDefenderRetakeGCController:
         mask[ACTION_DEFUSE] = dist_to_plant <= 1
 
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
+        mask[ACTION_ULTIMATE] = build_ultimate_action(
+            grid, char, chars, destination=self._dist_map_source
+        ) is not None
+        mask[ACTION_COLLECT_ORB] = can_collect_orb(char, available_orbs)
 
         return mask
+
+    def _select_facing(self, obs, action_idx):
+        if not self.facing_head_enabled:
+            return None
+        with torch.no_grad():
+            obs_t = torch.as_tensor(
+                obs, dtype=torch.float32, device=DEVICE
+            ).unsqueeze(0)
+            values = self.model.facing_values(
+                obs_t, torch.tensor([action_idx], device=DEVICE)
+            ).squeeze(0)
+        return FACING_DIRS[int(values.argmax().item())]
 
     # -- メイン ----------------------------------------------------------
     def decide_move(self, char, game_state):
@@ -486,7 +616,12 @@ class LearningDefenderRetakeGCController:
 
         # A defuse is consecutive: turning to fight or selecting an ability
         # resets its progress. Keep the same defuser committed once started.
-        if is_designated and cheb_dist <= 1 and int(getattr(char, "defuse_timer", 0)) > 0:
+        if (
+            not getattr(self, "facing_head_enabled", False)
+            and is_designated
+            and cheb_dist <= 1
+            and int(getattr(char, "defuse_timer", 0)) > 0
+        ):
             return list(char.pos), "DEFUSE"
 
         # Smoke the spike before the first defuse tick.  Entry range is used
@@ -509,6 +644,8 @@ class LearningDefenderRetakeGCController:
         }
         smoke_covers_spike = bool(spike_area & smoke_cells)
         if (
+            not getattr(self, "facing_head_enabled", False)
+            and
             str(getattr(char, "ability_name", "")).upper() == "SMOKE"
             and int(getattr(char, "smoke_charges", 0)) > 0
             and (near_defuser or active_defuser)
@@ -535,7 +672,7 @@ class LearningDefenderRetakeGCController:
         # Attacker全滅後は戦術判断を終了し、「解除だけ」を最優先する。
         # 既に誰かが隣接していれば、その1人を即解除担当に固定。
         # まだ誰も隣接していなければ、生存Defender全員を最短でSpikeへ寄せる。
-        if not alive_enemies:
+        if not getattr(self, "facing_head_enabled", False) and not alive_enemies:
             adjacent = [
                 d for d in alive_defenders
                 if max(
@@ -567,7 +704,11 @@ class LearningDefenderRetakeGCController:
             return forced_next
 
         # 解除デッドライン: 指定解除担当は戦闘判断よりSpikeを優先。
-        if is_designated and must_commit_now:
+        if (
+            not getattr(self, "facing_head_enabled", False)
+            and is_designated
+            and must_commit_now
+        ):
             if cheb_dist <= 1:
                 if self.verbose:
                     print(
@@ -588,11 +729,20 @@ class LearningDefenderRetakeGCController:
 
         # Inside smoke, start the protected defuse without waiting for the
         # network/deadline. Adjacent enemies remain visible by game rules.
-        if is_designated and cheb_dist <= 1 and (r0, c0) in smoke_cells and not visible_enemies:
+        if (
+            not getattr(self, "facing_head_enabled", False)
+            and is_designated
+            and cheb_dist <= 1
+            and (r0, c0) in smoke_cells
+            and not visible_enemies
+        ):
             return list(char.pos), "DEFUSE"
 
         # 遠距離からは全員BFS最短。サイト近辺(3マス以内)に入ってからDQNへ戻す。
-        if raw_dist > ENTRY_READY_RADIUS:
+        if (
+            not getattr(self, "facing_head_enabled", False)
+            and raw_dist > ENTRY_READY_RADIUS
+        ):
             forced_next = _bfs_next_step_avoiding_occupied(
                 self._dist_map, grid, char, chars
             )
@@ -617,6 +767,8 @@ class LearningDefenderRetakeGCController:
             and max(abs(int(d.pos[0]) - r0), abs(int(d.pos[1]) - c0)) <= ENTRY_READY_RADIUS
         ]
         if (
+            not getattr(self, "facing_head_enabled", False)
+            and
             visible_enemies
             and not nearby_allies
             and getattr(char, "blind_remaining", 0) <= 0
@@ -636,7 +788,8 @@ class LearningDefenderRetakeGCController:
 
         # サイト近辺では従来DQNを使う。
         lock_movement = (
-            not time_critical
+            not getattr(self, "facing_head_enabled", False)
+            and not time_critical
             and bool(visible_enemies)
             and bool(nearby_allies)
         )
@@ -645,6 +798,8 @@ class LearningDefenderRetakeGCController:
         # a nearly detonated spike still has to be defused even if an enemy is
         # visible.  A blinded defender is also allowed to reposition.
         if (
+            not getattr(self, "facing_head_enabled", False)
+            and
             visible_enemies
             and nearby_allies
             and getattr(char, "blind_remaining", 0) <= 0
@@ -665,15 +820,27 @@ class LearningDefenderRetakeGCController:
         obs = self._build_observation(
             char, game_state, chars, enemies, visible_enemies, detonate_timer
         )
-        mask = self._action_mask(char, grid, chars, lock_movement)
+        mask = self._action_mask(
+            char,
+            grid,
+            chars,
+            lock_movement,
+            available_orbs=game_state.get("available_orbs", ()),
+        )
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        model_obs = obs[:self.model_obs_dim]
+        model_mask = mask[:self.model_action_dim]
+        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
+        mask_t = torch.from_numpy(model_mask).to(DEVICE)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
+
+        facing = self._select_facing(obs, action_idx)
+        if facing is not None:
+            char.facing = facing
 
         if self.verbose:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
@@ -685,12 +852,29 @@ class LearningDefenderRetakeGCController:
 
         if action_idx <= 4:
             dr, dc = MOVE_DELTAS[action_idx]
-            return [char.pos[0] + dr, char.pos[1] + dc]
+            next_pos = [char.pos[0] + dr, char.pos[1] + dc]
+            return next_pos if facing is None else (next_pos, {"facing": facing})
 
         if action_idx == ACTION_DEFUSE:
             return list(char.pos), "DEFUSE"
 
+        if action_idx == ACTION_ULTIMATE:
+            ultimate = build_ultimate_action(
+                grid, char, chars, destination=planted_pos
+            )
+            if ultimate is not None:
+                if facing is not None:
+                    ultimate = dict(ultimate, facing=facing)
+                return list(char.pos), ultimate
+            return list(char.pos)
+
+        if action_idx == ACTION_COLLECT_ORB:
+            return list(char.pos), "COLLECT_ORB"
+
         # ACTION_ABILITY: 学習環境(RetakeEnv.apply_ability)がプラント地点
         # 中心に効果を計算する設計だったため、狙点は常にplanted_posとする。
         target_pos = (int(planted_pos[0]), int(planted_pos[1]))
-        return list(char.pos), {"ability": char.ability_name, "target": target_pos}
+        payload = {"ability": char.ability_name, "target": target_pos}
+        if facing is not None:
+            payload["facing"] = facing
+        return list(char.pos), payload

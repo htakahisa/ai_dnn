@@ -6,7 +6,11 @@ from abilities_los import AbilityLosMixin
 from battle_logic import BattleLogicMixin
 from game_core import Character, ORB_COLLECT_REQUIRED_TICKS
 from map_data import NEW_MAZE_STR
-from gc_v1.ultimate_tactics_gc import build_ultimate_action
+from gc_v1.ultimate_tactics_gc import (
+    build_ultimate_action,
+    can_collect_orb,
+    orb_context_features,
+)
 
 
 class FixedController:
@@ -62,6 +66,16 @@ def make_character(name, team, pos, points=0):
 
 
 class UltimateSystemTests(unittest.TestCase):
+    def test_gc_orb_context_and_collection_mask_are_observable(self):
+        collector = make_character("Demon1", "D", (2, 2), 0)
+        collector.orb_collect_timer = 2
+        context = orb_context_features(collector, {(2, 2), (4, 5)})
+
+        np.testing.assert_allclose(context, [1.0, 0.4, 0.0, 0.0])
+        self.assertTrue(can_collect_orb(collector, {(2, 2)}))
+        collector.ultimate_points = collector.ultimate_cost
+        self.assertFalse(can_collect_orb(collector, {(2, 2)}))
+
     def test_gc_learned_ultimate_payloads_are_executable(self):
         grid = np.zeros((9, 12), dtype=np.int32)
         tiger = make_character("something", "A", (4, 1), 3)

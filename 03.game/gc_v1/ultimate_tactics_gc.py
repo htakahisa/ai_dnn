@@ -4,6 +4,7 @@ import numpy as np
 
 
 ULTIMATE_CONTEXT_DIM = 4
+ORB_CONTEXT_DIM = 4
 
 FACING_STEPS = {
     "N": (-1, 0), "NE": (-1, 1), "E": (0, 1), "SE": (1, 1),
@@ -29,6 +30,38 @@ def ultimate_context_features(char, engaged=False, objective_window=False, urgen
         float(bool(objective_window)),
         float(bool(urgent)),
     ), dtype=np.float32)
+
+
+def orb_context_features(char, available_orbs, collect_required_ticks=5):
+    """Observable orb state: on-orb, progress, and direction to nearest orb."""
+    orbs = {tuple(map(int, cell)) for cell in (available_orbs or ())}
+    pos = tuple(map(int, char.pos))
+    on_orb = pos in orbs
+    progress = min(
+        1.0,
+        max(0, int(getattr(char, "orb_collect_timer", 0)))
+        / max(1, int(collect_required_ticks)),
+    )
+    dr = dc = 0.0
+    if orbs:
+        nearest = min(
+            orbs,
+            key=lambda cell: (
+                abs(cell[0] - pos[0]) + abs(cell[1] - pos[1]),
+                cell,
+            ),
+        )
+        dr = float(np.sign(nearest[0] - pos[0]))
+        dc = float(np.sign(nearest[1] - pos[1]))
+    return np.asarray((float(on_orb), progress, dr, dc), dtype=np.float32)
+
+
+def can_collect_orb(char, available_orbs):
+    return (
+        tuple(map(int, char.pos)) in {tuple(map(int, cell)) for cell in (available_orbs or ())}
+        and getattr(char, "ultimate_cost", 0) > 0
+        and getattr(char, "ultimate_points", 0) < getattr(char, "ultimate_cost", 0)
+    )
 
 
 def tactical_ultimate_window(char, context):

@@ -77,10 +77,10 @@ except ImportError:
     from positioning_gc import guard_candidates
 try:
     from .postplant_utils import postplant_watch_cells
-    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 except ImportError:
     from postplant_utils import postplant_watch_cells
-    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -88,8 +88,11 @@ CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 34
 ULTIMATE_CONTEXT_OBS_DIM = 38  # v4: ready/combat/objective/urgency cast context.
+ORB_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + 4
 LEGACY_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ACTION_DIM = 11
+COLLECT_ORB_ACTION_INDEX = 11
+ACTION_DIM = 12
 ULTIMATE_ACTION_INDEX = 10
 
 ABILITY_RANGE = 8
@@ -391,8 +394,9 @@ class LearningAttackerGuardGCController:
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             action_dim = int(checkpoint.get("n_actions", LEGACY_ACTION_DIM))
             obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
-            expected_actions = ACTION_DIM if self.positioning_version >= 3 else LEGACY_ACTION_DIM
-            expected_obs_dim = (ULTIMATE_CONTEXT_OBS_DIM
+            expected_actions = ACTION_DIM if self.positioning_version >= 5 else (11 if self.positioning_version >= 3 else LEGACY_ACTION_DIM)
+            expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 5 else
+                                ULTIMATE_CONTEXT_OBS_DIM
                                 if self.positioning_version >= 4 else OBS_DIM)
             if action_dim != expected_actions:
                 raise ValueError(
@@ -591,7 +595,8 @@ class LearningAttackerGuardGCController:
         height, width = grid.shape
         r0, c0 = int(char.pos[0]), int(char.pos[1])
 
-        obs_dim = (ULTIMATE_CONTEXT_OBS_DIM
+        obs_dim = (ORB_OBS_DIM if getattr(self, "positioning_version", 0) >= 5 else
+                   ULTIMATE_CONTEXT_OBS_DIM
                    if getattr(self, "positioning_version", 0) >= 4 else OBS_DIM)
         obs = np.zeros(obs_dim, dtype=np.float32)
 
@@ -703,17 +708,21 @@ class LearningAttackerGuardGCController:
                 objective_window=active_defuse_info is not None,
                 urgent=(progress >= 0.5 or detonate_timer <= 12),
             )
+        if getattr(self, "positioning_version", 0) >= 5:
+            obs[ULTIMATE_CONTEXT_OBS_DIM:ORB_OBS_DIM] = orb_context_features(
+                char, game_state.get("available_orbs", ())
+            )
 
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     # train_attacker_guard.py の build_action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement=False, ultimate_target=None):
+    def _action_mask(self, char, grid, chars, lock_movement=False, ultimate_target=None, available_orbs=()):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         敵を視認している間は静止させ、射撃の当たりやすさを優先する
         (「多少の索敵は許容するが強く抑制」は学習側の報酬設計で反映済み。
         本ファイル側のマスクは敵視認時のみの固定で足りる)。"""
-        action_count = ACTION_DIM if self.positioning_version >= 3 else LEGACY_ACTION_DIM
+        action_count = ACTION_DIM if self.positioning_version >= 5 else (11 if self.positioning_version >= 3 else LEGACY_ACTION_DIM)
         mask = np.ones(action_count, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -746,6 +755,10 @@ class LearningAttackerGuardGCController:
             mask[ULTIMATE_ACTION_INDEX] = build_ultimate_action(
                 grid, char, chars, destination=ultimate_target
             ) is not None
+        if self.positioning_version >= 5:
+            mask[COLLECT_ORB_ACTION_INDEX] = can_collect_orb(
+                char, available_orbs
+            )
 
         return mask
 
@@ -813,9 +826,13 @@ class LearningAttackerGuardGCController:
             char, grid, chars,
             lock_movement=bool(visible_enemies) and not learned_positioning,
             ultimate_target=ultimate_target,
+            available_orbs=game_state.get("available_orbs", ()),
         )
 
         action_idx = self._select_action(obs, mask)
+
+        if action_idx == COLLECT_ORB_ACTION_INDEX:
+            return list(char.pos), "COLLECT_ORB"
 
         if getattr(self, "positioning_version", 0) >= 3 and action_idx == ULTIMATE_ACTION_INDEX:
             ultimate = build_ultimate_action(

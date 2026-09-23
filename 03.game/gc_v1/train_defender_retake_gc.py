@@ -19,6 +19,7 @@ battle_logic.py 等をimportしない)も維持している。
 import random
 import sys
 import os
+import argparse
 from collections import deque, namedtuple
 import time
 
@@ -47,18 +48,45 @@ from game_core import (
     SPIKE_DETONATION_TICKS,
     SMOKE_DURATION_TICKS,
     RECON_REVEAL_SIZE,
+    ORB_COLLECT_REQUIRED_TICKS,
+    ORB_ULTIMATE_POINTS,
 )
 
-from character_stats_gc import (
-    CHARACTER_TABLE as GC_STATS_TABLE,
-    GC_ROSTER_ORDER,
-)
-from gc_combo_stats import build_combo_bonuses
+try:
+    from .character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from .gc_combo_stats import build_combo_bonuses
+    from .gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from .ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        can_collect_orb,
+        orb_context_features,
+        tactical_ultimate_window,
+        ultimate_context_features,
+    )
+except ImportError:
+    from character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from gc_combo_stats import build_combo_bonuses
+    from gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        can_collect_orb,
+        orb_context_features,
+        tactical_ultimate_window,
+        ultimate_context_features,
+    )
 
 EPISODE_COUNT = 20000
 
 DEVICE = torch.device("cpu")
-SAVE_DIR = "data/defender_retake_gc_data"
+SAVE_DIR = Path(__file__).resolve().parent / "data" / "defender_retake_gc_data"
+BEST_MODEL_PATH = SAVE_DIR / "dqn_defender_retake_gc_best_by_eval.pt"
+FINAL_MODEL_PATH = SAVE_DIR / "dqn_defender_retake_gc_final.pt"
 
 # ============================================================
 # マップ読み込み
@@ -161,7 +189,8 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
                     continue
                 state = env.build_observation(char)
                 mask = env.action_mask(char)
-                action = select_action(net, state, mask, epsilon=0.0)
+                action, facing = select_action(net, state, mask, epsilon=0.0)
+                char.facing = facing
                 actions[char.name] = action
                 if tuple(char.pos) in env.site_zone:
                     entered = True
@@ -389,6 +418,26 @@ class SimChar:
         self.smoke_charges = 1 if ability == "SMOKE" else 0
         self.flash_charges = 1 if ability == "FLASH" else 0
         self.recon_charges = 1 if ability == "RECON" else 0
+        self.facing = "N" if team == "A" else "S"
+        self.ultimate_name = {
+            "FLASH": "TUNNEL",
+            "SMOKE": "ESCAPE",
+            "RECON": "MONITOR",
+            "NONE": "RAID",
+        }[ability]
+        self.ultimate_cost = {
+            "RAID": 3,
+            "ESCAPE": 6,
+            "MONITOR": 8,
+            "TUNNEL": 5,
+        }[self.ultimate_name]
+        self.ultimate_points = (
+            self.ultimate_cost
+            if random.random() < 0.45
+            else random.randrange(self.ultimate_cost)
+        )
+        self.orb_collect_timer = 0
+        self.collecting_orb_pos = None
 
         if override_stats is not None:
             # gc_v1固定チーム用: 実効ステータスをそのまま使用(ランダム化しない)
@@ -439,10 +488,18 @@ class AttackerStub:
 # 行動空間
 # ============================================================
 
-N_ACTIONS = 7
+BASE_OBS_DIM = 37
+ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
+ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
+OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+LEGACY_N_ACTIONS = 7
+N_ACTIONS = 9
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 ACTION_DEFUSE = 5
 ACTION_ABILITY = 6
+ACTION_ULTIMATE = 7
+ACTION_COLLECT_ORB = 8
+FACING_HEAD_VERSION = 2
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
@@ -478,6 +535,7 @@ class RetakeEnv:
         self.round_over = False
         self.is_defused = False
         self.active_defuser_name = None
+        self.available_orbs = set(zip(*np.where(GRID == 5)))
 
         self.planted_pos = (
             random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
@@ -631,17 +689,13 @@ class RetakeEnv:
 
         has_charge = char.own_ability_charge() > 0
         mask[ACTION_ABILITY] = bool(has_charge and not self.ally_ability_active(char))
+        mask[ACTION_ULTIMATE] = bool(
+            char.ultimate_cost > 0 and char.ultimate_points >= char.ultimate_cost
+        )
+        mask[ACTION_COLLECT_ORB] = can_collect_orb(char, self.available_orbs)
 
         # 💡追加: 時間に余裕があり(time_critical_for_entryでない)、かつ敵が視認できている場合、
         # 移動action(0-3)をマスクして足を止めさせる(撃ち合い中の移動は不利なため)。
-        time_critical = self.detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
-        if not time_critical:
-            enemy_visible = any(
-                e.is_alive and self.check_line_of_sight(char, e)
-                for e in self.attackers()
-            )
-            if enemy_visible:
-                mask[0] = mask[1] = mask[2] = mask[3] = False
         return mask
 
     # -- 観測 --------------------------------------------------------------
@@ -733,7 +787,25 @@ class RetakeEnv:
             + role_onehot
         )
 
-        return np.array(obs, dtype=np.float32)
+        obs = np.array(obs, dtype=np.float32)
+        expanded = np.zeros(OBS_DIM, dtype=np.float32)
+        expanded[:BASE_OBS_DIM] = obs
+        expanded[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+            char,
+            engaged=bool(visible_enemies),
+            objective_window=True,
+            urgent=(
+                self.detonate_timer <= 20
+                or (char.max_hp > 0 and char.hp / char.max_hp <= 0.45)
+            ),
+        )
+        expanded[ULTIMATE_CONTEXT_OBS_DIM:ORB_CONTEXT_OBS_DIM] = orb_context_features(
+            char, self.available_orbs, ORB_COLLECT_REQUIRED_TICKS
+        )
+        append_facing_onehot(
+            expanded[ORB_CONTEXT_OBS_DIM:OBS_DIM], char.facing
+        )
+        return expanded
 
     # -- 1Tick進行 ---------------------------------------------------------
     def step_tick(self, defender_actions):
@@ -743,6 +815,8 @@ class RetakeEnv:
         next_positions = {}
         pending_defuse = set()
         pending_ability = set()
+        pending_ultimate = set()
+        pending_orb = set()
 
         for char in self.chars:
             if not char.is_alive:
@@ -757,6 +831,10 @@ class RetakeEnv:
                     pending_defuse.add(char.name)
                 elif action == ACTION_ABILITY:
                     pending_ability.add(char.name)
+                elif action == ACTION_ULTIMATE:
+                    pending_ultimate.add(char.name)
+                elif action == ACTION_COLLECT_ORB:
+                    pending_orb.add(char.name)
             else:
                 next_positions[char.name] = self.attacker_stub.decide_move(
                     char, self.chars, self.planted_pos
@@ -765,6 +843,55 @@ class RetakeEnv:
         for char in self.chars:
             if char.name in pending_ability:
                 self.apply_ability(char)
+
+        for char in self.defenders():
+            if char.name not in pending_orb or not can_collect_orb(
+                char, self.available_orbs
+            ):
+                char.orb_collect_timer = 0
+                char.collecting_orb_pos = None
+                continue
+            orb_pos = tuple(map(int, char.pos))
+            if char.collecting_orb_pos != orb_pos:
+                char.orb_collect_timer = 0
+            char.collecting_orb_pos = orb_pos
+            char.orb_collect_timer += 1
+            if char.orb_collect_timer >= ORB_COLLECT_REQUIRED_TICKS:
+                char.ultimate_points = min(
+                    char.ultimate_cost,
+                    char.ultimate_points + ORB_ULTIMATE_POINTS,
+                )
+                self.available_orbs.discard(orb_pos)
+                char.orb_collect_timer = 0
+                char.collecting_orb_pos = None
+
+        for char in self.chars:
+            if char.name not in pending_ultimate:
+                continue
+            if char.ultimate_points < char.ultimate_cost:
+                continue
+            char.ultimate_points = 0
+            if char.ultimate_name == "TUNNEL":
+                for enemy in self.attackers():
+                    if enemy.is_alive and self.check_line_of_sight(char, enemy):
+                        enemy.blind_remaining = max(enemy.blind_remaining, 5)
+            elif char.ultimate_name == "MONITOR":
+                for enemy in self.attackers():
+                    if enemy.is_alive:
+                        enemy.reveal_remaining = max(enemy.reveal_remaining, 5)
+            elif char.ultimate_name == "ESCAPE":
+                next_pos = move_towards_target(
+                    char.pos, self.planted_pos, self.chars, char, allow_adjacent_goal=True
+                )
+                next_positions[char.name] = next_pos
+            elif char.ultimate_name == "RAID":
+                step = {
+                    "N": (-1, 0), "NE": (-1, 1), "E": (0, 1), "SE": (1, 1),
+                    "S": (1, 0), "SW": (1, -1), "W": (0, -1), "NW": (-1, -1),
+                }.get(char.facing, (0, 0))
+                next_positions[char.name] = [
+                    char.pos[0] + step[0], char.pos[1] + step[1]
+                ]
 
         pr, pc = self.planted_pos
         for char in self.chars:
@@ -957,6 +1084,8 @@ def snapshot_before(env):
             "in_zone": (r, c) in env.site_zone,
             "dist_to_plant": dist_val,
             "defuse_timer": char.defuse_timer,
+            "orb_collect_timer": char.orb_collect_timer,
+            "ultimate_points": char.ultimate_points,
         }
     return before
 
@@ -1023,6 +1152,14 @@ def compute_rewards(env, before, chosen_actions):
             else:
                 reward += ABILITY_PREMATURE_PENALTY
 
+        if action_id == ACTION_COLLECT_ORB:
+            if char.ultimate_points > b["ultimate_points"]:
+                reward += 0.30
+            elif char.orb_collect_timer > b["orb_collect_timer"]:
+                reward += 0.025
+            else:
+                reward -= 0.05
+
         if char.defuse_timer > b["defuse_timer"]:
             reward += DEFUSE_PROGRESS_REWARD
 
@@ -1087,12 +1224,28 @@ class DuelingQNet(nn.Module):
         self.adv_head = nn.Sequential(
             nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Linear(hidden // 2, n_actions)
         )
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden),
+            nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden),
+            nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(facing_hidden + n_actions, len(FACING_DIRS))
+        self.action_dim = n_actions
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         feat = self.feature(x)
         value = self.value_head(feat)
         adv = self.adv_head(feat)
         return value + adv - adv.mean(dim=1, keepdim=True)
+
+    def facing_values(self, x, actions):
+        features = self.facing_feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        onehot = F.one_hot(actions, num_classes=self.action_dim).to(features.dtype)
+        return self.facing_output(torch.cat((features, onehot), dim=1))
 
 
 Transition = namedtuple(
@@ -1119,14 +1272,23 @@ class ReplayBuffer:
 def select_action(net, state, mask, epsilon):
     valid_indices = np.flatnonzero(mask)
     if len(valid_indices) == 0:
-        return 4
-    if random.random() < epsilon:
-        return int(random.choice(valid_indices))
+        base_action = 4
+    elif random.random() < epsilon:
+        base_action = int(random.choice(valid_indices))
+    else:
+        with torch.no_grad():
+            state_t = torch.from_numpy(state).float().unsqueeze(0).to(DEVICE)
+            q_values = net(state_t).squeeze(0).cpu().numpy()
+        q_values = np.where(mask, q_values, -np.inf)
+        base_action = int(np.argmax(q_values))
     with torch.no_grad():
         state_t = torch.from_numpy(state).float().unsqueeze(0).to(DEVICE)
-        q_values = net(state_t).squeeze(0).cpu().numpy()
-    q_values = np.where(mask, q_values, -np.inf)
-    return int(np.argmax(q_values))
+        facing_values = net.facing_values(state_t, [base_action]).squeeze(0)
+    if random.random() < epsilon:
+        facing_idx = random.randrange(len(FACING_DIRS))
+    else:
+        facing_idx = int(facing_values.argmax().item())
+    return base_action, FACING_DIRS[facing_idx]
 
 
 def compute_td_loss(net, target_net, batch, gamma):
@@ -1155,7 +1317,88 @@ def compute_td_loss(net, target_net, batch, gamma):
 # ============================================================
 
 
-def run_episode(env, net, target_net, replay, epsilon, obs_dim):
+def observable_facing_target(env, char, action):
+    def facing_index(direction):
+        if direction in FACING_DIRS:
+            return FACING_DIRS.index(direction)
+        current = getattr(char, "facing", "S")
+        return FACING_DIRS.index(current) if current in FACING_DIRS else FACING_DIRS.index("S")
+
+    visible = [
+        enemy
+        for enemy in env.attackers()
+        if enemy.is_alive and env.check_line_of_sight(char, enemy)
+    ]
+    if visible:
+        nearest = min(
+            visible,
+            key=lambda enemy: max(
+                abs(enemy.pos[0] - char.pos[0]), abs(enemy.pos[1] - char.pos[1])
+            ),
+        )
+        facing = facing_towards(char.pos, nearest.pos)
+        return facing_index(facing), 1.0
+    if action in MOVE_DELTAS and MOVE_DELTAS[action] != (0, 0):
+        dr, dc = MOVE_DELTAS[action]
+        facing = facing_towards((0, 0), (dr, dc))
+        return facing_index(facing), 0.35
+    facing = facing_towards(char.pos, env.planted_pos)
+    # At the exact plant cell there is no geometric direction. Keeping the
+    # current direction is an observable and stable teacher for that case.
+    return facing_index(facing), 0.60 if facing is not None else 0.15
+
+
+def optimize_facing(net, optimizer, samples, weight=0.35, batch_size=64):
+    if not samples:
+        return None
+    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    states, actions, targets, confidences = zip(*batch)
+    states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32, device=DEVICE)
+    actions_t = torch.as_tensor(actions, dtype=torch.long, device=DEVICE)
+    targets_t = torch.as_tensor(targets, dtype=torch.long, device=DEVICE)
+    confidence_t = torch.as_tensor(confidences, dtype=torch.float32, device=DEVICE)
+    losses = F.cross_entropy(net.facing_values(states_t, actions_t), targets_t, reduction="none")
+    loss = weight * (losses * confidence_t).sum() / confidence_t.sum().clamp_min(1e-6)
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
+
+
+def optimize_ultimate_classification(net, optimizer, positives, negatives, weight=0.25, batch_size=64):
+    if not positives and not negatives:
+        return None
+    per_class = max(1, batch_size // 2)
+    selected = []
+    if positives:
+        selected.extend((s, m, 1.0) for s, m in random.sample(list(positives), min(per_class, len(positives))))
+    if negatives:
+        selected.extend((s, m, 0.0) for s, m in random.sample(list(negatives), min(per_class, len(negatives))))
+    random.shuffle(selected)
+    states, masks, labels = zip(*selected)
+    states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32, device=DEVICE)
+    masks_t = torch.as_tensor(np.asarray(masks), dtype=torch.bool, device=DEVICE)
+    labels_t = torch.as_tensor(labels, dtype=torch.float32, device=DEVICE)
+    q_values = net(states_t)
+    alternatives = masks_t.clone()
+    alternatives[:, ACTION_ULTIMATE] = False
+    competitor = q_values.masked_fill(~alternatives, -torch.inf).max(dim=1).values
+    margin = q_values[:, ACTION_ULTIMATE] - competitor
+    loss = weight * torch.where(
+        labels_t > 0.5, torch.relu(0.8 - margin), torch.relu(0.8 + margin)
+    ).mean()
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
+
+
+def run_episode(
+    env, net, target_net, replay, epsilon, obs_dim,
+    facing_samples=None, ultimate_positives=None, ultimate_negatives=None,
+):
     env.reset()
     zero_obs = np.zeros(obs_dim, dtype=np.float32)
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
@@ -1173,14 +1416,35 @@ def run_episode(env, net, target_net, replay, epsilon, obs_dim):
                 continue
             state = env.build_observation(char)
             mask = env.action_mask(char)
-            action = select_action(net, state, mask, epsilon)
+            action, facing = select_action(net, state, mask, epsilon)
+            char.facing = facing
             obs_before[char.name] = state
             mask_before[char.name] = mask
             chosen_actions[char.name] = action
+            if facing_samples is not None:
+                target, confidence = observable_facing_target(env, char, action)
+                facing_samples.append((state.copy(), action, target, confidence))
+            if mask[ACTION_ULTIMATE]:
+                tactical = tactical_ultimate_window(
+                    char, state[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM]
+                )
+                sample = (state.copy(), mask.copy())
+                if tactical and ultimate_positives is not None:
+                    ultimate_positives.append(sample)
+                elif not tactical and ultimate_negatives is not None:
+                    ultimate_negatives.append(sample)
 
         env.step_tick(chosen_actions)
 
         rewards = compute_rewards(env, before, chosen_actions)
+        for name, action in chosen_actions.items():
+            if action == ACTION_ULTIMATE:
+                state = obs_before[name]
+                tactical = tactical_ultimate_window(
+                    next(char for char in env.defenders() if char.name == name),
+                    state[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM],
+                )
+                rewards[name] = rewards.get(name, 0.0) + (0.10 if tactical else -0.08)
 
         terminal_now, reason_now = env.is_terminal()
         if terminal_now:
@@ -1223,9 +1487,121 @@ def train_step(net, target_net, optimizer, replay, batch_size, gamma):
     return loss.item()
 
 
-def main():
+def expand_retake_policy_state(checkpoint, net):
+    """Warm-start 49-observation/8-action retake from the legacy 37/7 model."""
+    source = checkpoint.get("model_state_dict", checkpoint)
+    target = net.state_dict()
+    old_obs = int(source["feature.0.weight"].shape[1])
+    old_actions = int(source["adv_head.2.weight"].shape[0])
+    for key, value in source.items():
+        if key in target and target[key].shape == value.shape:
+            target[key] = value.detach().clone()
+    if old_obs == BASE_OBS_DIM:
+        target["feature.0.weight"][:, :BASE_OBS_DIM] = source["feature.0.weight"]
+        target["feature.0.weight"][:, BASE_OBS_DIM:ORB_CONTEXT_OBS_DIM] = 0.0
+    if old_actions == LEGACY_N_ACTIONS:
+        target["adv_head.2.weight"][:LEGACY_N_ACTIONS] = source["adv_head.2.weight"]
+        target["adv_head.2.bias"][:LEGACY_N_ACTIONS] = source["adv_head.2.bias"]
+    net.load_state_dict(target)
+    return old_obs, old_actions
+
+
+def checkpoint_payload(net, episode, metrics=None):
+    return {
+        "model_state_dict": net.state_dict(),
+        "episode": int(episode),
+        "obs_dim": OBS_DIM,
+        "n_actions": N_ACTIONS,
+        "facing_head_version": FACING_HEAD_VERSION,
+        "training_revision": "defender_retake_current",
+        "evaluation": metrics or {},
+    }
+
+
+def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 5026091700, 6026091700)):
+    was_training = net.training
+    net.eval()
+    rows = []
+    for seed in seeds:
+        random.seed(seed)
+        np.random.seed(seed & 0xFFFFFFFF)
+        env = RetakeEnv(
+            min_detonate_ticks=15,
+            max_detonate_ticks=SPIKE_DETONATION_TICKS,
+            attacker_hold_radius=4,
+        )
+        counts = {"defused": 0, "detonated": 0, "defenders_wiped": 0, "timeout": 0}
+        entered = 0
+        for _ in range(episodes_per_seed):
+            env.reset()
+            entered_this_round = False
+            while True:
+                terminal, reason = env.is_terminal()
+                if terminal:
+                    counts[reason] = counts.get(reason, 0) + 1
+                    break
+                actions = {}
+                for char in env.defenders():
+                    if not char.is_alive:
+                        continue
+                    state = env.build_observation(char)
+                    action, facing = select_action(net, state, env.action_mask(char), 0.0)
+                    char.facing = facing
+                    actions[char.name] = action
+                    entered_this_round |= tuple(char.pos) in env.site_zone
+                env.step_tick(actions)
+            entered += int(entered_this_round)
+        total = float(episodes_per_seed)
+        rows.append(
+            {
+                "seed": seed,
+                "defuse_rate": counts["defused"] / total,
+                "entry_rate": entered / total,
+                "wipe_rate": counts["defenders_wiped"] / total,
+                "timeout_rate": counts["timeout"] / total,
+            }
+        )
+    if was_training:
+        net.train()
+    return {
+        "episodes": episodes_per_seed * len(seeds),
+        "seeds": list(seeds),
+        "defuse_rate": float(np.mean([row["defuse_rate"] for row in rows])),
+        "worst_defuse_rate": min(row["defuse_rate"] for row in rows),
+        "entry_rate": float(np.mean([row["entry_rate"] for row in rows])),
+        "worst_entry_rate": min(row["entry_rate"] for row in rows),
+        "wipe_rate": float(np.mean([row["wipe_rate"] for row in rows])),
+        "timeout_rate": float(np.mean([row["timeout_rate"] for row in rows])),
+        "per_seed": rows,
+    }
+
+
+def retake_selection_score(metrics):
+    return (
+        metrics["worst_defuse_rate"],
+        metrics["defuse_rate"],
+        metrics["worst_entry_rate"],
+        -metrics["wipe_rate"],
+        -metrics["timeout_rate"],
+    )
+
+
+def scheduled_learning_rate(episode, initial_lr, decay_start=1000, decay_end=2500, minimum_scale=0.20):
+    if episode <= decay_start:
+        return initial_lr
+    fraction = min(1.0, (episode - decay_start) / max(1, decay_end - decay_start))
+    return initial_lr * (1.0 - fraction * (1.0 - minimum_scale))
+
+
+def main(
+    episodes=EPISODE_COUNT,
+    eval_every=250,
+    eval_episodes_per_seed=30,
+    learning_rate=None,
+    early_stop_patience=5,
+):
     print(f"[INIT] device = {DEVICE}")
-    os.makedirs(SAVE_DIR, exist_ok=True)
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
     env = RetakeEnv(
         min_detonate_ticks=15,
@@ -1239,34 +1615,85 @@ def main():
 
     net = DuelingQNet(obs_dim, N_ACTIONS).to(DEVICE)
     target_net = DuelingQNet(obs_dim, N_ACTIONS).to(DEVICE)
+    checkpoint = None
+    start_episode = 0
+    best_score = None
+    if BEST_MODEL_PATH.exists():
+        checkpoint = torch.load(BEST_MODEL_PATH, map_location=DEVICE, weights_only=False)
+        old_obs, old_actions = expand_retake_policy_state(checkpoint, net)
+        print(f"[WARM START] {BEST_MODEL_PATH} obs={old_obs} actions={old_actions}")
+        if isinstance(checkpoint, dict):
+            start_episode = int(checkpoint.get("episode", 0))
+            evaluation = checkpoint.get("evaluation") or {}
+            required = {
+                "worst_defuse_rate",
+                "defuse_rate",
+                "worst_entry_rate",
+                "wipe_rate",
+                "timeout_rate",
+            }
+            if required.issubset(evaluation):
+                best_score = retake_selection_score(evaluation)
+                print(
+                    f"[RESUME BASELINE] episode={start_episode} "
+                    f"defuse={evaluation['defuse_rate']:.3f} "
+                    f"worst_defuse={evaluation['worst_defuse_rate']:.3f}"
+                )
     target_net.load_state_dict(net.state_dict())
     target_net.eval()
 
-    optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
+    modern_resume = (
+        checkpoint is not None
+        and old_obs == OBS_DIM
+        and old_actions == N_ACTIONS
+    )
+    initial_lr = float(
+        learning_rate
+        if learning_rate is not None
+        else (3e-6 if modern_resume else 1e-5)
+    )
+    print(f"[INIT] learning_rate={initial_lr:.2e} start_episode={start_episode}")
+    optimizer = torch.optim.Adam(net.parameters(), lr=initial_lr)
     replay = ReplayBuffer(capacity=100_000)
+    facing_samples = deque(maxlen=50_000)
+    ultimate_positive_samples = deque(maxlen=20_000)
+    ultimate_negative_samples = deque(maxlen=20_000)
 
-    num_episodes = EPISODE_COUNT
+    num_episodes = episodes
     batch_size = 256
     gamma = 0.99
     target_update_every = 1000
     epsilon_start, epsilon_end, epsilon_decay_episodes = (
         1.0,
         0.02,
-        int(EPISODE_COUNT * 0.8),
+        max(1, int(num_episodes * 0.8)),
     )
 
     global_step = 0
     win_history = deque(maxlen=200)
-    best_win_rate = -1.0
+    no_improvement_evals = 0
+    last_episode = start_episode
 
     start_time = time.perf_counter()
-    for episode in range(1, num_episodes + 1):
+    for episode in range(start_episode + 1, num_episodes + 1):
+        last_episode = episode
+        current_lr = scheduled_learning_rate(episode, initial_lr)
+        for group in optimizer.param_groups:
+            group["lr"] = current_lr
         epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(
             0.0, 1.0 - episode / epsilon_decay_episodes
         )
 
         defused, ticks_used = run_episode(
-            env, net, target_net, replay, epsilon, obs_dim
+            env,
+            net,
+            target_net,
+            replay,
+            epsilon,
+            obs_dim,
+            facing_samples,
+            ultimate_positive_samples,
+            ultimate_negative_samples,
         )
         win_history.append(1 if defused else 0)
 
@@ -1274,33 +1701,73 @@ def main():
             loss = train_step(net, target_net, optimizer, replay, batch_size, gamma)
             if loss is not None:
                 soft_update(target_net, net)
+            if global_step % 4 == 0:
+                optimize_facing(net, optimizer, facing_samples)
+            if global_step % 8 == 0:
+                optimize_ultimate_classification(
+                    net,
+                    optimizer,
+                    ultimate_positive_samples,
+                    ultimate_negative_samples,
+                )
             global_step += 1
 
-        if episode % 500 == 0:
-            eval_win_rate, eval_entered_rate = evaluate_greedy(
-                env, net, obs_dim, num_eval_episodes=200
+        if episode % eval_every == 0:
+            metrics = evaluate_retake_fixed(
+                net, episodes_per_seed=eval_episodes_per_seed
             )
+            score = retake_selection_score(metrics)
 
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
             start_time = time.perf_counter()
 
             print(
-                f"[EVAL EP {episode}/{EPISODE_COUNT}] greedy win_rate(100 episodes) = {eval_win_rate:.3f}, eval_entered_rate={eval_entered_rate:.3f}, elapsed={elapsed_time:.1f}s"
+                f"[FIXED-SEED EVAL EP {episode}/{num_episodes}] "
+                f"defuse={metrics['defuse_rate']:.3f} "
+                f"worst_defuse={metrics['worst_defuse_rate']:.3f} "
+                f"entry={metrics['entry_rate']:.3f} "
+                f"worst_entry={metrics['worst_entry_rate']:.3f} "
+                f"wipe={metrics['wipe_rate']:.3f} lr={current_lr:.2e} "
+                f"elapsed={elapsed_time:.1f}s"
             )
-            if eval_win_rate > best_win_rate:
-                best_win_rate = eval_win_rate
-                torch.save(
-                    net.state_dict(),
-                    os.path.join(SAVE_DIR, "dqn_defender_retake_gc_best_by_eval.pt"),
+            if best_score is None or score > best_score:
+                best_score = score
+                no_improvement_evals = 0
+                torch.save(checkpoint_payload(net, episode, metrics), BEST_MODEL_PATH)
+                print(f"  -> fixed-seed winner updated: {BEST_MODEL_PATH}")
+            else:
+                no_improvement_evals += 1
+                print(
+                    f"  -> no improvement: {no_improvement_evals}/"
+                    f"{early_stop_patience}; best checkpoint kept"
                 )
-                print(f"  -> best model updated (greedy win_rate={best_win_rate:.3f})")
+                if (
+                    early_stop_patience > 0
+                    and no_improvement_evals >= early_stop_patience
+                ):
+                    print(
+                        f"[EARLY STOP] no fixed-seed improvement for "
+                        f"{no_improvement_evals} evaluations"
+                    )
+                    break
 
-    torch.save(
-        net.state_dict(), os.path.join(SAVE_DIR, "dqn_defender_retake_gc_final.pt")
-    )
+    torch.save(checkpoint_payload(net, last_episode), FINAL_MODEL_PATH)
     print("[DONE] training finished.")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Train current GC defender-retake policy")
+    parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
+    parser.add_argument("--eval-every", type=int, default=250)
+    parser.add_argument("--eval-episodes-per-seed", type=int, default=30)
+    parser.add_argument("--learning-rate", type=float, default=None)
+    parser.add_argument("--early-stop-patience", type=int, default=5)
+    args = parser.parse_args()
+    main(
+        episodes=args.episodes,
+        eval_every=args.eval_every,
+        eval_episodes_per_seed=args.eval_episodes_per_seed,
+        learning_rate=args.learning_rate,
+        early_stop_patience=args.early_stop_patience,
+    )

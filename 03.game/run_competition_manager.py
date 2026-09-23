@@ -8,6 +8,7 @@ import random
 import secrets
 import threading
 import traceback
+from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from itertools import combinations
@@ -128,6 +129,222 @@ class MResult:
     defender_side_stats: dict[str, Any] = field(default_factory=dict)
     round_records: list[dict[str, Any]] = field(default_factory=list)
     replay_frames: list[dict[str, Any]] = field(default_factory=list)
+
+
+from datetime import datetime
+from collections import defaultdict
+import os
+import json
+
+
+def extract_team_metrics(rounds):
+    team_metrics = {
+        "team_a": {
+            "kills": 0,
+            "deaths": 0,
+            "assists": 0,
+            "plants": 0,
+            "defuses": 0,
+            "round_win": 0,
+            "round_lose": 0,
+        },
+        "team_d": {
+            "kills": 0,
+            "deaths": 0,
+            "assists": 0,
+            "plants": 0,
+            "defuses": 0,
+            "round_win": 0,
+            "round_lose": 0,
+        },
+    }
+    for r in rounds:
+        winner = r.get("winner", "")
+        if winner == "A":
+            team_metrics["team_a"]["round_win"] += 1
+            team_metrics["team_d"]["round_lose"] += 1
+        elif winner == "D":
+            team_metrics["team_d"]["round_win"] += 1
+            team_metrics["team_a"]["round_lose"] += 1
+        team_a_stats = r.get("team_a_stats", {})
+        team_d_stats = r.get("team_d_stats", {})
+        team_metrics["team_a"]["kills"] += team_a_stats.get("kills", 0)
+        team_metrics["team_a"]["deaths"] += team_a_stats.get("deaths", 0)
+        team_metrics["team_d"]["kills"] += team_d_stats.get("kills", 0)
+        team_metrics["team_d"]["deaths"] += team_d_stats.get("deaths", 0)
+        team_metrics["team_a"]["plants"] += team_a_stats.get("plants", 0)
+        team_metrics["team_d"]["defuses"] += team_d_stats.get("defuses", 0)
+    return team_metrics
+
+
+def extract_tactic_metrics(rounds):
+    tactic_metrics = {
+        "entry_fights": 0,
+        "entry_wins": 0,
+        "post_plant_wins": 0,
+        "retake_wins": 0,
+        "fakes": 0,
+        "default_execs": 0,
+        " executes": 0,
+    }
+    for r in rounds:
+        tactics = r.get("tactics", {})
+        if tactics.get("entry_attempt", False):
+            tactic_metrics["entry_fights"] += 1
+            if tactics.get("entry_win", False):
+                tactic_metrics["entry_wins"] += 1
+        if tactics.get("post_plant", False) and r.get("winner") == "A":
+            tactic_metrics["post_plant_wins"] += 1
+        if tactics.get("retake", False) and r.get("winner") == "D":
+            tactic_metrics["retake_wins"] += 1
+        if tactics.get("fake_exec", False):
+            tactic_metrics["fakes"] += 1
+        if tactics.get("default_exec", False):
+            tactic_metrics["default_execs"] += 1
+    return tactic_metrics
+
+
+def extract_entry_metrics(rounds):
+    entry_data = {
+        "site_a": {"entries": 0, "wins": 0},
+        "site_b": {"entries": 0, "wins": 0},
+    }
+    for r in rounds:
+        entry_site = r.get("entry_site", None)
+        if entry_site in entry_data:
+            entry_data[entry_site]["entries"] += 1
+            if r.get("winner") == "A":
+                entry_data[entry_site]["wins"] += 1
+    return entry_data
+
+
+def extract_individual_efficiency(rounds):
+    players = defaultdict(lambda: {"kills": 0, "deaths": 0, "damage": 0, "mvps": 0})
+    for r in rounds:
+        # rが辞書であることを確認して安全に処理
+        if isinstance(r, dict):
+            # playersキーが存在しない場合はスキップ
+            if "players" not in r:
+                continue
+            # pが辞書であることを確認して処理
+            for p in r["players"]:
+                if isinstance(p, dict) and "name" in p:
+                    pid = p["name"]
+                    players[pid]["kills"] += p.get("kills", 0)
+                    players[pid]["deaths"] += p.get("deaths", 0)
+                    if p.get("mvp", False):
+                        players[pid]["mvps"] += 1
+    return players
+
+
+def calculate_side_outcomes(rounds):
+    side_stats = {
+        "as_attacker": {"wins": 0, "total": 0},
+        "as_defender": {"wins": 0, "total": 0},
+    }
+    for r in rounds:
+        team = r.get("team_playing", "")
+        if team == "A":
+            side_stats["as_attacker"]["total"] += 1
+            if r.get("winner") == "A":
+                side_stats["as_attacker"]["wins"] += 1
+        elif team == "D":
+            side_stats["as_defender"]["total"] += 1
+            if r.get("winner") == "D":
+                side_stats["as_defender"]["wins"] += 1
+    return side_stats
+
+
+def generate_inference_input(match_data):
+    all_rounds = []
+    for map_data in match_data["maps"]:
+        all_rounds.extend(map_data.get("round_records", []))
+    team_metrics = extract_team_metrics(all_rounds)
+    tactic_metrics = extract_tactic_metrics(all_rounds)
+    entry_metrics = extract_entry_metrics(all_rounds)
+    individual_data = extract_individual_efficiency(all_rounds)
+    side_outcomes = calculate_side_outcomes(all_rounds)
+    total_rounds = len(all_rounds)
+    entry_winrate = tactic_metrics["entry_wins"] / max(
+        tactic_metrics["entry_fights"], 1
+    )
+    post_plant_winrate = (
+        tactic_metrics["post_plant_wins"] / max(team_metrics["team_a"]["round_win"], 1)
+        if team_metrics["team_a"]["round_win"] > 0
+        else 0
+    )
+    retake_winrate = (
+        tactic_metrics["retake_wins"] / max(team_metrics["team_d"]["round_win"], 1)
+        if team_metrics["team_d"]["round_win"] > 0
+        else 0
+    )
+    mvp_list = sorted(
+        individual_data.items(), key=lambda x: x[1]["mvps"], reverse=True
+    )[:3]
+    inference_output = {
+        "match_metadata": {
+            "team1": match_data["team1"],
+            "team2": match_data["team2"],
+            "team1_score": match_data["team1_score"],
+            "team2_score": match_data["team2_score"],
+            "total_rounds": total_rounds,
+            "timestamp": datetime.now().isoformat(),
+        },
+        "map_aggregate": {
+            "overall_team_metrics": team_metrics,
+            "overall_tactic_metrics": tactic_metrics,
+            "entry_winrate": round(entry_winrate, 3),
+            "post_plant_winrate": round(post_plant_winrate, 3),
+            "retake_winrate": round(retake_winrate, 3),
+            "side_outcomes": side_outcomes,
+            "entry_site_stats": entry_metrics,
+            "top_mvps": [{"name": k, "stats": v} for k, v in mvp_list],
+        },
+        "round_features": [],
+    }
+    for i, r in enumerate(all_rounds):
+        inference_output["round_features"].append(
+            {
+                "round_number": i + 1,
+                "winner": r.get("winner"),
+                "entry_attempted": r.get("tactics", {}).get("entry_attempt", False),
+                "post_plant_occurred": r.get("tactics", {}).get("post_plant", False),
+                "retake_attempted": r.get("tactics", {}).get("retake", False),
+                "team_a_kills": r.get("team_a_stats", {}).get("kills", 0),
+                "team_d_kills": r.get("team_d_stats", {}).get("kills", 0),
+                "length": r.get("tick_length", 0),
+            }
+        )
+    try:
+        series_name = f"newmatch_{match_data['team1']}_vs_{match_data['team2']}_{match_data['team1_score']}-{match_data['team2_score']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        base_dir = os.path.join(os.getcwd(), "series_data")
+        os.makedirs(base_dir, exist_ok=True)
+        series_dir = os.path.join(base_dir, series_name)
+        os.makedirs(series_dir, exist_ok=True)
+        inference_path = os.path.join(series_dir, f"{series_name}_inference.json")
+        original_path = os.path.join(series_dir, f"{series_name}_original.json")
+        with open(inference_path, "w", encoding="utf-8") as f:
+            json.dump(inference_output, f, ensure_ascii=False, indent=2)
+        match_data_no_replays = {}
+        for k, v in match_data.items():
+            if k == "maps":
+                new_maps = []
+                for m in v:
+                    mcopy = dict(m)
+                    new_maps.append(mcopy)
+                match_data_no_replays[k] = new_maps
+            else:
+                match_data_no_replays[k] = v
+        with open(original_path, "w", encoding="utf-8") as f:
+            json.dump(match_data_no_replays, f, ensure_ascii=False, indent=2)
+        print(f"[Competition Auto-Save] Created directory: {series_dir}")
+        print(f"  - Inference analysis: {os.path.basename(inference_path)}")
+        print(f"  - Original match data: {os.path.basename(original_path)}")
+        print(
+            f"  - Total rounds: {total_rounds}, Series score: {match_data['team1_score']}-{match_data['team2_score']}"
+        )
+    except Exception as e:
+        print(f"[Competition Auto-Save] Error saving match data: {str(e)}")
 
 
 @dataclass
@@ -284,8 +501,12 @@ def player_stats_from_match_stats(
             covers=int(match_stats.get(key, {}).get("covers", 0)),
             first_kills=int(match_stats.get(key, {}).get("first_kills", 0)),
             first_deaths=int(match_stats.get(key, {}).get("first_deaths", 0)),
-            preaim_angle_sum=float(match_stats.get(key, {}).get("preaim_angle_sum", 0.0)),
-            preaim_angle_count=int(match_stats.get(key, {}).get("preaim_angle_count", 0)),
+            preaim_angle_sum=float(
+                match_stats.get(key, {}).get("preaim_angle_sum", 0.0)
+            ),
+            preaim_angle_count=int(
+                match_stats.get(key, {}).get("preaim_angle_count", 0)
+            ),
         )
         for key in player_keys
     ]
@@ -538,9 +759,7 @@ def play_map(
 
         if mental_fatigue_state is not None:
             mental_fatigue_state.clear()
-            mental_fatigue_state.update(
-                getattr(game, "player_mental_fatigue", {})
-            )
+            mental_fatigue_state.update(getattr(game, "player_mental_fatigue", {}))
 
         if render:
             # run()内のmainloopから戻ったことを保証したうえで非表示化。
@@ -582,17 +801,23 @@ def play_map(
         ),
         total_rounds=int(score1 + score2),
         gunfights=exported.get("gunfights", []) if analytics is not None else [],
-        assist_events=exported.get("assist_events", []) if analytics is not None else [],
+        assist_events=(
+            exported.get("assist_events", []) if analytics is not None else []
+        ),
         cover_events=exported.get("cover_events", []) if analytics is not None else [],
         attacker_side_stats=(
             exported.get("side_stats", {}).get("attacker", {})
-            if analytics is not None else {}
+            if analytics is not None
+            else {}
         ),
         defender_side_stats=(
             exported.get("side_stats", {}).get("defender", {})
-            if analytics is not None else {}
+            if analytics is not None
+            else {}
         ),
-        round_records=exported.get("round_records", []) if analytics is not None else [],
+        round_records=(
+            exported.get("round_records", []) if analytics is not None else []
+        ),
         replay_frames=list(getattr(game, "replay_frames", [])),
     )
 
@@ -715,7 +940,10 @@ def run_series_core(
         winner=winner,
         loser=loser,
         maps=maps,
-        total_rounds=sum(int(getattr(item, "total_rounds", item.score1 + item.score2)) for item in maps),
+        total_rounds=sum(
+            int(getattr(item, "total_rounds", item.score1 + item.score2))
+            for item in maps
+        ),
     )
 
 
@@ -912,7 +1140,6 @@ def build_seeded_bracket_slots(
     return list(slots), seeded_teams
 
 
-
 def build_double_elimination_ranking(
     team_names: list[str],
     bracket_matches: list[dict[str, Any]],
@@ -949,11 +1176,7 @@ def build_double_elimination_ranking(
     if runner_up and runner_up != champion:
         fixed.append(runner_up)
 
-    remaining = [
-        name
-        for name in team_names
-        if name not in fixed
-    ]
+    remaining = [name for name in team_names if name not in fixed]
 
     # 原則は2敗目を喫した時点が遅い順。
     # 万一2敗目が記録されていないチームがあれば、最後に敗れた時点、
@@ -1519,12 +1742,16 @@ class TeamRatingStore:
             return
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            saved_default = float(data.get(
-                "default_rating",
-                2500.0 if data.get("version", 1) == 1 else DEFAULT_TEAM_RATING,
-            ))
+            saved_default = float(
+                data.get(
+                    "default_rating",
+                    2500.0 if data.get("version", 1) == 1 else DEFAULT_TEAM_RATING,
+                )
+            )
             # 旧尺度からの平行移動で、順位・レート差・期待勝率を維持する。
-            offset = DEFAULT_TEAM_RATING - saved_default if saved_default == 2500.0 else 0.0
+            offset = (
+                DEFAULT_TEAM_RATING - saved_default if saved_default == 2500.0 else 0.0
+            )
             self.default_rating = saved_default + offset
             self._rating_scale_migrated = bool(offset)
             self._needs_migration = bool(offset)
@@ -1556,7 +1783,9 @@ class TeamRatingStore:
                             elif value is not None:
                                 migrated[key] = round(float(value) + offset, 3)
                     if "team" in migrated:
-                        if str(migrated["team"]) != canonical_preset_name(migrated["team"]):
+                        if str(migrated["team"]) != canonical_preset_name(
+                            migrated["team"]
+                        ):
                             self._needs_migration = True
                         migrated["team"] = canonical_preset_name(migrated["team"])
                     self.history.append(migrated)
@@ -2146,19 +2375,39 @@ def calculate_combat_power_index(
 def _combo_stat_key(stat_key: Any) -> str | None:
     normalized = str(stat_key).strip().lower()
     aliases = {
-        'accuracy': 'accuracy', 'aim': 'accuracy', 'hit': 'accuracy',
-        'hit%': 'accuracy', 'hit_pct': 'accuracy', 'hit_rate': 'accuracy', '命中率': 'accuracy',
-        'hs': 'hs_rate', 'hs%': 'hs_rate', 'hs_pct': 'hs_rate',
-        'hs_rate': 'hs_rate', 'headshot_rate': 'hs_rate', 'ヘッドショット率': 'hs_rate',
-        'dodge': 'dodge_rate', 'dodge%': 'dodge_rate', 'dodge_pct': 'dodge_rate',
-        'dodge_rate': 'dodge_rate', '回避率': 'dodge_rate', '弾除け率': 'dodge_rate',
-        'reaction': 'reaction', 'reaction_speed': 'reaction', '反応速度': 'reaction',
-        'iq': 'iq', 'intelligence': 'iq', '判断力': 'iq', '知能': 'iq',
+        "accuracy": "accuracy",
+        "aim": "accuracy",
+        "hit": "accuracy",
+        "hit%": "accuracy",
+        "hit_pct": "accuracy",
+        "hit_rate": "accuracy",
+        "命中率": "accuracy",
+        "hs": "hs_rate",
+        "hs%": "hs_rate",
+        "hs_pct": "hs_rate",
+        "hs_rate": "hs_rate",
+        "headshot_rate": "hs_rate",
+        "ヘッドショット率": "hs_rate",
+        "dodge": "dodge_rate",
+        "dodge%": "dodge_rate",
+        "dodge_pct": "dodge_rate",
+        "dodge_rate": "dodge_rate",
+        "回避率": "dodge_rate",
+        "弾除け率": "dodge_rate",
+        "reaction": "reaction",
+        "reaction_speed": "reaction",
+        "反応速度": "reaction",
+        "iq": "iq",
+        "intelligence": "iq",
+        "判断力": "iq",
+        "知能": "iq",
     }
     return aliases.get(normalized)
 
 
-def _apply_combo_bonus_to_stats(stats: dict[str, float], stat_key: Any, value: Any) -> None:
+def _apply_combo_bonus_to_stats(
+    stats: dict[str, float], stat_key: Any, value: Any
+) -> None:
     """Mirror game_core combo stat behavior for the five power-index stats."""
     key = _combo_stat_key(stat_key)
     if key is None:
@@ -2168,15 +2417,17 @@ def _apply_combo_bonus_to_stats(stats: dict[str, float], stat_key: Any, value: A
     except (TypeError, ValueError):
         return
 
-    if key in {'accuracy', 'hs_rate', 'dodge_rate'}:
+    if key in {"accuracy", "hs_rate", "dodge_rate"}:
         if abs(amount) > 1.0:
             amount /= 100.0
         updated = float(stats[key]) + amount
-        if key == 'accuracy':
-            stats[key] = max(0.0, updated)  # game_core allows >100% accuracy after combos
+        if key == "accuracy":
+            stats[key] = max(
+                0.0, updated
+            )  # game_core allows >100% accuracy after combos
         else:
             stats[key] = max(0.0, min(1.0, updated))
-    elif key in {'reaction', 'iq'}:
+    elif key in {"reaction", "iq"}:
         stats[key] = max(0.0, float(stats[key]) + amount)
 
 
@@ -2197,11 +2448,11 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
     for name in player_names:
         raw = get_character_combat_stats(name)
         row = {
-            'hs_rate': float(raw.get('hs_rate', 0.0)),
-            'dodge_rate': float(raw.get('dodge_rate', 0.0)),
-            'iq': float(raw.get('iq', 0.0)),
-            'accuracy': float(raw.get('accuracy', 0.0)),
-            'reaction': float(raw.get('reaction', 0.0)),
+            "hs_rate": float(raw.get("hs_rate", 0.0)),
+            "dodge_rate": float(raw.get("dodge_rate", 0.0)),
+            "iq": float(raw.get("iq", 0.0)),
+            "accuracy": float(raw.get("accuracy", 0.0)),
+            "reaction": float(raw.get("reaction", 0.0)),
         }
         base_stats[name] = dict(row)
         combo_stats[name] = dict(row)
@@ -2211,18 +2462,17 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
     for combo in PLAYER_COMBOS:
         if not isinstance(combo, dict):
             continue
-        required = tuple(str(x) for x in combo.get('players', ()))
+        required = tuple(str(x) for x in combo.get("players", ()))
         aliases_to_players = {
-            alias: player_name
-            for player_name, alias in player_aliases.items()
+            alias: player_name for player_name, alias in player_aliases.items()
         }
         if not required or not set(required).issubset(aliases_to_players):
             continue
-        active_combos.append(str(combo.get('name', '名称未設定コンボ')))
+        active_combos.append(str(combo.get("name", "名称未設定コンボ")))
 
-        common = combo.get('bonuses', {})
-        per_player = combo.get('player_bonuses', {})
-        renames = combo.get('renames', {})
+        common = combo.get("bonuses", {})
+        per_player = combo.get("player_bonuses", {})
+        renames = combo.get("renames", {})
         for name in required:
             player_name = aliases_to_players[name]
             if isinstance(common, dict):
@@ -2232,7 +2482,9 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
                 bonuses = per_player.get(name, {})
                 if isinstance(bonuses, dict):
                     for key, value in bonuses.items():
-                        _apply_combo_bonus_to_stats(combo_stats[player_name], key, value)
+                        _apply_combo_bonus_to_stats(
+                            combo_stats[player_name], key, value
+                        )
             if isinstance(renames, dict) and name in renames:
                 player_aliases[player_name] = str(renames[name])
 
@@ -2246,24 +2498,26 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
         combo_power = calculate_combat_power_index(**after)
         base_total += base_power
         combo_total += combo_power
-        rows.append({
-            'name': name,
-            'base': base,
-            'after': after,
-            'base_power': base_power,
-            'combo_power': combo_power,
-            'delta': combo_power - base_power,
-        })
+        rows.append(
+            {
+                "name": name,
+                "base": base,
+                "after": after,
+                "base_power": base_power,
+                "combo_power": combo_power,
+                "delta": combo_power - base_power,
+            }
+        )
 
     return {
-        'team': team_name,
-        'players': rows,
-        'active_combos': active_combos,
-        'base_total': base_total,
-        'combo_total': combo_total,
-        'delta': combo_total - base_total,
-        'base_average': base_total / len(rows) if rows else 0.0,
-        'combo_average': combo_total / len(rows) if rows else 0.0,
+        "team": team_name,
+        "players": rows,
+        "active_combos": active_combos,
+        "base_total": base_total,
+        "combo_total": combo_total,
+        "delta": combo_total - base_total,
+        "base_average": base_total / len(rows) if rows else 0.0,
+        "combo_average": combo_total / len(rows) if rows else 0.0,
     }
 
 
@@ -2888,13 +3142,18 @@ class CompetitionApp:
         self._build_power_index_tab()
 
     def _build_power_index_tab(self) -> None:
-        top = tk.LabelFrame(self.power_tab, text="コンボ後チーム戦闘力指数", padx=10, pady=8)
+        top = tk.LabelFrame(
+            self.power_tab, text="コンボ後チーム戦闘力指数", padx=10, pady=8
+        )
         top.pack(fill="x", padx=8, pady=(8, 4))
 
         tk.Label(top, text="チーム").grid(row=0, column=0, sticky="w")
         self.power_team_box = ttk.Combobox(
-            top, values=self.names, textvariable=self.power_team_var,
-            state="readonly", width=34,
+            top,
+            values=self.names,
+            textvariable=self.power_team_var,
+            state="readonly",
+            width=34,
         )
         self.power_team_box.grid(row=0, column=1, padx=(8, 12), sticky="w")
         tk.Button(top, text="戦闘力指数を計算", command=self._refresh_power_index).grid(
@@ -2909,37 +3168,68 @@ class CompetitionApp:
         ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(7, 0))
 
         tk.Label(
-            self.power_tab, textvariable=self.power_summary_var,
-            font=("Arial", 11, "bold"), anchor="w", fg="#1f5f7a"
+            self.power_tab,
+            textvariable=self.power_summary_var,
+            font=("Arial", 11, "bold"),
+            anchor="w",
+            fg="#1f5f7a",
         ).pack(fill="x", padx=12, pady=(4, 2))
         tk.Label(
-            self.power_tab, textvariable=self.power_combo_var,
-            anchor="w", justify="left", wraplength=1040, fg="#444"
+            self.power_tab,
+            textvariable=self.power_combo_var,
+            anchor="w",
+            justify="left",
+            wraplength=1040,
+            fg="#444",
         ).pack(fill="x", padx=12, pady=(0, 5))
 
         columns = (
-            "player", "base_power", "combo_power", "delta",
-            "hs", "dodge", "iq", "iq_used", "accuracy", "reaction"
+            "player",
+            "base_power",
+            "combo_power",
+            "delta",
+            "hs",
+            "dodge",
+            "iq",
+            "iq_used",
+            "accuracy",
+            "reaction",
         )
         self.power_tree = ttk.Treeview(
             self.power_tab, columns=columns, show="headings", height=7
         )
         headings = {
-            "player": "Player", "base_power": "素指数", "combo_power": "コンボ後",
-            "delta": "増減", "hs": "HS%", "dodge": "回避%", "iq": "IQ",
-            "iq_used": "指数IQ", "accuracy": "命中%", "reaction": "反応",
+            "player": "Player",
+            "base_power": "素指数",
+            "combo_power": "コンボ後",
+            "delta": "増減",
+            "hs": "HS%",
+            "dodge": "回避%",
+            "iq": "IQ",
+            "iq_used": "指数IQ",
+            "accuracy": "命中%",
+            "reaction": "反応",
         }
         widths = {
-            "player": 130, "base_power": 78, "combo_power": 78, "delta": 70,
-            "hs": 62, "dodge": 62, "iq": 58, "iq_used": 64,
-            "accuracy": 62, "reaction": 62,
+            "player": 130,
+            "base_power": 78,
+            "combo_power": 78,
+            "delta": 70,
+            "hs": 62,
+            "dodge": 62,
+            "iq": 58,
+            "iq_used": 64,
+            "accuracy": 62,
+            "reaction": 62,
         }
         for key in columns:
             self.power_tree.heading(key, text=headings[key])
             self.power_tree.column(key, width=widths[key], anchor="center")
         self.power_tree.pack(fill="x", padx=10, pady=(2, 8))
 
-        self.power_team_box.bind("<<ComboboxSelected>>", lambda _e: self._refresh_power_index())
+        self.power_team_box.bind(
+            "<<ComboboxSelected>>", lambda _e: self._refresh_power_index()
+        )
         self._refresh_power_index()
 
     def _refresh_power_index(self) -> None:
@@ -2960,18 +3250,20 @@ class CompetitionApp:
             after = row["after"]
             iq = float(after["iq"])
             self.power_tree.insert(
-                "", "end", values=(
+                "",
+                "end",
+                values=(
                     row["name"],
                     f'{row["base_power"]:.1f}',
                     f'{row["combo_power"]:.1f}',
                     f'{row["delta"]:+.1f}',
                     f'{after["hs_rate"] * 100:.1f}',
                     f'{after["dodge_rate"] * 100:.1f}',
-                    f'{iq:.0f}',
-                    f'{min(iq, COMBAT_POWER_IQ_EFFECTIVE_CAP):.0f}',
+                    f"{iq:.0f}",
+                    f"{min(iq, COMBAT_POWER_IQ_EFFECTIVE_CAP):.0f}",
                     f'{after["accuracy"] * 100:.1f}',
                     f'{after["reaction"]:.0f}',
-                )
+                ),
             )
 
         self.power_summary_var.set(
@@ -2981,7 +3273,8 @@ class CompetitionApp:
         )
         combos = report["active_combos"]
         self.power_combo_var.set(
-            "発動コンボ: " + (" / ".join(combos) if combos else "なし")
+            "発動コンボ: "
+            + (" / ".join(combos) if combos else "なし")
             + "  ※ IGL補正・覚醒・メンタル/コンディション等は含めません"
         )
 
@@ -3198,7 +3491,9 @@ class CompetitionApp:
         body.config(state="disabled")
 
     def redraw_visual(self) -> None:
-        if not hasattr(self, "visual_canvas") or getattr(self, "_visual_canvas_dead", False):
+        if not hasattr(self, "visual_canvas") or getattr(
+            self, "_visual_canvas_dead", False
+        ):
             return
         try:
             self.visual_canvas.delete("all")
@@ -4285,6 +4580,18 @@ class CompetitionApp:
                         f"\n{context} FINAL: {series.team1} {series.team1_wins} - {series.team2_wins} {series.team2}"
                         f" / WINNER: {series.winner}\n"
                     )
+                    # Always auto-save series data regardless of rating setting
+                    series_dict = {
+                        "team1": series.team1,
+                        "team2": series.team2,
+                        "team1_score": series.team1_wins,
+                        "team2_score": series.team2_wins,
+                        "maps": [],
+                    }
+                    for m in series.maps:
+                        map_dict = asdict(m)
+                        series_dict["maps"].append(map_dict)
+                    generate_inference_input(series_dict)
                     if self.current_rating_enabled:
                         rating_update = self.rating_store.update_series(
                             series,

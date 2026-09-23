@@ -61,11 +61,11 @@ import torch.nn as nn
 try:
     from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -77,7 +77,8 @@ from character_stats_gc import (
 ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
 ACTION_ULTIMATE = 6
 LEGACY_N_ACTIONS = 6
-N_ACTIONS = 7
+ACTION_COLLECT_ORB = 7
+N_ACTIONS = 8
 _MOVE_DELTA = {
     ACTION_UP: (-1, 0),
     ACTION_DOWN: (1, 0),
@@ -110,6 +111,7 @@ SCREEN_COMMITMENT_OBS_DIM = 90  # v9: exact U/D/L/R screen step plus active/read
 ULTIMATE_CONTEXT_OBS_DIM = 94  # v9: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
 FAKE_WAIT_SUPPORT_OBS_DIM = FACING_HEAD_OBS_DIM + 6  # v12: waiting bodyguard context.
+ORB_OBS_DIM = FAKE_WAIT_SUPPORT_OBS_DIM + 4
 FACING_HEAD_VERSION = 2
 
 
@@ -272,7 +274,8 @@ class LearningAttackerEscortGCController:
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
-        expected_dim = (FAKE_WAIT_SUPPORT_OBS_DIM if self.positioning_version >= 12 else
+        expected_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
+                        FAKE_WAIT_SUPPORT_OBS_DIM if self.positioning_version >= 12 else
                         FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                         ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 9 else
                         ENTRY_SUPPORT_OBS_DIM if self.positioning_version >= 8 else
@@ -282,7 +285,7 @@ class LearningAttackerEscortGCController:
                         SCREENING_OBS_DIM if self.positioning_version >= 4 else
                         NAVIGATION_OBS_DIM if self.positioning_version >= 3 else
                         TACTICAL_OBS_DIM if self.positioning_version >= 2 else OBS_DIM)
-        expected_actions = N_ACTIONS if self.positioning_version >= 8 else LEGACY_N_ACTIONS
+        expected_actions = N_ACTIONS if self.positioning_version >= 13 else (7 if self.positioning_version >= 8 else LEGACY_N_ACTIONS)
         if obs_dim != expected_dim or n_actions != expected_actions:
             raise ValueError(
                 f"チェックポイントの観測/行動空間がこのコントローラーと不一致です: "
@@ -746,6 +749,10 @@ class LearningAttackerEscortGCController:
             obs_arr = np.concatenate((obs_arr, fake_wait_support_features(
                 self.game, char, chars, cache
             )))
+        if self.positioning_version >= 13:
+            obs_arr = np.concatenate((obs_arr, orb_context_features(
+                char, getattr(self.game, "available_orbs", ())
+            )))
         return obs_arr
 
     def _ultimate_action(self, char, chars):
@@ -768,7 +775,7 @@ class LearningAttackerEscortGCController:
 
     def _action_mask(self, char, grid, chars):
         r, c = int(char.pos[0]), int(char.pos[1])
-        action_count = N_ACTIONS if self.positioning_version >= 8 else LEGACY_N_ACTIONS
+        action_count = N_ACTIONS if self.positioning_version >= 13 else (7 if self.positioning_version >= 8 else LEGACY_N_ACTIONS)
         mask = np.ones(action_count, dtype=bool)
         for a, (dr, dc) in _MOVE_DELTA.items():
             if a == ACTION_STAY:
@@ -800,6 +807,10 @@ class LearningAttackerEscortGCController:
 
         if self.positioning_version >= 8:
             mask[ACTION_ULTIMATE] = self._ultimate_action(char, chars) is not None
+        if self.positioning_version >= 13:
+            mask[ACTION_COLLECT_ORB] = can_collect_orb(
+                char, getattr(self.game, "available_orbs", ())
+            )
 
         return mask
 
@@ -865,6 +876,8 @@ class LearningAttackerEscortGCController:
         mask = self._action_mask(char, grid, chars)
 
         action = self._select_action(obs, mask)
+        if action == ACTION_COLLECT_ORB:
+            return list(char.pos), "COLLECT_ORB"
         facing = self._select_facing(obs, action)
         if facing is not None and not getattr(char, "facing_forced_this_tick", False):
             char.facing = facing

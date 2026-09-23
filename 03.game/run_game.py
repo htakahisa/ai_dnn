@@ -369,6 +369,15 @@ class VisualFPSBattle(
                     "ultimate": str(getattr(char, "ultimate_name", "")),
                     "ultimate_points": int(getattr(char, "ultimate_points", 0)),
                     "ultimate_cost": int(getattr(char, "ultimate_cost", 0)),
+                    # Replay UI data: current normal-ability inventory.
+                    # Older saved frames do not have these keys and are
+                    # intentionally treated as having zero charges.
+                    "ability": str(getattr(char, "ability_name", "")),
+                    "ability_charges": int(
+                        getattr(char, "smoke_charges", 0)
+                        + getattr(char, "flash_charges", 0)
+                        + getattr(char, "recon_charges", 0)
+                    ),
                     "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
                     # Per-team visibility is stored for fog-of-war replay views.
                     # Own players are always visible to their own team.

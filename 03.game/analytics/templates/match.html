@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Details - {{ match.match_metadata.team1 }} vs {{ match.match_metadata.team2 }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- ヘッダー -->
+        <header class="mb-8">
+            <a href="/" class="text-blue-400 hover:text-blue-300 mb-4 inline-block">← 一覧に戻る</a>
+            <div class="text-center">
+                <h1 class="text-4xl font-bold mb-2">
+                    {{ match.match_metadata.team1 }} <span class="text-blue-400">{{ match.match_metadata.team1_score }}</span> - <span class="text-red-400">{{ match.match_metadata.team2_score }}</span> {{ match.match_metadata.team2 }}
+                </h1>
+                <p class="text-gray-400">試合日時: {{ match.match_metadata.timestamp }}</p>
+            </div>
+        </header>
+
+        <!-- マップ情報 & ラウンドスコア可視化 -->
+        <section class="bg-gray-800 rounded-2xl p-6 border border-gray-700 mb-10">
+            <h2 class="text-2xl font-bold mb-6">🗺️ マップ: {{ match.match_metadata.map_name }}</h2>
+            
+            <!-- 累積スコア表示 -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-center">
+                        <p class="text-3xl font-bold text-blue-400">{{ match.match_metadata.team1_score }}</p>
+                        <p class="text-sm text-gray-400">{{ match.match_metadata.team1 }}</p>
+                    </div>
+                    <div class="flex-1 mx-8 h-4 bg-gray-700 rounded-full overflow-hidden">
+                        {% set total_rounds = match.match_metadata.team1_score + match.match_metadata.team2_score %}
+                        {% if total_rounds > 0 %}
+                            {% set team1_width = (match.match_metadata.team1_score / total_rounds) * 100 %}
+                            <div class="h-full bg-blue-500 float-left" style="width: {{ team1_width }}%"></div>
+                            <div class="h-full bg-red-500 float-right" style="width: {{ 100 - team1_width }}%"></div>
+                        {% endif %}
+                    </div>
+                    <div class="text-center">
+                        <p class="text-3xl font-bold text-red-400">{{ match.match_metadata.team2_score }}</p>
+                        <p class="text-sm text-gray-400">{{ match.match_metadata.team2 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ラウンドごとの勝者表示 -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">ラウンド別勝敗</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for round in match.round_features %}
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm
+                        {% if round.winner_team == match.match_metadata.team1 %}bg-blue-600{% else %}bg-red-600{% endif %}">
+                        {{ round.round_number }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="flex gap-6 mt-4 text-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-blue-600 rounded"></div>
+                        <span>{{ match.match_metadata.team1 }} (青)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-red-600 rounded"></div>
+                        <span>{{ match.match_metadata.team2 }} (赤)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- チーム別分析セクション -->
+        <section class="grid md:grid-cols-2 gap-6 mb-10">
+            <!-- 最初のチーム -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <h3 class="text-2xl font-bold mb-4 text-blue-400">{{ match.match_metadata.team1 }} の分析</h3>
+                
+                <!-- チームメトリクス -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold mb-3">📊 チーム統計</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="bg-gray-700 p-2 rounded">キル: {{ match.map_aggregate[match.match_metadata.team1].kills }}</div>
+                        <div class="bg-gray-700 p-2 rounded">デス: {{ match.map_aggregate[match.match_metadata.team1].deaths }}</div>
+                        <div class="bg-gray-700 p-2 rounded">爆弾設置: {{ match.map_aggregate[match.match_metadata.team1].plants }}</div>
+                        <div class="bg-gray-700 p-2 rounded">爆弾解除: {{ match.map_aggregate[match.match_metadata.team1].defuses }}</div>
+                    </div>
+                </div>
+
+                <!-- 勝率データ -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold mb-3">🏆 勝率</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">アタッカー勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-blue-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team1].attacker_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team1].attacker_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team1].attacker_wins }}/{{ match.map_aggregate[match.match_metadata.team1].attacker_rounds }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">ディフェンダー勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-red-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team1].defender_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team1].defender_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team1].defender_wins }}/{{ match.map_aggregate[match.match_metadata.team1].defender_rounds }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">ポストプラント勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-green-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team1].post_plant_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team1].post_plant_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team1].post_plant_wins }}/{{ match.map_aggregate[match.match_metadata.team1].plant_count }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">リテイク勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-purple-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team1].retake_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team1].retake_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team1].retake_wins }}/{{ match.map_aggregate[match.match_metadata.team1].retake_attempts }})</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI分析結果 -->
+                <div>
+                    <h4 class="text-lg font-semibold mb-3">🤖 AI改善点</h4>
+                    {% if match.ai_analysis_errors.get(match.match_metadata.team1) %}
+                    <p class="p-3 rounded text-sm bg-gray-700 text-gray-200">{{ match.ai_analysis_errors[match.match_metadata.team1] }}</p>
+                    {% elif not match.ai_analysis[match.match_metadata.team1] %}
+                    <p class="p-3 rounded text-sm bg-gray-700 text-gray-200">AIが改善点を選びませんでした。</p>
+                    {% endif %}
+                    <ul class="space-y-2 list-none pl-0">
+                        {% for analysis in match.ai_analysis[match.match_metadata.team1] %}
+                        <li class="p-3 rounded text-sm {% if analysis.severity == 'warning' %}bg-red-900/30 border border-red-700{% else %}bg-green-900/30 border border-green-700{% endif %}">
+                            <span class="mr-1">{% if analysis.severity == 'warning' %}⚠️{% else %}✅{% endif %}</span>
+                            {{ analysis.text }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 2番目のチーム -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <h3 class="text-2xl font-bold mb-4 text-red-400">{{ match.match_metadata.team2 }} の分析</h3>
+                
+                <!-- チームメトリクス -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold mb-3">📊 チーム統計</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="bg-gray-700 p-2 rounded">キル: {{ match.map_aggregate[match.match_metadata.team2].kills }}</div>
+                        <div class="bg-gray-700 p-2 rounded">デス: {{ match.map_aggregate[match.match_metadata.team2].deaths }}</div>
+                        <div class="bg-gray-700 p-2 rounded">爆弾設置: {{ match.map_aggregate[match.match_metadata.team2].plants }}</div>
+                        <div class="bg-gray-700 p-2 rounded">爆弾解除: {{ match.map_aggregate[match.match_metadata.team2].defuses }}</div>
+                    </div>
+                </div>
+
+                <!-- 勝率データ -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold mb-3">🏆 勝率</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">アタッカー勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-blue-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team2].attacker_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team2].attacker_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team2].attacker_wins }}/{{ match.map_aggregate[match.match_metadata.team2].attacker_rounds }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">ディフェンダー勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-red-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team2].defender_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team2].defender_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team2].defender_wins }}/{{ match.map_aggregate[match.match_metadata.team2].defender_rounds }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">ポストプラント勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-green-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team2].post_plant_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team2].post_plant_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team2].post_plant_wins }}/{{ match.map_aggregate[match.match_metadata.team2].plant_count }})</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1 text-sm">リテイク勝率</p>
+                            <div class="w-full bg-gray-700 rounded-full h-3">
+                                <div class="bg-purple-500 h-3 rounded-full" style="width: {{ match.map_aggregate[match.match_metadata.team2].retake_winrate * 100 }}%"></div>
+                            </div>
+                            <p class="text-right text-xs mt-1">{{ "%.1f"|format(match.map_aggregate[match.match_metadata.team2].retake_winrate * 100) }}% ({{ match.map_aggregate[match.match_metadata.team2].retake_wins }}/{{ match.map_aggregate[match.match_metadata.team2].retake_attempts }})</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI分析結果 -->
+                <div>
+                    <h4 class="text-lg font-semibold mb-3">🤖 AI改善点</h4>
+                    {% if match.ai_analysis_errors.get(match.match_metadata.team2) %}
+                    <p class="p-3 rounded text-sm bg-gray-700 text-gray-200">{{ match.ai_analysis_errors[match.match_metadata.team2] }}</p>
+                    {% elif not match.ai_analysis[match.match_metadata.team2] %}
+                    <p class="p-3 rounded text-sm bg-gray-700 text-gray-200">AIが改善点を選びませんでした。</p>
+                    {% endif %}
+                    <ul class="space-y-2 list-none pl-0">
+                        {% for analysis in match.ai_analysis[match.match_metadata.team2] %}
+                        <li class="p-3 rounded text-sm {% if analysis.severity == 'warning' %}bg-red-900/30 border border-red-700{% else %}bg-green-900/30 border border-green-700{% endif %}">
+                            <span class="mr-1">{% if analysis.severity == 'warning' %}⚠️{% else %}✅{% endif %}</span>
+                            {{ analysis.text }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 教師データ入力 -->
+        <section class="bg-gray-800 rounded-2xl p-6 border border-yellow-700 mb-10">
+            <h2 class="text-2xl font-bold mb-2 text-yellow-300">📝 教師データを入力</h2>
+            <p class="text-gray-300 text-sm mb-5">
+                この試合の各チームについて、改善が必要な項目を手動で選びます。保存した内容は XGBoost 学習用の JSONL に追加されます。
+            </p>
+            <form method="post" action="{{ url_for('save_training_labels', match_path=match_path) }}">
+                <div class="grid md:grid-cols-2 gap-6">
+                    {% for team_name in [match.match_metadata.team1, match.match_metadata.team2] %}
+                    <div class="bg-gray-900 rounded-xl p-4">
+                        <h3 class="text-lg font-semibold mb-4">{{ team_name }}</h3>
+                        <div class="space-y-3">
+                            {% set team_missing = missing_labels[team_name] %}
+                            {% if team_missing %}
+                            <p class="text-yellow-400 text-sm mb-2">⚠️ 以下の項目が未設定です。設定して保存してください。</p>
+                            {% for rule in analysis_rules %}
+                            {% if rule.variable in team_missing %}
+                            {% set field_name = team_name ~ '__' ~ rule.variable %}
+                            {% if rule.type == 'bool' %}
+                            <label class="flex items-start gap-3 text-sm text-gray-200">
+                                <input type="checkbox" name="{{ field_name }}" value="true" class="mt-1 h-4 w-4">
+                                <span>{{ rule.description }}</span>
+                            </label>
+                            {% else %}
+                            <label class="block text-sm text-gray-200">
+                                <span class="block mb-1">{{ rule.description }}</span>
+                                <select name="{{ field_name }}" class="w-full rounded bg-gray-700 border-gray-600 px-2 py-1">
+                                    {% for value in rule.enum_values %}
+                                    <option value="{{ value }}" {% if value == rule.default %}selected{% endif %}>{{ value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            {% endif %}
+                            {% endif %}
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-green-400 text-sm">✅ すべての項目が設定済みです。</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="mt-6 rounded bg-yellow-600 hover:bg-yellow-500 px-5 py-2 font-semibold text-gray-900">
+                    教師データを保存
+                </button>
+            </form>
+        </section>
+
+        <!-- ラウンド履歴 -->
+        <section class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+            <h2 class="text-2xl font-bold mb-6">📜 ラウンド履歴</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-3 px-2 text-left">ラウンド</th>
+                            <th class="py-3 px-2 text-left">勝者</th>
+                            <th class="py-3 px-2 text-center">エントリー試行</th>
+                            <th class="py-3 px-2 text-center">ポストプラント</th>
+                            <th class="py-3 px-2 text-center">リテイク対象</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for round in match.round_features %}
+                        <tr class="border-b border-gray-700 hover:bg-gray-750">
+                            <td class="py-2 px-2 font-mono">{{ round.round_number }}</td>
+                            <td class="py-2 px-2">
+                                <span class="px-2 py-1 rounded text-xs {% if round.winner == 'attacker' %}bg-blue-600{% else %}bg-red-600{% endif %}">
+                                    {{ round.winner }}
+                                </span>
+                            </td>
+                            <td class="py-2 px-2 text-center">{{ "✅" if round.entry_attempted else "❌" }}</td>
+                            <td class="py-2 px-2 text-center">{{ "✅" if round.post_plant_occurred else "❌" }}</td>
+                            <td class="py-2 px-2 text-center">{{ "✅" if round.retake_attempted else "❌" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {% if original_data %}
+        <!-- リプレイ再生セクション -->
+        <section class="bg-gray-800 rounded-2xl p-6 border border-gray-700 mt-10">
+            <h2 class="text-2xl font-bold mb-6">🎮 リプレイ再生</h2>
+            
+            <!-- リプレイコントローラー -->
+            <div class="mb-6 flex flex-wrap items-center gap-4">
+                <button id="playBtn" onclick="togglePlay()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all">
+                    ▶️ 再生
+                </button>
+                <button onclick="resetReplay()" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all">
+                    🔄 リセット
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-400">再生速度:</span>
+                    <select id="speedSelect" onchange="changeSpeed()" class="bg-gray-700 rounded px-2 py-1 text-sm">
+                        <option value="0.5">0.5x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[300px]">
+                    <input type="range" id="progressSlider" min="0" max="{{ original_data.rounds|length - 1 }}" value="0" 
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" onchange="seekTo(this.value)">
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>ラウンド 1</span>
+                        <span id="currentRound">現在: ラウンド 1</span>
+                        <span>ラウンド {{ original_data.rounds|length }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 試合画面 -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- メインゲーム画面 -->
+                <div class="lg:col-span-3">
+                    <div class="bg-gradient-to-br from-green-900/50 to-gray-900 rounded-xl p-6 border border-gray-700 relative" style="min-height: 500px;">
+                        <!-- スコアボード -->
+                        <div class="flex justify-between items-center mb-8 bg-gray-800/80 rounded-lg p-4">
+                            <div class="text-center">
+                                <p class="text-3xl font-bold text-blue-400" id="team1Score">{{ match.match_metadata.team1_score }}</p>
+                                <p class="text-sm text-gray-400">{{ match.match_metadata.team1 }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-xl font-bold" id="roundName">ラウンド 1</p>
+                                <p class="text-sm text-gray-400" id="roundTimer">00:00</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-3xl font-bold text-red-400" id="team2Score">{{ match.match_metadata.team2_score }}</p>
+                                <p class="text-sm text-gray-400">{{ match.match_metadata.team2 }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-8 grid grid-cols-1 xl:grid-cols-[180px_minmax(0,1fr)_180px] gap-3 items-start">
+                            <div class="rounded-lg border border-blue-800 bg-blue-950/40 p-2">
+                                <h4 class="text-sm font-bold text-blue-300 mb-2">チームA</h4>
+                                <div id="replayTeamA" class="space-y-2"></div>
+                            </div>
+                            <div class="rounded-lg overflow-hidden border border-gray-700 bg-slate-950">
+                                <canvas id="replayCanvas" width="880" height="520" class="w-full h-auto"></canvas>
+                                <div id="replayFrameStatus" class="px-3 py-2 text-xs text-gray-400">フレーム 0</div>
+                            </div>
+                            <div class="rounded-lg border border-red-800 bg-red-950/40 p-2">
+                                <h4 class="text-sm font-bold text-red-300 mb-2">チームD</h4>
+                                <div id="replayTeamD" class="space-y-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- プレイヤー表示エリア -->
+                        <div class="grid grid-cols-2 gap-8 mb-8">
+                            <!-- チーム1プレイヤー -->
+                            <div class="bg-blue-900/30 rounded-xl p-4 border border-blue-800">
+                                <h3 class="text-lg font-bold text-blue-400 mb-3">{{ match.match_metadata.team1 }}</h3>
+                                <div id="team1Players" class="grid grid-cols-2 gap-2">
+                                    {% for player in original_data.players if player.team == match.match_metadata.team1 %}
+                                    <div class="bg-gray-800 rounded-lg p-2 text-center player-card" id="player-{{ player.name }}">
+                                        <p class="text-sm font-semibold">{{ player.name }}</p>
+                                        <p class="text-xs text-gray-400">HP: <span class="hp-text">100</span></p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- チーム2プレイヤー -->
+                            <div class="bg-red-900/30 rounded-xl p-4 border border-red-800">
+                                <h3 class="text-lg font-bold text-red-400 mb-3">{{ match.match_metadata.team2 }}</h3>
+                                <div id="team2Players" class="grid grid-cols-2 gap-2">
+                                    {% for player in original_data.players if player.team == match.match_metadata.team2 %}
+                                    <div class="bg-gray-800 rounded-lg p-2 text-center player-card" id="player-{{ player.name }}">
+                                        <p class="text-sm font-semibold">{{ player.name }}</p>
+                                        <p class="text-xs text-gray-400">HP: <span class="hp-text">100</span></p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- イベントログ -->
+                        <div class="bg-gray-900/80 rounded-lg p-4 h-32 overflow-y-auto">
+                            <h4 class="text-sm font-semibold mb-2 text-gray-400">イベントログ</h4>
+                            <div id="eventLog" class="text-xs space-y-1">
+                                <p class="text-green-400">ラウンド開始！</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ラウンド情報サイドバー -->
+                <div class="lg:col-span-1">
+                    <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                        <h3 class="text-lg font-bold mb-4">ラウンド情報</h3>
+                        <div id="roundInfo" class="space-y-3 text-sm">
+                            <p><span class="text-gray-400">アタッカー:</span> <span id="attackerTeam">{{ original_data.rounds[0].attacker_team if original_data.rounds else '-' }}</span></p>
+                            <p><span class="text-gray-400">爆弾設置:</span> <span id="bombPlanted">❌</span></p>
+                            <p><span class="text-gray-400">爆弾解除:</span> <span id="bombDefused">❌</span></p>
+                            <p><span class="text-gray-400">キル数:</span> <span id="roundKills">0</span></p>
+                        </div>
+
+                        <!-- 全ラウンドリスト -->
+                        <h3 class="text-lg font-bold mt-6 mb-4">全ラウンド</h3>
+                        <div class="grid grid-cols-4 gap-2">
+                            {% for i in range(original_data.rounds|length) %}
+                            <button onclick="seekTo({{ i }})" class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm
+                                {% if original_data.rounds[i].winner == match.match_metadata.team1 %}bg-blue-600{% else %}bg-red-600{% endif %}
+                                hover:scale-110 transition-transform" id="roundBtn-{{ i }}">
+                                {{ i + 1 }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- リプレイ再生用JavaScript -->
+        <script>
+            // リプレイデータの準備
+            // Jinja's ``safe`` filter renders Python dict syntax, which is
+            // not valid JavaScript when strings contain single quotes.  Use
+            // tojson so the replay script can always be parsed by the browser.
+            const originalData = {{ original_data|tojson if original_data else 'null' }};
+            if (originalData) {
+                const replayFrames = {{ replay_frames|tojson }};
+                const replayMapGrid = {{ map_grid|tojson }};
+                const replayCanvas = document.getElementById('replayCanvas');
+                const replayContext = replayCanvas ? replayCanvas.getContext('2d') : null;
+                const replayRows = 26;
+                const replayCols = 44;
+                let replayFrameIndex = 0;
+
+                function drawReplayFrame(frame) {
+                    if (!replayContext || !frame) return;
+                    const cell = Math.min(replayCanvas.width / replayCols, replayCanvas.height / replayRows);
+                    replayContext.fillStyle = '#0f172a';
+                    replayContext.fillRect(0, 0, replayCanvas.width, replayCanvas.height);
+                    for (let row = 0; row < replayRows; row++) {
+                        for (let col = 0; col < replayCols; col++) {
+                            const mapValue = replayMapGrid[row] && replayMapGrid[row][col];
+                            replayContext.fillStyle = mapValue === 1 ? '#475569' : (mapValue === 2 ? '#fef08a' : '#ffffff');
+                            replayContext.fillRect(col * cell, row * cell, cell - 1, cell - 1);
+                        }
+                    }
+                    (frame.smokes || []).forEach(smoke => (smoke.cells || []).forEach(([row, col]) => {
+                        replayContext.fillStyle = 'rgba(217, 119, 6, .72)';
+                        replayContext.beginPath();
+                        replayContext.arc((col + .5) * cell, (row + .5) * cell, cell * .48, 0, Math.PI * 2);
+                        replayContext.fill();
+                    }));
+                    if (frame.target_plant_pos) {
+                        const [row, col] = frame.target_plant_pos;
+                        replayContext.strokeStyle = '#facc15';
+                        replayContext.lineWidth = 2;
+                        replayContext.strokeRect(col * cell + 2, row * cell + 2, cell - 4, cell - 4);
+                    }
+                    if (frame.planted_pos) {
+                        const [row, col] = frame.planted_pos;
+                        replayContext.fillStyle = '#b45309';
+                        replayContext.fillRect(col * cell + 3, row * cell + 3, cell - 6, cell - 6);
+                    }
+                    const drawBurstCells = (bursts, color) => (bursts || []).forEach(burst => (burst.cells || []).forEach(([row, col]) => {
+                        replayContext.fillStyle = color;
+                        replayContext.fillRect(col * cell + 2, row * cell + 2, cell - 4, cell - 4);
+                    }));
+                    drawBurstCells(frame.flash_bursts, 'rgba(250, 204, 21, .8)');
+                    drawBurstCells(frame.recon_bursts, 'rgba(14, 165, 233, .65)');
+                    (frame.escape_portals || []).forEach(portal => {
+                        if (!portal.pos) return;
+                        const [row, col] = portal.pos;
+                        replayContext.strokeStyle = '#06b6d4';
+                        replayContext.lineWidth = 3;
+                        replayContext.strokeRect(col * cell + 2, row * cell + 2, cell - 4, cell - 4);
+                    });
+                    const drawProjectiles = (items, color) => (items || []).forEach(item => {
+                        const path = item.path || [];
+                        if (!path.length) return;
+                        const point = path[Math.min(Number(item.progress || 0), path.length - 1)];
+                        if (!point) return;
+                        const [row, col] = point;
+                        replayContext.fillStyle = color;
+                        replayContext.beginPath();
+                        replayContext.arc((col + .5) * cell, (row + .5) * cell, cell * .22, 0, Math.PI * 2);
+                        replayContext.fill();
+                    });
+                    drawProjectiles(frame.flash_projectiles, '#facc15');
+                    drawProjectiles(frame.recon_projectiles, '#22d3ee');
+                    (frame.monitor_drones || []).forEach(drone => {
+                        const point = drone.pos || drone;
+                        if (!Array.isArray(point)) return;
+                        const [row, col] = point;
+                        replayContext.fillStyle = '#a855f7';
+                        replayContext.fillRect(col * cell + 4, row * cell + 4, cell - 8, cell - 8);
+                    });
+                    (frame.tunnel_bursts || []).forEach(burst => {
+                        const point = burst.pos || burst;
+                        if (!Array.isArray(point)) return;
+                        const [row, col] = point;
+                        replayContext.strokeStyle = '#ec4899';
+                        replayContext.lineWidth = 3;
+                        replayContext.beginPath();
+                        replayContext.arc((col + .5) * cell, (row + .5) * cell, cell * .4, 0, Math.PI * 2);
+                        replayContext.stroke();
+                    });
+                    (frame.chars || []).forEach(char => {
+                        if (!char.pos) return;
+                        const [row, col] = char.pos;
+                        replayContext.fillStyle = char.alive === false ? '#64748b' : (char.team === 'A' ? '#60a5fa' : '#f87171');
+                        replayContext.beginPath();
+                        replayContext.arc((col + .5) * cell, (row + .5) * cell, cell * .34, 0, Math.PI * 2);
+                        replayContext.fill();
+                        replayContext.strokeStyle = char.has_spike ? '#facc15' : '#111827';
+                        replayContext.lineWidth = char.has_spike ? 3 : 1;
+                        replayContext.stroke();
+                        replayContext.fillStyle = '#f8fafc';
+                        replayContext.font = `${Math.max(8, cell * .42)}px sans-serif`;
+                        replayContext.textAlign = 'center';
+                        replayContext.fillText(char.display_name || char.name || '', (col + .5) * cell, row * cell - 2);
+                    });
+                    updateReplayPanels(frame);
+                    const status = document.getElementById('replayFrameStatus');
+                    if (status) status.textContent = `フレーム ${replayFrameIndex + 1}/${replayFrames.length}  R${frame.round || '-'} / T${frame.tick ?? '-'}`;
+                }
+
+                function updateReplayPanels(frame) {
+                    const renderTeam = (team, targetId) => {
+                        const target = document.getElementById(targetId);
+                        if (!target) return;
+                        target.replaceChildren();
+                        (frame.chars || []).filter(char => char.team === team).forEach(char => {
+                            const card = document.createElement('div');
+                            card.className = 'rounded bg-slate-900/80 p-2 text-[10px]';
+                            const name = document.createElement('div');
+                            name.className = 'font-bold truncate';
+                            name.textContent = char.display_name || char.name || '-';
+                            const hp = document.createElement('div');
+                            hp.textContent = `HP ${Math.max(0, Math.round(char.hp ?? 0))}${char.alive === false ? ' ☠' : ''}`;
+                            const ability = document.createElement('div');
+                            const abilityName = char.ability || '-';
+                            const abilityCount = Number(char.ability_charges || 0);
+                            const abilityIcon = { FLASH: '🟡', SMOKE: '🟠', RECON: '🔵' }[abilityName] || '⚪';
+                            ability.textContent = abilityCount > 0
+                                ? `${abilityIcon} ${abilityName} ×${abilityCount}`
+                                : 'アビリティ なし';
+                            ability.className = abilityCount > 0 ? 'text-cyan-200' : 'text-gray-500';
+                            const ultimate = document.createElement('div');
+                            ultimate.textContent = `ULT ${char.ultimate || '-'} ${char.ultimate_points ?? 0}/${char.ultimate_cost ?? '-'}`;
+                            const state = document.createElement('div');
+                            state.textContent = `${char.has_spike ? 'SPIKE ' : ''}${char.blind ? 'BLIND ' : ''}${char.revealed ? 'REVEALED' : ''}`;
+                            state.className = 'text-yellow-300 min-h-[12px]';
+                            card.append(name, hp, ability, ultimate, state);
+                            target.appendChild(card);
+                        });
+                    };
+                    renderTeam('A', 'replayTeamA');
+                    renderTeam('D', 'replayTeamD');
+                }
+
+                let isPlaying = false;
+                let currentRoundIndex = 0;
+                let currentEventIndex = 0;
+                let playbackSpeed = 1;
+                let playInterval = null;
+                let team1Score = parseInt(document.getElementById('team1Score').textContent);
+                let team2Score = parseInt(document.getElementById('team2Score').textContent);
+
+                // 全イベントをフラットに取得
+                const allEvents = [];
+                originalData.rounds.forEach((round, roundIdx) => {
+                    if (round.events) {
+                        round.events.forEach(event => {
+                            allEvents.push({ ...event, roundIndex: roundIdx });
+                        });
+                    }
+                });
+
+                // Summary-only competition replays do not contain per-event
+                // logs.  Generate round-level events so Play still advances
+                // through the recorded match instead of silently doing
+                // nothing.
+                if (allEvents.length === 0) {
+                    originalData.rounds.forEach((round, roundIdx) => {
+                        if (round.planted) {
+                            allEvents.push({
+                                type: 'bomb_plant',
+                                planter: round.attacker_team || 'Attacker',
+                                roundIndex: roundIdx
+                            });
+                        }
+                        allEvents.push({
+                            type: 'round_end',
+                            winner: round.winner,
+                            attackerTeam: round.attacker_team,
+                            defenderTeam: round.defender_team,
+                            reason: round.reason,
+                            roundIndex: roundIdx
+                        });
+                    });
+                }
+
+                function togglePlay() {
+                    isPlaying = !isPlaying;
+                    const btn = document.getElementById('playBtn');
+                    if (isPlaying) {
+                        btn.textContent = '⏸️ 一時停止';
+                        btn.className = 'px-6 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-semibold transition-all';
+                        startPlayback();
+                    } else {
+                        btn.textContent = '▶️ 再生';
+                        btn.className = 'px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all';
+                        stopPlayback();
+                    }
+                }
+
+                function startPlayback() {
+                    if (playInterval) clearInterval(playInterval);
+                    if (replayFrames.length) {
+                        playInterval = setInterval(processNextFrame, 80 / playbackSpeed);
+                    } else {
+                        const interval = 1000 / playbackSpeed;
+                        playInterval = setInterval(processNextEvent, interval);
+                    }
+                }
+
+                function processNextFrame() {
+                    if (replayFrameIndex >= replayFrames.length) {
+                        stopPlayback();
+                        isPlaying = false;
+                        document.getElementById('playBtn').textContent = '▶️ 再生';
+                        return;
+                    }
+                    const frame = replayFrames[replayFrameIndex];
+                    drawReplayFrame(frame);
+                    const roundNumber = Number(frame.round || 1);
+                    if (roundNumber !== currentRoundIndex + 1) {
+                        currentRoundIndex = Math.max(0, roundNumber - 1);
+                        updateRoundDisplay();
+                        document.getElementById('progressSlider').value = currentRoundIndex;
+                    }
+                    replayFrameIndex++;
+                }
+
+                function stopPlayback() {
+                    if (playInterval) {
+                        clearInterval(playInterval);
+                        playInterval = null;
+                    }
+                }
+
+                function processNextEvent() {
+                    if (currentEventIndex >= allEvents.length) {
+                        stopPlayback();
+                        isPlaying = false;
+                        document.getElementById('playBtn').textContent = '▶️ 再生';
+                        document.getElementById('playBtn').className = 'px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all';
+                        return;
+                    }
+
+                    const event = allEvents[currentEventIndex];
+                    // ラウンドが変わったらスコアを更新
+                    if (event.roundIndex !== currentRoundIndex) {
+                        currentRoundIndex = event.roundIndex;
+                        updateRoundDisplay();
+                    }
+                    // イベントを処理
+                    processEvent(event);
+                    currentEventIndex++;
+                    // スライダーを更新
+                    document.getElementById('progressSlider').value = currentRoundIndex;
+                    document.getElementById('currentRound').textContent = `現在: ラウンド ${currentRoundIndex + 1}`;
+                }
+
+                function processEvent(event) {
+                    const eventLog = document.getElementById('eventLog');
+                    const logEntry = document.createElement('p');
+                    
+                    switch(event.type) {
+                        case 'kill':
+                            logEntry.className = 'text-red-400';
+                            logEntry.textContent = `${event.killer} が ${event.victim} をキル！`;
+                            // プレイヤーのHPを更新
+                            updatePlayerHP(event.victim, 0);
+                            document.getElementById('roundKills').textContent = parseInt(document.getElementById('roundKills').textContent) + 1;
+                            break;
+                        case 'bomb_plant':
+                            logEntry.className = 'text-yellow-400';
+                            logEntry.textContent = `${event.planter} が爆弾を設置！`;
+                            document.getElementById('bombPlanted').textContent = '✅';
+                            break;
+                        case 'bomb_defuse':
+                            logEntry.className = 'text-green-400';
+                            logEntry.textContent = `${event.defuser} が爆弾を解除！`;
+                            document.getElementById('bombDefused').textContent = '✅';
+                            break;
+                        case 'round_end':
+                            logEntry.className = 'text-blue-400';
+                            logEntry.textContent = `ラウンド終了！勝者: ${event.winner}`;
+                            // スコアを更新
+                            const winnerTeam = event.winner === 'attacker'
+                                ? event.attackerTeam
+                                : event.winner === 'defender'
+                                    ? event.defenderTeam
+                                    : event.winner;
+                            if (winnerTeam === '{{ match.match_metadata.team1 }}') {
+                                team1Score++;
+                                document.getElementById('team1Score').textContent = team1Score;
+                            } else {
+                                team2Score++;
+                                document.getElementById('team2Score').textContent = team2Score;
+                            }
+                            break;
+                        default:
+                            logEntry.className = 'text-gray-400';
+                            logEntry.textContent = `${event.type}: ${JSON.stringify(event)}`;
+                    }
+                    eventLog.appendChild(logEntry);
+                    eventLog.scrollTop = eventLog.scrollHeight;
+                }
+
+                function updatePlayerHP(playerName, hp) {
+                    const playerCard = document.getElementById(`player-${playerName}`);
+                    if (playerCard) {
+                        const hpText = playerCard.querySelector('.hp-text');
+                        if (hpText) {
+                            hpText.textContent = hp;
+                            if (hp <= 0) {
+                                playerCard.className = 'bg-gray-900 rounded-lg p-2 text-center player-card opacity-50';
+                            }
+                        }
+                    }
+                }
+
+                function updateRoundDisplay() {
+                    const round = originalData.rounds[currentRoundIndex];
+                    document.getElementById('roundName').textContent = `ラウンド ${currentRoundIndex + 1}`;
+                    document.getElementById('attackerTeam').textContent = round.attacker_team || '-';
+                    document.getElementById('bombPlanted').textContent = '❌';
+                    document.getElementById('bombDefused').textContent = '❌';
+                    document.getElementById('roundKills').textContent = '0';
+                    
+                    // 全プレイヤーのHPをリセット
+                    document.querySelectorAll('.player-card').forEach(card => {
+                        card.className = 'bg-gray-800 rounded-lg p-2 text-center player-card';
+                        const hpText = card.querySelector('.hp-text');
+                        if (hpText) hpText.textContent = '100';
+                    });
+
+                    // イベントログにラウンド開始を追加
+                    const eventLog = document.getElementById('eventLog');
+                    const logEntry = document.createElement('p');
+                    logEntry.className = 'text-green-400 font-bold';
+                    logEntry.textContent = `--- ラウンド ${currentRoundIndex + 1} 開始 ---`;
+                    eventLog.appendChild(logEntry);
+                    eventLog.scrollTop = eventLog.scrollHeight;
+                }
+
+                function resetReplay() {
+                    stopPlayback();
+                    isPlaying = false;
+                    currentRoundIndex = 0;
+                    currentEventIndex = 0;
+                    replayFrameIndex = 0;
+                    document.getElementById('playBtn').textContent = '▶️ 再生';
+                    document.getElementById('playBtn').className = 'px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all';
+                    document.getElementById('progressSlider').value = 0;
+                    document.getElementById('currentRound').textContent = '現在: ラウンド 1';
+                    // スコアをリセット
+                    const initialTeam1Score = {{ match.match_metadata.team1_score }};
+                    const initialTeam2Score = {{ match.match_metadata.team2_score }};
+                    document.getElementById('team1Score').textContent = initialTeam1Score;
+                    document.getElementById('team2Score').textContent = initialTeam2Score;
+                    updateRoundDisplay();
+                    if (replayFrames.length) drawReplayFrame(replayFrames[0]);
+                }
+
+                function seekTo(roundIndex) {
+                    currentRoundIndex = parseInt(roundIndex);
+                    // そのラウンドの最初のイベントインデックスを探す
+                    currentEventIndex = allEvents.findIndex(e => e.roundIndex === currentRoundIndex);
+                    if (currentEventIndex === -1) currentEventIndex = 0;
+                    document.getElementById('currentRound').textContent = `現在: ラウンド ${currentRoundIndex + 1}`;
+                    updateRoundDisplay();
+                    if (replayFrames.length) {
+                        replayFrameIndex = replayFrames.findIndex(frame => Number(frame.round || 1) === currentRoundIndex + 1);
+                        if (replayFrameIndex < 0) replayFrameIndex = 0;
+                        drawReplayFrame(replayFrames[replayFrameIndex]);
+                    }
+                }
+
+                function changeSpeed() {
+                    playbackSpeed = parseFloat(document.getElementById('speedSelect').value);
+                    if (isPlaying) {
+                        startPlayback();
+                    }
+                }
+
+                // 初期表示
+                updateRoundDisplay();
+                if (replayFrames.length) drawReplayFrame(replayFrames[0]);
+            }
+        </script>
+    </div>
+
+</body>
+</html>

@@ -75,6 +75,31 @@ class RealCurriculumTests(unittest.TestCase):
             self.assertIsNone(curriculum.fake_wait_support_teacher_action(
                 "escort", escort, {"chars": [carrier, escort]}, view, controller, mask
             ))
+            escort.name = "escort"
+            escort.pos = (2, 5)
+            self.assertEqual(
+                curriculum.fake_wait_support_teacher_action(
+                    "escort", escort, {"chars": [carrier, escort]}, view,
+                    controller, mask,
+                ),
+                curriculum.escort_runtime.ACTION_LEFT,
+            )
+            escort.pos = (2, 4)
+            self.assertEqual(
+                curriculum.fake_wait_support_teacher_action(
+                    "escort", escort, {"chars": [carrier, escort]}, view,
+                    controller, mask,
+                ),
+                curriculum.escort_runtime.ACTION_STAY,
+            )
+            escort.pos = (2, 3)
+            self.assertEqual(
+                curriculum.fake_wait_support_teacher_action(
+                    "escort", escort, {"chars": [carrier, escort]}, view,
+                    controller, mask,
+                ),
+                curriculum.escort_runtime.ACTION_UP,
+            )
 
     def test_frozen_phase_uses_greedy_action_and_facing_during_training(self):
         session = SimpleNamespace(
@@ -217,6 +242,172 @@ class RealCurriculumTests(unittest.TestCase):
                 self.assertTrue(torch.equal(value[frozen_rows], after[frozen_rows]))
             else:
                 self.assertTrue(torch.equal(value, after), name)
+
+    def test_escort_new_support_inputs_can_learn_without_changing_old_weights(self):
+        rt = curriculum.escort_runtime
+        policy = rt.DuelingQNetwork(rt.FAKE_WAIT_SUPPORT_OBS_DIM, rt.N_ACTIONS)
+        new_columns = range(rt.FACING_HEAD_OBS_DIM, rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+        with torch.no_grad():
+            policy.feature[0].weight[:, list(new_columns)] = 0
+        before = {name: value.clone() for name, value in policy.state_dict().items()}
+        curriculum.restrict_policy_to_movement_rows(
+            policy, curriculum.MOVEMENT_ACTION_ROWS["escort"], new_columns
+        )
+        optimizer = torch.optim.Adam(
+            [p for p in policy.parameters() if p.requires_grad], lr=0.01
+        )
+        obs = torch.randn(16, rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+        obs[:, list(new_columns)] = 1
+        loss = policy(obs)[:, rt.ACTION_UP].mean()
+        optimizer.zero_grad()
+        loss.backward()
+        self.assertEqual(
+            torch.count_nonzero(policy.feature[0].weight.grad[:, :rt.FACING_HEAD_OBS_DIM]), 0
+        )
+        self.assertGreater(
+            torch.count_nonzero(policy.feature[0].weight.grad[:, list(new_columns)]), 0
+        )
+        optimizer.step()
+        self.assertTrue(torch.equal(
+            policy.feature[0].weight[:, :rt.FACING_HEAD_OBS_DIM],
+            before["feature.0.weight"][:, :rt.FACING_HEAD_OBS_DIM],
+        ))
+        self.assertGreater(
+            torch.count_nonzero(policy.feature[0].weight[:, list(new_columns)]), 0
+        )
+        self.assertTrue(torch.equal(
+            policy.facing_feature[0].weight, before["facing_feature.0.weight"]
+        ))
+
+    def test_escort_selector_allows_only_new_support_input_columns(self):
+        rt = curriculum.escort_runtime
+        old_width, new_width = rt.FACING_HEAD_OBS_DIM, rt.FAKE_WAIT_SUPPORT_OBS_DIM
+        base = {
+            phase: {"model_state_dict": {"feature.0.weight": torch.zeros(2, old_width)}}
+            for phase in curriculum.PHASES
+        }
+        candidate = {
+            phase: {"model_state_dict": {name: tensor.clone() for name, tensor in
+                base[phase]["model_state_dict"].items()}}
+            for phase in curriculum.PHASES
+        }
+        candidate["escort"]["model_state_dict"]["feature.0.weight"] = torch.zeros(2, new_width)
+        candidate["escort"]["model_state_dict"]["feature.0.weight"][0, old_width] = 1
+        escort_selector.require_only_escort_movement_changed(base, candidate)
+        candidate["escort"]["model_state_dict"]["feature.0.weight"][0, 0] = 1
+        with self.assertRaises(ValueError):
+            escort_selector.require_only_escort_movement_changed(base, candidate)
+
+    def test_joint_movement_schedule_decays_before_previous_regression_window(self):
+        rate = curriculum.scheduled_learning_rate
+        self.assertAlmostEqual(rate(1e-5, 250, 250, 500, 0.2), 1e-5)
+        self.assertAlmostEqual(rate(1e-5, 500, 250, 500, 0.2), 6e-6)
+        self.assertAlmostEqual(rate(1e-5, 750, 250, 500, 0.2), 2e-6)
+        self.assertAlmostEqual(rate(1e-5, 1000, 250, 500, 0.2), 2e-6)
+
+    def test_joint_movement_score_rejects_safety_regression(self):
+        baseline = {
+            "worst_carry_no_entry_rate": 0.35,
+            "carry_no_entry_rate": 0.32,
+            "worst_timeout_rate": 0.08,
+            "timeout_rate": 0.05,
+            "carry_quiet_stall_tick_rate": 0.10,
+            "worst_carrier_preentry_death_rate": 0.40,
+            "carrier_preentry_death_rate": 0.38,
+            "worst_registered_plant_rate": 0.35,
+            "worst_round_win_rate": 0.20,
+            "round_win_rate": 0.25,
+        }
+        improved = {
+            **baseline,
+            "worst_carry_no_entry_rate": 0.29,
+            "worst_carrier_preentry_death_rate": 0.35,
+            "carrier_preentry_death_rate": 0.33,
+            "worst_registered_plant_rate": 0.37,
+        }
+        unsafe = {**improved, "worst_registered_plant_rate": 0.29}
+        score = lambda metrics: curriculum.joint_movement_selection_score(
+            metrics, baseline, 0.30, 0.10, 0.05, 0.05, 0.05
+        )
+        self.assertGreater(score(improved), score(baseline))
+        self.assertGreater(score(baseline), score(unsafe))
+        self.assertTrue(curriculum.joint_movement_guardrail_violated(
+            unsafe, baseline, 0.10, 0.05, 0.05, 0.05
+        ))
+
+    def test_joint_selector_allows_only_carry_and_escort_movement(self):
+        rt = curriculum.escort_runtime
+        state = {
+            "advantage_head.2.weight": torch.zeros(12, 3),
+            "advantage_head.2.bias": torch.zeros(12),
+            "feature.0.weight": torch.zeros(2, rt.FAKE_WAIT_SUPPORT_OBS_DIM),
+            "facing_feature.0.weight": torch.zeros(
+                2, rt.FAKE_WAIT_SUPPORT_OBS_DIM
+            ),
+            "facing_output.bias": torch.zeros(8),
+        }
+        base = {
+            phase: {
+                "model_state_dict": {
+                    name: tensor.clone() for name, tensor in state.items()
+                }
+            }
+            for phase in curriculum.PHASES
+        }
+        candidate = {
+            phase: {
+                "model_state_dict": {
+                    name: tensor.clone()
+                    for name, tensor in base[phase]["model_state_dict"].items()
+                }
+            }
+            for phase in curriculum.PHASES
+        }
+        carry_row = curriculum.MOVEMENT_ACTION_ROWS["carry"][0]
+        escort_row = curriculum.MOVEMENT_ACTION_ROWS["escort"][0]
+        candidate["carry"]["model_state_dict"]["advantage_head.2.bias"][carry_row] = 1
+        candidate["escort"]["model_state_dict"]["advantage_head.2.bias"][escort_row] = 1
+        candidate["escort"]["model_state_dict"]["feature.0.weight"][
+            0, rt.FACING_HEAD_OBS_DIM
+        ] = 1
+        escort_selector.require_only_carry_escort_movement_changed(base, candidate)
+
+        frozen_row = next(
+            row for row in range(12)
+            if row not in curriculum.MOVEMENT_ACTION_ROWS["carry"]
+        )
+        candidate["carry"]["model_state_dict"]["advantage_head.2.bias"][frozen_row] = 1
+        with self.assertRaises(ValueError):
+            escort_selector.require_only_carry_escort_movement_changed(base, candidate)
+
+    def test_escort_demonstration_batch_keeps_fake_wait_examples(self):
+        rt = curriculum.escort_runtime
+        policy = rt.DuelingQNetwork(rt.FAKE_WAIT_SUPPORT_OBS_DIM, rt.N_ACTIONS)
+        optimizer = torch.optim.Adam(policy.parameters(), lr=0.001)
+        mask = np.ones(rt.N_ACTIONS, dtype=bool)
+        ordinary = [
+            (np.zeros(rt.FAKE_WAIT_SUPPORT_OBS_DIM, dtype=np.float32),
+             rt.ACTION_UP, mask.copy())
+            for _ in range(20)
+        ]
+        support = [
+            (np.ones(rt.FAKE_WAIT_SUPPORT_OBS_DIM, dtype=np.float32),
+             rt.ACTION_STAY, mask.copy())
+            for _ in range(4)
+        ]
+        calls = []
+        sample = random.sample
+
+        def record(rows, count):
+            calls.append(count)
+            return sample(rows, count)
+
+        with patch.object(curriculum.random, "sample", side_effect=record):
+            curriculum.optimize_demonstrations(
+                policy, optimizer, ordinary + support, 1.0,
+                batch_size=8, focus_samples=support,
+            )
+        self.assertEqual(calls, [4, 4])
 
     def test_movement_only_restriction_updates_only_displacement_rows(self):
         policy = curriculum.runtime.AttackerCarryDuelingDQN(
@@ -370,6 +561,28 @@ class RealCurriculumTests(unittest.TestCase):
                 rebuilt[phase].feature[0].in_features,
                 policies[phase].feature[0].in_features,
             )
+
+    def test_checkpoint_evaluator_accepts_escort_support_observations(self):
+        rt = curriculum.escort_runtime
+        checkpoints = {
+            "carry": {"model_state_dict": curriculum.runtime.AttackerCarryDuelingDQN(
+                curriculum.runtime.FACING_HEAD_OBS_DIM,
+                curriculum.runtime.ACTION_DIM,
+            ).state_dict()},
+            "escort": {"model_state_dict": rt.DuelingQNetwork(
+                rt.FAKE_WAIT_SUPPORT_OBS_DIM, rt.N_ACTIONS,
+            ).state_dict()},
+            "guard": {"model_state_dict": curriculum.guard_runtime.AttackerGuardDuelingDQN(
+                curriculum.guard_runtime.ULTIMATE_CONTEXT_OBS_DIM,
+                curriculum.guard_runtime.ACTION_DIM,
+            ).state_dict()},
+        }
+        rebuilt = checkpoint_evaluator.build_policies(checkpoints)
+        self.assertEqual(rebuilt["escort"].feature[0].in_features,
+                         rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+        self.assertEqual(tuple(rebuilt["escort"](
+            torch.zeros(1, rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+        ).shape), (1, rt.N_ACTIONS))
 
     def test_navigation_loop_does_not_repeat_progress_reward(self):
         tracker = curriculum.ProgressTracker()

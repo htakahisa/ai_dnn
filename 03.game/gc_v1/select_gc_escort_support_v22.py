@@ -1,4 +1,4 @@
-"""Package a safe Escort-only movement checkpoint after isolated training."""
+"""Package a safe joint Carry/Escort movement checkpoint."""
 from __future__ import annotations
 
 import argparse
@@ -28,8 +28,79 @@ def require_only_escort_movement_changed(baseline, candidate):
                 ]
                 if not torch.equal(before[name][frozen_rows], after[name][frozen_rows]):
                     raise ValueError(f"Escort frozen action rows changed in {name}")
+            elif phase == "escort" and name in (
+                "feature.0.weight", "facing_feature.0.weight"
+            ):
+                old = before[name]
+                new = after[name]
+                old_width = old.shape[1]
+                new_start = trainer.escort_runtime.FACING_HEAD_OBS_DIM
+                frozen_width = min(old_width, new_start)
+                if (
+                    old.shape[0] != new.shape[0]
+                    or old_width > new.shape[1]
+                    or new.shape[1] > trainer.escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
+                    or not torch.equal(old[:, :frozen_width], new[:, :frozen_width])
+                ):
+                    raise ValueError(f"Escort pretrained input weights changed in {name}")
+                if old_width < new_start and not torch.equal(
+                    new[:, old_width:new_start],
+                    torch.zeros_like(new[:, old_width:new_start]),
+                ):
+                    raise ValueError(f"Escort unrelated input weights changed in {name}")
+                if name == "facing_feature.0.weight":
+                    if not torch.equal(old, new[:, :old_width]) or not torch.equal(
+                        new[:, old_width:], torch.zeros_like(new[:, old_width:])
+                    ):
+                        raise ValueError("Escort facing input weights changed")
             elif not torch.equal(before[name], after[name]):
                 raise ValueError(f"Non-Escort-movement tensor changed: {phase}/{name}")
+
+
+def require_only_carry_escort_movement_changed(baseline, candidate):
+    """Allow only Carry/Escort displacement rows and new Escort input columns."""
+    movement_rows = {
+        phase: set(trainer.MOVEMENT_ACTION_ROWS[phase])
+        for phase in ("carry", "escort")
+    }
+    for phase in trainer.PHASES:
+        before = baseline[phase]["model_state_dict"]
+        after = candidate[phase]["model_state_dict"]
+        if before.keys() != after.keys():
+            raise ValueError(f"{phase} state keys differ from baseline")
+        for name in before:
+            if phase in movement_rows and name in (
+                "advantage_head.2.weight", "advantage_head.2.bias"
+            ):
+                frozen_rows = [
+                    row for row in range(before[name].shape[0])
+                    if row not in movement_rows[phase]
+                ]
+                if not torch.equal(before[name][frozen_rows], after[name][frozen_rows]):
+                    raise ValueError(f"{phase} frozen action rows changed in {name}")
+            elif phase == "escort" and name in (
+                "feature.0.weight", "facing_feature.0.weight"
+            ):
+                old, new = before[name], after[name]
+                old_width = old.shape[1]
+                new_start = trainer.escort_runtime.FACING_HEAD_OBS_DIM
+                frozen_width = min(old_width, new_start)
+                if (
+                    old.shape[0] != new.shape[0]
+                    or old_width > new.shape[1]
+                    or new.shape[1] > trainer.escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
+                    or not torch.equal(old[:, :frozen_width], new[:, :frozen_width])
+                ):
+                    raise ValueError(f"Escort pretrained input weights changed in {name}")
+                if name == "facing_feature.0.weight" and (
+                    not torch.equal(old, new[:, :old_width])
+                    or not torch.equal(
+                        new[:, old_width:], torch.zeros_like(new[:, old_width:])
+                    )
+                ):
+                    raise ValueError("Escort facing input weights changed")
+            elif not torch.equal(before[name], after[name]):
+                raise ValueError(f"Frozen tensor changed: {phase}/{name}")
 
 
 def main():
@@ -44,6 +115,7 @@ def main():
     parser.add_argument("--allow-data-revision-mismatch", action="store_true")
     parser.add_argument("--max-no-entry-rate", type=float, default=0.30)
     parser.add_argument("--max-timeout-rate", type=float, default=0.10)
+    parser.add_argument("--max-quiet-stall-increase", type=float, default=0.05)
     parser.add_argument("--max-carrier-death-increase", type=float, default=0.05)
     parser.add_argument("--max-plant-regression", type=float, default=0.05)
     parser.add_argument("--holdout-seeds", type=int, nargs="+", required=True)
@@ -98,21 +170,28 @@ def main():
     candidate = {
         phase: common.load_checkpoint(path) for phase, path in candidate_paths.items()
     }
-    require_only_escort_movement_changed(baseline, candidate)
+    require_only_carry_escort_movement_changed(baseline, candidate)
     candidate_metrics = candidate["escort"]["evaluation"]
-    baseline_score = trainer.escort_support_selection_score(
-        baseline_metrics, args.max_no_entry_rate, args.max_timeout_rate
+    baseline_score = trainer.joint_movement_selection_score(
+        baseline_metrics, baseline_metrics,
+        args.max_no_entry_rate, args.max_timeout_rate,
+        args.max_quiet_stall_increase, args.max_carrier_death_increase,
+        args.max_plant_regression,
     )
-    candidate_score = trainer.escort_support_selection_score(
-        candidate_metrics, args.max_no_entry_rate, args.max_timeout_rate
+    candidate_score = trainer.joint_movement_selection_score(
+        candidate_metrics, baseline_metrics,
+        args.max_no_entry_rate, args.max_timeout_rate,
+        args.max_quiet_stall_increase, args.max_carrier_death_increase,
+        args.max_plant_regression,
     )
     selected_score, selected = common.select_candidate(
         baseline_score, {"trained": {"score": candidate_score}}
     )
-    safety_regression = trainer.escort_support_guardrail_violated(
+    safety_regression = trainer.joint_movement_guardrail_violated(
         candidate_metrics,
         baseline_metrics,
         args.max_timeout_rate,
+        args.max_quiet_stall_increase,
         args.max_carrier_death_increase,
         args.max_plant_regression,
     )
@@ -126,7 +205,7 @@ def main():
     fingerprint = trainer.runtime_data_fingerprint()
     bundle = {
         "episode": checkpoints["escort"].get("episode"),
-        "selection_method": "escort_support_rows_v22",
+        "selection_method": "carry_escort_joint_movement",
         "selected_branch": selected,
         "evaluation": holdout,
         "models": {},
@@ -136,7 +215,7 @@ def main():
         payload = dict(checkpoints[phase])
         payload.update(
             evaluation=holdout,
-            selection_method="escort_support_rows_v22",
+            selection_method="carry_escort_joint_movement",
             selected_branch=selected,
             source_runtime_data_fingerprint=baseline_data,
             runtime_data_fingerprint=fingerprint,
@@ -145,7 +224,7 @@ def main():
         torch.save(payload, args.output_dir / filename)
         bundle["models"][phase] = filename
     report = {
-        "revision": "escort_support_rows_v22",
+        "revision": "carry_escort_joint_movement",
         "selection_metrics_source": "evaluation seeds; holdout was not used for selection",
         "baseline_score": list(baseline_score),
         "candidate_score": list(candidate_score),
@@ -178,7 +257,7 @@ def main():
         json.dumps(holdout, indent=2), encoding="utf-8"
     )
     print(
-        "[ESCORT SUPPORT SELECTION] "
+        "[CARRY/ESCORT MOVEMENT SELECTION] "
         + json.dumps(
             {
                 "selected": selected,
@@ -188,7 +267,7 @@ def main():
         ),
         flush=True,
     )
-    print("[ESCORT SUPPORT HOLDOUT] " + json.dumps(holdout), flush=True)
+    print("[CARRY/ESCORT MOVEMENT HOLDOUT] " + json.dumps(holdout), flush=True)
 
 
 if __name__ == "__main__":

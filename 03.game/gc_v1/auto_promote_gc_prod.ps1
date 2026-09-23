@@ -1,9 +1,9 @@
 ﻿<#
-.AutoPromote GC v21 Production Script
+.AutoPromote GC v22Production Script
 本番環境で使用されるモデルを自動的に更新するスクリプト
 学習済みモデルが評価基準を満たした場合、自動的に本番パスにコピーし、旧モデルはバックアップ
-使用方法: .\auto_promote_gc_v21_prod.ps1 [--episode <エピソード番号>]
-例: .\auto_promote_gc_v21_prod.ps1 --episode 1250
+使用方法: .\auto_promote_gc_v22_prod.ps1 [--episode <エピソード番号>]
+例: .\auto_promote_gc_v22_prod.ps1 --episode 1250
 #>
 
 # 引数解析
@@ -22,9 +22,9 @@ $PROD_ESCORT_MODEL = Join-Path $PROD_MODEL_DIR "dqn_attacker_escort_gc_final.pt"
 $PROD_GUARD_MODEL = Join-Path $PROD_MODEL_DIR "dqn_attacker_guard_gc_final.pt"
 
 # 学習済みソースパス（最新の学習ディレクトリに修正）
-$V21_SOURCE_DIR = "D:\git\ai_dnn\03.game\gc_v1\data\attacker_gc_escort_support_current\training"
-$SOURCE_CARRY_MODEL = Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_best_by_eval.pt"
-$SOURCE_EVAL_HISTORY = Join-Path $V21_SOURCE_DIR "evaluation_history.json"
+$V22_SOURCE_DIR = "D:\git\ai_dnn\03.game\gc_v1\data\attacker_gc_curriculum_v22_escort_support_20260922_094149\training"
+$SOURCE_CARRY_MODEL = Join-Path $V22_SOURCE_DIR "dqn_attacker_carry_gc_best_by_eval.pt"
+$SOURCE_EVAL_HISTORY = Join-Path $V22_SOURCE_DIR "evaluation_history.json"
 
 # コードベースの公式評価基準（select_gc_carry_movement_v21.py から引用）
 $MAX_TIMEOUT_RATE = 0.05    # タイムアウト率5%以下
@@ -59,7 +59,7 @@ if ($targetEpisode -eq $null) {
     Write-Host "エピソードが指定されていません - 履歴から最良モデルを自動選択します..."
     # コードベースと同じ選択ロジックで最良エントリを選ぶ（存在するPTファイルだけ対象）
     foreach ($entry in $evalHistory) {
-        $candidateModel = Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_ep$($entry.episode).pt"
+        $candidateModel = Join-Path $V22_SOURCE_DIR "dqn_attacker_carry_gc_ep$($entry.episode).pt"
         if (-not (Test-Path $candidateModel)) {
             continue # ファイルが存在しないエピソードはスキップ
         }
@@ -89,12 +89,12 @@ if ($targetEpisode -eq $null) {
 }
 
 # 選択されたエピソードに対応するPTファイルを設定
-if (Test-Path (Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_ep$($bestEntry.episode).pt")) {
-    $SOURCE_CARRY_MODEL = Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_ep$($bestEntry.episode).pt"
+if (Test-Path (Join-Path $V22_SOURCE_DIR "dqn_attacker_carry_gc_ep$($bestEntry.episode).pt")) {
+    $SOURCE_CARRY_MODEL = Join-Path $V22_SOURCE_DIR "dqn_attacker_carry_gc_ep$($bestEntry.episode).pt"
 } else {
     # ファイルが存在しない場合はbest_by_eval.ptを使用
     Write-Warning "EP$($bestEntry.episode)のモデルファイルが見つかりません - best_by_eval.ptを使用します"
-    $SOURCE_CARRY_MODEL = Join-Path $V21_SOURCE_DIR "dqn_attacker_carry_gc_best_by_eval.pt"
+    $SOURCE_CARRY_MODEL = Join-Path $V22_SOURCE_DIR "dqn_attacker_carry_gc_best_by_eval.pt"
 }
 
 # モデルファイルの存在確認
@@ -128,7 +128,7 @@ Write-Host "  Route clear rate: $(if ($passRouteClear) { 'PASS' } else { 'FAIL' 
 $promotionLog = [PSCustomObject]@{
     timestamp = $timestamp
     source_episode = $bestEntry.episode
-    source_dir = $V21_SOURCE_DIR
+    source_dir = $V22_SOURCE_DIR
     source_model = "auto_selected_best"
     selection_violation = $bestScoreViolation
     criteria_met = $allPassed

@@ -32,6 +32,7 @@ import os
 import sys
 import random
 import math
+import argparse
 from collections import deque, namedtuple
 import time
 
@@ -73,9 +74,15 @@ from .gc_facing import (
     FACING_DIRS,
     FACING_VECTORS,
     append_facing_onehot,
-    decode_action as decode_facing_action,
-    encode_action as encode_facing_action,
+    facing_from_delta,
     facing_towards,
+)
+from .ultimate_tactics_gc import (
+    ORB_CONTEXT_DIM,
+    can_collect_orb,
+    orb_context_features,
+    tactical_ultimate_window,
+    ultimate_context_features,
 )
 
 from game_core import (
@@ -92,6 +99,8 @@ from game_core import (
     ROUND_DURATION_TICKS,
     PLANT_REQUIRED_TICKS,
     SHOOTING_SITE_DIGREE,
+    ORB_COLLECT_REQUIRED_TICKS,
+    ORB_ULTIMATE_POINTS,
 )
 
 EPISODE_COUNT = 8000
@@ -99,10 +108,10 @@ EPISODE_COUNT = 8000
 # ---------------------------------------------------------------------------
 # 保存先
 # ---------------------------------------------------------------------------
-DATA_DIR = "data/defender_search_gc_data/"
-os.makedirs(DATA_DIR, exist_ok=True)
-MODEL_SAVE_PATH = os.path.join(DATA_DIR, "dqn_defender_search_gc_best_by_eval.pt")
-MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_defender_search_gc_latest.pt")
+DATA_DIR = Path(__file__).resolve().parent / "data" / "defender_search_gc_data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+MODEL_SAVE_PATH = DATA_DIR / "dqn_defender_search_gc_best_by_eval.pt"
+MODEL_LATEST_PATH = DATA_DIR / "dqn_defender_search_gc_latest.pt"
 
 # ---------------------------------------------------------------------------
 # 基本設定
@@ -111,12 +120,15 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = (
-    36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
-)
-OBS_DIM = 44
+BASE_OBS_DIM = 36
+ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
+ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
+OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
 BASE_ACTION_DIM = 10
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
+ACTION_ULTIMATE = BASE_ACTION_DIM
+ACTION_COLLECT_ORB = BASE_ACTION_DIM + 1
+ACTION_DIM = BASE_ACTION_DIM + 2
+FACING_HEAD_VERSION = 2
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # Attacker(敵)側の簡易ヒューリスティック用
 
 N_DEFENDERS = 5
@@ -500,6 +512,22 @@ class UnitStub:
         self.hs_rate = DEFAULT_HS_RATE
         self.reaction = DEFAULT_REACTION + random.uniform(-10, 10)
         self.facing = "S" if team == "D" else "N"
+        self.ultimate_name = {
+            "FLASH": "TUNNEL",
+            "SMOKE": "ESCAPE",
+            "RECON": "MONITOR",
+            "HUNT": "RAID",
+        }.get(role, "TUNNEL")
+        self.ultimate_cost = {
+            "RAID": 3, "ESCAPE": 6, "MONITOR": 8, "TUNNEL": 5,
+        }[self.ultimate_name]
+        self.ultimate_points = (
+            self.ultimate_cost
+            if random.random() < 0.45
+            else random.randrange(self.ultimate_cost)
+        )
+        self.orb_collect_timer = 0
+        self.collecting_orb_pos = None
 
         # Defender専用: 割り当てられた待機ポジション(7)とそのBFS距離マップ。
         self.assigned_defense_pos = None
@@ -680,12 +708,30 @@ class DefenderSearchDuelingDQN(nn.Module):
         self.advantage_head = nn.Sequential(
             nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
         )
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden), nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden), nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(
+            facing_hidden + action_dim, len(FACING_DIRS)
+        )
+        self.action_dim = action_dim
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         f = self.feature(x)
         v = self.value_head(f)
         a = self.advantage_head(f)
         return v + (a - a.mean(dim=1, keepdim=True))
+
+    def facing_values(self, x, actions):
+        features = self.facing_feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        onehot = torch.nn.functional.one_hot(
+            actions, num_classes=self.action_dim
+        ).to(dtype=features.dtype)
+        return self.facing_output(torch.cat((features, onehot), dim=1))
 
 
 Transition = namedtuple(
@@ -724,6 +770,7 @@ def build_observation(
     spike_dist_map,
     sighting_dist_map,
     unit_has_spike_los,
+    available_orbs,
     force_positioning=False,
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
@@ -824,26 +871,55 @@ def build_observation(
         else 0.0
     )
 
-    append_facing_onehot(obs, getattr(unit, "facing", "S"))
+    objective_window = bool(
+        team_memory.spike_pos is not None
+        or (
+            team_memory.last_seen_enemy is not None
+            and int(team_memory.last_seen_enemy.get("tick_ago", 999)) <= 5
+        )
+    )
+    obs[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+        unit,
+        engaged=bool(visible_enemies),
+        objective_window=objective_window,
+        urgent=(
+            (unit.max_hp > 0 and unit.hp / unit.max_hp <= 0.45)
+            or (0 < round_timer <= 20)
+        ),
+    )
+    obs[ULTIMATE_CONTEXT_OBS_DIM:ORB_CONTEXT_OBS_DIM] = orb_context_features(
+        unit, available_orbs
+    )
+    append_facing_onehot(
+        obs[ORB_CONTEXT_OBS_DIM:OBS_DIM],
+        getattr(unit, "facing", "S"),
+    )
 
     return obs
 
 
 def decode_action(action_idx):
-    base_idx, facing = decode_facing_action(action_idx)
+    if isinstance(action_idx, tuple):
+        base_idx, facing = action_idx
+    else:
+        base_idx, facing = int(action_idx), None
+    if base_idx == ACTION_ULTIMATE:
+        return MOVES[0], False, facing, True
+    if base_idx == ACTION_COLLECT_ORB:
+        return MOVES[0], False, facing, False
     move_idx, use_ability = divmod(base_idx, 2)
-    return MOVES[move_idx], bool(use_ability), facing
+    return MOVES[move_idx], bool(use_ability), facing, False
 
 
 def encode_action(move, use_ability, facing):
     move_idx = MOVES.index(move)
-    return encode_facing_action(move_idx * 2 + (1 if use_ability else 0), facing)
+    return move_idx * 2 + (1 if use_ability else 0)
 
 
-def build_action_mask(unit, occupied, lock_movement=False):
+def build_action_mask(unit, occupied, lock_movement=False, available_orbs=()):
     """lock_movement=True の場合、stay(move_idx=0)以外の移動を禁止する。
     交戦中(敵が視認できている間)は静止させ、射撃の当たりやすさを優先する。"""
-    base_mask = np.ones(BASE_ACTION_DIM, dtype=bool)
+    base_mask = np.ones(ACTION_DIM, dtype=bool)
     r, c = int(unit.pos[0]), int(unit.pos[1])
     for move_idx, (dr, dc) in enumerate(MOVES):
         if lock_movement and move_idx != 0:
@@ -865,7 +941,12 @@ def build_action_mask(unit, occupied, lock_movement=False):
         for move_idx in range(5):
             base_mask[move_idx * 2 + 1] = False
 
-    return np.repeat(base_mask, len(FACING_DIRS))
+    base_mask[ACTION_ULTIMATE] = (
+        unit.ultimate_points >= unit.ultimate_cost
+    )
+    base_mask[ACTION_COLLECT_ORB] = can_collect_orb(unit, available_orbs)
+
+    return base_mask
 
 
 # ============================================================================
@@ -897,6 +978,7 @@ class SearchEnv:
         self.spike_dist_map = None
         self.sighting_dist_map = None
         self.spike_ground_pos = None
+        self.available_orbs = set(zip(*np.where(GRID == 5)))
 
         # --- 一時デバッグ用: 特定キャラの毎tick実況トレース。
         # train()側で特定エピソードだけTrueにする。
@@ -1056,6 +1138,7 @@ class SearchEnv:
                 self.spike_dist_map,
                 self.sighting_dist_map,
                 unit_has_spike_los,
+                self.available_orbs,
                 force_positioning=force_positioning,
             )
             own_occupied = occupied - {tuple(d.pos)}
@@ -1064,7 +1147,12 @@ class SearchEnv:
                 for a in self.attackers
             )
             # Search v2: 接敵中も引く/横ずれ/合流を学べるよう移動を禁止しない。
-            mask_dict[d.name] = build_action_mask(d, own_occupied, lock_movement=False)
+            mask_dict[d.name] = build_action_mask(
+                d,
+                own_occupied,
+                lock_movement=False,
+                available_orbs=self.available_orbs,
+            )
         return obs_dict, mask_dict
 
     # -- Attacker側の簡易ヒューリスティック ------------------------------
@@ -1128,6 +1216,8 @@ class SearchEnv:
         ability_whiff = {}
         ability_overlap = {}
         held_angle = {}
+        ultimate_quality = {}
+        orb_reward = {}
 
         carriers = [a for a in self.attackers if a.is_alive and a.has_spike]
         others = [a for a in self.attackers if a.is_alive and not a.has_spike]
@@ -1141,14 +1231,24 @@ class SearchEnv:
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
-            (dr, dc), use_ability, facing = decode_action(action_dict[d.name])
+            requested = action_dict[d.name]
+            requested_base = int(requested[0] if isinstance(requested, tuple) else requested)
+            use_collect_orb = requested_base == ACTION_COLLECT_ORB
+            (dr, dc), use_ability, facing, use_ultimate = decode_action(
+                requested
+            )
 
-            if self._should_force_positioning(d, smoke_cells):
-                r0, c0 = int(d.pos[0]), int(d.pos[1])
-                dr, dc = bfs_best_direction(d.assigned_defense_dist_map, r0, c0)
-
-            d.facing = facing
-            actual_action_dict[d.name] = encode_action((dr, dc), use_ability, facing)
+            if facing is not None:
+                d.facing = facing
+            actual_action_dict[d.name] = (
+                ACTION_ULTIMATE
+                if use_ultimate
+                else (
+                    ACTION_COLLECT_ORB
+                    if use_collect_orb
+                    else encode_action((dr, dc), use_ability, facing)
+                )
+            )
             move_plans.append((d, (dr, dc)))
 
             visible_enemies = [
@@ -1157,6 +1257,47 @@ class SearchEnv:
                 if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+
+            if use_collect_orb and can_collect_orb(d, self.available_orbs):
+                orb_pos = tuple(map(int, d.pos))
+                if d.collecting_orb_pos != orb_pos:
+                    d.orb_collect_timer = 0
+                d.collecting_orb_pos = orb_pos
+                d.orb_collect_timer += 1
+                orb_reward[d.name] = 0.025
+                if d.orb_collect_timer >= ORB_COLLECT_REQUIRED_TICKS:
+                    d.ultimate_points = min(
+                        d.ultimate_cost,
+                        d.ultimate_points + ORB_ULTIMATE_POINTS,
+                    )
+                    self.available_orbs.discard(orb_pos)
+                    d.orb_collect_timer = 0
+                    d.collecting_orb_pos = None
+                    orb_reward[d.name] = 0.30
+            else:
+                d.orb_collect_timer = 0
+                d.collecting_orb_pos = None
+
+            if use_ultimate and d.ultimate_points >= d.ultimate_cost:
+                objective_window = bool(
+                    self.team_memory.spike_pos is not None
+                    or self.team_memory.last_seen_enemy is not None
+                )
+                context = ultimate_context_features(
+                    d,
+                    engaged=has_enemy_los,
+                    objective_window=objective_window,
+                    urgent=(d.max_hp > 0 and d.hp / d.max_hp <= 0.45),
+                )
+                ultimate_quality[d.name] = tactical_ultimate_window(d, context)
+                d.ultimate_points = 0
+                if d.ultimate_name == "TUNNEL":
+                    for enemy in visible_enemies:
+                        enemy.blind_remaining = max(enemy.blind_remaining, 5)
+                elif d.ultimate_name == "MONITOR":
+                    for enemy in self.attackers:
+                        if enemy.is_alive:
+                            enemy.reveal_remaining = max(enemy.reveal_remaining, 5)
 
             if has_enemy_los and (dr, dc) == (0, 0):
                 held_angle[d.name] = "held_with_los"
@@ -1289,6 +1430,10 @@ class SearchEnv:
         rewards = self._compute_rewards(
             pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle
         )
+        for name, tactical in ultimate_quality.items():
+            rewards[name] = rewards.get(name, 0.0) + (0.08 if tactical else -0.05)
+        for name, value in orb_reward.items():
+            rewards[name] = rewards.get(name, 0.0) + value
 
         carrier_after = next(
             (a for a in self.attackers if a.is_alive and a.has_spike), None
@@ -1659,13 +1804,23 @@ def select_action(policy_net, obs, mask, epsilon):
     if random.random() < epsilon:
         valid_indices = np.flatnonzero(mask)
         if len(valid_indices) == 0:
-            return 0
-        return int(np.random.choice(valid_indices))
+            base_action = 0
+        else:
+            base_action = int(np.random.choice(valid_indices))
+    else:
+        with torch.no_grad():
+            obs_t = torch.as_tensor(obs, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+            q_values = policy_net(obs_t).squeeze(0).cpu().numpy()
+            q_values = np.where(mask, q_values, -np.inf)
+            base_action = int(np.argmax(q_values))
     with torch.no_grad():
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-        q_values = policy_net(obs_t).squeeze(0).cpu().numpy()
-        q_values = np.where(mask, q_values, -np.inf)
-        return int(np.argmax(q_values))
+        facing_values = policy_net.facing_values(obs_t, [base_action]).squeeze(0)
+    if random.random() < epsilon:
+        facing_idx = random.randrange(len(FACING_DIRS))
+    else:
+        facing_idx = int(facing_values.argmax().item())
+    return base_action, FACING_DIRS[facing_idx]
 
 
 def select_actions_batch(policy_net, obs_dict, mask_dict, epsilon):
@@ -1682,16 +1837,105 @@ def select_actions_batch(policy_net, obs_dict, mask_dict, epsilon):
     with torch.no_grad():
         obs_t = torch.as_tensor(observations, dtype=torch.float32, device=DEVICE)
         q_values = policy_net(obs_t).cpu().numpy()
-    actions = {}
+    base_actions = []
     for row, name in enumerate(names):
         valid = np.flatnonzero(masks[row])
         if len(valid) == 0:
-            actions[name] = 0
+            base_actions.append(0)
         elif random.random() < epsilon:
-            actions[name] = int(np.random.choice(valid))
+            base_actions.append(int(np.random.choice(valid)))
         else:
-            actions[name] = int(np.argmax(np.where(masks[row], q_values[row], -np.inf)))
+            base_actions.append(
+                int(np.argmax(np.where(masks[row], q_values[row], -np.inf)))
+            )
+    with torch.no_grad():
+        facing_values = policy_net.facing_values(obs_t, base_actions).cpu().numpy()
+    actions = {}
+    for row, name in enumerate(names):
+        if random.random() < epsilon:
+            facing_idx = random.randrange(len(FACING_DIRS))
+        else:
+            facing_idx = int(np.argmax(facing_values[row]))
+        actions[name] = (base_actions[row], FACING_DIRS[facing_idx])
     return actions
+
+
+def observable_facing_target(obs, action):
+    """Build a facing label only from values already present in the observation."""
+    if obs[9] > 0.5 and (obs[22] != 0.0 or obs[23] != 0.0):
+        direction = facing_from_delta(np.sign(obs[22]), np.sign(obs[23]))
+        return FACING_DIRS.index(direction), 1.0
+    if obs[17] > 0.5 and (obs[18] != 0.0 or obs[19] != 0.0):
+        direction = facing_from_delta(obs[18], obs[19])
+        return FACING_DIRS.index(direction), 0.75
+    if obs[14] > 0.5 and (obs[15] != 0.0 or obs[16] != 0.0):
+        direction = facing_from_delta(obs[15], obs[16])
+        return FACING_DIRS.index(direction), 0.60
+    base_action = int(action[0] if isinstance(action, tuple) else action)
+    if 0 <= base_action < BASE_ACTION_DIM:
+        move = MOVES[base_action // 2]
+        if move != (0, 0):
+            direction = facing_towards((0, 0), move)
+            return FACING_DIRS.index(direction), 0.35
+    current = int(np.argmax(obs[ORB_CONTEXT_OBS_DIM:OBS_DIM]))
+    return current, 0.15
+
+
+def optimize_facing(policy_net, optimizer, samples, weight=0.35, batch_size=64):
+    if not samples or weight <= 0:
+        return None
+    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    observations, actions, targets, confidences = zip(*batch)
+    obs_t = torch.as_tensor(np.asarray(observations), dtype=torch.float32, device=DEVICE)
+    action_t = torch.as_tensor(actions, dtype=torch.long, device=DEVICE)
+    target_t = torch.as_tensor(targets, dtype=torch.long, device=DEVICE)
+    confidence_t = torch.as_tensor(confidences, dtype=torch.float32, device=DEVICE)
+    losses = nn.functional.cross_entropy(
+        policy_net.facing_values(obs_t, action_t), target_t, reduction="none"
+    )
+    loss = weight * (losses * confidence_t).sum() / confidence_t.sum().clamp_min(1e-6)
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
+
+
+def optimize_ultimate_classification(
+    policy_net, optimizer, positives, negatives, weight=0.25, batch_size=64
+):
+    if not positives and not negatives:
+        return None
+    per_class = max(1, batch_size // 2)
+    selected = []
+    if positives:
+        selected.extend(
+            (obs, mask, 1.0)
+            for obs, mask in random.sample(list(positives), min(per_class, len(positives)))
+        )
+    if negatives:
+        selected.extend(
+            (obs, mask, 0.0)
+            for obs, mask in random.sample(list(negatives), min(per_class, len(negatives)))
+        )
+    random.shuffle(selected)
+    observations, masks, labels = zip(*selected)
+    obs_t = torch.as_tensor(np.asarray(observations), dtype=torch.float32, device=DEVICE)
+    mask_t = torch.as_tensor(np.asarray(masks), dtype=torch.bool, device=DEVICE)
+    label_t = torch.as_tensor(labels, dtype=torch.float32, device=DEVICE)
+    q_values = policy_net(obs_t)
+    alternatives = mask_t.clone()
+    alternatives[:, ACTION_ULTIMATE] = False
+    competitor = q_values.masked_fill(~alternatives, -torch.inf).max(dim=1).values
+    margin = q_values[:, ACTION_ULTIMATE] - competitor
+    loss = weight * torch.where(
+        label_t > 0.5, torch.relu(0.8 - margin), torch.relu(0.8 + margin)
+    ).mean()
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_net.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
 
 
 def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
@@ -1729,16 +1973,130 @@ def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
     return loss.item()
 
 
+def expand_search_policy_state(checkpoint, policy_net):
+    """Warm-start the factorized policy from either legacy search format."""
+    source = checkpoint.get("model_state_dict", checkpoint)
+    target = policy_net.state_dict()
+    old_obs = int(source["feature.0.weight"].shape[1])
+    old_actions = int(source["advantage_head.2.weight"].shape[0])
+    for key, value in source.items():
+        if key in target and target[key].shape == value.shape:
+            target[key] = value.detach().clone()
+
+    feature_key = "feature.0.weight"
+    if feature_key in source and old_obs in (BASE_OBS_DIM, BASE_OBS_DIM + len(FACING_DIRS)):
+        expanded = target[feature_key].detach().clone()
+        expanded[:, :BASE_OBS_DIM] = source[feature_key][:, :BASE_OBS_DIM]
+        if old_obs > BASE_OBS_DIM:
+            expanded[:, ORB_CONTEXT_OBS_DIM:OBS_DIM] = source[feature_key][
+                :, BASE_OBS_DIM:old_obs
+            ]
+        expanded[:, BASE_OBS_DIM:ORB_CONTEXT_OBS_DIM] = 0.0
+        target[feature_key] = expanded
+
+    old_weight = source.get("advantage_head.2.weight")
+    old_bias = source.get("advantage_head.2.bias")
+    if old_weight is not None and old_actions == BASE_ACTION_DIM * len(FACING_DIRS):
+        target["advantage_head.2.weight"][:BASE_ACTION_DIM] = old_weight.reshape(
+            BASE_ACTION_DIM, len(FACING_DIRS), -1
+        ).mean(dim=1)
+        target["advantage_head.2.bias"][:BASE_ACTION_DIM] = old_bias.reshape(
+            BASE_ACTION_DIM, len(FACING_DIRS)
+        ).mean(dim=1)
+    elif old_weight is not None and old_actions == BASE_ACTION_DIM:
+        target["advantage_head.2.weight"][:BASE_ACTION_DIM] = old_weight
+        target["advantage_head.2.bias"][:BASE_ACTION_DIM] = old_bias
+    policy_net.load_state_dict(target)
+    return old_obs, old_actions
+
+
+def checkpoint_payload(policy_net, episode, metrics=None):
+    return {
+        "model_state_dict": policy_net.state_dict(),
+        "episode": int(episode),
+        "obs_dim": OBS_DIM,
+        "n_actions": ACTION_DIM,
+        "facing_head_version": FACING_HEAD_VERSION,
+        "training_revision": "defender_search_current",
+        "evaluation": metrics or {},
+    }
+
+
+def evaluate_search_greedy(policy_net, episodes_per_seed=30, seeds=(3026091700, 5026091700, 6026091700)):
+    """Evaluate checkpoint selection on fixed seeds instead of training reward."""
+    was_training = policy_net.training
+    policy_net.eval()
+    seed_rows = []
+    for seed in seeds:
+        random.seed(seed)
+        np.random.seed(seed & 0xFFFFFFFF)
+        env = SearchEnv()
+        counts = {"defender_win": 0, "planted": 0, "defender_wipe": 0}
+        for _ in range(episodes_per_seed):
+            observations, masks = env.reset()
+            for _tick in range(MAX_TICKS):
+                actions = select_actions_batch(policy_net, observations, masks, 0.0)
+                observations, masks, _rewards, done, _actual = env.step(actions)
+                if done or not observations:
+                    break
+            reason = env.match_over_reason or "defender_wipe"
+            counts[reason] = counts.get(reason, 0) + 1
+        total = float(episodes_per_seed)
+        seed_rows.append(
+            {
+                "seed": seed,
+                "win_rate": counts["defender_win"] / total,
+                "plant_rate": counts["planted"] / total,
+                "wipe_rate": counts["defender_wipe"] / total,
+            }
+        )
+    if was_training:
+        policy_net.train()
+    metrics = {
+        "episodes": episodes_per_seed * len(seeds),
+        "seeds": list(seeds),
+        "win_rate": float(np.mean([row["win_rate"] for row in seed_rows])),
+        "worst_win_rate": min(row["win_rate"] for row in seed_rows),
+        "plant_rate": float(np.mean([row["plant_rate"] for row in seed_rows])),
+        "worst_plant_rate": max(row["plant_rate"] for row in seed_rows),
+        "wipe_rate": float(np.mean([row["wipe_rate"] for row in seed_rows])),
+        "per_seed": seed_rows,
+    }
+    return metrics
+
+
+def search_selection_score(metrics):
+    return (
+        metrics["worst_win_rate"],
+        -metrics["worst_plant_rate"],
+        metrics["win_rate"],
+        -metrics["wipe_rate"],
+    )
+
+
+def scheduled_learning_rate(episode, initial_lr, decay_start=1500, decay_end=3000, minimum_scale=0.20):
+    if episode <= decay_start:
+        return initial_lr
+    fraction = min(1.0, (episode - decay_start) / max(1, decay_end - decay_start))
+    return initial_lr * (1.0 - fraction * (1.0 - minimum_scale))
+
+
 def train(
     episodes=EPISODE_COUNT,
     batch_size=128,
     gamma=0.99,
-    lr=1e-4,
+    lr=1e-5,
     buffer_size=200_000,
     target_update_every=1000,
+    eval_every=250,
+    eval_episodes_per_seed=30,
 ):
     policy_net = DefenderSearchDuelingDQN().to(DEVICE)
     target_net = DefenderSearchDuelingDQN().to(DEVICE)
+    if MODEL_SAVE_PATH.exists():
+        checkpoint = torch.load(MODEL_SAVE_PATH, map_location=DEVICE, weights_only=False)
+        old_obs, old_actions = expand_search_policy_state(checkpoint, policy_net)
+        print(f"[WARM START] {MODEL_SAVE_PATH} obs={old_obs} actions={old_actions}")
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
@@ -1747,8 +2105,11 @@ def train(
     env = SearchEnv()
 
     global_step = 0
-    best_avg_reward = -float("inf")
+    best_score = None
     episode_reward_history = deque(maxlen=100)
+    facing_samples = deque(maxlen=50_000)
+    ultimate_positive_samples = deque(maxlen=20_000)
+    ultimate_negative_samples = deque(maxlen=20_000)
 
     # --- 診断用(1): キャラ別(ロール別)の直近100エピソード報酬履歴 ---
     per_name_reward_history = {name: deque(maxlen=100) for name in GC_ROSTER_ORDER}
@@ -1763,6 +2124,9 @@ def train(
 
     start_time = time.perf_counter()
     for episode in range(1, episodes + 1):
+        current_lr = scheduled_learning_rate(episode, lr)
+        for group in optimizer.param_groups:
+            group["lr"] = current_lr
         # --- 一時デバッグ用: 500エピソードごとに1エピソードだけ実況トレースON ---
         env.debug_trace = False
 
@@ -1779,6 +2143,19 @@ def train(
             action_dict = select_actions_batch(
                 policy_net, obs_dict, mask_dict, epsilon
             )
+
+            defender_by_name = {unit.name: unit for unit in env.defenders if unit.is_alive}
+            for name, obs in obs_dict.items():
+                base_action = int(action_dict[name][0])
+                target, confidence = observable_facing_target(obs, action_dict[name])
+                facing_samples.append((obs.copy(), base_action, target, confidence))
+                if mask_dict[name][ACTION_ULTIMATE]:
+                    unit = defender_by_name.get(name)
+                    tactical = unit is not None and tactical_ultimate_window(
+                        unit, obs[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM]
+                    )
+                    sample = (obs.copy(), mask_dict[name].copy())
+                    (ultimate_positive_samples if tactical else ultimate_negative_samples).append(sample)
 
             next_obs_dict, next_mask_dict, rewards, done, actual_action_dict = env.step(
                 action_dict
@@ -1811,6 +2188,15 @@ def train(
             global_step += 1
 
             optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma)
+            if global_step % 4 == 0:
+                optimize_facing(policy_net, optimizer, facing_samples)
+            if global_step % 8 == 0:
+                optimize_ultimate_classification(
+                    policy_net,
+                    optimizer,
+                    ultimate_positive_samples,
+                    ultimate_negative_samples,
+                )
 
             if global_step % target_update_every == 0:
                 target_net.load_state_dict(policy_net.state_dict())
@@ -1844,6 +2230,7 @@ def train(
             print(
                 f"[EP {episode}/{episodes}] reward={episode_reward_total:.3f} "
                 f"avg100={avg_reward:.3f} epsilon={epsilon_by_episode(episode):.3f} "
+                f"lr={current_lr:.2e} "
                 f"buffer={len(buffer)} reason={env.match_over_reason} "
                 f"elapse={elapsed_time:.1f} "
             )
@@ -1866,18 +2253,36 @@ def train(
             )
             print(f"  [POSITION-MODE diag] {position_diag_str}")
 
-        if avg_reward > best_avg_reward and episode >= 100:
-            best_avg_reward = avg_reward
-            torch.save(policy_net.state_dict(), MODEL_SAVE_PATH)
-            print(
-                f"[SAVE] best model updated: avg100={avg_reward:.3f} -> {MODEL_SAVE_PATH}"
+        if episode % eval_every == 0:
+            metrics = evaluate_search_greedy(
+                policy_net, episodes_per_seed=eval_episodes_per_seed
             )
+            score = search_selection_score(metrics)
+            print(
+                f"[FIXED-SEED EVAL] win={metrics['win_rate']:.3f} "
+                f"worst_win={metrics['worst_win_rate']:.3f} "
+                f"plant={metrics['plant_rate']:.3f} "
+                f"worst_plant={metrics['worst_plant_rate']:.3f}"
+            )
+            if best_score is None or score > best_score:
+                best_score = score
+                torch.save(checkpoint_payload(policy_net, episode, metrics), MODEL_SAVE_PATH)
+                print(f"[SAVE] fixed-seed winner -> {MODEL_SAVE_PATH}")
 
         if episode % 100 == 0:
-            torch.save(policy_net.state_dict(), MODEL_LATEST_PATH)
+            torch.save(checkpoint_payload(policy_net, episode), MODEL_LATEST_PATH)
 
     print("[DONE] training finished.")
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description="Train current GC defender-search policy")
+    parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
+    parser.add_argument("--eval-every", type=int, default=250)
+    parser.add_argument("--eval-episodes-per-seed", type=int, default=30)
+    args = parser.parse_args()
+    train(
+        episodes=args.episodes,
+        eval_every=args.eval_every,
+        eval_episodes_per_seed=args.eval_episodes_per_seed,
+    )

@@ -52,7 +52,7 @@ from navigation_intent_gc import (
 from ultimate_tactics_gc import tactical_ultimate_window
 
 PHASES = ("carry", "escort", "guard")
-VERSIONS = {"carry": 11, "escort": 12, "guard": 4}
+VERSIONS = {"carry": 12, "escort": 13, "guard": 5}
 FACING_PHASES = ("carry", "escort")
 TRAINING_REVISION = "independent_confident_facing_v20"
 FACING_PARAMETER_PREFIXES = (
@@ -88,6 +88,7 @@ LATE_ROUND_THRESHOLD = 30
 LATE_QUIET_STALL_EXTRA_PENALTY = 0.12
 TIMEOUT_PENALTY = 20.0
 FAKE_WAIT_SUPPORT_RADIUS = 4
+FAKE_WAIT_SUPPORT_DESIRED_RADIUS = 2
 
 
 def expand_policy_state(checkpoint, obs_dim, action_dim=None):
@@ -219,9 +220,10 @@ def restrict_policy_to_facing_head(policy):
         parameter.requires_grad_(True)
 
 
-def restrict_policy_to_movement_rows(policy, rows):
-    """Train only selected displacement rows in the final advantage layer."""
+def restrict_policy_to_movement_rows(policy, rows, input_columns=()):
+    """Train displacement rows and, optionally, newly added observation columns."""
     rows = tuple(map(int, rows))
+    input_columns = tuple(map(int, input_columns))
     if not rows:
         raise ValueError("movement-only training requires at least one action row")
     output = policy.advantage_head[-1]
@@ -229,6 +231,16 @@ def restrict_policy_to_movement_rows(policy, rows):
         raise ValueError(f"movement rows are outside action space: {rows}")
     for parameter in policy.parameters():
         parameter.requires_grad_(False)
+    if input_columns:
+        feature_weight = policy.feature[0].weight
+        if min(input_columns) < 0 or max(input_columns) >= feature_weight.shape[1]:
+            raise ValueError(
+                f"input columns are outside observation space: {input_columns}"
+            )
+        feature_weight.requires_grad_(True)
+        feature_mask = torch.zeros_like(feature_weight)
+        feature_mask[:, list(input_columns)] = 1
+        feature_weight.register_hook(lambda gradient: gradient * feature_mask)
     output.weight.requires_grad_(True)
     output.bias.requires_grad_(True)
     weight_mask = torch.zeros_like(output.weight)
@@ -557,8 +569,36 @@ def fake_wait_support_teacher_action(phase, char, state, view, controller, mask)
     distance = controller._get_carry_dist_map(view.grid, tuple(map(int, carrier.pos)))
     pos = tuple(map(int, char.pos))
     current = float(distance[pos])
-    if not np.isfinite(current) or current <= FAKE_WAIT_SUPPORT_RADIUS:
+    if not np.isfinite(current):
         return None
+    if current <= FAKE_WAIT_SUPPORT_DESIRED_RADIUS:
+        # The ordinary waypoint teacher can send a newly arrived bodyguard
+        # straight back toward its separate staging slot. Keep the support
+        # band instead; step aside if directly adjacent to the holder.
+        if current <= 1:
+            goal = navigation_intent(view, carrier)[0]
+            route = (
+                controller._get_goal_dist_map(view.grid, goal)
+                if goal is not None and hasattr(controller, "_get_goal_dist_map")
+                else None
+            )
+            carrier_route = float(route[tuple(map(int, carrier.pos))]) if route is not None else -1
+            sidesteps = []
+            for action, (dr, dc) in enumerate(((-1, 0), (1, 0), (0, -1), (0, 1))):
+                nxt = (pos[0] + dr, pos[1] + dc)
+                if not mask[action]:
+                    continue
+                support_distance = float(distance[nxt])
+                if not current < support_distance <= FAKE_WAIT_SUPPORT_RADIUS:
+                    continue
+                route_distance = float(route[nxt]) if route is not None else -1
+                blocks_route = (
+                    carrier_route >= 0 and 0 <= route_distance < carrier_route
+                )
+                sidesteps.append((blocks_route, support_distance, action))
+            if sidesteps:
+                return min(sidesteps)[2]
+        return escort_runtime.ACTION_STAY if mask[escort_runtime.ACTION_STAY] else None
     choices = []
     for action, (dr, dc) in enumerate(((-1, 0), (1, 0), (0, -1), (0, 1))):
         nxt = (pos[0] + dr, pos[1] + dc)
@@ -641,10 +681,19 @@ def carrier_entry_sync_needed(screen, state, obs=None):
     )
 
 
-def optimize_demonstrations(policy, optimizer, samples, weight, batch_size=64):
+def optimize_demonstrations(
+    policy, optimizer, samples, weight, batch_size=64,
+    focus_samples=None, focus_fraction=0.5,
+):
     if not samples or weight <= 0:
         return None
-    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    count = min(batch_size, len(samples))
+    focus_count = min(
+        len(focus_samples) if focus_samples is not None else 0,
+        int(count * focus_fraction),
+    )
+    batch = random.sample(list(focus_samples), focus_count) if focus_count else []
+    batch += random.sample(list(samples), count - focus_count)
     obs, action, mask = zip(*batch)
     q = policy(torch.from_numpy(np.array(obs)))
     valid = torch.from_numpy(np.array(mask))
@@ -801,6 +850,35 @@ def escort_support_selection_score(metrics, max_no_entry, max_timeout):
     )
 
 
+def joint_movement_selection_score(
+    metrics, baseline_metrics, max_no_entry, max_timeout,
+    max_quiet_stall_increase, max_carrier_death_increase, max_plant_regression,
+):
+    """Select coordinated Carry/Escort movement without trading away planting."""
+    no_entry = metrics.get("worst_carry_no_entry_rate", metrics["carry_no_entry_rate"])
+    timeout = metrics.get("worst_timeout_rate", metrics["timeout_rate"])
+    violation = max(0.0, no_entry - max_no_entry) + max(0.0, timeout - max_timeout)
+    unsafe = joint_movement_guardrail_violated(
+        metrics,
+        baseline_metrics,
+        max_timeout,
+        max_quiet_stall_increase,
+        max_carrier_death_increase,
+        max_plant_regression,
+    )
+    return (
+        int(not unsafe),
+        int(violation <= 1e-12),
+        -violation,
+        metrics.get("worst_registered_plant_rate", 0.0),
+        -metrics.get("worst_carrier_preentry_death_rate", 1.0),
+        -metrics.get("carrier_preentry_death_rate", 1.0),
+        metrics.get("worst_round_win_rate", 0.0),
+        metrics.get("round_win_rate", 0.0),
+        -metrics.get("carry_quiet_stall_tick_rate", 1.0),
+    )
+
+
 def carry_movement_guardrail_violated(
     metrics,
     baseline_metrics,
@@ -856,6 +934,37 @@ def escort_support_guardrail_violated(
         or plant < baseline_plant - max_plant_regression
         or no_entry > baseline_no_entry + max_no_entry_increase
     )
+
+
+def joint_movement_guardrail_violated(
+    metrics,
+    baseline_metrics,
+    max_timeout,
+    max_quiet_stall_increase,
+    max_carrier_death_increase,
+    max_plant_regression,
+):
+    return carry_movement_guardrail_violated(
+        metrics,
+        baseline_metrics,
+        max_timeout,
+        max_quiet_stall_increase,
+    ) or escort_support_guardrail_violated(
+        metrics,
+        baseline_metrics,
+        max_timeout,
+        max_carrier_death_increase,
+        max_plant_regression,
+    )
+
+
+def scheduled_learning_rate(base_lr, episode, decay_start, decay_episodes, final_scale):
+    """Linear decay after a stable warm phase; episode is schedule-relative."""
+    if episode <= decay_start:
+        return float(base_lr)
+    progress = min(1.0, (episode - decay_start) / max(1, decay_episodes))
+    scale = 1.0 - progress * (1.0 - final_scale)
+    return float(base_lr * scale)
 
 
 def phase_facing_selection_score(
@@ -1741,6 +1850,23 @@ class CurriculumSession(RealCarrySession):
                         reward += 3.0 if tactical_window else -5.0
                     else:
                         reward -= 2.0
+                orb_action = {
+                    "carry": runtime.COLLECT_ORB_ACTION_INDEX,
+                    "escort": escort_runtime.ACTION_COLLECT_ORB,
+                    "guard": guard_runtime.COLLECT_ORB_ACTION_INDEX,
+                }[phase]
+                if action == orb_action:
+                    # Reward actual collection progress, not merely selecting
+                    # the action.  The engine exposes the per-tick flag and
+                    # increments ultimate_points only on completion.
+                    collecting = bool(getattr(char, "collecting_orb_this_tick", False))
+                    gained = getattr(char, "ultimate_points", 0) > ultimate_before.get(name, 0)
+                    if gained:
+                        reward += 0.50 + 0.20
+                    elif collecting:
+                        reward += 0.03
+                    else:
+                        reward -= 0.05
                 if fighting:
                     combat_ticks += 1
                     combat_stops += tuple(char.pos) == pos
@@ -1863,14 +1989,14 @@ class CurriculumSession(RealCarrySession):
                         reward -= 0.6 * progress
                 elif phase == "escort" and holder_pos is not None:
                     route_goal = self.action_goals.get(key)
-                    if (
+                    fake_wait_bodyguard = bool(
                         holder is not None
                         and holder.is_alive
                         and char.is_alive
-                        and not fighting
                         and navigation_intent(game, holder)[2] == "FAKE_WAIT"
                         and navigation_intent(game, char)[2] == "FAKE_WAIT"
-                    ):
+                    )
+                    if fake_wait_bodyguard and not fighting:
                         # The fake sellers deliberately leave the Spike behind.
                         # Teach a waiting teammate to *learn* to guard the holder
                         # before contact, without overriding production actions.
@@ -1909,7 +2035,11 @@ class CurriculumSession(RealCarrySession):
                     route_blocking = bool(
                         designated and designated_route_blocking(screen_status, holder)
                     )
-                    if route_goal is not None and not formation_active:
+                    if (
+                        route_goal is not None
+                        and not formation_active
+                        and not fake_wait_bodyguard
+                    ):
                         distance = self.distances(route_goal)
                         reward += self.progress.step(
                             name,
@@ -2152,6 +2282,18 @@ def evaluate(session, episodes, seed, final):
         if (r.get("first_carrier_threat_macro_context") or {}).get("carrier_role")
         == "FAKE_WAIT"
     ]
+    fake_wait_threat_distances = [
+        (r.get("first_carrier_threat_macro_context") or {}).get(
+            "nearest_same_role_distance"
+        )
+        for r in threat_rows
+        if (r.get("first_carrier_threat_macro_context") or {}).get("carrier_role")
+        == "FAKE_WAIT"
+    ]
+    fake_wait_threat_close_count = sum(
+        distance is not None and distance <= FAKE_WAIT_SUPPORT_RADIUS
+        for distance in fake_wait_threat_distances
+    )
 
     def screen_state_counts(event_rows, key):
         states = [r.get(key) for r in event_rows]
@@ -2313,6 +2455,11 @@ def evaluate(session, episodes, seed, final):
                 )
                 for r in fake_wait_no_candidate_threat_rows
             )
+        ),
+        "fake_wait_threat_count": len(fake_wait_threat_distances),
+        "fake_wait_threat_close_count": fake_wait_threat_close_count,
+        "fake_wait_threat_close_rate": fake_wait_threat_close_count / max(
+            1, len(fake_wait_threat_distances)
         ),
         "first_threat_final_distance_mean": mean_contact_distance(
             threat_rows, "first_carrier_threat_final_distance"
@@ -2585,6 +2732,15 @@ def evaluate_multi(session, episodes, seeds, final):
         "fake_wait_threat_same_role_distance_counts": total_screen_states(
             "fake_wait_threat_same_role_distance_counts"
         ),
+        "fake_wait_threat_count": sum(
+            b.get("fake_wait_threat_count", 0) for b in blocks
+        ),
+        "fake_wait_threat_close_count": sum(
+            b.get("fake_wait_threat_close_count", 0) for b in blocks
+        ),
+        "fake_wait_threat_close_rate": sum(
+            b.get("fake_wait_threat_close_count", 0) for b in blocks
+        ) / max(1, sum(b.get("fake_wait_threat_count", 0) for b in blocks)),
         "postplant_win_rate": float(postplant_wins / max(1, plants)),
         "screened_approach_rate": sum(
             b["screened_approach_success_ticks"] for b in blocks
@@ -2750,13 +2906,13 @@ def train(args):
     hashes = {p: hashlib.sha256(s.read_bytes()).hexdigest() for p, s in sources.items()}
     policies = {
         "carry": runtime.AttackerCarryDuelingDQN(
-            obs_dim=runtime.FACING_HEAD_OBS_DIM, action_dim=runtime.ACTION_DIM
+            obs_dim=runtime.ORB_OBS_DIM, action_dim=runtime.ACTION_DIM
         ),
         "escort": escort_runtime.DuelingQNetwork(
-            escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM, escort_runtime.N_ACTIONS
+            escort_runtime.ORB_OBS_DIM, escort_runtime.N_ACTIONS
         ),
         "guard": guard_runtime.AttackerGuardDuelingDQN(
-            obs_dim=guard_runtime.ULTIMATE_CONTEXT_OBS_DIM,
+            obs_dim=guard_runtime.ORB_OBS_DIM,
             action_dim=guard_runtime.ACTION_DIM,
         ),
     }
@@ -2810,7 +2966,14 @@ def train(args):
         rows = MOVEMENT_ACTION_ROWS[phase]
         if phase in args.reset_movement_head_phases:
             reset_movement_rows(policies[phase], rows)
-        restrict_policy_to_movement_rows(policies[phase], rows)
+        input_columns = (
+            range(
+                escort_runtime.FACING_HEAD_OBS_DIM,
+                escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM,
+            )
+            if phase == "escort" else ()
+        )
+        restrict_policy_to_movement_rows(policies[phase], rows, input_columns)
     # A reset branch must start its target network from the same freshly
     # initialized movement rows, not from the pre-reset source checkpoint.
     targets = {p: copy.deepcopy(net) for p, net in policies.items()}
@@ -2823,6 +2986,7 @@ def train(args):
     }
     replays = {p: deque(maxlen=100_000) for p in PHASES}
     demonstrations = {p: deque(maxlen=20_000) for p in PHASES}
+    fake_wait_demonstrations = deque(maxlen=5_000)
     facing_demonstrations = {p: deque(maxlen=30_000) for p in FACING_PHASES}
     ultimate_positives = {p: deque(maxlen=10_000) for p in PHASES}
     ultimate_negatives = {p: deque(maxlen=10_000) for p in PHASES}
@@ -2876,12 +3040,16 @@ def train(args):
             episode=episode,
             training_environment="actual_engine_full_round_curriculum",
             training_revision=(
-                "escort_support_rows_v22"
-                if set(args.movement_only_phases) == {"escort"}
+                "carry_escort_joint_movement"
+                if set(args.movement_only_phases) == {"carry", "escort"}
                 else (
-                    "movement_rows_v21"
-                    if set(args.movement_only_phases) == {"carry"}
-                    else TRAINING_REVISION
+                    "escort_support_input_columns_v22"
+                    if set(args.movement_only_phases) == {"escort"}
+                    else (
+                        "movement_rows_v21"
+                        if set(args.movement_only_phases) == {"carry"}
+                        else TRAINING_REVISION
+                    )
                 )
             ),
             evaluation=metrics,
@@ -2965,6 +3133,16 @@ def train(args):
                 if args.navigation_bootstrap_episodes
                 else 0.0
             )
+            learning_rate = scheduled_learning_rate(
+                args.lr,
+                schedule_episode,
+                args.lr_decay_start,
+                args.lr_decay_episodes,
+                args.lr_final_scale,
+            )
+            for optimizer in optimizers.values():
+                for group in optimizer.param_groups:
+                    group["lr"] = learning_rate
             row = session.play(
                 args.seed + global_episode,
                 stats,
@@ -2973,9 +3151,15 @@ def train(args):
             )
             row["episode"] = global_episode
             row["navigation_teacher_probability"] = teacher_probability
+            row["learning_rate"] = learning_rate
             row["demonstration_counts"] = {
                 p: len(session.demonstrations[p]) for p in PHASES
             }
+            row["fake_wait_demonstration_count"] = int(sum(
+                len(obs) >= escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
+                and obs[escort_runtime.FACING_HEAD_OBS_DIM] > 0.5
+                for obs, _action, _mask in session.demonstrations["escort"]
+            ))
             row["facing_demonstration_counts"] = {
                 p: len(session.facing_examples[p]) for p in FACING_PHASES
             }
@@ -3028,6 +3212,12 @@ def train(args):
                     )
                 )
                 demonstrations[phase].extend(phase_demonstrations)
+                if phase == "escort":
+                    fake_wait_demonstrations.extend(
+                        sample for sample in phase_demonstrations
+                        if len(sample[0]) >= escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
+                        and sample[0][escort_runtime.FACING_HEAD_OBS_DIM] > 0.5
+                    )
                 if phase in FACING_PHASES:
                     facing_demonstrations[phase].extend(session.facing_examples[phase])
                 for obs, mask, tactical in session.ultimate_examples[phase]:
@@ -3063,6 +3253,9 @@ def train(args):
                                 teacher_probability,
                                 args.navigation_retention_weight,
                             ),
+                            focus_samples=(
+                                fake_wait_demonstrations if phase == "escort" else None
+                            ),
                         )
                     if (
                         update_index < td_updates
@@ -3097,7 +3290,9 @@ def train(args):
                     f"win={sum(r['attacker_win'] for r in recent)/len(recent):.3f} "
                     f"plant={sum(r['planted'] for r in recent)/len(recent):.3f} "
                     f"epsilon={epsilon:.3f} teacher={teacher_probability:.3f} "
+                    f"lr={learning_rate:.2e} "
                     f"demo={row['navigation_demo_multiplier']:.3f} "
+                    f"fake_wait_demo={sum(r.get('fake_wait_demonstration_count', 0) for r in recent)/len(recent):.1f} "
                     f"no_entry={sum(not entered_site(r) for r in recent)/len(recent):.3f} "
                     f"timeout={sum(r['timed_out'] for r in recent)/len(recent):.3f} "
                     f"seconds={time.monotonic()-started:.0f}",
@@ -3117,6 +3312,8 @@ def train(args):
                 metrics, args.max_no_entry_rate, args.max_timeout_rate
             )
             evaluations.append(metrics)
+            if baseline_metrics is None:
+                baseline_metrics = metrics
             if set(args.movement_only_phases) == {"carry"}:
                 score = carry_movement_selection_score(
                     metrics, args.max_no_entry_rate, args.max_timeout_rate
@@ -3124,6 +3321,16 @@ def train(args):
             elif set(args.movement_only_phases) == {"escort"}:
                 score = escort_support_selection_score(
                     metrics, args.max_no_entry_rate, args.max_timeout_rate
+                )
+            elif set(args.movement_only_phases) == {"carry", "escort"}:
+                score = joint_movement_selection_score(
+                    metrics,
+                    baseline_metrics,
+                    args.max_no_entry_rate,
+                    args.max_timeout_rate,
+                    args.max_quiet_stall_increase,
+                    args.max_carrier_death_increase,
+                    args.max_plant_regression,
                 )
             else:
                 score = selection_score(
@@ -3138,14 +3345,26 @@ def train(args):
                 save("best_by_eval", global_episode, metrics)
             elif episode > 0:
                 evaluations_without_improvement += 1
-            if baseline_metrics is None:
-                baseline_metrics = metrics
             if episode > 0 and set(args.movement_only_phases) == {"carry"}:
                 if carry_movement_guardrail_violated(
                     metrics,
                     baseline_metrics,
                     args.max_timeout_rate,
                     args.max_quiet_stall_increase,
+                ):
+                    guardrail_violations += 1
+                else:
+                    guardrail_violations = 0
+            elif episode > 0 and set(args.movement_only_phases) == {
+                "carry", "escort"
+            }:
+                if joint_movement_guardrail_violated(
+                    metrics,
+                    baseline_metrics,
+                    args.max_timeout_rate,
+                    args.max_quiet_stall_increase,
+                    args.max_carrier_death_increase,
+                    args.max_plant_regression,
                 ):
                     guardrail_violations += 1
                 else:
@@ -3378,6 +3597,24 @@ def main():
         default=(9026092000, 10026092000, 11026092000),
     )
     parser.add_argument("--lr", type=float, default=0.00005)
+    parser.add_argument(
+        "--lr-decay-start",
+        type=int,
+        default=0,
+        help="schedule-relative episode at which linear learning-rate decay begins",
+    )
+    parser.add_argument(
+        "--lr-decay-episodes",
+        type=int,
+        default=1,
+        help="episodes over which lr reaches lr-final-scale",
+    )
+    parser.add_argument(
+        "--lr-final-scale",
+        type=float,
+        default=1.0,
+        help="final learning rate as a fraction of --lr",
+    )
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--max-updates", type=int, default=64)
     parser.add_argument("--final-mix", type=float, default=0.20)
@@ -3393,7 +3630,7 @@ def main():
         "--movement-guardrail-patience",
         type=int,
         default=0,
-        help="stop isolated movement training after this many consecutive safety regressions; zero disables",
+        help="stop movement training after this many consecutive safety regressions; zero disables",
     )
     parser.add_argument(
         "--max-quiet-stall-increase",
@@ -3405,13 +3642,13 @@ def main():
         "--max-carrier-death-increase",
         type=float,
         default=0.05,
-        help="maximum Escort worst-seed pre-entry carrier-death increase over baseline",
+        help="maximum worst-seed pre-entry carrier-death increase over baseline",
     )
     parser.add_argument(
         "--max-plant-regression",
         type=float,
         default=0.05,
-        help="maximum Escort worst-seed registered-plant loss versus baseline",
+        help="maximum worst-seed registered-plant loss versus baseline",
     )
     parser.add_argument(
         "--navigation-bootstrap-episodes",
@@ -3478,7 +3715,10 @@ def main():
         nargs="*",
         choices=tuple(MOVEMENT_ACTION_ROWS),
         default=(),
-        help="freeze all tensors except phase displacement rows in the final advantage layer",
+        help=(
+            "train phase displacement rows while freezing tactical/facing weights; "
+            "Escort may also learn its new support-only input columns"
+        ),
     )
     parser.add_argument(
         "--reset-movement-head-phases",
@@ -3535,6 +3775,8 @@ def main():
         or args.movement_demo_updates < 0
         or args.early_stop_patience < 0
         or args.movement_guardrail_patience < 0
+        or args.lr_decay_start < 0
+        or args.lr_decay_episodes < 1
         or args.max_quiet_stall_increase < 0
         or args.max_carrier_death_increase < 0
         or args.max_plant_regression < 0
@@ -3552,6 +3794,7 @@ def main():
     if (
         not 0 < args.gamma <= 1
         or args.lr <= 0
+        or not 0 < args.lr_final_scale <= 1
         or not 0 <= args.target_win_rate <= 1
         or not 0 <= args.final_mix <= 1
         or not 0 <= args.max_no_entry_rate <= 1
@@ -3584,9 +3827,10 @@ def main():
     if args.movement_guardrail_patience > 0 and set(args.movement_only_phases) not in (
         {"carry"},
         {"escort"},
+        {"carry", "escort"},
     ):
         parser.error(
-            "movement-guardrail-patience requires movement-only-phases carry or escort"
+            "movement-guardrail-patience requires Carry and/or Escort movement-only training"
         )
     seed_sets = [
         set(

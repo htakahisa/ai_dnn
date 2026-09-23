@@ -78,6 +78,13 @@ try:
         facing_from_delta,
         facing_towards,
     )
+    from .ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        build_ultimate_action,
+        can_collect_orb,
+        orb_context_features,
+        ultimate_context_features,
+    )
 except ImportError:
     from gc_facing import (
         FACING_DIRS,
@@ -86,18 +93,30 @@ except ImportError:
         facing_from_delta,
         facing_towards,
     )
+    from ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        build_ultimate_action,
+        can_collect_orb,
+        orb_context_features,
+        ultimate_context_features,
+    )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = (
-    36  # 31(従来) + 4(BFS距離 + 推奨方向dr,dc + 到着フラグ) + 1(spike_watchフラグ)
-)
-OBS_DIM = 44
+BASE_OBS_DIM = 36
+LEGACY_FACING_OBS_DIM = BASE_OBS_DIM + len(FACING_DIRS)
+ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
+ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
+OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
 BASE_ACTION_DIM = 10
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
+LEGACY_COMPOSITE_ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
+ACTION_ULTIMATE = BASE_ACTION_DIM
+ACTION_COLLECT_ORB = BASE_ACTION_DIM + 1
+ACTION_DIM = BASE_ACTION_DIM + 2
+FACING_HEAD_VERSION = 2
 
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
@@ -135,12 +154,39 @@ class DefenderSearchDuelingDQN(nn.Module):
         self.advantage_head = nn.Sequential(
             nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
         )
+        facing_hidden = hidden // 2
+        self.facing_feature = nn.Sequential(
+            nn.Linear(obs_dim, facing_hidden),
+            nn.ReLU(),
+            nn.Linear(facing_hidden, facing_hidden),
+            nn.ReLU(),
+        )
+        self.facing_output = nn.Linear(
+            facing_hidden + action_dim, len(FACING_DIRS)
+        )
+        self.action_dim = action_dim
+        self.facing_head_version = FACING_HEAD_VERSION
 
     def forward(self, x):
         f = self.feature(x)
         v = self.value_head(f)
         a = self.advantage_head(f)
         return v + (a - a.mean(dim=1, keepdim=True))
+
+    def facing_values(self, x, actions):
+        features = self.facing_feature(x)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=x.device).view(-1)
+        action_onehot = torch.nn.functional.one_hot(
+            actions, num_classes=self.action_dim
+        ).to(dtype=features.dtype)
+        return self.facing_output(torch.cat((features, action_onehot), dim=1))
+
+    def facing_parameters(self):
+        return [
+            parameter
+            for module in (self.facing_feature, self.facing_output)
+            for parameter in module.parameters()
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -476,21 +522,59 @@ class LearningDefenderSearchGCController:
         self.verbose = verbose
         # Runtime game/view reference used for active smoke information.
         self.game = None
+        self.model_mode = "factorized"
         self.legacy_model = False
+        self.facing_head_enabled = False
+        self.model_episode = None
         self.model = DefenderSearchDuelingDQN().to(DEVICE)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE, weights_only=False)
-            # Keep old checkpoints runnable while the expanded facing model
-            # is being retrained.  They retain the old automatic movement
-            # facing behaviour; new checkpoints use the learned action.
+            checkpoint = torch.load(
+                model_path, map_location=DEVICE, weights_only=False
+            )
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
             old_obs = int(state_dict["feature.0.weight"].shape[1])
             old_actions = int(state_dict["advantage_head.2.weight"].shape[0])
-            if old_obs != OBS_DIM or old_actions != ACTION_DIM:
-                self.legacy_model = True
-                self.model = DefenderSearchDuelingDQN(
-                    obs_dim=old_obs, action_dim=old_actions
-                ).to(DEVICE)
-            self.model.load_state_dict(state_dict)
+            if old_actions == BASE_ACTION_DIM:
+                self.model_mode = "flat"
+            elif old_actions == LEGACY_COMPOSITE_ACTION_DIM:
+                self.model_mode = "composite"
+            elif old_actions == ACTION_DIM and old_obs == OBS_DIM:
+                self.model_mode = "factorized"
+            else:
+                raise ValueError(
+                    f"unsupported defender-search checkpoint: "
+                    f"obs_dim={old_obs} actions={old_actions}"
+                )
+            self.legacy_model = self.model_mode == "flat"
+            self.model = DefenderSearchDuelingDQN(
+                obs_dim=old_obs, action_dim=old_actions
+            ).to(DEVICE)
+            incompatible = self.model.load_state_dict(state_dict, strict=False)
+            missing = [
+                key for key in incompatible.missing_keys
+                if not key.startswith(("facing_feature.", "facing_output."))
+            ]
+            if missing or incompatible.unexpected_keys:
+                raise RuntimeError(
+                    f"defender-search checkpoint keys mismatch: "
+                    f"missing={missing} unexpected={list(incompatible.unexpected_keys)}"
+                )
+            facing_version = int(
+                checkpoint.get("facing_head_version", 0)
+                if isinstance(checkpoint, dict) else 0
+            )
+            self.model.facing_head_version = facing_version
+            self.facing_head_enabled = (
+                self.model_mode == "factorized"
+                and facing_version >= 1
+                and not any(
+                    key.startswith(("facing_feature.", "facing_output."))
+                    for key in incompatible.missing_keys
+                )
+            )
+            self.model_episode = (
+                checkpoint.get("episode") if isinstance(checkpoint, dict) else None
+            )
             if verbose:
                 print(f"[LearningDefenderSearchGCController] loaded: {model_path}")
         except Exception as exc:
@@ -810,15 +894,41 @@ class LearningDefenderSearchGCController:
             else 0.0
         )
 
-        append_facing_onehot(obs, getattr(char, "facing", "S"))
+        objective_window = bool(
+            self.team_memory.spike_pos is not None
+            or (
+                self.team_memory.last_seen_enemy is not None
+                and int(self.team_memory.last_seen_enemy.get("tick_ago", 999))
+                <= SEARCH_SIGHTING_FRESH_TICKS
+            )
+        )
+        round_timer = int(game_state.get("round_timer", 0))
+        obs[BASE_OBS_DIM:ULTIMATE_CONTEXT_OBS_DIM] = ultimate_context_features(
+            char,
+            engaged=bool(visible_enemies),
+            objective_window=objective_window,
+            urgent=(
+                (char.max_hp > 0 and char.hp / char.max_hp <= 0.45)
+                or (0 < round_timer <= 20)
+            ),
+        )
+        obs[ULTIMATE_CONTEXT_OBS_DIM:ORB_CONTEXT_OBS_DIM] = orb_context_features(
+            char, game_state.get("available_orbs", ())
+        )
+        append_facing_onehot(
+            obs[ORB_CONTEXT_OBS_DIM:OBS_DIM],
+            getattr(char, "facing", "S"),
+        )
 
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
-    def _action_mask(self, char, grid, chars, lock_movement=False):
+    def _action_mask(
+        self, char, grid, chars, lock_movement=False, available_orbs=()
+    ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。"""
-        base_mask = np.ones(BASE_ACTION_DIM, dtype=bool)
+        base_mask = np.ones(ACTION_DIM, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
             tuple(o.pos)
@@ -846,7 +956,33 @@ class LearningDefenderSearchGCController:
             for move_idx in range(5):
                 base_mask[move_idx * 2 + 1] = False
 
-        return np.repeat(base_mask, len(FACING_DIRS))
+        base_mask[ACTION_ULTIMATE] = self._ultimate_action(
+            char, grid, chars
+        ) is not None
+        base_mask[ACTION_COLLECT_ORB] = can_collect_orb(char, available_orbs)
+
+        return base_mask
+
+    def _ultimate_action(self, char, grid, chars):
+        destination = self.team_memory.spike_pos
+        if destination is None and self.team_memory.last_seen_enemy is not None:
+            destination = self.team_memory.last_seen_enemy.get("pos")
+        if destination is None:
+            assigned = self._assigned_positions.get(char.name)
+            destination = assigned[0] if assigned else None
+        return build_ultimate_action(grid, char, chars, destination=destination)
+
+    def _select_facing(self, obs, action_idx):
+        if not self.facing_head_enabled:
+            return None
+        with torch.no_grad():
+            obs_t = torch.as_tensor(
+                obs, dtype=torch.float32, device=DEVICE
+            ).unsqueeze(0)
+            values = self.model.facing_values(
+                obs_t, torch.tensor([action_idx], device=DEVICE)
+            ).squeeze(0)
+        return FACING_DIRS[int(values.argmax().item())]
 
     # -- メイン ----------------------------------------------------------
     def decide_move(self, char, game_state):
@@ -970,7 +1106,13 @@ class LearningDefenderSearchGCController:
                 )
                 hold_known_angle = True
         # Search v3: 接敵中も引く/横ずれ/合流を選べる。
-        mask = self._action_mask(char, grid, chars, lock_movement=False)
+        mask = self._action_mask(
+            char,
+            grid,
+            chars,
+            lock_movement=False,
+            available_orbs=game_state.get("available_orbs", ()),
+        )
 
         if self.verbose:
             mode = (
@@ -991,8 +1133,17 @@ class LearningDefenderSearchGCController:
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
-        model_obs = obs[:36] if self.legacy_model else obs
-        model_mask = mask.reshape(BASE_ACTION_DIM, len(FACING_DIRS))[:, 0] if self.legacy_model else mask
+        if self.model_mode == "flat":
+            model_obs = obs[:BASE_OBS_DIM]
+            model_mask = mask[:BASE_ACTION_DIM]
+        elif self.model_mode == "composite":
+            model_obs = np.concatenate(
+                (obs[:BASE_OBS_DIM], obs[ORB_CONTEXT_OBS_DIM:OBS_DIM])
+            )
+            model_mask = np.repeat(mask[:BASE_ACTION_DIM], len(FACING_DIRS))
+        else:
+            model_obs = obs
+            model_mask = mask
         obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(model_mask).to(DEVICE)
 
@@ -1008,15 +1159,33 @@ class LearningDefenderSearchGCController:
                     f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n"
                 )
 
-        if self.legacy_model:
+        if self.model_mode == "flat":
             move_idx, use_ability_int = divmod(action_idx, 2)
             facing = None
-        else:
+        elif self.model_mode == "composite":
             base_idx, facing = decode_facing_action(action_idx)
             move_idx, use_ability_int = divmod(base_idx, 2)
+        else:
+            if action_idx == ACTION_ULTIMATE:
+                facing = self._select_facing(obs, action_idx)
+                if facing is not None:
+                    char.facing = facing
+                ultimate = self._ultimate_action(char, grid, chars)
+                if ultimate is not None:
+                    if facing is not None:
+                        ultimate = dict(ultimate, facing=facing)
+                    return list(char.pos), ultimate
+                action_idx = 0
+            if action_idx == ACTION_COLLECT_ORB:
+                facing = self._select_facing(obs, action_idx)
+                if facing is not None:
+                    char.facing = facing
+                return list(char.pos), "COLLECT_ORB"
+            facing = self._select_facing(obs, action_idx)
+            move_idx, use_ability_int = divmod(action_idx, 2)
         use_ability = bool(use_ability_int)
         move_offset = MOVES[move_idx]
-        if hold_known_angle:
+        if hold_known_angle and self.model_mode != "factorized":
             move_offset = MOVES[0]
         if facing is not None:
             char.facing = facing
@@ -1026,7 +1195,9 @@ class LearningDefenderSearchGCController:
         # at an unrelated wall.  This also supplies a stable target for the
         # newly expanded policy while it is being retrained.
         tactical_facing = None
-        if smoke_hold_target is not None:
+        if self.model_mode == "factorized":
+            pass
+        elif smoke_hold_target is not None:
             tactical_facing = facing_towards(char.pos, smoke_hold_target.pos)
         elif visible_enemies:
             nearest = min(
@@ -1046,9 +1217,9 @@ class LearningDefenderSearchGCController:
             assigned = self._assigned_positions.get(char.name)
             if assigned:
                 tactical_facing = facing_towards(char.pos, assigned[0])
-        if reinforce_target is not None and not self.legacy_model:
+        if reinforce_target is not None and self.model_mode == "composite":
             tactical_facing = facing_towards(char.pos, reinforce_target)
-        if tactical_facing is not None and not self.legacy_model:
+        if tactical_facing is not None and self.model_mode == "composite":
             facing = tactical_facing
             char.facing = facing
 
@@ -1058,7 +1229,7 @@ class LearningDefenderSearchGCController:
         # 移動判断ではなくBFS最短方向を強制する。学習時のバッファもこの
         # 上書き後の行動で作られているため、推論側もこれに合わせないと
         # 学習内容とズレる。
-        if smoke_hold_target is not None:
+        if smoke_hold_target is not None and self.model_mode != "factorized":
             move_offset = MOVES[0]
         elif (
             not visible_enemies

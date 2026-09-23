@@ -9,18 +9,23 @@ import train_attacker_gc_real_curriculum as trainer
 
 
 def build_policies(checkpoints):
-    """Build the current runtime architectures and expand older checkpoints."""
+    """Build architectures matching each saved observation schema."""
+    def saved_obs_dim(phase):
+        checkpoint = checkpoints[phase]
+        state = checkpoint.get("model_state_dict", checkpoint)
+        return int(state["feature.0.weight"].shape[1])
+
     policies = {
         "carry": trainer.runtime.AttackerCarryDuelingDQN(
-            obs_dim=trainer.runtime.FACING_HEAD_OBS_DIM,
+            obs_dim=saved_obs_dim("carry"),
             action_dim=trainer.runtime.ACTION_DIM,
         ),
         "escort": trainer.escort_runtime.DuelingQNetwork(
-            trainer.escort_runtime.FACING_HEAD_OBS_DIM,
+            saved_obs_dim("escort"),
             trainer.escort_runtime.N_ACTIONS,
         ),
         "guard": trainer.guard_runtime.AttackerGuardDuelingDQN(
-            obs_dim=trainer.guard_runtime.ULTIMATE_CONTEXT_OBS_DIM,
+            obs_dim=saved_obs_dim("guard"),
             action_dim=trainer.guard_runtime.ACTION_DIM,
         ),
     }

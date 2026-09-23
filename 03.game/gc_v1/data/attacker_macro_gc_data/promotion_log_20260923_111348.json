@@ -1,0 +1,24 @@
+﻿{
+    "timestamp":  "20260923_111348",
+    "source_episode":  2250,
+    "source_dir":  "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_curriculum_v21_carry_movement_warm",
+    "source_model":  "auto_selected_best",
+    "selection_violation":  3.40282347E+38,
+    "criteria_met":  true,
+    "metrics":  {
+                    "designated_route_clear_rate":  0.6080178173719376,
+                    "carry_no_entry_rate":  0.2733333333333334,
+                    "timeout_rate":  0.04666666666666667
+                },
+    "criteria":  {
+                     "max_no_entry_rate":  0.35,
+                     "max_timeout_rate":  0.05,
+                     "min_route_clear_rate":  0.5
+                 },
+    "gaps_to_criteria":  {
+                             "route_clear_gap":  0,
+                             "no_entry_gap":  0,
+                             "timeout_gap":  0
+                         },
+    "backup_path":  "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_macro_gc_data\\backup_20260923_111348"
+}

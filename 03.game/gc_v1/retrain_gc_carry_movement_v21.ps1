@@ -86,6 +86,15 @@ if ($LASTEXITCODE -ne 0) {
   throw "Carry movement selection failed with exit code $LASTEXITCODE"
 }
 
+Write-Host "=== Deploying selected attacker models (with automatic backup) ===" -ForegroundColor Cyan
+& $pythonPath -u -m gc_v1.promote_attacker_gc `
+  --carry-source (Join-Path $selectedDir "dqn_attacker_carry_gc_best_carry_movement_ab.pt") `
+  --escort-source (Join-Path $selectedDir "dqn_attacker_escort_gc_best_carry_movement_ab.pt") `
+  --guard-source (Join-Path $selectedDir "dqn_attacker_guard_gc_best_carry_movement_ab.pt")
+if ($LASTEXITCODE -ne 0) {
+  throw "Attacker model deployment failed with exit code $LASTEXITCODE"
+}
+
 Write-Host "=== GC v21 Carry movement run completed ===" -ForegroundColor Green
 Write-Host "Training: $warmDir"
 Write-Host "Selected: $selectedDir"

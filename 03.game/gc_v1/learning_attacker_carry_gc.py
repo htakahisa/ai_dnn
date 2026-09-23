@@ -52,11 +52,11 @@ from character_stats_gc import (
 try:
     from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -75,11 +75,13 @@ FORMATION_OBS_DIM = 65  # v7: persistent designated entry screener and readiness
 ENTRY_SYNC_OBS_DIM = 66  # v8: explicit two-tick entry synchronization state.
 ULTIMATE_CONTEXT_OBS_DIM = 70  # v10: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
+ORB_OBS_DIM = FACING_HEAD_OBS_DIM + 4
 FACING_HEAD_VERSION = 2
 LEGACY_ACTION_DIM = 11
-ACTION_DIM = 12
+ACTION_DIM = 13
 PLANT_ACTION_INDEX = 10
 ULTIMATE_ACTION_INDEX = 11
+COLLECT_ORB_ACTION_INDEX = 12
 
 # 本番map_data.pyには5/6/7は存在しないが、train_attacker_carry.pyとの対称性のため
 # 同じ集合定義を維持する(判定は常にFalseになるだけで実害はない)。
@@ -382,7 +384,8 @@ class LearningAttackerCarryGCController:
 
         ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         ckpt_n_actions = int(checkpoint.get("n_actions", ACTION_DIM))
-        expected_obs_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+        expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 12 else
+                            FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                             ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
                             ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
                             FORMATION_OBS_DIM if self.positioning_version >= 7 else
@@ -390,7 +393,7 @@ class LearningAttackerCarryGCController:
                             NAVIGATION_OBS_DIM if self.positioning_version >= 5 else
                             TACTICAL_OBS_DIM if self.positioning_version >= 4 else
                             REAL_OBS_DIM if self.positioning_version >= 3 else OBS_DIM)
-        expected_actions = ACTION_DIM if self.positioning_version >= 9 else LEGACY_ACTION_DIM
+        expected_actions = ACTION_DIM if self.positioning_version >= 12 else (12 if self.positioning_version >= 9 else LEGACY_ACTION_DIM)
         if ckpt_obs_dim != expected_obs_dim or ckpt_n_actions != expected_actions:
             raise ValueError(
                 f"チェックポイントの観測/行動空間がこのコントローラーと不一致です: "
@@ -582,7 +585,8 @@ class LearningAttackerCarryGCController:
         target_plant_pos=None,
     ):
         modern = self.positioning_version >= 3
-        obs_dim = (FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
+        obs_dim = (ORB_OBS_DIM if self.positioning_version >= 12 else
+                   FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                    ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
                    ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
                    FORMATION_OBS_DIM if self.positioning_version >= 7 else
@@ -774,6 +778,10 @@ class LearningAttackerCarryGCController:
                 obs[ULTIMATE_CONTEXT_OBS_DIM:FACING_HEAD_OBS_DIM],
                 getattr(char, "facing", "N"),
             )
+        if self.positioning_version >= 12:
+            obs[ FACING_HEAD_OBS_DIM:ORB_OBS_DIM ] = orb_context_features(
+                char, getattr(self.game, "available_orbs", ())
+            )
         return obs
 
     def _build_mask(self, char, chars, on_site):
@@ -784,7 +792,7 @@ class LearningAttackerCarryGCController:
             for o in chars
             if o is not char and getattr(o, "is_alive", True)
         }
-        action_dim = ACTION_DIM if self.positioning_version >= 9 else LEGACY_ACTION_DIM
+        action_dim = ACTION_DIM if self.positioning_version >= 12 else (12 if self.positioning_version >= 9 else LEGACY_ACTION_DIM)
         mask = np.ones(action_dim, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         for move_idx, (dr, dc) in enumerate(MOVES):
@@ -827,6 +835,10 @@ class LearningAttackerCarryGCController:
             mask[ULTIMATE_ACTION_INDEX] = build_ultimate_action(
                 grid, char, chars, destination=goal
             ) is not None
+        if self.positioning_version >= 12:
+            mask[COLLECT_ORB_ACTION_INDEX] = can_collect_orb(
+                char, getattr(self.game, "available_orbs", ())
+            )
 
         return mask
 
@@ -872,6 +884,8 @@ class LearningAttackerCarryGCController:
         """train_attacker_carry.py の decode_action と同一。"""
         if int(action_idx) == PLANT_ACTION_INDEX:
             return "PLANT"
+        if int(action_idx) == COLLECT_ORB_ACTION_INDEX:
+            return "COLLECT_ORB"
         move_idx, use_ability = divmod(int(action_idx), 2)
         return MOVES[move_idx], bool(use_ability)
 
@@ -1074,6 +1088,9 @@ class LearningAttackerCarryGCController:
                     ultimate = dict(ultimate, facing=facing)
                 return list(char.pos), ultimate
         decoded = self._decode_action(action_idx)
+
+        if decoded == "COLLECT_ORB":
+            return list(char.pos), "COLLECT_ORB"
 
         if decoded == "PLANT":
             # PLANTはマスク上、on_site==Trueの時のみ選択され得る。

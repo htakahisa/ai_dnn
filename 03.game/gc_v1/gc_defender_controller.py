@@ -57,6 +57,14 @@ class GCDefenderController(BaseController):
             if hasattr(ctrl, "reset_round"):
                 ctrl.reset_round()
 
+    def set_game(self, game):
+        """Keep both phase controllers on the same real or IQ-filtered view."""
+        for ctrl in (self.search_controller, self.retake_controller):
+            if hasattr(ctrl, "set_game"):
+                ctrl.set_game(game)
+            else:
+                ctrl.game = game
+
     def decide_move(self, char, game_state):
         if game_state.get("is_planted"):
             return self.retake_controller.decide_move(char, game_state)
