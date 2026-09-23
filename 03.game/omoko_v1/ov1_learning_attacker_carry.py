@@ -38,7 +38,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ov1_map_data_carry import NEW_MAZE_STR as CARRY_MAZE_STR
+from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
+from ov1_ultimate_training import (
+    nearest_orb,
+    orb_context,
+    orb_priority,
+    ultimate_context,
+    ultimate_ready,
+)
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -47,40 +54,42 @@ DEFAULT_MODEL_PATH = "omoko_v1/data/attacker_carry_data/dqn_attacker_carry_best_
 DEBUG_LOG_PATH = "attacker_carry_debug.log"
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-OBS_DIM = 34
+OBS_DIM = 45
 # 移動はBFS決定的なため行動空間に含めない。ここに含めるのはアビリティ使用判断
 # (NONE/ABILITY)・明示PLANTの3値と、向き(facing)選択の直積のみ。
 # ov1_train_attacker_carry.py / ov1_train_defender_search.pyと同一規約:
 # action_idx = base_idx(0-2)*8 + facing_idx(0-7)。
-BASE_ACTION_DIM = 3
+BASE_ACTION_DIM = 5
 ACTION_NONE = 0
 ACTION_ABILITY = 1
 ACTION_PLANT = 2
+ACTION_ULTIMATE = 3
+ACTION_ORB = 4
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 24
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 40
 
 SITE_VALUES = frozenset({2, 5})
-SMOKE_LINEUP_VALUE_BY_SITE = {"left": 8, "right": 9}
+LINEUP_ABILITY_MARKERS = {"S": "SMOKE", "R": "RECON", "F": "FLASH"}
 
 
-def _marker_cells_by_site(maze_str, values_by_site):
-    lines = [line.strip() for line in maze_str.strip().splitlines() if line.strip()]
-    return {
-        site: [
-            (r, c)
-            for r, line in enumerate(lines)
-            for c, value in enumerate(line)
-            if int(value) == marker
-        ]
-        for site, marker in values_by_site.items()
-    }
+def _parse_ability_lineup_points(maze_str):
+    """Parse the same S/R/F lineup markers used by the escort controller."""
+    lines = [line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()]
+    if not lines or len({len(line) for line in lines}) != 1:
+        raise ValueError("escort mapの行長が一致していません")
+    points = {ability: [] for ability in LINEUP_ABILITY_MARKERS.values()}
+    for r, line in enumerate(lines):
+        for c, marker in enumerate(line):
+            if marker in LINEUP_ABILITY_MARKERS:
+                points[LINEUP_ABILITY_MARKERS[marker]].append((r, c))
+            elif not marker.isdigit():
+                raise ValueError(f"escort mapに不正な文字があります: {marker!r}")
+    return points
 
 
-# 定点は学習マップの値8(left)/9(right)から読む。旧チェックポイントには
-# 保存値しかない場合があるため、__init__で空のサイトだけ旧値へフォールバックする。
-SMOKE_LINEUP_CELLS_BY_SITE = _marker_cells_by_site(
-    CARRY_MAZE_STR, SMOKE_LINEUP_VALUE_BY_SITE
-)
+# アビリティ定点はescort map上のS/R/Fマーカーから読む。旧checkpointの定点情報は
+# 現行マップに該当する定点が無い場合だけフォールバックする。
+ABILITY_LINEUP_POINTS = _parse_ability_lineup_points(ESCORT_MAZE_STR)
 
 ABILITY_RANGE = 7
 SIGHTING_STALENESS_CAP = 20
@@ -329,21 +338,29 @@ class Ov1LearningAttackerCarryController:
                 (int(cell[0]), int(cell[1])) for cell in raw_cells
             ]
 
-        raw_lineup_cells = checkpoint.get("smoke_lineup_cells_by_site") or {}
-        checkpoint_lineup_cells_by_site = {
-            str(site): [(int(cell[0]), int(cell[1])) for cell in cells]
-            for site, cells in raw_lineup_cells.items()
+        raw_lineup_points = checkpoint.get("ability_lineup_points") or {}
+        checkpoint_lineup_points = {
+            str(ability): [(int(cell[0]), int(cell[1])) for cell in cells]
+            for ability, cells in raw_lineup_points.items()
         }
-        self.smoke_lineup_cells_by_site = {
-            site: cells or checkpoint_lineup_cells_by_site.get(site, [])
-            for site, cells in SMOKE_LINEUP_CELLS_BY_SITE.items()
+        old_smoke_lineup = checkpoint.get("smoke_lineup_cells_by_site") or {}
+        old_smoke_cells = next(
+            ([(int(cell[0]), int(cell[1])) for cell in cells] for cells in old_smoke_lineup.values() if cells),
+            [],
+        )
+        self.ability_lineup_points = {
+            ability: list(cells) or checkpoint_lineup_points.get(ability, [])
+            for ability, cells in ABILITY_LINEUP_POINTS.items()
         }
+        if not self.ability_lineup_points["SMOKE"]:
+            self.ability_lineup_points["SMOKE"] = old_smoke_cells
 
         self._log(
             f"[LOAD] model={model_path} episode={checkpoint.get('episode')} "
             f"success_rate={checkpoint.get('success_rate')} "
             f"has_priority_cells={self.has_priority_cells} priority_cells={self.priority_cells} "
-            f"waypoint_cells={self.waypoint_cells_by_site}"
+            f"waypoint_cells={self.waypoint_cells_by_site} "
+            f"ability_lineup_points={self.ability_lineup_points}"
         )
 
         self.game = None
@@ -626,7 +643,11 @@ class Ov1LearningAttackerCarryController:
                 self._sighting = None
 
     # -- 観測構築(train_attacker_carry.py の build_observation と同一構造) --
-    def _build_observation(self, char, chars, smoke_cells, dist_map, elapsed_ticks, reached_waypoint, on_target, next_step=None):
+    def _build_observation(
+        self, char, chars, smoke_cells, dist_map, elapsed_ticks,
+        reached_waypoint, on_target, next_step=None, team_sighting=False,
+        tactical_ultimate=False, available_orbs=(), allies=(),
+    ):
         obs = np.zeros(OBS_DIM, dtype=np.float32)
         grid = self.game.grid
         height, width = grid.shape
@@ -701,9 +722,20 @@ class Ov1LearningAttackerCarryController:
                 if openness is not None:
                     obs[33] = openness[dir_idx]
 
+        obs[34:38] = ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=team_sighting,
+            tactical=tactical_ultimate,
+        )
+        obs[38:45] = orb_context(char, available_orbs, grid, allies)
+
         return obs
 
-    def _build_mask(self, char, on_target, ability_available=True):
+    def _build_mask(
+        self, char, on_target, ability_available=True, enemy_visible=False,
+        available_orbs=(), allies=(),
+    ):
         """向き(facing)は移動・アビリティとは無関係に常に自由選択できるため、
         base(0-2)側のマスクをfacing方向数だけ展開する
         (ov1_train_attacker_carry.pyと同一規約)。
@@ -716,6 +748,10 @@ class Ov1LearningAttackerCarryController:
         if charges <= 0 or char.ability_name == "HUNT" or not ability_available:
             base_mask[ACTION_ABILITY] = False
         base_mask[ACTION_PLANT] = bool(on_target)
+        base_mask[ACTION_ULTIMATE] = ultimate_ready(char)
+        base_mask[ACTION_ORB] = bool(available_orbs) and orb_priority(char, allies)
+        if enemy_visible:
+            base_mask[ACTION_PLANT] = False
         return np.repeat(base_mask, len(FACING_DIRS))
 
     def _select_action(self, obs, mask):
@@ -739,9 +775,57 @@ class Ov1LearningAttackerCarryController:
             decoded = "PLANT"
         elif base_idx == ACTION_ABILITY:
             decoded = "ABILITY"
+        elif base_idx == ACTION_ULTIMATE:
+            decoded = "ULTIMATE"
+        elif base_idx == ACTION_ORB:
+            decoded = "ORB"
         else:
             decoded = "NONE"
         return decoded, FACING_DIRS[facing_idx]
+
+    def _ultimate_action(self, char, chars, facing):
+        """Build a live-game payload for the ultimate selected by the DQN."""
+        name = str(getattr(char, "ultimate_name", "")).upper()
+        if not name or not ultimate_ready(char):
+            return None
+
+        # The training action includes facing in the same action index.  The
+        # live ultimate executor reads Character.facing directly.
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+
+        payload = {"ultimate": name, "facing": facing}
+        if name != "ESCAPE":
+            return payload
+
+        grid = self.game.grid
+        occupied = {
+            tuple(map(int, other.pos)) for other in chars
+            if other is not char and getattr(other, "is_alive", True)
+        }
+        destination = self._active_target
+        if destination is None:
+            return None
+        destination = tuple(map(int, destination))
+        for radius in range(4):
+            candidates = []
+            for dr in range(-radius, radius + 1):
+                for dc in range(-radius, radius + 1):
+                    if max(abs(dr), abs(dc)) != radius:
+                        continue
+                    cell = (destination[0] + dr, destination[1] + dc)
+                    if (
+                        0 <= cell[0] < grid.shape[0]
+                        and 0 <= cell[1] < grid.shape[1]
+                        and grid[cell] != 1
+                        and cell not in occupied
+                        and cell != tuple(map(int, char.pos))
+                    ):
+                        candidates.append((abs(dr) + abs(dc), cell))
+            if candidates:
+                payload["target"] = min(candidates)[1]
+                return payload
+        return None
 
     # -- エスコート・ヒューリスティック -----------------------------------
     def _escort_ability_action(self, char, visible_enemies):
@@ -875,8 +959,10 @@ class Ov1LearningAttackerCarryController:
         nxt = _bfs_next_step(grid, (r, c), goal, own_occupied, allow_adjacent_goal=allow_adjacent)
         next_pos = [int(nxt[0]), int(nxt[1])]
 
-        # マスク構築前に、ABILITYを選ぶ意味があるか(射程内に敵、またはSMOKEなら
-        # 定点が射程内)を判定しておく。train側のability_availableゲートと同一方針
+        # マスク構築前に、ABILITYを選ぶ意味があるか(射程内に敵、または
+        # 使用可能な定点)を判定しておく。SMOKE定点は射程だけ、FLASH/RECON
+        # 定点は射程内かつ壁の射線が通ることを条件にする。train側の
+        # ability_availableゲートと同一方針
         # (無駄撃ちでチャージを浪費させないため、意味が無ければ選択肢から外す)。
         visible_enemies = [
             o for o in chars
@@ -887,43 +973,71 @@ class Ov1LearningAttackerCarryController:
             o for o in visible_enemies
             if max(abs(o.pos[0] - r), abs(o.pos[1] - c)) <= ABILITY_RANGE
         ]
-        lineup_candidates = []
-        if char.ability_name == "SMOKE":
-            lineup_candidates = [
-                cell for cell in self.smoke_lineup_cells_by_site.get(self._active_site, [])
-                if max(abs(cell[0] - r), abs(cell[1] - c)) <= ABILITY_RANGE
-            ]
+        lineup_candidates = [
+            cell for cell in self.ability_lineup_points.get(char.ability_name, [])
+            if max(abs(cell[0] - r), abs(cell[1] - c)) <= ABILITY_RANGE
+            and (
+                char.ability_name == "SMOKE"
+                or _has_los(grid, (r, c), cell)
+            )
+        ]
         ability_available = (
             char.ability_name == "RECON"
             or bool(nearby_enemies)
-            or (char.ability_name == "SMOKE" and bool(lineup_candidates))
+            or bool(lineup_candidates)
             or (char.ability_name == "FLASH" and self._sighting is not None)
         )
 
-        # A visible enemy is an immediate firefight.  Do not advance with the
-        # spike while the automatic shooting system needs a stationary shooter.
-        # ABILITY, when legal, remains the first option; otherwise hold and aim.
-        if visible_enemies:
-            nearest = min(
-                visible_enemies,
-                key=lambda o: max(abs(o.pos[0] - r), abs(o.pos[1] - c)),
-            )
-            charges = {
-                "SMOKE": getattr(char, "smoke_charges", 0),
-                "FLASH": getattr(char, "flash_charges", 0),
-                "RECON": getattr(char, "recon_charges", 0),
-            }.get(char.ability_name, 0)
-            if ability_available and charges > 0 and char.ability_name != "HUNT":
-                return [r, c], {"ability": char.ability_name, "target": tuple(map(int, nearest.pos))}
-            return [r, c], {"facing": _facing_towards(char.pos, nearest.pos)}
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        tactical_ultimate = (
+            self._reached_waypoint
+            and (bool(visible_enemies) or self._sighting is not None or on_target)
+        )
 
         obs = self._build_observation(
             char, chars, smoke_cells, dist_map, elapsed_ticks, self._reached_waypoint, on_target,
             next_step=next_pos,
+            team_sighting=self._sighting is not None,
+            tactical_ultimate=tactical_ultimate,
+            available_orbs=available_orbs,
+            allies=allies,
         )
-        mask = self._build_mask(char, on_target, ability_available)
+        mask = self._build_mask(
+            char, on_target, ability_available,
+            enemy_visible=bool(visible_enemies),
+            available_orbs=available_orbs,
+            allies=allies,
+        )
         action_idx = self._select_action(obs, mask)
         decoded, facing = self._decode_action(action_idx)
+
+        # train側ではbase actionにかかわらず、直積で選ばれた向きを同tickに
+        # 適用する。ULTIMATE/PLANT/ABILITYも同じ規約に合わせる。
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+
+        if decoded == "ORB":
+            orb_target = nearest_orb((r, c), available_orbs)
+            if orb_target is not None and orb_priority(char, allies):
+                if orb_target == (r, c):
+                    return [r, c], "COLLECT_ORB"
+                orb_next = _bfs_next_step(
+                    grid, (r, c), orb_target, occupied, allow_adjacent_goal=False,
+                )
+                return [int(orb_next[0]), int(orb_next[1])], {"facing": facing}
+            return [r, c], {"facing": facing}
+
+        if decoded == "ULTIMATE":
+            payload = self._ultimate_action(char, chars, facing)
+            if payload is not None:
+                return [r, c], payload
+            return [r, c], {"facing": facing}
 
         if decoded == "PLANT":
             return list(char.pos), "PLANT"

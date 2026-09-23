@@ -56,6 +56,17 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, soft_update
 from ov1_common_defender import ROSTER_ORDER, ROLE_TO_ABILITY, compute_effective_stats
+from ov1_ultimate_training import (
+    collect_orb_tick,
+    initialize_ultimate,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 
 EPISODE_COUNT = 10000
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)
@@ -104,12 +115,14 @@ KNOWN_POS_PROB = 0.5    # 選ばれたサイト内で既知位置を使う確率
 # 行動空間
 # ============================================================
 
-N_ACTIONS = 11
+N_ACTIONS = 13
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 ACTION_DEFUSE = 5
 ACTION_ABILITY = 6
 TURN_DIRS = ["N", "S", "E", "W"]
 ACTION_TURN_BASE = 7  # 7,8,9,10 = N/S/E/W への向き変更のみ(移動・DEFUSE・ABILITYなし)
+ACTION_ULTIMATE = 11
+ACTION_ORB = 12
 # 観測用。被弾時の強制向き(_facing_towards)は斜め8方向を返しうるため、
 # 行動としてのTURN(4方向)とは別に、観測エンコードは8方向で持つ。
 # game_core.FACING_VECTORSの定義順(N,NE,E,SE,S,SW,W,NW)と一致させること。
@@ -406,7 +419,8 @@ def evaluate_greedy(env, net, obs_dim, num_eval_episodes=100):
         f"stay={int(action_counts[4])}, "
         f"defuse={int(action_counts[ACTION_DEFUSE])}, "
         f"ability={int(action_counts[ACTION_ABILITY])}, "
-        f"turn={int(action_counts[ACTION_TURN_BASE:].sum())}, "
+        f"turn={int(action_counts[ACTION_TURN_BASE:ACTION_ULTIMATE].sum())}, "
+        f"ultimate={int(action_counts[ACTION_ULTIMATE])}, "
         f"defuse_eligible={defuse_eligible_count}, "
         f"defuse_selected={defuse_selected_count}"
     )
@@ -612,6 +626,12 @@ class SimChar:
         self.smoke_charges = 1 if ability == "SMOKE" else 0
         self.flash_charges = 1 if ability == "FLASH" else 0
         self.recon_charges = 1 if ability == "RECON" else 0
+        if ability in ("SMOKE", "FLASH", "RECON", "HUNT"):
+            initialize_ultimate(self, ability)
+        else:
+            self.ultimate_name = ""
+            self.ultimate_cost = 1
+            self.ultimate_points = 0
 
         if override_stats is not None:
             # omoko_v1固定チーム用: 実効ステータスをそのまま使用(ランダム化しない)
@@ -669,6 +689,7 @@ class RetakeEnv:
         self.max_ticks = max_ticks
         self.team_sighting = _TeamSightingMemory()
         self.active_entry_points = []  # このラウンドのサイト(左/右)に対応する既知侵入経路
+        self.available_orbs = set()
 
     def reset(self):
         self.tick = 0
@@ -691,6 +712,8 @@ class RetakeEnv:
 
         self.detonate_timer = random.randint(self.min_detonate_ticks, self.max_detonate_ticks)
         self.smokes = []  # list of {"cells": set, "remaining_ticks": int, "owner": str}
+        self.available_orbs = valid_orb_cells(GRID)
+        self.last_orb_rewards = {}
         # 💡追加: そのtickでのability使用効果(誰が何人に効果を与えたか等)を保持。
         # compute_rewards側から参照する。tick毎にstep_tick冒頭でクリアする。
         self.last_ability_effects = {}
@@ -851,7 +874,12 @@ class RetakeEnv:
         mask[ACTION_ABILITY] = bool(has_charge)
 
         # facing は経路・combat 状態から自動決定するため、TURN action は使わない。
-        mask[ACTION_TURN_BASE:] = False
+        mask[ACTION_TURN_BASE:ACTION_ULTIMATE] = False
+        mask[ACTION_ULTIMATE] = ultimate_ready(char)
+        mask[ACTION_ORB] = (
+            tuple(char.pos) in self.available_orbs
+            and orb_priority(char, self.defenders())
+        )
 
         return mask
 
@@ -965,6 +993,14 @@ class RetakeEnv:
             len(enemies) / 5.0,
         ] + enemy_feats + role_onehot + facing_onehot + team_sighting_feats + entry_feats
 
+        obs.extend(ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=last_seen is not None,
+            tactical=bool(visible_enemies) or last_seen is not None,
+        ))
+        obs.extend(orb_context(char, self.available_orbs, GRID, allies))
+
         return np.array(obs, dtype=np.float32)
 
     # -- 1Tick進行 ---------------------------------------------------------
@@ -982,10 +1018,13 @@ class RetakeEnv:
         # 💡追加: このtickのability効果記録をクリア(前tick分の値が
         # compute_rewards側に残らないようにする)。
         self.last_ability_effects = {}
+        self.last_orb_rewards = {}
 
         next_positions = {}
         pending_defuse = set()
         pending_ability = set()
+        pending_ultimate = set()
+        pending_orb = set()
 
         for char in self.chars:
             if not char.is_alive:
@@ -1000,6 +1039,10 @@ class RetakeEnv:
                     pending_defuse.add(char.name)
                 elif action == ACTION_ABILITY:
                     pending_ability.add(char.name)
+                elif action == ACTION_ULTIMATE:
+                    pending_ultimate.add(char.name)
+                elif action == ACTION_ORB:
+                    pending_orb.add(char.name)
                 elif action >= ACTION_TURN_BASE:
                     if not char.facing_forced_this_tick:
                         char.facing = TURN_DIRS[action - ACTION_TURN_BASE]
@@ -1029,6 +1072,25 @@ class RetakeEnv:
         for char in self.chars:
             if char.name in pending_ability:
                 self.apply_ability(char)
+            elif char.name in pending_ultimate and spend_ultimate(char):
+                visible_enemies = [
+                    enemy for enemy in self.attackers()
+                    if enemy.is_alive and self.check_line_of_sight(char, enemy)
+                ]
+                if char.ultimate_name == "MONITOR":
+                    for enemy in self.attackers():
+                        if enemy.is_alive:
+                            enemy.reveal_remaining = max(
+                                enemy.reveal_remaining, REVEAL_DURATION_TICKS
+                            )
+                elif char.ultimate_name == "TUNNEL":
+                    for enemy in visible_enemies:
+                        enemy.blind_remaining = max(
+                            enemy.blind_remaining, BLIND_DURATION_TICKS
+                        )
+            elif char.name in pending_orb:
+                _completed, reward = collect_orb_tick(char, self.available_orbs)
+                self.last_orb_rewards[char.name] = reward
 
         pr, pc = self.planted_pos
         for char in self.chars:
@@ -1056,7 +1118,12 @@ class RetakeEnv:
         fixed_order = self.attackers() + self.defenders()
         move_order = [c for c in fixed_order if c.is_alive and c.name in next_positions]
         for char in move_order:
-            if char.name in pending_defuse or char.name in pending_ability:
+            if (
+                char.name in pending_defuse
+                or char.name in pending_ability
+                or char.name in pending_ultimate
+                or char.name in pending_orb
+            ):
                 continue
             target = next_positions[char.name]
             nr, nc = int(target[0]), int(target[1])
@@ -1198,12 +1265,30 @@ def snapshot_before(env):
         # マップ最大距離相当の値でフォールバックする(通常は起こらない想定)。
         raw = env.dist_map[r, c]
         dist_val = raw if raw >= 0 else (HEIGHT + WIDTH)
+        visible_enemies = [
+            enemy for enemy in env.attackers()
+            if enemy.is_alive and env.check_line_of_sight(char, enemy)
+        ]
+        target_pos = None
+        if visible_enemies:
+            target_pos = tuple(min(
+                visible_enemies,
+                key=lambda enemy: max(
+                    abs(enemy.pos[0] - char.pos[0]),
+                    abs(enemy.pos[1] - char.pos[1]),
+                ),
+            ).pos)
+        elif env.team_sighting.last_seen_enemy is not None:
+            target_pos = env.team_sighting.last_seen_enemy["pos"]
         before[char.name] = {
             "alive": char.is_alive,
             "in_zone": (r, c) in env.site_zone,
             "dist_to_plant": dist_val,
             "defuse_timer": char.defuse_timer,
             "ability_charge": char.own_ability_charge(),
+            "self_sighting": bool(visible_enemies),
+            "team_sighting": env.team_sighting.last_seen_enemy is not None,
+            "ultimate_target": target_pos,
         }
     return before
 
@@ -1342,6 +1427,16 @@ def compute_rewards(env, before, chosen_actions):
                     reward += ABILITY_CORRIDOR_PREEMPT_BONUS
             else:
                 reward += ABILITY_PREMATURE_PENALTY
+        elif action_id == ACTION_ULTIMATE:
+            reward += ultimate_use_reward(
+                b["self_sighting"] or b["team_sighting"]
+            )
+            if b["ultimate_target"] is not None:
+                reward += 0.25 * _facing_alignment(
+                    char.facing, tuple(char.pos), b["ultimate_target"]
+                )
+        elif action_id == ACTION_ORB:
+            reward += env.last_orb_rewards.get(name, 0.0)
         elif smoke_ready_before:
             # チャージを残したまま射程内を進むほどペナルティを大きくする。
             # 行動をマスク/強制せず、即時スモークが最適になるよう学習側だけで誘導する。

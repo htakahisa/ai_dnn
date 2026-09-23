@@ -32,8 +32,10 @@ from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
 from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
 from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
 
-from omoko_v1.ov1_defender_controller import Ov1DefenderController
 from omoko_v1.ov1_attacker_controller import Ov1AttackerController
+from omoko_v1.ov1_defender_controller import Ov1DefenderController
+from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
+from omoko_v1.ov1_defender_real_controller import Ov1DefenderRealController
 
 from ghost_champions_v1_macro import (
     GhostChampionsV1AttackerController,
@@ -144,6 +146,13 @@ def _build_team_ai(key):
             attacker_factory=lambda: Ov1AttackerController(),
             defender_factory=lambda: Ov1DefenderController(),
         )
+    
+    # if normalized == "omoko_gaming_v1_r":
+    #     return DualRoleTeamAI(
+    #         name="Omoko Gaming v1 R",
+    #         attacker_factory=lambda: Ov1AttackerRealController(),
+    #         defender_factory=lambda: Ov1DefenderRealController(),
+    #     )
 
     if normalized in {
         "ghost_champions_v1",
@@ -193,7 +202,7 @@ def _build_team_ai(key):
             team_ai.use_iq_perception = False
         return team_ai
 
-    raise ValueError(f"不明なTeam AIです: {key}")
+    raise ValueError(f"不明なTeam AIです: {normalized}")
 
 
 class VisualFPSBattle(

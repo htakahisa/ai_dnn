@@ -48,16 +48,17 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_retake import KNOWN_ENTRY_POINTS_LEFT, KNOWN_ENTRY_POINTS_RIGHT, ENTRY_CORRIDOR_RADIUS
 from ov1_train_defender_retake import _facing_from_delta, _facing_towards
+from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL_MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 
-OBS_DIM = 53  # train_defender_retake.py の build_observation() と要素数を一致させること
+OBS_DIM = 64  # train_defender_retake.py の build_observation() と要素数を一致させること
               # (role_onehot+facing_onehot[8方向]で45、チーム共有目撃情報4次元+
               # 既知侵入経路3次元の追加で45→52、スモーク被覆フラグ追加で52→53)
-N_ACTIONS = 11  # 0-3:move, 4:stay, 5:DEFUSE, 6:ABILITY, 7-10:TURN(N/S/E/W)
+N_ACTIONS = 13
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
@@ -77,6 +78,8 @@ ACTION_TURN_BASE = 7  # 7,8,9,10 = 向き変更のみ(移動なし)。battle_log
 # 返しうるため、TURN行動(4方向)とは別に観測エンコードは8方向で持つ。
 # game_core.FACING_VECTORSの定義順(N,NE,E,SE,S,SW,W,NW)と一致させること。
 ALL_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+ACTION_ULTIMATE = 11
+ACTION_ORB = 12
 
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "タイガー": 3}
 
@@ -510,12 +513,23 @@ class Ov1LearningDefenderRetakeController:
             obs[51] = (nearest_entry[0] - r) / height
             obs[52] = (nearest_entry[1] - c) / width
 
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        obs[53:57] = ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=last_seen is not None,
+            tactical=bool(visible_enemies) or last_seen is not None,
+        )
+        obs[57:64] = orb_context(char, available_orbs, grid, allies)
+
         return obs
 
     # -- 行動マスク ---------------------------------------------------------
     # train_defender_retake.py の action_mask() と同一ロジック
     # (敵視認による移動禁止は撤廃済み。学習側と一致させる)。
-    def _action_mask(self, char, grid, chars):
+    def _action_mask(self, char, grid, chars, available_orbs=()):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -541,7 +555,15 @@ class Ov1LearningDefenderRetakeController:
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
 
         # train側と同じく、facingは自動決定する。
-        mask[ACTION_TURN_BASE:] = False
+        mask[ACTION_TURN_BASE:ACTION_ULTIMATE] = False
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        mask[ACTION_ULTIMATE] = ultimate_ready(char)
+        mask[ACTION_ORB] = (
+            (r, c) in available_orbs and orb_priority(char, allies)
+        )
 
         return mask
 
@@ -579,7 +601,10 @@ class Ov1LearningDefenderRetakeController:
         ]
 
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
-        mask = self._action_mask(char, grid, chars)
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        mask = self._action_mask(char, grid, chars, available_orbs)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)
@@ -621,7 +646,22 @@ class Ov1LearningDefenderRetakeController:
                 char.facing = forced_facing
             return list(char.pos), "DEFUSE"
 
-        if action_idx >= ACTION_TURN_BASE:
+        if action_idx == ACTION_ORB:
+            return list(char.pos), "COLLECT_ORB"
+
+        if action_idx == ACTION_ULTIMATE:
+            facing = forced_facing or getattr(char, "facing", "S")
+            if not getattr(char, "facing_forced_this_tick", False):
+                char.facing = facing
+            payload = {
+                "ultimate": str(getattr(char, "ultimate_name", "")).upper(),
+                "facing": facing,
+            }
+            if payload["ultimate"] == "ESCAPE":
+                payload["target"] = tuple(map(int, planted_pos))
+            return list(char.pos), payload
+
+        if ACTION_TURN_BASE <= action_idx < ACTION_ULTIMATE:
             # battle_logic.py新契約: Defenderは{"facing": ...}を返すとaction_type="MOVE"
             # として扱われ、next_pos=現在地のためその場で向きだけ変わる。
             turn_dir = forced_facing or TURN_DIRS[action_idx - ACTION_TURN_BASE]

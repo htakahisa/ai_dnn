@@ -70,6 +70,17 @@ from game_core import (
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_ultimate_training import (
+    collect_orb_tick,
+    initialize_ultimate,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 from ov1_common_attacker import (
     ROSTER_ORDER,
     DEFAULT_ACCURACY,
@@ -99,7 +110,7 @@ DEVICE = torch.device("cpu")
 
 MAX_TICKS = 70
 CARDINAL = ov1_common_rl.CARDINAL_MOVES
-ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY"]
+ACTIONS = ["UP", "DOWN", "LEFT", "RIGHT", "STAY", "ABILITY", "ULTIMATE", "ORB"]
 N_ACTIONS = len(ACTIONS)
 # 向き(facing)は移動・アビリティとは独立に常に自由選択できる。
 # action_idx = base_idx(0-5)*8 + facing_idx(0-7) で展開する
@@ -240,6 +251,7 @@ class AgentState:
         self.role = role
         # HUNT(タイガー)はアビリティを持たないため、最初からチャージ0にする。
         self.charge = 0 if role == "HUNT" else 1
+        initialize_ultimate(self, role)
         self.hp = MAX_HP
         self.alive = True
         self.moved_this_tick = False
@@ -257,6 +269,8 @@ class AgentState:
 
 
 ACTION_ABILITY = 5
+ACTION_ULTIMATE = 6
+ACTION_ORB = 7
 
 
 def decode_action(action_idx):
@@ -280,7 +294,7 @@ class RetrieveEnv:
     詰まった側が単に「先に入った方を待つ」だけで自然に解消される
     という想定。"""
 
-    OBS_DIM = 33
+    OBS_DIM = 44
     # [0-1]座標 [2-5]壁 [6-9]隣接BFS距離 [10]自己BFS距離
     # [11-14]ロールonehot [15]アビリティ残チャージ
     # [16]視認中敵有無 [17-18]視認中敵相対方向 [19]敵blind [20]敵reveal
@@ -336,6 +350,7 @@ class RetrieveEnv:
                     self.enemy_reveal = REVEAL_DURATION_TICKS
 
         self.team_sighting = None
+        self.available_orbs = valid_orb_cells(GRID)
         self._update_team_sighting()
 
         return self._collect_observations(), self._collect_masks()
@@ -430,6 +445,13 @@ class RetrieveEnv:
             *facing_onehot,
             team_present, team_dr, team_dc, team_tick_ago,
         ]
+        obs.extend(ultimate_context(
+            unit,
+            self_sighting=visible,
+            team_sighting=self.team_sighting is not None,
+            tactical=visible or self.team_sighting is not None,
+        ))
+        obs.extend(orb_context(unit, self.available_orbs, GRID, self.agents))
         obs_arr = np.array(obs, dtype=np.float32)
         assert obs_arr.shape[0] == self.OBS_DIM, (
             f"観測次元がOBS_DIM({self.OBS_DIM})と不一致: {obs_arr.shape[0]}"
@@ -462,6 +484,11 @@ class RetrieveEnv:
             )
         if unit.charge <= 0:
             mask[ACTION_ABILITY] = False
+        mask[ACTION_ULTIMATE] = ultimate_ready(unit)
+        mask[ACTION_ORB] = (
+            tuple(unit.pos) in self.available_orbs
+            and orb_priority(unit, self.agents)
+        )
         return np.repeat(np.array(mask, dtype=bool), len(FACING_DIRS))
 
     def _collect_observations(self):
@@ -542,6 +569,28 @@ class RetrieveEnv:
         for u in alive_agents:
             if base_action_dict.get(u.name) == ACTION_ABILITY:
                 ability_rewards[u.name] = self._resolve_ability(u)
+            elif base_action_dict.get(u.name) == ACTION_ULTIMATE and spend_ultimate(u):
+                tactical = (
+                    pre_action_visible_enemy.get(u.name, False)
+                    or team_sighting_for_reward is not None
+                )
+                ability_rewards[u.name] = ultimate_use_reward(tactical)
+                aim_target = None
+                if pre_action_visible_enemy.get(u.name, False) and self.enemy_pos is not None:
+                    aim_target = tuple(self.enemy_pos)
+                elif team_sighting_for_reward is not None:
+                    aim_target = team_sighting_for_reward["pos"]
+                if aim_target is not None:
+                    ability_rewards[u.name] += 0.25 * _facing_alignment(
+                        u.facing, tuple(u.pos), aim_target
+                    )
+                if u.ultimate_name == "MONITOR" and self.enemy_alive:
+                    self.enemy_reveal = max(self.enemy_reveal, REVEAL_DURATION_TICKS)
+                elif u.ultimate_name == "TUNNEL" and pre_action_visible_enemy.get(u.name, False):
+                    self.enemy_blind = max(self.enemy_blind, BLIND_DURATION_TICKS)
+            elif base_action_dict.get(u.name) == ACTION_ORB:
+                _completed, orb_reward = collect_orb_tick(u, self.available_orbs)
+                ability_rewards[u.name] = orb_reward
 
         # --- 足踏み・接近報酬(全エージェント共通) ---
         rewards = {}

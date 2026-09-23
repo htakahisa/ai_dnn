@@ -18,14 +18,12 @@ character_stats.py 側の定義に基づき、run_game.py の既存エンジン
 本ファイルではステータスの再計算は行わない。char.accuracy等の実値を
 そのまま利用する。
 
-omoko_v1/train_defender_search.py と同じ優先順位ツリーを踏襲する:
-    1. スパイク確定情報があればそちらへ最優先で寄る
-    2. 敵目撃情報があればそちらへ寄る(retake準備)
-    3. どちらも無ければ、ラウンド開始時に自チーム内で貪欲割り当てた
-       map_data_search.py の7地点(有利ポジション)へ、BFS距離マップに
-       基づいて向かい、到着後は静止する
+omoko_v1/train_defender_search.py と同じ行動方針を踏襲する:
+    1. 味方視認またはスパイク情報があれば、学習済みモデルが移動を決める
+    2. 観測には共有対象・味方射線数・各1歩候補からの射線可否を含める
+    3. 情報が無い平常時のみ担当する有利ポジションへBFSで移動する
 
-OBS_DIM=36: train_defender_search.py と完全に一致させること。
+OBS_DIMはtrain_defender_search.pyと完全に一致させること。
 
 このチーム(5人)で1つのコントローラーインスタンスを共有する想定
 (重み共有Dueling DQN)。
@@ -49,7 +47,11 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR
 from ov1_map_data_search import SEARCH_MAZE_STR
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
-from ov1_train_defender_search import DEFENSE_WATCH_POINTS, DEFENSE_WATCH_FACING
+from ov1_train_defender_search import (
+    DEFENSE_WATCH_POINTS,
+    DEFENSE_WATCH_FACING,
+)
+from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -58,15 +60,23 @@ CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 AGENT_ID_DIM = len(ROSTER_ORDER)
 AGENT_ID_OFFSET = 46
-OBS_DIM = AGENT_ID_OFFSET + AGENT_ID_DIM  # 既存46次元 + キャラID one-hot
+ULTIMATE_CONTEXT_DIM = 6
+ORB_CONTEXT_DIM = 7
+TACTICAL_CONTEXT_DIM = 8
+OBS_DIM = (
+    AGENT_ID_OFFSET + AGENT_ID_DIM
+    + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM + TACTICAL_CONTEXT_DIM
+)
               # + 8(自身のfacing one-hot。従来欠落していたため追加)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
 # 完全に独立した直積として扱う: action_idx = base_idx(0-9) * 8 + facing_idx(0-7)。
 # 移動先と向きは無関係に指定できる(例: 前進しながら後ろを向く)。
 # ov1_train_defender_search.pyと完全に一致させること。
-BASE_ACTION_DIM = 10
+BASE_ACTION_DIM = 12
+ACTION_ULTIMATE_BASE = 10
+ACTION_ORB_BASE = 11
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 96
 
 
 def _facing_towards(from_pos, to_pos):
@@ -331,8 +341,12 @@ def _decode_action(action_idx):
     戻り値は (move, use_ability, facing)。"""
     action_idx = int(action_idx)
     base_idx, facing_idx = divmod(action_idx, len(FACING_DIRS))
+    if base_idx == ACTION_ULTIMATE_BASE:
+        return (0, 0), False, True, False, FACING_DIRS[facing_idx]
+    if base_idx == ACTION_ORB_BASE:
+        return (0, 0), False, False, True, FACING_DIRS[facing_idx]
     move_idx, use_ability = divmod(base_idx, 2)
-    return MOVES[move_idx], bool(use_ability), FACING_DIRS[facing_idx]
+    return MOVES[move_idx], bool(use_ability), False, False, FACING_DIRS[facing_idx]
 
 def _bfs_best_direction_unoccupied(dist_map, grid, r0, c0, occupied):
     """_bfs_best_directionと同じだが、occupied(他ユニットが現在いるマス)を
@@ -473,26 +487,8 @@ class _TeamMemory:
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
 
-        if visible_enemies:
-            tracked = None
-            if self.last_seen_enemy is not None:
-                tracked_name = self.last_seen_enemy.get("name")
-                tracked = next((e for e in visible_enemies if e.name == tracked_name), None)
-            if tracked is None:
-                tracked = min(
-                    visible_enemies,
-                    key=lambda e: min(
-                        max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
-                        for d in defenders
-                    ) if defenders else 0,
-                )
-            self.last_seen_enemy = {
-                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
-            }
-        elif self.last_seen_enemy is not None:
-            self.last_seen_enemy["tick_ago"] += 1
-            if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
-                self.last_seen_enemy = None
+        # 永続的な追走先にはせず、現在tickの味方視認は観測へ直接入れる。
+        self.last_seen_enemy = None
 
 
 # ---------------------------------------------------------------------------
@@ -742,10 +738,16 @@ class Ov1LearningDefenderSearchController:
         # spike/sightingモードの間はこの情報を出さない。到着済みフラグが
         # 「動くな」という学習済みバイアスとして誤って引き継がれ、緊急時の
         # 移動を妨げるのを防ぐため。Setup中はSetup専用距離マップを使う。
-        in_position_mode = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
-        )
+        team_visible_enemies = [
+            enemy for enemy in enemies
+            if getattr(enemy, "is_alive", True)
+            and any(
+                getattr(ally, "is_alive", True)
+                and _has_los(grid, ally.pos, enemy.pos)
+                for ally in teammates + [char]
+            )
+        ]
+        in_position_mode = self.team_memory.spike_pos is None and not team_visible_enemies
         if in_setup_phase:
             dist_map = self._assigned_setup_dist_maps.get(char.name)
         elif in_position_mode:
@@ -785,12 +787,76 @@ class Ov1LearningDefenderSearchController:
         agent_id = ROSTER_ORDER.index(char.name)
         obs[AGENT_ID_OFFSET + agent_id] = 1.0
 
+        context_offset = AGENT_ID_OFFSET + AGENT_ID_DIM
+        team_sees_enemy = bool(team_visible_enemies)
+        obs[context_offset:context_offset + 4] = ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=team_sees_enemy,
+            tactical=(not in_setup_phase and team_sees_enemy),
+        )
+        if team_visible_enemies:
+            shared_target = min(
+                team_visible_enemies,
+                key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
+            )
+            obs[context_offset + 4] = (shared_target.pos[0] - r0) / height
+            obs[context_offset + 5] = (shared_target.pos[1] - c0) / width
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        obs[context_offset + 6:context_offset + 13] = orb_context(
+            char, available_orbs, grid, teammates + [char]
+        )
+
+        tactical_offset = context_offset + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM
+        visible_holders = [
+            enemy for enemy in team_visible_enemies
+            if getattr(enemy, "has_spike", False)
+        ]
+        if visible_holders:
+            tactical_target = min(
+                visible_holders,
+                key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
+            ).pos
+            ground_spike_target = False
+        elif team_visible_enemies:
+            tactical_target = min(
+                team_visible_enemies,
+                key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
+            ).pos
+            ground_spike_target = False
+        else:
+            tactical_target = self.team_memory.spike_pos
+            ground_spike_target = tactical_target is not None and not self.team_memory.spike_held
+
+        if tactical_target is not None:
+            target_pos = tuple(map(int, tactical_target))
+            obs[tactical_offset] = 1.0
+            obs[tactical_offset + 1] = 1.0 if ground_spike_target else 0.0
+            ally_coverage = sum(
+                ally.is_alive and _has_los(grid, ally.pos, target_pos)
+                for ally in teammates
+            )
+            obs[tactical_offset + 2] = ally_coverage / 4.0
+            occupied = {tuple(ally.pos) for ally in teammates if ally.is_alive}
+            for move_idx, (dr, dc) in enumerate(MOVES):
+                nr, nc = r0 + dr, c0 + dc
+                valid = (
+                    0 <= nr < height and 0 <= nc < width
+                    and grid[nr, nc] != 1
+                    and (nr, nc) not in occupied
+                )
+                obs[tactical_offset + 3 + move_idx] = (
+                    1.0 if valid and _has_los(grid, (nr, nc), target_pos) else 0.0
+                )
+
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(
         self, char, grid, chars, lock_movement=False, in_setup_phase=False,
-        has_target_info=False, forced_facing=None,
+        has_target_info=False, forced_facing=None, available_orbs=(),
     ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。
@@ -828,6 +894,19 @@ class Ov1LearningDefenderSearchController:
         ):
             for move_idx in range(5):
                 base_mask[move_idx * 2 + 1] = False
+
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        base_mask[ACTION_ULTIMATE_BASE] = bool(
+            not in_setup_phase and ultimate_ready(char)
+        )
+        base_mask[ACTION_ORB_BASE] = bool(
+            not in_setup_phase
+            and (r, c) in available_orbs
+            and orb_priority(char, allies)
+        )
 
         action_mask = np.repeat(base_mask, len(FACING_DIRS))
         if forced_facing in FACING_DIRS:
@@ -884,7 +963,7 @@ class Ov1LearningDefenderSearchController:
                 q_values[~mask_t] = -1e9
                 action_idx = int(torch.argmax(q_values).item())
 
-            (dr, dc), _use_ability, facing = _decode_action(action_idx)
+            (dr, dc), _use_ability, _use_ultimate, _use_orb, facing = _decode_action(action_idx)
             if forced_facing is not None:
                 facing = forced_facing
             move_offset = (dr, dc)
@@ -935,16 +1014,19 @@ class Ov1LearningDefenderSearchController:
             char, game_state, self._site_positions_cache, unit_has_spike_los
         )
 
-        in_position_mode = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
+        tactical_offset = (
+            AGENT_ID_OFFSET + AGENT_ID_DIM
+            + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM
         )
+        in_position_mode = obs[tactical_offset] == 0.0
 
         if char.ability_name == "SMOKE":
             # 学習側と同じく、SMOKE は自分が直接視認したスパイク持ちにだけ使用可能。
             has_target_info = any(getattr(e, "is_alive", True) and e.has_spike for e in visible_enemies)
         else:
-            has_target_info = bool(visible_enemies) or self.team_memory.last_seen_enemy is not None
+            # Abilities may still be used against a directly visible enemy;
+            # the movement restriction below is independent from targeting.
+            has_target_info = bool(visible_enemies)
         forced_facing = _forced_combat_facing(
             char, visible_enemies, self.team_memory
         )
@@ -953,15 +1035,22 @@ class Ov1LearningDefenderSearchController:
                 char, visible_enemies, self.team_memory
             )
         mask = self._action_mask(
-            char, grid, chars, lock_movement=bool(visible_enemies),
+            char,
+            grid,
+            chars,
+            lock_movement=False,
             has_target_info=has_target_info, forced_facing=forced_facing,
+            available_orbs={
+                tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+            },
         )
 
         # After
         if self.verbose:
             mode = (
-                "spike" if self.team_memory.spike_pos is not None
-                else "sighting" if self.team_memory.last_seen_enemy is not None
+                "spike"
+                if self.team_memory.spike_pos is not None
+                and self.team_memory.spike_held
                 else "position"
             )
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
@@ -988,7 +1077,7 @@ class Ov1LearningDefenderSearchController:
                 masked_q = q_values.cpu().numpy()
                 f.write(f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n")
 
-        (dr, dc), use_ability, facing = _decode_action(action_idx)
+        (dr, dc), use_ability, use_ultimate, use_orb, facing = _decode_action(action_idx)
         if forced_facing is not None:
             # マスクだけでなく実行側でも保証する。
             facing = forced_facing
@@ -1000,6 +1089,23 @@ class Ov1LearningDefenderSearchController:
         if not getattr(char, "facing_forced_this_tick", False):
             char.facing = facing
 
+        if use_orb:
+            return list(char.pos), "COLLECT_ORB"
+
+        if use_ultimate:
+            payload = {
+                "ultimate": str(getattr(char, "ultimate_name", "")).upper(),
+                "facing": facing,
+            }
+            if payload["ultimate"] == "ESCAPE":
+                target = self._assigned_positions.get(char.name)
+                if target is None or tuple(target) == tuple(char.pos):
+                    target = self.team_memory.spike_pos
+                if target is None:
+                    return list(char.pos), {"facing": facing}
+                payload["target"] = tuple(map(int, target))
+            return list(char.pos), payload
+
         # train_defender_search.py と挙動を一致させる: position mode
         # (スパイク情報も敵目撃情報も無い)かつ担当地点未到着の間は、
         # スポーン・担当地点が毎ラウンド固定である以上、ネットワークの
@@ -1010,9 +1116,7 @@ class Ov1LearningDefenderSearchController:
             if getattr(o, "is_alive", True) and o is not char
         }
 
-        if visible_enemies:
-            pass
-        elif in_position_mode:
+        if in_position_mode:
             dist_map = self._assigned_dist_maps.get(char.name)
             if dist_map is not None:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])
@@ -1023,21 +1127,6 @@ class Ov1LearningDefenderSearchController:
                     )
                 else:
                     move_offset = (0, 0)
-        elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
-            r0, c0 = int(char.pos[0]), int(char.pos[1])
-            already_watching = (
-                not self.team_memory.spike_held
-                and _has_los(grid, tuple(char.pos), self.team_memory.spike_pos)
-            )
-            if not already_watching:
-                move_offset = _bfs_best_direction_unoccupied(
-                    self.spike_dist_map, grid, r0, c0, occupied_now
-                )
-        elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
-            r0, c0 = int(char.pos[0]), int(char.pos[1])
-            move_offset = _bfs_best_direction_unoccupied(
-                self.sighting_dist_map, grid, r0, c0, occupied_now
-            )
 
         if self.verbose:
             print(
@@ -1065,10 +1154,6 @@ class Ov1LearningDefenderSearchController:
             dist = max(abs(nearest.pos[0] - char.pos[0]), abs(nearest.pos[1] - char.pos[1]))
             if dist <= ABILITY_RANGE:
                 target_pos = (int(nearest.pos[0]), int(nearest.pos[1]))
-        elif self.team_memory.last_seen_enemy is not None:
-            pos = self.team_memory.last_seen_enemy["pos"]
-            target_pos = (int(pos[0]), int(pos[1]))
-
         if target_pos is None:
             # 狙点が定まらない場合はチャージを無駄にしないよう移動+向きのみ返す。
             return next_pos, {"facing": facing}
