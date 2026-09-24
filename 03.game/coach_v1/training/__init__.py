@@ -9,6 +9,12 @@ from .scenario_generator import (
     write_distribution_report,
     write_scenarios_jsonl,
 )
+from .character_environment import (
+    CharacterAction,
+    CharacterEnvironment,
+    CharacterStep,
+    CurriculumStage,
+)
 
 __all__ = [
     "EnemyPlacement",
@@ -18,4 +24,8 @@ __all__ = [
     "distribution_report",
     "write_distribution_report",
     "write_scenarios_jsonl",
+    "CharacterAction",
+    "CharacterEnvironment",
+    "CharacterStep",
+    "CurriculumStage",
 ]
