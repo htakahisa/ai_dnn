@@ -1,0 +1,857 @@
+{
+  "schema_version": "watch-points-v1",
+  "map": {
+    "rows": 26,
+    "columns": 44,
+    "sha256": "8f90e7c0f596e4f235b5a60d5a2350ca4bfa4ab63d82fb6efa8437f8255d6528"
+  },
+  "points": [
+    {
+      "id": "upper_left_junction",
+      "position": [
+        2,
+        17
+      ],
+      "importance": 5,
+      "facing": "SW",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "choke",
+        "long_angle"
+      ]
+    },
+    {
+      "id": "watch_r02_c40",
+      "position": [
+        2,
+        40
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r03_c38",
+      "position": [
+        3,
+        38
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r04_c12",
+      "position": [
+        4,
+        12
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r04_c15",
+      "position": [
+        4,
+        15
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r04_c31",
+      "position": [
+        4,
+        31
+      ],
+      "importance": 3,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r06_c06",
+      "position": [
+        6,
+        6
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "center_north_entry",
+      "position": [
+        6,
+        20
+      ],
+      "importance": 5,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "choke",
+        "site_entry"
+      ]
+    },
+    {
+      "id": "watch_r06_c25",
+      "position": [
+        6,
+        25
+      ],
+      "importance": 3,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r06_c32",
+      "position": [
+        6,
+        32
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r07_c12",
+      "position": [
+        7,
+        12
+      ],
+      "importance": 3,
+      "facing": "SW",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r07_c16",
+      "position": [
+        7,
+        16
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "right_site_west_entry",
+      "position": [
+        7,
+        37
+      ],
+      "importance": 5,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "choke",
+        "site_entry"
+      ]
+    },
+    {
+      "id": "watch_r08_c01",
+      "position": [
+        8,
+        1
+      ],
+      "importance": 3,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r08_c23",
+      "position": [
+        8,
+        23
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r09_c03",
+      "position": [
+        9,
+        3
+      ],
+      "importance": 5,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 1,
+      "tags": [
+        "post_plant",
+        "retake"
+      ]
+    },
+    {
+      "id": "watch_r09_c15",
+      "position": [
+        9,
+        15
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r10_c38",
+      "position": [
+        10,
+        38
+      ],
+      "importance": 3,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r10_c42",
+      "position": [
+        10,
+        42
+      ],
+      "importance": 5,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 1,
+      "tags": [
+        "post_plant",
+        "retake"
+      ]
+    },
+    {
+      "id": "left_mid_lane",
+      "position": [
+        11,
+        6
+      ],
+      "importance": 4,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 3,
+      "tags": [
+        "long_angle",
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r11_c08",
+      "position": [
+        11,
+        8
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "center_mid_angle",
+      "position": [
+        12,
+        29
+      ],
+      "importance": 4,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "corner",
+        "long_angle"
+      ]
+    },
+    {
+      "id": "watch_r13_c01",
+      "position": [
+        13,
+        1
+      ],
+      "importance": 3,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r14_c03",
+      "position": [
+        14,
+        3
+      ],
+      "importance": 3,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r14_c19",
+      "position": [
+        14,
+        19
+      ],
+      "importance": 3,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r14_c33",
+      "position": [
+        14,
+        33
+      ],
+      "importance": 3,
+      "facing": "E",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r15_c33",
+      "position": [
+        15,
+        33
+      ],
+      "importance": 3,
+      "facing": "NW",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r16_c07",
+      "position": [
+        16,
+        7
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r16_c22",
+      "position": [
+        16,
+        22
+      ],
+      "importance": 3,
+      "facing": "S",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r16_c26",
+      "position": [
+        16,
+        26
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r18_c12",
+      "position": [
+        18,
+        12
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r18_c36",
+      "position": [
+        18,
+        36
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r20_c40",
+      "position": [
+        20,
+        40
+      ],
+      "importance": 3,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "lower_left_entry",
+      "position": [
+        21,
+        9
+      ],
+      "importance": 4,
+      "facing": "N",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "choke",
+        "flank"
+      ]
+    },
+    {
+      "id": "watch_r22_c40",
+      "position": [
+        22,
+        40
+      ],
+      "importance": 3,
+      "facing": "W",
+      "sides": [
+        "attacker",
+        "defender"
+      ],
+      "situations": [
+        "carry",
+        "retrieve",
+        "guard",
+        "search",
+        "retake"
+      ],
+      "random_radius": 2,
+      "tags": [
+        "off_angle"
+      ]
+    }
+  ]
+}

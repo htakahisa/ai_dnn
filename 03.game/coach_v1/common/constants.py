@@ -14,6 +14,7 @@ from .types import Facing, GridPosition, RosterSlot
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 CONFIG_DIR = PACKAGE_DIR / "config"
+WATCH_POINTS_CONFIG_PATH = CONFIG_DIR / "watch_points.json"
 CHECKPOINTS_DIR = PACKAGE_DIR / "checkpoints"
 LOGS_DIR = PACKAGE_DIR / "logs"
 REPORTS_DIR = PACKAGE_DIR / "reports"
