@@ -167,6 +167,14 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         spike_holder="ねこさん",
         description="おもこが集めた動物たちのチーム。かわいい。かわいい。かわいい。",
     ),
+    "Gorigons": TeamPreset(
+        name="Gorigons",
+        short_name="GG",
+        players=("ごりまる", "ごんごん", "ごんた", "くんた", "くりまる"),
+        igl="ごりまる",
+        spike_holder="ごんた",
+        description="ごりまるを中心とした、ゴリラのようなパワーで押し切るチーム",
+    ),
     "BBL": TeamPreset(
         name="BBL",
         short_name="BBL",
