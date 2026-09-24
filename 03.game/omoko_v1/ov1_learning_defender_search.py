@@ -30,6 +30,7 @@ OBS_DIMはtrain_defender_search.pyと完全に一致させること。
 """
 
 from collections import deque
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -51,6 +52,8 @@ from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_search import (
     DEFENSE_WATCH_POINTS,
     DEFENSE_WATCH_FACING,
+    REINFORCE_FROM_TICK,
+    SIGHTING_MEMORY_TICKS,
 )
 from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
@@ -120,9 +123,9 @@ _SETUP_WALK_GRID = np.where(
     (_BASE_GRID_FOR_SETUP == 1) | (_SETUP_MASK_GRID == 1), 1, 0
 ).astype(np.int32)
 
-DEFAULT_MODEL_PATH = (
-    "omoko_v1/data/defender_search_data/"
-    "dqn_defender_search_best_by_eval.pt"
+DEFAULT_MODEL_PATH = str(
+    Path(__file__).resolve().parent / "data" / "defender_search_data"
+    / "dqn_defender_search_best_by_eval.pt"
 )
 
 VERBOSE = False
@@ -474,7 +477,7 @@ class _TeamMemory:
         self.spike_held = False
         self.last_seen_enemy = None
 
-    def update(self, grid, my_team, chars, spike_ground_pos=None):
+    def update(self, grid, my_team, chars, spike_ground_pos=None, round_tick=0):
         defenders = [c for c in chars if c.team == my_team and c.is_alive]
         enemies = [c for c in chars if c.team != my_team]
 
@@ -497,9 +500,24 @@ class _TeamMemory:
         ):
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
+        elif round_tick >= REINFORCE_FROM_TICK and visible_enemies and self.spike_held:
+            self.spike_pos = None
+            self.spike_held = False
 
-        # 永続的な追走先にはせず、現在tickの味方視認は観測へ直接入れる。
-        self.last_seen_enemy = None
+        if round_tick < REINFORCE_FROM_TICK:
+            self.last_seen_enemy = None
+        elif visible_enemies:
+            previous_name = (self.last_seen_enemy or {}).get("name")
+            target = next((e for e in visible_enemies if e.name == previous_name), visible_enemies[0])
+            self.last_seen_enemy = {"pos": tuple(target.pos), "name": target.name, "tick_ago": 0}
+        elif self.last_seen_enemy is not None:
+            memory = self.last_seen_enemy
+            memory["tick_ago"] += 1
+            target_dead = any(
+                e.name == memory["name"] and not e.is_alive for e in enemies
+            )
+            if target_dead or memory["tick_ago"] > SIGHTING_MEMORY_TICKS:
+                self.last_seen_enemy = None
 
 
 # ---------------------------------------------------------------------------
@@ -566,12 +584,14 @@ class Ov1LearningDefenderSearchController:
         self._spike_dist_map_source = None
         self._sighting_dist_map_source = None
 
-    def _maybe_advance_tick(self, char, grid, chars, spike_ground_pos):
+    def _maybe_advance_tick(self, char, grid, chars, spike_ground_pos, round_tick):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
         チーム共有メモリを1回だけ更新する。"""
         if char.name in self._processed_this_tick:
             self._processed_this_tick.clear()
-            self.team_memory.update(grid, char.team, chars, spike_ground_pos)
+            self.team_memory.update(
+                grid, char.team, chars, spike_ground_pos, round_tick=round_tick,
+            )
         self._processed_this_tick.add(char.name)
 
     def _scheduled_smoke_target(self, char, game_state):
@@ -801,9 +821,9 @@ class Ov1LearningDefenderSearchController:
             obs[27] = (site_positions[1][0] - char.pos[0]) / height
             obs[28] = (site_positions[1][1] - char.pos[1]) / width
 
-        # search phaseではdetonate_timerは未使用(プラント前)。
-        # ラウンド経過情報を持たないため中立値(0.5)を入れる。
-        obs[29] = 0.5
+        # 学習側と同じラウンド残り時間を観測へ入れる。
+        round_timer = game_state.get("round_timer", ROUND_DURATION_TICKS)
+        obs[29] = min(max(float(round_timer), 0.0), ROUND_DURATION_TICKS) / ROUND_DURATION_TICKS
         obs[30] = 1.0 if in_setup_phase else 0.0  # Setup Phase中かどうか(旧: 予備次元)
 
         # --- 担当する有利ポジション(7)へのBFS距離・推奨方向・到着フラグ ---
@@ -819,7 +839,11 @@ class Ov1LearningDefenderSearchController:
                 for ally in teammates + [char]
             )
         ]
-        in_position_mode = self.team_memory.spike_pos is None and not team_visible_enemies
+        in_position_mode = (
+            self.team_memory.spike_pos is None
+            and self.team_memory.last_seen_enemy is None
+            and not team_visible_enemies
+        )
         if in_setup_phase:
             dist_map = self._assigned_setup_dist_maps.get(char.name)
         elif in_position_mode:
@@ -898,9 +922,15 @@ class Ov1LearningDefenderSearchController:
                 key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
             ).pos
             ground_spike_target = False
-        else:
+        elif self.team_memory.spike_pos is not None:
             tactical_target = self.team_memory.spike_pos
-            ground_spike_target = tactical_target is not None and not self.team_memory.spike_held
+            ground_spike_target = not self.team_memory.spike_held
+        else:
+            tactical_target = (
+                self.team_memory.last_seen_enemy["pos"]
+                if self.team_memory.last_seen_enemy is not None else None
+            )
+            ground_spike_target = False
 
         if tactical_target is not None:
             target_pos = tuple(map(int, tactical_target))
@@ -1082,7 +1112,12 @@ class Ov1LearningDefenderSearchController:
                 self._site_positions_cache = [(grid.shape[0] / 2.0, grid.shape[1] / 2.0)]
 
         self._ensure_defense_assignment(char, grid, chars)
-        self._maybe_advance_tick(char, grid, chars, game_state.get("spike_pos"))
+        round_tick = game_state.get("battle_tick")
+        if round_tick is None:
+            round_tick = ROUND_DURATION_TICKS - int(game_state.get("round_timer", ROUND_DURATION_TICKS)) + 1
+        self._maybe_advance_tick(
+            char, grid, chars, game_state.get("spike_pos"), int(round_tick),
+        )
         self._update_priority_dist_maps(grid)
 
         unit_has_spike_los = (
@@ -1118,7 +1153,7 @@ class Ov1LearningDefenderSearchController:
             char,
             grid,
             chars,
-            lock_movement=bool(visible_enemies),
+            lock_movement=bool(visible_enemies) and int(round_tick) < REINFORCE_FROM_TICK,
             has_target_info=has_target_info, forced_facing=forced_facing,
             available_orbs={
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
@@ -1208,8 +1243,8 @@ class Ov1LearningDefenderSearchController:
                 else:
                     move_offset = (0, 0)
 
-        if visible_enemies:
-            # 直接視認中は位置を崩さず自動射撃に専念する。
+        if visible_enemies and int(round_tick) < REINFORCE_FROM_TICK:
+            # 序盤は射撃位置を維持し、それ以降は移動判断をモデルに委ねる。
             move_offset = (0, 0)
 
         if self.verbose:

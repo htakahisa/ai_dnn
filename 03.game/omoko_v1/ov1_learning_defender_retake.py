@@ -48,7 +48,13 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_retake import KNOWN_ENTRY_POINTS_LEFT, KNOWN_ENTRY_POINTS_RIGHT, ENTRY_CORRIDOR_RADIUS
 from ov1_train_defender_retake import _facing_from_delta, _facing_towards
-from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
+from ov1_ultimate_training import (
+    ORB_COLLECT_REQUIRED_TICKS,
+    orb_context,
+    orb_priority,
+    ultimate_context,
+    ultimate_ready,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -528,8 +534,11 @@ class Ov1LearningDefenderRetakeController:
 
     # -- 行動マスク ---------------------------------------------------------
     # train_defender_retake.py の action_mask() と同一ロジック
-    # (敵視認による移動禁止は撤廃済み。学習側と一致させる)。
-    def _action_mask(self, char, grid, chars, available_orbs=()):
+    # (危険な場面の行動選択は学習済み方策に任せ、学習側と一致させる)。
+    def _action_mask(
+        self, char, grid, chars, available_orbs=(),
+        under_direct_threat=False, detonate_timer=0.0,
+    ):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -552,6 +561,36 @@ class Ov1LearningDefenderRetakeController:
         dist_to_plant = max(abs(pr - r), abs(pc - c))
         mask[ACTION_DEFUSE] = dist_to_plant <= 1
 
+        # Keep the retake moving whenever an unoccupied step shortens the
+        # walkable path to the spike. Ability and ultimate actions stay enabled.
+        raw_dist = self._dist_map[r, c] if self._dist_map is not None else -1
+        if under_direct_threat:
+            # Preserve the learned combat choice: staying fires automatically,
+            # while movement, defuse, and tactical actions remain selectable.
+            mask[4] = True
+        elif dist_to_plant <= 1:
+            # At the spike with no visible threat, prevent idle/walk-away
+            # actions while leaving defuse and tactical choices to the policy.
+            mask[:5] = False
+        elif raw_dist > 1:
+            advancing_actions = []
+            for action in range(4):
+                if not mask[action]:
+                    continue
+                dr, dc = MOVE_DELTAS[action]
+                next_dist = self._dist_map[r + dr, c + dc]
+                if 0 <= next_dist < raw_dist:
+                    advancing_actions.append(action)
+            if advancing_actions:
+                for action in range(4):
+                    mask[action] = action in advancing_actions
+                mask[4] = False
+            else:
+                # If allies temporarily block the route, wait for the next tick.
+                mask[4] = True
+        else:
+            mask[4] = True
+
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
 
         # train側と同じく、facingは自動決定する。
@@ -564,6 +603,16 @@ class Ov1LearningDefenderRetakeController:
         mask[ACTION_ORB] = (
             (r, c) in available_orbs and orb_priority(char, allies)
         )
+        if (
+            dist_to_plant <= 1
+            and detonate_timer <= (
+                DEFUSE_REQUIRED_TICKS + ORB_COLLECT_REQUIRED_TICKS
+                + DEFUSE_SAFETY_MARGIN_TICKS
+            )
+        ):
+            # Orb collection takes five stationary ticks; preserve that time
+            # for an available defuse.
+            mask[ACTION_ORB] = False
 
         return mask
 
@@ -599,12 +648,25 @@ class Ov1LearningDefenderRetakeController:
         visible_enemies = [
             e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
         ]
+        smoke_cells = game_state.get("smoke_cells") or set()
+        under_direct_threat = any(
+            getattr(char, "sees_through_smoke", False)
+            or not any(
+                cell in smoke_cells
+                for cell in _line_cells(tuple(char.pos), tuple(enemy.pos))
+            )
+            for enemy in visible_enemies
+        )
 
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
         available_orbs = {
             tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
         }
-        mask = self._action_mask(char, grid, chars, available_orbs)
+        mask = self._action_mask(
+            char, grid, chars, available_orbs,
+            under_direct_threat=under_direct_threat,
+            detonate_timer=detonate_timer,
+        )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)

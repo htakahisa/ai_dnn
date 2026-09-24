@@ -57,6 +57,7 @@ import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, soft_update
 from ov1_common_defender import ROSTER_ORDER, ROLE_TO_ABILITY, compute_effective_stats
 from ov1_ultimate_training import (
+    ORB_COLLECT_REQUIRED_TICKS,
     collect_orb_tick,
     initialize_ultimate,
     orb_context,
@@ -870,6 +871,40 @@ class RetakeEnv:
         dist_to_plant = max(abs(pr - r), abs(pc - c))
         mask[ACTION_DEFUSE] = bool(not self.is_defused and dist_to_plant <= 1)
 
+        # Keep the retake moving whenever an unoccupied step shortens the
+        # walkable path to the spike. Ability and ultimate actions stay enabled.
+        raw_dist = self.dist_map[r, c] if self.dist_map is not None else -1
+        under_direct_threat = any(
+            enemy.is_alive and self.check_line_of_sight(char, enemy)
+            for enemy in self.attackers()
+        )
+        if under_direct_threat:
+            # Preserve the learned combat choice: staying fires automatically,
+            # while movement, defuse, and tactical actions remain selectable.
+            mask[4] = True
+        elif dist_to_plant <= 1:
+            # At the spike with no visible threat, prevent idle/walk-away
+            # actions while leaving defuse and tactical choices to the policy.
+            mask[:5] = False
+        elif raw_dist > 1:
+            advancing_actions = []
+            for action in range(4):
+                if not mask[action]:
+                    continue
+                dr, dc = MOVE_DELTAS[action]
+                next_dist = self.dist_map[r + dr, c + dc]
+                if 0 <= next_dist < raw_dist:
+                    advancing_actions.append(action)
+            if advancing_actions:
+                for action in range(4):
+                    mask[action] = action in advancing_actions
+                mask[4] = False
+            else:
+                # If allies temporarily block the route, wait for the next tick.
+                mask[4] = True
+        else:
+            mask[4] = True
+
         has_charge = char.own_ability_charge() > 0
         mask[ACTION_ABILITY] = bool(has_charge)
 
@@ -880,6 +915,16 @@ class RetakeEnv:
             tuple(char.pos) in self.available_orbs
             and orb_priority(char, self.defenders())
         )
+        if (
+            dist_to_plant <= 1
+            and self.detonate_timer <= (
+                DEFUSE_REQUIRED_TICKS + ORB_COLLECT_REQUIRED_TICKS
+                + DEFUSE_SAFETY_MARGIN_TICKS
+            )
+        ):
+            # Orb collection takes five stationary ticks; preserve that time
+            # for an available defuse.
+            mask[ACTION_ORB] = False
 
         return mask
 
