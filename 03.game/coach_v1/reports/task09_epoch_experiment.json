@@ -1,0 +1,519 @@
+{
+  "experiment": "epochs-only",
+  "baseline_epochs": 16,
+  "epochs": 80,
+  "training_examples_per_character": 120,
+  "validation_examples_per_character": 80,
+  "characters": {
+    "gorimaru": {
+      "baseline": {
+        "samples": 80,
+        "loss": 2.6538386821746824,
+        "facing_accuracy": 0.175,
+        "ability_accuracy": 0.8625,
+        "unused_ability_accuracy": 0.90625,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_16": {
+        "epoch": 16,
+        "step": 128,
+        "samples": 80,
+        "loss": 2.6775872230529787,
+        "facing_accuracy": 0.2125,
+        "ability_accuracy": 0.85,
+        "unused_ability_accuracy": 0.890625,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_40": {
+        "epoch": 40,
+        "step": 320,
+        "samples": 80,
+        "loss": 2.332707643508911,
+        "facing_accuracy": 0.4,
+        "ability_accuracy": 0.95,
+        "unused_ability_accuracy": 0.96875,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_80": {
+        "epoch": 80,
+        "step": 640,
+        "samples": 80,
+        "loss": 2.3851406574249268,
+        "facing_accuracy": 0.525,
+        "ability_accuracy": 0.975,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "last": {
+        "samples": 80,
+        "loss": 2.3851406574249268,
+        "facing_accuracy": 0.525,
+        "ability_accuracy": 0.975,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 51,
+      "best_validation": {
+        "samples": 80,
+        "loss": 2.213613724708557,
+        "facing_accuracy": 0.45,
+        "ability_accuracy": 0.95,
+        "unused_ability_accuracy": 0.96875,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_training": {
+        "samples": 120,
+        "loss": 0.7459214727083842,
+        "facing_accuracy": 0.7666666666666667,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_by_category": {
+        "point": {
+          "samples": 51,
+          "loss": 2.312002883237951,
+          "facing_accuracy": 0.45098039215686275,
+          "ability_accuracy": 0.9411764705882353,
+          "unused_ability_accuracy": 0.9512195121951219,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 20,
+          "loss": 2.0952807664871216,
+          "facing_accuracy": 0.4,
+          "ability_accuracy": 0.95,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 9,
+          "loss": 1.8951520919799805,
+          "facing_accuracy": 0.5555555555555556,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09_epochs80\\gorimaru"
+    },
+    "gongon": {
+      "baseline": {
+        "samples": 80,
+        "loss": 1.6100988864898682,
+        "facing_accuracy": 0.525,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "epoch_16": {
+        "epoch": 16,
+        "step": 128,
+        "samples": 80,
+        "loss": 1.6100988864898682,
+        "facing_accuracy": 0.525,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "epoch_40": {
+        "epoch": 40,
+        "step": 320,
+        "samples": 80,
+        "loss": 1.7255256414413451,
+        "facing_accuracy": 0.45,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "epoch_80": {
+        "epoch": 80,
+        "step": 640,
+        "samples": 80,
+        "loss": 2.236762857437134,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "last": {
+        "samples": 80,
+        "loss": 2.236762857437134,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 25,
+      "best_validation": {
+        "samples": 80,
+        "loss": 1.597162675857544,
+        "facing_accuracy": 0.475,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "best_training": {
+        "samples": 120,
+        "loss": 0.8967695911725362,
+        "facing_accuracy": 0.6583333333333333,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "best_by_category": {
+        "point": {
+          "samples": 56,
+          "loss": 1.637076463018145,
+          "facing_accuracy": 0.5178571428571429,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 17,
+          "loss": 1.4926690354066736,
+          "facing_accuracy": 0.35294117647058826,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 7,
+          "loss": 1.5316227674484253,
+          "facing_accuracy": 0.42857142857142855,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        }
+      },
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09_epochs80\\gongon"
+    },
+    "gonta": {
+      "baseline": {
+        "samples": 80,
+        "loss": 2.508122444152832,
+        "facing_accuracy": 0.175,
+        "ability_accuracy": 0.8875,
+        "unused_ability_accuracy": 0.9047619047619048,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_16": {
+        "epoch": 16,
+        "step": 128,
+        "samples": 80,
+        "loss": 2.508122444152832,
+        "facing_accuracy": 0.175,
+        "ability_accuracy": 0.8875,
+        "unused_ability_accuracy": 0.9047619047619048,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_40": {
+        "epoch": 40,
+        "step": 320,
+        "samples": 80,
+        "loss": 1.8506457090377808,
+        "facing_accuracy": 0.3875,
+        "ability_accuracy": 0.9875,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_80": {
+        "epoch": 80,
+        "step": 640,
+        "samples": 80,
+        "loss": 2.0292029857635496,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "last": {
+        "samples": 80,
+        "loss": 2.0292029857635496,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 53,
+      "best_validation": {
+        "samples": 80,
+        "loss": 1.7949703931808472,
+        "facing_accuracy": 0.45,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_training": {
+        "samples": 120,
+        "loss": 0.7627082268397013,
+        "facing_accuracy": 0.8,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_by_category": {
+        "point": {
+          "samples": 52,
+          "loss": 1.9222156084500825,
+          "facing_accuracy": 0.38461538461538464,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 17,
+          "loss": 1.81472250994514,
+          "facing_accuracy": 0.5294117647058824,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 11,
+          "loss": 1.112242341041565,
+          "facing_accuracy": 0.6363636363636364,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09_epochs80\\gonta"
+    },
+    "kunta": {
+      "baseline": {
+        "samples": 80,
+        "loss": 2.895424652099609,
+        "facing_accuracy": 0.25,
+        "ability_accuracy": 0.9125,
+        "unused_ability_accuracy": 0.9344262295081968,
+        "target_accuracy": 0.7368421052631579,
+        "ability_effective_rate": null
+      },
+      "epoch_16": {
+        "epoch": 16,
+        "step": 128,
+        "samples": 80,
+        "loss": 2.9127832412719727,
+        "facing_accuracy": 0.2625,
+        "ability_accuracy": 0.925,
+        "unused_ability_accuracy": 0.9344262295081968,
+        "target_accuracy": 0.7368421052631579,
+        "ability_effective_rate": null
+      },
+      "epoch_40": {
+        "epoch": 40,
+        "step": 320,
+        "samples": 80,
+        "loss": 2.6139163255691527,
+        "facing_accuracy": 0.4125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 0.6842105263157895,
+        "ability_effective_rate": null
+      },
+      "epoch_80": {
+        "epoch": 80,
+        "step": 640,
+        "samples": 80,
+        "loss": 3.2297218799591065,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 0.6842105263157895,
+        "ability_effective_rate": null
+      },
+      "last": {
+        "samples": 80,
+        "loss": 3.2297218799591065,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 0.6842105263157895,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 35,
+      "best_validation": {
+        "samples": 80,
+        "loss": 2.5727933406829835,
+        "facing_accuracy": 0.4,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 0.7368421052631579,
+        "ability_effective_rate": null
+      },
+      "best_training": {
+        "samples": 120,
+        "loss": 1.2964521964391074,
+        "facing_accuracy": 0.5666666666666667,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_by_category": {
+        "point": {
+          "samples": 57,
+          "loss": 1.8262333242516768,
+          "facing_accuracy": 0.40350877192982454,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9166666666666666,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 18,
+          "loss": 4.784974813461304,
+          "facing_accuracy": 0.3888888888888889,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.3333333333333333,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 5,
+          "loss": 1.8453242778778076,
+          "facing_accuracy": 0.4,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09_epochs80\\kunta"
+    },
+    "kurimaru": {
+      "baseline": {
+        "samples": 80,
+        "loss": 2.2470618724822997,
+        "facing_accuracy": 0.3,
+        "ability_accuracy": 0.925,
+        "unused_ability_accuracy": 0.9846153846153847,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_16": {
+        "epoch": 16,
+        "step": 128,
+        "samples": 80,
+        "loss": 2.2470618724822997,
+        "facing_accuracy": 0.3,
+        "ability_accuracy": 0.925,
+        "unused_ability_accuracy": 0.9846153846153847,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_40": {
+        "epoch": 40,
+        "step": 320,
+        "samples": 80,
+        "loss": 1.9771710872650146,
+        "facing_accuracy": 0.45,
+        "ability_accuracy": 0.975,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "epoch_80": {
+        "epoch": 80,
+        "step": 640,
+        "samples": 80,
+        "loss": 1.9767549157142639,
+        "facing_accuracy": 0.475,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "last": {
+        "samples": 80,
+        "loss": 1.9767549157142639,
+        "facing_accuracy": 0.475,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 62,
+      "best_validation": {
+        "samples": 80,
+        "loss": 1.8803197383880614,
+        "facing_accuracy": 0.5125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_training": {
+        "samples": 120,
+        "loss": 0.8698192437489828,
+        "facing_accuracy": 0.7,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_by_category": {
+        "point": {
+          "samples": 59,
+          "loss": 1.8981141963247525,
+          "facing_accuracy": 0.5084745762711864,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 15,
+          "loss": 1.4236981868743896,
+          "facing_accuracy": 0.5333333333333333,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 6,
+          "loss": 2.845402717590332,
+          "facing_accuracy": 0.5,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09_epochs80\\kurimaru"
+    }
+  }
+}

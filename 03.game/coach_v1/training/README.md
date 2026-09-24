@@ -72,11 +72,34 @@ epoch and `best.pt` when validation loss improves. It saves metadata, network
 and optimizer states, epoch, best loss, and metric history. `resume=True`
 restores the latest optimizer and step. `GorimaruPolicy` loads the best model
 with strict character/map/watch-point/interface checks and selects only legal
-facing, use, and target actions. It has no movement output. Other character
-checkpoints and rollout integration are later tasks.
+facing, use, and target actions. It has no movement output. The remaining
+character checkpoints are produced by the Task 09 curriculum below; full
+round rollout integration remains a later task.
 
 Validation metrics are facing accuracy, ability-use accuracy, accuracy on
 examples labeled "do not use", target accuracy on use examples, and the
 observed effectiveness rate for examples carrying an outcome label. That last
 rate describes the supplied rollouts; it is not a counterfactual estimate of
 the current policy. A missing target/outcome group is reported as `None`.
+
+## Task 09 staged character curriculum
+
+`python -m coach_v1.train_task09` generates a deterministic 1v1/2v1 supervised
+curriculum for each fixed-roster character, trains five independent checkpoints,
+and writes `reports/task09_character_curriculum.json`. The train and validation
+seeds differ. The current run uses 360 training examples, 80 validation examples,
+and 80 epochs per character. The private enemy placement uses `ScenarioGenerator`'s 70/20/10
+point/jitter/random sampler; a staged actor is placed near that enemy. The
+training-only game goes through `TeamPerceptionBuilder`, `BeliefMemory`, and
+`CharacterEnvironment.prepare` before an example is supplied to the model.
+Facing and ability labels use only the resulting legal sighting, watch-point
+metadata, coach intent, and action mask. The enemy's private location is never
+included in the model input or label calculation after staging.
+
+The four new `train_character_*.py` and `learning_character_*.py` pairs use
+their own slot and checkpoint. `gongon` learns facing only because HUNT has no
+active ability. The report separates validation at exact watch points, jitter
+cells, and legal random cells. These staged examples do not simulate ability
+outcomes or full rounds; `ability_effective_rate` is therefore `null`. Check
+the report's positive ability-use recall as well as overall accuracy, since
+the use label is less common than the no-use label.
