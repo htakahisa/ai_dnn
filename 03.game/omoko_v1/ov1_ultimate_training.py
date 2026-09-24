@@ -32,6 +32,10 @@ ULTIMATE_BAD_USE_PENALTY = -0.45
 ORB_COLLECT_REQUIRED_TICKS = 5
 ORB_ULTIMATE_POINTS = 2
 ORB_COMPLETION_REWARD = 1.0
+# Escortは護衛を優先し、オーブのために大きくルートを外れない。
+# 回収時間(5 tick)と、戦闘・設置へ戻るための余裕を残す。
+ESCORT_ORB_MAX_PATH_DISTANCE = 3
+ESCORT_ORB_MIN_REMAINING_TICKS = 20
 
 
 def _base_orb_cells():
