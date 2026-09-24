@@ -57,6 +57,14 @@ class CharacterObservationEncoder:
     def __init__(self) -> None:
         self._coach_encoder = CoachObservationEncoder()
 
+    @property
+    def map_hash(self) -> str:
+        return self._coach_encoder.map_hash
+
+    @property
+    def watch_points_hash(self) -> str:
+        return self._coach_encoder.watch_points_hash
+
     def validate_checkpoint(self, metadata: object, *, slot: int) -> None:
         if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < len(FIXED_ROSTER):
             raise CharacterInputError("invalid character slot")

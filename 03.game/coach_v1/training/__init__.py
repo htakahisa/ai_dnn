@@ -1,4 +1,4 @@
-"""Training-only scenario generation for the fixed coach_v1 map."""
+"""Fixed-map scenario generation and character training contracts."""
 
 from .scenario_generator import (
     EnemyPlacement,
@@ -15,6 +15,7 @@ from .character_environment import (
     CharacterStep,
     CurriculumStage,
 )
+from .character_trainer import CharacterMetrics, CharacterTrainer, CharacterTrainingExample
 
 __all__ = [
     "EnemyPlacement",
@@ -28,4 +29,7 @@ __all__ = [
     "CharacterEnvironment",
     "CharacterStep",
     "CurriculumStage",
+    "CharacterMetrics",
+    "CharacterTrainer",
+    "CharacterTrainingExample",
 ]

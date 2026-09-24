@@ -44,3 +44,39 @@ write_distribution_report("coach_v1/reports/distribution.json", scenarios)
 The JSONL log contains true enemy positions and must remain on the training
 side. The report records target and actual percentages, including any change
 caused by early-tick eligibility or occupied cells.
+
+## Task 08 character trainer
+
+`CharacterTrainer` accepts `CharacterTrainingExample` records. Each record has
+one `CharacterObservation` returned by `CharacterEnvironment.prepare`, a legal
+facing label, an ability-use label, an optional legal target, and an optional
+outcome flag for ability-effectiveness reporting. Labels can be derived from a
+training simulator, but the model receives only the observation's copied grid
+and vector. The trainer checks the fixed map and watch-point hashes, slot,
+version, shapes, finite values, and action masks before training. Keep training
+and validation examples separate by scenario or round when collecting real
+rollouts.
+
+```python
+from coach_v1.train_character_gorimaru import train_gorimaru
+from coach_v1.training import CharacterTrainingExample
+
+# train_examples and validation_examples are sequences of safe, labeled samples.
+trainer = train_gorimaru(
+    train_examples, validation_examples, seed=42, epochs=20,
+)
+```
+
+The trainer writes `checkpoints/characters/gorimaru/latest.pt` after every
+epoch and `best.pt` when validation loss improves. It saves metadata, network
+and optimizer states, epoch, best loss, and metric history. `resume=True`
+restores the latest optimizer and step. `GorimaruPolicy` loads the best model
+with strict character/map/watch-point/interface checks and selects only legal
+facing, use, and target actions. It has no movement output. Other character
+checkpoints and rollout integration are later tasks.
+
+Validation metrics are facing accuracy, ability-use accuracy, accuracy on
+examples labeled "do not use", target accuracy on use examples, and the
+observed effectiveness rate for examples carrying an outcome label. That last
+rate describes the supplied rollouts; it is not a counterfactual estimate of
+the current policy. A missing target/outcome group is reported as `None`.
