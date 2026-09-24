@@ -34,8 +34,8 @@ from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerControl
 
 from omoko_v1.ov1_attacker_controller import Ov1AttackerController
 from omoko_v1.ov1_defender_controller import Ov1DefenderController
-from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
-from omoko_v1.ov1_defender_real_controller import Ov1DefenderRealController
+# from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
+# from omoko_v1.ov1_defender_real_controller import Ov1DefenderRealController
 
 from ghost_champions_v1_macro import (
     GhostChampionsV1AttackerController,

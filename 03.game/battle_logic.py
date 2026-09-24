@@ -478,6 +478,10 @@ class BattleLogicMixin:
             "detonate_timer": self.detonate_timer,
             # GC Macro Plant Commitment: pre-plant remaining round time.
             "round_timer": self.round_timer,
+            # Setup phase does not advance battle_tick.  Controllers use this
+            # value to schedule post-setup actions without inferring elapsed
+            # time from a timer that may also be modified by other rules.
+            "battle_tick": self.battle_tick,
             "smoke_cells": self._smoke_cells(),
             "available_orbs": set(getattr(self, "available_orbs", set())),
             "ultimate_points": int(char.ultimate_points),

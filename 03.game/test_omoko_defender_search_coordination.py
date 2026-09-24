@@ -50,6 +50,57 @@ class OmokoDefenderSearchCoordinationTests(unittest.TestCase):
 
         self.assertTrue(moving_actions.any())
 
+    def test_directly_visible_enemy_locks_movement_actions(self):
+        env = search.SearchEnv()
+        env.reset()
+        env.in_setup_phase = False
+        defender = env.defenders[0]
+        attacker = env.attackers[0]
+        origin = tuple(defender.pos)
+        candidate = next(
+            (pos for pos in ((origin[0] - 1, origin[1]), (origin[0] + 1, origin[1]),
+                             (origin[0], origin[1] - 1), (origin[0], origin[1] + 1))
+             if 0 <= pos[0] < search.HEIGHT and 0 <= pos[1] < search.WIDTH
+             and search.GRID[pos] != 1 and search.has_los(origin, pos)),
+            None,
+        )
+        self.assertIsNotNone(candidate)
+        attacker.pos = list(candidate)
+        _, masks = env._collect_observations()
+        mask = masks[defender.name]
+        moving_actions = np.concatenate([
+            mask[base * len(search.FACING_DIRS):(base + 1) * len(search.FACING_DIRS)]
+            for base in range(2, 10)
+        ])
+        self.assertFalse(moving_actions.any())
+
+    def test_s_markers_fire_at_the_twentieth_post_setup_tick(self):
+        env = search.SearchEnv()
+        env.reset()
+        env.in_setup_phase = False
+        env.round_timer = search.MAX_TICKS - search.SCHEDULED_SMOKE_DELAY_TICKS + 1
+        targets = env._scheduled_smoke_targets()
+
+        smoke_names = {d.name for d in env.defenders if d.role == "SMOKE"}
+        # A map may contain fewer S markers than smoke-capable defenders;
+        # only one nearest defender is assigned per marker.
+        self.assertEqual(len(targets), min(len(smoke_names), len(search.SMOKE_SITE_POSITIONS)))
+        self.assertTrue(set(targets).issubset(smoke_names))
+        self.assertEqual(set(targets.values()), set(search.SMOKE_SITE_POSITIONS))
+
+        observations, masks = env._collect_observations()
+        actions = {
+            name: int(np.flatnonzero(masks[name])[0])
+            for name in observations
+        }
+        env.scheduled_smoke_fired = False
+        env.step(actions)
+        self.assertEqual(
+            sum(d.charges for d in env.defenders if d.role == "SMOKE"),
+            len(smoke_names) - len(targets),
+        )
+        self.assertEqual(len(env.smokes), len(search.SMOKE_SITE_POSITIONS))
+
 
 if __name__ == "__main__":
     unittest.main()

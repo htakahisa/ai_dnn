@@ -38,6 +38,7 @@ import torch.nn as nn
 from game_core import (
     BLIND_DURATION_TICKS,
     REVEAL_DURATION_TICKS,
+    ROUND_DURATION_TICKS,
     FACING_VECTORS,
 )
 from map_data import NEW_MAZE_STR
@@ -95,6 +96,7 @@ ALL_FACINGS = FACING_DIRS
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
 REACH_RADIUS = 0  # 担当ポジションへ「到着した」とみなすBFS距離(学習側train_defender_search.pyと一致させる)
+SCHEDULED_SMOKE_DELAY_TICKS = 18
 
 # ---------------------------------------------------------------------------
 # Defender Setup Phase(配置フェーズ)用: 通常の壁に加えて進入禁止マスも
@@ -388,6 +390,14 @@ def _find_marker_position(maze_str, char):
     return hits[0]
 
 
+def _find_marker_positions(maze_str, char):
+    lines = [l for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return [
+        (r, c) for r, line in enumerate(lines) for c, marker in enumerate(line)
+        if marker == char
+    ]
+
+
 def _compute_fixed_assignments():
     """train_defender_search.py と完全に同一のロジックで固定割当を再現する。
 
@@ -412,6 +422,7 @@ def _compute_fixed_assignments():
 
 _FIXED_SETUP_ASSIGNMENT, _FIXED_DEFENSE_ASSIGNMENT = _compute_fixed_assignments()
 _DEFENSE_POSITIONS_CACHE = list(_FIXED_DEFENSE_ASSIGNMENT.values())
+SMOKE_SITE_POSITIONS = _find_marker_positions(SEARCH_MAZE_STR, "S")
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -521,6 +532,8 @@ class Ov1LearningDefenderSearchController:
         self.team_memory = _TeamMemory()
         self._site_positions_cache = None
         self._processed_this_tick = set()
+        self._scheduled_smoke_plan_tick = None
+        self._scheduled_smoke_plan = {}
 
         # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
@@ -541,6 +554,8 @@ class Ov1LearningDefenderSearchController:
     def reset_round(self):
         self.team_memory.reset()
         self._processed_this_tick.clear()
+        self._scheduled_smoke_plan_tick = None
+        self._scheduled_smoke_plan = {}
         self._assigned_positions.clear()
         self._assigned_dist_maps.clear()
         self._assigned_setup_dist_maps.clear()
@@ -558,6 +573,63 @@ class Ov1LearningDefenderSearchController:
             self._processed_this_tick.clear()
             self.team_memory.update(grid, char.team, chars, spike_ground_pos)
         self._processed_this_tick.add(char.name)
+
+    def _scheduled_smoke_target(self, char, game_state):
+        """Sマーカーの指定tickに、距離順で割り当てたSMOKE対象を返す。"""
+        if game_state.get("defender_setup_active", False) or not SMOKE_SITE_POSITIONS:
+            return None
+        # battle_tick is incremented once per normal (post-setup) tick and is
+        # shared by all character decisions in that tick.  It is preferable
+        # to deriving elapsed time from round_timer, which can be changed by
+        # round rules.  Keep the timer fallback for standalone callers/tests.
+        battle_tick = game_state.get("battle_tick")
+        if battle_tick is not None:
+            search_tick = int(battle_tick) + 1
+        else:
+            round_timer = game_state.get("round_timer")
+            if round_timer is None:
+                return None
+            search_tick = ROUND_DURATION_TICKS - int(round_timer) + 1
+        if search_tick != SCHEDULED_SMOKE_DELAY_TICKS:
+            return None
+
+        if self._scheduled_smoke_plan_tick != search_tick:
+            defenders = [
+                other for other in game_state.get("chars", [])
+                if getattr(other, "team", None) == char.team
+                and getattr(other, "is_alive", True)
+                and getattr(other, "ability_name", "") == "SMOKE"
+                and _ability_charge(other) > 0
+            ]
+            unused = set(other.name for other in defenders)
+            plan = {}
+            site_dist_maps = {
+                site: _bfs_distance_map(game_state["grid"], site)
+                for site in SMOKE_SITE_POSITIONS
+            }
+            for site in SMOKE_SITE_POSITIONS:
+                candidates = [other for other in defenders if other.name in unused]
+                if not candidates:
+                    break
+                dist_map = site_dist_maps[site]
+
+                def smoke_distance(other):
+                    distance = dist_map[int(other.pos[0]), int(other.pos[1])]
+                    limit = game_state["grid"].shape[0] + game_state["grid"].shape[1]
+                    return distance if distance >= 0 else limit
+
+                nearest = min(
+                    candidates,
+                    key=lambda other: (
+                        smoke_distance(other),
+                        other.name,
+                    ),
+                )
+                plan[nearest.name] = tuple(site)
+                unused.remove(nearest.name)
+            self._scheduled_smoke_plan_tick = search_tick
+            self._scheduled_smoke_plan = plan
+        return self._scheduled_smoke_plan.get(char.name)
 
     def _update_priority_dist_maps(self, grid):
         """team_memoryのspike_pos/last_seen_enemyが変化した時だけBFSを
@@ -933,6 +1005,14 @@ class Ov1LearningDefenderSearchController:
         if is_planted:
             return list(char.pos)
 
+        scheduled_smoke_target = self._scheduled_smoke_target(char, game_state)
+        if scheduled_smoke_target is not None and _ability_charge(char) > 0:
+            return list(char.pos), {
+                "ability": "SMOKE",
+                "target": tuple(map(int, scheduled_smoke_target)),
+                "facing": getattr(char, "facing", "S"),
+            }
+
         smoke_enemy = _smoke_visible_enemy(
             char, chars, grid, game_state.get("smoke_cells") or set()
         )
@@ -1038,7 +1118,7 @@ class Ov1LearningDefenderSearchController:
             char,
             grid,
             chars,
-            lock_movement=False,
+            lock_movement=bool(visible_enemies),
             has_target_info=has_target_info, forced_facing=forced_facing,
             available_orbs={
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
@@ -1127,6 +1207,10 @@ class Ov1LearningDefenderSearchController:
                     )
                 else:
                     move_offset = (0, 0)
+
+        if visible_enemies:
+            # 直接視認中は位置を崩さず自動射撃に専念する。
+            move_offset = (0, 0)
 
         if self.verbose:
             print(

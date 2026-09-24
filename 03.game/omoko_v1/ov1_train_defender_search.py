@@ -131,11 +131,12 @@ BASE_ACTION_DIM = 12
 ACTION_ULTIMATE_BASE = 10
 ACTION_ORB_BASE = 11
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 96
 
 N_DEFENDERS = 5
 N_ATTACKERS = 5
 MAX_TICKS = ROUND_DURATION_TICKS  # 90
+SCHEDULED_SMOKE_DELAY_TICKS = 20  # Setup終了後、Sマークへ自動スモークするまで
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30  # 敵が倒された後も、このtick数その方向を警戒する
@@ -274,6 +275,15 @@ def _find_marker_position(maze_str, char):
     return hits[0]
 
 
+def _find_marker_positions(maze_str, char):
+    """maze_str中の同一マーカーを全て返す(順序は行優先)。"""
+    lines = [l for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return [
+        (r, c) for r, line in enumerate(lines) for c, marker in enumerate(line)
+        if marker == char
+    ]
+
+
 SETUP_ASSIGNMENT = {
     name: _find_marker_position(SEARCH_MAZE_STR, ch)
     for name, ch in SETUP_POSITION_CHARS.items()
@@ -286,16 +296,17 @@ DEFENSE_ASSIGNMENT = {
 # SETUP_POSITIONS/DEFENSE_POSITIONS はロースター順の担当地点リスト(既存コードとの互換用)。
 SETUP_POSITIONS = [SETUP_ASSIGNMENT[name] for name in ROSTER_ORDER]
 DEFENSE_POSITIONS = [DEFENSE_ASSIGNMENT[name] for name in ROSTER_ORDER]
+SMOKE_SITE_POSITIONS = _find_marker_positions(SEARCH_MAZE_STR, "S")
 
 # 各キャラの監視座標(複数可、配列形式)。マップではなくコード上で直接指定する。
 # 壁越しなど視認不可能な座標は登録しないこと(視認可否のチェックはここでは行わない)。
 # 味方が直線上に立ち、一時的に視線を塞ぐことはあり得るが許容する。
 DEFENSE_WATCH_POINTS = {
     "ねこさん": [(16, 8)],
-    "とりさん": [(16, 8)],
-    "おもこ": [(12, 30)],
-    "いぬさん": [(10, 40)],
-    "ひつじさん": [(11, 40)],
+    "とりさん": [(9, 15)],
+    "おもこ": [(8, 31)],
+    "いぬさん": [(14, 40)],
+    "ひつじさん": [(7, 37)],
 }
 
 
@@ -1107,6 +1118,7 @@ class SearchEnv:
         self.available_orbs = set()
         self.in_setup_phase = False
         self.setup_ticks_remaining = 0
+        self.scheduled_smoke_fired = False
 
         # --- 一時デバッグ用: 特定キャラの毎tick実況トレース。
         # train()側で特定エピソードだけTrueにする。
@@ -1147,6 +1159,7 @@ class SearchEnv:
         self.spike_ground_pos = None
         self.in_setup_phase = DEFENDER_SETUP_TICKS > 0
         self.setup_ticks_remaining = DEFENDER_SETUP_TICKS
+        self.scheduled_smoke_fired = False
 
         # --- 診断用: 新しいエピソードの開始時に集計をリセット ---
         
@@ -1178,6 +1191,46 @@ class SearchEnv:
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
 
         return self._collect_observations()
+
+    def _scheduled_smoke_targets(self):
+        """指定tickにSマーカーへ投げるスモーク役を距離順に割り当てる。"""
+        search_tick = MAX_TICKS - self.round_timer + 1
+        if (
+            self.scheduled_smoke_fired
+            or self.in_setup_phase
+            or search_tick != SCHEDULED_SMOKE_DELAY_TICKS
+            or not SMOKE_SITE_POSITIONS
+        ):
+            return {}
+
+        eligible = [
+            defender for defender in self.defenders
+            if defender.is_alive and defender.role == "SMOKE" and defender.charges > 0
+        ]
+        assignments = {}
+        unused = set(defender.name for defender in eligible)
+        site_dist_maps = {site: bfs_distance_map(site) for site in SMOKE_SITE_POSITIONS}
+        for site in SMOKE_SITE_POSITIONS:
+            candidates = [defender for defender in eligible if defender.name in unused]
+            if not candidates:
+                break
+            dist_map = site_dist_maps[site]
+
+            def smoke_distance(defender):
+                distance = dist_map[int(defender.pos[0]), int(defender.pos[1])]
+                return distance if distance >= 0 else HEIGHT + WIDTH
+
+            nearest = min(
+                candidates,
+                key=lambda defender: (
+                    smoke_distance(defender),
+                    defender.name,
+                ),
+            )
+            assignments[nearest.name] = tuple(site)
+            unused.remove(nearest.name)
+        self.scheduled_smoke_fired = True
+        return assignments
 
     def _update_episode_arrival_flags(self):
         """エピソード全体の配置位置到達状況を記録する。
@@ -1282,9 +1335,9 @@ class SearchEnv:
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies_for_mask) and not self.in_setup_phase
-            # 戦闘中の移動可否はネットワークに委ねる。壁・占有マスだけをマスクし、
-            # 距離や現在の射線を理由に stay を強制しない。
-            lock_movement = False
+            # 自分が敵を直接視認している間は、射撃位置を崩さずstayに限定する。
+            # 味方だけが視認している場合は、クロスファイア参加のため移動を許可する。
+            lock_movement = has_enemy_los
             # 敵の視認情報も直近の目撃情報も一切無い場合、use_abilityは常に無意味
             # (ability_requestsに追加されない空撃ち)になるため、探索での浪費を防ぐ
             # ためマスクの時点で選択肢から除外する。
@@ -1490,6 +1543,7 @@ class SearchEnv:
         )
 
         smoke_cells = self._smoke_cells()
+        scheduled_smoke_targets = self._scheduled_smoke_targets()
 
         move_plans = []
         ability_requests = []
@@ -1500,6 +1554,13 @@ class SearchEnv:
         ultimate_tactical = {}
         ultimate_alignment = {}
         orb_rewards = {}
+
+        for name, target in scheduled_smoke_targets.items():
+            defender = next((d for d in self.defenders if d.name == name), None)
+            if defender is not None and defender.is_alive and defender.charges > 0:
+                defender.charges -= 1
+                ability_requests.append((defender, target))
+                ability_whiff[name] = False
 
         team_visible_enemies = [
             attacker
@@ -1600,6 +1661,11 @@ class SearchEnv:
             if forced_facing is not None:
                 # マスクだけでなく実行側でも保証し、replayに実際のfacingを記録する。
                 facing = forced_facing
+
+            if d.name in scheduled_smoke_targets or has_enemy_los:
+                # 予定スモークはこのtickに即時発動し、直接視認中は射撃位置を維持する。
+                dr, dc = 0, 0
+                use_ability = False
 
             if in_position_phase and d.assigned_defense_dist_map is not None:
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
