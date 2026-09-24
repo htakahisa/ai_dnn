@@ -162,7 +162,7 @@ AWAKENING_EVENTS = [
         "name": "にゃんだお前は!? やっつけるニャ!",
         "player": "ねこさん",
         "condition": "enemy_in_straight_line",
-        "condition_value": 3,
+        "duration_ticks": 10,
         "bonuses": {"hs_rate": 3, "accuracy": 3, "reaction": 300},
         "leap_on_kill": True,
         "effect_text": "直線上下左右3マス以内の敵に飛びかかり攻撃。撃破すると相手の位置へ移動しスモークを焚く。",

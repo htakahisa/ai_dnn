@@ -162,9 +162,9 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     "Omoko Gaming": TeamPreset(
         name="Omoko Gaming",
         short_name="OMG",
-        players=("おもこ", "いぬさん", "ねこさん", "とりさん", "ひつじさん"),
+        players=("ねこさん", "とりさん", "おもこ", "いぬさん", "ひつじさん"),
         igl="ひつじさん",
-        spike_holder="ねこさん",
+        spike_holder="おもこ",
         description="おもこが集めた動物たちのチーム。かわいい。かわいい。かわいい。",
     ),
     "BBL": TeamPreset(

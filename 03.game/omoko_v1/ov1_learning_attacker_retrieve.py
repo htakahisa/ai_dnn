@@ -78,15 +78,18 @@ import torch.nn as nn
 
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
+from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right (行動ID 0-3と対応)
 
-OBS_DIM = 33
-N_ACTIONS = 6
+OBS_DIM = 44
+N_ACTIONS = 8
 ACTION_ABILITY = 5
 ACTION_STAY = 4
+ACTION_ULTIMATE = 6
+ACTION_ORB = 7
 # 向き(facing)は移動・アビリティとは独立に常に自由選択できる。
 # action_idx = base_idx(0-5)*8 + facing_idx(0-7)。
 # ov1_train_attacker_retrieve.pyのdecode_actionと同一規約。
@@ -327,7 +330,10 @@ class Ov1LearningAttackerRetrieveController:
     # -- 観測構築 ----------------------------------------------------------
     # train_attacker_retrieve.py の RetrieveEnv._build_obs() と要素・並び順を
     # 完全一致させること。
-    def _build_observation(self, char, grid, chars, visible_enemies, team_sighting):
+    def _build_observation(
+        self, char, grid, chars, visible_enemies, team_sighting,
+        available_orbs=(), allies=(),
+    ):
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
 
@@ -392,10 +398,18 @@ class Ov1LearningAttackerRetrieveController:
             obs[31] = float(np.clip((tc - c) / width, -1.0, 1.0))
             obs[32] = min(team_sighting["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
 
+        obs[33:37] = ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=team_sighting is not None,
+            tactical=bool(visible_enemies) or team_sighting is not None,
+        )
+        obs[37:44] = orb_context(char, available_orbs, grid, allies)
+
         return obs
 
     # -- 行動マスク ---------------------------------------------------------
-    def _action_mask(self, char, grid, chars):
+    def _action_mask(self, char, grid, chars, available_orbs=()):
         """BFS距離が減る移動だけを許可し、STAY/ABILITYは別に扱う。"""
         mask = np.zeros(N_ACTIONS, dtype=bool)
         height, width = grid.shape
@@ -421,6 +435,14 @@ class Ov1LearningAttackerRetrieveController:
             )
         mask[4] = True  # STAY は常に許可
         mask[ACTION_ABILITY] = _ability_charge(char) > 0
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        mask[ACTION_ULTIMATE] = ultimate_ready(char)
+        mask[ACTION_ORB] = (
+            (r, c) in available_orbs and orb_priority(char, allies)
+        )
         return np.repeat(mask, len(FACING_DIRS))
 
     # -- メイン ----------------------------------------------------------
@@ -457,8 +479,18 @@ class Ov1LearningAttackerRetrieveController:
         # train/inference mismatch and can cause a timeout near the spike.
         # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
         # なので、呼ばれたキャラは役割区分なくそのままモデルの判断に従う。
-        obs = self._build_observation(char, grid, chars, visible_enemies, self._team_sighting)
-        mask = self._action_mask(char, grid, chars)
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        obs = self._build_observation(
+            char, grid, chars, visible_enemies, self._team_sighting,
+            available_orbs, allies,
+        )
+        mask = self._action_mask(char, grid, chars, available_orbs)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)
@@ -469,6 +501,9 @@ class Ov1LearningAttackerRetrieveController:
             action_idx = int(torch.argmax(q_values).item())
 
         base_idx, facing = _decode_action(action_idx)
+
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
 
         if self.verbose:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
@@ -487,6 +522,18 @@ class Ov1LearningAttackerRetrieveController:
 
         if base_idx == ACTION_STAY:
             return list(char.pos), {"facing": facing}
+
+        if base_idx == ACTION_ORB:
+            return list(char.pos), "COLLECT_ORB"
+
+        if base_idx == ACTION_ULTIMATE:
+            payload = {
+                "ultimate": str(getattr(char, "ultimate_name", "")).upper(),
+                "facing": facing,
+            }
+            if payload["ultimate"] == "ESCAPE":
+                payload["target"] = tuple(map(int, spike_pos))
+            return list(char.pos), payload
 
         # ACTION_ABILITY: アビリティ使用Tickはbattle_logic側で移動・向き変更が
         # 行われないため、facingは付与しない(carry推論コントローラーと同一方針)。

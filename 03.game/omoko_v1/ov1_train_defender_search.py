@@ -75,6 +75,17 @@ from ov1_map_data_search import SEARCH_MAZE_STR
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_ultimate_training import (
+    collect_orb_tick,
+    initialize_ultimate,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 from ov1_common_defender import (
     ROSTER_ORDER,
     compute_effective_stats,
@@ -103,20 +114,29 @@ CARDINAL = ov1_common_rl.CARDINAL_MOVES
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 AGENT_ID_DIM = len(ROSTER_ORDER)
 AGENT_ID_OFFSET = 46
-OBS_DIM = AGENT_ID_OFFSET + AGENT_ID_DIM  # 既存46次元 + キャラID one-hot
+ULTIMATE_CONTEXT_DIM = 6
+ORB_CONTEXT_DIM = 7
+TACTICAL_CONTEXT_DIM = 8
+OBS_DIM = (
+    AGENT_ID_OFFSET + AGENT_ID_DIM
+    + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM + TACTICAL_CONTEXT_DIM
+)
               # + 8(自身のfacing one-hot。従来欠落していたため追加。POMDP化を防ぐ)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
 # 完全に独立した直積として扱う: action_idx = base_idx(0-9) * 8 + facing_idx(0-7)。
 # 移動先と向きは無関係に指定できる(例: 前進しながら後ろを向く)。
 # 向きには直接報酬を与えず、battle_logic.pyと同じ命中率補正を経由した通常の
 # 交戦結果(KILL_REWARD/DEATH_PENALTY)を通じて間接的に学習させる。
-BASE_ACTION_DIM = 10
+BASE_ACTION_DIM = 12
+ACTION_ULTIMATE_BASE = 10
+ACTION_ORB_BASE = 11
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 96
 
 N_DEFENDERS = 5
 N_ATTACKERS = 5
 MAX_TICKS = ROUND_DURATION_TICKS  # 90
+SCHEDULED_SMOKE_DELAY_TICKS = 20  # Setup終了後、Sマークへ自動スモークするまで
 
 ABILITY_RANGE = 8       # FLASH/RECONを即時適用してよい最大距離(簡易化)
 SIGHTING_STALENESS_CAP = 30  # 敵が倒された後も、このtick数その方向を警戒する
@@ -145,14 +165,14 @@ print_effective_stats(EFFECTIVE_STATS, "Defender/search")
 # 優先度: SPIKE > SIGHTING > DEFENSE_POSITION > HOLD_POSITION
 # の順で明確に重みを引き離し、「待機の方が得」という学習結果を防ぐ。
 STEP_PENALTY = -0.001
-SPIKE_PULL_REWARD = 0.08         # スパイク確定方向へ近づく(保持中=緊急時のみ使用)
-SPIKE_GROUND_PULL_REWARD = 0.02  # 地面に落ちたスパイクへ近づく(弱め)
+SPIKE_PULL_REWARD = 0.025        # 保持中スパイクへ寄る弱いポテンシャル差分
+SPIKE_GROUND_PULL_REWARD = 0.01  # 落下スパイクへ寄る、さらに弱い差分
 SPIKE_GROUND_APPROACH_RADIUS = 4 # 担当ポジションからこの距離以内でのみSPIKE_GROUND_PULL_REWARDを付与
 SIGHTING_PULL_REWARD = 0.05      # 敵目撃方向へ近づく(ポテンシャル差分)
-COMBAT_HOLD_BONUS = 0.08         # 直接視認中は、その場で撃ち合う
-COMBAT_MOVE_PENALTY = -0.12      # 直接視認中の追撃移動
-THREAT_NEAR_RADIUS = 7           # 脅威(spike保持中/敵目撃)にこの半径距離以内なら「既に近い」とみなし、
-                                  # 追走ではなく待ち伏せ(HOLD)へ切り替える
+COMBAT_HOLD_BONUS = 0.01         # 射線中の静止はごく弱く評価し、再配置を妨げない
+COMBAT_MOVE_PENALTY = 0.0        # 移動可否は射線参加と戦闘結果から学習させる
+CROSSFIRE_JOIN_REWARD = 0.12     # 味方が見ている対象へ新たに射線参加
+CROSSFIRE_MAINTAIN_REWARD = 0.015  # 2人以上の射線を維持（毎tickは弱く）
 DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
 HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
 HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
@@ -163,8 +183,8 @@ ABILITY_HIT_BONUS = 0.10         # 上記に加え、実際に命中/デバフ�
 SMOKE_SPIKE_TARGET_BONUS = 0.08  # SMOKE: スパイク保持者/地面スパイクに近い敵へ使用
 SMOKE_NONSPIKE_TARGET_PENALTY = -0.04  # SMOKE: 上記以外(フェイク候補含む)の視認敵へ使用
 DEBUFF_KILL_BONUS = 0.3
-HOLD_ANGLE_BONUS = 0.02
-HOLD_ANGLE_PENALTY = -0.01
+HOLD_ANGLE_BONUS = 0.005
+HOLD_ANGLE_PENALTY = 0.0
 # 💡追加: facing整合の弱いshaping報酬。自分が敵を直接視認していない時のみ有効。
 # 優先順位はTeamMemoryの優先度ツリーと揃える: spike > sighting > 担当地点。
 # 直接視認時は既存の交戦報酬(命中率経由)に完全に委ね、このshapingは加えない。
@@ -188,6 +208,23 @@ KILL_REWARD = 0.5
 DEATH_PENALTY = -0.5
 ROUND_WIN_REWARD = 1.0          # 時間切れ・全滅によるDefender勝利
 PLANT_PENALTY = -0.5            # このフェーズの範囲外(プラント成立)に至った場合
+
+
+def crossfire_coordination_reward(unit_name, pre_los, post_los):
+    """共有対象への射線参加を評価する純粋関数。"""
+    joined = (
+        not pre_los.get(unit_name, False)
+        and post_los.get(unit_name, False)
+        and any(
+            has_los_before
+            for name, has_los_before in pre_los.items()
+            if name != unit_name
+        )
+    )
+    reward = CROSSFIRE_JOIN_REWARD if joined else 0.0
+    if sum(post_los.values()) >= 2 and post_los.get(unit_name, False):
+        reward += CROSSFIRE_MAINTAIN_REWARD
+    return reward
 
 
 # ============================================================================
@@ -238,6 +275,15 @@ def _find_marker_position(maze_str, char):
     return hits[0]
 
 
+def _find_marker_positions(maze_str, char):
+    """maze_str中の同一マーカーを全て返す(順序は行優先)。"""
+    lines = [l for l in maze_str.strip("\n").split("\n") if l.strip()]
+    return [
+        (r, c) for r, line in enumerate(lines) for c, marker in enumerate(line)
+        if marker == char
+    ]
+
+
 SETUP_ASSIGNMENT = {
     name: _find_marker_position(SEARCH_MAZE_STR, ch)
     for name, ch in SETUP_POSITION_CHARS.items()
@@ -250,16 +296,17 @@ DEFENSE_ASSIGNMENT = {
 # SETUP_POSITIONS/DEFENSE_POSITIONS はロースター順の担当地点リスト(既存コードとの互換用)。
 SETUP_POSITIONS = [SETUP_ASSIGNMENT[name] for name in ROSTER_ORDER]
 DEFENSE_POSITIONS = [DEFENSE_ASSIGNMENT[name] for name in ROSTER_ORDER]
+SMOKE_SITE_POSITIONS = _find_marker_positions(SEARCH_MAZE_STR, "S")
 
 # 各キャラの監視座標(複数可、配列形式)。マップではなくコード上で直接指定する。
 # 壁越しなど視認不可能な座標は登録しないこと(視認可否のチェックはここでは行わない)。
 # 味方が直線上に立ち、一時的に視線を塞ぐことはあり得るが許容する。
 DEFENSE_WATCH_POINTS = {
-     "ねこさん": [(13, 3)],
-     "いぬさん": [(13, 4)],
-     "おもこ": [(11, 40)],
-     "ひつじさん": [(11, 40)],
-     "とりさん": [(11, 40)],
+    "ねこさん": [(16, 8)],
+    "とりさん": [(9, 15)],
+    "おもこ": [(8, 31)],
+    "いぬさん": [(14, 40)],
+    "ひつじさん": [(7, 37)],
 }
 
 
@@ -616,6 +663,7 @@ class UnitStub:
         self.role = role
         self.ability_name = role
         self.charges = 0 if role == "HUNT" else 1
+        initialize_ultimate(self, role)
         self.blind_remaining = 0
         self.reveal_remaining = 0
         self.moved_this_tick = False
@@ -716,26 +764,12 @@ class TeamMemory:
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
 
-        if visible_enemies:
-            tracked = None
-            if self.last_seen_enemy is not None:
-                tracked_name = self.last_seen_enemy.get("name")
-                tracked = next((a for a in visible_enemies if a.name == tracked_name), None)
-            if tracked is None:
-                tracked = min(
-                    visible_enemies,
-                    key=lambda a: min(
-                        max(abs(a.pos[0] - d.pos[0]), abs(a.pos[1] - d.pos[1]))
-                        for d in alive_defenders
-                    ) if alive_defenders else 0,
-                )
-            self.last_seen_enemy = {
-                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
-            }
-        elif self.last_seen_enemy is not None:
-            self.last_seen_enemy["tick_ago"] += 1
-            if self.last_seen_enemy["tick_ago"] > SIGHTING_STALENESS_CAP:
-                self.last_seen_enemy = None
+        # Search phase does not pursue ordinary attackers.  Keeping an
+        # ordinary sighting in last_seen_enemy would turn a brief sighting
+        # into a team-wide chase target on the following ticks.  The only
+        # enemy that may pull defenders away from their assigned positions is
+        # the currently visible/known spike holder, represented by spike_pos.
+        self.last_seen_enemy = None
 
 
 # ============================================================================
@@ -752,6 +786,7 @@ Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "n
 def build_observation(
     unit, defenders, attackers, team_memory, smoke_cells, own_smoke_active, round_timer,
     spike_dist_map, sighting_dist_map, unit_has_spike_los, in_setup_phase=False,
+    available_orbs=(), allies=(),
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(unit.pos[0]), int(unit.pos[1])
@@ -818,7 +853,17 @@ def build_observation(
     obs[29] = min(round_timer, MAX_TICKS) / MAX_TICKS
     obs[30] = 1.0 if in_setup_phase else 0.0  # Setup Phase中かどうか(旧: 予備次元)
 
-    in_position_mode = team_memory.spike_pos is None and team_memory.last_seen_enemy is None
+    team_visible_enemies = [
+        attacker
+        for attacker in attackers
+        if attacker.is_alive
+        and any(
+            defender.is_alive and has_los(defender.pos, attacker.pos, smoke_cells)
+            for defender in defenders
+        )
+    ]
+    # 味方の視認または落下スパイク情報がある間は、担当地点への強制帰還を止める。
+    in_position_mode = team_memory.spike_pos is None and not team_visible_enemies
     if in_setup_phase and unit.assigned_setup_dist_map is not None:
         dist_map = unit.assigned_setup_dist_map
         bfs_dist = dist_map[r0, c0]
@@ -861,6 +906,74 @@ def build_observation(
     agent_id = ROSTER_ORDER.index(unit.name)
     obs[AGENT_ID_OFFSET + agent_id] = 1.0
 
+    team_sees_enemy = bool(team_visible_enemies)
+    context_offset = AGENT_ID_OFFSET + AGENT_ID_DIM
+    obs[context_offset:context_offset + 4] = ultimate_context(
+        unit,
+        self_sighting=bool(visible_enemies),
+        team_sighting=team_sees_enemy,
+        tactical=(not in_setup_phase and team_sees_enemy),
+    )
+    if team_visible_enemies:
+        shared_target = min(
+            team_visible_enemies,
+            key=lambda enemy: max(
+                abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)
+            ),
+        )
+        obs[context_offset + 4] = (shared_target.pos[0] - r0) / HEIGHT
+        obs[context_offset + 5] = (shared_target.pos[1] - c0) / WIDTH
+    obs[context_offset + 6:context_offset + 13] = orb_context(
+        unit, available_orbs, GRID, allies
+    )
+
+    # 共有された戦術対象と、各1歩候補から対象へ射線が通るかを観測する。
+    # これにより、壁形状を推論側の移動ルールにせず、射線参加を学習できる。
+    tactical_offset = context_offset + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM
+    visible_holders = [enemy for enemy in team_visible_enemies if enemy.has_spike]
+    if visible_holders:
+        tactical_target = min(
+            visible_holders,
+            key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
+        ).pos
+        ground_spike_target = False
+    elif team_visible_enemies:
+        tactical_target = min(
+            team_visible_enemies,
+            key=lambda enemy: max(abs(enemy.pos[0] - r0), abs(enemy.pos[1] - c0)),
+        ).pos
+        ground_spike_target = False
+    else:
+        tactical_target = team_memory.spike_pos
+        ground_spike_target = tactical_target is not None and not team_memory.spike_held
+
+    if tactical_target is not None:
+        target_pos = tuple(map(int, tactical_target))
+        obs[tactical_offset] = 1.0
+        obs[tactical_offset + 1] = 1.0 if ground_spike_target else 0.0
+        ally_coverage = sum(
+            defender is not unit
+            and defender.is_alive
+            and has_los(defender.pos, target_pos, smoke_cells)
+            for defender in defenders
+        )
+        obs[tactical_offset + 2] = ally_coverage / 4.0
+        occupied = {
+            tuple(defender.pos)
+            for defender in defenders
+            if defender.is_alive and defender is not unit
+        }
+        for move_idx, (dr, dc) in enumerate(MOVES):
+            nr, nc = r0 + dr, c0 + dc
+            valid = (
+                0 <= nr < HEIGHT and 0 <= nc < WIDTH
+                and GRID[nr, nc] != 1
+                and (nr, nc) not in occupied
+            )
+            obs[tactical_offset + 3 + move_idx] = (
+                1.0 if valid and has_los((nr, nc), target_pos, smoke_cells) else 0.0
+            )
+
     return obs
 
 
@@ -872,11 +985,19 @@ def decode_action(action_idx):
     戻り値は (move, use_ability, facing)。"""
     action_idx = int(action_idx)
     base_idx, facing_idx = divmod(action_idx, len(FACING_DIRS))
+    if base_idx == ACTION_ULTIMATE_BASE:
+        return (0, 0), False, True, False, FACING_DIRS[facing_idx]
+    if base_idx == ACTION_ORB_BASE:
+        return (0, 0), False, False, True, FACING_DIRS[facing_idx]
     move_idx, use_ability = divmod(base_idx, 2)
-    return MOVES[move_idx], bool(use_ability), FACING_DIRS[facing_idx]
+    return MOVES[move_idx], bool(use_ability), False, False, FACING_DIRS[facing_idx]
 
 
-def encode_action(move, use_ability, facing):
+def encode_action(move, use_ability, facing, use_ultimate=False, use_orb=False):
+    if use_ultimate:
+        return ACTION_ULTIMATE_BASE * len(FACING_DIRS) + FACING_DIRS.index(facing)
+    if use_orb:
+        return ACTION_ORB_BASE * len(FACING_DIRS) + FACING_DIRS.index(facing)
     move_idx = MOVES.index(move)
     base_idx = move_idx * 2 + (1 if use_ability else 0)
     facing_idx = FACING_DIRS.index(facing)
@@ -917,6 +1038,9 @@ def build_action_mask(
     if in_setup_phase or unit.charges <= 0 or unit.role == "HUNT" or not has_target_info:
         for move_idx in range(5):
             base_mask[move_idx * 2 + 1] = False
+
+    base_mask[ACTION_ULTIMATE_BASE] = bool(not in_setup_phase and ultimate_ready(unit))
+    base_mask[ACTION_ORB_BASE] = False
 
     # base_idxごとに向き4通りをまとめて許可/禁止する(encode_actionのbase_idx*4+facing_idxと対応)。
     action_mask = np.repeat(base_mask, len(FACING_DIRS))
@@ -991,8 +1115,10 @@ class SearchEnv:
         self.spike_dist_map = None
         self.sighting_dist_map = None
         self.spike_ground_pos = None
+        self.available_orbs = set()
         self.in_setup_phase = False
         self.setup_ticks_remaining = 0
+        self.scheduled_smoke_fired = False
 
         # --- 一時デバッグ用: 特定キャラの毎tick実況トレース。
         # train()側で特定エピソードだけTrueにする。
@@ -1026,12 +1152,14 @@ class SearchEnv:
     def reset(self):
         self.team_memory.reset()
         self.smokes = []
+        self.available_orbs = valid_orb_cells(GRID)
         self.round_timer = MAX_TICKS
         self.planted = False
         self.match_over_reason = None
         self.spike_ground_pos = None
         self.in_setup_phase = DEFENDER_SETUP_TICKS > 0
         self.setup_ticks_remaining = DEFENDER_SETUP_TICKS
+        self.scheduled_smoke_fired = False
 
         # --- 診断用: 新しいエピソードの開始時に集計をリセット ---
         
@@ -1063,6 +1191,46 @@ class SearchEnv:
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
 
         return self._collect_observations()
+
+    def _scheduled_smoke_targets(self):
+        """指定tickにSマーカーへ投げるスモーク役を距離順に割り当てる。"""
+        search_tick = MAX_TICKS - self.round_timer + 1
+        if (
+            self.scheduled_smoke_fired
+            or self.in_setup_phase
+            or search_tick != SCHEDULED_SMOKE_DELAY_TICKS
+            or not SMOKE_SITE_POSITIONS
+        ):
+            return {}
+
+        eligible = [
+            defender for defender in self.defenders
+            if defender.is_alive and defender.role == "SMOKE" and defender.charges > 0
+        ]
+        assignments = {}
+        unused = set(defender.name for defender in eligible)
+        site_dist_maps = {site: bfs_distance_map(site) for site in SMOKE_SITE_POSITIONS}
+        for site in SMOKE_SITE_POSITIONS:
+            candidates = [defender for defender in eligible if defender.name in unused]
+            if not candidates:
+                break
+            dist_map = site_dist_maps[site]
+
+            def smoke_distance(defender):
+                distance = dist_map[int(defender.pos[0]), int(defender.pos[1])]
+                return distance if distance >= 0 else HEIGHT + WIDTH
+
+            nearest = min(
+                candidates,
+                key=lambda defender: (
+                    smoke_distance(defender),
+                    defender.name,
+                ),
+            )
+            assignments[nearest.name] = tuple(site)
+            unused.remove(nearest.name)
+        self.scheduled_smoke_fired = True
+        return assignments
 
     def _update_episode_arrival_flags(self):
         """エピソード全体の配置位置到達状況を記録する。
@@ -1160,18 +1328,16 @@ class SearchEnv:
                 smoke_cells, self._own_smoke_active("D"), self.round_timer,
                 self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
                 in_setup_phase=self.in_setup_phase,
+                available_orbs=self.available_orbs, allies=self.defenders,
             )
             own_occupied = occupied - {tuple(d.pos)}
             visible_enemies_for_mask = [
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies_for_mask) and not self.in_setup_phase
-
-            # スパイク(地面)に射線が通った時点で、それ以上通路を進ませず
-            # その場で待ち伏せさせる(敵が拾いに来るところを迎撃する方が有利なため)。
-            # 向き(facing)は移動状態と無関係に常に自由選択できるため、ここでの
-            # 制限は移動軸のみに適用する。Setup Phase中は戦闘自体が発生しないため常にFalse。
-            lock_movement = has_enemy_los or (unit_has_spike_los and not self.in_setup_phase)
+            # 自分が敵を直接視認している間は、射撃位置を崩さずstayに限定する。
+            # 味方だけが視認している場合は、クロスファイア参加のため移動を許可する。
+            lock_movement = has_enemy_los
             # 敵の視認情報も直近の目撃情報も一切無い場合、use_abilityは常に無意味
             # (ability_requestsに追加されない空撃ち)になるため、探索での浪費を防ぐ
             # ためマスクの時点で選択肢から除外する。
@@ -1182,7 +1348,7 @@ class SearchEnv:
             elif d.role == "SMOKE":
                 has_target_info = any(a.has_spike for a in visible_enemies_for_mask)
             else:
-                has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+                has_target_info = has_enemy_los
             forced_facing = _forced_combat_facing(
                 d, visible_enemies_for_mask, self.team_memory
             )
@@ -1194,6 +1360,13 @@ class SearchEnv:
                 d, own_occupied, lock_movement=lock_movement, has_target_info=has_target_info,
                 in_setup_phase=self.in_setup_phase, forced_facing=forced_facing,
             )
+            if (
+                not self.in_setup_phase
+                and tuple(d.pos) in self.available_orbs
+                and orb_priority(d, self.defenders)
+            ):
+                start = ACTION_ORB_BASE * len(FACING_DIRS)
+                mask_dict[d.name][start:start + len(FACING_DIRS)] = True
         return obs_dict, mask_dict
 
 
@@ -1258,8 +1431,11 @@ class SearchEnv:
         # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
         # RLに手探りさせる意味がない。既知のBFS最短方向をそのまま強制適用する。
         in_position_phase = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
+            self.team_memory.last_seen_enemy is None
+            and (
+                self.team_memory.spike_pos is None
+                or not self.team_memory.spike_held
+            )
         )
 
         # search phase(in_position_phase)と同様、担当地点は毎エピソード固定のため
@@ -1270,12 +1446,11 @@ class SearchEnv:
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
-            (dr, dc), use_ability, facing = decode_action(action_dict[d.name])
+            (dr, dc), use_ability, _use_ultimate, _use_orb, facing = decode_action(action_dict[d.name])
 
             visible_enemies = [
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
-            has_enemy_los = bool(visible_enemies)
             self_occupied = occupied_now - {tuple(d.pos)}
 
             forced_facing = _forced_combat_facing(d, visible_enemies, self.team_memory)
@@ -1284,13 +1459,7 @@ class SearchEnv:
             if forced_facing is not None:
                 facing = forced_facing
 
-            if has_enemy_los:
-                # 敵を直接視認中はBFS強制移動を一切行わない。
-                # 観測側のマスク(lock_movement)でネットワークはstay以外を
-                # 選べないはずだが、以前はここでBFS方向へ強制上書きしており、
-                # 交戦中でも敵の方向へ突進してしまっていた。
-                pass
-            elif in_position_phase and d.assigned_defense_dist_map is not None:
+            if in_position_phase and d.assigned_defense_dist_map is not None:
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
@@ -1299,18 +1468,6 @@ class SearchEnv:
                     )
                 else:
                     dr, dc = 0, 0
-            elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
-                if self.team_memory.spike_held:
-                    r0, c0 = int(d.pos[0]), int(d.pos[1])
-                    dr, dc = bfs_best_direction_unoccupied(
-                        self.spike_dist_map, r0, c0, self_occupied
-                    )
-            elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
-                r0, c0 = int(d.pos[0]), int(d.pos[1])
-                dr, dc = bfs_best_direction_unoccupied(
-                    self.sighting_dist_map, r0, c0, self_occupied
-                )
-
             # 向き(facing)は移動先の決定方法(BFS強制/ネットワーク)と無関係に、
             # ネットワークが選んだ向きをそのまま毎tick適用する。
             d.facing = facing
@@ -1386,6 +1543,7 @@ class SearchEnv:
         )
 
         smoke_cells = self._smoke_cells()
+        scheduled_smoke_targets = self._scheduled_smoke_targets()
 
         move_plans = []
         ability_requests = []
@@ -1393,6 +1551,52 @@ class SearchEnv:
         ability_overlap = {}
         held_angle = {}
         ability_smoke_valid_target = {}
+        ultimate_tactical = {}
+        ultimate_alignment = {}
+        orb_rewards = {}
+
+        for name, target in scheduled_smoke_targets.items():
+            defender = next((d for d in self.defenders if d.name == name), None)
+            if defender is not None and defender.is_alive and defender.charges > 0:
+                defender.charges -= 1
+                ability_requests.append((defender, target))
+                ability_whiff[name] = False
+
+        team_visible_enemies = [
+            attacker
+            for attacker in self.attackers
+            if attacker.is_alive
+            and any(
+                defender.is_alive and has_los(defender.pos, attacker.pos, smoke_cells)
+                for defender in self.defenders
+            )
+        ]
+        team_sees_enemy = bool(team_visible_enemies)
+        visible_holders = [enemy for enemy in team_visible_enemies if enemy.has_spike]
+        if visible_holders:
+            crossfire_enemy = visible_holders[0]
+            crossfire_ground_pos = None
+        elif team_visible_enemies:
+            crossfire_enemy = team_visible_enemies[0]
+            crossfire_ground_pos = None
+        else:
+            crossfire_enemy = None
+            crossfire_ground_pos = (
+                tuple(self.team_memory.spike_pos)
+                if self.team_memory.spike_pos is not None and not self.team_memory.spike_held
+                else None
+            )
+        pre_crossfire_target = (
+            tuple(crossfire_enemy.pos) if crossfire_enemy is not None else crossfire_ground_pos
+        )
+        pre_crossfire_los = {
+            defender.name: bool(
+                defender.is_alive
+                and pre_crossfire_target is not None
+                and has_los(defender.pos, pre_crossfire_target, smoke_cells)
+            )
+            for defender in self.defenders
+        }
 
         carriers = [a for a in self.attackers if a.is_alive and a.has_spike]
         others = [a for a in self.attackers if a.is_alive and not a.has_spike]
@@ -1403,10 +1607,7 @@ class SearchEnv:
         # position mode(スパイク情報も敵目撃情報も無い状態)かつ担当地点未到着の
         # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
         # RLに手探りさせる意味がない。既知のBFS最短方向をそのまま強制適用する。
-        in_position_phase = (
-            self.team_memory.spike_pos is None
-            and self.team_memory.last_seen_enemy is None
-        )
+        in_position_phase = self.team_memory.spike_pos is None and not team_sees_enemy
 
         actual_action_dict = {}
         defenders_occupied_now = {tuple(u.pos) for u in self.defenders if u.is_alive}
@@ -1414,12 +1615,42 @@ class SearchEnv:
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
                 continue
-            (dr, dc), use_ability, facing = decode_action(action_dict[d.name])
+            (dr, dc), use_ability, use_ultimate, use_orb, facing = decode_action(action_dict[d.name])
 
             visible_enemies = [
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+            if use_ultimate and spend_ultimate(d):
+                tactical = has_enemy_los or team_sees_enemy
+                ultimate_tactical[d.name] = tactical
+                targets = visible_enemies or team_visible_enemies
+                if targets:
+                    target = min(
+                        targets,
+                        key=lambda enemy: max(
+                            abs(enemy.pos[0] - d.pos[0]),
+                            abs(enemy.pos[1] - d.pos[1]),
+                        ),
+                    )
+                    ultimate_alignment[d.name] = _facing_alignment(
+                        facing, tuple(d.pos), tuple(target.pos)
+                    )
+                dr, dc = 0, 0
+                if d.ultimate_name == "MONITOR":
+                    for enemy in self.attackers:
+                        if enemy.is_alive:
+                            enemy.reveal_remaining = max(enemy.reveal_remaining, REVEAL_DURATION_TICKS)
+                elif d.ultimate_name == "TUNNEL":
+                    targets = visible_enemies
+                    if not targets and team_sees_enemy:
+                        targets = [enemy for enemy in self.attackers if enemy.is_alive]
+                    for enemy in targets:
+                        enemy.blind_remaining = max(enemy.blind_remaining, BLIND_DURATION_TICKS)
+            if use_orb:
+                dr, dc = 0, 0
+                _completed, orb_rewards[d.name] = collect_orb_tick(d, self.available_orbs)
+            self_occupied = defenders_occupied_now - {tuple(d.pos)}
             forced_facing = _forced_combat_facing(
                 d, visible_enemies, self.team_memory
             )
@@ -1431,13 +1662,12 @@ class SearchEnv:
                 # マスクだけでなく実行側でも保証し、replayに実際のfacingを記録する。
                 facing = forced_facing
 
-            if has_enemy_los:
-                # 敵を直接視認中はBFS強制移動を一切行わない。
-                # 観測側のマスク(lock_movement)でネットワークはstay以外を
-                # 選べないはずだが、以前はここでBFS方向へ強制上書きしており、
-                # 交戦中でも敵の方向へ突進してしまっていた。
-                pass
-            elif in_position_phase and d.assigned_defense_dist_map is not None:
+            if d.name in scheduled_smoke_targets or has_enemy_los:
+                # 予定スモークはこのtickに即時発動し、直接視認中は射撃位置を維持する。
+                dr, dc = 0, 0
+                use_ability = False
+
+            if in_position_phase and d.assigned_defense_dist_map is not None:
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
@@ -1455,11 +1685,15 @@ class SearchEnv:
 
             # 向き(facing)は移動先の決定方法(BFS強制/ネットワーク)と無関係に、
             # ネットワークが選んだ向きをそのまま毎tick適用する。
+            if use_ultimate or use_orb:
+                dr, dc = 0, 0
             d.facing = facing
             d._facing_eval_pos = tuple(d.pos)
             d._facing_route_map = d.assigned_defense_dist_map if in_position_phase else None
             d._facing_move = (dr, dc)
-            actual_action_dict[d.name] = encode_action((dr, dc), use_ability, facing)
+            actual_action_dict[d.name] = encode_action(
+                (dr, dc), use_ability, facing, use_ultimate=use_ultimate, use_orb=use_orb
+            )
             move_plans.append((d, (dr, dc)))
             # use_abilityのマスク許可条件(has_target_info)と、実際にability_requestsへ
             # 追加されるかどうかの条件は一致している必要がある。以前はwhiff判定に
@@ -1471,7 +1705,7 @@ class SearchEnv:
             if d.role == "SMOKE":
                 has_target_info = any(a.has_spike for a in visible_enemies)
             else:
-                has_target_info = has_enemy_los or (self.team_memory.last_seen_enemy is not None)
+                has_target_info = has_enemy_los
 
             if has_target_info:
                 stats = self.ability_diag_stats.get(d.name)
@@ -1516,9 +1750,6 @@ class SearchEnv:
                         dist = max(abs(target.pos[0]-d.pos[0]), abs(target.pos[1]-d.pos[1]))
                         if dist <= ABILITY_RANGE:
                             ability_requests.append((d, tuple(target.pos)))
-                    elif self.team_memory.last_seen_enemy is not None:
-                        ability_requests.append((d, self.team_memory.last_seen_enemy["pos"]))
-
         for unit, (dr, dc) in move_plans:
             if not unit.is_alive:
                 continue
@@ -1537,6 +1768,18 @@ class SearchEnv:
                 # 直接反映済み(移動方向とは無関係)のため、ここでは上書きしない。
                 unit.pos = [nr, nc]
             unit.moved_this_tick = tuple(unit.pos) != old_pos
+
+        post_crossfire_target = (
+            tuple(crossfire_enemy.pos) if crossfire_enemy is not None else crossfire_ground_pos
+        )
+        post_crossfire_los = {
+            defender.name: bool(
+                defender.is_alive
+                and post_crossfire_target is not None
+                and has_los(defender.pos, post_crossfire_target, smoke_cells)
+            )
+            for defender in self.defenders
+        }
 
         if self.spike_ground_pos is not None:
             picker = next(
@@ -1630,8 +1873,13 @@ class SearchEnv:
 
         rewards = self._compute_rewards(
             pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle, ability_hit,
-            ability_smoke_valid_target,
+            ability_smoke_valid_target, pre_crossfire_los, post_crossfire_los,
         )
+        for name, tactical in ultimate_tactical.items():
+            rewards[name] = rewards.get(name, 0.0) + ultimate_use_reward(tactical)
+            rewards[name] += 0.25 * ultimate_alignment.get(name, 0.0)
+        for name, orb_reward in orb_rewards.items():
+            rewards[name] = rewards.get(name, 0.0) + orb_reward
 
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
@@ -1724,38 +1972,34 @@ class SearchEnv:
                 self.last_shots.append({"shooter": shooter, "target": target, "hit": False})
 
     def _priority_mode_and_distmap(self, defender):
-        r0, c0 = int(defender.pos[0]), int(defender.pos[1])
-        # 直接視認中の個体は、共有されたlast_seen_enemyへ向かう役割ではなく、
-        # 現在位置で射撃して角度を維持する役割にする。ここをsightingにすると、
-        # THREAT_NEAR_RADIUSの外側で「見えている敵へ近づく」報酬が発生する。
-        if any(
-            a.is_alive and has_los(defender.pos, a.pos, self._smoke_cells())
-            for a in self.attackers
-        ):
-            return "combat_hold", None, "combat_hold"
+        # スパイク接近は弱い差分報酬に留め、射線参加報酬と戦闘結果が
+        # 待機・横移動・接近のどれを選ぶかを決められるようにする。
+        visible_enemies = [
+            a for a in self.attackers
+            if a.is_alive and has_los(defender.pos, a.pos, self._smoke_cells())
+        ]
+        visible_spike_holder = any(a.has_spike for a in visible_enemies)
+        active_spike_target = (
+            self.team_memory.spike_pos is not None
+            and self.team_memory.spike_held
+        )
         if self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
             if self.team_memory.spike_held:
-                dist = self.spike_dist_map[r0, c0]
-                if dist >= 0 and dist <= THREAT_NEAR_RADIUS:
-                    return "spike_hold", self.spike_dist_map, "spike_hold"
                 return "spike", self.spike_dist_map, "spike"
-            if has_los(defender.pos, self.team_memory.spike_pos, self._smoke_cells()):
-                return "spike_watch", self.spike_dist_map, "spike_watch"
-            return "spike_approach", self.spike_dist_map, "spike_approach"
-        if self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
-            dist = self.sighting_dist_map[r0, c0]
-            if dist >= 0 and dist <= THREAT_NEAR_RADIUS:
-                return "sighting_hold", self.sighting_dist_map, "sighting_hold"
-            target_key = f"sighting:{self.team_memory.last_seen_enemy.get('name')}"
-            return "sighting", self.sighting_dist_map, target_key
+            return "spike_ground", self.spike_dist_map, "spike_ground"
+        if visible_enemies and not visible_spike_holder and not active_spike_target:
+            return "combat_hold", None, "combat_hold"
         return "position", defender.assigned_defense_dist_map, "position"
 
     def _compute_rewards(
         self, pre_tick_enemy_debuffed, ability_whiff, ability_overlap, held_angle,
         ability_hit=None, ability_smoke_valid_target=None,
+        pre_crossfire_los=None, post_crossfire_los=None,
     ):
         ability_hit = ability_hit or {}
         ability_smoke_valid_target = ability_smoke_valid_target or {}
+        pre_crossfire_los = pre_crossfire_los or {}
+        post_crossfire_los = post_crossfire_los or {}
         rewards = {}
         for d in self.defenders:
             r = STEP_PENALTY
@@ -1774,6 +2018,10 @@ class SearchEnv:
                     if not d.moved_this_tick
                     else COMBAT_MOVE_PENALTY
                 )
+
+            r += crossfire_coordination_reward(
+                d.name, pre_crossfire_los, post_crossfire_los
+            )
 
             # 配置地点到着後の向きを明確に学習させる。
             # 移動中は向きの自由度を維持し、配置地点にいるときだけ
@@ -1822,15 +2070,8 @@ class SearchEnv:
 
                 if mode == "spike":
                     r += SPIKE_PULL_REWARD * delta
-                elif mode == "spike_hold":
-                    r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
-                elif mode == "spike_approach":
-                    post_dist_map = d.assigned_defense_dist_map
-                    post_dist = post_dist_map[r0, c0] if post_dist_map is not None else None
-                    if post_dist is not None and 0 <= post_dist <= SPIKE_GROUND_APPROACH_RADIUS:
-                        r += SPIKE_GROUND_PULL_REWARD * delta
-                elif mode == "spike_watch":
-                    r += SPIKE_WATCH_HOLD_BONUS if not d.moved_this_tick else SPIKE_WATCH_MOVE_PENALTY
+                elif mode == "spike_ground":
+                    r += SPIKE_GROUND_PULL_REWARD * delta
                 elif mode == "sighting_hold":
                     r += HOLD_POSITION_BONUS if not d.moved_this_tick else HOLD_POSITION_PENALTY
                 elif mode == "sighting":

@@ -67,15 +67,18 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
 from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS, _facing_towards
+from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 38
+OBS_DIM = 49
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-BASE_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
-ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80: base_idx(0-9)*8 + facing_idx(0-7)
+BASE_ACTION_DIM = 12  # move/ability 10 + ultimate + orb
+ACTION_ULTIMATE_BASE = 10
+ACTION_ORB_BASE = 11
+ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 96
 
 ABILITY_RANGE = 8
 GUARD_POS_REACH_RADIUS = 1
@@ -568,11 +571,33 @@ class Ov1LearningAttackerGuardController:
             obs[36] = (nearest_watch[0] - r0) / height
             obs[37] = (nearest_watch[1] - c0) / width
 
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        obs[38:42] = ultimate_context(
+            char,
+            self_sighting=bool(visible_enemies),
+            team_sighting=self.team_memory.last_seen_enemy is not None,
+            tactical=(
+                bool(visible_enemies)
+                or self.team_memory.last_seen_enemy is not None
+                or active_defuse_info is not None
+            ),
+        )
+        obs[42:49] = orb_context(char, available_orbs, grid, allies)
+
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     # train_attacker_guard.py の build_action_mask() と同一ロジック。
-    def _action_mask(self, char, grid, chars, lock_movement=False, progress_dist_map=None):
+    def _action_mask(
+        self, char, grid, chars, lock_movement=False, progress_dist_map=None,
+        available_orbs=(),
+    ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         敵を視認している間は静止させ、射撃の当たりやすさを優先する
         (「多少の索敵は許容するが強く抑制」は学習側の報酬設計で反映済み。
@@ -622,6 +647,15 @@ class Ov1LearningAttackerGuardController:
         if _ability_charge(char) <= 0 or char.ability_name == "HUNT":
             for move_idx in range(5):
                 base_mask[move_idx * 2 + 1] = False
+
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        base_mask[ACTION_ULTIMATE_BASE] = ultimate_ready(char)
+        base_mask[ACTION_ORB_BASE] = (
+            (r, c) in available_orbs and orb_priority(char, allies)
+        )
 
         return np.repeat(base_mask, len(FACING_DIRS))
 
@@ -673,6 +707,9 @@ class Ov1LearningAttackerGuardController:
         mask = self._action_mask(
             char, grid, chars, lock_movement=False,
             progress_dist_map=positioning_map,
+            available_orbs={
+                tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+            },
         )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
@@ -692,9 +729,24 @@ class Ov1LearningAttackerGuardController:
                 )
 
         base_idx, facing_idx = divmod(action_idx, len(FACING_DIRS))
+        facing_dir = FACING_DIRS[facing_idx]
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing_dir
+
+        if base_idx == ACTION_ORB_BASE:
+            return list(char.pos), "COLLECT_ORB"
+
+        if base_idx == ACTION_ULTIMATE_BASE:
+            payload = {
+                "ultimate": str(getattr(char, "ultimate_name", "")).upper(),
+                "facing": facing_dir,
+            }
+            if payload["ultimate"] == "ESCAPE":
+                payload["target"] = tuple(map(int, planted_pos))
+            return list(char.pos), payload
+
         move_idx, use_ability_int = divmod(base_idx, 2)
         use_ability = bool(use_ability_int)
-        facing_dir = FACING_DIRS[facing_idx]
         move_offset = MOVES[move_idx]
         next_pos = [char.pos[0] + move_offset[0], char.pos[1] + move_offset[1]]
 

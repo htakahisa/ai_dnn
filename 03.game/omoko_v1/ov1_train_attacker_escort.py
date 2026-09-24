@@ -76,6 +76,7 @@ import random
 import sys
 from collections import deque, namedtuple
 import time
+from types import SimpleNamespace
 
 import numpy as np
 import torch
@@ -110,6 +111,19 @@ from game_core import (
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_ultimate_training import (
+    ESCORT_ORB_MAX_PATH_DISTANCE,
+    ESCORT_ORB_MIN_REMAINING_TICKS,
+    collect_orb_tick,
+    initialize_ultimate,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 from ov1_common_attacker import (
     ROSTER_ORDER,
     SPIKE_HOLDER,
@@ -315,6 +329,30 @@ def _build_distance_map_walls_only(grid, source_cells):
     return dist
 
 
+def _bfs_next_step(grid, start, goal, blocked=()):
+    """Return one walkable step from start toward goal, if one exists."""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal:
+        return start
+    blocked = {tuple(map(int, cell)) for cell in blocked}
+    dist_map = _build_distance_map_walls_only(grid, [goal])
+    r, c = start
+    best = start
+    best_dist = dist_map[r, c]
+    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nr, nc = r + dr, c + dc
+        if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+            continue
+        if grid[nr, nc] == 1 or (nr, nc) in blocked:
+            continue
+        distance = dist_map[nr, nc]
+        if np.isfinite(distance) and distance < best_dist:
+            best = (nr, nc)
+            best_dist = distance
+    return best
+
+
 def _parse_escort_map(maze_str):
     """地形数字をgridへ変換する。
     S/R/F = 定点アビリティ位置。
@@ -349,8 +387,8 @@ class EscortEnv:
     """omoko_v1固定チームのキャリアー護衛4体(重み共有)を学習させる
     軽量マルチエージェント環境。"""
 
-    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
-    BASE_N_ACTIONS = 6
+    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY, ACTION_ULTIMATE, ACTION_ORB = range(8)
+    BASE_N_ACTIONS = 8
     N_ACTIONS = BASE_N_ACTIONS * len(FACING_DIRS)
     _MOVE_DELTA = {
         ACTION_UP: (-1, 0),
@@ -473,6 +511,7 @@ class EscortEnv:
         self.escort_name = []
         self.escort_ability_type = []
         self.escort_ability_used = []
+        self.escort_ultimate = []
         self.escort_accuracy = []
         self.escort_dodge = []
         self.escort_hs_rate = []
@@ -502,6 +541,7 @@ class EscortEnv:
         self.enemy_reveal_source = []
 
         self.smokes = []  # [{"cells": set, "remaining": int}]
+        self.available_orbs = set()
 
         self._blocking_escort_idx = None  # このtickでキャリアーを塞いだescort index
         self.team_sighting = None  # {"pos": (r, c), "idx": int, "tick_ago": int} or None。
@@ -587,6 +627,7 @@ class EscortEnv:
     def reset(self):
         self.tick = 0
         self.smokes = []
+        self.available_orbs = valid_orb_cells(self.grid)
         self.lineup_used_cells = {ability: set() for ability in self.ability_lineup_points}
 
         # --- キャリアー役を決定(train_attacker_carry.pyと同一のハンドオフ方針) ---
@@ -623,6 +664,7 @@ class EscortEnv:
         self.escort_name = []
         self.escort_ability_type = []
         self.escort_ability_used = []
+        self.escort_ultimate = []
         self.escort_accuracy = []
         self.escort_dodge = []
         self.escort_hs_rate = []
@@ -636,6 +678,9 @@ class EscortEnv:
             self.escort_pos.append(pos)
             self.escort_name.append(name)
             self.escort_ability_type.append(stats["ability"])
+            ultimate = SimpleNamespace()
+            initialize_ultimate(ultimate, stats["ability"], self.rng)
+            self.escort_ultimate.append(ultimate)
             self.escort_accuracy.append(stats["accuracy"])
             self.escort_dodge.append(stats["dodge_rate"])
             self.escort_hs_rate.append(stats["hs_rate"])
@@ -780,6 +825,28 @@ class EscortEnv:
             if best_dist is None or dist < best_dist:
                 best_idx, best_dist = i, dist
         return best_idx, best_dist
+
+    def _opportunistic_orb_target(self, i):
+        """Return a nearby orb only when escort duty has enough spare time."""
+        if not self.available_orbs or self.team_sighting is not None:
+            return None
+        if self.tick < self.hold_ticks:
+            return None
+        if self._nearest_visible_enemy(self.escort_pos[i], max_range=None)[0] is not None:
+            return None
+        if self.max_ticks - self.tick < ESCORT_ORB_MIN_REMAINING_TICKS:
+            return None
+        if not orb_priority(self.escort_ultimate[i], self.escort_ultimate):
+            return None
+
+        pos = tuple(self.escort_pos[i])
+        candidates = []
+        for orb in sorted(self.available_orbs):
+            dist_map = _build_distance_map_walls_only(self.grid, [orb])
+            distance = dist_map[pos[0], pos[1]]
+            if np.isfinite(distance) and distance <= ESCORT_ORB_MAX_PATH_DISTANCE:
+                candidates.append((int(distance), tuple(orb)))
+        return min(candidates)[1] if candidates else None
 
     def _available_lineup_cell(self, ability, pos):
         """定点アビリティ位置のうち、未使用かつ使用可能な条件を満たすものから
@@ -956,6 +1023,9 @@ class EscortEnv:
             if not has_target:
                 base_mask[self.ACTION_ABILITY] = False
 
+        base_mask[self.ACTION_ULTIMATE] = ultimate_ready(self.escort_ultimate[i])
+        base_mask[self.ACTION_ORB] = self._opportunistic_orb_target(i) is not None
+
         return np.repeat(base_mask, len(FACING_DIRS))
 
     def _get_obs(self, i):
@@ -1096,6 +1166,20 @@ class EscortEnv:
         hint_available, hint_dr, hint_dc = self._position_hint_info(i)
         obs.extend([hint_available, hint_dr, hint_dc])
 
+        self_visible = enemy_idx is not None
+        team_visible = self.team_sighting is not None
+        site_entry = self.carry_path_index >= max(0, len(self.carry_path) - 12)
+        obs.extend(ultimate_context(
+            self.escort_ultimate[i],
+            self_sighting=self_visible,
+            team_sighting=team_visible,
+            tactical=site_entry and (self_visible or team_visible or watch_visible),
+        ))
+        self.escort_ultimate[i].pos = self.escort_pos[i]
+        obs.extend(orb_context(
+            self.escort_ultimate[i], self.available_orbs, self.grid, self.escort_ultimate
+        ))
+
         return np.array(obs, dtype=np.float32)
 
     @staticmethod
@@ -1114,7 +1198,7 @@ class EscortEnv:
         #  自分だけでなくcarrier/他escortが見ている敵の情報も反映するため)
         # (56→59: 均等配分された警戒点のvisibleフラグ+相対方向2)
         # (59→62: 警戒点に対応する推奨立ち位置(大文字ヒント)への方向情報3を追加)
-        return 62
+        return 73
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -1413,6 +1497,8 @@ class EscortEnv:
         # 含め、ACTION_ABILITYが選択された場合にのみ_apply_ability()内で
         # 標的(視認可能な敵、無ければ定点セル)を解決するよう統一した。
         used_ability_this_tick = set()
+        orb_requested = set()
+        orb_targets = {}
         for i in range(self.n_escorts):
             if not self.escort_alive[i] or decoded_base_actions[i] is None:
                 continue
@@ -1421,6 +1507,61 @@ class EscortEnv:
                 used_ability_this_tick.add(i)
                 self.escort_last_delta[i] = (0.0, 0.0)
                 self.escort_stuck[i] += 1
+            elif decoded_base_actions[i] == self.ACTION_ORB:
+                orb_target = self._opportunistic_orb_target(i)
+                if orb_target is not None:
+                    orb_requested.add(i)
+                    orb_targets[i] = orb_target
+                self.escort_last_delta[i] = (0.0, 0.0)
+                self.escort_stuck[i] += 1
+
+        # Ultimate is a separate learned stationary action.  The positive
+        # window is the final site-entry corridor with a seen/shared threat or
+        # an assigned watch point (an observable "enemy likely here" cue).
+        for i in range(self.n_escorts):
+            if not self.escort_alive[i] or decoded_base_actions[i] != self.ACTION_ULTIMATE:
+                continue
+            if not spend_ultimate(self.escort_ultimate[i]):
+                continue
+            site_entry = self.carry_path_index >= max(0, len(self.carry_path) - 12)
+            tactical = site_entry and (
+                pre_action_visible_enemy[i]
+                or team_sighting_for_reward is not None
+                or self.escort_watch_points[i] is not None
+            )
+            rewards[i] += ultimate_use_reward(tactical)
+            aim_target = None
+            enemy_idx, _ = self._nearest_visible_enemy(
+                self.escort_pos[i], max_range=None
+            )
+            if enemy_idx is not None:
+                aim_target = self.enemy_pos[enemy_idx]
+            elif team_sighting_for_reward is not None:
+                aim_target = team_sighting_for_reward["pos"]
+            elif self.escort_watch_points[i] is not None:
+                aim_target = self.escort_watch_points[i]
+            if aim_target is not None:
+                rewards[i] += 0.25 * _direction_alignment(
+                    chosen_facings[i], self.escort_pos[i], aim_target
+                )
+            ultimate_name = self.escort_ultimate[i].ultimate_name
+            if ultimate_name == "MONITOR":
+                for enemy_idx in range(self.n_enemies):
+                    if self.enemy_alive[enemy_idx]:
+                        self.enemy_reveal_remaining[enemy_idx] = max(
+                            self.enemy_reveal_remaining[enemy_idx], REVEAL_DURATION_TICKS
+                        )
+            elif ultimate_name == "TUNNEL":
+                for enemy_idx in range(self.n_enemies):
+                    if self.enemy_alive[enemy_idx] and _has_los(
+                        self.grid, self._smoke_cell_set(), self.escort_pos[i], self.enemy_pos[enemy_idx]
+                    ):
+                        self.enemy_blind_remaining[enemy_idx] = max(
+                            self.enemy_blind_remaining[enemy_idx], BLIND_DURATION_TICKS
+                        )
+            used_ability_this_tick.add(i)
+            self.escort_last_delta[i] = (0.0, 0.0)
+            self.escort_stuck[i] += 1
 
         # 3. 敵の簡易移動(衝突は考慮しない簡略化スクリプトAI)
         for i in range(self.n_enemies):
@@ -1513,6 +1654,23 @@ class EscortEnv:
             action = decoded_base_actions[i]
             r, c = self.escort_pos[i]
 
+            if i in orb_requested:
+                occupied = self._occupied_by_others("escort", i)
+                next_pos = _bfs_next_step(
+                    self.grid, (r, c), orb_targets[i], occupied
+                )
+                if next_pos == (r, c):
+                    self.escort_last_delta[i] = (0.0, 0.0)
+                    self.escort_stuck[i] += 1
+                    continue
+                self.escort_pos[i] = next_pos
+                self.escort_moved[i] = True
+                self.escort_last_delta[i] = (
+                    float(next_pos[0] - r), float(next_pos[1] - c)
+                )
+                self.escort_stuck[i] = 0
+                continue
+
             if action == self.ACTION_STAY or action not in self._MOVE_DELTA:
                 self.escort_last_delta[i] = (0.0, 0.0)
                 self.escort_stuck[i] += 1
@@ -1536,6 +1694,11 @@ class EscortEnv:
             self.escort_moved[i] = True
             self.escort_last_delta[i] = (float(dr), float(dc))
             self.escort_stuck[i] = 0
+
+        for i in orb_requested:
+            self.escort_ultimate[i].pos = self.escort_pos[i]
+            _completed, reward = collect_orb_tick(self.escort_ultimate[i], self.available_orbs)
+            rewards[i] += reward
 
         # 5.5 escortの向き(facing)を確定する。
         # 移動・STAY・アビリティいずれでもfacingは移動方向と無関係にDQNが
