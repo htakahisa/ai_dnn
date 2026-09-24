@@ -1,0 +1,28 @@
+{
+  "scenarios": 1000,
+  "enemies": 5000,
+  "target_percent": {
+    "point": 70,
+    "jitter": 20,
+    "random": 10
+  },
+  "counts": {
+    "point": 3481,
+    "jitter": 1003,
+    "random": 516
+  },
+  "actual_percent": {
+    "point": 69.62,
+    "jitter": 20.06,
+    "random": 10.32
+  },
+  "contexts": [
+    {
+      "actor_side": "attacker",
+      "situation": "carry",
+      "elapsed_ticks": 100,
+      "seed": 20260924,
+      "scenarios": 1000
+    }
+  ]
+}
