@@ -112,6 +112,8 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
 from ov1_ultimate_training import (
+    ESCORT_ORB_MAX_PATH_DISTANCE,
+    ESCORT_ORB_MIN_REMAINING_TICKS,
     collect_orb_tick,
     initialize_ultimate,
     orb_context,
@@ -325,6 +327,30 @@ def _build_distance_map_walls_only(grid, source_cells):
                     dist[nr, nc] = dist[r, c] + 1
                     q.append((nr, nc))
     return dist
+
+
+def _bfs_next_step(grid, start, goal, blocked=()):
+    """Return one walkable step from start toward goal, if one exists."""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal:
+        return start
+    blocked = {tuple(map(int, cell)) for cell in blocked}
+    dist_map = _build_distance_map_walls_only(grid, [goal])
+    r, c = start
+    best = start
+    best_dist = dist_map[r, c]
+    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nr, nc = r + dr, c + dc
+        if not (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]):
+            continue
+        if grid[nr, nc] == 1 or (nr, nc) in blocked:
+            continue
+        distance = dist_map[nr, nc]
+        if np.isfinite(distance) and distance < best_dist:
+            best = (nr, nc)
+            best_dist = distance
+    return best
 
 
 def _parse_escort_map(maze_str):
@@ -800,6 +826,28 @@ class EscortEnv:
                 best_idx, best_dist = i, dist
         return best_idx, best_dist
 
+    def _opportunistic_orb_target(self, i):
+        """Return a nearby orb only when escort duty has enough spare time."""
+        if not self.available_orbs or self.team_sighting is not None:
+            return None
+        if self.tick < self.hold_ticks:
+            return None
+        if self._nearest_visible_enemy(self.escort_pos[i], max_range=None)[0] is not None:
+            return None
+        if self.max_ticks - self.tick < ESCORT_ORB_MIN_REMAINING_TICKS:
+            return None
+        if not orb_priority(self.escort_ultimate[i], self.escort_ultimate):
+            return None
+
+        pos = tuple(self.escort_pos[i])
+        candidates = []
+        for orb in sorted(self.available_orbs):
+            dist_map = _build_distance_map_walls_only(self.grid, [orb])
+            distance = dist_map[pos[0], pos[1]]
+            if np.isfinite(distance) and distance <= ESCORT_ORB_MAX_PATH_DISTANCE:
+                candidates.append((int(distance), tuple(orb)))
+        return min(candidates)[1] if candidates else None
+
     def _available_lineup_cell(self, ability, pos):
         """定点アビリティ位置のうち、未使用かつ使用可能な条件を満たすものから
         最も近い1点を返す(無ければNone)。使用可能条件は、
@@ -976,10 +1024,7 @@ class EscortEnv:
                 base_mask[self.ACTION_ABILITY] = False
 
         base_mask[self.ACTION_ULTIMATE] = ultimate_ready(self.escort_ultimate[i])
-        base_mask[self.ACTION_ORB] = (
-            tuple(self.escort_pos[i]) in self.available_orbs
-            and orb_priority(self.escort_ultimate[i], self.escort_ultimate)
-        )
+        base_mask[self.ACTION_ORB] = self._opportunistic_orb_target(i) is not None
 
         return np.repeat(base_mask, len(FACING_DIRS))
 
@@ -1453,6 +1498,7 @@ class EscortEnv:
         # 標的(視認可能な敵、無ければ定点セル)を解決するよう統一した。
         used_ability_this_tick = set()
         orb_requested = set()
+        orb_targets = {}
         for i in range(self.n_escorts):
             if not self.escort_alive[i] or decoded_base_actions[i] is None:
                 continue
@@ -1462,7 +1508,10 @@ class EscortEnv:
                 self.escort_last_delta[i] = (0.0, 0.0)
                 self.escort_stuck[i] += 1
             elif decoded_base_actions[i] == self.ACTION_ORB:
-                orb_requested.add(i)
+                orb_target = self._opportunistic_orb_target(i)
+                if orb_target is not None:
+                    orb_requested.add(i)
+                    orb_targets[i] = orb_target
                 self.escort_last_delta[i] = (0.0, 0.0)
                 self.escort_stuck[i] += 1
 
@@ -1598,12 +1647,29 @@ class EscortEnv:
         # 5. Escortの移動(アビリティ使用者・死亡者を除く、ランダム順で逐次解決)
         move_order = [
             i for i in range(self.n_escorts)
-            if self.escort_alive[i] and i not in used_ability_this_tick and i not in orb_requested and decoded_base_actions[i] is not None
+            if self.escort_alive[i] and i not in used_ability_this_tick and decoded_base_actions[i] is not None
         ]
         self.rng.shuffle(move_order)
         for i in move_order:
             action = decoded_base_actions[i]
             r, c = self.escort_pos[i]
+
+            if i in orb_requested:
+                occupied = self._occupied_by_others("escort", i)
+                next_pos = _bfs_next_step(
+                    self.grid, (r, c), orb_targets[i], occupied
+                )
+                if next_pos == (r, c):
+                    self.escort_last_delta[i] = (0.0, 0.0)
+                    self.escort_stuck[i] += 1
+                    continue
+                self.escort_pos[i] = next_pos
+                self.escort_moved[i] = True
+                self.escort_last_delta[i] = (
+                    float(next_pos[0] - r), float(next_pos[1] - c)
+                )
+                self.escort_stuck[i] = 0
+                continue
 
             if action == self.ACTION_STAY or action not in self._MOVE_DELTA:
                 self.escort_last_delta[i] = (0.0, 0.0)
