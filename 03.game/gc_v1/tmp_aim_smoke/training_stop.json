@@ -1,0 +1,15 @@
+{
+  "reason": "completed",
+  "stopped_episode": null,
+  "last_evaluated_episode": 2,
+  "best_episode": 0,
+  "evaluations_without_improvement": 1,
+  "consecutive_guardrail_violations": 0,
+  "early_stop_patience": 0,
+  "movement_guardrail_patience": 0,
+  "max_timeout_rate": 0.1,
+  "max_quiet_stall_increase": 0.05,
+  "max_carrier_death_increase": 0.05,
+  "max_plant_regression": 0.05,
+  "baseline_quiet_stall_tick_rate": 0.1774193548387097
+}

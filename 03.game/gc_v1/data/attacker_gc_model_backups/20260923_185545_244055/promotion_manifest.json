@@ -1,0 +1,34 @@
+{
+  "operation": "gc_attacker_model_promotion",
+  "timestamp": "2026-09-23T09:55:45.244592+00:00",
+  "backup_dir": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260923_185545_244055",
+  "models": {
+    "carry": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_escort_support_current\\selected\\dqn_attacker_carry_gc_best_escort_support_ab.pt",
+      "source_sha256": "3ff48582f7e96f7754dea918c39517341925ccde90677b51b5b5195f9bc5ccdf",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "ead4330e670e3cab99e4565da4626fc52257066079ec6b49dd265fe4b9ab862d",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260923_185545_244055\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "target_sha256_after": "3ff48582f7e96f7754dea918c39517341925ccde90677b51b5b5195f9bc5ccdf"
+    },
+    "escort": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_escort_support_current\\selected\\dqn_attacker_escort_gc_best_escort_support_ab.pt",
+      "source_sha256": "68b39362a9ec288d0ad2ffce84a8a73e2daa0cf5886c2f5159fdc135aea1c12e",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "ea220552e0d202adc36e75f3b5d35a50d3e17758fc60ab4574660f7e97084b15",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260923_185545_244055\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "target_sha256_after": "68b39362a9ec288d0ad2ffce84a8a73e2daa0cf5886c2f5159fdc135aea1c12e"
+    },
+    "guard": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_escort_support_current\\selected\\dqn_attacker_guard_gc_best_escort_support_ab.pt",
+      "source_sha256": "a2d8ced37ea1079d84dd2f2f1e3667529f460fdfe5ea490cda89e23dc1f1e20c",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "55aabf1895f37bb209c66badcf485532455f951401e60862cf5c487e70d41800",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260923_185545_244055\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "target_sha256_after": "a2d8ced37ea1079d84dd2f2f1e3667529f460fdfe5ea490cda89e23dc1f1e20c"
+    }
+  }
+}

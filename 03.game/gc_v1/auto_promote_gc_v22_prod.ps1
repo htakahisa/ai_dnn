@@ -8,9 +8,14 @@
 
 # 引数解析
 $targetEpisode = $null
+$minOrbCollections = 1
 for ($i = 0; $i -lt $args.Count; $i++) {
     if ($args[$i] -eq "--episode" -and $i + 1 -lt $args.Count) {
         $targetEpisode = [int]$args[$i + 1]
+        $i++
+    }
+    if ($args[$i] -eq "--min-orb-collections" -and $i + 1 -lt $args.Count) {
+        $minOrbCollections = [int]$args[$i + 1]
         $i++
     }
 }
@@ -30,6 +35,7 @@ $SOURCE_EVAL_HISTORY = Join-Path $V22_SOURCE_DIR "evaluation_history.json"
 $MAX_TIMEOUT_RATE = 0.05    # タイムアウト率5%以下
 $MAX_NO_ENTRY_RATE = 0.35   # エントリー不実行率35%以下
 $MIN_ROUTE_CLEAR_RATE = 0.50 # ルートクリア率50%以上
+$MIN_ORB_COLLECTIONS = $minOrbCollections # 評価ブロック中の回収成功回数
 
 # タイムスタンプ
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -65,7 +71,8 @@ if ($targetEpisode -eq $null) {
         }
         $noEntry = $entry.carry_no_entry_rate
         $timeout = $entry.timeout_rate
-        $violation = [Math]::Max(0.0, $noEntry - $MAX_NO_ENTRY_RATE) + [Math]::Max(0.0, $timeout - $MAX_TIMEOUT_RATE)
+        $orbCollections = [int]$entry.orb_collections
+        $violation = [Math]::Max(0.0, $noEntry - $MAX_NO_ENTRY_RATE) + [Math]::Max(0.0, $timeout - $MAX_TIMEOUT_RATE) + [Math]::Max(0.0, $MIN_ORB_COLLECTIONS - $orbCollections)
         
         if ($violation -lt $bestScoreViolation) {
             $bestScoreViolation = $violation
@@ -78,7 +85,8 @@ if ($targetEpisode -eq $null) {
         foreach ($entry in $evalHistory) {
             $noEntry = $entry.carry_no_entry_rate
             $timeout = $entry.timeout_rate
-            $violation = [Math]::Max(0.0, $noEntry - $MAX_NO_ENTRY_RATE) + [Math]::Max(0.0, $timeout - $MAX_TIMEOUT_RATE)
+            $orbCollections = [int]$entry.orb_collections
+            $violation = [Math]::Max(0.0, $noEntry - $MAX_NO_ENTRY_RATE) + [Math]::Max(0.0, $timeout - $MAX_TIMEOUT_RATE) + [Math]::Max(0.0, $MIN_ORB_COLLECTIONS - $orbCollections)
             
             if ($violation -lt $bestScoreViolation) {
                 $bestScoreViolation = $violation
@@ -107,22 +115,27 @@ Write-Host "Using verified evaluation result (EP$($bestEntry.episode)):"
 Write-Host "  timeout_rate: $([math]::Round($bestEntry.timeout_rate*100,2))%"
 Write-Host "  carry_no_entry_rate: $([math]::Round($bestEntry.carry_no_entry_rate*100,2))%"
 Write-Host "  designated_route_clear_rate: $([math]::Round($bestEntry.designated_route_clear_rate*100,2))%"
+Write-Host "  orb_collections: $([int]$bestEntry.orb_collections)"
 
 Write-Host "`nThreshold criteria (max limits):"
 Write-Host "  max_timeout_rate: $($MAX_TIMEOUT_RATE*100)%"
 Write-Host "  max_no_entry_rate: $($MAX_NO_ENTRY_RATE*100)%"
 Write-Host "  min_route_clear_rate: $($MIN_ROUTE_CLEAR_RATE*100)%"
+Write-Host "  min_orb_collections: $MIN_ORB_COLLECTIONS"
 
 # 基準達成チェック
 $passTimeout = $bestEntry.timeout_rate -le $MAX_TIMEOUT_RATE
 $passNoEntry = $bestEntry.carry_no_entry_rate -le $MAX_NO_ENTRY_RATE
 $passRouteClear = $bestEntry.designated_route_clear_rate -ge $MIN_ROUTE_CLEAR_RATE
-$allPassed = $passTimeout -and $passNoEntry -and $passRouteClear
+$orbCollections = [int]$bestEntry.orb_collections
+$passOrbCollections = $orbCollections -ge $MIN_ORB_COLLECTIONS
+$allPassed = $passTimeout -and $passNoEntry -and $passRouteClear -and $passOrbCollections
 
 Write-Host "`nCriteria check results:"
 Write-Host "  Timeout rate: $(if ($passTimeout) { 'PASS' } else { 'FAIL' }) (value: $([math]::Round($bestEntry.timeout_rate*100,2))% <= $($MAX_TIMEOUT_RATE*100)%)"
 Write-Host "  No-entry rate: $(if ($passNoEntry) { 'PASS' } else { 'FAIL' }) (value: $([math]::Round($bestEntry.carry_no_entry_rate*100,2))% <= $($MAX_NO_ENTRY_RATE*100)%)"
 Write-Host "  Route clear rate: $(if ($passRouteClear) { 'PASS' } else { 'FAIL' }) (value: $([math]::Round($bestEntry.designated_route_clear_rate*100,2))% >= $($MIN_ROUTE_CLEAR_RATE*100)%)"
+Write-Host "  Orb collections: $(if ($passOrbCollections) { 'PASS' } else { 'FAIL' }) (value: $orbCollections >= $MIN_ORB_COLLECTIONS)"
 
 # プロモーションログを記録（基準未達成でも常に保存）
 $promotionLog = [PSCustomObject]@{
@@ -136,16 +149,19 @@ $promotionLog = [PSCustomObject]@{
         timeout_rate = $bestEntry.timeout_rate
         carry_no_entry_rate = $bestEntry.carry_no_entry_rate
         designated_route_clear_rate = $bestEntry.designated_route_clear_rate
+        orb_collections = $orbCollections
     }
     criteria = @{
         max_timeout_rate = $MAX_TIMEOUT_RATE
         max_no_entry_rate = $MAX_NO_ENTRY_RATE
         min_route_clear_rate = $MIN_ROUTE_CLEAR_RATE
+        min_orb_collections = $MIN_ORB_COLLECTIONS
     }
     gaps_to_criteria = @{
                 timeout_gap = [Math]::Max(0, $bestEntry.timeout_rate - $MAX_TIMEOUT_RATE)
                 no_entry_gap = [Math]::Max(0, $bestEntry.carry_no_entry_rate - $MAX_NO_ENTRY_RATE)
                 route_clear_gap = [Math]::Max(0, $MIN_ROUTE_CLEAR_RATE - $bestEntry.designated_route_clear_rate)
+                orb_collections_gap = [Math]::Max(0, $MIN_ORB_COLLECTIONS - $orbCollections)
             }
     backup_path = $null
 }
@@ -156,6 +172,7 @@ if (-not $allPassed) {
     Write-Host "  Timeout rate remaining: $([math]::Round(($bestEntry.timeout_rate - $MAX_TIMEOUT_RATE)*100,2))%"
             Write-Host "  No-entry rate remaining: $([math]::Max(0, [math]::Round(($bestEntry.carry_no_entry_rate - $MAX_NO_ENTRY_RATE)*100,2)))%"
             Write-Host "  Route clear rate remaining: $([math]::Max(0, [math]::Round(($MIN_ROUTE_CLEAR_RATE - $bestEntry.designated_route_clear_rate)*100,2)))%"
+    Write-Host "  Orb collections remaining: $([math]::Max(0, $MIN_ORB_COLLECTIONS - $orbCollections))"
     Write-Host "`nEvaluation results have been saved to promotion log for tracking."
     # ログだけ保存して終了
     $promotionLog | ConvertTo-Json -Depth 10 | Out-File (Join-Path $PROD_MODEL_DIR "promotion_log_$timestamp.json") -Encoding utf8
@@ -185,3 +202,4 @@ $promotionLog.backup_path = $backupDir
 $promotionLog | ConvertTo-Json -Depth 10 | Out-File (Join-Path $PROD_MODEL_DIR "promotion_log_$timestamp.json") -Encoding utf8
 Write-Host "Promotion log saved: promotion_log_$timestamp.json"
 Write-Host "Auto-promotion complete! New model is now active in production."
+

@@ -52,11 +52,11 @@ from character_stats_gc import (
 try:
     from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, attacker_orb_context_features, can_collect_orb
 except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, attacker_orb_context_features, can_collect_orb
 
 # ---------------------------------------------------------------------------
 # 設定(train_attacker_carry.pyと一致させる)
@@ -75,7 +75,8 @@ FORMATION_OBS_DIM = 65  # v7: persistent designated entry screener and readiness
 ENTRY_SYNC_OBS_DIM = 66  # v8: explicit two-tick entry synchronization state.
 ULTIMATE_CONTEXT_OBS_DIM = 70  # v10: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
-ORB_OBS_DIM = FACING_HEAD_OBS_DIM + 4
+LEGACY_ORB_OBS_DIM = FACING_HEAD_OBS_DIM + 4
+ORB_OBS_DIM = LEGACY_ORB_OBS_DIM + 1  # v13: nearby-orb proximity
 FACING_HEAD_VERSION = 2
 LEGACY_ACTION_DIM = 11
 ACTION_DIM = 13
@@ -384,7 +385,8 @@ class LearningAttackerCarryGCController:
 
         ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         ckpt_n_actions = int(checkpoint.get("n_actions", ACTION_DIM))
-        expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 12 else
+        expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
+                            LEGACY_ORB_OBS_DIM if self.positioning_version >= 12 else
                             FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                             ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
                             ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
@@ -585,7 +587,8 @@ class LearningAttackerCarryGCController:
         target_plant_pos=None,
     ):
         modern = self.positioning_version >= 3
-        obs_dim = (ORB_OBS_DIM if self.positioning_version >= 12 else
+        obs_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
+                   LEGACY_ORB_OBS_DIM if self.positioning_version >= 12 else
                    FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                    ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 10 else
                    ENTRY_SYNC_OBS_DIM if self.positioning_version >= 8 else
@@ -779,9 +782,15 @@ class LearningAttackerCarryGCController:
                 getattr(char, "facing", "N"),
             )
         if self.positioning_version >= 12:
-            obs[ FACING_HEAD_OBS_DIM:ORB_OBS_DIM ] = orb_context_features(
-                char, getattr(self.game, "available_orbs", ())
-            )
+            available_orbs = getattr(self.game, "available_orbs", ())
+            if self.positioning_version >= 13:
+                obs[FACING_HEAD_OBS_DIM:ORB_OBS_DIM] = attacker_orb_context_features(
+                    char, available_orbs
+                )
+            else:
+                obs[FACING_HEAD_OBS_DIM:LEGACY_ORB_OBS_DIM] = orb_context_features(
+                    char, available_orbs
+                )
         return obs
 
     def _build_mask(self, char, chars, on_site):

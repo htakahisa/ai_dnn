@@ -61,7 +61,7 @@ MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 AGENT_ID_DIM = len(TOUYAMA_ROSTER_ORDER)
 AGENT_ID_OFFSET = 46
 OBS_DIM = AGENT_ID_OFFSET + AGENT_ID_DIM  # 既存46次元 + キャラID one-hot
-              # + 8(自身のfacing one-hot。従来欠落していたため追加)
+# + 8(自身のfacing one-hot。従来欠落していたため追加)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
 # 完全に独立した直積として扱う: action_idx = base_idx(0-9) * 8 + facing_idx(0-7)。
 # 移動先と向きは無関係に指定できる(例: 前進しながら後ろを向く)。
@@ -90,6 +90,7 @@ def _parse_maze_grid(maze_str):
     lines = [l.strip() for l in maze_str.strip("\n").split("\n") if l.strip()]
     return np.array([[int(ch) for ch in line] for line in lines], dtype=np.int32)
 
+
 _BASE_GRID_FOR_SETUP = _parse_maze_grid(NEW_MAZE_STR)
 _SETUP_MASK_GRID = _parse_maze_grid(DEFENDER_SETUP_MASK_STR)
 if _SETUP_MASK_GRID.shape != _BASE_GRID_FOR_SETUP.shape:
@@ -108,6 +109,7 @@ DEFAULT_MODEL_PATH = (
 
 VERBOSE = False
 
+
 # ---------------------------------------------------------------------------
 # Dueling DQN (touyama_v2/train_defender_search.py と同一構造)
 # ---------------------------------------------------------------------------
@@ -115,11 +117,17 @@ class DefenderSearchDuelingDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.ReLU(),
-            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(obs_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
         )
-        self.value_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1))
-        self.advantage_head = nn.Sequential(nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim))
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, 1)
+        )
+        self.advantage_head = nn.Sequential(
+            nn.Linear(hidden, 64), nn.ReLU(), nn.Linear(64, action_dim)
+        )
 
     def forward(self, x):
         f = self.feature(x)
@@ -176,10 +184,16 @@ def _bfs_distance_map(grid, goal):
         r, c = queue.popleft()
         for dr, dc in CARDINAL:
             nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
+            if (
+                0 <= nr < height
+                and 0 <= nc < width
+                and grid[nr, nc] != 1
+                and dist[nr, nc] == -1
+            ):
                 dist[nr, nc] = dist[r, c] + 1
                 queue.append((nr, nc))
     return dist
+
 
 def _bfs_best_direction(dist_map, grid, r0, c0):
     """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
@@ -199,6 +213,7 @@ def _bfs_best_direction(dist_map, grid, r0, c0):
                 best_d = dist_map[nr, nc]
                 best_dr, best_dc = dr, dc
     return best_dr, best_dc
+
 
 def _bfs_best_direction(dist_map, grid, r0, c0):
     """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
@@ -248,11 +263,7 @@ def _watch_point(name):
     if value is None:
         return None
     # train側は[(r, c)]、旧learning側は(r, c)だったため、両形式を受け付ける。
-    if (
-        len(value) == 1
-        and isinstance(value[0], (tuple, list))
-        and len(value[0]) == 2
-    ):
+    if len(value) == 1 and isinstance(value[0], (tuple, list)) and len(value[0]) == 2:
         value = value[0]
     return int(value[0]), int(value[1])
 
@@ -267,8 +278,7 @@ def _expected_facing(from_pos, to_pos):
     return max(
         FACING_DIRS,
         key=lambda direction: (
-            FACING_VECTORS[direction][0] * nx
-            + FACING_VECTORS[direction][1] * ny
+            FACING_VECTORS[direction][0] * nx + FACING_VECTORS[direction][1] * ny
         ),
     )
 
@@ -291,15 +301,14 @@ def _forced_combat_facing(char, visible_enemies, team_memory):
     if visible_enemies:
         target = min(
             visible_enemies,
-            key=lambda e: max(
-                abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
-            ),
+            key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
         )
         facing = _expected_facing(tuple(char.pos), tuple(target.pos))
         if facing is not None:
             char._combat_facing = facing
         return getattr(char, "_combat_facing", None)
     return None
+
 
 def _decode_action(action_idx):
     """action_idx = base_idx(0-9) * 4 + facing_idx(0-3)。
@@ -309,6 +318,7 @@ def _decode_action(action_idx):
     base_idx, facing_idx = divmod(action_idx, len(FACING_DIRS))
     move_idx, use_ability = divmod(base_idx, 2)
     return MOVES[move_idx], bool(use_ability), FACING_DIRS[facing_idx]
+
 
 def _bfs_best_direction_unoccupied(dist_map, grid, r0, c0, occupied):
     """_bfs_best_directionと同じだが、occupied(他ユニットが現在いるマス)を
@@ -332,6 +342,7 @@ def _bfs_best_direction_unoccupied(dist_map, grid, r0, c0, occupied):
             best_dr, best_dc = dr, dc
     return best_dr, best_dc
 
+
 def _find_marker_position(maze_str, char):
     """train_defender_search.py の _find_marker_position と同一ロジック。
     SEARCH_MAZE_STRはa-e/A-E/z等の非数字マーカーを含むため、int変換の
@@ -339,7 +350,9 @@ def _find_marker_position(maze_str, char):
     (そうでなければ学習時と食い違うため例外にする)。"""
     lines = [l for l in maze_str.strip("\n").split("\n") if l.strip()]
     hits = [
-        (r, c) for r, line in enumerate(lines) for c, ch in enumerate(line)
+        (r, c)
+        for r, line in enumerate(lines)
+        for c, ch in enumerate(line)
         if ch == char
     ]
     if len(hits) != 1:
@@ -372,7 +385,9 @@ def _compute_touyama_fixed_assignments():
     return setup_assignment, defense_assignment
 
 
-_TOUYAMA_FIXED_SETUP_ASSIGNMENT, _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT = _compute_touyama_fixed_assignments()
+_TOUYAMA_FIXED_SETUP_ASSIGNMENT, _TOUYAMA_FIXED_DEFENSE_ASSIGNMENT = (
+    _compute_touyama_fixed_assignments()
+)
 _DEFENSE_POSITIONS_CACHE = list(_TOUYAMA_FIXED_DEFENSE_ASSIGNMENT.values())
 
 
@@ -396,7 +411,9 @@ def _extract_site_positions(grid, max_sites=2):
                 placed = True
                 break
         if not placed:
-            clusters.append({"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))})
+            clusters.append(
+                {"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))}
+            )
 
     clusters.sort(key=lambda c: -len(c["cells"]))
     return [c["centroid"] for c in clusters[:max_sites]]
@@ -417,7 +434,9 @@ def _ability_charge(char):
 class _TeamMemory:
     def __init__(self):
         self.spike_pos = None
-        self.spike_held = False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
+        self.spike_held = (
+            False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
+        )
         self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
 
     def reset(self):
@@ -453,17 +472,25 @@ class _TeamMemory:
             tracked = None
             if self.last_seen_enemy is not None:
                 tracked_name = self.last_seen_enemy.get("name")
-                tracked = next((e for e in visible_enemies if e.name == tracked_name), None)
+                tracked = next(
+                    (e for e in visible_enemies if e.name == tracked_name), None
+                )
             if tracked is None:
                 tracked = min(
                     visible_enemies,
-                    key=lambda e: min(
-                        max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
-                        for d in defenders
-                    ) if defenders else 0,
+                    key=lambda e: (
+                        min(
+                            max(abs(e.pos[0] - d.pos[0]), abs(e.pos[1] - d.pos[1]))
+                            for d in defenders
+                        )
+                        if defenders
+                        else 0
+                    ),
                 )
             self.last_seen_enemy = {
-                "pos": tuple(tracked.pos), "name": tracked.name, "tick_ago": 0
+                "pos": tuple(tracked.pos),
+                "name": tracked.name,
+                "tick_ago": 0,
             }
         elif self.last_seen_enemy is not None:
             self.last_seen_enemy["tick_ago"] += 1
@@ -495,7 +522,9 @@ class LearningDefenderSearchTouyamaController:
             if verbose:
                 print(f"[LearningDefenderSearchTouyamaController] loaded: {model_path}")
         except Exception as exc:
-            print(f"[LOAD ERROR] defender search(touyama) model '{model_path}' の読込に失敗: {exc}")
+            print(
+                f"[LOAD ERROR] defender search(touyama) model '{model_path}' の読込に失敗: {exc}"
+            )
         self.model.eval()
 
         self.team_memory = _TeamMemory()
@@ -504,18 +533,22 @@ class LearningDefenderSearchTouyamaController:
 
         # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
-        self._assigned_positions = {}       # char_name -> (r, c)
-        self._assigned_dist_maps = {}       # char_name -> np.ndarray(BFS距離マップ)
-        self._assigned_setup_dist_maps = {} # char_name -> np.ndarray(Setup専用BFS距離マップ)
-        self._prev_defense_bfs_dist = {}    # char_name -> float(デバッグ用に保持)
+        self._assigned_positions = {}  # char_name -> (r, c)
+        self._assigned_dist_maps = {}  # char_name -> np.ndarray(BFS距離マップ)
+        self._assigned_setup_dist_maps = (
+            {}
+        )  # char_name -> np.ndarray(Setup専用BFS距離マップ)
+        self._prev_defense_bfs_dist = {}  # char_name -> float(デバッグ用に保持)
         self._debug_log_path = "defender_search_touyama_debug.log"
 
         self._assignment_done = False
         self._grid_cache = None
         self.spike_dist_map = None
         self.sighting_dist_map = None
-        self._spike_dist_map_source = None       # 再計算要否判定用: 直前のspike_pos
-        self._sighting_dist_map_source = None    # 再計算要否判定用: 直前のlast_seen_enemy["pos"]
+        self._spike_dist_map_source = None  # 再計算要否判定用: 直前のspike_pos
+        self._sighting_dist_map_source = (
+            None  # 再計算要否判定用: 直前のlast_seen_enemy["pos"]
+        )
 
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
@@ -544,15 +577,22 @@ class LearningDefenderSearchTouyamaController:
         再計算する(全defenderで共有するため、キャラクターごとには呼ばない)。"""
         spike_pos = self.team_memory.spike_pos
         if spike_pos != self._spike_dist_map_source:
-            self.spike_dist_map = _bfs_distance_map(grid, spike_pos) if spike_pos is not None else None
+            self.spike_dist_map = (
+                _bfs_distance_map(grid, spike_pos) if spike_pos is not None else None
+            )
             self._spike_dist_map_source = spike_pos
 
         sighting_pos = (
             self.team_memory.last_seen_enemy["pos"]
-            if self.team_memory.last_seen_enemy is not None else None
+            if self.team_memory.last_seen_enemy is not None
+            else None
         )
         if sighting_pos != self._sighting_dist_map_source:
-            self.sighting_dist_map = _bfs_distance_map(grid, sighting_pos) if sighting_pos is not None else None
+            self.sighting_dist_map = (
+                _bfs_distance_map(grid, sighting_pos)
+                if sighting_pos is not None
+                else None
+            )
             self._sighting_dist_map_source = sighting_pos
 
     def _ensure_defense_assignment(self, char, grid, chars):
@@ -608,7 +648,9 @@ class LearningDefenderSearchTouyamaController:
             if remaining:
                 pos = min(
                     remaining,
-                    key=lambda p: max(abs(p[0] - teammate.pos[0]), abs(p[1] - teammate.pos[1])),
+                    key=lambda p: max(
+                        abs(p[0] - teammate.pos[0]), abs(p[1] - teammate.pos[1])
+                    ),
                 )
                 remaining.remove(pos)
             else:
@@ -629,13 +671,20 @@ class LearningDefenderSearchTouyamaController:
 
     # -- 観測構築 ----------------------------------------------------------
     def _build_observation(
-        self, char, game_state, site_positions, unit_has_spike_los, in_setup_phase=False,
+        self,
+        char,
+        game_state,
+        site_positions,
+        unit_has_spike_los,
+        in_setup_phase=False,
     ):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         height, width = grid.shape
 
-        teammates = [c for c in chars if c.team == char.team and c is not char and c.is_alive]
+        teammates = [
+            c for c in chars if c.team == char.team and c is not char and c.is_alive
+        ]
         enemies = [c for c in chars if c.team != char.team]
 
         obs = np.zeros(OBS_DIM, dtype=np.float32)
@@ -645,7 +694,9 @@ class LearningDefenderSearchTouyamaController:
         obs[2] = char.hp / char.max_hp if char.max_hp else 0.0
         obs[3] = 1.0 if getattr(char, "moved_this_tick", False) else 0.0
 
-        ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}.get(char.ability_name, 7)
+        ability_index = {"SMOKE": 4, "FLASH": 5, "RECON": 6, "HUNT": 7}.get(
+            char.ability_name, 7
+        )
         obs[ability_index] = 1.0
         obs[8] = 1.0 if _ability_charge(char) > 0 else 0.0
 
@@ -657,16 +708,23 @@ class LearningDefenderSearchTouyamaController:
         obs[10] = len(teammates) / 4.0
         if teammates:
             nearest_d = min(
-                max(abs(t.pos[0] - char.pos[0]), abs(t.pos[1] - char.pos[1])) for t in teammates
+                max(abs(t.pos[0] - char.pos[0]), abs(t.pos[1] - char.pos[1]))
+                for t in teammates
             )
             obs[11] = min(nearest_d, height) / height
 
-        obs[12] = 1.0 if any(
-            e.is_alive and (
-                getattr(e, "blind_remaining", 0) > 0 or getattr(e, "reveal_remaining", 0) > 0
+        obs[12] = (
+            1.0
+            if any(
+                e.is_alive
+                and (
+                    getattr(e, "blind_remaining", 0) > 0
+                    or getattr(e, "reveal_remaining", 0) > 0
+                )
+                for e in enemies
             )
-            for e in enemies
-        ) else 0.0
+            else 0.0
+        )
 
         # 味方スモーク展開中フラグ。game_state に smokes が含まれないため
         # 常に0とする(learning_attacker_retrieve.py と同じ簡略化方針)。
@@ -686,13 +744,17 @@ class LearningDefenderSearchTouyamaController:
             best_dr, best_dc = _bfs_best_direction(self.sighting_dist_map, grid, r0, c0)
             obs[18] = float(best_dr)
             obs[19] = float(best_dc)
-            obs[20] = min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
+            obs[20] = (
+                min(ls["tick_ago"], SIGHTING_STALENESS_CAP) / SIGHTING_STALENESS_CAP
+            )
 
         obs[21] = len(visible_enemies) / 5.0
         if visible_enemies:
             nearest_enemy = min(
                 visible_enemies,
-                key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
+                key=lambda e: max(
+                    abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                ),
             )
             obs[22] = (nearest_enemy.pos[0] - char.pos[0]) / height
             obs[23] = (nearest_enemy.pos[1] - char.pos[1]) / width
@@ -740,11 +802,15 @@ class LearningDefenderSearchTouyamaController:
             obs[34] = 1.0 if bfs_dist <= REACH_RADIUS else 0.0
 
         # --- 落下中スパイクにLOSが通っており、待ち伏せすべき状態か ---
-        obs[35] = 1.0 if (
-            self.team_memory.spike_pos is not None
-            and not self.team_memory.spike_held
-            and unit_has_spike_los
-        ) else 0.0
+        obs[35] = (
+            1.0
+            if (
+                self.team_memory.spike_pos is not None
+                and not self.team_memory.spike_held
+                and unit_has_spike_los
+            )
+            else 0.0
+        )
 
         # [36-43] 自身の向き(8方向)one-hot。tv2_train_defender_search.pyの
         # build_observationと完全一致させること(従来欠落していたため追加)。
@@ -758,15 +824,33 @@ class LearningDefenderSearchTouyamaController:
             obs[45] = (watch_pos[1] - c0) / width
 
         # train側と同じ共有ネットワーク用のキャラID one-hot。
-        agent_id = TOUYAMA_ROSTER_ORDER.index(char.name)
+        try:
+            agent_id = TOUYAMA_ROSTER_ORDER.index(char.name)
+        except ValueError:
+            team_order = [c for c in chars if c.team == char.team]
+            agent_id = next(
+                (
+                    index
+                    for index, teammate in enumerate(team_order)
+                    if teammate is char
+                ),
+                0,
+            )
+            agent_id = min(agent_id, len(TOUYAMA_ROSTER_ORDER) - 1)
         obs[AGENT_ID_OFFSET + agent_id] = 1.0
 
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(
-        self, char, grid, chars, lock_movement=False, in_setup_phase=False,
-        has_target_info=False, forced_facing=None,
+        self,
+        char,
+        grid,
+        chars,
+        lock_movement=False,
+        in_setup_phase=False,
+        has_target_info=False,
+        forced_facing=None,
     ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。
@@ -776,7 +860,9 @@ class LearningDefenderSearchTouyamaController:
         base_mask = np.ones(BASE_ACTION_DIM, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
-            tuple(o.pos) for o in chars if o is not char and getattr(o, "is_alive", True)
+            tuple(o.pos)
+            for o in chars
+            if o is not char and getattr(o, "is_alive", True)
         }
 
         for move_idx, (dr, dc) in enumerate(MOVES):
@@ -786,7 +872,8 @@ class LearningDefenderSearchTouyamaController:
                 continue
             nr, nc = r + dr, c + dc
             walkable = (
-                0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
+                0 <= nr < grid.shape[0]
+                and 0 <= nc < grid.shape[1]
                 and grid[nr, nc] != 1
                 and (nr, nc) not in occupied
             )
@@ -811,7 +898,7 @@ class LearningDefenderSearchTouyamaController:
             for base_idx in range(BASE_ACTION_DIM):
                 if base_mask[base_idx]:
                     start = base_idx * len(FACING_DIRS)
-                    action_mask[start:start + len(FACING_DIRS)] = False
+                    action_mask[start : start + len(FACING_DIRS)] = False
                     action_mask[start + facing_idx] = True
         return action_mask
 
@@ -840,11 +927,19 @@ class LearningDefenderSearchTouyamaController:
         if game_state.get("defender_setup_active", False):
             self._ensure_defense_assignment(char, grid, chars)
             obs, _visible = self._build_observation(
-                char, game_state, [], False, in_setup_phase=True,
+                char,
+                game_state,
+                [],
+                False,
+                in_setup_phase=True,
             )
             forced_facing = _forced_watch_facing(char, [], self.team_memory)
             mask = self._action_mask(
-                char, grid, chars, in_setup_phase=True, forced_facing=forced_facing,
+                char,
+                grid,
+                chars,
+                in_setup_phase=True,
+                forced_facing=forced_facing,
             )
 
             obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
@@ -869,7 +964,8 @@ class LearningDefenderSearchTouyamaController:
                 cur_dist = dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
                     occupied_now = {
-                        tuple(o.pos) for o in chars
+                        tuple(o.pos)
+                        for o in chars
                         if getattr(o, "is_alive", True) and o is not char
                     }
                     move_offset = _bfs_best_direction_unoccupied(
@@ -890,7 +986,9 @@ class LearningDefenderSearchTouyamaController:
         if self._site_positions_cache is None:
             self._site_positions_cache = _extract_site_positions(grid)
             if not self._site_positions_cache:
-                self._site_positions_cache = [(grid.shape[0] / 2.0, grid.shape[1] / 2.0)]
+                self._site_positions_cache = [
+                    (grid.shape[0] / 2.0, grid.shape[1] / 2.0)
+                ]
 
         self._ensure_defense_assignment(char, grid, chars)
         self._maybe_advance_tick(char, grid, chars, game_state.get("spike_pos"))
@@ -912,27 +1010,37 @@ class LearningDefenderSearchTouyamaController:
 
         if char.ability_name == "SMOKE":
             # 学習側と同じく、SMOKE は自分が直接視認したスパイク持ちにだけ使用可能。
-            has_target_info = any(getattr(e, "is_alive", True) and e.has_spike for e in visible_enemies)
+            has_target_info = any(
+                getattr(e, "is_alive", True) and e.has_spike for e in visible_enemies
+            )
         else:
-            has_target_info = bool(visible_enemies) or self.team_memory.last_seen_enemy is not None
-        forced_facing = _forced_combat_facing(
-            char, visible_enemies, self.team_memory
-        )
+            has_target_info = (
+                bool(visible_enemies) or self.team_memory.last_seen_enemy is not None
+            )
+        forced_facing = _forced_combat_facing(char, visible_enemies, self.team_memory)
         if forced_facing is None:
             forced_facing = _forced_watch_facing(
                 char, visible_enemies, self.team_memory
             )
         mask = self._action_mask(
-            char, grid, chars, lock_movement=bool(visible_enemies),
-            has_target_info=has_target_info, forced_facing=forced_facing,
+            char,
+            grid,
+            chars,
+            lock_movement=bool(visible_enemies),
+            has_target_info=has_target_info,
+            forced_facing=forced_facing,
         )
 
         # After
         if self.verbose:
             mode = (
-                "spike" if self.team_memory.spike_pos is not None
-                else "sighting" if self.team_memory.last_seen_enemy is not None
-                else "position"
+                "spike"
+                if self.team_memory.spike_pos is not None
+                else (
+                    "sighting"
+                    if self.team_memory.last_seen_enemy is not None
+                    else "position"
+                )
             )
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 f.write(
@@ -956,7 +1064,9 @@ class LearningDefenderSearchTouyamaController:
         if self.verbose:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
                 masked_q = q_values.cpu().numpy()
-                f.write(f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n")
+                f.write(
+                    f"  Qvals={np.round(masked_q, 4).tolist()} chosen={action_idx}\n"
+                )
 
         (dr, dc), use_ability, facing = _decode_action(action_idx)
         if forced_facing is not None:
@@ -976,7 +1086,8 @@ class LearningDefenderSearchTouyamaController:
         # 移動判断ではなくBFS最短方向を強制する。向き(facing)は移動先の
         # 決定方法と無関係に、ネットワークが選んだ値を常にそのまま使う。
         occupied_now = {
-            tuple(o.pos) for o in chars
+            tuple(o.pos)
+            for o in chars
             if getattr(o, "is_alive", True) and o is not char
         }
 
@@ -995,15 +1106,17 @@ class LearningDefenderSearchTouyamaController:
                     move_offset = (0, 0)
         elif self.team_memory.spike_pos is not None and self.spike_dist_map is not None:
             r0, c0 = int(char.pos[0]), int(char.pos[1])
-            already_watching = (
-                not self.team_memory.spike_held
-                and _has_los(grid, tuple(char.pos), self.team_memory.spike_pos)
+            already_watching = not self.team_memory.spike_held and _has_los(
+                grid, tuple(char.pos), self.team_memory.spike_pos
             )
             if not already_watching:
                 move_offset = _bfs_best_direction_unoccupied(
                     self.spike_dist_map, grid, r0, c0, occupied_now
                 )
-        elif self.team_memory.last_seen_enemy is not None and self.sighting_dist_map is not None:
+        elif (
+            self.team_memory.last_seen_enemy is not None
+            and self.sighting_dist_map is not None
+        ):
             r0, c0 = int(char.pos[0]), int(char.pos[1])
             move_offset = _bfs_best_direction_unoccupied(
                 self.sighting_dist_map, grid, r0, c0, occupied_now
@@ -1030,9 +1143,13 @@ class LearningDefenderSearchTouyamaController:
         if visible_enemies:
             nearest = min(
                 visible_enemies,
-                key=lambda e: max(abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])),
+                key=lambda e: max(
+                    abs(e.pos[0] - char.pos[0]), abs(e.pos[1] - char.pos[1])
+                ),
             )
-            dist = max(abs(nearest.pos[0] - char.pos[0]), abs(nearest.pos[1] - char.pos[1]))
+            dist = max(
+                abs(nearest.pos[0] - char.pos[0]), abs(nearest.pos[1] - char.pos[1])
+            )
             if dist <= ABILITY_RANGE:
                 target_pos = (int(nearest.pos[0]), int(nearest.pos[1]))
         elif self.team_memory.last_seen_enemy is not None:

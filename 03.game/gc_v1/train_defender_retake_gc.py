@@ -58,7 +58,21 @@ try:
         GC_ROSTER_ORDER,
     )
     from .gc_combo_stats import build_combo_bonuses
-    from .gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from .gc_facing import (
+        FACING_DIRS,
+        append_facing_onehot,
+        facing_towards,
+        nearest_alive_enemy_facing,
+    )
+    from .defender_objectives_gc import (
+        RETAKE_COORDINATION_DIM,
+        bfs_distance_map as objective_distance_map,
+        nearest_orb_assignment,
+        path_distance,
+        retake_coordination_features,
+        retake_coordination_state,
+        shortest_legal_action,
+    )
     from .ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
         can_collect_orb,
@@ -72,7 +86,21 @@ except ImportError:
         GC_ROSTER_ORDER,
     )
     from gc_combo_stats import build_combo_bonuses
-    from gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from gc_facing import (
+        FACING_DIRS,
+        append_facing_onehot,
+        facing_towards,
+        nearest_alive_enemy_facing,
+    )
+    from defender_objectives_gc import (
+        RETAKE_COORDINATION_DIM,
+        bfs_distance_map as objective_distance_map,
+        nearest_orb_assignment,
+        path_distance,
+        retake_coordination_features,
+        retake_coordination_state,
+        shortest_legal_action,
+    )
     from ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
         can_collect_orb,
@@ -491,7 +519,8 @@ class AttackerStub:
 BASE_OBS_DIM = 37
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
-OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+LEGACY_OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+OBS_DIM = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
@@ -510,6 +539,7 @@ ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "�
 # 「解除完了に最低限必要なtick数からの絶対的な残り時間」で判定するための定数。
 DEFUSE_SAFETY_MARGIN_TICKS = 4
 ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
+DEFENDER_ORB_APPROACH_RADIUS = 8
 
 
 # ============================================================
@@ -536,6 +566,11 @@ class RetakeEnv:
         self.is_defused = False
         self.active_defuser_name = None
         self.available_orbs = set(zip(*np.where(GRID == 5)))
+        self.orb_distance_maps = {
+            tuple(map(int, orb)): objective_distance_map(GRID, orb)
+            for orb in self.available_orbs
+        }
+        self.orb_collections = 0
 
         self.planted_pos = (
             random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
@@ -803,7 +838,19 @@ class RetakeEnv:
             char, self.available_orbs, ORB_COLLECT_REQUIRED_TICKS
         )
         append_facing_onehot(
-            expanded[ORB_CONTEXT_OBS_DIM:OBS_DIM], char.facing
+            expanded[ORB_CONTEXT_OBS_DIM:LEGACY_OBS_DIM], char.facing
+        )
+        coordination = retake_coordination_state(
+            char,
+            allies,
+            self.dist_map,
+            self.detonate_timer,
+            entry_radius=ENTRY_READY_RADIUS,
+            defuse_ticks=DEFUSE_REQUIRED_TICKS,
+            safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+        )
+        expanded[LEGACY_OBS_DIM:OBS_DIM] = retake_coordination_features(
+            coordination, SPIKE_DETONATION_TICKS
         )
         return expanded
 
@@ -862,6 +909,7 @@ class RetakeEnv:
                     char.ultimate_points + ORB_ULTIMATE_POINTS,
                 )
                 self.available_orbs.discard(orb_pos)
+                self.orb_collections += 1
                 char.orb_collect_timer = 0
                 char.collecting_orb_pos = None
 
@@ -1069,6 +1117,14 @@ UNSAFE_DEFUSE_PENALTY = -0.5
 DEFUSE_WIN_REWARD = 10.0
 LOSS_PENALTY = -10.0
 TICK_TIME_PENALTY = -0.01
+ORB_PROGRESS_REWARD = 0.50
+ORB_COLLECTION_REWARD = 3.00
+ORB_ROUND_MISS_PENALTY = 1.00
+RETAKE_WAIT_REWARD = 0.08
+RETAKE_EARLY_PEEK_PENALTY = -0.60
+RETAKE_UTILITY_PREP_BONUS = 0.60
+RETAKE_UTILITY_ENTRY_BONUS = 0.75
+RETAKE_DRY_ENTRY_PENALTY = -0.50
 
 
 def snapshot_before(env):
@@ -1079,6 +1135,20 @@ def snapshot_before(env):
         # マップ最大距離相当の値でフォールバックする(通常は起こらない想定)。
         raw = env.dist_map[r, c]
         dist_val = raw if raw >= 0 else (HEIGHT + WIDTH)
+        coordination = retake_coordination_state(
+            char,
+            env.defenders(),
+            env.dist_map,
+            env.detonate_timer,
+            entry_radius=ENTRY_READY_RADIUS,
+            defuse_ticks=DEFUSE_REQUIRED_TICKS,
+            safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+        )
+        ready_allies = [
+            ally
+            for ally in env.defenders()
+            if ally.is_alive and int(env.dist_map[ally.pos[0], ally.pos[1]]) <= ENTRY_READY_RADIUS
+        ]
         before[char.name] = {
             "alive": char.is_alive,
             "in_zone": (r, c) in env.site_zone,
@@ -1086,6 +1156,16 @@ def snapshot_before(env):
             "defuse_timer": char.defuse_timer,
             "orb_collect_timer": char.orb_collect_timer,
             "ultimate_points": char.ultimate_points,
+            "coordination": coordination,
+            "ally_ability_active": env.ally_ability_active(char),
+            "team_utility_available": any(
+                ally.own_ability_charge() > 0
+                or (
+                    ally.ultimate_cost > 0
+                    and ally.ultimate_points >= ally.ultimate_cost
+                )
+                for ally in ready_allies
+            ),
         }
     return before
 
@@ -1141,6 +1221,21 @@ def compute_rewards(env, before, chosen_actions):
             reward += APPROACH_REWARD_SCALE * (b["dist_to_plant"] - dist_now)
 
         action_id = chosen_actions.get(name)
+        coordination = b["coordination"]
+        if coordination["should_wait"]:
+            if action_id == 4:
+                reward += RETAKE_WAIT_REWARD
+            elif in_zone_now:
+                reward += RETAKE_EARLY_PEEK_PENALTY
+        if action_id in (ACTION_ABILITY, ACTION_ULTIMATE):
+            if coordination["team_ready"] or coordination["must_commit"]:
+                reward += RETAKE_UTILITY_PREP_BONUS
+        if in_zone_now and not b["in_zone"] and coordination["team_ready"]:
+            if b["ally_ability_active"] or env.ally_ability_active(char):
+                reward += RETAKE_UTILITY_ENTRY_BONUS
+            elif b["team_utility_available"] and not coordination["must_commit"]:
+                reward += RETAKE_DRY_ENTRY_PENALTY
+
         if action_id == ACTION_ABILITY:
             char_dist_to_plant = max(abs(pr - char.pos[0]), abs(pc - char.pos[1]))
             ready = (
@@ -1154,9 +1249,9 @@ def compute_rewards(env, before, chosen_actions):
 
         if action_id == ACTION_COLLECT_ORB:
             if char.ultimate_points > b["ultimate_points"]:
-                reward += 0.30
+                reward += ORB_COLLECTION_REWARD
             elif char.orb_collect_timer > b["orb_collect_timer"]:
-                reward += 0.025
+                reward += ORB_PROGRESS_REWARD
             else:
                 reward -= 0.05
 
@@ -1324,19 +1419,8 @@ def observable_facing_target(env, char, action):
         current = getattr(char, "facing", "S")
         return FACING_DIRS.index(current) if current in FACING_DIRS else FACING_DIRS.index("S")
 
-    visible = [
-        enemy
-        for enemy in env.attackers()
-        if enemy.is_alive and env.check_line_of_sight(char, enemy)
-    ]
-    if visible:
-        nearest = min(
-            visible,
-            key=lambda enemy: max(
-                abs(enemy.pos[0] - char.pos[0]), abs(enemy.pos[1] - char.pos[1])
-            ),
-        )
-        facing = facing_towards(char.pos, nearest.pos)
+    facing = nearest_alive_enemy_facing(char, env.attackers())
+    if facing is not None:
         return facing_index(facing), 1.0
     if action in MOVE_DELTAS and MOVE_DELTAS[action] != (0, 0):
         dr, dc = MOVE_DELTAS[action]
@@ -1346,6 +1430,117 @@ def observable_facing_target(env, char, action):
     # At the exact plant cell there is no geometric direction. Keeping the
     # current direction is an observable and stable teacher for that case.
     return facing_index(facing), 0.60 if facing is not None else 0.15
+
+
+def defender_orb_teacher_action(env, char, mask):
+    """Route one ult-hungry defender to an orb only when the defuse still fits."""
+    if env.orb_collections > 0 or not env.available_orbs:
+        return None
+    assignment = nearest_orb_assignment(
+        env.defenders(),
+        env.available_orbs,
+        GRID,
+        env.orb_distance_maps,
+        DEFENDER_ORB_APPROACH_RADIUS,
+    )
+    if assignment is None or assignment[3].name != char.name:
+        return None
+    distance, _name, orb, _collector, orb_map = assignment
+    orb_to_plant = int(env.dist_map[orb[0], orb[1]])
+    total_required = (
+        int(distance)
+        + ORB_COLLECT_REQUIRED_TICKS
+        + max(0, orb_to_plant - 1)
+        + DEFUSE_REQUIRED_TICKS
+        + DEFUSE_SAFETY_MARGIN_TICKS
+    )
+    if orb_to_plant < 0 or total_required > env.detonate_timer:
+        return None
+    env.orb_teacher_opportunity = True
+    if tuple(map(int, char.pos)) == orb:
+        return ACTION_COLLECT_ORB if mask[ACTION_COLLECT_ORB] else None
+    return shortest_legal_action(orb_map, char.pos, mask, MOVE_DELTAS)
+
+
+def retake_teacher_action(env, char, mask):
+    """Teacher for shortest-path regroup, utility preparation and entry."""
+    orb_action = defender_orb_teacher_action(env, char, mask)
+    if orb_action is not None:
+        return orb_action
+
+    allies = [ally for ally in env.defenders() if ally.is_alive]
+    coordination = retake_coordination_state(
+        char,
+        allies,
+        env.dist_map,
+        env.detonate_timer,
+        entry_radius=ENTRY_READY_RADIUS,
+        defuse_ticks=DEFUSE_REQUIRED_TICKS,
+        safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+    )
+    if coordination["self_distance"] > ENTRY_READY_RADIUS:
+        return shortest_legal_action(env.dist_map, char.pos, mask, MOVE_DELTAS)
+    if coordination["should_wait"]:
+        return 4
+
+    ready_allies = [
+        ally
+        for ally in allies
+        if 0 <= path_distance(env.dist_map, ally) <= ENTRY_READY_RADIUS
+    ]
+    utility_options = []
+    if not env.ally_ability_active(char) and not coordination["must_commit"]:
+        for ally in ready_allies:
+            if ally.own_ability_charge() > 0:
+                utility_options.append((0, ally.name, ally, ACTION_ABILITY))
+            if ally.ultimate_cost > 0 and ally.ultimate_points >= ally.ultimate_cost:
+                utility_options.append((1, ally.name, ally, ACTION_ULTIMATE))
+    if utility_options:
+        _priority, _name, utility_actor, utility_action = min(utility_options)
+        if utility_actor.name == char.name and mask[utility_action]:
+            return utility_action
+        return 4
+
+    designated = min(
+        allies,
+        key=lambda ally: (path_distance(env.dist_map, ally), ally.name),
+    )
+    if (
+        designated.name == char.name
+        and coordination["self_distance"] <= 1
+        and mask[ACTION_DEFUSE]
+    ):
+        return ACTION_DEFUSE
+    next_action = shortest_legal_action(env.dist_map, char.pos, mask, MOVE_DELTAS)
+    return 4 if next_action is None else next_action
+
+
+def optimize_demonstrations(net, optimizer, samples, weight=2.0, batch_size=64):
+    if not samples or weight <= 0:
+        return None
+    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    states, actions, masks = zip(*batch)
+    states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32, device=DEVICE)
+    actions_t = torch.as_tensor(actions, dtype=torch.long, device=DEVICE)
+    masks_t = torch.as_tensor(np.asarray(masks), dtype=torch.bool, device=DEVICE)
+    q_values = net(states_t)
+    competitor = q_values.masked_fill(~masks_t, -torch.inf)
+    margin = torch.full_like(q_values, 0.8)
+    margin.scatter_(1, actions_t[:, None], 0.0)
+    loss = weight * (
+        torch.max(competitor + margin, dim=1).values
+        - q_values.gather(1, actions_t[:, None]).squeeze(1)
+    ).mean()
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
+
+
+def scheduled_teacher_probability(episode, total_episodes, final=0.10):
+    fraction = min(1.0, max(0.0, (episode - 1) / max(1, total_episodes - 1)))
+    return 0.80 + fraction * (float(final) - 0.80)
 
 
 def optimize_facing(net, optimizer, samples, weight=0.35, batch_size=64):
@@ -1417,12 +1612,17 @@ def run_episode(
             state = env.build_observation(char)
             mask = env.action_mask(char)
             action, facing = select_action(net, state, mask, epsilon)
+            target = confidence = None
+            if facing_samples is not None:
+                target, confidence = observable_facing_target(env, char, action)
+                # Training always executes the teacher direction.  Evaluation
+                # calls this loop without facing_samples and stays model-driven.
+                facing = FACING_DIRS[target]
             char.facing = facing
             obs_before[char.name] = state
             mask_before[char.name] = mask
             chosen_actions[char.name] = action
             if facing_samples is not None:
-                target, confidence = observable_facing_target(env, char, action)
                 facing_samples.append((state.copy(), action, target, confidence))
             if mask[ACTION_ULTIMATE]:
                 tactical = tactical_ultimate_window(

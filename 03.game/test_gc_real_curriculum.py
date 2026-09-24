@@ -305,6 +305,95 @@ class RealCurriculumTests(unittest.TestCase):
         self.assertAlmostEqual(rate(1e-5, 750, 250, 500, 0.2), 2e-6)
         self.assertAlmostEqual(rate(1e-5, 1000, 250, 500, 0.2), 2e-6)
 
+    def test_orb_teacher_probability_decays_without_forcing_all_round(self):
+        rate = curriculum.scheduled_orb_teacher_probability
+        self.assertAlmostEqual(rate(1, 300, 0.05), 0.80)
+        self.assertAlmostEqual(rate(151, 300, 0.05), 0.425)
+        self.assertAlmostEqual(rate(301, 300, 0.05), 0.05)
+
+    def test_orb_collection_update_changes_only_collection_row(self):
+        policy = curriculum.escort_runtime.DuelingQNetwork(
+            curriculum.escort_runtime.ORB_OBS_DIM,
+            curriculum.escort_runtime.N_ACTIONS,
+        )
+        orb_action = curriculum.escort_runtime.ACTION_COLLECT_ORB
+        stay_action = curriculum.escort_runtime.ACTION_STAY
+        output = policy.advantage_head[-1]
+        with torch.no_grad():
+            output.bias[stay_action] = 2.0
+            output.bias[orb_action] = -2.0
+        original_weight = output.weight.detach().clone()
+        original_bias = output.bias.detach().clone()
+        original_feature = policy.feature[0].weight.detach().clone()
+        optimizer = torch.optim.Adam((output.weight, output.bias), lr=0.01)
+        obs = np.zeros(curriculum.escort_runtime.ORB_OBS_DIM, dtype=np.float32)
+        mask = np.zeros(curriculum.escort_runtime.N_ACTIONS, dtype=bool)
+        mask[stay_action] = mask[orb_action] = True
+        sample = [(obs, orb_action, mask)]
+        with torch.no_grad():
+            before = policy(torch.from_numpy(obs).unsqueeze(0))[0]
+            before_margin = float(before[orb_action] - before[stay_action])
+        for _ in range(10):
+            curriculum.optimize_orb_collection_head(
+                policy, optimizer, sample, orb_action,
+            )
+        with torch.no_grad():
+            after = policy(torch.from_numpy(obs).unsqueeze(0))[0]
+            after_margin = float(after[orb_action] - after[stay_action])
+        self.assertGreater(after_margin, before_margin)
+        for action in range(curriculum.escort_runtime.N_ACTIONS):
+            if action != orb_action:
+                self.assertTrue(torch.equal(output.weight[action], original_weight[action]))
+                self.assertTrue(torch.equal(output.bias[action], original_bias[action]))
+        self.assertTrue(torch.equal(policy.feature[0].weight, original_feature))
+
+    def test_orb_teacher_labels_without_overriding_policy_when_probability_zero(self):
+        orb_action = curriculum.escort_runtime.ACTION_COLLECT_ORB
+        mask = np.zeros(curriculum.escort_runtime.N_ACTIONS, dtype=bool)
+        mask[curriculum.escort_runtime.ACTION_STAY] = True
+        mask[orb_action] = True
+        q = torch.zeros((1, len(mask)))
+        q[0, curriculum.escort_runtime.ACTION_STAY] = 3.0
+        actor = SimpleNamespace(name="collector")
+        session = SimpleNamespace(
+            actor="collector", pending={}, decision_context=(
+                actor, {"available_orbs": [(2, 2)], "chars": []}
+            ),
+            controllers={"escort": SimpleNamespace(game=object())},
+            policies={"escort": Mock(return_value=q)},
+            collect_demonstrations=True, frozen_phases=set(),
+            teacher_probability=0.0, orb_teacher_probability=0.0, epsilon=0.0,
+            demonstrations={"escort": []}, orb_demonstrations={"escort": []},
+            orb_approach_demonstrations={"escort": []},
+            orb_collection_demonstrations={"escort": []},
+            orb_visible_ticks=0, orb_teacher_actions=0,
+            orb_eligible_decisions=0, orb_eligible_misses=0,
+            orb_greedy_choices=0, orb_teacher_forced_actions=0,
+            orb_q_margin_sum=0.0, orb_q_margin_count=0,
+            action_goals={},
+        )
+        def label(*args, **kwargs):
+            return orb_action if kwargs.get("orb_only") else None
+        with patch.object(curriculum, "observable_teacher_action", side_effect=label), \
+             patch.object(curriculum, "navigation_intent", return_value=(None, None, None)):
+            action = curriculum.CurriculumSession.selector(session, "escort")(
+                np.zeros(curriculum.escort_runtime.ORB_OBS_DIM, dtype=np.float32), mask
+            )
+        self.assertEqual(action, curriculum.escort_runtime.ACTION_STAY)
+        self.assertEqual(session.orb_teacher_forced_actions, 0)
+        self.assertEqual(session.orb_eligible_misses, 1)
+        self.assertEqual(session.orb_collection_demonstrations["escort"][0][1], orb_action)
+
+        session.orb_teacher_round_enabled = True
+        session.pending.clear()
+        with patch.object(curriculum, "observable_teacher_action", side_effect=label), \
+             patch.object(curriculum, "navigation_intent", return_value=(None, None, None)):
+            guided_action = curriculum.CurriculumSession.selector(session, "escort")(
+                np.zeros(curriculum.escort_runtime.ORB_OBS_DIM, dtype=np.float32), mask
+            )
+        self.assertEqual(guided_action, orb_action)
+        self.assertEqual(session.orb_teacher_forced_actions, 1)
+
     def test_joint_movement_score_rejects_safety_regression(self):
         baseline = {
             "worst_carry_no_entry_rate": 0.35,
@@ -334,6 +423,89 @@ class RealCurriculumTests(unittest.TestCase):
         self.assertTrue(curriculum.joint_movement_guardrail_violated(
             unsafe, baseline, 0.10, 0.05, 0.05, 0.05
         ))
+
+    def test_joint_movement_score_prioritizes_orb_collection_when_safe(self):
+        baseline = {
+            "worst_carry_no_entry_rate": 0.25,
+            "carry_no_entry_rate": 0.25,
+            "worst_timeout_rate": 0.05,
+            "timeout_rate": 0.05,
+            "carry_quiet_stall_tick_rate": 0.10,
+            "worst_carrier_preentry_death_rate": 0.30,
+            "carrier_preentry_death_rate": 0.30,
+            "worst_registered_plant_rate": 0.40,
+            "worst_round_win_rate": 0.30,
+            "round_win_rate": 0.35,
+            "episodes": 90,
+            "orb_collections": 0,
+        }
+        orb_candidate = {**baseline, "orb_collections": 1}
+        score = lambda metrics: curriculum.joint_movement_selection_score(
+            metrics, baseline, 0.30, 0.10, 0.05, 0.05, 0.05
+        )
+        self.assertGreater(score(orb_candidate), score(baseline))
+
+    def test_orb_action_is_trainable_during_movement_only_training(self):
+        self.assertIn(
+            curriculum.runtime.COLLECT_ORB_ACTION_INDEX,
+            curriculum.MOVEMENT_ACTION_ROWS["carry"],
+        )
+        self.assertIn(
+            curriculum.escort_runtime.ACTION_COLLECT_ORB,
+            curriculum.MOVEMENT_ACTION_ROWS["escort"],
+        )
+
+    def test_orb_teacher_skips_ally_whose_ultimate_is_ready(self):
+        ready = SimpleNamespace(
+            name="ready", team="A", pos=(2, 2), is_alive=True,
+            has_spike=False, ultimate_points=5, ultimate_cost=5,
+        )
+        collector = SimpleNamespace(
+            name="collector", team="A", pos=(2, 3), is_alive=True,
+            has_spike=False, ultimate_points=0, ultimate_cost=5,
+        )
+        state = {"available_orbs": [(2, 2)], "chars": [ready, collector]}
+        mask = np.ones(curriculum.escort_runtime.N_ACTIONS, dtype=bool)
+        controller = SimpleNamespace(game=object())
+        obs = np.zeros(curriculum.escort_runtime.ORB_OBS_DIM, dtype=np.float32)
+        teacher = lambda actor: curriculum.observable_teacher_action(
+            "escort", obs, mask, controller, (actor, state), orb_only=True,
+        )
+        self.assertIsNone(teacher(ready))
+        self.assertEqual(teacher(collector), curriculum.escort_runtime.ACTION_LEFT)
+
+    def test_nearby_orb_teacher_routes_around_wall_and_ignores_distant_orb(self):
+        grid = np.zeros((5, 13), dtype=np.int32)
+        grid[2, 2] = 1
+        collector = SimpleNamespace(
+            name="collector", team="A", pos=(2, 1), is_alive=True,
+            has_spike=False, ultimate_points=0, ultimate_cost=5,
+        )
+        view = SimpleNamespace(grid=grid)
+        controller = SimpleNamespace(game=view)
+        mask = np.ones(curriculum.escort_runtime.N_ACTIONS, dtype=bool)
+        obs = np.zeros(curriculum.escort_runtime.ORB_OBS_DIM, dtype=np.float32)
+        state = {"available_orbs": [(2, 3)], "chars": [collector]}
+        self.assertEqual(
+            curriculum.observable_teacher_action(
+                "escort", obs, mask, controller, (collector, state), orb_only=True,
+            ),
+            curriculum.escort_runtime.ACTION_UP,
+        )
+        state["available_orbs"] = [(2, 12)]
+        self.assertIsNone(curriculum.observable_teacher_action(
+            "escort", obs, mask, controller, (collector, state), orb_only=True,
+        ))
+
+    def test_attacker_orb_observation_encodes_proximity(self):
+        from ultimate_tactics_gc import attacker_orb_context_features
+        char = SimpleNamespace(pos=(2, 2), orb_collect_timer=0)
+        self.assertEqual(len(attacker_orb_context_features(char, [(2, 3)])), 5)
+        self.assertGreater(
+            attacker_orb_context_features(char, [(2, 3)])[-1],
+            attacker_orb_context_features(char, [(2, 7)])[-1],
+        )
+        self.assertEqual(attacker_orb_context_features(char, [(2, 12)])[-1], 0)
 
     def test_joint_selector_allows_only_carry_and_escort_movement(self):
         rt = curriculum.escort_runtime
@@ -408,6 +580,31 @@ class RealCurriculumTests(unittest.TestCase):
                 batch_size=8, focus_samples=support,
             )
         self.assertEqual(calls, [4, 4])
+
+    def test_orb_demonstration_batch_repeats_rare_collection_examples(self):
+        rt = curriculum.escort_runtime
+        policy = rt.DuelingQNetwork(rt.ORB_OBS_DIM, rt.N_ACTIONS)
+        optimizer = torch.optim.Adam(policy.parameters(), lr=0.001)
+        mask = np.ones(rt.N_ACTIONS, dtype=bool)
+        approach = [
+            (np.zeros(rt.ORB_OBS_DIM, dtype=np.float32), rt.ACTION_UP, mask.copy())
+            for _ in range(20)
+        ]
+        collection = [
+            (np.ones(rt.ORB_OBS_DIM, dtype=np.float32), rt.ACTION_COLLECT_ORB,
+             mask.copy())
+        ]
+        choices = random.choices
+        sample = random.sample
+        with patch.object(curriculum.random, "choices", wraps=choices) as focused, \
+             patch.object(curriculum.random, "sample", wraps=sample) as ordinary:
+            curriculum.optimize_demonstrations(
+                policy, optimizer, approach, 4.0, batch_size=8,
+                focus_samples=collection, focus_fraction=0.40,
+                focus_with_replacement=True,
+            )
+        self.assertEqual(focused.call_args.kwargs["k"], 3)
+        self.assertEqual(ordinary.call_args.args[1], 5)
 
     def test_movement_only_restriction_updates_only_displacement_rows(self):
         policy = curriculum.runtime.AttackerCarryDuelingDQN(
@@ -666,7 +863,9 @@ class RealCurriculumTests(unittest.TestCase):
 
     def test_observable_combat_teacher_stops_all_three_phases(self):
         from types import SimpleNamespace as NS
-        with patch.object(curriculum, "can_engage", return_value=True):
+        with patch.object(curriculum, "can_engage", return_value=True), \
+             patch.object(curriculum, "navigation_intent", return_value=((1, 1), None, None)), \
+             patch.object(curriculum, "navigation_teacher_action", return_value=None):
             for phase, dim, action in (("carry", 57, 0), ("escort", 67, 4), ("guard", 34, 0)):
                 self.assertEqual(curriculum.observable_teacher_action(phase, np.zeros(dim), np.ones(11 if phase != "escort" else 6, dtype=bool),
                                  NS(game=object()), (object(), {"chars": []})), action)
@@ -679,11 +878,17 @@ class RealCurriculumTests(unittest.TestCase):
         session.actor = "escort"
         session.pending = {}
         session.demonstrations = {"escort": []}
+        session.orb_demonstrations = {"escort": []}
+        session.orb_approach_demonstrations = {"escort": []}
+        session.orb_collection_demonstrations = {"escort": []}
         session.collect_demonstrations = True
         session.teacher_probability = session.epsilon = 0
         session.decision_context = None
         choose = session.selector("escort")
-        with patch.object(curriculum, "observable_teacher_action", return_value=0):
+        with patch.object(
+            curriculum, "observable_teacher_action",
+            side_effect=lambda *args, **kwargs: None if kwargs.get("orb_only") else 0,
+        ):
             self.assertEqual(choose(np.zeros(67, dtype=np.float32), np.ones(6, dtype=bool)), 2)
         self.assertEqual(session.pending[("escort", "escort")].action, 2)
         self.assertEqual(session.demonstrations["escort"][0][1], 0)
@@ -706,10 +911,16 @@ class RealCurriculumTests(unittest.TestCase):
         session.pending = {}
         session.collect_demonstrations = True
         session.demonstrations = {"guard": []}
+        session.orb_demonstrations = {"guard": []}
+        session.orb_approach_demonstrations = {"guard": []}
+        session.orb_collection_demonstrations = {"guard": []}
         session.teacher_probability = session.epsilon = 0
         session.decision_context = (object(), {"chars": []})
         session.action_goals = {}
-        with patch.object(curriculum, "observable_teacher_action", return_value=0) as label:
+        with patch.object(
+            curriculum, "observable_teacher_action",
+            side_effect=lambda *args, **kwargs: None if kwargs.get("orb_only") else 0,
+        ) as label:
             session.selector("guard")(np.zeros(34, dtype=np.float32), np.ones(11, dtype=bool))
         self.assertIs(label.call_args.kwargs["view"], view)
 
@@ -878,12 +1089,6 @@ class RealCurriculumTests(unittest.TestCase):
                 "escort", np.zeros(75), np.ones(6, dtype=bool), controller,
                 (escort, state))
         self.assertEqual(action, curriculum.escort_runtime.ACTION_RIGHT)
-
-        with patch.object(curriculum, "can_engage", return_value=False):
-            carry_action = curriculum.observable_teacher_action(
-                "carry", np.zeros(66), np.ones(11, dtype=bool), controller,
-                (carrier, state))
-        self.assertEqual(carry_action, 0)  # Let the nearby screener establish entry.
 
         screen = intent.carrier_screening_status(game, carrier, [carrier, escort], {})
         fresh = np.zeros(66)
@@ -1304,16 +1509,18 @@ class RealCurriculumTests(unittest.TestCase):
             )
         )
 
-    def test_facing_teacher_prioritizes_visible_enemy_then_phase_goal(self):
+    def test_facing_teacher_prioritizes_nearest_enemy_then_phase_goal(self):
         from types import SimpleNamespace as NS
         char = NS(name="carry", pos=[2, 2], team="A", facing="N")
         enemy = NS(name="enemy", pos=[2, 4], team="D", is_alive=True)
         state = {"grid": np.zeros((6, 6), dtype=int), "chars": [char, enemy],
                  "smoke_cells": set()}
-        with patch.object(curriculum.runtime, "_has_los", return_value=True):
+        with patch.object(curriculum.runtime, "_has_los", return_value=False):
             label = curriculum.observable_facing_teacher(
                 "carry", char, state, NS(_sighting=None), goal=(0, 2)
             )
+        # Training pre-aim is deliberately privileged: walls/smoke do not
+        # hide the closest enemy from the teacher label.
         self.assertEqual(curriculum.FACING_DIRS[label], "E")
 
         state["chars"] = [char]
@@ -1328,12 +1535,12 @@ class RealCurriculumTests(unittest.TestCase):
         enemy = NS(name="enemy", pos=[2, 4], team="D", is_alive=True)
         state = {"grid": np.zeros((6, 6), dtype=int), "chars": [char, enemy],
                  "smoke_cells": set()}
-        with patch.object(curriculum.runtime, "_has_los", return_value=True):
+        with patch.object(curriculum.runtime, "_has_los", return_value=False):
             label, confidence, source = curriculum.observable_facing_target(
                 "escort", char, state, NS(_sighting=None)
             )
         self.assertEqual(curriculum.FACING_DIRS[label], "E")
-        self.assertEqual((confidence, source), (1.0, "visible_enemy"))
+        self.assertEqual((confidence, source), (1.0, "nearest_enemy"))
 
         state["chars"] = [char]
         label, confidence, source = curriculum.observable_facing_target(
@@ -1363,6 +1570,89 @@ class RealCurriculumTests(unittest.TestCase):
         )
         self.assertEqual(curriculum.FACING_DIRS[label], "W")
         self.assertEqual((confidence, source), (0.55, "escort_outward"))
+
+    def test_facing_teacher_chooses_closest_enemy_and_training_executes_it(self):
+        from types import SimpleNamespace as NS
+        char = NS(name="carry", pos=[3, 3], team="A", facing="S")
+        near = NS(name="near", pos=[1, 3], team="D", is_alive=True)
+        far = NS(name="far", pos=[3, 8], team="D", is_alive=True)
+        dead = NS(name="dead", pos=[3, 2], team="D", is_alive=False)
+        state = {
+            "grid": np.zeros((10, 10), dtype=int),
+            "chars": [char, far, dead, near],
+            "smoke_cells": {(2, 3)},
+        }
+        policy = Mock()
+        policy.facing_values.return_value = torch.tensor(
+            [[0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+        )
+        session = NS(
+            actor="carry",
+            decision_context=(char, state),
+            controllers={"carry": NS(facing_head_enabled=True, _sighting=None)},
+            policies={"carry": policy},
+            action_goals={},
+            collect_demonstrations=True,
+            frozen_facing_phases=set(),
+            teacher_probability=0.0,
+            epsilon=0.0,
+            facing_examples={"carry": []},
+            facing_decisions={"carry": 0},
+            facing_teacher_matches={"carry": 0},
+            facing_confident_decisions={"carry": 0},
+            facing_confident_matches={"carry": 0},
+            facing_confidence_mass={"carry": 0.0},
+            facing_weighted_matches={"carry": 0.0},
+            facing_context_counts={"carry": {}},
+            facing_context_matches={"carry": {}},
+        )
+
+        facing = curriculum.CurriculumSession.facing_selector(session, "carry")(
+            np.zeros(3, dtype=np.float32), 0
+        )
+
+        self.assertEqual(facing, "N")
+        self.assertEqual(session.facing_examples["carry"][0][2:], (0, 1.0))
+        self.assertEqual(session.facing_context_counts["carry"], {"nearest_enemy": 1})
+        policy.facing_values.assert_not_called()
+
+    def test_facing_teacher_uses_real_positions_behind_iq_perception(self):
+        from types import SimpleNamespace as NS
+        real_char = NS(name="carry", pos=[5, 5], team="A", facing="S")
+        real_enemy = NS(name="enemy", pos=[3, 5], team="D", is_alive=True)
+        perceived_char = NS(name="carry", pos=[5, 5], team="A", facing="S")
+        perceived_enemy = NS(name="enemy", pos=[5, 8], team="D", is_alive=True)
+        state = {
+            "grid": np.zeros((10, 10), dtype=int),
+            "chars": [perceived_char, perceived_enemy],
+        }
+        session = NS(
+            actor="carry",
+            game=NS(chars=[real_char, real_enemy]),
+            decision_context=(perceived_char, state),
+            controllers={"carry": NS(facing_head_enabled=True, _sighting=None)},
+            policies={"carry": Mock()},
+            action_goals={},
+            collect_demonstrations=True,
+            frozen_facing_phases=set(),
+            teacher_probability=0.0,
+            epsilon=0.0,
+            facing_examples={"carry": []},
+            facing_decisions={"carry": 0},
+            facing_teacher_matches={"carry": 0},
+            facing_confident_decisions={"carry": 0},
+            facing_confident_matches={"carry": 0},
+            facing_confidence_mass={"carry": 0.0},
+            facing_weighted_matches={"carry": 0.0},
+            facing_context_counts={"carry": {}},
+            facing_context_matches={"carry": {}},
+        )
+
+        facing = curriculum.CurriculumSession.facing_selector(session, "carry")(
+            np.zeros(3, dtype=np.float32), 0
+        )
+
+        self.assertEqual(facing, "N")
 
     def test_phase_facing_selection_prefers_accuracy_only_inside_safety_limit(self):
         baseline = {

@@ -58,32 +58,64 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
-from .map_data_search_gc import SEARCH_MAZE_STR
-from .character_stats_gc import (
-    CHARACTER_TABLE as GC_STATS_TABLE,
-    GC_ROSTER_ORDER,
-)
-from .gc_combo_stats import build_combo_bonuses
-
-from .gc_search_config import (
-    GC_SEARCH_AGGRESSION_MARKERS,
-    GC_SEARCH_POSITION_RANDOMNESS,
-    GC_SEARCH_RELEASE_BY_MARKER,
-)
-from .gc_facing import (
-    FACING_DIRS,
-    FACING_VECTORS,
-    append_facing_onehot,
-    facing_from_delta,
-    facing_towards,
-)
-from .ultimate_tactics_gc import (
-    ORB_CONTEXT_DIM,
-    can_collect_orb,
-    orb_context_features,
-    tactical_ultimate_window,
-    ultimate_context_features,
-)
+try:
+    from .map_data_search_gc import SEARCH_MAZE_STR
+    from .character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from .gc_combo_stats import build_combo_bonuses
+    from .gc_search_config import (
+        GC_SEARCH_USAGE_MARKERS,
+        GC_SEARCH_POSITION_RANDOMNESS,
+        GC_SEARCH_RELEASE,
+        GC_SEARCH_USAGE_WEIGHT_BY_MARKER,
+    )
+    from .gc_facing import (
+        FACING_DIRS,
+        FACING_VECTORS,
+        append_facing_onehot,
+        facing_from_delta,
+        facing_towards,
+        nearest_alive_enemy_facing,
+    )
+    from .ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        can_collect_orb,
+        orb_context_features,
+        tactical_ultimate_window,
+        ultimate_context_features,
+    )
+except ImportError:
+    # Support ``py train_defender_search_gc.py`` from inside gc_v1 in
+    # addition to the preferred package form, ``py -m gc_v1....``.
+    from map_data_search_gc import SEARCH_MAZE_STR
+    from character_stats_gc import (
+        CHARACTER_TABLE as GC_STATS_TABLE,
+        GC_ROSTER_ORDER,
+    )
+    from gc_combo_stats import build_combo_bonuses
+    from gc_search_config import (
+        GC_SEARCH_USAGE_MARKERS,
+        GC_SEARCH_POSITION_RANDOMNESS,
+        GC_SEARCH_RELEASE,
+        GC_SEARCH_USAGE_WEIGHT_BY_MARKER,
+    )
+    from gc_facing import (
+        FACING_DIRS,
+        FACING_VECTORS,
+        append_facing_onehot,
+        facing_from_delta,
+        facing_towards,
+        nearest_alive_enemy_facing,
+    )
+    from ultimate_tactics_gc import (
+        ORB_CONTEXT_DIM,
+        can_collect_orb,
+        orb_context_features,
+        tactical_ultimate_window,
+        ultimate_context_features,
+    )
 
 from game_core import (
     MAX_HP,
@@ -306,11 +338,11 @@ def _find_marker_positions(grid, value):
 # 5～9は選手名ではなくポジションのアグレッシブさ。
 GC_DEFENSE_POSITION_GROUPS_BY_MARKER = {
     marker: _find_marker_positions(_SEARCH_GRID, marker)
-    for marker in GC_SEARCH_AGGRESSION_MARKERS
+    for marker in GC_SEARCH_USAGE_MARKERS
 }
 DEFENSE_POSITIONS = [
     pos
-    for marker in GC_SEARCH_AGGRESSION_MARKERS
+    for marker in GC_SEARCH_USAGE_MARKERS
     for pos in GC_DEFENSE_POSITION_GROUPS_BY_MARKER[marker]
 ]
 
@@ -476,13 +508,13 @@ def bfs_best_direction(dist_map, r0, c0):
 
 
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
-print("[gc_v1] Search marker meaning: 5=safe ... 9=aggressive")
+print("[gc_v1] Search marker usage: 5=most frequent ... 9=least frequent")
 print("[gc_v1] 5～9 are shuffled across the five defenders every round.")
-for _marker in GC_SEARCH_AGGRESSION_MARKERS:
+for _marker in GC_SEARCH_USAGE_MARKERS:
     print(
-        f"  aggression={_marker}: "
+        f"  usage={_marker} weight={GC_SEARCH_USAGE_WEIGHT_BY_MARKER[_marker]}: "
         f"candidates={GC_DEFENSE_POSITION_GROUPS_BY_MARKER[_marker]} "
-        f"release={GC_SEARCH_RELEASE_BY_MARKER[_marker]}"
+        f"release={GC_SEARCH_RELEASE}"
     )
 
 
@@ -532,7 +564,7 @@ class UnitStub:
         # Defender専用: 割り当てられた待機ポジション(7)とそのBFS距離マップ。
         self.assigned_defense_pos = None
         self.assigned_defense_dist_map = None
-        self.assigned_aggression_marker = 7
+        self.assigned_usage_marker = 7
 
         # Defender専用: 現在アクティブな優先モード("spike"/"sighting"/"position")
         # と、そのモードで前tickに観測したBFS距離。モード切替直後は基準値を
@@ -1044,16 +1076,38 @@ class SearchEnv:
 
     def _assign_defense_positions(self):
         """5～9を5人へ毎ラウンドシャッフルして割り当てる。"""
-        markers = list(GC_SEARCH_AGGRESSION_MARKERS)
-        random.shuffle(markers)
-        for d, marker in zip(self.defenders, markers):
+        used_positions = set()
+        for d in self.defenders:
+            available_markers = [
+                marker for marker in GC_SEARCH_USAGE_MARKERS
+                if any(
+                    pos not in used_positions
+                    for pos in GC_DEFENSE_POSITION_GROUPS_BY_MARKER[marker]
+                )
+            ]
+            if not available_markers:
+                break
+            marker = random.choices(
+                available_markers,
+                weights=[GC_SEARCH_USAGE_WEIGHT_BY_MARKER[item] for item in available_markers],
+                k=1,
+            )[0]
             chosen = _choose_defense_position_for_round(marker, d.pos)
-            d.assigned_aggression_marker = int(marker)
+            if chosen in used_positions:
+                candidates = [
+                    pos for pos in GC_DEFENSE_POSITION_GROUPS_BY_MARKER[marker]
+                    if pos not in used_positions
+                ]
+                chosen = random.choice(candidates) if candidates else None
+            if chosen is None:
+                continue
+            d.assigned_usage_marker = int(marker)
             d.assigned_defense_positions = list(
                 GC_DEFENSE_POSITION_GROUPS_BY_MARKER[int(marker)]
             )
             d.assigned_defense_pos = chosen
             d.assigned_defense_dist_map = bfs_distance_map(chosen)
+            used_positions.add(chosen)
 
     def _update_priority_dist_maps(self):
         self.spike_dist_map = (
@@ -1103,16 +1157,12 @@ class SearchEnv:
         count = int(seen.get("count", 1))
         if age > SEARCH_SIGHTING_FRESH_TICKS:
             return True
-        marker = int(getattr(defender, "assigned_aggression_marker", 7))
-        release = GC_SEARCH_RELEASE_BY_MARKER.get(
-            marker, GC_SEARCH_RELEASE_BY_MARKER[7]
-        )
-        if count < int(release["min_seen"]):
+        if count < int(GC_SEARCH_RELEASE["min_seen"]):
             return True
         if self.sighting_dist_map is None:
             return True
         sighting_dist = int(self.sighting_dist_map[r, c])
-        return not (0 <= sighting_dist <= int(release["max_bfs"]))
+        return not (0 <= sighting_dist <= int(GC_SEARCH_RELEASE["max_bfs"]))
 
     def _collect_observations(self):
         smoke_cells = self._smoke_cells()
@@ -1860,8 +1910,12 @@ def select_actions_batch(policy_net, obs_dict, mask_dict, epsilon):
     return actions
 
 
-def observable_facing_target(obs, action):
-    """Build a facing label only from values already present in the observation."""
+def observable_facing_target(obs, action, char=None, enemies=()):
+    """Build a facing label, preferring the nearest-enemy training target."""
+    if char is not None:
+        direction = nearest_alive_enemy_facing(char, enemies)
+        if direction is not None:
+            return FACING_DIRS.index(direction), 1.0
     if obs[9] > 0.5 and (obs[22] != 0.0 or obs[23] != 0.0):
         direction = facing_from_delta(np.sign(obs[22]), np.sign(obs[23]))
         return FACING_DIRS.index(direction), 1.0
@@ -2147,7 +2201,15 @@ def train(
             defender_by_name = {unit.name: unit for unit in env.defenders if unit.is_alive}
             for name, obs in obs_dict.items():
                 base_action = int(action_dict[name][0])
-                target, confidence = observable_facing_target(obs, action_dict[name])
+                target, confidence = observable_facing_target(
+                    obs,
+                    action_dict[name],
+                    defender_by_name.get(name),
+                    env.attackers,
+                )
+                # Always execute the same nearest-enemy direction recorded as
+                # supervision.  select_actions_batch remains unchanged for eval.
+                action_dict[name] = (base_action, FACING_DIRS[target])
                 facing_samples.append((obs.copy(), base_action, target, confidence))
                 if mask_dict[name][ACTION_ULTIMATE]:
                     unit = defender_by_name.get(name)

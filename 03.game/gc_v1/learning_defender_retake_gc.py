@@ -51,6 +51,11 @@ try:
         GC_ROSTER_ORDER,
     )
     from .gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from .defender_objectives_gc import (
+        RETAKE_COORDINATION_DIM,
+        retake_coordination_features,
+        retake_coordination_state,
+    )
     from .ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
         build_ultimate_action,
@@ -64,6 +69,11 @@ except ImportError:
         GC_ROSTER_ORDER,
     )
     from gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
+    from defender_objectives_gc import (
+        RETAKE_COORDINATION_DIM,
+        retake_coordination_features,
+        retake_coordination_state,
+    )
     from ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
         build_ultimate_action,
@@ -80,7 +90,8 @@ MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
 BASE_OBS_DIM = 37
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
-OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+LEGACY_OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+OBS_DIM = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 
@@ -497,8 +508,20 @@ class LearningDefenderRetakeGCController:
             char, game_state.get("available_orbs", ())
         )
         append_facing_onehot(
-            obs[ORB_CONTEXT_OBS_DIM:OBS_DIM],
+            obs[ORB_CONTEXT_OBS_DIM:LEGACY_OBS_DIM],
             getattr(char, "facing", "S"),
+        )
+        coordination = retake_coordination_state(
+            char,
+            allies,
+            self._dist_map,
+            detonate_timer,
+            entry_radius=ENTRY_READY_RADIUS,
+            defuse_ticks=DEFUSE_REQUIRED_TICKS,
+            safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+        )
+        obs[LEGACY_OBS_DIM:OBS_DIM] = retake_coordination_features(
+            coordination, SPIKE_DETONATION_TICKS
         )
 
         return obs

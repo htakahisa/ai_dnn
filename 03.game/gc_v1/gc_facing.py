@@ -40,6 +40,37 @@ def facing_towards(source, target) -> str | None:
     return facing_from_delta(int(round(dr)), int(round(dc)))
 
 
+def nearest_alive_enemy_facing(char, characters) -> str | None:
+    """Face the nearest alive enemy using training-state information.
+
+    GC combat ranges use Chebyshev distance, so the pre-aim teacher uses the
+    same metric.  The name tie-break keeps labels deterministic when multiple
+    enemies are equally close.  This helper is intended for training only;
+    production controllers must infer facing from their observations.
+    """
+    source = tuple(char.pos)
+    enemies = [
+        other
+        for other in characters
+        if getattr(other, "is_alive", True)
+        and getattr(other, "team", None) != getattr(char, "team", None)
+        and tuple(other.pos) != source
+    ]
+    if not enemies:
+        return None
+    nearest = min(
+        enemies,
+        key=lambda other: (
+            max(
+                abs(int(other.pos[0]) - int(source[0])),
+                abs(int(other.pos[1]) - int(source[1])),
+            ),
+            str(getattr(other, "name", "")),
+        ),
+    )
+    return facing_towards(source, tuple(nearest.pos))
+
+
 def encode_action(base_action: int, facing: str) -> int:
     return int(base_action) * len(FACING_DIRS) + FACING_DIRS.index(facing)
 

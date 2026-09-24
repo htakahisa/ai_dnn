@@ -61,11 +61,11 @@ import torch.nn as nn
 try:
     from .gc_facing import FACING_DIRS, append_facing_onehot
     from .tactical_ability import choose_pre_entry_ability
-    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
+    from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, attacker_orb_context_features, can_collect_orb
 except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
-    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
+    from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, attacker_orb_context_features, can_collect_orb
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -111,7 +111,8 @@ SCREEN_COMMITMENT_OBS_DIM = 90  # v9: exact U/D/L/R screen step plus active/read
 ULTIMATE_CONTEXT_OBS_DIM = 94  # v9: ready/combat/objective/urgency cast context.
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
 FAKE_WAIT_SUPPORT_OBS_DIM = FACING_HEAD_OBS_DIM + 6  # v12: waiting bodyguard context.
-ORB_OBS_DIM = FAKE_WAIT_SUPPORT_OBS_DIM + 4
+LEGACY_ORB_OBS_DIM = FAKE_WAIT_SUPPORT_OBS_DIM + 4
+ORB_OBS_DIM = LEGACY_ORB_OBS_DIM + 1  # v14: nearby-orb proximity
 FACING_HEAD_VERSION = 2
 
 
@@ -274,7 +275,8 @@ class LearningAttackerEscortGCController:
         obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
-        expected_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
+        expected_dim = (ORB_OBS_DIM if self.positioning_version >= 14 else
+                        LEGACY_ORB_OBS_DIM if self.positioning_version >= 13 else
                         FAKE_WAIT_SUPPORT_OBS_DIM if self.positioning_version >= 12 else
                         FACING_HEAD_OBS_DIM if self.positioning_version >= 11 else
                         ULTIMATE_CONTEXT_OBS_DIM if self.positioning_version >= 9 else
@@ -750,9 +752,13 @@ class LearningAttackerEscortGCController:
                 self.game, char, chars, cache
             )))
         if self.positioning_version >= 13:
-            obs_arr = np.concatenate((obs_arr, orb_context_features(
-                char, getattr(self.game, "available_orbs", ())
-            )))
+            available_orbs = getattr(self.game, "available_orbs", ())
+            features = (
+                attacker_orb_context_features(char, available_orbs)
+                if self.positioning_version >= 14
+                else orb_context_features(char, available_orbs)
+            )
+            obs_arr = np.concatenate((obs_arr, features))
         return obs_arr
 
     def _ultimate_action(self, char, chars):

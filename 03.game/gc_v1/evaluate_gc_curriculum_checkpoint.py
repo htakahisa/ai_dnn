@@ -15,18 +15,23 @@ def build_policies(checkpoints):
         state = checkpoint.get("model_state_dict", checkpoint)
         return int(state["feature.0.weight"].shape[1])
 
+    def saved_action_dim(phase):
+        checkpoint = checkpoints[phase]
+        state = checkpoint.get("model_state_dict", checkpoint)
+        return int(state["advantage_head.2.weight"].shape[0])
+
     policies = {
         "carry": trainer.runtime.AttackerCarryDuelingDQN(
             obs_dim=saved_obs_dim("carry"),
-            action_dim=trainer.runtime.ACTION_DIM,
+            action_dim=saved_action_dim("carry"),
         ),
         "escort": trainer.escort_runtime.DuelingQNetwork(
             saved_obs_dim("escort"),
-            trainer.escort_runtime.N_ACTIONS,
+            saved_action_dim("escort"),
         ),
         "guard": trainer.guard_runtime.AttackerGuardDuelingDQN(
             obs_dim=saved_obs_dim("guard"),
-            action_dim=trainer.guard_runtime.ACTION_DIM,
+            action_dim=saved_action_dim("guard"),
         ),
     }
     for phase in trainer.PHASES:
