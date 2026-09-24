@@ -69,6 +69,17 @@ from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_ultimate_training import (
+    collect_orb_tick,
+    initialize_ultimate,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 from ov1_common_attacker import (
     ROSTER_ORDER,
     SPIKE_HOLDER,
@@ -93,9 +104,11 @@ MODEL_LATEST_PATH = os.path.join(DATA_DIR, "dqn_attacker_guard_latest.pt")
 
 CARDINAL = ov1_common_rl.CARDINAL_MOVES
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
-OBS_DIM = 38
+OBS_DIM = 49
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-BASE_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
+BASE_ACTION_DIM = 12
+ACTION_ULTIMATE_BASE = 10
+ACTION_ORB_BASE = 11
 ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 80: base_idx(0-9)*8 + facing_idx(0-7)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # 参考用(omoko側ロールはステータス表から決定)
 
@@ -394,6 +407,7 @@ class UnitStub:
         self.role = role
         self.ability_name = role
         self.charges = 0 if role in ("HUNT", "NONE") else 1
+        initialize_ultimate(self, role)
         self.blind_remaining = 0
         self.reveal_remaining = 0
         self.moved_this_tick = False
@@ -526,7 +540,7 @@ Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "n
 def build_observation(
     unit, attackers, defenders, guard_memory, smoke_cells, own_smoke_active,
     detonate_timer, spike_dist_map, sighting_dist_map, unit_has_spike_los,
-    active_defuse_info, watch_point_info=None,
+    active_defuse_info, watch_point_info=None, available_orbs=(), allies=(),
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(unit.pos[0]), int(unit.pos[1])
@@ -615,6 +629,18 @@ def build_observation(
         obs[36] = (watch_point_info[0] - r0) / HEIGHT
         obs[37] = (watch_point_info[1] - c0) / WIDTH
 
+    obs[38:42] = ultimate_context(
+        unit,
+        self_sighting=bool(visible_enemies),
+        team_sighting=guard_memory.last_seen_enemy is not None,
+        tactical=(
+            bool(visible_enemies)
+            or guard_memory.last_seen_enemy is not None
+            or active_defuse_info is not None
+        ),
+    )
+    obs[42:49] = orb_context(unit, available_orbs, GRID, allies)
+
     return obs
 
 
@@ -626,8 +652,12 @@ def decode_action(action_idx):
     戻り値は (move_delta, use_ability, facing)。"""
     idx = int(action_idx)
     base_idx, facing_idx = divmod(idx, len(FACING_DIRS))
+    if base_idx == ACTION_ULTIMATE_BASE:
+        return (0, 0), False, True, False, FACING_DIRS[facing_idx]
+    if base_idx == ACTION_ORB_BASE:
+        return (0, 0), False, False, True, FACING_DIRS[facing_idx]
     move_idx, use_ability = divmod(base_idx, 2)
-    return MOVES[move_idx], bool(use_ability), FACING_DIRS[facing_idx]
+    return MOVES[move_idx], bool(use_ability), False, False, FACING_DIRS[facing_idx]
 
 
 def build_action_mask(unit, occupied, lock_movement=False, progress_dist_map=None):
@@ -678,6 +708,9 @@ def build_action_mask(unit, occupied, lock_movement=False, progress_dist_map=Non
         for move_idx in range(5):
             base_mask[move_idx * 2 + 1] = False
 
+    base_mask[ACTION_ULTIMATE_BASE] = ultimate_ready(unit)
+    base_mask[ACTION_ORB_BASE] = False
+
     return np.repeat(base_mask, len(FACING_DIRS))
 
 
@@ -710,11 +743,13 @@ class GuardEnv:
         self.active_defuser_name = None
         self.last_shots = []
         self._current_responders = set()
+        self.available_orbs = set()
 
     # -- 初期化 --------------------------------------------------------
     def reset(self):
         self.guard_memory.reset()
         self.smokes = []
+        self.available_orbs = valid_orb_cells(GRID)
         self.detonate_timer = MAX_TICKS
         self.match_over_reason = None
         self.active_defuser_name = None
@@ -789,7 +824,7 @@ class GuardEnv:
                 a, self.attackers, self.defenders, self.guard_memory,
                 smoke_cells, self._own_smoke_active("A"), self.detonate_timer,
                 self.spike_dist_map, self.sighting_dist_map, unit_has_spike_los,
-                active_defuse, watch_point_info,
+                active_defuse, watch_point_info, self.available_orbs, self.attackers,
             )
             own_occupied = occupied - {tuple(a.pos)}
 
@@ -808,6 +843,9 @@ class GuardEnv:
             mask_dict[a.name] = build_action_mask(
                 a, own_occupied, lock_movement=False,
                 progress_dist_map=positioning_map,
+            )
+            mask_dict[a.name][ACTION_ORB_BASE * len(FACING_DIRS):(ACTION_ORB_BASE + 1) * len(FACING_DIRS)] = (
+                tuple(a.pos) in self.available_orbs and orb_priority(a, self.attackers)
             )
         return obs_dict, mask_dict
 
@@ -835,6 +873,9 @@ class GuardEnv:
         ability_whiff = {}
         ability_overlap = {}
         held_angle = {}
+        ultimate_tactical = {}
+        ultimate_target = {}
+        orb_rewards = {}
 
         # --- 敵(Defender)側: プラント地点へBFSで接近し、隣接したら解除する ---
         for d in self.defenders:
@@ -891,7 +932,7 @@ class GuardEnv:
         for a in self.attackers:
             if not a.is_alive or a.name not in action_dict:
                 continue
-            (dr, dc), use_ability, facing = decode_action(action_dict[a.name])
+            (dr, dc), use_ability, use_ultimate, use_orb, facing = decode_action(action_dict[a.name])
             attacker_facing[a.name] = facing
             move_plans.append((a, (dr, dc)))
 
@@ -899,6 +940,35 @@ class GuardEnv:
                 d for d in self.defenders if d.is_alive and has_los(a.pos, d.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+            if use_ultimate and spend_ultimate(a):
+                tactical = (
+                    has_enemy_los
+                    or self.guard_memory.last_seen_enemy is not None
+                    or any(d.is_alive and d.defuse_timer > 0 for d in self.defenders)
+                )
+                ultimate_tactical[a.name] = tactical
+                if visible_enemies:
+                    ultimate_target[a.name] = tuple(min(
+                        visible_enemies,
+                        key=lambda enemy: max(
+                            abs(enemy.pos[0] - a.pos[0]),
+                            abs(enemy.pos[1] - a.pos[1]),
+                        ),
+                    ).pos)
+                elif self.guard_memory.last_seen_enemy is not None:
+                    ultimate_target[a.name] = self.guard_memory.last_seen_enemy["pos"]
+                else:
+                    ultimate_target[a.name] = self.planted_pos
+                if a.ultimate_name == "MONITOR":
+                    for enemy in self.defenders:
+                        if enemy.is_alive:
+                            enemy.reveal_remaining = max(enemy.reveal_remaining, REVEAL_DURATION_TICKS)
+                elif a.ultimate_name == "TUNNEL":
+                    for enemy in visible_enemies:
+                        enemy.blind_remaining = max(enemy.blind_remaining, BLIND_DURATION_TICKS)
+            if use_orb:
+                dr, dc = 0, 0
+                _completed, orb_rewards[a.name] = collect_orb_tick(a, self.available_orbs)
 
             if has_enemy_los and (dr, dc) == (0, 0):
                 held_angle[a.name] = "held_with_los"
@@ -1043,6 +1113,14 @@ class GuardEnv:
             pre_tick_defuse_timers, ability_whiff, ability_overlap, held_angle,
             nearest_watch_by_name, watch_alignment_info,
         )
+        for name, tactical in ultimate_tactical.items():
+            rewards[name] = rewards.get(name, 0.0) + ultimate_use_reward(tactical)
+            attacker = next(a for a in self.attackers if a.name == name)
+            rewards[name] += 0.25 * _direction_alignment(
+                attacker.facing, tuple(attacker.pos), ultimate_target[name]
+            )
+        for name, orb_reward in orb_rewards.items():
+            rewards[name] = rewards.get(name, 0.0) + orb_reward
         for name, penalty in blocking_penalties.items():
             rewards[name] = rewards.get(name, 0.0) + penalty
 

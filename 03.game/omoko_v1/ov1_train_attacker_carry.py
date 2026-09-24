@@ -49,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # --- after ---
 from ov1_map_data_carry import NEW_MAZE_STR
+from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
 from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 
@@ -71,6 +72,18 @@ from game_core import (
 
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_ultimate_training import (
+    collect_orb_tick,
+    initialize_ultimate,
+    nearest_orb,
+    orb_context,
+    orb_priority,
+    spend_ultimate,
+    ultimate_context,
+    ultimate_ready,
+    ultimate_use_reward,
+    valid_orb_cells,
+)
 from ov1_common_attacker import (
     ROSTER_ORDER,
     SPIKE_HOLDER,
@@ -99,16 +112,18 @@ CARDINAL = ov1_common_rl.CARDINAL_MOVES
 # (移動はDQNの行動空間に含めない。BFS経路探索で決定的に処理する)。
 # 21-28: 自分(carrier)の現在の向き(N/NE/E/SE/S/SW/W/NW)のone-hot。向き選択
 # (facing_idx)を状態から独立に学習できないバグの修正のため追加。
-OBS_DIM = 34
+OBS_DIM = 45
 # 移動はBFS決定的なため行動空間に含めない。ここに含めるのはアビリティ使用判断
 # (NONE/ABILITY)・明示PLANTの3値と、向き(facing)選択の直積のみ。
 # ov1_train_defender_search.pyと同一規約: action_idx = base_idx(0-2)*8 + facing_idx(0-7)。
 # 移動先(BFS)と向きは無関係に選べる(例: 前進しながら横を警戒する)。
 # 向きには直接報酬を与えず、通常の交戦結果(命中率補正経由)を通じて間接的に学習させる。
-BASE_ACTION_DIM = 3
+BASE_ACTION_DIM = 5
 ACTION_NONE = 0
 ACTION_ABILITY = 1
 ACTION_PLANT = 2
+ACTION_ULTIMATE = 3
+ACTION_ORB = 4
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 24
 
@@ -116,8 +131,8 @@ ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 24
 # ラウンド開始時にその中から1地点をランダム選択し、その地点だけを通過する。
 WAYPOINT_VALUE_BY_SITE = {"right": 6, "left": 7}
 
-# スモーク事前設置(lineup)用の定点は、マップ上の値8(left)/9(right)から読む。
-SMOKE_LINEUP_VALUE_BY_SITE = {"left": 8, "right": 9}
+# アビリティ定点はescort map上のS/R/Fマーカーから能力種別ごとに読む。
+LINEUP_ABILITY_MARKERS = {"S": "SMOKE", "R": "RECON", "F": "FLASH"}
 
 # target_plant_pos抽選時のサイト選択確率。学習は必ず50/50にする(片方のサイトの
 # 学習内容が不足するのを防ぐため)。実プレイでの左右比率は推論側
@@ -171,15 +186,29 @@ SMOKE_LINEUP_WAIT_PENALTY = -0.03  # 定点スモークが射程内で使用可�
 
 GRID = ov1_common_rl.parse_grid(NEW_MAZE_STR)
 HEIGHT, WIDTH = GRID.shape
-SMOKE_LINEUP_CELLS_BY_SITE = {
-    site: [
-        (r, c)
-        for r in range(HEIGHT)
-        for c in range(WIDTH)
-        if int(GRID[r, c]) == value
-    ]
-    for site, value in SMOKE_LINEUP_VALUE_BY_SITE.items()
-}
+
+
+def _parse_ability_lineup_points(maze_str):
+    """Parse escort-map S/R/F markers without changing carry's movement grid."""
+    lines = [line.strip() for line in maze_str.strip("\n").split("\n") if line.strip()]
+    if not lines or len({len(line) for line in lines}) != 1:
+        raise ValueError("escort mapの行長が一致していません")
+    if (len(lines), len(lines[0])) != GRID.shape:
+        raise ValueError(
+            f"escort mapのサイズがcarry mapと一致していません: "
+            f"escort={(len(lines), len(lines[0]))} carry={GRID.shape}"
+        )
+    points = {ability: [] for ability in LINEUP_ABILITY_MARKERS.values()}
+    for r, line in enumerate(lines):
+        for c, marker in enumerate(line):
+            if marker in LINEUP_ABILITY_MARKERS:
+                points[LINEUP_ABILITY_MARKERS[marker]].append((r, c))
+            elif not marker.isdigit():
+                raise ValueError(f"escort mapに不正な文字があります: {marker!r}")
+    return points
+
+
+ABILITY_LINEUP_POINTS = _parse_ability_lineup_points(ESCORT_MAZE_STR)
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
 ATTACKER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 3]
 
@@ -345,16 +374,21 @@ def _facing_towards(from_pos, to_pos):
     return best_dir
 
 
-def _facing_angle_diff(shooter, target):
-    """射手のfacingと、射手→標的方向との角度差(度)を返す(battle_logic._facing_angle_diffと同一ロジック)。"""
-    dc = float(target.pos[1] - shooter.pos[1])
-    dr = float(target.pos[0] - shooter.pos[0])
+def _facing_angle_diff_to_pos(shooter, target_pos):
+    """射手のfacingと、射手→座標方向との角度差(度)を返す。"""
+    dc = float(target_pos[1] - shooter.pos[1])
+    dr = float(target_pos[0] - shooter.pos[0])
     dist = math.hypot(dc, dr)
     if dist == 0:
         return 0.0
     fx, fy = FACING_VECTORS[shooter.facing]
     dot = max(-1.0, min(1.0, (fx * dc + fy * dr) / dist))
     return math.degrees(math.acos(dot))
+
+
+def _facing_angle_diff(shooter, target):
+    """射手→標的キャラクターの角度差(battle_logicと同一形式)。"""
+    return _facing_angle_diff_to_pos(shooter, target.pos)
 
 
 def _facing_accuracy_multiplier(shooter, target):
@@ -416,6 +450,7 @@ class UnitStub:
         self.role = role
         self.ability_name = ability
         self.charges = 0 if ability in ("HUNT", "NONE") else 1
+        initialize_ultimate(self, ability)
         self.blind_remaining = 0
         self.reveal_remaining = 0
         self.moved_this_tick = False
@@ -618,7 +653,9 @@ Transition = namedtuple("Transition", ("obs", "action", "reward", "next_obs", "n
 
 def build_observation(
     carrier, defenders, smoke_cells, own_smoke_active, elapsed_ticks, dist_map,
-    reached_waypoint, on_target, next_step=None,
+    reached_waypoint, on_target, next_step=None, team_sighting=False,
+    tactical_ultimate=False,
+    available_orbs=(), allies=(),
 ):
     obs = np.zeros(OBS_DIM, dtype=np.float32)
     r0, c0 = int(carrier.pos[0]), int(carrier.pos[1])
@@ -670,6 +707,14 @@ def build_observation(
             obs[29 + dir_idx] = 1.0
             obs[33] = CELL_OPENNESS.get(tuple(next_step), [0.0, 0.0, 0.0, 0.0])[dir_idx]
 
+    obs[34:38] = ultimate_context(
+        carrier,
+        self_sighting=bool(visible_enemies),
+        team_sighting=team_sighting,
+        tactical=tactical_ultimate,
+    )
+    obs[38:45] = orb_context(carrier, available_orbs, GRID, allies)
+
     return obs
 
 
@@ -684,12 +729,16 @@ def decode_action(action_idx):
         decoded = "PLANT"
     elif base_idx == ACTION_ABILITY:
         decoded = "ABILITY"
+    elif base_idx == ACTION_ULTIMATE:
+        decoded = "ULTIMATE"
+    elif base_idx == ACTION_ORB:
+        decoded = "ORB"
     else:
         decoded = "NONE"
     return decoded, FACING_DIRS[facing_idx]
 
 
-def build_action_mask(unit, on_target, ability_available=True, enemy_visible=False):
+def build_action_mask(unit, on_target, ability_available=True, enemy_visible=False, available_orbs=(), allies=()):
     """向き(facing)は移動・アビリティとは無関係に常に自由選択できるため、
     base(0-2)側のマスクをfacing方向数だけ展開する
     (ov1_train_defender_search.pyと同一規約)。
@@ -699,6 +748,8 @@ def build_action_mask(unit, on_target, ability_available=True, enemy_visible=Fal
     if unit.charges <= 0 or unit.ability_name in ("HUNT", "NONE") or not ability_available:
         base_mask[ACTION_ABILITY] = False
     base_mask[ACTION_PLANT] = bool(on_target)
+    base_mask[ACTION_ULTIMATE] = ultimate_ready(unit)
+    base_mask[ACTION_ORB] = bool(available_orbs) and orb_priority(unit, allies)
     if enemy_visible:
         # NONE means hold position in CarryEnv.step() while fighting.  Moving
         # along the route is deliberately unavailable until LOS is broken.
@@ -720,6 +771,7 @@ class CarryEnv:
         self.defenders = []
         self.carrier = None
         self.smokes = []
+        self.available_orbs = set()
         self.elapsed_ticks = 0
         self.plant_progress = 0
         self.dist_map = None
@@ -738,6 +790,7 @@ class CarryEnv:
     def reset(self):
         self.sighting.reset()
         self.smokes = []
+        self.available_orbs = valid_orb_cells(GRID)
         self.elapsed_ticks = 0
         self.plant_progress = 0
         self.match_over_reason = None
@@ -831,12 +884,11 @@ class CarryEnv:
         1ラウンド1回しか使えないアビリティを、意味のあるターゲットが無いまま
         無駄撃ちしてチャージを浪費してしまう。PLANTのon_targetゲートと同様に、
         ABILITY自体をマスクして温存させる。
-        - SMOKE: 射程内に敵、または定点(射程内)が無ければ不可。
+        - SMOKE: 射程内に敵、または射程内の定点が無ければ不可。
+        - FLASH/RECON: 定点への使用は射程内かつ壁の射線が通る場合だけ許可。
         - FLASH: 射程内に敵が見えている、または直近の索敵記憶が無ければ不可
           (ラウンド開始直後など、狙う相手がいない状態での盲目投げを防ぐ)。
         - RECON: 従来通りchargesがあれば常に選択可(先読み偵察に価値があるため)。"""
-        if self.carrier.ability_name == "RECON":
-            return True
         smoke_cells = self._smoke_cells()
         visible_enemies = [
             d for d in self.defenders if d.is_alive and has_los(self.carrier.pos, d.pos, smoke_cells)
@@ -847,18 +899,28 @@ class CarryEnv:
         ]
         if nearby_enemies:
             return True
-        if self.carrier.ability_name == "SMOKE":
-            lineup_candidates = [
-                cell for cell in SMOKE_LINEUP_CELLS_BY_SITE.get(self.active_site, [])
-                if max(abs(int(cell[0]) - int(self.carrier.pos[0])), abs(int(cell[1]) - int(self.carrier.pos[1]))) <= ABILITY_RANGE
-            ]
-            return bool(lineup_candidates)
+        lineup_candidates = [
+            cell for cell in ABILITY_LINEUP_POINTS.get(self.carrier.ability_name, [])
+            if max(
+                abs(int(cell[0]) - int(self.carrier.pos[0])),
+                abs(int(cell[1]) - int(self.carrier.pos[1])),
+            ) <= ABILITY_RANGE
+            and (
+                self.carrier.ability_name == "SMOKE"
+                or has_los(self.carrier.pos, cell, set())
+            )
+        ]
+        if lineup_candidates:
+            return True
+        if self.carrier.ability_name == "RECON":
+            return True
         if self.carrier.ability_name == "FLASH":
             return self.sighting.last_seen_enemy is not None
-        return True
+        return False
 
     def _smoke_lineup_opportunity(self):
-        """定点スモークを「今すぐ焚ける」状態かどうか(近接脅威なし・射程内に定点あり)。
+        """定点スモークを「今すぐ焚ける」状態かどうか
+        (近接脅威なし・射程内に定点あり。壁の射線は問わない)。
         wait penalty算出専用。"""
         if self.carrier.ability_name != "SMOKE" or self.carrier.charges <= 0:
             return False
@@ -871,8 +933,11 @@ class CarryEnv:
         if nearby_enemies:
             return False
         lineup_candidates = [
-            cell for cell in SMOKE_LINEUP_CELLS_BY_SITE.get(self.active_site, [])
-            if max(abs(int(cell[0]) - int(self.carrier.pos[0])), abs(int(cell[1]) - int(self.carrier.pos[1]))) <= ABILITY_RANGE
+            cell for cell in ABILITY_LINEUP_POINTS.get("SMOKE", [])
+            if max(
+                abs(int(cell[0]) - int(self.carrier.pos[0])),
+                abs(int(cell[1]) - int(self.carrier.pos[1])),
+            ) <= ABILITY_RANGE
         ]
         return bool(lineup_candidates)
 
@@ -903,8 +968,18 @@ class CarryEnv:
             self.carrier, self.defenders, smoke_cells, self._own_smoke_active(),
             self.elapsed_ticks, self.dist_map, self.reached_waypoint, on_target,
             next_step=next_step,
+            team_sighting=self.sighting.last_seen_enemy is not None,
+            tactical_ultimate=(
+                self.reached_waypoint
+                and (enemy_visible or self.sighting.last_seen_enemy is not None or on_target)
+            ),
+            available_orbs=self.available_orbs,
+            allies=[a for a in self.attackers if a.is_alive],
         )
-        mask = build_action_mask(self.carrier, on_target, ability_available, enemy_visible)
+        mask = build_action_mask(
+            self.carrier, on_target, ability_available, enemy_visible,
+            self.available_orbs, [a for a in self.attackers if a.is_alive],
+        )
         return obs, mask
 
     def step(self, action_idx):
@@ -966,15 +1041,64 @@ class CarryEnv:
         carrier_explicit_facing = None
         carrier_had_visible_enemy = False
         carrier_move_dir = None
-        smoke_lineup_used = False
+        lineup_ability_used = False
+        ultimate_used = False
+        ultimate_tactical = False
+        ultimate_aim_target = None
+        orb_requested = False
+        orb_reward = 0.0
         if carrier_alive:
             decoded, carrier_explicit_facing = decode_action(action_idx)
             visible_enemies = [
                 d for d in self.defenders if d.is_alive and has_los(self.carrier.pos, d.pos, smoke_cells)
             ]
             carrier_had_visible_enemy = bool(visible_enemies)
+            ultimate_tactical = (
+                self.reached_waypoint
+                and (
+                    carrier_had_visible_enemy
+                    or self.sighting.last_seen_enemy is not None
+                    or on_target_before_action
+                )
+            )
+            if visible_enemies:
+                ultimate_aim_target = tuple(min(
+                    visible_enemies,
+                    key=lambda d: max(
+                        abs(d.pos[0] - self.carrier.pos[0]),
+                        abs(d.pos[1] - self.carrier.pos[1]),
+                    ),
+                ).pos)
+            elif self.sighting.last_seen_enemy is not None:
+                ultimate_aim_target = self.sighting.last_seen_enemy["pos"]
+            elif self.reached_waypoint:
+                ultimate_aim_target = self.target_plant_pos
 
-            if decoded == "PLANT" or (carrier_had_visible_enemy and decoded == "NONE"):
+            if decoded == "ORB":
+                orb_requested = orb_priority(
+                    self.carrier, [a for a in self.attackers if a.is_alive]
+                )
+                orb_target = nearest_orb(tuple(self.carrier.pos), self.available_orbs)
+                if orb_requested and orb_target is not None:
+                    own_occupied = occupied - {tuple(self.carrier.pos)}
+                    move_plans.append((self.carrier, bfs_next_step(
+                        tuple(self.carrier.pos), orb_target, own_occupied,
+                        allow_adjacent_goal=False,
+                    )))
+                else:
+                    move_plans.append((self.carrier, tuple(self.carrier.pos)))
+            elif decoded == "ULTIMATE":
+                ultimate_used = spend_ultimate(self.carrier)
+                move_plans.append((self.carrier, tuple(self.carrier.pos)))
+                if ultimate_used:
+                    if self.carrier.ultimate_name == "MONITOR":
+                        for enemy in self.defenders:
+                            if enemy.is_alive:
+                                enemy.reveal_remaining = max(enemy.reveal_remaining, REVEAL_DURATION_TICKS)
+                    elif self.carrier.ultimate_name == "TUNNEL":
+                        for enemy in visible_enemies:
+                            enemy.blind_remaining = max(enemy.blind_remaining, BLIND_DURATION_TICKS)
+            elif decoded == "PLANT" or (carrier_had_visible_enemy and decoded == "NONE"):
                 move_plans.append((self.carrier, tuple(self.carrier.pos)))
                 plant_action_chosen = decoded == "PLANT"
             else:
@@ -996,14 +1120,22 @@ class CarryEnv:
                         d for d in visible_enemies
                         if max(abs(d.pos[0] - self.carrier.pos[0]), abs(d.pos[1] - self.carrier.pos[1])) <= ABILITY_RANGE
                     ]
-                    # 定点(SMOKE_LINEUP_CELLS_BY_SITE)のうち、射程内にあるものだけを候補にする。
+                    # escort map上のS/R/F定点のうち、SMOKEは射程だけで候補にする。
+                    # FLASH/RECONは射程内かつ壁の射線が通る場合だけ候補にする。
                     # goal(中継地点/設置目標)とは無関係の、事前に指定した「射線を切る座標」。
                     lineup_candidates = [
-                        cell for cell in SMOKE_LINEUP_CELLS_BY_SITE.get(self.active_site, [])
-                        if max(abs(int(cell[0]) - int(self.carrier.pos[0])), abs(int(cell[1]) - int(self.carrier.pos[1]))) <= ABILITY_RANGE
+                        cell for cell in ABILITY_LINEUP_POINTS.get(self.carrier.ability_name, [])
+                        if max(
+                            abs(int(cell[0]) - int(self.carrier.pos[0])),
+                            abs(int(cell[1]) - int(self.carrier.pos[1])),
+                        ) <= ABILITY_RANGE
+                        and (
+                            self.carrier.ability_name == "SMOKE"
+                            or has_los(self.carrier.pos, cell, set())
+                        )
                     ]
-                    smoke_lineup = is_smoke and not nearby_enemies and bool(lineup_candidates)
-                    ability_whiff = (not nearby_enemies) and not smoke_lineup
+                    lineup_ability = not nearby_enemies and bool(lineup_candidates)
+                    ability_whiff = (not nearby_enemies) and not lineup_ability
                     ability_overlap = pre_flash_recon_active and self.carrier.ability_name in ("FLASH", "RECON")
                     if self.carrier.charges > 0:
                         if nearby_enemies:
@@ -1015,7 +1147,7 @@ class CarryEnv:
                                 self.carrier, self.carrier.ability_name, tuple(nearest.pos),
                                 self.smokes, self.attackers + self.defenders, smoke_cells,
                             )
-                        elif smoke_lineup:
+                        elif lineup_ability:
                             # 射程内に脅威がいない状態で、指定済みの定点へスモークを焚く(事前設置)。
                             lineup_target = min(
                                 lineup_candidates,
@@ -1024,8 +1156,9 @@ class CarryEnv:
                                     abs(int(cell[1]) - int(self.carrier.pos[1])),
                                 ),
                             )
-                            smoke_lineup_used = True
-                            self.smoke_lineup_used = True
+                            lineup_ability_used = True
+                            if is_smoke:
+                                self.smoke_lineup_used = True
                             _apply_ability(
                                 self.carrier, self.carrier.ability_name, tuple(map(int, lineup_target)),
                                 self.smokes, self.attackers + self.defenders, smoke_cells,
@@ -1072,6 +1205,9 @@ class CarryEnv:
 
         self._resolve_shots()
 
+        if orb_requested and self.carrier.is_alive:
+            _completed, orb_reward = collect_orb_tick(self.carrier, self.available_orbs)
+
         for u in self.attackers + self.defenders:
             u.blind_remaining = max(0, u.blind_remaining - 1)
             u.reveal_remaining = max(0, u.reveal_remaining - 1)
@@ -1110,9 +1246,16 @@ class CarryEnv:
             ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
             plant_action_chosen, on_target_before_action, waypoint_bonus,
             plant_completed_on_priority, carrier_explicit_facing,
-            carrier_had_visible_enemy, carrier_move_dir, smoke_lineup_used,
+            carrier_had_visible_enemy, carrier_move_dir, lineup_ability_used,
             smoke_lineup_opportunity_before_action,
         )
+        if ultimate_used:
+            reward += ultimate_use_reward(ultimate_tactical)
+            if ultimate_aim_target is not None:
+                reward += 0.25 * math.cos(math.radians(
+                    _facing_angle_diff_to_pos(self.carrier, ultimate_aim_target)
+                ))
+        reward += orb_reward
 
         all_units = self.attackers + self.defenders
         self._prev_kills = {u.name: u.kills for u in all_units}
@@ -1121,7 +1264,7 @@ class CarryEnv:
 
         obs, mask = self._collect_observation() if self.carrier.is_alive else (
             np.zeros(OBS_DIM, dtype=np.float32),
-            np.repeat(np.array([True, False, False], dtype=bool), len(FACING_DIRS)),
+            np.repeat(np.array([True, False, False, False, False], dtype=bool), len(FACING_DIRS)),
         )
         return obs, mask, reward, done
 
@@ -1184,11 +1327,11 @@ class CarryEnv:
         self, ability_whiff, ability_overlap, plant_tick_progress, plant_completed,
         plant_action_chosen, on_target_before_action, waypoint_bonus=0.0,
         plant_completed_on_priority=False, chosen_facing=None,
-        had_visible_enemy=False, move_dir=None, smoke_lineup_used=False,
+        had_visible_enemy=False, move_dir=None, lineup_ability_used=False,
         smoke_lineup_opportunity_before_action=False,
     ):
-        reward = STEP_PENALTY + waypoint_bonus + (SMOKE_LINEUP_REWARD if smoke_lineup_used else 0.0)
-        if smoke_lineup_opportunity_before_action and not smoke_lineup_used:
+        reward = STEP_PENALTY + waypoint_bonus + (SMOKE_LINEUP_REWARD if lineup_ability_used else 0.0)
+        if smoke_lineup_opportunity_before_action and not lineup_ability_used:
             reward += SMOKE_LINEUP_WAIT_PENALTY
 
         # 視認中の敵がいない時だけ、進行方向を向く弱いshaping報酬を与える。
@@ -1351,8 +1494,12 @@ def train(
                     for site, cells in WAYPOINT_CELLS_BY_SITE.items()
                 },
                 "smoke_lineup_cells_by_site": {
-                    site: [tuple(map(int, cell)) for cell in cells]
-                    for site, cells in SMOKE_LINEUP_CELLS_BY_SITE.items()
+                    site: [tuple(map(int, cell)) for cell in ABILITY_LINEUP_POINTS["SMOKE"]]
+                    for site in ("left", "right")
+                },
+                "ability_lineup_points": {
+                    ability: [tuple(map(int, cell)) for cell in cells]
+                    for ability, cells in ABILITY_LINEUP_POINTS.items()
                 },
             },
             path,

@@ -16,6 +16,7 @@ TEAM_AI_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
+    #"Omoko Gaming v1 R": "omoko_gaming_v1_r",
     "Fnatic v2": "fnatic_v2",
     "Fnatic v1": "fnatic_v1",
     "Touyama Gaming v1": "touyama_gaming_v1",

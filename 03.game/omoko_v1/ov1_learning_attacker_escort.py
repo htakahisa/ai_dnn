@@ -69,12 +69,16 @@ from ov1_train_attacker_escort import (
     FLASH_RANGE,
     DEFENDER_SPAWN_VALUE,
 )
+from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
 
 # ---------------------------------------------------------------------------
 # 行動定義(train_attacker_escort.py の EscortEnv と同一でなければならない)
 # ---------------------------------------------------------------------------
-ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY, ACTION_ABILITY = range(6)
-BASE_N_ACTIONS = 6
+(
+    ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_STAY,
+    ACTION_ABILITY, ACTION_ULTIMATE, ACTION_ORB,
+) = range(8)
+BASE_N_ACTIONS = 8
 FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 N_ACTIONS = BASE_N_ACTIONS * len(FACING_DIRS)
 _MOVE_DELTA = {
@@ -117,7 +121,7 @@ DIST_BAND_MIN = 2
 DIST_BAND_MAX = 7
 DIST_NORM_MAX = 15.0
 
-OBS_DIM = 62  # train_attacker_escort.py(omoko_v1版) EscortEnv._obs_dim() と一致
+OBS_DIM = 73  # train_attacker_escort.py(omoko_v1版) EscortEnv._obs_dim() と一致
               # (facing onehotが4→8方向化により44→52、チーム共有目撃情報4次元追加により52→56、
               #  警戒点の推奨立ち位置(大文字ヒント)方向3次元追加により59→62)
 
@@ -868,6 +872,24 @@ class Ov1LearningAttackerEscortController:
         hint_available, hint_dr, hint_dc = self._position_hint_info(char, grid)
         obs.extend([hint_available, hint_dr, hint_dc])
 
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        team_visible = self.team_sighting.last_seen_enemy is not None
+        goal_distance = self._get_goal_dist_map(grid, goal)[r, c]
+        site_entry = np.isfinite(goal_distance) and goal_distance <= 12
+        obs.extend(ultimate_context(
+            char,
+            self_sighting=enemy_char is not None,
+            team_sighting=team_visible,
+            tactical=site_entry and (enemy_char is not None or team_visible or bool(watch_visible)),
+        ))
+        obs.extend(orb_context(char, available_orbs, grid, allies))
+
         obs_arr = np.array(obs, dtype=np.float32)
         assert obs_arr.shape[0] == OBS_DIM, (
             f"観測次元がOBS_DIM({OBS_DIM})と不一致: {obs_arr.shape[0]}。"
@@ -875,7 +897,7 @@ class Ov1LearningAttackerEscortController:
         )
         return obs_arr
 
-    def _action_mask(self, char, grid, chars, carry_pos):
+    def _action_mask(self, char, grid, chars, carry_pos, available_orbs=()):
         r, c = int(char.pos[0]), int(char.pos[1])
         base_mask = np.ones(BASE_N_ACTIONS, dtype=bool)
         for a, (dr, dc) in _MOVE_DELTA.items():
@@ -920,6 +942,15 @@ class Ov1LearningAttackerEscortController:
                 ) is not None
             if not has_target:
                 base_mask[ACTION_ABILITY] = False
+
+        allies = [
+            other for other in chars
+            if getattr(other, "is_alive", True) and other.team == char.team
+        ]
+        base_mask[ACTION_ULTIMATE] = ultimate_ready(char)
+        base_mask[ACTION_ORB] = (
+            (r, c) in available_orbs and orb_priority(char, allies)
+        )
 
         return np.repeat(base_mask, len(FACING_DIRS))
 
@@ -967,8 +998,11 @@ class Ov1LearningAttackerEscortController:
             return escape_step
 
         carry_pos, _goal = self._resolve_carry_and_goal(char, game_state)
+        available_orbs = {
+            tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
+        }
         obs = self._build_obs(char, game_state, st)
-        mask = self._action_mask(char, grid, chars, carry_pos)
+        mask = self._action_mask(char, grid, chars, carry_pos, available_orbs)
 
         if (not self.greedy) and np.random.random() < self.epsilon:
             action_idx = int(np.random.choice(np.flatnonzero(mask)))
@@ -981,6 +1015,22 @@ class Ov1LearningAttackerEscortController:
 
         action, facing = decode_action(action_idx)
         r, c = int(char.pos[0]), int(char.pos[1])
+
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+
+        if action == ACTION_ORB:
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return [r, c], "COLLECT_ORB"
+
+        if action == ACTION_ULTIMATE:
+            payload = {"ultimate": str(getattr(char, "ultimate_name", "")).upper(), "facing": facing}
+            if payload["ultimate"] == "ESCAPE":
+                payload["target"] = tuple(map(int, _goal))
+            st["last_delta"] = (0.0, 0.0)
+            st["stuck"] += 1
+            return [r, c], payload
 
         # Keep inference deterministic with the combat action mask used during
         # training, including pre-existing checkpoints.
