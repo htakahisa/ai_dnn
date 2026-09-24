@@ -87,6 +87,8 @@ class DualRoleTeamAI:
         self.game = None
 
     def _wrap(self, controller):
+        if getattr(controller, "handles_team_perception", False):
+            return controller
         if isinstance(controller, IQAwareController):
             return controller
         if isinstance(controller, UserInputController):
