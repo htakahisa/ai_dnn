@@ -1,5 +1,13 @@
 """Safe team-perception boundary for coach_v1 actors."""
 
+from .belief_memory import (
+    BeliefInputError,
+    BeliefMemory,
+    BeliefSnapshot,
+    EnemyBelief,
+    WatchPointBelief,
+    normalize_age,
+)
 from .team_perception import (
     AllyPerception,
     EnemyPublicState,
@@ -14,7 +22,11 @@ from .team_perception import (
 
 __all__ = [
     "AllyPerception",
+    "BeliefInputError",
+    "BeliefMemory",
+    "BeliefSnapshot",
     "EnemyPublicState",
+    "EnemyBelief",
     "EnemySighting",
     "PerceptionInputError",
     "PerceptionTick",
@@ -22,4 +34,6 @@ __all__ = [
     "SpikeSharedInfo",
     "TeamPerceptionBuilder",
     "TeamPerceptionSnapshot",
+    "WatchPointBelief",
+    "normalize_age",
 ]
