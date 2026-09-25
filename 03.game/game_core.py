@@ -547,7 +547,7 @@ class Character:
         self.moved_this_tick = False
         self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
-        self.recon_charges = 1 if self.ability_name == "RECON" else 0
+        self.recon_charges = 2 if self.ability_name == "RECON" else 0
         self.blind_remaining = 0.0
         self.reveal_remaining = 0.0
         self.los_revealed = False
