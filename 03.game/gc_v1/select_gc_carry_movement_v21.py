@@ -45,6 +45,26 @@ def require_only_carry_movement_changed(baseline, candidate, label):
                     raise ValueError(
                         f"{label} changed frozen Carry action rows in {name}"
                     )
+            elif name in ("feature.0.weight", "facing_feature.0.weight"):
+                old, new = before[name], after[name]
+                if old.shape[0] != new.shape[0] or old.shape[1] > new.shape[1]:
+                    raise ValueError(f"{label} changed input shape {phase}/{name}")
+                if not torch.equal(old, new[:, : old.shape[1]]):
+                    raise ValueError(f"{label} changed frozen input {phase}/{name}")
+            elif name in ("facing_head.weight", "facing_output.weight"):
+                old, new = before[name], after[name]
+                if old.shape[0] != new.shape[0] or old.shape[1] > new.shape[1]:
+                    raise ValueError(f"{label} changed facing shape {phase}/{name}")
+                if not torch.equal(old, new[:, : old.shape[1]]):
+                    raise ValueError(f"{label} changed frozen facing {phase}/{name}")
+            elif before[name].shape != after[name].shape:
+                old, new = before[name], after[name]
+                if old.ndim == new.ndim and all(a <= b for a, b in zip(old.shape, new.shape)):
+                    if old.ndim == 1 and torch.equal(old, new[: old.shape[0]]):
+                        continue
+                    if old.ndim == 2 and torch.equal(old, new[: old.shape[0], : old.shape[1]]):
+                        continue
+                raise ValueError(f"{label} changed non-movement tensor {phase}/{name}")
             elif not torch.equal(before[name], after[name]):
                 raise ValueError(
                     f"{label} changed non-movement tensor {phase}/{name}"

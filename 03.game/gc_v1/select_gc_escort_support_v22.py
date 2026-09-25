@@ -57,8 +57,10 @@ def require_only_escort_movement_changed(baseline, candidate):
                 raise ValueError(f"Non-Escort-movement tensor changed: {phase}/{name}")
 
 
-def require_only_carry_escort_movement_changed(baseline, candidate):
-    """Allow only Carry/Escort displacement rows and new Escort input columns."""
+def require_only_carry_escort_movement_changed(
+    baseline, candidate, allow_facing_changes=False,
+):
+    """Allow movement/orb updates and optional independent facing updates."""
     movement_rows = {
         phase: set(trainer.MOVEMENT_ACTION_ROWS[phase])
         for phase in ("carry", "escort")
@@ -69,38 +71,58 @@ def require_only_carry_escort_movement_changed(baseline, candidate):
         if before.keys() != after.keys():
             raise ValueError(f"{phase} state keys differ from baseline")
         for name in before:
-            if phase in movement_rows and name in (
-                "advantage_head.2.weight", "advantage_head.2.bias"
+            old, new = before[name], after[name]
+            if (
+                allow_facing_changes
+                and phase in movement_rows
+                and name.startswith(("facing_feature.", "facing_head.", "facing_output."))
             ):
-                frozen_rows = [
-                    row for row in range(before[name].shape[0])
-                    if row not in movement_rows[phase]
-                ]
-                if not torch.equal(before[name][frozen_rows], after[name][frozen_rows]):
-                    raise ValueError(f"{phase} frozen action rows changed in {name}")
-            elif phase == "escort" and name in (
-                "feature.0.weight", "facing_feature.0.weight"
-            ):
-                old, new = before[name], after[name]
-                old_width = old.shape[1]
-                new_start = trainer.escort_runtime.FACING_HEAD_OBS_DIM
-                frozen_width = min(old_width, new_start)
-                if (
-                    old.shape[0] != new.shape[0]
-                    or old_width > new.shape[1]
-                    or new.shape[1] > trainer.escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
-                    or not torch.equal(old[:, :frozen_width], new[:, :frozen_width])
+                if old.ndim != new.ndim or any(
+                    before_dim > after_dim
+                    for before_dim, after_dim in zip(old.shape, new.shape)
                 ):
-                    raise ValueError(f"Escort pretrained input weights changed in {name}")
-                if name == "facing_feature.0.weight" and (
-                    not torch.equal(old, new[:, :old_width])
-                    or not torch.equal(
-                        new[:, old_width:], torch.zeros_like(new[:, old_width:])
+                    raise ValueError(f"{phase} facing tensor shape changed unexpectedly: {name}")
+                continue
+            if name in ("feature.0.weight", "facing_feature.0.weight"):
+                if old.shape[0] != new.shape[0] or old.shape[1] > new.shape[1]:
+                    raise ValueError(f"{phase} input shape changed unexpectedly: {name}")
+                if phase in movement_rows and name == "feature.0.weight":
+                    # The orb approach feature is appended after the facing
+                    # input; existing orb columns also train with movement.
+                    mutable_start = (
+                        trainer.runtime.FACING_HEAD_OBS_DIM if phase == "carry"
+                        else trainer.escort_runtime.FACING_HEAD_OBS_DIM
                     )
-                ):
-                    raise ValueError("Escort facing input weights changed")
-            elif not torch.equal(before[name], after[name]):
+                    frozen = min(old.shape[1], mutable_start)
+                    if not torch.equal(old[:, :frozen], new[:, :frozen]):
+                        raise ValueError(f"Frozen tensor changed: {phase}/{name}")
+                    continue
+                if not torch.equal(old, new[:, : old.shape[1]]):
+                    raise ValueError(f"Frozen tensor changed: {phase}/{name}")
+                continue
+            if name in ("facing_head.weight", "facing_output.weight"):
+                if old.shape[0] != new.shape[0] or old.shape[1] > new.shape[1]:
+                    raise ValueError(f"{phase} facing shape changed unexpectedly: {name}")
+                if not torch.equal(old, new[:, : old.shape[1]]):
+                    raise ValueError(f"Frozen tensor changed: {phase}/{name}")
+                continue
+            if name in ("advantage_head.2.weight", "advantage_head.2.bias"):
+                frozen_rows = [row for row in range(old.shape[0])
+                               if phase not in movement_rows or row not in movement_rows[phase]]
+                if not torch.equal(old[frozen_rows], new[frozen_rows]):
+                    raise ValueError(f"{phase} frozen action rows changed in {name}")
+                continue
+            if old.shape != new.shape:
+                if old.ndim == new.ndim and all(a <= b for a, b in zip(old.shape, new.shape)):
+                    if old.ndim == 1 and torch.equal(old, new[: old.shape[0]]):
+                        continue
+                    if old.ndim == 2 and torch.equal(old, new[: old.shape[0], : old.shape[1]]):
+                        continue
+            elif torch.equal(old, new):
+                continue
+            else:
                 raise ValueError(f"Frozen tensor changed: {phase}/{name}")
+            raise ValueError(f"Frozen tensor changed: {phase}/{name}")
 
 
 def main():
@@ -113,6 +135,11 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--overwrite-output", action="store_true")
     parser.add_argument("--allow-data-revision-mismatch", action="store_true")
+    parser.add_argument(
+        "--allow-facing-changes",
+        action="store_true",
+        help="accept Carry/Escort independent-facing tensor updates",
+    )
     parser.add_argument("--max-no-entry-rate", type=float, default=0.30)
     parser.add_argument("--max-timeout-rate", type=float, default=0.10)
     parser.add_argument("--max-quiet-stall-increase", type=float, default=0.05)
@@ -170,7 +197,9 @@ def main():
     candidate = {
         phase: common.load_checkpoint(path) for phase, path in candidate_paths.items()
     }
-    require_only_carry_escort_movement_changed(baseline, candidate)
+    require_only_carry_escort_movement_changed(
+        baseline, candidate, args.allow_facing_changes
+    )
     candidate_metrics = candidate["escort"]["evaluation"]
     baseline_score = trainer.joint_movement_selection_score(
         baseline_metrics, baseline_metrics,
@@ -202,6 +231,19 @@ def main():
     holdout = common.evaluate_combo(
         paths, checkpoints, args.holdout_episodes, args.holdout_seeds
     )
+    candidate_holdout_orb_collections = None
+    holdout_orb_rejected = False
+    if selected == "trained":
+        candidate_holdout_orb_collections = int(holdout.get("orb_collections", 0))
+        if candidate_holdout_orb_collections < 1:
+            # A single evaluation-seed orb pickup is insufficient evidence
+            # that the behavior works on unseen rounds. Keep the safe source.
+            holdout_orb_rejected = True
+            selected_score, selected = baseline_score, "baseline"
+            paths, checkpoints = source_paths, baseline
+            holdout = common.evaluate_combo(
+                paths, checkpoints, args.holdout_episodes, args.holdout_seeds
+            )
     fingerprint = trainer.runtime_data_fingerprint()
     bundle = {
         "episode": checkpoints["escort"].get("episode"),
@@ -225,12 +267,16 @@ def main():
         bundle["models"][phase] = filename
     report = {
         "revision": "carry_escort_joint_movement",
-        "selection_metrics_source": "evaluation seeds; holdout was not used for selection",
+        "selection_metrics_source": (
+            "evaluation seeds; holdout can veto a trained model with zero orb collections"
+        ),
         "baseline_score": list(baseline_score),
         "candidate_score": list(candidate_score),
         "selected_score": list(selected_score),
         "selected": selected,
         "candidate_safety_regression": safety_regression,
+        "holdout_orb_rejected": holdout_orb_rejected,
+        "candidate_holdout_orb_collections": candidate_holdout_orb_collections,
         "baseline_evaluation": baseline_metrics,
         "candidate_evaluation": candidate_metrics,
         "holdout": holdout,

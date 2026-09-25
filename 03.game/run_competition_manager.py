@@ -23,6 +23,12 @@ from map_data import NEW_MAZE_STR
 from party_presets import all_preset_names, canonical_preset_name, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from game_core import PLAYER_COMBOS, get_character_combat_stats
+from tactical_simulator import (
+    TacticalSimulator,
+    RetakeScenario,
+    create_sample_retake_scenario,
+    create_sample_action_handlers,
+)
 
 CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
@@ -2553,6 +2559,11 @@ class CompetitionApp:
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
+        # 戦術シミュレーション手動モード用の変数を初期化
+        self.current_simulator = None
+        self.current_action_handlers = None
+        self.max_ticks = 0
+        self.simulation_step_count = 0
         self.series_score_var = tk.StringVar(value="-")
         self.power_team_var = tk.StringVar(value=self.names[0])
         self.power_summary_var = tk.StringVar(value="チームを選択して計算してください")
@@ -2659,7 +2670,14 @@ class CompetitionApp:
             command=self.open_rating_window,
         )
         self.rating_button.grid(row=0, column=10, padx=(8, 0))
-        frame.grid_columnconfigure(11, weight=1)
+
+        self.tactical_sim_button = tk.Button(
+            frame,
+            text="戦術シミュレーション実行",
+            command=self.run_tactical_simulation,
+        )
+        self.tactical_sim_button.grid(row=0, column=11, padx=(8, 0))
+        frame.grid_columnconfigure(12, weight=1)
         self._update_seed_entry_state()
 
     def _on_render_toggle(self) -> None:
@@ -2675,6 +2693,644 @@ class CompetitionApp:
             self.seed_entry.config(
                 state=("normal" if self.seed_mode_var.get() == "fixed" else "disabled")
             )
+
+    def open_tactical_sim_window(self) -> None:
+        """戦術シミュレーション設定ウィンドウを開く"""
+        import tkinter as tk
+        from tkinter import ttk, messagebox
+        from tactical_simulator import TacticalSimulator, RetakeScenario
+        from map_data import NEW_MAZE_STR
+
+        # マップデータをパース
+        maze = NEW_MAZE_STR.strip().splitlines()
+        maze_height = len(maze)
+        maze_width = len(maze[0])
+        cell_size = 18  # マップの1セルのサイズ(px)
+
+        # 設定ウィンドウを作成
+        sim_window = tk.Toplevel(self.root)
+        sim_window.title("戦術シミュレーター - マップクリック配置")
+        window_width = maze_width * cell_size + 300
+        window_height = max(maze_height * cell_size + 150, 820)
+        sim_window.geometry(f"{window_width}x{window_height}")
+        sim_window.minsize(window_width, window_height)
+
+        # 左側：マップCanvas
+        canvas_frame = ttk.LabelFrame(sim_window, text="マップ（クリックで配置）")
+        canvas_frame.pack(side=tk.LEFT, padx=10, pady=5, fill="both", expand=True)
+
+        canvas = tk.Canvas(
+            canvas_frame,
+            width=maze_width * cell_size,
+            height=maze_height * cell_size,
+            bg="#000000",
+        )
+        canvas.pack()
+
+        # 右側：設定パネル
+        settings_frame = ttk.LabelFrame(sim_window, text="シナリオ設定")
+        settings_frame.pack(side=tk.RIGHT, padx=10, pady=5, fill="y")
+
+        # シナリオ名
+        ttk.Label(settings_frame, text="シナリオ名:").grid(
+            row=0, column=0, padx=5, pady=5, sticky="w"
+        )
+        scenario_name_var = tk.StringVar(value="retake_a_site_custom")
+        ttk.Entry(settings_frame, textvariable=scenario_name_var, width=25).grid(
+            row=0, column=1, padx=5, pady=5
+        )
+
+        # タイマー設定
+        ttk.Label(settings_frame, text="爆弾爆発まで(tick):").grid(
+            row=1, column=0, padx=5, pady=5, sticky="w"
+        )
+        detonate_timer_var = tk.IntVar(value=40)
+        ttk.Spinbox(
+            settings_frame, from_=10, to=120, textvariable=detonate_timer_var, width=10
+        ).grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(settings_frame, text="ラウンド残り(tick):").grid(
+            row=2, column=0, padx=5, pady=5, sticky="w"
+        )
+        round_timer_var = tk.IntVar(value=60)
+        ttk.Spinbox(
+            settings_frame, from_=30, to=180, textvariable=round_timer_var, width=10
+        ).grid(row=2, column=1, padx=5, pady=5)
+
+        # 配置モード切替
+        ttk.Label(settings_frame, text="配置モード:").grid(
+            row=3, column=0, padx=5, pady=5, sticky="w"
+        )
+        placement_mode_var = tk.StringVar(value="spike")
+        placement_modes = [
+            ("爆弾(スパイク)", "spike"),
+            ("攻撃側プレイヤー", "attacker"),
+            ("守備側プレイヤー", "defender"),
+            ("削除", "delete"),
+        ]
+        for i, (text, value) in enumerate(placement_modes):
+            ttk.Radiobutton(
+                settings_frame, text=text, variable=placement_mode_var, value=value
+            ).grid(row=3 + i, column=1, padx=5, pady=2, sticky="w")
+
+        # 配置済みオブジェクト保存用
+        placed_spike = None  # (x, y)
+        placed_attackers = []  # list of (x,y,name)
+        placed_defenders = []  # list of (x,y,name)
+        canvas_items = []  # 描画した図形を保存
+
+        # マップを描画
+        def draw_base_map():
+            """ベースのマップを描画"""
+            for y, row in enumerate(maze):
+                for x, cell in enumerate(row):
+                    x1 = x * cell_size
+                    y1 = y * cell_size
+                    x2 = x1 + cell_size
+                    y2 = y1 + cell_size
+                    if cell == "1":  # 壁
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#48505c", outline="#667080"
+                        )
+                    elif cell == "0":  # 通路
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#1c2633", outline="#344252"
+                        )
+                    elif cell == "2":  # Aサイト（爆弾設置エリア）
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#70443d", outline="#a56559"
+                        )
+                    elif cell == "4":  # 攻撃側スポーン
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#24516a", outline="#4e9ac1"
+                        )
+                    elif cell == "3":  # 守備側スポーン
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#536128", outline="#91a84a"
+                        )
+                    else:
+                        canvas.create_rectangle(
+                            x1, y1, x2, y2, fill="#263342", outline="#405264"
+                        )
+
+        def clear_all_placed():
+            """配置したオブジェクトを全て消去"""
+            for item in canvas_items:
+                canvas.delete(item)
+            canvas_items.clear()
+            placed_attackers.clear()
+            placed_defenders.clear()
+            nonlocal placed_spike
+            placed_spike = None
+            redraw_all_placed()
+
+        def redraw_all_placed():
+            """全ての配置済みオブジェクトを再描画"""
+            # 爆弾を描画
+            if placed_spike:
+                x, y = placed_spike
+                cx = x * cell_size + cell_size / 2
+                cy = y * cell_size + cell_size / 2
+                item = canvas.create_oval(
+                    cx - 8, cy - 8, cx + 8, cy + 8, fill="#ff4400", tags="spike"
+                )
+                canvas_items.append(item)
+                text_item = canvas.create_text(cx, cy, text="💣", font=("Arial", 10))
+                canvas_items.append(text_item)
+            # 攻撃側を描画
+            for i, (x, y, name) in enumerate(placed_attackers):
+                cx = x * cell_size + cell_size / 2
+                cy = y * cell_size + cell_size / 2
+                item = canvas.create_oval(
+                    cx - 7, cy - 7, cx + 7, cy + 7, fill="#0066ff", tags="attacker"
+                )
+                canvas_items.append(item)
+                text_item = canvas.create_text(
+                    cx, cy, text=f"A{i+1}", font=("Arial", 8), fill="white"
+                )
+                canvas_items.append(text_item)
+            # 守備側を描画
+            for i, (x, y, name) in enumerate(placed_defenders):
+                cx = x * cell_size + cell_size / 2
+                cy = y * cell_size + cell_size / 2
+                item = canvas.create_oval(
+                    cx - 7, cy - 7, cx + 7, cy + 7, fill="#00cc00", tags="defender"
+                )
+                canvas_items.append(item)
+                text_item = canvas.create_text(
+                    cx, cy, text=f"D{i+1}", font=("Arial", 8), fill="black"
+                )
+                canvas_items.append(text_item)
+
+        def on_canvas_click(event):
+            """Canvasクリック時の処理"""
+            x = event.x // cell_size
+            y = event.y // cell_size
+            if x < 0 or x >= maze_width or y < 0 or y >= maze_height:
+                return
+            cell = maze[y][x]
+            if cell == "1":  # 壁には配置不可
+                return
+
+            mode = placement_mode_var.get()
+            nonlocal placed_spike
+            # 既に何かが配置されているか確認
+            is_occupied = False
+            if placed_spike == (x, y):
+                is_occupied = True
+            for ax, ay, _ in placed_attackers:
+                if ax == x and ay == y:
+                    is_occupied = True
+                    break
+            for dx, dy, _ in placed_defenders:
+                if dx == x and dy == y:
+                    is_occupied = True
+                    break
+
+            if mode == "spike":
+                # 爆弾は一つだけ配置可能、空いているマスだけに配置
+                if not is_occupied:
+                    placed_spike = (x, y)
+            elif mode == "attacker":
+                # 空いているマスだけに配置
+                if not is_occupied:
+                    placed_attackers.append((x, y, f"攻撃側{len(placed_attackers)+1}"))
+            elif mode == "defender":
+                # 空いているマスだけに配置
+                if not is_occupied:
+                    placed_defenders.append((x, y, f"守備側{len(placed_defenders)+1}"))
+            elif mode == "delete":
+                # 最も近いオブジェクトを削除
+                if (
+                    placed_spike
+                    and abs(placed_spike[0] - x) < 1
+                    and abs(placed_spike[1] - y) < 1
+                ):
+                    placed_spike = None
+                else:
+                    for i, (ax, ay, _) in enumerate(placed_attackers):
+                        if abs(ax - x) < 1 and abs(ay - y) < 1:
+                            del placed_attackers[i]
+                            break
+                    for i, (dx, dy, _) in enumerate(placed_defenders):
+                        if abs(dx - x) < 1 and abs(dy - y) < 1:
+                            del placed_defenders[i]
+                            break
+            # 再描画
+            for item in canvas_items:
+                canvas.delete(item)
+            canvas_items.clear()
+            redraw_all_placed()
+
+        # クリアボタン
+        ttk.Button(settings_frame, text="全てクリア", command=clear_all_placed).grid(
+            row=9, column=0, columnspan=2, padx=5, pady=5
+        )
+
+        # AI選択フレーム
+        ai_frame = ttk.LabelFrame(settings_frame, text="AI設定")
+        ai_frame.grid(row=10, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+
+        # 使用可能なAI一覧
+        available_ais = [
+            ("Touyama Gaming v2", "touyama_gaming_v2"),
+            ("Touyama Gaming v1", "touyama_gaming_v1"),
+            ("Fnatic v2", "fnatic_v2"),
+            ("Fnatic v1", "fnatic_v1"),
+            ("Toru AI v3.1", "toru_ai_v3.1"),
+            ("Omoko Gaming v1", "omoko_gaming_v1"),
+            ("Ghost Champions v1", "ghost_champions_v1"),
+            ("ロジック（デフォルト）", "default"),
+        ]
+        ai_names = [name for name, key in available_ais]
+        ai_keys = {name: key for name, key in available_ais}
+
+        from gc_v1.character_stats_gc import GC_ROSTER_ORDER
+        from touyama_v2.tv2_character_stats_touyama import TOUYAMA_ROSTER_ORDER
+
+        def default_roster_for_ai(ai_key):
+            return (
+                GC_ROSTER_ORDER.copy()
+                if str(ai_key).startswith("ghost_champions")
+                else TOUYAMA_ROSTER_ORDER.copy()
+            )
+
+        def fixed_roster_for_ai(ai_key):
+            normalized = str(ai_key).lower()
+            if normalized.startswith("ghost_champions"):
+                return GC_ROSTER_ORDER.copy()
+            if normalized.startswith("touyama_gaming"):
+                return TOUYAMA_ROSTER_ORDER.copy()
+            return None
+
+        # アタッカーAI選択
+        ttk.Label(ai_frame, text="攻撃側AI:").grid(
+            row=0, column=0, padx=5, pady=5, sticky="w"
+        )
+        attacker_ai_var = tk.StringVar(value="Touyama Gaming v2")
+        attacker_ai_combo = ttk.Combobox(
+            ai_frame,
+            textvariable=attacker_ai_var,
+            values=ai_names,
+            state="readonly",
+            width=20,
+        )
+        attacker_ai_combo.grid(row=0, column=1, padx=5, pady=5)
+        attacker_ai_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: attacker_roster_var.set(
+                ",".join(default_roster_for_ai(ai_keys[attacker_ai_var.get()]))
+            ),
+        )
+
+        # ディフェンダーAI選択
+        ttk.Label(ai_frame, text="守備側AI:").grid(
+            row=1, column=0, padx=5, pady=5, sticky="w"
+        )
+        defender_ai_var = tk.StringVar(value="Touyama Gaming v2")
+        defender_ai_combo = ttk.Combobox(
+            ai_frame,
+            textvariable=defender_ai_var,
+            values=ai_names,
+            state="readonly",
+            width=20,
+        )
+        defender_ai_combo.grid(row=1, column=1, padx=5, pady=5)
+        defender_ai_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: defender_roster_var.set(
+                ",".join(default_roster_for_ai(ai_keys[defender_ai_var.get()]))
+            ),
+        )
+
+        # ロスター選択。攻撃側と守備側は各AIの固定ロスターを別々に持つ。
+        attacker_roster_var = tk.StringVar(
+            value=",".join(default_roster_for_ai("touyama_gaming_v2"))
+        )
+        defender_roster_var = tk.StringVar(
+            value=",".join(default_roster_for_ai("touyama_gaming_v2"))
+        )
+        ttk.Label(ai_frame, text="攻撃側キャラクター(カンマ区切り):").grid(
+            row=2, column=0, padx=5, pady=5, sticky="w"
+        )
+        ttk.Entry(ai_frame, textvariable=attacker_roster_var, width=20).grid(
+            row=2, column=1, padx=5, pady=5
+        )
+        ttk.Label(ai_frame, text="守備側キャラクター(カンマ区切り):").grid(
+            row=3, column=0, padx=5, pady=5, sticky="w"
+        )
+        ttk.Entry(ai_frame, textvariable=defender_roster_var, width=20).grid(
+            row=3, column=1, padx=5, pady=5
+        )
+
+        # 手動操作モード
+        manual_frame = ttk.LabelFrame(settings_frame, text="実行設定")
+        manual_frame.grid(row=12, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+
+        manual_mode_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            manual_frame, text="手動操作モード(1tickずつ)", variable=manual_mode_var
+        ).grid(row=0, column=0, padx=5, pady=5)
+        max_ticks_var = tk.IntVar(value=100)
+        ttk.Label(manual_frame, text="最大ticks:").grid(
+            row=1, column=0, padx=5, pady=5, sticky="w"
+        )
+        ttk.Spinbox(
+            manual_frame, from_=50, to=500, textvariable=max_ticks_var, width=10
+        ).grid(row=1, column=1, padx=5, pady=5)
+
+        # 手動ステップボタン（初期状態は無効）
+        step_button = ttk.Button(manual_frame, text="次の1tick実行", state="disabled")
+        step_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+        # マップ初期描画
+        draw_base_map()
+        canvas.bind("<Button-1>", on_canvas_click)
+
+        # シミュレーション開始処理
+        def start_simulation():
+            if not placed_spike:
+                messagebox.showerror("エラー", "爆弾(スパイク)を配置してください")
+                return
+            if len(placed_attackers) < 1 or len(placed_defenders) < 1:
+                messagebox.showerror(
+                    "エラー", "攻撃側と守備側を最低1人ずつ配置してください"
+                )
+                return
+
+            selected_attacker_ai_name = attacker_ai_var.get()
+            selected_defender_ai_name = defender_ai_var.get()
+            attacker_ai_key = ai_keys[selected_attacker_ai_name]
+            defender_ai_key = ai_keys[selected_defender_ai_name]
+
+            # 配置した人数分だけ名前を自動生成（どのAIでも任意の人数で動作可能）
+            attacker_names = [f"A_player_{i}" for i in range(len(placed_attackers))]
+            defender_names = [f"D_player_{i}" for i in range(len(placed_defenders))]
+
+            # ロスター入力欄に名前が指定されていればそちらを優先使用
+            user_attacker_names = [
+                name.strip()
+                for name in attacker_roster_var.get().split(",")
+                if name.strip()
+            ]
+            user_defender_names = [
+                name.strip()
+                for name in defender_roster_var.get().split(",")
+                if name.strip()
+            ]
+
+            # ユーザーが入力した名前が足りない分は自動生成した名前を使用
+            for i in range(len(attacker_names)):
+                if i < len(user_attacker_names):
+                    attacker_names[i] = user_attacker_names[i]
+            for i in range(len(defender_names)):
+                if i < len(user_defender_names):
+                    defender_names[i] = user_defender_names[i]
+            # どのAIでも任意の人数で動作可能なのでチェックを削除
+
+            # プレイヤー情報を収集
+            attackers = []
+            for i, (x, y, _) in enumerate(placed_attackers):
+                name = attacker_names[i] if i < len(attacker_names) else f"Attacker_{i}"
+                attackers.append({"name": name, "pos": (y, x), "facing": "E"})
+            defenders = []
+            for i, (x, y, _) in enumerate(placed_defenders):
+                name = defender_names[i] if i < len(defender_names) else f"Defender_{i}"
+                defenders.append({"name": name, "pos": (y, x), "facing": "E"})
+
+            # シナリオ作成
+            scenario = RetakeScenario(
+                scenario_name=scenario_name_var.get(),
+                description="マップクリックで配置したカスタムシナリオ",
+                planted_pos=(placed_spike[1], placed_spike[0]),
+                detonate_timer=detonate_timer_var.get(),
+                round_timer=round_timer_var.get(),
+                attackers=attackers,
+                defenders=defenders,
+                initial_smokes=[],
+            )
+
+            # デフォルトの行動ハンドラー作成
+            def create_default_handlers():
+                handlers = {}
+                for a in attackers:
+
+                    def move_west(c, sim):
+                        c.x -= 0.05
+
+                    handlers[f"A_{a['name']}"] = move_west
+                for d in defenders:
+
+                    def move_east(c, sim):
+                        c.x += 0.05
+
+                    handlers[f"D_{d['name']}"] = move_east
+                return handlers
+
+            action_handlers = create_default_handlers()
+
+            simulation_items = []
+
+            def render_simulation(simulator):
+                """シミュレーション中の状態を設定画面へ反映する。"""
+                import time
+
+                # canvasが存在するか確認してからdelete
+                if canvas.winfo_exists():
+                    for item in simulation_items:
+                        try:
+                            canvas.delete(item)
+                        except:
+                            pass
+                    simulation_items.clear()
+                else:
+                    # canvasが存在しない場合はシミュレーションを停止
+                    self.simulation_stop_flag = True
+                    return
+
+                if simulator.is_planted and simulator.planted_pos:
+                    row, col = simulator.planted_pos
+                    cx = col * cell_size + cell_size / 2
+                    cy = row * cell_size + cell_size / 2
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - 8,
+                            cy - 8,
+                            cx + 8,
+                            cy + 8,
+                            fill="#ff4400",
+                            outline="#ffd166",
+                            width=2,
+                        )
+                    )
+
+                for smoke in simulator.smokes:
+                    for row, col in smoke.get("cells", []):
+                        x1 = col * cell_size + 2
+                        y1 = row * cell_size + 2
+                        simulation_items.append(
+                            canvas.create_rectangle(
+                                x1,
+                                y1,
+                                x1 + cell_size - 4,
+                                y1 + cell_size - 4,
+                                fill="#687080",
+                                outline="#9aa3b5",
+                            )
+                        )
+
+                team_counts = {"A": 0, "D": 0}
+                for char in simulator.chars:
+                    if not char.is_alive:
+                        continue
+                    row, col = char.pos
+                    cx = col * cell_size + cell_size / 2
+                    cy = row * cell_size + cell_size / 2
+                    team = char.team
+                    team_counts[team] += 1
+                    fill = "#0066ff" if team == "A" else "#00cc00"
+                    text_fill = "white" if team == "A" else "black"
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - 7,
+                            cy - 7,
+                            cx + 7,
+                            cy + 7,
+                            fill=fill,
+                            outline="#ffffff",
+                        )
+                    )
+                    simulation_items.append(
+                        canvas.create_text(
+                            cx,
+                            cy,
+                            text=f"{team}{team_counts[team]}",
+                            font=("Arial", 7, "bold"),
+                            fill=text_fill,
+                        )
+                    )
+
+                self.status_var.set(
+                    f"実行中: {simulator.total_ticks}/{max_ticks_var.get()} ticks  "
+                    f"A:{team_counts['A']}人 D:{team_counts['D']}人"
+                )
+                canvas.update_idletasks()
+                sim_window.update()
+                time.sleep(0.04)
+
+            self.status_var.set(f"シミュレーション開始: {scenario.scenario_name}")
+            sim_window.update()
+
+            try:
+                # 選択したAIキーを取得
+                custom_roster = defender_names
+
+                print(f"シミュレーション開始: {scenario.scenario_name}")
+                print(f"攻撃側AI: {selected_attacker_ai_name} ({attacker_ai_key})")
+                print(f"守備側AI: {selected_defender_ai_name} ({defender_ai_key})")
+                print(f"使用ロスター: {custom_roster}")
+                simulator = TacticalSimulator(
+                    scenario,
+                    attacker_ai_name=attacker_ai_key,
+                    defender_ai_name=defender_ai_key,
+                    custom_roster=custom_roster,
+                )
+                if not manual_mode_var.get():
+                    # シミュレーションをループ実行
+                    # シミュレーションを1回だけ実行（ラウンド終了で停止）
+                    def run_single_simulation():
+                        # シミュレーションを実行
+                        result = simulator.run(
+                            action_handlers,
+                            max_ticks=max_ticks_var.get(),
+                            on_tick=render_simulation,
+                        )
+
+                        # ラウンド終了後にステータスを更新
+                        self.status_var.set("シミュレーションが終了しました")
+
+                    # シミュレーションを別スレッドで実行（UIがフリーズしないように）
+                    import threading
+
+                    threading.Thread(target=run_single_simulation, daemon=True).start()
+                else:
+                    # 手動モード初期化
+                    self.current_simulator = simulator
+                    self.current_action_handlers = action_handlers
+                    self.max_ticks = max_ticks_var.get()
+                    self.simulation_step_count = 0
+
+                    def execute_step():
+                        if (
+                            not self.current_simulator
+                            or self.current_simulator.round_over
+                            or self.simulation_step_count >= self.max_ticks
+                        ):
+                            if self.current_simulator:
+                                result = type(
+                                    "SimulationResult",
+                                    (object,),
+                                    {
+                                        "winner": (
+                                            "attackers"
+                                            if self.current_simulator.attacker_wins
+                                            > self.current_simulator.defender_wins
+                                            else "defenders"
+                                        ),
+                                        "total_ticks": self.simulation_step_count,
+                                        "replay_frames": self.current_simulator.replay_frames,
+                                    },
+                                )()
+                                saved_path = self.current_simulator.save_result(result)
+                                self.status_var.set(
+                                    f"シミュレーション完了! {saved_path}"
+                                )
+                                messagebox.showinfo(
+                                    "完了",
+                                    f"シミュレーションが終了しました\n保存先: {saved_path}",
+                                )
+                                self.current_simulator = None
+                            step_button.config(state="disabled")
+                            return
+
+                        # 1tick実行
+                        simulator = self.current_simulator
+                        simulator._record_replay_frame()
+                        simulator._apply_player_actions(self.current_action_handlers)
+                        simulator._build_occupancy_counts()
+                        try:
+                            for c in simulator._move_order():
+                                if c.is_alive:
+                                    simulator.move_character(c)
+                        finally:
+                            simulator._clear_occupancy_counts()
+                        if simulator.round_timer > 0:
+                            simulator.round_timer -= 1
+                        if simulator.detonate_timer > 0:
+                            simulator.detonate_timer -= 1
+                        simulator.process_battle()
+                        simulator.battle_tick += 1
+                        self.simulation_step_count += 1
+                        self.status_var.set(
+                            f"手動実行中: {self.simulation_step_count}ticks経過"
+                        )
+
+                    step_button.config(command=execute_step, state="normal")
+            except Exception as e:
+                import traceback
+
+                traceback.print_exc()
+                messagebox.showerror("エラー", f"シミュレーションエラー: {str(e)}")
+
+        # 開始ボタン
+        start_button = ttk.Button(
+            settings_frame, text="シミュレーション開始", command=start_simulation
+        )
+        start_button.grid(row=13, column=0, columnspan=2, padx=5, pady=15)
+
+    def run_tactical_simulation(self) -> None:
+        """戦術シミュレーションの設定ウィンドウを開く"""
+        self.open_tactical_sim_window()
 
     def open_rating_window(self) -> None:
         if self.rating_window is not None and self.rating_window.winfo_exists():

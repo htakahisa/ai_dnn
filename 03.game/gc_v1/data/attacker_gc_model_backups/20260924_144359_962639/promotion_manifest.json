@@ -1,0 +1,43 @@
+{
+  "operation": "gc_attacker_model_promotion",
+  "timestamp": "2026-09-24T05:43:59.962877+00:00",
+  "backup_dir": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260924_144359_962639",
+  "models": {
+    "carry": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "source_sha256": "358cd87de210d0d1f100f08a9c3dafaf306460b8f5553647dbb6dced5c765646",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "358cd87de210d0d1f100f08a9c3dafaf306460b8f5553647dbb6dced5c765646",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260924_144359_962639\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "target_sha256_after": "358cd87de210d0d1f100f08a9c3dafaf306460b8f5553647dbb6dced5c765646"
+    },
+    "escort": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "source_sha256": "f55cb4e05b13dd6d84b60483ed297d5174c8330cb664ddf0b8633c02c3569472",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "f55cb4e05b13dd6d84b60483ed297d5174c8330cb664ddf0b8633c02c3569472",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260924_144359_962639\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "target_sha256_after": "f55cb4e05b13dd6d84b60483ed297d5174c8330cb664ddf0b8633c02c3569472"
+    },
+    "retrieve": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_retrieve_gc_data\\dqn_attacker_retrieve_gc_best_by_eval.pt",
+      "source_sha256": "54f9d00c417aac03c6a30b6a186713cb317ef8905bc6ace6344be5b883391dbb",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_retrieve_gc_data\\dqn_attacker_retrieve_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "54f9d00c417aac03c6a30b6a186713cb317ef8905bc6ace6344be5b883391dbb",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260924_144359_962639\\dqn_attacker_retrieve_gc_best_by_eval.pt",
+      "target_sha256_after": "54f9d00c417aac03c6a30b6a186713cb317ef8905bc6ace6344be5b883391dbb"
+    },
+    "guard": {
+      "source": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "source_sha256": "737ec450c192241f8846296b1e4d981c4db6eea26f057967c6230b1b3d5211f0",
+      "target": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "target_existed": true,
+      "target_sha256_before": "737ec450c192241f8846296b1e4d981c4db6eea26f057967c6230b1b3d5211f0",
+      "backup": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_gc_model_backups\\20260924_144359_962639\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "target_sha256_after": "737ec450c192241f8846296b1e4d981c4db6eea26f057967c6230b1b3d5211f0"
+    }
+  }
+}

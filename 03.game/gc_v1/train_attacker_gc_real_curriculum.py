@@ -30,10 +30,12 @@ from train_attacker_carry_gc_real import (
 )
 import learning_attacker_escort_gc as escort_runtime
 import learning_attacker_guard_gc as guard_runtime
-from gc_facing import FACING_DIRS, facing_towards
+from gc_facing import FACING_DIRS, facing_towards, nearest_alive_enemy_facing
+from game_core import SHOOTING_SITE_DIGREE
 from carry_route_priority import current_carry_route_priority
 from positioning_gc import REGISTERED_PLANT_CELLS, team_plant_target
 from navigation_intent_gc import (
+    _distance_map,
     navigation_intent,
     own_macro,
     can_engage,
@@ -49,28 +51,29 @@ from navigation_intent_gc import (
     designated_route_blocking,
     FAKE_WAIT_SUPPORT_DIM,
 )
-from ultimate_tactics_gc import tactical_ultimate_window
+from ultimate_tactics_gc import ATTACKER_ORB_APPROACH_RADIUS, tactical_ultimate_window
 
 PHASES = ("carry", "escort", "guard")
-VERSIONS = {"carry": 12, "escort": 13, "guard": 5}
+VERSIONS = {"carry": 13, "escort": 14, "guard": 5}
 FACING_PHASES = ("carry", "escort")
-TRAINING_REVISION = "independent_confident_facing_v20"
+TRAINING_REVISION = "independent_confident_facing_v21"
 FACING_PARAMETER_PREFIXES = (
     "facing_head.",
     "facing_feature.",
     "facing_output.",
 )
 MOVEMENT_ACTION_ROWS = {
-    # Carry v5+ has explicit STAY/ABILITY/PLANT/ULT actions.  Only these five
-    # rows control displacement; ability, plant, ultimate, and facing tensors
-    # therefore remain bit-for-bit fixed during movement-only training.
-    "carry": (0, 2, 4, 6, 8),
+    # Carry v5+ has explicit STAY/ABILITY/PLANT/ULT actions.  Displacement and
+    # orb collection are trainable; ability, plant, ultimate, and facing tensors
+    # remain bit-for-bit fixed during movement-only training.
+    "carry": (0, 2, 4, 6, 8, runtime.COLLECT_ORB_ACTION_INDEX),
     "escort": (
         escort_runtime.ACTION_UP,
         escort_runtime.ACTION_DOWN,
         escort_runtime.ACTION_LEFT,
         escort_runtime.ACTION_RIGHT,
         escort_runtime.ACTION_STAY,
+        escort_runtime.ACTION_COLLECT_ORB,
     ),
 }
 RUNTIME_DATA_FILES = tuple(
@@ -87,6 +90,18 @@ CARRY_QUIET_STALL_PENALTY = 0.08
 LATE_ROUND_THRESHOLD = 30
 LATE_QUIET_STALL_EXTRA_PENALTY = 0.12
 TIMEOUT_PENALTY = 20.0
+# A gunfight-contact reward is granted only on the tick a shooter newly gains
+# a valid shot line.  It uses the identical angle and firing cone as the
+# engine, but affects training only; live inference remains policy-driven.
+AIM_CONTACT_REWARD = 1.20
+AIM_CONTACT_MISS_PENALTY = 0.30
+ORB_COLLECTION_REWARD = 3.00
+ORB_COLLECTION_PROGRESS_REWARD = 0.50
+ORB_APPROACH_STEP_REWARD = 0.35
+ORB_INVALID_ACTION_PENALTY = 0.15
+ORB_ELIGIBLE_MISS_PENALTY = 2.00
+ORB_INTERRUPTED_COLLECTION_PENALTY = 1.00
+ORB_ROUND_MISS_PENALTY = 3.00
 FAKE_WAIT_SUPPORT_RADIUS = 4
 FAKE_WAIT_SUPPORT_DESIRED_RADIUS = 2
 
@@ -220,8 +235,10 @@ def restrict_policy_to_facing_head(policy):
         parameter.requires_grad_(True)
 
 
-def restrict_policy_to_movement_rows(policy, rows, input_columns=()):
-    """Train displacement rows and, optionally, newly added observation columns."""
+def restrict_policy_to_movement_rows(
+    policy, rows, input_columns=(), train_facing=False,
+):
+    """Train displacement rows and, optionally, independent facing weights."""
     rows = tuple(map(int, rows))
     input_columns = tuple(map(int, input_columns))
     if not rows:
@@ -249,6 +266,11 @@ def restrict_policy_to_movement_rows(policy, rows, input_columns=()):
     bias_mask[list(rows)] = 1
     output.weight.register_hook(lambda gradient: gradient * weight_mask)
     output.bias.register_hook(lambda gradient: gradient * bias_mask)
+    if train_facing:
+        if not hasattr(policy, "facing_parameters"):
+            raise ValueError("joint movement/facing training requires a facing head")
+        for parameter in policy.facing_parameters():
+            parameter.requires_grad_(True)
 
 
 def reset_movement_rows(policy, rows):
@@ -340,6 +362,49 @@ def combat_reward(phase, action, engaged):
     return 0.02 if stationary else -0.12
 
 
+def combat_contact_aim(game, chars):
+    """Return potential shot contacts and each shooter's post-move aim angle.
+
+    This intentionally mirrors the engine's pre-facing target filtering.  A
+    target outside the firing cone is retained here so a newly exposed enemy
+    can reward good pre-aim instead of disappearing from the signal.
+    """
+    contacts = {}
+    for shooter in chars:
+        if (
+            not getattr(shooter, "is_alive", True)
+            or getattr(shooter, "plant_timer", 0) > 0
+            or getattr(shooter, "defuse_timer", 0) > 0
+            or getattr(shooter, "collecting_orb_this_tick", False)
+        ):
+            continue
+        candidates = [
+            target
+            for target in chars
+            if target.team != shooter.team
+            and getattr(target, "is_alive", True)
+            and game.check_line_of_sight(shooter, target)
+            and game.check_shot_line_of_sight(shooter, target)
+        ]
+        if not candidates:
+            continue
+        target = min(
+            candidates,
+            key=lambda item: (
+                max(
+                    abs(int(item.pos[0]) - int(shooter.pos[0])),
+                    abs(int(item.pos[1]) - int(shooter.pos[1])),
+                ),
+                item.hp,
+                item.name,
+            ),
+        )
+        contacts[(shooter.name, target.name)] = float(
+            game._facing_angle_diff(shooter, target)
+        )
+    return contacts
+
+
 def n_step_transitions(rows, gamma, horizon, allowed_start_actions=None):
     """Back up rewards within one actor/phase segment, never across terminal."""
     allowed = (
@@ -400,7 +465,39 @@ def navigation_teacher_action(phase, obs, mask, final_approach=False):
     return None  # Let exploration learn detours when all short steps are blocked.
 
 
-def observable_teacher_action(phase, obs, mask, controller, context, view=None):
+def nearby_orb_assignment(view, chars, available_orbs, cache):
+    """Choose one nearby, ult-hungry non-carrier using walkable-path distance."""
+    grid = getattr(view, "grid", None)
+    candidates = []
+    for cell in available_orbs:
+        orb = tuple(map(int, cell))
+        distances = _distance_map(view, orb, cache) if grid is not None else None
+        for unit in chars:
+            if (
+                not getattr(unit, "is_alive", True)
+                or getattr(unit, "team", None) != "A"
+                or getattr(unit, "has_spike", False)
+                or getattr(unit, "ultimate_cost", 0) <= 0
+                or getattr(unit, "ultimate_points", 0)
+                >= getattr(unit, "ultimate_cost", 0)
+            ):
+                continue
+            pos = tuple(map(int, unit.pos))
+            distance = (
+                int(distances[pos]) if distances is not None
+                else abs(pos[0] - orb[0]) + abs(pos[1] - orb[1])
+            )
+            if 0 <= distance <= ATTACKER_ORB_APPROACH_RADIUS:
+                candidates.append((distance, str(unit.name), orb, unit, distances))
+    if not candidates:
+        return None
+    distance, _name, orb, unit, distances = min(candidates, key=lambda row: row[:3])
+    return unit, orb, distances, distance
+
+
+def observable_teacher_action(
+    phase, obs, mask, controller, context, view=None, orb_only=False,
+):
     """Label policy-visited states using only the acting character's IQ view.
 
     Labels can be trained without executing them. No production controller
@@ -410,6 +507,59 @@ def observable_teacher_action(phase, obs, mask, controller, context, view=None):
         return None
     char, state = context
     view = view if view is not None else controller.game
+    # Designate the nearest non-carrier attacker as the orb collector.  This
+    # gives the new action a supervised path to the orb; the TD reward then
+    # decides whether the detour is worthwhile in the real round.
+    if phase in ("carry", "escort"):
+        raw_orbs = state.get("available_orbs", ())
+        if not raw_orbs:
+            raw_orbs = getattr(view, "available_orbs", ())
+        if not raw_orbs:
+            raw_orbs = getattr(getattr(controller, "game", None), "available_orbs", ())
+        if not raw_orbs:
+            grid = getattr(view, "grid", None)
+            if grid is not None:
+                raw_orbs = list(zip(*np.where(np.asarray(grid) == 5)))
+        if raw_orbs:
+            real_game = getattr(view, "real_game", view)
+            if getattr(controller, "_orb_teacher_game", None) is not real_game:
+                controller._orb_teacher_game = real_game
+                controller._orb_teacher_maps = {}
+            assignment = nearby_orb_assignment(
+                view, state.get("chars", ()), raw_orbs,
+                controller._orb_teacher_maps,
+            )
+            # Perception wrappers may create an equivalent proxy object for
+            # the acting character, so identity is not reliable here.
+            if assignment is not None and assignment[0].name == getattr(char, "name", None):
+                _collector, orb, distances, current_dist = assignment
+                orb_action = (
+                    runtime.COLLECT_ORB_ACTION_INDEX
+                    if phase == "carry"
+                    else escort_runtime.ACTION_COLLECT_ORB
+                )
+                if tuple(map(int, char.pos)) == orb and orb_action < len(mask) and mask[orb_action]:
+                    return orb_action
+                move_actions = (
+                    ((2, (-1, 0)), (4, (1, 0)), (6, (0, -1)), (8, (0, 1)))
+                    if phase == "carry" else
+                    ((0, (-1, 0)), (1, (1, 0)), (2, (0, -1)), (3, (0, 1)))
+                )
+                improving = []
+                for action, (dr, dc) in move_actions:
+                    if action >= len(mask) or not mask[action]:
+                        continue
+                    nxt = (int(char.pos[0]) + dr, int(char.pos[1]) + dc)
+                    next_dist = (
+                        int(distances[nxt]) if distances is not None
+                        else abs(nxt[0] - orb[0]) + abs(nxt[1] - orb[1])
+                    )
+                    if 0 <= next_dist < current_dist:
+                        improving.append((next_dist, action))
+                if improving:
+                    return min(improving)[1]
+    if orb_only:
+        return None
     ultimate_action = {
         "carry": runtime.ULTIMATE_ACTION_INDEX,
         "escort": escort_runtime.ACTION_ULTIMATE,
@@ -683,16 +833,20 @@ def carrier_entry_sync_needed(screen, state, obs=None):
 
 def optimize_demonstrations(
     policy, optimizer, samples, weight, batch_size=64,
-    focus_samples=None, focus_fraction=0.5,
+    focus_samples=None, focus_fraction=0.5, focus_with_replacement=False,
 ):
     if not samples or weight <= 0:
         return None
     count = min(batch_size, len(samples))
-    focus_count = min(
-        len(focus_samples) if focus_samples is not None else 0,
-        int(count * focus_fraction),
+    focus_count = int(count * focus_fraction) if focus_samples else 0
+    if not focus_with_replacement:
+        focus_count = min(len(focus_samples) if focus_samples else 0, focus_count)
+    batch = (
+        random.choices(list(focus_samples), k=focus_count)
+        if focus_count and focus_with_replacement
+        else random.sample(list(focus_samples), focus_count)
+        if focus_count else []
     )
-    batch = random.sample(list(focus_samples), focus_count) if focus_count else []
     batch += random.sample(list(samples), count - focus_count)
     obs, action, mask = zip(*batch)
     q = policy(torch.from_numpy(np.array(obs)))
@@ -711,6 +865,44 @@ def optimize_demonstrations(
     optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(policy.parameters(), 5.0)
+    optimizer.step()
+    return float(loss.detach())
+
+
+def optimize_orb_collection_head(
+    policy, optimizer, samples, orb_action, batch_size=64,
+):
+    """Raise only COLLECT's advantage against legal alternatives.
+
+    A separate optimizer gives the rare collection row enough learning rate
+    without changing navigation, ability, ultimate, or facing parameters.
+    """
+    if not samples:
+        return None
+    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    obs, actions, masks = zip(*batch)
+    if any(int(action) != orb_action for action in actions):
+        raise ValueError("orb collection replay contains a non-collection label")
+    output = policy.advantage_head[-1]
+    q = policy(torch.from_numpy(np.asarray(obs, dtype=np.float32)))
+    valid = torch.from_numpy(np.asarray(masks, dtype=bool))
+    competitor = q.masked_fill(~valid, -torch.inf)
+    margin = torch.full_like(q, 0.8)
+    margin[:, orb_action] = 0.0
+    loss = (
+        torch.max(competitor + margin, dim=1).values - q[:, orb_action]
+    ).mean()
+    if float(loss.detach()) <= 1e-6:
+        return 0.0
+    weight_grad, bias_grad = torch.autograd.grad(
+        loss, (output.weight, output.bias)
+    )
+    optimizer.zero_grad()
+    output.weight.grad = torch.zeros_like(output.weight)
+    output.bias.grad = torch.zeros_like(output.bias)
+    output.weight.grad[orb_action] = weight_grad[orb_action]
+    output.bias.grad[orb_action] = bias_grad[orb_action]
+    torch.nn.utils.clip_grad_norm_((output.weight, output.bias), 5.0)
     optimizer.step()
     return float(loss.detach())
 
@@ -869,6 +1061,8 @@ def joint_movement_selection_score(
     return (
         int(not unsafe),
         int(violation <= 1e-12),
+        int(metrics.get("orb_collections", 0) > 0),
+        metrics.get("orb_collections", 0) / max(1, metrics.get("episodes", 1)),
         -violation,
         metrics.get("worst_registered_plant_rate", 0.0),
         -metrics.get("worst_carrier_preentry_death_rate", 1.0),
@@ -965,6 +1159,14 @@ def scheduled_learning_rate(base_lr, episode, decay_start, decay_episodes, final
     progress = min(1.0, (episode - decay_start) / max(1, decay_episodes))
     scale = 1.0 - progress * (1.0 - final_scale)
     return float(base_lr * scale)
+
+
+def scheduled_orb_teacher_probability(episode, bootstrap_episodes, final_probability):
+    """Fade forced orb actions so missed opportunities enter the replay buffer."""
+    if bootstrap_episodes <= 0:
+        return float(final_probability)
+    remaining = max(0.0, 1.0 - (episode - 1) / bootstrap_episodes)
+    return float(final_probability + (0.80 - final_probability) * remaining)
 
 
 def phase_facing_selection_score(
@@ -1161,28 +1363,16 @@ def phase_of(char, planted, holder):
 def observable_facing_target(
     phase, char, state, controller, goal=None, action=None, team_sighting=None
 ):
-    """Return ``(direction, confidence, source)`` using observable training data."""
+    """Return ``(direction, confidence, source)`` for facing supervision.
+
+    During training, the closest alive enemy is a privileged teacher target,
+    including while it is behind a wall or smoke.  The policy still receives
+    only its normal observation, so inference remains network-driven.
+    """
     chars = state.get("chars", ())
-    grid = state["grid"]
-    smoke_cells = state.get("smoke_cells", set())
-    visible = [
-        other
-        for other in chars
-        if getattr(other, "is_alive", True)
-        and other.team != char.team
-        and tuple(other.pos) != tuple(char.pos)
-        and runtime._has_los(grid, char.pos, other.pos, smoke_cells)
-    ]
-    if visible:
-        target = min(
-            visible,
-            key=lambda other: max(
-                abs(other.pos[0] - char.pos[0]),
-                abs(other.pos[1] - char.pos[1]),
-            ),
-        ).pos
-        facing = facing_towards(tuple(char.pos), tuple(target))
-        return FACING_DIRS.index(facing), 1.0, "visible_enemy"
+    nearest_enemy_facing = nearest_alive_enemy_facing(char, chars)
+    if nearest_enemy_facing is not None:
+        return FACING_DIRS.index(nearest_enemy_facing), 1.0, "nearest_enemy"
 
     sighting = team_sighting or getattr(controller, "_sighting", None)
     if (
@@ -1264,10 +1454,25 @@ class CurriculumSession(RealCarrySession):
         self.decision_context = None
         self.action_goals = {}
         self.teacher_probability = 0.0
+        self.orb_visible_ticks = 0
+        self.orb_teacher_actions = 0
+        self.orb_teacher_forced_actions = 0
+        self.orb_eligible_decisions = 0
+        self.orb_eligible_misses = 0
+        self.orb_greedy_choices = 0
+        self.orb_q_margin_sum = 0.0
+        self.orb_q_margin_count = 0
+        self.orb_eligible_pending = {}
+        self.orb_eligible_actor_names = set()
+        self.orb_teacher_probability = 0.0
+        self.orb_teacher_round_enabled = False
         self.collect_demonstrations = False
         self.frozen_phases = set()
         self.frozen_facing_phases = set()
         self.demonstrations = {phase: [] for phase in PHASES}
+        self.orb_demonstrations = {phase: [] for phase in PHASES}
+        self.orb_approach_demonstrations = {phase: [] for phase in PHASES}
+        self.orb_collection_demonstrations = {phase: [] for phase in PHASES}
         self.ultimate_examples = {phase: [] for phase in PHASES}
         self.facing_examples = {phase: [] for phase in FACING_PHASES}
         self.facing_decisions = {phase: 0 for phase in FACING_PHASES}
@@ -1308,6 +1513,7 @@ class CurriculumSession(RealCarrySession):
 
     def selector(self, phase):
         def choose(obs, mask):
+            context = getattr(self, "decision_context", None)
             key = (phase, self.actor)
             previous = self.pending.pop(key, None)
             if previous is not None:
@@ -1318,20 +1524,71 @@ class CurriculumSession(RealCarrySession):
                 # Guard consumes state directly and has no set_game method.
                 # The wrapper holds this decision's existing perceived view.
                 view = self.game.attacker_controller.inner_controller.game
-            teacher = (
-                observable_teacher_action(
+            orb_teacher_action = None
+            teacher = None
+            if getattr(self, "collect_demonstrations", False):
+                orb_teacher_action = observable_teacher_action(
                     phase,
                     obs,
                     mask,
                     self.controllers[phase],
                     getattr(self, "decision_context", None),
                     view=view,
+                    orb_only=True,
                 )
-                if getattr(self, "collect_demonstrations", False)
-                else None
+                teacher = (
+                    orb_teacher_action
+                    if orb_teacher_action is not None
+                    else observable_teacher_action(
+                        phase,
+                        obs,
+                        mask,
+                        self.controllers[phase],
+                        getattr(self, "decision_context", None),
+                        view=view,
+                    )
+                )
+            orb_action = {
+                "carry": runtime.COLLECT_ORB_ACTION_INDEX,
+                "escort": escort_runtime.ACTION_COLLECT_ORB,
+                "guard": guard_runtime.COLLECT_ORB_ACTION_INDEX,
+            }[phase]
+            orb_eligible = bool(
+                phase in ("carry", "escort")
+                and orb_action < len(mask)
+                and mask[orb_action]
             )
+            if orb_eligible and self.collect_demonstrations:
+                # Every executable on-orb state is a positive example, even
+                # when another ally was the designated approach collector.
+                orb_teacher_action = teacher = orb_action
+            if phase in ("carry", "escort"):
+                state_orbs = context[1].get("available_orbs") if context is not None else ()
+                if not state_orbs:
+                    state_orbs = getattr(view, "available_orbs", ())
+                if not state_orbs:
+                    grid = getattr(view, "grid", None)
+                    if grid is not None:
+                        state_orbs = list(zip(*np.where(np.asarray(grid) == 5)))
+                if state_orbs:
+                    self.orb_visible_ticks += 1
+                if teacher in {
+                    runtime.COLLECT_ORB_ACTION_INDEX,
+                    escort_runtime.ACTION_COLLECT_ORB,
+                }:
+                    self.orb_teacher_actions += 1
             if teacher is not None:
-                self.demonstrations[phase].append((obs.copy(), teacher, mask.copy()))
+                sample = (obs.copy(), teacher, mask.copy())
+                self.demonstrations[phase].append(sample)
+                if orb_teacher_action is not None:
+                    # Keep every teacher step toward the orb (not merely the
+                    # final COLLECT action) in a dedicated replay pool.
+                    self.orb_demonstrations[phase].append(sample)
+                    if teacher == orb_action:
+                        self.orb_collection_demonstrations[phase].append(sample)
+                    else:
+                        self.orb_approach_demonstrations[phase].append(sample)
+            orb_teacher = orb_teacher_action is not None
             if (
                 getattr(self, "collect_demonstrations", False)
                 and getattr(self, "decision_context", None) is not None
@@ -1350,7 +1607,17 @@ class CurriculumSession(RealCarrySession):
                         "ultimate_examples", {item: [] for item in PHASES}
                     )[phase].append((obs.copy(), mask.copy(), bool(tactical)))
             if (
+                orb_teacher
+                and phase not in getattr(self, "frozen_phases", ())
+                and getattr(self, "orb_teacher_round_enabled", False)
+            ):
+                action = teacher
+                self.orb_teacher_forced_actions = getattr(
+                    self, "orb_teacher_forced_actions", 0
+                ) + 1
+            elif (
                 teacher is not None
+                and not orb_teacher
                 and phase not in getattr(self, "frozen_phases", ())
                 and random.random() < self.teacher_probability
             ):
@@ -1372,6 +1639,29 @@ class CurriculumSession(RealCarrySession):
                         .numpy()
                     )
                 action = int(np.argmax(np.where(mask, q, -1e9)))
+            self.__dict__.setdefault("orb_eligible_pending", {})[key] = orb_eligible
+            if orb_eligible:
+                if context is not None:
+                    self.__dict__.setdefault("orb_eligible_actor_names", set()).add(
+                        str(context[0].name)
+                    )
+                self.orb_eligible_decisions += 1
+                self.orb_eligible_misses += int(action != orb_action)
+                with torch.no_grad():
+                    greedy_q = (
+                        self.policies[phase](torch.from_numpy(obs).unsqueeze(0))
+                        .squeeze(0)
+                        .numpy()
+                    )
+                rival_mask = np.asarray(mask, dtype=bool).copy()
+                rival_mask[orb_action] = False
+                if rival_mask.any():
+                    margin = float(greedy_q[orb_action] - np.max(greedy_q[rival_mask]))
+                    self.orb_q_margin_sum += margin
+                    self.orb_q_margin_count += 1
+                self.orb_greedy_choices += int(
+                    int(np.argmax(np.where(mask, greedy_q, -1e9))) == orb_action
+                )
             self.pending[key] = Pending(obs.copy(), action)
             if getattr(self, "decision_context", None) is not None and phase != "guard":
                 char, state = self.decision_context
@@ -1391,10 +1681,28 @@ class CurriculumSession(RealCarrySession):
             teacher = confidence = source = None
             if context is not None:
                 char, state = context
+                # The IQ wrapper may blur or omit enemies in ``state``.  That
+                # remains the policy input, but the training-only label must
+                # use the real positions to guarantee the truly nearest enemy.
+                teacher_char = char
+                teacher_state = state
+                real_chars = getattr(getattr(self, "game", None), "chars", None)
+                if real_chars:
+                    real_char = next(
+                        (
+                            item
+                            for item in real_chars
+                            if getattr(item, "name", None) == getattr(char, "name", None)
+                        ),
+                        None,
+                    )
+                    if real_char is not None:
+                        teacher_char = real_char
+                        teacher_state = dict(state, chars=real_chars)
                 teacher, confidence, source = observable_facing_target(
                     phase,
-                    char,
-                    state,
+                    teacher_char,
+                    teacher_state,
                     self.controllers[phase],
                     self.action_goals.get(key),
                     action=action,
@@ -1406,12 +1714,9 @@ class CurriculumSession(RealCarrySession):
                     self.facing_examples[phase].append(
                         (obs.copy(), int(action), int(teacher), float(confidence))
                     )
-            if (
-                teacher is not None
-                and getattr(self, "collect_demonstrations", False)
-                and phase not in getattr(self, "frozen_facing_phases", ())
-                and random.random() < self.teacher_probability
-            ):
+            if teacher is not None and getattr(self, "collect_demonstrations", False):
+                # Training actors always execute the privileged pre-aim label.
+                # Evaluation/inference still uses the learned facing head.
                 index = teacher
             elif (
                 phase not in getattr(self, "frozen_facing_phases", ())
@@ -1472,11 +1777,36 @@ class CurriculumSession(RealCarrySession):
         pending.reward += self.gamma**pending.ticks * reward
         pending.ticks += 1
 
-    def play(self, seed, stats, epsilon=0.0, training=True, teacher_probability=0.0):
+    def play(
+        self, seed, stats, epsilon=0.0, training=True,
+        teacher_probability=0.0, orb_teacher_probability=None,
+    ):
         self.collect_demonstrations = bool(training)
         self.epsilon = epsilon
         self.teacher_probability = teacher_probability if training else 0.0
+        self.orb_teacher_probability = (
+            (teacher_probability if orb_teacher_probability is None else orb_teacher_probability)
+            if training else 0.0
+        )
+        # A full orb pickup needs five uninterrupted COLLECT ticks. Choose
+        # teacher-guided *rounds*, not independently sampled teacher ticks.
+        self.orb_teacher_round_enabled = bool(
+            training and random.random() < self.orb_teacher_probability
+        )
+        self.orb_visible_ticks = 0
+        self.orb_teacher_actions = 0
+        self.orb_teacher_forced_actions = 0
+        self.orb_eligible_decisions = 0
+        self.orb_eligible_misses = 0
+        self.orb_greedy_choices = 0
+        self.orb_q_margin_sum = 0.0
+        self.orb_q_margin_count = 0
+        self.orb_eligible_pending = {}
+        self.orb_eligible_actor_names = set()
         self.demonstrations = {phase: [] for phase in PHASES}
+        self.orb_demonstrations = {phase: [] for phase in PHASES}
+        self.orb_approach_demonstrations = {phase: [] for phase in PHASES}
+        self.orb_collection_demonstrations = {phase: [] for phase in PHASES}
         self.ultimate_examples = {phase: [] for phase in PHASES}
         self.facing_examples = {phase: [] for phase in FACING_PHASES}
         self.facing_decisions = {phase: 0 for phase in FACING_PHASES}
@@ -1519,6 +1849,10 @@ class CurriculumSession(RealCarrySession):
                 char.base_hs_rate_before_condition = char.hs_rate / multiplier
         initial_wins = game.attacker_wins
         guard_ticks = guard_arrivals = combat_ticks = combat_stops = 0
+        combat_start_events = 0
+        combat_start_angle_total = combat_start_alignment_total = 0.0
+        combat_start_reward_total = 0.0
+        active_combat_contacts = set()
         carry_ticks = carry_spawn_ticks = 0
         entry_tick = None
         plant_tick = None
@@ -1550,6 +1884,10 @@ class CurriculumSession(RealCarrySession):
         designated_route_clear_opportunities = designated_route_clear_moves = 0
         screen_guidance_opportunities = screen_guidance_follows = 0
         ultimate_ready_ticks = ultimate_uses = tactical_ultimate_uses = 0
+        orb_actions = orb_collections = 0
+        orb_approach_opportunities = orb_approach_steps = 0
+        orb_reward_maps = {}
+        orb_opportunity_names = set()
         preentry_ultimate_uses = 0
         ultimate_uses_by_phase = {phase: 0 for phase in PHASES}
         tactical_ultimate_uses_by_phase = {phase: 0 for phase in PHASES}
@@ -1629,6 +1967,14 @@ class CurriculumSession(RealCarrySession):
                 c.name: (tuple(c.pos), c.hp, c.plant_timer, c.kills, c.is_alive)
                 for c in game.chars
             }
+            orb_assignment = (
+                nearby_orb_assignment(
+                    game, game.chars, getattr(game, "available_orbs", ()),
+                    orb_reward_maps,
+                ) if not planted_before else None
+            )
+            if orb_assignment is not None:
+                orb_opportunity_names.add(str(orb_assignment[0].name))
             ultimate_before = {
                 c.name: int(getattr(c, "ultimate_points", 0))
                 for c in game.chars
@@ -1673,6 +2019,20 @@ class CurriculumSession(RealCarrySession):
                     for char in game._move_order():
                         if char.is_alive:
                             game.move_character(char)
+                    # Movement and independent facing are now both settled.
+                    # Measure aim before battle resolution can force a dead
+                    # unit's facing or remove its target.
+                    current_contacts = combat_contact_aim(game, game.chars)
+                    attacker_names = {
+                        unit.name for unit in game.chars if unit.team == "A"
+                    }
+                    combat_start_aim = {
+                        shooter: angle
+                        for (shooter, target), angle in current_contacts.items()
+                        if (shooter, target) not in active_combat_contacts
+                        and shooter in attacker_names
+                    }
+                    active_combat_contacts = set(current_contacts)
                     game.process_battle()
                     game._advance_combo_announcement()
             finally:
@@ -1821,6 +2181,43 @@ class CurriculumSession(RealCarrySession):
                 action = self.pending[key].action
                 fighting = engaged.get(name, False)
                 reward += combat_reward(phase, action, fighting)
+                if (
+                    orb_assignment is not None
+                    and orb_assignment[0].name == name
+                    and phase in ("carry", "escort")
+                    and orb_assignment[3] > 0
+                    and char.is_alive
+                    and not fighting
+                ):
+                    _collector, orb, distances, old_distance = orb_assignment
+                    new_pos = tuple(map(int, char.pos))
+                    new_distance = (
+                        int(distances[new_pos]) if distances is not None
+                        else abs(new_pos[0] - orb[0]) + abs(new_pos[1] - orb[1])
+                    )
+                    orb_approach_opportunities += 1
+                    if new_distance >= 0:
+                        progress_to_orb = max(-1, min(1, old_distance - new_distance))
+                        reward += ORB_APPROACH_STEP_REWARD * progress_to_orb
+                        orb_approach_steps += int(progress_to_orb > 0)
+                if name in combat_start_aim:
+                    angle = combat_start_aim[name]
+                    # 0° is a full reward; at the engine's firing-cone edge
+                    # it is neutral; outside that cone it becomes a small
+                    # penalty.  This is sampled only once per new contact,
+                    # preventing a sustained duel from farming reward.
+                    alignment = max(
+                        0.0, 1.0 - angle / float(SHOOTING_SITE_DIGREE)
+                    )
+                    aim_reward = (
+                        AIM_CONTACT_REWARD * alignment
+                        - AIM_CONTACT_MISS_PENALTY * (1.0 - alignment)
+                    )
+                    reward += aim_reward
+                    combat_start_events += 1
+                    combat_start_angle_total += angle
+                    combat_start_alignment_total += alignment
+                    combat_start_reward_total += aim_reward
                 ultimate_action = {
                     "carry": runtime.ULTIMATE_ACTION_INDEX,
                     "escort": escort_runtime.ACTION_ULTIMATE,
@@ -1855,18 +2252,34 @@ class CurriculumSession(RealCarrySession):
                     "escort": escort_runtime.ACTION_COLLECT_ORB,
                     "guard": guard_runtime.COLLECT_ORB_ACTION_INDEX,
                 }[phase]
+                if (
+                    phase in ("carry", "escort")
+                    and self.orb_eligible_pending.get(key, False)
+                    and action != orb_action
+                ):
+                    # Charge the *decision that walked away or waited* rather
+                    # than relying only on a remote round-end team outcome.
+                    reward -= ORB_ELIGIBLE_MISS_PENALTY
+                    progress_index = (
+                        runtime.FACING_HEAD_OBS_DIM + 1 if phase == "carry"
+                        else escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM + 1
+                    )
+                    if self.pending[key].obs[progress_index] > 0:
+                        reward -= ORB_INTERRUPTED_COLLECTION_PENALTY
                 if action == orb_action:
+                    orb_actions += 1
                     # Reward actual collection progress, not merely selecting
                     # the action.  The engine exposes the per-tick flag and
                     # increments ultimate_points only on completion.
                     collecting = bool(getattr(char, "collecting_orb_this_tick", False))
                     gained = getattr(char, "ultimate_points", 0) > ultimate_before.get(name, 0)
                     if gained:
-                        reward += 0.50 + 0.20
+                        orb_collections += 1
+                        reward += ORB_COLLECTION_REWARD
                     elif collecting:
-                        reward += 0.03
+                        reward += ORB_COLLECTION_PROGRESS_REWARD
                     else:
-                        reward -= 0.05
+                        reward -= ORB_INVALID_ACTION_PENALTY
                 if fighting:
                     combat_ticks += 1
                     combat_stops += tuple(char.pos) == pos
@@ -2152,20 +2565,43 @@ class CurriculumSession(RealCarrySession):
                 next_phase = phase_of(char, game.is_planted, next_holder)
                 if dead or game.round_over or next_phase != phase:
                     self.flush(key, self.pending.pop(key))
+        # Remember opportunities at decision time. At round end all attackers
+        # may be dead or the orb may be gone, but those later facts must not
+        # erase a missed collectable chance earlier in the round.
+        orb_opportunity_names.update(self.orb_eligible_actor_names)
+        orb_round_missed = bool(
+            orb_collections == 0
+            and orb_opportunity_names
+        )
+        orb_round_miss_penalty = (
+            ORB_ROUND_MISS_PENALTY
+            if orb_round_missed and self.collect_demonstrations
+            else 0.0
+        )
         # Give each participant's last action the actual round outcome, including
         # Carry/Escort whose phases ended at planting, and actors who died earlier.
         won = game.attacker_wins > initial_wins
+        orb_penalty_targets = {}
+        for phase in ("carry", "escort"):
+            for index, (name, _row) in enumerate(self.transitions[phase]):
+                if name in orb_opportunity_names:
+                    orb_penalty_targets[name] = (phase, index)
+        per_actor_orb_penalty = orb_round_miss_penalty / max(1, len(orb_penalty_targets))
         for phase, rows in self.transitions.items():
             last = {name: i for i, (name, _) in enumerate(rows)}
             for index in last.values():
                 name, row = rows[index]
                 obs, action, reward, next_obs, mask, terminal, ticks = row
+                missed_orb_share = (
+                    per_actor_orb_penalty
+                    if orb_penalty_targets.get(name) == (phase, index) else 0.0
+                )
                 rows[index] = (
                     name,
                     (
                         obs,
                         action,
-                        reward + (20.0 if won else -20.0),
+                        reward + (20.0 if won else -20.0) - missed_orb_share,
                         next_obs,
                         mask,
                         terminal,
@@ -2186,6 +2622,10 @@ class CurriculumSession(RealCarrySession):
             "opponent_stats": list(stats),
             "combat_ticks": combat_ticks,
             "combat_stop_ticks": combat_stops,
+            "combat_start_events": combat_start_events,
+            "combat_start_angle_total": combat_start_angle_total,
+            "combat_start_alignment_total": combat_start_alignment_total,
+            "combat_start_reward_total": combat_start_reward_total,
             "carry_ticks": carry_ticks,
             "carry_spawn_ticks": carry_spawn_ticks,
             "carry_reversals": carry_reversals,
@@ -2224,6 +2664,25 @@ class CurriculumSession(RealCarrySession):
             "screen_guidance_opportunities": screen_guidance_opportunities,
             "screen_guidance_follows": screen_guidance_follows,
             "ultimate_ready_ticks": ultimate_ready_ticks,
+            "orb_actions": orb_actions,
+            "orb_collections": orb_collections,
+            "orb_approach_opportunities": orb_approach_opportunities,
+            "orb_approach_steps": orb_approach_steps,
+            "orb_eligible_decisions": self.orb_eligible_decisions,
+            "orb_eligible_misses": self.orb_eligible_misses,
+            "orb_greedy_choices": self.orb_greedy_choices,
+            "orb_q_margin_mean": (
+                self.orb_q_margin_sum / self.orb_q_margin_count
+                if self.orb_q_margin_count else None
+            ),
+            "orb_q_margin_sum": self.orb_q_margin_sum,
+            "orb_q_margin_count": self.orb_q_margin_count,
+            "orb_round_missed": orb_round_missed,
+            "orb_round_miss_penalty": orb_round_miss_penalty,
+            "orb_visible_ticks": self.orb_visible_ticks,
+            "orb_teacher_actions": self.orb_teacher_actions,
+            "orb_teacher_forced_actions": self.orb_teacher_forced_actions,
+            "orb_teacher_round_enabled": self.orb_teacher_round_enabled,
             "ultimate_uses": ultimate_uses,
             "tactical_ultimate_uses": tactical_ultimate_uses,
             "preentry_ultimate_uses": preentry_ultimate_uses,
@@ -2528,6 +2987,30 @@ def evaluate(session, episodes, seed, final):
         / max(1, sum(r.get("ultimate_ready_ticks", 0) for r in rows)),
         "ultimate_ready_ticks": sum(r.get("ultimate_ready_ticks", 0) for r in rows),
         "ultimate_uses": sum(r.get("ultimate_uses", 0) for r in rows),
+        "orb_actions": sum(r.get("orb_actions", 0) for r in rows),
+        "orb_collections": sum(r.get("orb_collections", 0) for r in rows),
+        "orb_approach_opportunities": sum(
+            r.get("orb_approach_opportunities", 0) for r in rows
+        ),
+        "orb_approach_steps": sum(r.get("orb_approach_steps", 0) for r in rows),
+        "orb_eligible_decisions": sum(
+            r.get("orb_eligible_decisions", 0) for r in rows
+        ),
+        "orb_eligible_misses": sum(r.get("orb_eligible_misses", 0) for r in rows),
+        "orb_greedy_choices": sum(r.get("orb_greedy_choices", 0) for r in rows),
+        "orb_q_margin_sum": sum(r.get("orb_q_margin_sum", 0.0) for r in rows),
+        "orb_q_margin_count": sum(r.get("orb_q_margin_count", 0) for r in rows),
+        "orb_q_margin_mean": sum(r.get("orb_q_margin_sum", 0.0) for r in rows)
+        / max(1, sum(r.get("orb_q_margin_count", 0) for r in rows)),
+        "orb_round_missed": sum(r.get("orb_round_missed", False) for r in rows),
+        "orb_round_miss_penalty": sum(
+            r.get("orb_round_miss_penalty", 0.0) for r in rows
+        ),
+        "orb_visible_ticks": sum(r.get("orb_visible_ticks", 0) for r in rows),
+        "orb_teacher_actions": sum(r.get("orb_teacher_actions", 0) for r in rows),
+        "orb_teacher_forced_actions": sum(
+            r.get("orb_teacher_forced_actions", 0) for r in rows
+        ),
         "tactical_ultimate_rate": sum(r.get("tactical_ultimate_uses", 0) for r in rows)
         / max(1, sum(r.get("ultimate_uses", 0) for r in rows)),
         "tactical_ultimate_uses": sum(r.get("tactical_ultimate_uses", 0) for r in rows),
@@ -2629,6 +3112,16 @@ def evaluate(session, episodes, seed, final):
             }
             for phase in FACING_PHASES
         },
+        "combat_start_events": sum(r.get("combat_start_events", 0) for r in rows),
+        "combat_start_mean_aim_angle": sum(
+            r.get("combat_start_angle_total", 0.0) for r in rows
+        ) / max(1, sum(r.get("combat_start_events", 0) for r in rows)),
+        "combat_start_aim_alignment": sum(
+            r.get("combat_start_alignment_total", 0.0) for r in rows
+        ) / max(1, sum(r.get("combat_start_events", 0) for r in rows)),
+        "combat_start_aim_reward": sum(
+            r.get("combat_start_reward_total", 0.0) for r in rows
+        ),
         "combat_stop_rate": sum(r.get("combat_stop_ticks", 0) for r in rows)
         / max(1, sum(r.get("combat_ticks", 0) for r in rows)),
         "postplant_win_rate": sum(r.get("postplant_win", False) for r in rows)
@@ -2778,6 +3271,50 @@ def evaluate_multi(session, episodes, seeds, final):
         / max(1, sum(b["ultimate_ready_ticks"] for b in blocks)),
         "ultimate_ready_ticks": sum(b["ultimate_ready_ticks"] for b in blocks),
         "ultimate_uses": sum(b["ultimate_uses"] for b in blocks),
+        "orb_actions": sum(b.get("orb_actions", 0) for b in blocks),
+        "orb_collections": sum(b.get("orb_collections", 0) for b in blocks),
+        "orb_approach_opportunities": sum(
+            b.get("orb_approach_opportunities", 0) for b in blocks
+        ),
+        "orb_approach_steps": sum(b.get("orb_approach_steps", 0) for b in blocks),
+        "orb_eligible_decisions": sum(
+            b.get("orb_eligible_decisions", 0) for b in blocks
+        ),
+        "orb_eligible_misses": sum(
+            b.get("orb_eligible_misses", 0) for b in blocks
+        ),
+        "orb_greedy_choices": sum(
+            b.get("orb_greedy_choices", 0) for b in blocks
+        ),
+        "orb_q_margin_sum": sum(b.get("orb_q_margin_sum", 0.0) for b in blocks),
+        "orb_q_margin_count": sum(b.get("orb_q_margin_count", 0) for b in blocks),
+        "orb_q_margin_mean": sum(b.get("orb_q_margin_sum", 0.0) for b in blocks)
+        / max(1, sum(b.get("orb_q_margin_count", 0) for b in blocks)),
+        "orb_round_missed": sum(b.get("orb_round_missed", 0) for b in blocks),
+        "orb_round_miss_penalty": sum(
+            b.get("orb_round_miss_penalty", 0.0) for b in blocks
+        ),
+        "orb_visible_ticks": sum(b.get("orb_visible_ticks", 0) for b in blocks),
+        "orb_teacher_actions": sum(b.get("orb_teacher_actions", 0) for b in blocks),
+        "orb_teacher_forced_actions": sum(
+            b.get("orb_teacher_forced_actions", 0) for b in blocks
+        ),
+        "combat_start_events": sum(
+            b.get("combat_start_events", 0) for b in blocks
+        ),
+        "combat_start_mean_aim_angle": sum(
+            b.get("combat_start_mean_aim_angle", 0.0)
+            * b.get("combat_start_events", 0)
+            for b in blocks
+        ) / max(1, sum(b.get("combat_start_events", 0) for b in blocks)),
+        "combat_start_aim_alignment": sum(
+            b.get("combat_start_aim_alignment", 0.0)
+            * b.get("combat_start_events", 0)
+            for b in blocks
+        ) / max(1, sum(b.get("combat_start_events", 0) for b in blocks)),
+        "combat_start_aim_reward": sum(
+            b.get("combat_start_aim_reward", 0.0) for b in blocks
+        ),
         "tactical_ultimate_rate": sum(b["tactical_ultimate_uses"] for b in blocks)
         / max(1, sum(b["ultimate_uses"] for b in blocks)),
         "tactical_ultimate_uses": sum(b["tactical_ultimate_uses"] for b in blocks),
@@ -2966,14 +3503,31 @@ def train(args):
         rows = MOVEMENT_ACTION_ROWS[phase]
         if phase in args.reset_movement_head_phases:
             reset_movement_rows(policies[phase], rows)
-        input_columns = (
-            range(
+        if phase == "escort":
+            # Keep the previously added fake-wait features trainable and also
+            # expose the four orb-context features to the movement head.
+            input_columns = range(
                 escort_runtime.FACING_HEAD_OBS_DIM,
-                escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM,
+                escort_runtime.ORB_OBS_DIM,
             )
-            if phase == "escort" else ()
+        elif phase == "carry":
+            # Carry v12 appends orb distance/availability context after the
+            # facing head.  Without these columns the new action row can
+            # never condition on an orb, even when demonstrations exist.
+            input_columns = range(
+                runtime.FACING_HEAD_OBS_DIM,
+                runtime.ORB_OBS_DIM,
+            )
+        else:
+            input_columns = ()
+        restrict_policy_to_movement_rows(
+            policies[phase],
+            rows,
+            input_columns,
+            train_facing=(
+                args.train_facing_with_movement and phase in FACING_PHASES
+            ),
         )
-        restrict_policy_to_movement_rows(policies[phase], rows, input_columns)
     # A reset branch must start its target network from the same freshly
     # initialized movement rows, not from the pre-reset source checkpoint.
     targets = {p: copy.deepcopy(net) for p, net in policies.items()}
@@ -2984,8 +3538,22 @@ def train(args):
         )
         for p, net in policies.items()
     }
+    orb_collection_optimizers = {
+        phase: torch.optim.Adam(
+            (
+                policies[phase].advantage_head[-1].weight,
+                policies[phase].advantage_head[-1].bias,
+            ),
+            lr=args.lr * args.orb_collection_lr_multiplier,
+        )
+        for phase in ("carry", "escort")
+        if phase in args.movement_only_phases
+    }
     replays = {p: deque(maxlen=100_000) for p in PHASES}
     demonstrations = {p: deque(maxlen=20_000) for p in PHASES}
+    orb_demonstrations = {p: deque(maxlen=8_000) for p in PHASES}
+    orb_approach_demonstrations = {p: deque(maxlen=8_000) for p in PHASES}
+    orb_collection_demonstrations = {p: deque(maxlen=2_000) for p in PHASES}
     fake_wait_demonstrations = deque(maxlen=5_000)
     facing_demonstrations = {p: deque(maxlen=30_000) for p in FACING_PHASES}
     ultimate_positives = {p: deque(maxlen=10_000) for p in PHASES}
@@ -3133,6 +3701,11 @@ def train(args):
                 if args.navigation_bootstrap_episodes
                 else 0.0
             )
+            orb_teacher_probability = scheduled_orb_teacher_probability(
+                schedule_episode,
+                args.navigation_bootstrap_episodes,
+                args.orb_teacher_final_probability,
+            )
             learning_rate = scheduled_learning_rate(
                 args.lr,
                 schedule_episode,
@@ -3143,17 +3716,32 @@ def train(args):
             for optimizer in optimizers.values():
                 for group in optimizer.param_groups:
                     group["lr"] = learning_rate
+            for optimizer in orb_collection_optimizers.values():
+                for group in optimizer.param_groups:
+                    group["lr"] = learning_rate * args.orb_collection_lr_multiplier
             row = session.play(
                 args.seed + global_episode,
                 stats,
                 epsilon,
                 teacher_probability=teacher_probability,
+                orb_teacher_probability=orb_teacher_probability,
             )
             row["episode"] = global_episode
             row["navigation_teacher_probability"] = teacher_probability
+            row["orb_teacher_probability"] = orb_teacher_probability
+            row["orb_teacher_round_enabled"] = session.orb_teacher_round_enabled
             row["learning_rate"] = learning_rate
             row["demonstration_counts"] = {
                 p: len(session.demonstrations[p]) for p in PHASES
+            }
+            row["orb_demonstration_counts"] = {
+                p: len(session.orb_demonstrations[p]) for p in PHASES
+            }
+            row["orb_approach_demonstration_counts"] = {
+                p: len(session.orb_approach_demonstrations[p]) for p in PHASES
+            }
+            row["orb_collection_demonstration_counts"] = {
+                p: len(session.orb_collection_demonstrations[p]) for p in PHASES
             }
             row["fake_wait_demonstration_count"] = int(sum(
                 len(obs) >= escort_runtime.FAKE_WAIT_SUPPORT_OBS_DIM
@@ -3203,6 +3791,11 @@ def train(args):
                     phase_demonstrations = movement_only_demonstrations(
                         phase_demonstrations, allowed_actions
                     )
+                phase_orb_demonstrations = session.orb_demonstrations[phase]
+                if allowed_actions is not None:
+                    phase_orb_demonstrations = movement_only_demonstrations(
+                        phase_orb_demonstrations, allowed_actions
+                    )
                 replays[phase].extend(
                     n_step_transitions(
                         transitions,
@@ -3212,6 +3805,13 @@ def train(args):
                     )
                 )
                 demonstrations[phase].extend(phase_demonstrations)
+                orb_demonstrations[phase].extend(phase_orb_demonstrations)
+                orb_approach_demonstrations[phase].extend(
+                    session.orb_approach_demonstrations[phase]
+                )
+                orb_collection_demonstrations[phase].extend(
+                    session.orb_collection_demonstrations[phase]
+                )
                 if phase == "escort":
                     fake_wait_demonstrations.extend(
                         sample for sample in phase_demonstrations
@@ -3234,7 +3834,14 @@ def train(args):
                 if phase in args.movement_only_phases:
                     td_updates = min(td_updates, args.movement_td_updates)
                     demo_updates = min(demo_updates, args.movement_demo_updates)
-                for update_index in range(max(td_updates, demo_updates)):
+                for update_index in range(
+                    max(
+                        td_updates,
+                        demo_updates,
+                        args.orb_demo_updates if phase in ("carry", "escort") else 0,
+                        args.orb_collection_updates if phase in ("carry", "escort") else 0,
+                    )
+                ):
                     if update_index < td_updates:
                         optimize(
                             policies[phase],
@@ -3258,9 +3865,44 @@ def train(args):
                             ),
                         )
                     if (
+                        phase in ("carry", "escort")
+                        and update_index < args.orb_demo_updates
+                    ):
+                        # Approach is the scarce behavior at inference time:
+                        # train legal steps toward a nearby orb alongside the
+                        # final COLLECT action, not only the latter.
+                        optimize_demonstrations(
+                            policies[phase],
+                            optimizers[phase],
+                            orb_approach_demonstrations[phase]
+                            if orb_approach_demonstrations[phase]
+                            else orb_demonstrations[phase],
+                            args.orb_demo_weight,
+                            batch_size=64,
+                            focus_samples=orb_collection_demonstrations[phase],
+                            focus_fraction=0.40,
+                            focus_with_replacement=True,
+                        )
+                    if (
+                        phase in orb_collection_optimizers
+                        and update_index < args.orb_collection_updates
+                    ):
+                        # Rare executable COLLECT labels need a faster,
+                        # row-local update.  Other action rows stay fixed.
+                        optimize_orb_collection_head(
+                            policies[phase],
+                            orb_collection_optimizers[phase],
+                            orb_collection_demonstrations[phase],
+                            runtime.COLLECT_ORB_ACTION_INDEX if phase == "carry"
+                            else escort_runtime.ACTION_COLLECT_ORB,
+                        )
+                    if (
                         update_index < td_updates
                         and phase in FACING_PHASES
-                        and phase not in args.movement_only_phases
+                        and (
+                            phase not in args.movement_only_phases
+                            or args.train_facing_with_movement
+                        )
                     ):
                         optimize_facing(
                             policies[phase],
@@ -3290,9 +3932,25 @@ def train(args):
                     f"win={sum(r['attacker_win'] for r in recent)/len(recent):.3f} "
                     f"plant={sum(r['planted'] for r in recent)/len(recent):.3f} "
                     f"epsilon={epsilon:.3f} teacher={teacher_probability:.3f} "
+                    f"orb_teacher_prob={orb_teacher_probability:.3f} "
                     f"lr={learning_rate:.2e} "
                     f"demo={row['navigation_demo_multiplier']:.3f} "
                     f"fake_wait_demo={sum(r.get('fake_wait_demonstration_count', 0) for r in recent)/len(recent):.1f} "
+                    f"orb_actions={sum(r.get('orb_actions', 0) for r in recent)} "
+                    f"orb_collections={sum(r.get('orb_collections', 0) for r in recent)} "
+                    f"orb_approach={sum(r.get('orb_approach_steps', 0) for r in recent)}/"
+                    f"{sum(r.get('orb_approach_opportunities', 0) for r in recent)} "
+                    f"orb_teacher={sum(r.get('orb_teacher_actions', 0) for r in recent)} "
+                    f"orb_forced={sum(r.get('orb_teacher_forced_actions', 0) for r in recent)} "
+                    f"orb_teacher_rounds={sum(r.get('orb_teacher_round_enabled', False) for r in recent)} "
+                    f"orb_eligible={sum(r.get('orb_eligible_decisions', 0) for r in recent)} "
+                    f"orb_misses={sum(r.get('orb_eligible_misses', 0) for r in recent)} "
+                    f"orb_greedy={sum(r.get('orb_greedy_choices', 0) for r in recent)} "
+                    f"orb_q_margin={sum(r.get('orb_q_margin_sum', 0.0) for r in recent) / max(1, sum(r.get('orb_q_margin_count', 0) for r in recent)):.2f} "
+                    f"orb_missed={sum(r.get('orb_round_missed', False) for r in recent)} "
+                    f"orb_demo={sum(sum(r.get('orb_demonstration_counts', {}).values()) for r in recent)} "
+                    f"orb_approach_demo={sum(sum(r.get('orb_approach_demonstration_counts', {}).values()) for r in recent)} "
+                    f"orb_collect_demo={sum(sum(r.get('orb_collection_demonstration_counts', {}).values()) for r in recent)} "
                     f"no_entry={sum(not entered_site(r) for r in recent)/len(recent):.3f} "
                     f"timeout={sum(r['timed_out'] for r in recent)/len(recent):.3f} "
                     f"seconds={time.monotonic()-started:.0f}",
@@ -3658,6 +4316,36 @@ def main():
     )
     parser.add_argument("--navigation-demo-weight", type=float, default=1.0)
     parser.add_argument(
+        "--orb-demo-weight",
+        type=float,
+        default=3.0,
+        help="dedicated demonstration-loss weight for every teacher step toward an orb",
+    )
+    parser.add_argument(
+        "--orb-demo-updates",
+        type=int,
+        default=2,
+        help="extra balanced orb imitation updates per active phase and episode",
+    )
+    parser.add_argument(
+        "--orb-collection-updates",
+        type=int,
+        default=4,
+        help="extra row-local on-orb COLLECT updates per active phase and episode",
+    )
+    parser.add_argument(
+        "--orb-collection-lr-multiplier",
+        type=float,
+        default=20.0,
+        help="learning-rate multiplier for the isolated COLLECT action row",
+    )
+    parser.add_argument(
+        "--orb-teacher-final-probability",
+        type=float,
+        default=0.05,
+        help="fraction of orb teacher-guided rounds after bootstrap",
+    )
+    parser.add_argument(
         "--navigation-retention-weight",
         type=float,
         default=0.15,
@@ -3721,6 +4409,15 @@ def main():
         ),
     )
     parser.add_argument(
+        "--train-facing-with-movement",
+        action="store_true",
+        help=(
+            "also update the independent Carry/Escort facing heads during "
+            "movement-only training; required for aim-contact rewards to "
+            "improve pre-aim rather than movement alone"
+        ),
+    )
+    parser.add_argument(
         "--reset-movement-head-phases",
         nargs="*",
         choices=tuple(MOVEMENT_ACTION_ROWS),
@@ -3769,6 +4466,11 @@ def main():
     if (
         args.navigation_bootstrap_episodes < 0
         or args.navigation_demo_weight < 0
+        or args.orb_demo_weight < 0
+        or args.orb_demo_updates < 0
+        or args.orb_collection_updates < 0
+        or args.orb_collection_lr_multiplier <= 0
+        or not 0 <= args.orb_teacher_final_probability <= 0.80
         or args.ultimate_classification_weight < 0
         or args.facing_supervision_weight < 0
         or args.movement_td_updates < 0

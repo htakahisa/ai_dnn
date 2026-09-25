@@ -23,7 +23,6 @@ from game_core import (
     TUNNEL_WARNING_TICKS,
 )
 
-
 ULTIMATE_FACING_STEPS = {
     "N": (-1, 0),
     "NE": (-1, 1),
@@ -97,8 +96,7 @@ class AbilityLosMixin:
                     old_pos[1] + step[1] * distance,
                 )
                 if not (
-                    0 <= candidate[0] < self.height
-                    and 0 <= candidate[1] < self.width
+                    0 <= candidate[0] < self.height and 0 <= candidate[1] < self.width
                 ):
                     break
                 if self.grid[candidate[0], candidate[1]] == 1:
@@ -126,8 +124,7 @@ class AbilityLosMixin:
             destination = (int(target[0]), int(target[1]))
             old_pos = tuple(owner.pos)
             if not (
-                0 <= destination[0] < self.height
-                and 0 <= destination[1] < self.width
+                0 <= destination[0] < self.height and 0 <= destination[1] < self.width
             ):
                 return False
             if self.grid[destination[0], destination[1]] == 1:
@@ -312,9 +309,7 @@ class AbilityLosMixin:
         }
         for drone in live_drones:
             enemies = [
-                char
-                for char in self.chars
-                if char.is_alive and char.team != drone.team
+                char for char in self.chars if char.is_alive and char.team != drone.team
             ]
             target = next(
                 (enemy for enemy in enemies if enemy.name == drone.target_name),
@@ -344,11 +339,7 @@ class AbilityLosMixin:
             drone.moved_this_tick = tuple(drone.pos) != old_pos
 
             collided = next(
-                (
-                    enemy
-                    for enemy in enemies
-                    if tuple(enemy.pos) == tuple(drone.pos)
-                ),
+                (enemy for enemy in enemies if tuple(enemy.pos) == tuple(drone.pos)),
                 None,
             )
             if collided is not None:
@@ -365,9 +356,7 @@ class AbilityLosMixin:
                 ):
                     enemy.reveal_remaining = max(enemy.reveal_remaining, 1)
 
-        self.monitor_drones = [
-            drone for drone in self.monitor_drones if drone.is_alive
-        ]
+        self.monitor_drones = [drone for drone in self.monitor_drones if drone.is_alive]
 
     def execute_ai_ability(self, owner, ability_action):
         """AIコントローラーから受け取ったアビリティ要求を実行する。"""
@@ -481,7 +470,11 @@ class AbilityLosMixin:
     def check_cell_line_of_sight(self, start, end, block_smoke=True):
         line_cells = self._line_cells(start, end)
 
+        grid_height, grid_width = self.grid.shape
         for r, c in line_cells:
+            # 境界チェックを追加してIndexErrorを防止
+            if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
+                continue
             if self.grid[r, c] == 1:
                 return False
 
@@ -494,7 +487,11 @@ class AbilityLosMixin:
         """壁とスモーク規則を考慮して、2人の間に射線が通るか判定する。"""
         line_cells = self._line_cells(tuple(p1.pos), tuple(p2.pos))
 
+        grid_height, grid_width = self.grid.shape
         for r, c in line_cells:
+            # 境界チェックを追加してIndexErrorを防止
+            if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
+                continue
             if self.grid[r, c] == 1:
                 return False
 
@@ -646,8 +643,11 @@ class AbilityLosMixin:
                 tracker = getattr(self, "analytics_tracker", None)
                 if tracker is not None:
                     owner = next(
-                        (c for c in self.chars
-                         if str(c.name) == str(projectile.get("owner"))),
+                        (
+                            c
+                            for c in self.chars
+                            if str(c.name) == str(projectile.get("owner"))
+                        ),
                         None,
                     )
                     tracker.record_contribution(owner, char, self.battle_tick, "flash")
@@ -685,8 +685,11 @@ class AbilityLosMixin:
                 tracker = getattr(self, "analytics_tracker", None)
                 if tracker is not None:
                     owner = next(
-                        (c for c in self.chars
-                         if str(c.name) == str(projectile.get("owner"))),
+                        (
+                            c
+                            for c in self.chars
+                            if str(c.name) == str(projectile.get("owner"))
+                        ),
                         None,
                     )
                     tracker.record_contribution(owner, char, self.battle_tick, "recon")

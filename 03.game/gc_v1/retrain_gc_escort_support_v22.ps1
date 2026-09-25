@@ -57,21 +57,50 @@ foreach ($path in @($pythonPath, $carryModel, $escortModel, $guardModel)) {
   }
 }
 
+# Continue learning from the last candidate, while keeping the previously
+# selected safe bundle as the independent deployment baseline. Copy first:
+# --overwrite-output replaces the training directory below.
+$trainCarryModel = $carryModel
+$trainEscortModel = $escortModel
+$trainGuardModel = $guardModel
+$trainSourceEpisode = $sourceEpisode
+$latestBundle = Join-Path $trainingDir "latest_bundle.json"
+$latestModels = @{
+  carry = Join-Path $trainingDir "dqn_attacker_carry_gc_latest.pt"
+  escort = Join-Path $trainingDir "dqn_attacker_escort_gc_latest.pt"
+  guard = Join-Path $trainingDir "dqn_attacker_guard_gc_latest.pt"
+}
+if ((Test-Path -LiteralPath $latestBundle) -and
+    -not (@($latestModels.Values | Where-Object { -not (Test-Path -LiteralPath $_) }).Count)) {
+  $latestMetadata = Get-Content -LiteralPath $latestBundle -Raw | ConvertFrom-Json
+  if ($null -ne $latestMetadata.episode -and [int]$latestMetadata.episode -gt $sourceEpisode) {
+    $resumeDir = Join-Path $runRoot "resume"
+    New-Item -ItemType Directory -Path $resumeDir -Force | Out-Null
+    foreach ($phase in @("carry", "escort", "guard")) {
+      Copy-Item -LiteralPath $latestModels[$phase] -Destination (Join-Path $resumeDir "dqn_attacker_${phase}_gc_resume.pt") -Force
+    }
+    $trainCarryModel = Join-Path $resumeDir "dqn_attacker_carry_gc_resume.pt"
+    $trainEscortModel = Join-Path $resumeDir "dqn_attacker_escort_gc_resume.pt"
+    $trainGuardModel = Join-Path $resumeDir "dqn_attacker_guard_gc_resume.pt"
+    $trainSourceEpisode = [int]$latestMetadata.episode
+  }
+}
+
 Write-Host "=== GC joint Carry/Escort movement training ===" -ForegroundColor Cyan
 Write-Host "Run directory: $runRoot"
-Write-Host "Source episode: $sourceEpisode"
-Write-Host "Guard, facing, ability and ultimate are frozen."
+Write-Host "Safe baseline episode: $sourceEpisode; training starts from episode: $trainSourceEpisode"
+Write-Host "Guard, ability and ultimate are frozen; Carry/Escort movement and facing train together."
 
 $trainArgs = @(
   "-X", "utf8",
   (Join-Path $gcDir "train_attacker_gc_real_curriculum.py"),
-  "--init-carry", $carryModel,
-  "--init-escort", $escortModel,
-  "--init-guard", $guardModel,
+  "--init-carry", $trainCarryModel,
+  "--init-escort", $trainEscortModel,
+  "--init-guard", $trainGuardModel,
   "--output-dir", $trainingDir,
   "--overwrite-output",
   "--episodes", "1000",
-  "--episode-offset", "$sourceEpisode",
+  "--episode-offset", "$trainSourceEpisode",
   "--curriculum-episodes", "350",
   "--navigation-bootstrap-episodes", "300",
   "--eval-interval", "250",
@@ -90,11 +119,17 @@ $trainArgs = @(
   "--max-carrier-death-increase", "0.05",
   "--max-plant-regression", "0.05",
   "--navigation-demo-weight", "1.0",
+  "--orb-demo-weight", "4.0",
+  "--orb-demo-updates", "4",
+  "--orb-collection-updates", "4",
+  "--orb-collection-lr-multiplier", "20",
+  "--orb-teacher-final-probability", "0.05",
   "--navigation-retention-weight", "0.10",
   "--ultimate-classification-weight", "0.0",
-  "--facing-supervision-weight", "0.0",
+  "--facing-supervision-weight", "1.0",
   "--freeze-phases", "guard",
   "--movement-only-phases", "carry", "escort",
+  "--train-facing-with-movement",
   "--movement-td-updates", "1",
   "--movement-demo-updates", "2",
   "--relative-schedules",
@@ -117,6 +152,7 @@ $selectArgs = @(
   "--output-dir", $selectedDir,
   "--overwrite-output",
   "--allow-data-revision-mismatch",
+  "--allow-facing-changes",
   "--max-no-entry-rate", "0.30",
   "--max-timeout-rate", "0.10",
   "--max-quiet-stall-increase", "0.05",

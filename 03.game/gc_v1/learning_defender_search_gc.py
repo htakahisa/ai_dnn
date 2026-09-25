@@ -49,9 +49,10 @@ from map_data import NEW_MAZE_STR
 
 try:
     from .gc_search_config import (
-        GC_SEARCH_AGGRESSION_MARKERS,
+        GC_SEARCH_USAGE_MARKERS,
         GC_SEARCH_POSITION_RANDOMNESS,
-        GC_SEARCH_RELEASE_BY_MARKER,
+        GC_SEARCH_RELEASE,
+        GC_SEARCH_USAGE_WEIGHT_BY_MARKER,
     )
     from .map_data_search_gc import SEARCH_MAZE_STR
     from .character_stats_gc import (
@@ -60,9 +61,10 @@ try:
     )
 except ImportError:
     from gc_search_config import (
-        GC_SEARCH_AGGRESSION_MARKERS,
+        GC_SEARCH_USAGE_MARKERS,
         GC_SEARCH_POSITION_RANDOMNESS,
-        GC_SEARCH_RELEASE_BY_MARKER,
+        GC_SEARCH_RELEASE,
+        GC_SEARCH_USAGE_WEIGHT_BY_MARKER,
     )
     from map_data_search_gc import SEARCH_MAZE_STR
     from character_stats_gc import (
@@ -376,14 +378,14 @@ def _compute_gc_defense_groups_by_marker():
     search_grid = _parse_search_grid(SEARCH_MAZE_STR)
     return {
         marker: _find_marker_positions(search_grid, marker)
-        for marker in GC_SEARCH_AGGRESSION_MARKERS
+        for marker in GC_SEARCH_USAGE_MARKERS
     }
 
 
 _GC_DEFENSE_GROUPS_BY_MARKER = _compute_gc_defense_groups_by_marker()
 _DEFENSE_POSITIONS_CACHE = [
     pos
-    for marker in GC_SEARCH_AGGRESSION_MARKERS
+    for marker in GC_SEARCH_USAGE_MARKERS
     for pos in _GC_DEFENSE_GROUPS_BY_MARKER[marker]
 ]
 
@@ -659,16 +661,12 @@ class LearningDefenderSearchGCController:
         count = int(seen.get("count", 1))
         if age > SEARCH_SIGHTING_FRESH_TICKS:
             return True
-        marker = int(self._assigned_markers.get(char.name, 7))
-        release = GC_SEARCH_RELEASE_BY_MARKER.get(
-            marker, GC_SEARCH_RELEASE_BY_MARKER[7]
-        )
-        if count < int(release["min_seen"]):
+        if count < int(GC_SEARCH_RELEASE["min_seen"]):
             return True
         if self.sighting_dist_map is None:
             return True
         sighting_dist = int(self.sighting_dist_map[r, c])
-        return not (0 <= sighting_dist <= int(release["max_bfs"]))
+        return not (0 <= sighting_dist <= int(GC_SEARCH_RELEASE["max_bfs"]))
 
     def _update_priority_dist_maps(self, grid):
         """team_memoryのspike_pos/last_seen_enemyが変化した時だけBFSを
@@ -738,16 +736,32 @@ class LearningDefenderSearchGCController:
         ]
         # chars側の並び順にも依存しないように一度シャッフルする。
         random.shuffle(teammates)
-        markers = list(GC_SEARCH_AGGRESSION_MARKERS)
-        random.shuffle(markers)
-
-        for teammate, marker in zip(teammates, markers):
+        used_positions = set()
+        for teammate in teammates:
+            available_markers = [
+                marker for marker in GC_SEARCH_USAGE_MARKERS
+                if any(pos not in used_positions for pos in _GC_DEFENSE_GROUPS_BY_MARKER[marker])
+            ]
+            if not available_markers:
+                break
+            marker = random.choices(
+                available_markers,
+                weights=[GC_SEARCH_USAGE_WEIGHT_BY_MARKER[item] for item in available_markers],
+                k=1,
+            )[0]
             chosen = _choose_defense_position_for_round(grid, marker, teammate.pos)
+            if chosen in used_positions:
+                candidates = [
+                    pos for pos in _GC_DEFENSE_GROUPS_BY_MARKER[marker]
+                    if pos not in used_positions
+                ]
+                chosen = random.choice(candidates) if candidates else None
             if chosen is None:
                 continue
             self._assigned_markers[teammate.name] = int(marker)
             self._assigned_positions[teammate.name] = [chosen]
             self._assigned_dist_maps[teammate.name] = _bfs_distance_map(grid, chosen)
+            used_positions.add(chosen)
 
         self._assignment_done = True
 

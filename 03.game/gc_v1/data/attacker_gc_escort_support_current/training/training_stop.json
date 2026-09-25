@@ -1,8 +1,8 @@
 {
   "reason": "movement_guardrail",
-  "stopped_episode": 2000,
-  "last_evaluated_episode": 2000,
-  "best_episode": 2000,
+  "stopped_episode": 2750,
+  "last_evaluated_episode": 2750,
+  "best_episode": 2750,
   "evaluations_without_improvement": 0,
   "consecutive_guardrail_violations": 2,
   "early_stop_patience": 3,
@@ -11,5 +11,5 @@
   "max_quiet_stall_increase": 0.05,
   "max_carrier_death_increase": 0.05,
   "max_plant_regression": 0.05,
-  "baseline_quiet_stall_tick_rate": 0.09156044188573687
+  "baseline_quiet_stall_tick_rate": 0.08640061034420976
 }

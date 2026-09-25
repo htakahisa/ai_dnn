@@ -5,6 +5,7 @@ import numpy as np
 
 ULTIMATE_CONTEXT_DIM = 4
 ORB_CONTEXT_DIM = 4
+ATTACKER_ORB_APPROACH_RADIUS = 8
 
 FACING_STEPS = {
     "N": (-1, 0), "NE": (-1, 1), "E": (0, 1), "SE": (1, 1),
@@ -54,6 +55,21 @@ def orb_context_features(char, available_orbs, collect_required_ticks=5):
         dr = float(np.sign(nearest[0] - pos[0]))
         dc = float(np.sign(nearest[1] - pos[1]))
     return np.asarray((float(on_orb), progress, dr, dc), dtype=np.float32)
+
+
+def attacker_orb_context_features(char, available_orbs, collect_required_ticks=5):
+    """Add nearby-orb distance without changing Defender/Guard observations."""
+    base = orb_context_features(char, available_orbs, collect_required_ticks)
+    pos = tuple(map(int, char.pos))
+    distances = [
+        abs(int(cell[0]) - pos[0]) + abs(int(cell[1]) - pos[1])
+        for cell in (available_orbs or ())
+    ]
+    proximity = (
+        max(0.0, 1.0 - min(distances) / ATTACKER_ORB_APPROACH_RADIUS)
+        if distances else 0.0
+    )
+    return np.append(base, np.float32(proximity))
 
 
 def can_collect_orb(char, available_orbs):

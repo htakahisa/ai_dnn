@@ -4,6 +4,7 @@ param(
     [string]$EscortSource = "",
     [string]$RetrieveSource = "",
     [string]$GuardSource = "",
+    [switch]$Selected,
     [switch]$DryRun
 )
 
@@ -21,6 +22,7 @@ try {
     )) {
         if ($item[1]) { $arguments += @("--$($item[0])-source", $item[1]) }
     }
+    if ($Selected) { $arguments += "--selected" }
     if ($DryRun) { $arguments += "--dry-run" }
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) {
