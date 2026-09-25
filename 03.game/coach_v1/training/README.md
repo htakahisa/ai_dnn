@@ -103,3 +103,58 @@ cells, and legal random cells. These staged examples do not simulate ability
 outcomes or full rounds; `ability_effective_rate` is therefore `null`. Check
 the report's positive ability-use recall as well as overall accuracy, since
 the use label is less common than the no-use label.
+
+## Task 09-A Gorimaru follow-up
+
+After Task 10 found weak real-game facing, Gorimaru alone was fine tuned with
+actor-safe 5v5 rollout observations. `gorimaru_rollout.py` obtains these through
+the normal coordinator and labels facing from legal shared sightings only.
+`experiment_task09a_gorimaru_rollout.py` reproduces the earlier selected
+checkpoint from the archived pre-update baseline. See `HANDOFF-09-A.md` for paired
+real-game results and limits. Running the older `train_task09.py` recreates the
+staged baseline and would replace the promoted Gorimaru checkpoint.
+
+## Task 09-A facing label and evaluation follow-up
+
+`experiment_task09a_gorimaru_labels.py` trains a separate Gorimaru candidate.
+For a current legal team sighting, any facing within 45 degrees of a reported
+enemy is accepted. The trainer sums the probability of all accepted directions;
+the existing single-label behavior remains the default for other characters.
+70% or more of the candidate's examples come from the 70/20/10 watch-point
+curriculum. Supplemental 5v5 observations cover near, west, east, crossfire,
+and natural encounters. Train, validation, and holdout use distinct seeds.
+
+`evaluate_task09a_gorimaru_labels.py` compares saved candidates in the game
+loop. Its primary facing measure is slot 0's `unforced_aligned_45` divided by
+`unforced_sighting_actions`; forced-facing actions are reported separately.
+Run with `PYTHONHASHSEED=0` in the process environment for the recorded setup.
+The candidates from that experiment remain under `checkpoints/experiments/`.
+
+## Task 09-A attacker adjustment
+
+`analyze_task09a_gorimaru_attacker.py` records only legal team report offsets
+for evaluation. `experiment_task09a_gorimaru_attacker_adjustment.py` compares
+two separate fine tunes: one removes facing loss when the team has no current
+sighting, and the other also increases attacker near-encounter examples. Both
+retain at least 70% staged watch-point curriculum examples. The no-sighting
+change is opt-in, so previous experiment scripts keep their original labels.
+
+`evaluate_task09a_gorimaru_attacker_adjustment.py` compares paired 20-seed
+game blocks. The selected `near_priority/epoch90_latest.pt` is now the official
+Gorimaru `best.pt` and `latest.pt`; the prior official checkpoint is archived
+as `task09a_gorimaru_rollout/epoch70_latest.pt`. Use `PYTHONHASHSEED=0` for the
+recorded game comparisons. See `HANDOFF-09-A.md` for the measured results and
+the remaining smoke-target limitation.
+
+## Task 09-A smoke evaluation
+
+`python -m coach_v1.evaluate_task09a_gorimaru_smoke` replays the selected and
+prior Gorimaru policies on the fixed map with a STAY/HOLD coach. The report
+counts successful throws and uses the game's shot LOS function to measure
+directed shooting lanes removed by Gorimaru's smoke. It temporarily removes
+only that smoke for each measurement and restores the original game state.
+`--shadow-prior` also asks the prior policy for an action on the selected
+policy's exact actor-safe observation and measures the prior target in the
+same positions and facings without applying it to the match. Use
+`PYTHONHASHSEED=0` to reproduce the recorded 10-seed comparisons. These are
+potential shot lanes, not a measured change in kills or match wins.

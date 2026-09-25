@@ -10,6 +10,8 @@ import argparse
 import json
 import math
 import random
+from pathlib import Path
+from typing import Mapping
 
 from map_data import NEW_MAZE_STR
 from run_game import VisualFPSBattle, _build_team_ai
@@ -72,12 +74,16 @@ def _aligned_with_shared_sighting(character, sightings) -> bool:
 
 
 def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
-             variant: str = "best") -> dict:
+             variant: str = "best",
+             checkpoint_overrides: Mapping[int, Path] | None = None,
+             trace_slot: int | None = None) -> dict:
     random.seed(seed)
     coach = StayCoach()
     if variant not in {"best", "facing_best"}:
         raise ValueError("unknown checkpoint variant")
     def policy(slot):
+        if checkpoint_overrides and slot in checkpoint_overrides:
+            return CharacterPolicy(slot, checkpoint_overrides[slot])
         if variant == "best":
             return CharacterPolicy(slot)
         path = (CHECKPOINTS_DIR / "experiments" / "task09_data360"
@@ -136,7 +142,9 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
     unforced_aligned_45 = 0
     per_slot = {str(slot): {"actions": 0, "sighting_actions": 0,
                            "aligned_45": 0, "unforced_sighting_actions": 0,
-                           "unforced_aligned_45": 0} for slot in range(5)}
+                           "unforced_aligned_45": 0, "ability_requests": 0,
+                           "ability_successes": 0} for slot in range(5)}
+    sighting_trace = []
     tick_count = 0
     for _ in range(ticks):
         if game.current_round != initial_round or game.match_over:
@@ -164,6 +172,21 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
                     sighting_actions += 1
                     slot_metrics["sighting_actions"] += 1
                     aligned = _aligned_with_shared_sighting(character, sightings)
+                    if action.slot == trace_slot:
+                        origin = tuple(int(value) for value in character.pos)
+                        sighting_trace.append({
+                            "tick": tick_count,
+                            "position": origin,
+                            "facing": str(character.facing),
+                            "requested_facing": str(action.facing),
+                            "forced": forced,
+                            "aligned_45": aligned,
+                            "reported_offsets": [
+                                (int(item.reported_position[0]) - origin[0],
+                                 int(item.reported_position[1]) - origin[1])
+                                for item in sightings
+                            ],
+                        })
                     sighting_aligned_45 += aligned
                     slot_metrics["aligned_45"] += aligned
                     if not forced:
@@ -176,8 +199,10 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
                 sightline_covered += covered
                 if action.action == "ABILITY":
                     ability_requests += 1
+                    slot_metrics["ability_requests"] += 1
                     succeeded = _charges(character) < charges_before
                     ability_successes += succeeded
+                    slot_metrics["ability_successes"] += succeeded
                     if succeeded:
                         ability_activated_by_type[action.ability] += 1
         finally:
@@ -187,7 +212,7 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
     return {
         "side": side.value,
         "seed": seed,
-        "checkpoint_variant": variant,
+        "checkpoint_variant": variant if not checkpoint_overrides else "custom",
         "coach": "fixed STAY/HOLD dummy",
         "opponent": "default",
         "encounter": "near" if near else "natural",
@@ -210,6 +235,7 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
         "unforced_sighting_actions": unforced_sighting_actions,
         "unforced_aligned_45": unforced_aligned_45,
         "per_slot": per_slot,
+        **({"sighting_trace": sighting_trace} if trace_slot is not None else {}),
         "round_finished": game.current_round != initial_round,
     }
 
@@ -221,10 +247,12 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=1)
     parser.add_argument("--near", action="store_true")
     parser.add_argument("--variant", choices=("best", "facing_best"), default="best")
+    parser.add_argument("--gorimaru-checkpoint", type=Path)
     parser.add_argument("--output")
     args = parser.parse_args()
+    overrides = {0: args.gorimaru_checkpoint} if args.gorimaru_checkpoint else None
     results = [evaluate(side, ticks=args.ticks, seed=seed, near=args.near,
-                        variant=args.variant)
+                        variant=args.variant, checkpoint_overrides=overrides)
                for seed in range(args.seed, args.seed + args.seeds)
                for side in (Side.ATTACKER, Side.DEFENDER)]
     encoded = json.dumps(results, ensure_ascii=False, indent=2)

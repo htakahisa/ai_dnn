@@ -22,6 +22,7 @@ from coach_v1.common.watch_points import load_watch_points
 from coach_v1.perception import BeliefMemory, TeamPerceptionBuilder
 from coach_v1.training.character_environment import CharacterEnvironment, CurriculumStage
 from coach_v1.training.character_trainer import CharacterTrainingExample
+from coach_v1.training.facing_labels import acceptable_facings_from_snapshot
 from coach_v1.training.scenario_generator import ScenarioGenerator
 from coach_v1.observation.character_encoder import CoachInstruction
 
@@ -81,7 +82,8 @@ def _nearby(target: tuple[int, int], rng: random.Random, excluded: set[tuple[int
     return rng.choice(candidates)
 
 
-def build_character_curriculum(slot: int, *, seed: int, count: int) -> tuple[CurriculumExample, ...]:
+def build_character_curriculum(slot: int, *, seed: int, count: int,
+                               multi_facing: bool = False) -> tuple[CurriculumExample, ...]:
     """Generate independent staged rounds using the 70/20/10 scenario sampler."""
     if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < 5:
         raise ValueError("invalid fixed-roster slot")
@@ -139,6 +141,10 @@ def build_character_curriculum(slot: int, *, seed: int, count: int) -> tuple[Cur
                                          + abs(point.position[1] - actor_position[1]), point.point_id))
         label_facing = (_direction(actor_position, sighting.reported_position, nearest.facing)
                         if sighting is not None else nearest.facing)
+        accepted = (acceptable_facings_from_snapshot(snapshot, slot=slot)
+                    if multi_facing and sighting is not None else (label_facing,))
+        if label_facing not in accepted:
+            label_facing = accepted[0]
         use = bool(sighting is not None and request_utility and step.observation.mask.ability_use[1])
         target = None
         if use:
@@ -149,7 +155,8 @@ def build_character_curriculum(slot: int, *, seed: int, count: int) -> tuple[Cur
                                                     int(cell[0]), int(cell[1])))
             target = int(selected[0]), int(selected[1])
         result.append(CurriculumExample(
-            CharacterTrainingExample(step.observation, label_facing, use, target),
+            CharacterTrainingExample(step.observation, label_facing, use, target,
+                                     acceptable_facings=accepted if multi_facing else None),
             placement.category, side, situation, int(sighting is not None),
         ))
     return tuple(result)

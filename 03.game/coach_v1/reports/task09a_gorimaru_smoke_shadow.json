@@ -1,0 +1,4625 @@
+{
+  "seeds": [
+    60,
+    69
+  ],
+  "ticks_per_round": 20,
+  "encounters": [
+    "near",
+    "west",
+    "east",
+    "crossfire",
+    "natural"
+  ],
+  "models": {
+    "selected": {
+      "checkpoint": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch90_latest.pt",
+      "all": {
+        "rounds": 100,
+        "smoke_requests": 80,
+        "smoke_successes": 80,
+        "rounds_with_immediate_enemy_lane_block": 28,
+        "rounds_with_immediate_ally_lane_block": 30,
+        "smoke_active_evaluated_ticks": 1535,
+        "allies_inside_at_throw": 0,
+        "enemies_inside_at_throw": 159,
+        "ally_lanes_without": 3534,
+        "enemy_lanes_without": 3176,
+        "ally_lanes_blocked": 408,
+        "enemy_lanes_blocked": 629,
+        "paired_shadow_uses": 80,
+        "paired_different_targets": 4,
+        "shadow_pair_ticks": {
+          "ally_lanes_without": 3534,
+          "enemy_lanes_without": 3176,
+          "ally_lanes_blocked": 408,
+          "enemy_lanes_blocked": 629
+        }
+      },
+      "by_side_encounter": {
+        "attacker_near": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 9,
+          "rounds_with_immediate_ally_lane_block": 9,
+          "smoke_active_evaluated_ticks": 146,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 26,
+          "ally_lanes_without": 745,
+          "enemy_lanes_without": 526,
+          "ally_lanes_blocked": 69,
+          "enemy_lanes_blocked": 135,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 1,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 745,
+            "enemy_lanes_without": 526,
+            "ally_lanes_blocked": 66,
+            "enemy_lanes_blocked": 132
+          }
+        },
+        "attacker_west": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 3,
+          "rounds_with_immediate_ally_lane_block": 3,
+          "smoke_active_evaluated_ticks": 200,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 27,
+          "ally_lanes_without": 208,
+          "enemy_lanes_without": 117,
+          "ally_lanes_blocked": 20,
+          "enemy_lanes_blocked": 30,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 1,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 208,
+            "enemy_lanes_without": 117,
+            "ally_lanes_blocked": 20,
+            "enemy_lanes_blocked": 30
+          }
+        },
+        "attacker_east": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 3,
+          "rounds_with_immediate_ally_lane_block": 4,
+          "smoke_active_evaluated_ticks": 200,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 26,
+          "ally_lanes_without": 111,
+          "enemy_lanes_without": 100,
+          "ally_lanes_blocked": 32,
+          "enemy_lanes_blocked": 19,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 111,
+            "enemy_lanes_without": 100,
+            "ally_lanes_blocked": 32,
+            "enemy_lanes_blocked": 19
+          }
+        },
+        "attacker_crossfire": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 2,
+          "rounds_with_immediate_ally_lane_block": 2,
+          "smoke_active_evaluated_ticks": 200,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 8,
+          "ally_lanes_without": 192,
+          "enemy_lanes_without": 179,
+          "ally_lanes_blocked": 13,
+          "enemy_lanes_blocked": 41,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 2,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 192,
+            "enemy_lanes_without": 179,
+            "ally_lanes_blocked": 16,
+            "enemy_lanes_blocked": 44
+          }
+        },
+        "attacker_natural": {
+          "rounds": 10,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "rounds_with_immediate_enemy_lane_block": 0,
+          "rounds_with_immediate_ally_lane_block": 0,
+          "smoke_active_evaluated_ticks": 0,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 0,
+          "ally_lanes_without": 0,
+          "enemy_lanes_without": 0,
+          "ally_lanes_blocked": 0,
+          "enemy_lanes_blocked": 0,
+          "paired_shadow_uses": 0,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        "defender_near": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 0,
+          "rounds_with_immediate_ally_lane_block": 0,
+          "smoke_active_evaluated_ticks": 195,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 20,
+          "ally_lanes_without": 986,
+          "enemy_lanes_without": 1042,
+          "ally_lanes_blocked": 70,
+          "enemy_lanes_blocked": 228,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 986,
+            "enemy_lanes_without": 1042,
+            "ally_lanes_blocked": 70,
+            "enemy_lanes_blocked": 228
+          }
+        },
+        "defender_west": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 0,
+          "rounds_with_immediate_ally_lane_block": 1,
+          "smoke_active_evaluated_ticks": 196,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 22,
+          "ally_lanes_without": 344,
+          "enemy_lanes_without": 348,
+          "ally_lanes_blocked": 11,
+          "enemy_lanes_blocked": 35,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 344,
+            "enemy_lanes_without": 348,
+            "ally_lanes_blocked": 11,
+            "enemy_lanes_blocked": 35
+          }
+        },
+        "defender_east": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 1,
+          "rounds_with_immediate_ally_lane_block": 1,
+          "smoke_active_evaluated_ticks": 200,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 20,
+          "ally_lanes_without": 384,
+          "enemy_lanes_without": 355,
+          "ally_lanes_blocked": 65,
+          "enemy_lanes_blocked": 41,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 384,
+            "enemy_lanes_without": 355,
+            "ally_lanes_blocked": 65,
+            "enemy_lanes_blocked": 41
+          }
+        },
+        "defender_crossfire": {
+          "rounds": 10,
+          "smoke_requests": 10,
+          "smoke_successes": 10,
+          "rounds_with_immediate_enemy_lane_block": 10,
+          "rounds_with_immediate_ally_lane_block": 10,
+          "smoke_active_evaluated_ticks": 198,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 10,
+          "ally_lanes_without": 564,
+          "enemy_lanes_without": 509,
+          "ally_lanes_blocked": 128,
+          "enemy_lanes_blocked": 100,
+          "paired_shadow_uses": 10,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 564,
+            "enemy_lanes_without": 509,
+            "ally_lanes_blocked": 128,
+            "enemy_lanes_blocked": 100
+          }
+        },
+        "defender_natural": {
+          "rounds": 10,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "rounds_with_immediate_enemy_lane_block": 0,
+          "rounds_with_immediate_ally_lane_block": 0,
+          "smoke_active_evaluated_ticks": 0,
+          "allies_inside_at_throw": 0,
+          "enemies_inside_at_throw": 0,
+          "ally_lanes_without": 0,
+          "enemy_lanes_without": 0,
+          "ally_lanes_blocked": 0,
+          "enemy_lanes_blocked": 0,
+          "paired_shadow_uses": 0,
+          "paired_different_targets": 0,
+          "shadow_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        }
+      },
+      "games": [
+        {
+          "side": "attacker",
+          "seed": 60,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              19
+            ],
+            "cell_count": 8,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 19,
+              "enemy_lanes_without": 10,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 7
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              19
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 19,
+              "enemy_lanes_without": 10,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 7
+            }
+          },
+          "smoke_active_evaluated_ticks": 7,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 44,
+            "enemy_lanes_without": 16,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 44,
+            "enemy_lanes_without": 16,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 60,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 60,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              26
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              26
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 5,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 5,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 60,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              27
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 0,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 0,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 15,
+            "enemy_lanes_without": 14,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 15,
+            "enemy_lanes_without": 14,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 60,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 60,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 102,
+            "enemy_lanes_without": 100,
+            "ally_lanes_blocked": 11,
+            "enemy_lanes_blocked": 20
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 102,
+            "enemy_lanes_without": 100,
+            "ally_lanes_blocked": 11,
+            "enemy_lanes_blocked": 20
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 60,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 29,
+            "enemy_lanes_without": 25,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 29,
+            "enemy_lanes_without": 25,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 60,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              25
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              25
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 24,
+            "enemy_lanes_without": 23,
+            "ally_lanes_blocked": 4,
+            "enemy_lanes_blocked": 3
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 24,
+            "enemy_lanes_without": 23,
+            "ally_lanes_blocked": 4,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 60,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 74,
+            "enemy_lanes_without": 74,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 10
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 74,
+            "enemy_lanes_without": 74,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 10
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 60,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 61,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              19
+            ],
+            "cell_count": 8,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 17,
+              "enemy_lanes_blocked": 10
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              19
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 17,
+              "enemy_lanes_blocked": 10
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 105,
+            "enemy_lanes_without": 54,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 20
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 105,
+            "enemy_lanes_without": 54,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 20
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 61,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              14
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              14
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 8,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 8,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 61,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              26
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              26
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 15,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 7
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 15,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 7
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 61,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 22,
+            "enemy_lanes_without": 21,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 22,
+            "enemy_lanes_without": 21,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 61,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 61,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 106,
+            "enemy_lanes_without": 100,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 14
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 106,
+            "enemy_lanes_without": 100,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 14
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 61,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 39,
+            "enemy_lanes_without": 40,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 10
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 39,
+            "enemy_lanes_without": 40,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 10
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 61,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 5
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 5
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 61,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 57,
+            "enemy_lanes_without": 42,
+            "ally_lanes_blocked": 28,
+            "enemy_lanes_blocked": 15
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 57,
+            "enemy_lanes_without": 42,
+            "ally_lanes_blocked": 28,
+            "enemy_lanes_blocked": 15
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 61,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 62,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              18
+            ],
+            "cell_count": 7,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 19,
+              "enemy_lanes_without": 11,
+              "ally_lanes_blocked": 10,
+              "enemy_lanes_blocked": 5
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 19,
+              "enemy_lanes_without": 11,
+              "ally_lanes_blocked": 10,
+              "enemy_lanes_blocked": 5
+            }
+          },
+          "smoke_active_evaluated_ticks": 19,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 137,
+            "enemy_lanes_without": 80,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 137,
+            "enemy_lanes_without": 80,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 62,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              14
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              14
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 21,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 21,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 62,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              26
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              26
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 3,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 3,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 62,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              9
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 0,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              9
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 62,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 62,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 62,
+            "enemy_lanes_without": 72,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 62,
+            "enemy_lanes_without": 72,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 4
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 62,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 40,
+            "enemy_lanes_without": 43,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 40,
+            "enemy_lanes_without": 43,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 62,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 67,
+            "enemy_lanes_without": 57,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 2
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 67,
+            "enemy_lanes_without": 57,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 2
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 62,
+          "encounter": "crossfire",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 38,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 6
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 38,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 6
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 62,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 63,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              21
+            ],
+            "cell_count": 9,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 12,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 3
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              20,
+              21
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 12,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 3
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 34,
+            "ally_lanes_blocked": 10,
+            "enemy_lanes_blocked": 7
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 34,
+            "ally_lanes_blocked": 10,
+            "enemy_lanes_blocked": 7
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 63,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              14
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              14
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 28,
+            "enemy_lanes_without": 19,
+            "ally_lanes_blocked": 15,
+            "enemy_lanes_blocked": 18
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 28,
+            "enemy_lanes_without": 19,
+            "ally_lanes_blocked": 15,
+            "enemy_lanes_blocked": 18
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 63,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              29
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              29
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 2,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 2,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 63,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              15
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 0,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              15
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 22,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 14
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 22,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 14
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 63,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 63,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 108,
+            "enemy_lanes_without": 118,
+            "ally_lanes_blocked": 14,
+            "enemy_lanes_blocked": 43
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 108,
+            "enemy_lanes_without": 118,
+            "ally_lanes_blocked": 14,
+            "enemy_lanes_blocked": 43
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 63,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 40,
+            "enemy_lanes_without": 47,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 40,
+            "enemy_lanes_without": 47,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 63,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 33,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 3
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 33,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 63,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 30,
+            "ally_lanes_blocked": 25,
+            "enemy_lanes_blocked": 11
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 30,
+            "ally_lanes_blocked": 25,
+            "enemy_lanes_blocked": 11
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 63,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 64,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              20
+            ],
+            "cell_count": 9,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 14,
+              "ally_lanes_blocked": 15,
+              "enemy_lanes_blocked": 10
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              20,
+              20
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 14,
+              "ally_lanes_blocked": 15,
+              "enemy_lanes_blocked": 10
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 101,
+            "enemy_lanes_without": 85,
+            "ally_lanes_blocked": 30,
+            "enemy_lanes_blocked": 43
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 101,
+            "enemy_lanes_without": 85,
+            "ally_lanes_blocked": 30,
+            "enemy_lanes_blocked": 43
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 64,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 64,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 19,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 19,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 64,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 23,
+            "enemy_lanes_without": 29,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 13
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 23,
+            "enemy_lanes_without": 29,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 13
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 64,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 64,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 124,
+            "enemy_lanes_without": 137,
+            "ally_lanes_blocked": 22,
+            "enemy_lanes_blocked": 64
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 124,
+            "enemy_lanes_without": 137,
+            "ally_lanes_blocked": 22,
+            "enemy_lanes_blocked": 64
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 64,
+          "encounter": "west",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 16,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 24,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 24,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 4
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 64,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              26
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              26
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 26,
+            "enemy_lanes_without": 35,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 26,
+            "enemy_lanes_without": 35,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 4
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 64,
+          "encounter": "crossfire",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 19,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 49,
+            "enemy_lanes_without": 46,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 13
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 49,
+            "enemy_lanes_without": 46,
+            "ally_lanes_blocked": 12,
+            "enemy_lanes_blocked": 13
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 64,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 65,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              19
+            ],
+            "cell_count": 7,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 6,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 4
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              20,
+              19
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 6,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 4
+            }
+          },
+          "smoke_active_evaluated_ticks": 8,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 37,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 3
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 37,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 65,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 12,
+            "enemy_lanes_without": 3,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 12,
+            "enemy_lanes_without": 3,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 65,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              29
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              29
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 65,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 3,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 2
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 5,
+            "enemy_lanes_without": 3,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 2
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 65,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 65,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 102,
+            "enemy_lanes_without": 112,
+            "ally_lanes_blocked": 10,
+            "enemy_lanes_blocked": 32
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 102,
+            "enemy_lanes_without": 112,
+            "ally_lanes_blocked": 10,
+            "enemy_lanes_blocked": 32
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 65,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 47,
+            "enemy_lanes_without": 48,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 47,
+            "enemy_lanes_without": 48,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 4
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 65,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 12,
+            "ally_lanes_blocked": 17,
+            "enemy_lanes_blocked": 9
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 12,
+            "ally_lanes_blocked": 17,
+            "enemy_lanes_blocked": 9
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 65,
+          "encounter": "crossfire",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 19,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 64,
+            "enemy_lanes_without": 65,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 7
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 64,
+            "enemy_lanes_without": 65,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 7
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 65,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 66,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              19,
+              21
+            ],
+            "cell_count": 9,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 0,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 16,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              19,
+              21
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 16,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 14,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 111,
+            "enemy_lanes_without": 104,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 12
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 111,
+            "enemy_lanes_without": 104,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 12
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 66,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 28,
+            "enemy_lanes_without": 26,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 2
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 28,
+            "enemy_lanes_without": 26,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 2
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 66,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              27
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              27
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 66,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 33,
+            "enemy_lanes_without": 29,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 12
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 33,
+            "enemy_lanes_without": 29,
+            "ally_lanes_blocked": 2,
+            "enemy_lanes_blocked": 12
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 66,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 66,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 70,
+            "enemy_lanes_without": 83,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 9
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 70,
+            "enemy_lanes_without": 83,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 9
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 66,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 3
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 32,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 66,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 81,
+            "enemy_lanes_without": 65,
+            "ally_lanes_blocked": 4,
+            "enemy_lanes_blocked": 1
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 81,
+            "enemy_lanes_without": 65,
+            "ally_lanes_blocked": 4,
+            "enemy_lanes_blocked": 1
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 66,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 68,
+            "enemy_lanes_without": 69,
+            "ally_lanes_blocked": 19,
+            "enemy_lanes_blocked": 10
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 68,
+            "enemy_lanes_without": 69,
+            "ally_lanes_blocked": 19,
+            "enemy_lanes_blocked": 10
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 66,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 67,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              20
+            ],
+            "cell_count": 9,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 18,
+              "ally_lanes_blocked": 15,
+              "enemy_lanes_blocked": 10
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              20,
+              20
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 18,
+              "ally_lanes_blocked": 15,
+              "enemy_lanes_blocked": 10
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 91,
+            "enemy_lanes_without": 87,
+            "ally_lanes_blocked": 18,
+            "enemy_lanes_blocked": 37
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 91,
+            "enemy_lanes_without": 87,
+            "ally_lanes_blocked": 18,
+            "enemy_lanes_blocked": 37
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 67,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              12
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 26,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 10
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 26,
+            "enemy_lanes_without": 27,
+            "ally_lanes_blocked": 5,
+            "enemy_lanes_blocked": 10
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 67,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              24
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              24
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 14,
+            "ally_lanes_blocked": 18,
+            "enemy_lanes_blocked": 12
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 20,
+            "enemy_lanes_without": 14,
+            "ally_lanes_blocked": 18,
+            "enemy_lanes_blocked": 12
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 67,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              9
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 0,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              9
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 44,
+            "enemy_lanes_without": 45,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 44,
+            "enemy_lanes_without": 45,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 67,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 67,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 99,
+            "enemy_lanes_without": 103,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 21
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 99,
+            "enemy_lanes_without": 103,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 21
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 67,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 25,
+            "enemy_lanes_without": 20,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 3
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 25,
+            "enemy_lanes_without": 20,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 3
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 67,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              26
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              26
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 35,
+            "enemy_lanes_without": 33,
+            "ally_lanes_blocked": 8,
+            "enemy_lanes_blocked": 7
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 35,
+            "enemy_lanes_without": 33,
+            "ally_lanes_blocked": 8,
+            "enemy_lanes_blocked": 7
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 67,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 43,
+            "enemy_lanes_without": 39,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 43,
+            "enemy_lanes_without": 39,
+            "ally_lanes_blocked": 7,
+            "enemy_lanes_blocked": 4
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 67,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 68,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              19
+            ],
+            "cell_count": 7,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 17,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 8
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              20,
+              19
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 17,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 8
+            }
+          },
+          "smoke_active_evaluated_ticks": 10,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 31,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 9
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 45,
+            "enemy_lanes_without": 31,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 9
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 68,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              12
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 0,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 23,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 23,
+            "enemy_lanes_without": 2,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 68,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              27
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              27
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 13,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 13,
+            "enemy_lanes_without": 18,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 68,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 10,
+            "enemy_lanes_without": 9,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 10,
+            "enemy_lanes_without": 9,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 68,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 68,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 15,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 120,
+            "enemy_lanes_without": 121,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 16
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 120,
+            "enemy_lanes_without": 121,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 16
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 68,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 37,
+            "enemy_lanes_without": 41,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 2
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 37,
+            "enemy_lanes_without": 41,
+            "ally_lanes_blocked": 1,
+            "enemy_lanes_blocked": 2
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 68,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 19,
+            "enemy_lanes_without": 13,
+            "ally_lanes_blocked": 13,
+            "enemy_lanes_blocked": 7
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 19,
+            "enemy_lanes_without": 13,
+            "ally_lanes_blocked": 13,
+            "enemy_lanes_blocked": 7
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 68,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 1,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 46,
+            "enemy_lanes_without": 43,
+            "ally_lanes_blocked": 9,
+            "enemy_lanes_blocked": 6
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 46,
+            "enemy_lanes_without": 43,
+            "ally_lanes_blocked": 9,
+            "enemy_lanes_blocked": 6
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 68,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 69,
+          "encounter": "near",
+          "live_ticks": 0,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              20,
+              21
+            ],
+            "cell_count": 9,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 14,
+              "enemy_lanes_blocked": 9
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              19,
+              19
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 23,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 8,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 42,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 3,
+            "enemy_lanes_blocked": 4
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 42,
+            "enemy_lanes_without": 17,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 1
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 69,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 69,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 3,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 4,
+            "enemy_lanes_without": 4,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 4,
+            "enemy_lanes_without": 4,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 69,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              11
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              11
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 9,
+            "enemy_lanes_without": 6,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "attacker",
+          "seed": 69,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 69,
+          "encounter": "near",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              3,
+              18
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              3,
+              18
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 11,
+              "enemy_lanes_without": 13,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 93,
+            "enemy_lanes_without": 96,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 5
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 93,
+            "enemy_lanes_without": 96,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 5
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 69,
+          "encounter": "west",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              10
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              10
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 31,
+            "enemy_lanes_without": 30,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 9
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 31,
+            "enemy_lanes_without": 30,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 9
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 69,
+          "encounter": "east",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              22,
+              28
+            ],
+            "cell_count": 3,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 2,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              22,
+              28
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 1,
+              "enemy_lanes_without": 1,
+              "ally_lanes_blocked": 0,
+              "enemy_lanes_blocked": 0
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 60,
+            "enemy_lanes_without": 66,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 60,
+            "enemy_lanes_without": 66,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 69,
+          "encounter": "crossfire",
+          "live_ticks": 20,
+          "smoke_requests": 1,
+          "smoke_successes": 1,
+          "placement": {
+            "tick": 0,
+            "target": [
+              21,
+              13
+            ],
+            "cell_count": 6,
+            "allies_in_smoke": 0,
+            "enemies_in_smoke": 1,
+            "legal_shared_sightings": 5,
+            "marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            },
+            "shadow_requested_smoke": true,
+            "shadow_target": [
+              21,
+              13
+            ],
+            "shadow_marginal_shot_lanes": {
+              "ally_lanes_without": 2,
+              "enemy_lanes_without": 2,
+              "ally_lanes_blocked": 2,
+              "enemy_lanes_blocked": 1
+            }
+          },
+          "smoke_active_evaluated_ticks": 20,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 73,
+            "enemy_lanes_without": 63,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 18
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 73,
+            "enemy_lanes_without": 63,
+            "ally_lanes_blocked": 6,
+            "enemy_lanes_blocked": 18
+          }
+        },
+        {
+          "side": "defender",
+          "seed": 69,
+          "encounter": "natural",
+          "live_ticks": 20,
+          "smoke_requests": 0,
+          "smoke_successes": 0,
+          "placement": null,
+          "smoke_active_evaluated_ticks": 0,
+          "marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          },
+          "shadow_marginal_shot_lane_pair_ticks": {
+            "ally_lanes_without": 0,
+            "enemy_lanes_without": 0,
+            "ally_lanes_blocked": 0,
+            "enemy_lanes_blocked": 0
+          }
+        }
+      ]
+    }
+  }
+}

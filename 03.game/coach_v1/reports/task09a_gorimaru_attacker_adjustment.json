@@ -1,0 +1,2926 @@
+{
+  "start_checkpoint": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gorimaru\\best.pt",
+  "change": "no facing loss without current legal sighting; near attacker quota in second arm",
+  "train_seeds": [
+    500,
+    539
+  ],
+  "validation_seeds": [
+    600,
+    604
+  ],
+  "holdout_seeds": [
+    700,
+    709
+  ],
+  "staged_train_samples": 1400,
+  "extra_attacker_near_collected": 369,
+  "arms": {
+    "mask_only": {
+      "train_rollout_samples": 600,
+      "train_rollout_sighted": 285,
+      "train_rollout_by_side_scenario": {
+        "attacker_near": 60,
+        "attacker_west": 60,
+        "attacker_east": 60,
+        "attacker_crossfire": 60,
+        "attacker_natural": 60,
+        "defender_near": 60,
+        "defender_west": 60,
+        "defender_east": 60,
+        "defender_crossfire": 60,
+        "defender_natural": 60
+      },
+      "watchpoint_training_share": 0.7,
+      "checkpoints": {
+        "epoch75_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch75_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2489684046728148,
+              "facing_accuracy": 0.9261744966442953,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.5684505525584284,
+              "facing_accuracy": 0.819078947368421,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.5496820930923735,
+                "facing_accuracy": 0.6571428571428571,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.4441021049022675,
+                "facing_accuracy": 0.98,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.2272388253893172,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.44016030672434214,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0015860982239246368,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0348211293193427,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.6932140744250753,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.868650476137797,
+                "facing_accuracy": 0.7380952380952381,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.27440667831338145,
+              "facing_accuracy": 0.9151069518716578,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.925,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.579383426558243,
+              "facing_accuracy": 0.8107302533532041,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.925,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.7232536366491606,
+                "facing_accuracy": 0.7727272727272727,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.7,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.29237848741036876,
+                "facing_accuracy": 0.8240740740740741,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.5217045437471539,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.7827278974056244,
+                "facing_accuracy": 0.768,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.7282509207725525,
+                "facing_accuracy": 0.3333333333333333,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.5998401916944064,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.020056753419339657,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.43458864020138255,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7285593233935468,
+                "facing_accuracy": 0.7207207207207207,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8621220135688782,
+            "facing_accuracy": 0.66,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch75_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch75_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.245378516470494,
+              "facing_accuracy": 0.9221476510067114,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.5582802769678988,
+              "facing_accuracy": 0.8092105263157895,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.6059933594294957,
+                "facing_accuracy": 0.6571428571428571,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.4462928092479706,
+                "facing_accuracy": 0.98,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.1297617980412074,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.42349238653440735,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.001184638007543981,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.034679696979847824,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.6136627715566884,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.9367709613981701,
+                "facing_accuracy": 0.6904761904761905,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.27234224754733183,
+              "facing_accuracy": 0.9264705882352942,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9375,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5694731345563994,
+              "facing_accuracy": 0.8360655737704918,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9375,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.7950643987366648,
+                "facing_accuracy": 0.7878787878787878,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.1797119183120904,
+                "facing_accuracy": 0.9722222222222222,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.4873647103268726,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.782079092502594,
+                "facing_accuracy": 0.736,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.3844534456729889,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.6107461635883038,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.019022437278181314,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.4510270122105513,
+                "facing_accuracy": 0.8292682926829268,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7485942502279539,
+                "facing_accuracy": 0.7477477477477478,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8787249088287353,
+            "facing_accuracy": 0.6,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch80_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch80_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2352314441994079,
+              "facing_accuracy": 0.9208053691275168,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.5359584139905086,
+              "facing_accuracy": 0.805921052631579,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.693484086224011,
+                "facing_accuracy": 0.6857142857142857,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.5483509200811386,
+                "facing_accuracy": 0.76,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 0.6556447488921029,
+                "facing_accuracy": 0.7857142857142857,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.4483857348158553,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0002490420883987099,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.017924895002083344,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.5695565640926361,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.9460372868038359,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.2587308390466707,
+              "facing_accuracy": 0.9271390374331551,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5601110971142744,
+              "facing_accuracy": 0.8375558867362146,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.6030989740834092,
+                "facing_accuracy": 0.8181818181818182,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.14409322401991598,
+                "facing_accuracy": 0.9629629629629629,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.3276001295330478,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.9602879648208618,
+                "facing_accuracy": 0.712,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.02168019860982895,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.7350848638094388,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.008653679164126515,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.3261049601847563,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7171125613354348,
+                "facing_accuracy": 0.7657657657657657,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8283247375488281,
+            "facing_accuracy": 0.65,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch80_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch80_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2352314441994079,
+              "facing_accuracy": 0.9208053691275168,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.5359584139905086,
+              "facing_accuracy": 0.805921052631579,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.693484086224011,
+                "facing_accuracy": 0.6857142857142857,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.5483509200811386,
+                "facing_accuracy": 0.76,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 0.6556447488921029,
+                "facing_accuracy": 0.7857142857142857,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.4483857348158553,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0002490420883987099,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.017924895002083344,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.5695565640926361,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.9460372868038359,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.2587308390466707,
+              "facing_accuracy": 0.9271390374331551,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5601110971142744,
+              "facing_accuracy": 0.8375558867362146,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.6030989740834092,
+                "facing_accuracy": 0.8181818181818182,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.14409322401991598,
+                "facing_accuracy": 0.9629629629629629,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.3276001295330478,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.9602879648208618,
+                "facing_accuracy": 0.712,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.02168019860982895,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.7350848638094388,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.008653679164126515,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.3261049601847563,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7171125613354348,
+                "facing_accuracy": 0.7657657657657657,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8283247375488281,
+            "facing_accuracy": 0.65,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch90_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch90_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.27771499875839895,
+              "facing_accuracy": 0.9234899328859061,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.6405314287097242,
+              "facing_accuracy": 0.8125,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.5260632775723935,
+                "facing_accuracy": 0.8285714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.934118991792202,
+                "facing_accuracy": 0.7,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 0.5758728555270604,
+                "facing_accuracy": 0.75,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.5163051800147908,
+                "facing_accuracy": 0.8513513513513513,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0009244639659300447,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.01895650289952755,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.7059851463722147,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 1.138655838512239,
+                "facing_accuracy": 0.7857142857142857,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.3239890971358963,
+              "facing_accuracy": 0.929144385026738,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9625,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.6479191205973686,
+              "facing_accuracy": 0.842026825633383,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9625,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.47973023400162207,
+                "facing_accuracy": 0.8181818181818182,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.23845251346075977,
+                "facing_accuracy": 0.9166666666666666,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.34732592328652445,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.339233781337738,
+                "facing_accuracy": 0.736,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.003082538489252329,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.8072599035042983,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.017569972027558833,
+                "facing_accuracy": 0.96875,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.31021873180459186,
+                "facing_accuracy": 0.8617886178861789,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.852982851164835,
+                "facing_accuracy": 0.7927927927927928,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.7674527263641358,
+            "facing_accuracy": 0.67,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch90_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\mask_only\\epoch90_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.41950016195018286,
+              "facing_accuracy": 0.9261744966442953,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.9832769820442129,
+              "facing_accuracy": 0.819078947368421,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 2.341838697024754,
+                "facing_accuracy": 0.6285714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.2342498606443405,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.85889618737357,
+                "facing_accuracy": 0.5714285714285714,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.7859406310158807,
+                "facing_accuracy": 0.7972972972972973,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0002640205784700811,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0001967280775054612,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 1.3422450293665347,
+                "facing_accuracy": 0.782608695652174,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.9349238133900577,
+                "facing_accuracy": 0.8809523809523809,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.5266612525773796,
+              "facing_accuracy": 0.9131016042780749,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 1.0973703767902192,
+              "facing_accuracy": 0.8062593144560357,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 1.6395521265539257,
+                "facing_accuracy": 0.7424242424242424,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.11317605092416569,
+                "facing_accuracy": 0.9907407407407407,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 1.2266864682748622,
+                "facing_accuracy": 0.7254901960784313,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.8743593624830246,
+                "facing_accuracy": 0.76,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.012160840444266796,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.9456983300355765,
+                "facing_accuracy": 0.8653846153846154,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.0001377884909743443,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 1.3543144842473471,
+                "facing_accuracy": 0.6341463414634146,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.6759388209530363,
+                "facing_accuracy": 0.8558558558558559,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.7798663330078125,
+            "facing_accuracy": 0.66,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        }
+      }
+    },
+    "near_priority": {
+      "train_rollout_samples": 600,
+      "train_rollout_sighted": 385,
+      "train_rollout_by_side_scenario": {
+        "attacker_near": 180,
+        "attacker_west": 35,
+        "attacker_east": 35,
+        "attacker_crossfire": 35,
+        "attacker_natural": 35,
+        "defender_near": 56,
+        "defender_west": 56,
+        "defender_east": 56,
+        "defender_crossfire": 56,
+        "defender_natural": 56
+      },
+      "watchpoint_training_share": 0.7,
+      "checkpoints": {
+        "epoch75_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch75_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2734875658384014,
+              "facing_accuracy": 0.912751677852349,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.6270880148697057,
+              "facing_accuracy": 0.7861842105263158,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.4468424311705998,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.2746578845381737,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.9536519050598145,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.5804030975779971,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0018491254886612296,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.02303585765713995,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.409438651541005,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 1.0941706952594576,
+                "facing_accuracy": 0.5,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.2810906081167091,
+              "facing_accuracy": 0.9084224598930482,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5989166300094252,
+              "facing_accuracy": 0.7958271236959762,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.48477347827318945,
+                "facing_accuracy": 0.8181818181818182,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.2987530090742641,
+                "facing_accuracy": 0.8518518518518519,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.6958062726931245,
+                "facing_accuracy": 0.9215686274509803,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.0104745860099793,
+                "facing_accuracy": 0.712,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.6,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.7067888379096985,
+                "facing_accuracy": 0.6666666666666666,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.5530720605300024,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.014926047995686531,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.3135569896397552,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.9195828534461357,
+                "facing_accuracy": 0.6216216216216216,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8615568566322327,
+            "facing_accuracy": 0.62,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch75_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch75_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2734875658384014,
+              "facing_accuracy": 0.912751677852349,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.6270880148697057,
+              "facing_accuracy": 0.7861842105263158,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.4468424311705998,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.2746578845381737,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.9536519050598145,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.5804030975779971,
+                "facing_accuracy": 0.8108108108108109,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.0018491254886612296,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.02303585765713995,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.409438651541005,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 1.0941706952594576,
+                "facing_accuracy": 0.5,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.2810906081167091,
+              "facing_accuracy": 0.9084224598930482,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5989166300094252,
+              "facing_accuracy": 0.7958271236959762,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.48477347827318945,
+                "facing_accuracy": 0.8181818181818182,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.2987530090742641,
+                "facing_accuracy": 0.8518518518518519,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.6958062726931245,
+                "facing_accuracy": 0.9215686274509803,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.0104745860099793,
+                "facing_accuracy": 0.712,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.6,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.7067888379096985,
+                "facing_accuracy": 0.6666666666666666,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.5530720605300024,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.014926047995686531,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.3135569896397552,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.9195828534461357,
+                "facing_accuracy": 0.6216216216216216,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8615568566322327,
+            "facing_accuracy": 0.62,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch80_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch80_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2729608051195125,
+              "facing_accuracy": 0.9328859060402684,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.6366615051795778,
+              "facing_accuracy": 0.8355263157894737,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.5628940922873361,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.17207157363649458,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 2.053939172199794,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.7112098392602559,
+                "facing_accuracy": 0.8378378378378378,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.001177072525024414,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0024882953994992104,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.565230764772581,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.7755671228681292,
+                "facing_accuracy": 0.8095238095238095,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.26271025108393614,
+              "facing_accuracy": 0.9251336898395722,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5987238477327029,
+              "facing_accuracy": 0.8330849478390462,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.6981389953783064,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.17518558237632667,
+                "facing_accuracy": 0.9629629629629629,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.7218839347946877,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.9476012072563171,
+                "facing_accuracy": 0.704,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 1.7509167194366455,
+                "facing_accuracy": 0.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.5829241000688993,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.0016704906593076885,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.384666257939203,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7718406743831463,
+                "facing_accuracy": 0.7657657657657657,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8122713255882263,
+            "facing_accuracy": 0.655,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch80_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch80_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.2729608051195125,
+              "facing_accuracy": 0.9328859060402684,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.6366615051795778,
+              "facing_accuracy": 0.8355263157894737,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.975,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.5628940922873361,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.17207157363649458,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 2.053939172199794,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 0.7112098392602559,
+                "facing_accuracy": 0.8378378378378378,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.001177072525024414,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0024882953994992104,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.565230764772581,
+                "facing_accuracy": 0.8043478260869565,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 0.7755671228681292,
+                "facing_accuracy": 0.8095238095238095,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.26271025108393614,
+              "facing_accuracy": 0.9251336898395722,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.5987238477327029,
+              "facing_accuracy": 0.8330849478390462,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 0.6981389953783064,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.17518558237632667,
+                "facing_accuracy": 0.9629629629629629,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.7218839347946877,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 0.9476012072563171,
+                "facing_accuracy": 0.704,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 1.7509167194366455,
+                "facing_accuracy": 0.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 0.5829241000688993,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.0016704906593076885,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.384666257939203,
+                "facing_accuracy": 0.8373983739837398,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 0.7718406743831463,
+                "facing_accuracy": 0.7657657657657657,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.8122713255882263,
+            "facing_accuracy": 0.655,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch90_best": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch90_best.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.44140297343685675,
+              "facing_accuracy": 0.9315436241610738,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.9307009405333941,
+              "facing_accuracy": 0.8322368421052632,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.9,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.5175167415823255,
+                "facing_accuracy": 0.7714285714285715,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.9438716458599083,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.6,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 1.963123423712594,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 1.29976950867756,
+                "facing_accuracy": 0.8378378378378378,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.018635908141732216,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0038578490599651227,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.47218963050323987,
+                "facing_accuracy": 0.8478260869565217,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 1.2833785216013591,
+                "facing_accuracy": 0.6666666666666666,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.39062357232492323,
+              "facing_accuracy": 0.9157754010695187,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.925,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 0.9063283278108554,
+              "facing_accuracy": 0.812220566318927,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.925,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 1.0079263128114468,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.40531990576871774,
+                "facing_accuracy": 0.9629629629629629,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.7387329490453589,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.298177811384201,
+                "facing_accuracy": 0.72,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.9833230376243591,
+                "facing_accuracy": 0.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 1.0569714399484487,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.0032546072034165263,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.3690163048165964,
+                "facing_accuracy": 0.8536585365853658,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 1.3736392195160325,
+                "facing_accuracy": 0.6036036036036037,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.7762674450874328,
+            "facing_accuracy": 0.67,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        },
+        "epoch90_latest": {
+          "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_attacker_adjustment\\near_priority\\epoch90_latest.pt",
+          "validation": {
+            "all": {
+              "samples": 745,
+              "loss": 0.3840452579519607,
+              "facing_accuracy": 0.934228187919463,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 6.249664429530202
+            },
+            "sighted": {
+              "samples": 304,
+              "loss": 0.848750886704932,
+              "facing_accuracy": 0.8388157894736842,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.710526315789474
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 35,
+                "loss": 0.4924402645656041,
+                "facing_accuracy": 0.8,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.0285714285714285
+              },
+              "attacker_west": {
+                "samples": 50,
+                "loss": 0.19007049798907247,
+                "facing_accuracy": 0.96,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.46
+              },
+              "attacker_east": {
+                "samples": 28,
+                "loss": 2.0284646238599504,
+                "facing_accuracy": 0.6785714285714286,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.7142857142857144
+              },
+              "attacker_crossfire": {
+                "samples": 74,
+                "loss": 1.5306485665811074,
+                "facing_accuracy": 0.8378378378378378,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.554054054054054
+              },
+              "attacker_natural": {
+                "samples": 0
+              },
+              "defender_near": {
+                "samples": 7,
+                "loss": 0.10143078863620758,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 6.0
+              },
+              "defender_west": {
+                "samples": 22,
+                "loss": 0.0010428821816193786,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.409090909090909
+              },
+              "defender_east": {
+                "samples": 46,
+                "loss": 0.6568096655866374,
+                "facing_accuracy": 0.8478260869565217,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.717391304347826
+              },
+              "defender_crossfire": {
+                "samples": 42,
+                "loss": 1.2093072221392678,
+                "facing_accuracy": 0.7142857142857143,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.7857142857142856
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "holdout": {
+            "all": {
+              "samples": 1496,
+              "loss": 0.4394277675950076,
+              "facing_accuracy": 0.9191176470588235,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 5.949197860962567
+            },
+            "sighted": {
+              "samples": 671,
+              "loss": 1.0404146110674368,
+              "facing_accuracy": 0.819672131147541,
+              "ability_accuracy": 1.0,
+              "unused_ability_accuracy": 1.0,
+              "target_accuracy": 0.95,
+              "ability_effective_rate": null,
+              "mean_accepted_facings": 3.427719821162444
+            },
+            "by_side_scenario": {
+              "attacker_near": {
+                "samples": 66,
+                "loss": 1.1925310850439763,
+                "facing_accuracy": 0.8333333333333334,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 4.2272727272727275
+              },
+              "attacker_west": {
+                "samples": 108,
+                "loss": 0.22035305251908235,
+                "facing_accuracy": 0.9537037037037037,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.1574074074074074
+              },
+              "attacker_east": {
+                "samples": 51,
+                "loss": 0.819478523497488,
+                "facing_accuracy": 0.9019607843137255,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.843137254901961
+              },
+              "attacker_crossfire": {
+                "samples": 125,
+                "loss": 1.724715396642685,
+                "facing_accuracy": 0.72,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.9,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.968
+              },
+              "attacker_natural": {
+                "samples": 3,
+                "loss": 0.9095425605773926,
+                "facing_accuracy": 0.3333333333333333,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": null,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.0
+              },
+              "defender_near": {
+                "samples": 52,
+                "loss": 1.1203307922069843,
+                "facing_accuracy": 0.8846153846153846,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 0.8,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.826923076923077
+              },
+              "defender_west": {
+                "samples": 32,
+                "loss": 0.0009355534566566348,
+                "facing_accuracy": 1.0,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.40625
+              },
+              "defender_east": {
+                "samples": 123,
+                "loss": 0.4459768376290435,
+                "facing_accuracy": 0.8617886178861789,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 2.6178861788617884
+              },
+              "defender_crossfire": {
+                "samples": 111,
+                "loss": 1.511799465697091,
+                "facing_accuracy": 0.6396396396396397,
+                "ability_accuracy": 1.0,
+                "unused_ability_accuracy": 1.0,
+                "target_accuracy": 1.0,
+                "ability_effective_rate": null,
+                "mean_accepted_facings": 3.630630630630631
+              },
+              "defender_natural": {
+                "samples": 0
+              }
+            }
+          },
+          "staged_holdout": {
+            "samples": 200,
+            "loss": 0.7842257928848266,
+            "facing_accuracy": 0.655,
+            "ability_accuracy": 1.0,
+            "unused_ability_accuracy": 1.0,
+            "target_accuracy": 1.0,
+            "ability_effective_rate": null
+          }
+        }
+      }
+    }
+  }
+}

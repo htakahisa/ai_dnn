@@ -32,6 +32,7 @@ class CharacterTrainingExample:
     use_ability: bool
     target: tuple[int, int] | None = None
     ability_effective: bool | None = None
+    acceptable_facings: tuple[Facing, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,14 @@ def _validate_examples(examples: Sequence[CharacterTrainingExample], slot: int,
             raise ValueError("observation belongs to another character slot")
         if not isinstance(example.facing, Facing) or not observation.mask.facing[tuple(Facing).index(example.facing)]:
             raise ValueError("masked facing label")
+        if example.acceptable_facings is not None:
+            accepted = example.acceptable_facings
+            if (not isinstance(accepted, tuple) or not accepted
+                    or any(not isinstance(item, Facing) or not observation.mask.facing[tuple(Facing).index(item)]
+                           for item in accepted)
+                    or len(set(accepted)) != len(accepted)
+                    or example.facing not in accepted):
+                raise ValueError("invalid acceptable facing labels")
         if not isinstance(example.use_ability, bool) or not observation.mask.ability_use[int(example.use_ability)]:
             raise ValueError("masked ability-use label")
         if example.use_ability:
@@ -141,7 +150,16 @@ class CharacterTrainer:
         facing = facing.masked_fill(~facing_mask, -torch.inf)
         ability = ability.masked_fill(~use_mask, -torch.inf)
         target = target.masked_fill(~target_mask, -torch.inf)
-        facing_loss = nn.functional.cross_entropy(facing, facing_label)
+        if any(e.acceptable_facings is not None for e in examples):
+            accepted = torch.zeros_like(facing, dtype=torch.bool)
+            for row, example in enumerate(examples):
+                for direction in example.acceptable_facings or (example.facing,):
+                    accepted[row, tuple(Facing).index(direction)] = True
+            facing_loss = -torch.logsumexp(
+                nn.functional.log_softmax(facing, dim=1).masked_fill(~accepted, -torch.inf), dim=1,
+            ).mean()
+        else:
+            facing_loss = nn.functional.cross_entropy(facing, facing_label)
         ability_loss = nn.functional.cross_entropy(ability, use_label)
         used = use_label.bool()
         target_loss = nn.functional.cross_entropy(target[used], target_label[used]) if used.any() else facing_loss.new_zeros(())
@@ -158,7 +176,8 @@ class CharacterTrainer:
                 loss, facing, ability, target = self._loss_and_predictions(batch)
                 total_loss += float(loss.item()) * len(batch)
                 for i, example in enumerate(batch):
-                    facing_correct += int(facing[i].item() == tuple(Facing).index(example.facing))
+                    accepted = example.acceptable_facings or (example.facing,)
+                    facing_correct += int(tuple(Facing)[facing[i].item()] in accepted)
                     predicted_use = bool(ability[i].item())
                     ability_correct += int(predicted_use == example.use_ability)
                     if not example.use_ability:
