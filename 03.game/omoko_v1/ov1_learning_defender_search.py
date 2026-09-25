@@ -54,8 +54,11 @@ from ov1_train_defender_search import (
     DEFENSE_WATCH_FACING,
     REINFORCE_FROM_TICK,
     SIGHTING_MEMORY_TICKS,
+    SPIKE_CARRIER_MEMORY_TICKS,
 )
 from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
+from ov1_search_site_context import SITE_CONTEXT_DIM, site_context
+from ov1_defender_search_support import find_support_ability_plan
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -70,6 +73,7 @@ TACTICAL_CONTEXT_DIM = 8
 OBS_DIM = (
     AGENT_ID_OFFSET + AGENT_ID_DIM
     + ULTIMATE_CONTEXT_DIM + ORB_CONTEXT_DIM + TACTICAL_CONTEXT_DIM
+    + SITE_CONTEXT_DIM
 )
               # + 8(自身のfacing one-hot。従来欠落していたため追加)
 # 移動(5方向)*アビリティ有無(10通り) と 向き(N/NE/E/SE/S/SW/W/NW、8通り)を
@@ -100,6 +104,8 @@ SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
 REACH_RADIUS = 0  # 担当ポジションへ「到着した」とみなすBFS距離(学習側train_defender_search.pyと一致させる)
 SCHEDULED_SMOKE_DELAY_TICKS = 18
+RIGHT_FIGHT_MIN_KILLS = 2
+RIGHT_FIGHT_QUIET_TICKS = 5
 
 # ---------------------------------------------------------------------------
 # Defender Setup Phase(配置フェーズ)用: 通常の壁に加えて進入禁止マスも
@@ -126,6 +132,10 @@ _SETUP_WALK_GRID = np.where(
 DEFAULT_MODEL_PATH = str(
     Path(__file__).resolve().parent / "data" / "defender_search_data"
     / "dqn_defender_search_best_by_eval.pt"
+)
+SITE_V2_MODEL_PATH = str(
+    Path(__file__).resolve().parent / "data" / "defender_search_data"
+    / "dqn_defender_search_site_v2_best.pt"
 )
 
 VERBOSE = False
@@ -322,11 +332,7 @@ def _forced_watch_facing(char, visible_enemies, team_memory):
 
 
 def _forced_combat_facing(char, visible_enemies, team_memory):
-    """敵を直接視認している間だけ、combat方向を固定する。
-
-    ov1_train_defender_search.py側の変更と合わせ、視認が途切れた後の
-    last_seen_enemyベースの強制は行わない(学習された自由なfacing選択に委ねる)。
-    """
+    """視認中の敵、または最後に確認した敵の方向を優先する。"""
     if visible_enemies:
         target = min(
             visible_enemies,
@@ -335,6 +341,12 @@ def _forced_combat_facing(char, visible_enemies, team_memory):
             ),
         )
         facing = _expected_facing(tuple(char.pos), tuple(target.pos))
+        if facing is not None:
+            char._combat_facing = facing
+        return getattr(char, "_combat_facing", None)
+    threat = getattr(team_memory, "last_enemy_threat", None)
+    if threat is not None:
+        facing = _expected_facing(tuple(char.pos), tuple(threat["pos"]))
         if facing is not None:
             char._combat_facing = facing
         return getattr(char, "_combat_facing", None)
@@ -374,6 +386,72 @@ def _bfs_best_direction_unoccupied(dist_map, grid, r0, c0, occupied):
             best_d = dist_map[nr, nc]
             best_dr, best_dc = dr, dc
     return best_dr, best_dc
+
+def _ground_spike_watch_move(grid, start, spike_pos, occupied):
+    """Return a route step to the nearest reachable angle on a dropped spike."""
+    start = tuple(map(int, start))
+    spike_pos = tuple(map(int, spike_pos))
+    occupied = set(occupied)
+
+    def clear_angle(cell):
+        return _has_los(grid, cell, spike_pos) and not any(
+            between in occupied for between in _line_cells(cell, spike_pos)[1:-1]
+        )
+
+    if clear_angle(start):
+        return (0, 0)
+
+    height, width = grid.shape
+    queue = deque([(start, (0, 0))])
+    visited = {start}
+    adjacent_fallback = None
+    while queue:
+        (r, c), first_step = queue.popleft()
+        for dr, dc in CARDINAL:
+            nr, nc = r + dr, c + dc
+            next_cell = (nr, nc)
+            if (not 0 <= nr < height or not 0 <= nc < width
+                    or grid[nr, nc] == 1 or next_cell in occupied
+                    or next_cell == spike_pos or next_cell in visited):
+                continue
+            visited.add(next_cell)
+            first = (dr, dc) if (r, c) == start else first_step
+            if clear_angle(next_cell):
+                spike_distance = max(abs(nr - spike_pos[0]),
+                                     abs(nc - spike_pos[1]))
+                if spike_distance >= 2:
+                    return first
+                if adjacent_fallback is None:
+                    adjacent_fallback = first
+            queue.append((next_cell, first))
+    return adjacent_fallback or (0, 0)
+
+
+def _route_step_to_cell(grid, start, goal, occupied):
+    """Return the first step of a path that actually visits ``goal``."""
+    start = tuple(map(int, start))
+    goal = tuple(map(int, goal))
+    if start == goal or goal in occupied:
+        return (0, 0)
+    queue = deque([(start, (0, 0))])
+    visited = {start}
+    height, width = grid.shape
+    while queue:
+        cell, first_step = queue.popleft()
+        for dr, dc in CARDINAL:
+            next_cell = (cell[0] + dr, cell[1] + dc)
+            nr, nc = next_cell
+            if (not 0 <= nr < height or not 0 <= nc < width
+                    or grid[nr, nc] == 1 or next_cell in occupied
+                    or next_cell in visited):
+                continue
+            first = (dr, dc) if cell == start else first_step
+            if next_cell == goal:
+                return first
+            visited.add(next_cell)
+            queue.append((next_cell, first))
+    return (0, 0)
+
 
 def _find_marker_position(maze_str, char):
     """train_defender_search.py の _find_marker_position と同一ロジック。
@@ -426,6 +504,7 @@ def _compute_fixed_assignments():
 _FIXED_SETUP_ASSIGNMENT, _FIXED_DEFENSE_ASSIGNMENT = _compute_fixed_assignments()
 _DEFENSE_POSITIONS_CACHE = list(_FIXED_DEFENSE_ASSIGNMENT.values())
 SMOKE_SITE_POSITIONS = _find_marker_positions(SEARCH_MAZE_STR, "S")
+ROTATION_TRANSIT_POSITION = _find_marker_position(SEARCH_MAZE_STR, "T")
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -451,7 +530,11 @@ def _extract_site_positions(grid, max_sites=2):
             clusters.append({"cells": [cell], "centroid": (float(cell[0]), float(cell[1]))})
 
     clusters.sort(key=lambda c: -len(c["cells"]))
-    return [c["centroid"] for c in clusters[:max_sites]]
+    return [min(
+        c["cells"],
+        key=lambda cell: (cell[0] - c["centroid"][0]) ** 2
+        + (cell[1] - c["centroid"][1]) ** 2,
+    ) for c in clusters[:max_sites]]
 
 
 def _ability_charge(char):
@@ -470,12 +553,17 @@ class _TeamMemory:
     def __init__(self):
         self.spike_pos = None
         self.spike_held = False  # True: 保持者が視認中(緊急) / False: 地面に落下(待ち伏せ可)
+        self.spike_tick_ago = 0
         self.last_seen_enemy = None  # {"pos": (r, c), "name": str, "tick_ago": int}
+        # 撃破・視界切れの後も、次の接敵に備えて最後に見た敵方向を維持する。
+        self.last_enemy_threat = None
 
     def reset(self):
         self.spike_pos = None
         self.spike_held = False
+        self.spike_tick_ago = 0
         self.last_seen_enemy = None
+        self.last_enemy_threat = None
 
     def update(self, grid, my_team, chars, spike_ground_pos=None, round_tick=0):
         defenders = [c for c in chars if c.team == my_team and c.is_alive]
@@ -495,21 +583,38 @@ class _TeamMemory:
         if spike_holder is not None:
             self.spike_pos = tuple(spike_holder.pos)
             self.spike_held = True
+            self.spike_tick_ago = 0
         elif spike_ground_pos is not None and any(
             _has_los(grid, tuple(d.pos), tuple(spike_ground_pos)) for d in defenders
         ):
             self.spike_pos = tuple(spike_ground_pos)
             self.spike_held = False
+            self.spike_tick_ago = 0
         elif round_tick >= REINFORCE_FROM_TICK and visible_enemies and self.spike_held:
             self.spike_pos = None
             self.spike_held = False
+            self.spike_tick_ago = 0
+        elif self.spike_pos is not None and self.spike_held:
+            self.spike_tick_ago += 1
+            if self.spike_tick_ago > SPIKE_CARRIER_MEMORY_TICKS:
+                self.spike_pos = None
+                self.spike_held = False
+                self.spike_tick_ago = 0
+        elif (self.spike_pos is not None and spike_ground_pos is None
+              and any(_has_los(grid, tuple(d.pos), self.spike_pos)
+                      for d in defenders)):
+            self.spike_pos = None
 
         if round_tick < REINFORCE_FROM_TICK:
             self.last_seen_enemy = None
+            self.last_enemy_threat = None
         elif visible_enemies:
             previous_name = (self.last_seen_enemy or {}).get("name")
             target = next((e for e in visible_enemies if e.name == previous_name), visible_enemies[0])
             self.last_seen_enemy = {"pos": tuple(target.pos), "name": target.name, "tick_ago": 0}
+            self.last_enemy_threat = {
+                "pos": tuple(target.pos), "name": target.name, "source": "sighting"
+            }
         elif self.last_seen_enemy is not None:
             memory = self.last_seen_enemy
             memory["tick_ago"] += 1
@@ -539,19 +644,35 @@ class Ov1LearningDefenderSearchController:
         self.verbose = verbose
         self.model = DefenderSearchDuelingDQN().to(DEVICE)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            load_path = model_path
+            if model_path == DEFAULT_MODEL_PATH and not Path(model_path).exists():
+                load_path = SITE_V2_MODEL_PATH
+            state_dict = torch.load(load_path, map_location=DEVICE)
+            first_weight = state_dict["feature.0.weight"]
+            if first_weight.shape[1] == OBS_DIM - SITE_CONTEXT_DIM:
+                expanded = torch.zeros(
+                    (first_weight.shape[0], OBS_DIM), dtype=first_weight.dtype,
+                    device=first_weight.device,
+                )
+                expanded[:, :first_weight.shape[1]] = first_weight
+                state_dict["feature.0.weight"] = expanded
             self.model.load_state_dict(state_dict)
             if verbose:
-                print(f"[Ov1LearningDefenderSearchController] loaded: {model_path}")
+                print(f"[Ov1LearningDefenderSearchController] loaded: {load_path}")
         except Exception as exc:
-            print(f"[LOAD ERROR] defender search(omoko) model '{model_path}' の読込に失敗: {exc}")
+            raise RuntimeError(
+                f"defender search(omoko) model '{model_path}' の読込に失敗"
+            ) from exc
         self.model.eval()
 
         self.team_memory = _TeamMemory()
         self._site_positions_cache = None
+        self._site_dist_maps_cache = None
         self._processed_this_tick = set()
         self._scheduled_smoke_plan_tick = None
         self._scheduled_smoke_plan = {}
+        self._support_last_cast = {}
+        self._reset_right_site_rotation()
 
         # 有利ポジション(7)の割り当て。ラウンド開始時に1度だけ計算する。
         self._defense_positions = list(_DEFENSE_POSITIONS_CACHE)
@@ -574,6 +695,8 @@ class Ov1LearningDefenderSearchController:
         self._processed_this_tick.clear()
         self._scheduled_smoke_plan_tick = None
         self._scheduled_smoke_plan = {}
+        self._support_last_cast = {}
+        self._reset_right_site_rotation()
         self._assigned_positions.clear()
         self._assigned_dist_maps.clear()
         self._assigned_setup_dist_maps.clear()
@@ -583,6 +706,95 @@ class Ov1LearningDefenderSearchController:
         self.sighting_dist_map = None
         self._spike_dist_map_source = None
         self._sighting_dist_map_source = None
+
+    def _reset_right_site_rotation(self):
+        self._right_fight_last_contact_tick = None
+        self._right_fight_start_kills = None
+        self._spike_found_this_round = False
+        self._right_rotation_stage = {}  # name -> "transit" / "watch"
+
+    def _update_right_site_rotation(self, char, grid, chars, round_tick):
+        """Track a right-site fight using only team sightings and team kills."""
+        if not hasattr(self, "_right_rotation_stage"):
+            self._reset_right_site_rotation()
+        sites = self._site_positions_cache or []
+        if len(sites) < 2:
+            return
+        right_site = max(sites, key=lambda pos: pos[1])
+        defenders = [c for c in chars if c.team == char.team and c.is_alive]
+        visible = [
+            enemy for enemy in chars
+            if enemy.team != char.team and enemy.is_alive
+            and any(_has_los(grid, ally.pos, enemy.pos) for ally in defenders)
+        ]
+        if any(getattr(enemy, "has_spike", False) for enemy in visible):
+            self._spike_found_this_round = True
+        if self.team_memory.spike_pos is not None:
+            self._spike_found_this_round = True
+        if self._spike_found_this_round:
+            self._right_rotation_stage.clear()
+            return
+
+        kills = sum(
+            int(getattr(ally, "round_kills", getattr(ally, "kills", 0)))
+            for ally in chars if ally.team == char.team
+        )
+        right_contact = any(
+            int(enemy.pos[1]) >= int(right_site[1]) - 10 for enemy in visible
+        )
+        if right_contact:
+            if self._right_fight_last_contact_tick is None:
+                self._right_fight_start_kills = kills
+            self._right_fight_last_contact_tick = round_tick
+            self._right_rotation_stage.clear()
+            return
+        if (self._right_fight_last_contact_tick is None
+                or kills - self._right_fight_start_kills < RIGHT_FIGHT_MIN_KILLS
+                or round_tick - self._right_fight_last_contact_tick < RIGHT_FIGHT_QUIET_TICKS
+                or self._right_rotation_stage):
+            return
+
+        # Leave a right-site anchor when possible; send at most two teammates.
+        right_defenders = [
+            ally for ally in defenders
+            if self._assigned_positions.get(ally.name, ally.pos)[1]
+            >= int(right_site[1]) - 10
+        ]
+        right_defenders.sort(key=lambda ally: (
+            abs(int(ally.pos[0]) - ROTATION_TRANSIT_POSITION[0])
+            + abs(int(ally.pos[1]) - ROTATION_TRANSIT_POSITION[1]), ally.name,
+        ))
+        count = min(2, len(right_defenders) - 1) if len(right_defenders) > 1 else len(right_defenders)
+        self._right_rotation_stage = {
+            ally.name: "transit" for ally in right_defenders[:count]
+        }
+
+    def _right_site_rotation_move(self, char, grid, chars):
+        stage = self._right_rotation_stage.get(char.name)
+        if stage is None:
+            return None
+        occupied = {
+            tuple(map(int, other.pos)) for other in chars
+            if other is not char and getattr(other, "is_alive", True)
+        }
+        start = tuple(map(int, char.pos))
+        if stage == "transit" and start == ROTATION_TRANSIT_POSITION:
+            stage = "watch"
+            self._right_rotation_stage[char.name] = stage
+        if stage == "transit":
+            dr, dc = _route_step_to_cell(
+                grid, start, ROTATION_TRANSIT_POSITION, occupied,
+            )
+            target = ROTATION_TRANSIT_POSITION
+        else:
+            left_site = min(self._site_positions_cache, key=lambda pos: pos[1])
+            dr, dc = _ground_spike_watch_move(grid, start, left_site, occupied)
+            target = left_site
+        next_pos = (start[0] + dr, start[1] + dc)
+        facing = _expected_facing(next_pos, target) or char.facing
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+        return list(next_pos), {"facing": facing}
 
     def _maybe_advance_tick(self, char, grid, chars, spike_ground_pos, round_tick):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
@@ -953,6 +1165,24 @@ class Ov1LearningDefenderSearchController:
                     1.0 if valid and _has_los(grid, (nr, nc), target_pos) else 0.0
                 )
 
+        site_offset = tactical_offset + TACTICAL_CONTEXT_DIM
+        site_target = (
+            self.team_memory.spike_pos if self.team_memory.spike_pos is not None
+            else self.team_memory.last_seen_enemy["pos"]
+            if self.team_memory.last_seen_enemy is not None
+            else team_visible_enemies[0].pos if team_visible_enemies else None
+        )
+        site_maps = getattr(self, "_site_dist_maps_cache", None)
+        if site_maps is None:
+            site_maps = [_bfs_distance_map(grid, tuple(map(int, site)))
+                         for site in site_positions]
+            self._site_dist_maps_cache = site_maps
+        obs[site_offset:site_offset + SITE_CONTEXT_DIM] = site_context(
+            char, teammates + [char], team_visible_enemies, site_maps,
+            getattr(self, "_assigned_positions", {}).get(char.name), site_target,
+            self.team_memory.spike_held, height, width,
+        )
+
         return obs, visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
@@ -1036,7 +1266,15 @@ class Ov1LearningDefenderSearchController:
             return list(char.pos)
 
         scheduled_smoke_target = self._scheduled_smoke_target(char, game_state)
-        if scheduled_smoke_target is not None and _ability_charge(char) > 0:
+        team_in_contact = any(
+            enemy.is_alive and enemy.team != char.team
+            and any(ally.is_alive and ally.team == char.team
+                    and _has_los(grid, ally.pos, enemy.pos)
+                    for ally in chars)
+            for enemy in chars
+        )
+        if (scheduled_smoke_target is not None and _ability_charge(char) > 0
+                and not team_in_contact):
             return list(char.pos), {
                 "ability": "SMOKE",
                 "target": tuple(map(int, scheduled_smoke_target)),
@@ -1128,6 +1366,61 @@ class Ov1LearningDefenderSearchController:
         obs, visible_enemies = self._build_observation(
             char, game_state, self._site_positions_cache, unit_has_spike_los
         )
+        # 自分に射線が通る敵との交戦中は移動射撃の命中率が大きく下がる。
+        # サイトへの増援や合流より、この場で静止して撃つ判断を優先する。
+        hold_for_shot = bool(visible_enemies)
+        self._update_right_site_rotation(char, grid, chars, int(round_tick))
+
+        # 落下位置が共有されている間は、そのマスへ走り込まず射線を確保する。
+        # すでに見えていれば動かず待ち、見えていなければ最寄りの監視マスへ進む。
+        if (not hold_for_shot and self.team_memory.spike_pos is not None
+                and not self.team_memory.spike_held):
+            spike_pos = tuple(map(int, self.team_memory.spike_pos))
+            occupied = {
+                tuple(map(int, other.pos)) for other in chars
+                if other is not char and getattr(other, "is_alive", True)
+            }
+            dr, dc = _ground_spike_watch_move(
+                grid, char.pos, spike_pos, occupied
+            )
+            next_pos = (int(char.pos[0]) + dr, int(char.pos[1]) + dc)
+            facing = _expected_facing(next_pos, spike_pos) or char.facing
+            if not getattr(char, "facing_forced_this_tick", False):
+                char.facing = facing
+            return list(next_pos), {"facing": facing}
+
+        # 味方が現在視認している敵には、射線を持たない味方がアビリティで支援する。
+        # 投射物の着弾点とスモーク後の味方射線は共通の幾何判定で確認する。
+        if not hold_for_shot and _ability_charge(char) > 0:
+            role = str(char.ability_name).upper()
+            support_plan = find_support_ability_plan(
+                grid, char,
+                [ally for ally in chars if ally.team == char.team],
+                [enemy for enemy in chars if enemy.team != char.team],
+                role, game_state.get("smoke_cells") or (),
+                max_aim_range=ABILITY_RANGE,
+            )
+            if support_plan is not None:
+                last_cast = getattr(self, "_support_last_cast", {}).get(
+                    (role, support_plan.enemy_name), -10**9,
+                )
+                cooldown = {
+                    "FLASH": BLIND_DURATION_TICKS,
+                    "RECON": REVEAL_DURATION_TICKS,
+                    "SMOKE": 8,
+                }[role]
+                if int(round_tick) - last_cast >= cooldown:
+                    if not hasattr(self, "_support_last_cast"):
+                        self._support_last_cast = {}
+                    self._support_last_cast[(role, support_plan.enemy_name)] = int(round_tick)
+                    return list(char.pos), {
+                        "ability": role, "target": support_plan.aim,
+                    }
+
+        if not hold_for_shot and self.team_memory.spike_pos is None:
+            rotation_move = self._right_site_rotation_move(char, grid, chars)
+            if rotation_move is not None:
+                return rotation_move
 
         tactical_offset = (
             AGENT_ID_OFFSET + AGENT_ID_DIM
@@ -1135,13 +1428,9 @@ class Ov1LearningDefenderSearchController:
         )
         in_position_mode = obs[tactical_offset] == 0.0
 
-        if char.ability_name == "SMOKE":
-            # 学習側と同じく、SMOKE は自分が直接視認したスパイク持ちにだけ使用可能。
-            has_target_info = any(getattr(e, "is_alive", True) and e.has_spike for e in visible_enemies)
-        else:
-            # Abilities may still be used against a directly visible enemy;
-            # the movement restriction below is independent from targeting.
-            has_target_info = bool(visible_enemies)
+        # 直接交戦中は射撃を継続する。支援可能な非交戦者は上で使用済みなので、
+        # ここではモデルによる空撃ちや同一対象への重複使用を許さない。
+        has_target_info = False
         forced_facing = _forced_combat_facing(
             char, visible_enemies, self.team_memory
         )
@@ -1153,12 +1442,19 @@ class Ov1LearningDefenderSearchController:
             char,
             grid,
             chars,
-            lock_movement=bool(visible_enemies) and int(round_tick) < REINFORCE_FROM_TICK,
+            lock_movement=hold_for_shot,
             has_target_info=has_target_info, forced_facing=forced_facing,
             available_orbs={
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
             },
         )
+        if hold_for_shot:
+            # ESCAPE は現在地から離れ、ORB回収中は射撃できない。
+            if str(getattr(char, "ultimate_name", "")).upper() == "ESCAPE":
+                start = ACTION_ULTIMATE_BASE * len(FACING_DIRS)
+                mask[start:start + len(FACING_DIRS)] = False
+            start = ACTION_ORB_BASE * len(FACING_DIRS)
+            mask[start:start + len(FACING_DIRS)] = False
 
         # After
         if self.verbose:
@@ -1243,8 +1539,7 @@ class Ov1LearningDefenderSearchController:
                 else:
                     move_offset = (0, 0)
 
-        if visible_enemies and int(round_tick) < REINFORCE_FROM_TICK:
-            # 序盤は射撃位置を維持し、それ以降は移動判断をモデルに委ねる。
+        if hold_for_shot:
             move_offset = (0, 0)
 
         if self.verbose:
