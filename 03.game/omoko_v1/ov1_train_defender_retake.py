@@ -32,7 +32,8 @@ import torch.nn.functional as F
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from map_data import NEW_MAZE_STR
+from ov1_map_data_retake import RETAKE_MAZE_STR
+from ov1_map_data_retake_ability import RETAKE_MAZE_STR as RETAKE_ABILITY_MAZE_STR
 
 from game_core import (
     MAX_HP,
@@ -57,6 +58,7 @@ import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, soft_update
 from ov1_common_defender import ROSTER_ORDER, ROLE_TO_ABILITY, compute_effective_stats
 from ov1_ultimate_training import (
+    ORB_COLLECT_REQUIRED_TICKS,
     collect_orb_tick,
     initialize_ultimate,
     orb_context,
@@ -68,7 +70,7 @@ from ov1_ultimate_training import (
     valid_orb_cells,
 )
 
-EPISODE_COUNT = 10000
+EPISODE_COUNT = 4000
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)
 DEFUSE_LERNING_EPISODE_COUNT = EPISODE_COUNT * 0.3  #解除学習を強制するエピソード。減衰させ最後は0。
 
@@ -78,37 +80,93 @@ SAVE_DIR = "data/defender_retake_data"
 # マップ読み込み
 # ============================================================
 
-GRID = ov1_common_rl.parse_grid(NEW_MAZE_STR)
+def _parse_retake_map(maze_str, marker_terrain):
+    rows = [row.strip() for row in maze_str.strip().splitlines() if row.strip()]
+    if not rows or len({len(row) for row in rows}) != 1:
+        raise ValueError("Retake map rows must have a consistent width")
+
+    grid = np.zeros((len(rows), len(rows[0])), dtype=np.int32)
+    markers = {}
+    for r, row in enumerate(rows):
+        for c, cell in enumerate(row):
+            if cell.isdigit():
+                value = int(cell)
+                if value == 5:
+                    markers.setdefault("5", []).append((r, c))
+                grid[r, c] = 0 if value in (3, 4, 5) else value
+            elif cell in marker_terrain:
+                grid[r, c] = marker_terrain[cell]
+                markers.setdefault(cell, []).append((r, c))
+            else:
+                raise ValueError(f"Unsupported retake map marker {cell!r} at {(r, c)}")
+    return grid, markers
+
+
+GRID, RETAKE_MARKERS = _parse_retake_map(
+    RETAKE_MAZE_STR, {"A": 0, "B": 0, "T": 0, "a": 2, "b": 2}
+)
 HEIGHT, WIDTH = GRID.shape
+SITE_BOUNDARY_COL = WIDTH // 2
 WALKABLE = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] != 1]
-DEFENDER_SPAWNS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 4]
-PLANT_CELLS = [(r, c) for r in range(HEIGHT) for c in range(WIDTH) if GRID[r, c] == 2]
+DEFENDER_SPAWNS = RETAKE_MARKERS.get("5", [])
+ATTACKER_SPAWNS = {
+    "left": RETAKE_MARKERS.get("A", []),
+    "right": RETAKE_MARKERS.get("B", []),
+}
+PLANT_POSITIONS = {
+    "left": RETAKE_MARKERS["a"][0],
+    "right": RETAKE_MARKERS["b"][0],
+}
+ENTRY_POINTS = {
+    "left": [p for p in RETAKE_MARKERS.get("T", []) if p[1] < SITE_BOUNDARY_COL],
+    "right": [p for p in RETAKE_MARKERS.get("T", []) if p[1] >= SITE_BOUNDARY_COL],
+}
+
+
+def _parse_ability_markers(maze_str):
+    rows = [row.strip() for row in maze_str.strip().splitlines() if row.strip()]
+    if len(rows) != HEIGHT or any(len(row) != WIDTH for row in rows):
+        raise ValueError("Retake ability map must match the retake map dimensions")
+    points = {"SMOKE": [], "FLASH": [], "RECON": []}
+    marker_abilities = {"S": "SMOKE", "F": "FLASH", "R": "RECON"}
+    for r, row in enumerate(rows):
+        for c, cell in enumerate(row):
+            if cell in marker_abilities:
+                if GRID[r, c] == 1:
+                    raise ValueError(f"Ability marker {cell} is on a wall at {(r, c)}")
+                points[marker_abilities[cell]].append((r, c))
+            elif not cell.isdigit():
+                raise ValueError(f"Unsupported ability map marker {cell!r} at {(r, c)}")
+    if not all(points.values()):
+        raise ValueError("Retake ability map must contain S, F, and R markers")
+    return points
+
+
+ABILITY_TARGET_POINTS = _parse_ability_markers(RETAKE_ABILITY_MAZE_STR)
+ABILITY_TARGET_RANGE = 6
+
+if len(DEFENDER_SPAWNS) < 5:
+    raise ValueError("Retake map must provide at least five defender start cells marked 5")
+if len(ATTACKER_SPAWNS["left"]) < 5 or len(ATTACKER_SPAWNS["right"]) < 5:
+    raise ValueError("Retake map must provide at least five A and five B enemy start cells")
+if len(RETAKE_MARKERS.get("a", [])) != 1 or len(RETAKE_MARKERS.get("b", [])) != 1:
+    raise ValueError("Retake map must contain exactly one a and one b spike location")
+if not ENTRY_POINTS["left"] or not ENTRY_POINTS["right"]:
+    raise ValueError("Retake map must provide at least one T entry point on each site")
 
 # 💡追加: 左右サイトのプラント位置サンプリング用。
 # 既知プラント位置(実際に攻撃側が狙いやすい座標)を優先的に学習させつつ、
 # 汎化のためサイト範囲内のランダムPLANT_CELLSも一定割合混ぜる。
 # 境界はWIDTH//2(col基準)。実際のサイト境界とズレる場合は要調整。
-SITE_BOUNDARY_COL = WIDTH // 2
-
-KNOWN_PLANT_LEFT = [(8, 3), (8, 4)]
-KNOWN_PLANT_RIGHT = [(6, 42), (7, 42), (8, 42)]
-
-LEFT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] < SITE_BOUNDARY_COL]
-RIGHT_PLANT_CELLS = [p for p in PLANT_CELLS if p[1] >= SITE_BOUNDARY_COL]
-
 # 敵の侵入経路(通路・角)として既知の座標。carry側のSMOKE_LINEUP_CELLS_BY_SITEと
 # 同じ考え方: 実際に視認していなくても「ここから敵が来るはず」という構造的な
 # 予測情報として使う。facing整合shapingと、アビリティの無効射撃ペナルティ免除
 # (事前投げの正当化)の両方に使う。未設定(空リスト)の間は発火しない。
 # マップを見ながら座標を埋めること(サイト判定はplanted_posの列基準で自動)。
-KNOWN_ENTRY_POINTS_LEFT = [(7, 3), (7, 4),(8, 3), (8, 4),(9, 3)]   # 例: [(6, 8), (9, 5)]
-KNOWN_ENTRY_POINTS_RIGHT = [(7, 40),(6, 42),(7, 42),(8, 42)]  # 例: [(6, 38)]
-ENTRY_CORRIDOR_RADIUS = 11      # この距離以内なら「既知の侵入経路付近」とみなす(チェビシェフ距離)
 
 
 # CLIから上書き可能(main()内でargparseにより再代入)
-SITE_LEFT_PROB = 0.5    # 左サイトを選ぶ確率(残りは右サイト)
-KNOWN_POS_PROB = 0.5    # 選ばれたサイト内で既知位置を使う確率(残りはそのサイト範囲内のランダムPLANT_CELLS)
+SITE_LEFT_PROB = 0.5
 
 
 # ============================================================
@@ -131,7 +189,7 @@ ALL_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
 MIN_ALLIES_FOR_ENTRY = 1
-SMOKE_READY_BFS_RADIUS = 11   # スモークを撃つ距離の最大距離
+SMOKE_READY_BFS_RADIUS = ABILITY_TARGET_RANGE   # スモークを撃つ距離の最大距離
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "タイガー": 3}
 
 # 💡追加: 「解除が安全かどうか」の判定を、起爆タイマーの割合(detonate_frac)ではなく
@@ -159,18 +217,16 @@ FLASH_EFFECT_BONUS_PER_ENEMY = 0.5
 RECON_EFFECT_BONUS_PER_ENEMY = 0.3
 SMOKE_EFFECT_BONUS_PER_BLOCKED = 0.4
 SMOKE_EARLY_CAST_BONUS = 1.2
-SMOKE_DELAY_PENALTY = -0.15
-SMOKE_DELAY_DISTANCE_SCALE = -0.35
 # 💡追加: 既知の侵入経路(KNOWN_ENTRY_POINTS_*)付近からの投げは、SMOKEと同様に
 # 「即時効果が0でも無効射撃ペナルティを免除」し、さらに事前投げ自体への
 # 小さなボーナスを与える。この免除がこれまでFLASH/RECONに無かったことが、
 # SMOKEだけ事前投げを覚えてFLASH/RECONが覚えなかった主因。
-ABILITY_CORRIDOR_PREEMPT_BONUS = 0.2
 SIGHTING_STALENESS_CAP = 20         # チーム共有の目撃情報を保持する最大tick数(carry/escort/guardと同一方針)
 TEAM_SIGHTING_ALIGN_WEIGHT = 0.02   # 自分が直接視認していない時のみ有効。チーム共有の目撃位置を向くほど+
 CORRIDOR_WATCH_ALIGN_WEIGHT = 0.02  # 敵の目撃情報(自分・チーム共有とも)が無い時のみ有効。
                                      # 最寄りの既知侵入経路を向くほど+
-SMOKE_COVER_DEFUSE_COMPLETE_BONUS = 2.0  # 解除完了の瞬間、スモークに覆われていれば加算
+SMOKE_COVER_DEFUSE_COMPLETE_BONUS = 2.0
+SMOKE_COVER_SPIKE_BONUS = 1.0  # 解除完了の瞬間、スモークに覆われていれば加算
 SMOKE_COVER_MIN_REMAIN_TICKS = DEFUSE_REQUIRED_TICKS - DEFUSE_SAFETY_MARGIN_TICKS  # 開始時に要求する最低スモーク残りtick
 DAMAGE_REWARD_SCALE = 0.01
 DEBUFF_HIT_MULTIPLIER = 1.5
@@ -185,20 +241,132 @@ TICK_TIME_PENALTY = -0.01
 
 
 def _sample_planted_pos():
-    """左右サイトを確率選択し、その中で既知位置/ランダム位置を確率選択して
-    プラント地点を決める。既知位置・サイト内候補が空ならフォールバックする。"""
-    if random.random() < SITE_LEFT_PROB:
-        known_pool, site_pool = KNOWN_PLANT_LEFT, LEFT_PLANT_CELLS
-    else:
-        known_pool, site_pool = KNOWN_PLANT_RIGHT, RIGHT_PLANT_CELLS
+    side = "left" if random.random() < SITE_LEFT_PROB else "right"
+    return side, PLANT_POSITIONS[side]
 
-    if known_pool and random.random() < KNOWN_POS_PROB:
-        return random.choice(known_pool)
-    if site_pool:
-        return random.choice(site_pool)
-    if PLANT_CELLS:
-        return random.choice(PLANT_CELLS)
-    return random.choice(WALKABLE)
+
+def _jitter_spawn(base_pos, occupied):
+    """Randomize a marked enemy start by at most one cell in either axis."""
+    br, bc = base_pos
+    candidates = [
+        (br + dr, bc + dc)
+        for dr in (-1, 0, 1)
+        for dc in (-1, 0, 1)
+        if _in_bounds((br + dr, bc + dc))
+        and GRID[br + dr, bc + dc] != 1
+        and (br + dr, bc + dc) not in occupied
+    ]
+    if not candidates:
+        raise ValueError(f"No free jitter cell around retake enemy start {base_pos}")
+    return random.choice(candidates)
+
+
+def _select_enemy_starts(side, count, occupied):
+    candidates = ATTACKER_SPAWNS[side]
+    if len(candidates) < count:
+        raise ValueError(f"Retake map has fewer {side} enemy starts than requested players")
+    # A candidate can become unusable after earlier jitter choices. Retry the
+    # candidate selection as a group so valid layouts are re-drawn on collision.
+    for _ in range(100):
+        selected = random.sample(candidates, count)
+        starts = []
+        reserved = set(occupied)
+        try:
+            for base_pos in selected:
+                pos = _jitter_spawn(base_pos, reserved)
+                reserved.add(pos)
+                starts.append(pos)
+        except ValueError:
+            continue
+        occupied.update(starts)
+        return starts
+    raise ValueError(f"Could not place {count} jittered enemies for {side} retake")
+
+
+def _line_cells(p1, p2):
+    r0, c0 = map(int, p1)
+    r1, c1 = map(int, p2)
+    dx, dy = abs(c1 - c0), -abs(r1 - r0)
+    sx = 1 if c0 < c1 else -1
+    sy = 1 if r0 < r1 else -1
+    error = dx + dy
+    while True:
+        yield r0, c0
+        if (r0, c0) == (r1, c1):
+            break
+        twice = 2 * error
+        if twice >= dy:
+            error += dy
+            c0 += sx
+        if twice <= dx:
+            error += dx
+            r0 += sy
+
+
+def has_wall_los(grid, p1, p2):
+    """Map LOS ignores smoke; walls alone block ability trajectories."""
+    return all(grid[r, c] != 1 for r, c in _line_cells(p1, p2))
+
+
+def _chebyshev_distance(p1, p2):
+    return max(abs(int(p1[0]) - int(p2[0])), abs(int(p1[1]) - int(p2[1])))
+
+
+def choose_ability_target(char, grid, visible_enemies, planted_pos, side):
+    """Choose a fixed lineup or visible enemy target with stable tie-breaking."""
+    ability = str(getattr(char, "ability_name", "")).upper()
+    points = ABILITY_TARGET_POINTS.get(ability, [])
+    side_points = [p for p in points if (p[1] < SITE_BOUNDARY_COL) == (side == "left")]
+    fixed_targets = [
+        p for p in side_points
+        if _chebyshev_distance(char.pos, p) <= ABILITY_TARGET_RANGE
+        and (ability == "SMOKE" or has_wall_los(grid, char.pos, p))
+    ]
+    enemy_targets = [
+        tuple(map(int, enemy.pos)) for enemy in visible_enemies
+        if getattr(enemy, "is_alive", True)
+        and _chebyshev_distance(char.pos, enemy.pos) <= ABILITY_TARGET_RANGE
+        and (ability == "SMOKE" or has_wall_los(grid, char.pos, enemy.pos))
+    ]
+    candidates = list(dict.fromkeys(fixed_targets + enemy_targets))
+    if not candidates:
+        return None
+
+    if ability == "SMOKE":
+        def smoke_utility(target):
+            cells = {
+                (r, c)
+                for r in range(target[0] - 1, target[0] + 2)
+                for c in range(target[1] - 1, target[1] + 2)
+                if 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1] and grid[r, c] != 1
+            }
+            blocked_lines = sum(
+                1 for enemy in visible_enemies
+                if ov1_common_rl.has_los(grid, tuple(enemy.pos), planted_pos, set())
+                and not ov1_common_rl.has_los(grid, tuple(enemy.pos), planted_pos, cells)
+            )
+            covers_spike = int(tuple(planted_pos) in cells)
+            near_spike = _chebyshev_distance(target, planted_pos) <= 2
+            return covers_spike * 10 + blocked_lines * 2 + int(near_spike)
+
+        fixed_smokes = fixed_targets
+        candidates = list(dict.fromkeys(fixed_smokes + enemy_targets))
+        if not candidates:
+            return None
+        return min(candidates, key=lambda p: (-smoke_utility(p), _chebyshev_distance(char.pos, p), p))
+
+    def utility(target):
+        if ability == "FLASH":
+            return sum(
+                1 for enemy in visible_enemies
+                if has_wall_los(grid, target, enemy.pos)
+            )
+        if ability == "RECON":
+            radius = RECON_REVEAL_SIZE // 2
+            return sum(1 for enemy in visible_enemies if _chebyshev_distance(target, enemy.pos) <= radius)
+        return 0
+
+    return min(candidates, key=lambda p: (-utility(p), _chebyshev_distance(char.pos, p), p))
 
 
 # ============================================================
@@ -696,12 +864,10 @@ class RetakeEnv:
         self.round_over = False
         self.is_defused = False
         self.active_defuser_name = None
+        self.combat_started = False
+        self.player_count = random.randint(1, 5)
+        self.site_side, self.planted_pos = _sample_planted_pos()
 
-        # 💡修正: 完全ランダムではなく、左右サイト50/50 × 既知位置80%/サイト内ランダム20%で選択。
-        self.planted_pos = _sample_planted_pos()
-
-        # 💡修正: プラント地点からの全マスBFS距離を1回だけ計算し、
-        # site_zoneも観測・報酬の距離計算もすべてこれに基づかせる。
         self.dist_map = bfs_distance_map(self.planted_pos)
         self.site_zone = {
             (r, c)
@@ -711,56 +877,35 @@ class RetakeEnv:
         }
 
         self.detonate_timer = random.randint(self.min_detonate_ticks, self.max_detonate_ticks)
-        self.smokes = []  # list of {"cells": set, "remaining_ticks": int, "owner": str}
+        self.smokes = []
         self.available_orbs = valid_orb_cells(GRID)
         self.last_orb_rewards = {}
-        # 💡追加: そのtickでのability使用効果(誰が何人に効果を与えたか等)を保持。
-        # compute_rewards側から参照する。tick毎にstep_tick冒頭でクリアする。
         self.last_ability_effects = {}
-
-        # 💡追加: プラント地点の左右サイト判定に基づき、既知の侵入経路
-        # (KNOWN_ENTRY_POINTS_LEFT/RIGHT)をこのラウンドの担当分として確定する。
-        self.active_entry_points = (
-            KNOWN_ENTRY_POINTS_LEFT if self.planted_pos[1] < SITE_BOUNDARY_COL else KNOWN_ENTRY_POINTS_RIGHT
-        )
+        self.active_entry_points = ENTRY_POINTS[self.site_side]
         self.team_sighting.reset()
 
         used = set()
         self.chars = []
-        self._build_fixed_defenders(used)
-        self._build_attackers(used)
+        self._build_fixed_defenders(used, self.player_count)
+        self._build_attackers(used, self.player_count, self.site_side)
         self.team_sighting.update(self.defenders(), self.attackers(), self.smoke_cells())
 
-    def _build_fixed_defenders(self, used):
-        """omoko_v1固定ロースターをDEFENDER_SPAWNS順に固定配置し、実効ステータスをセットする。
-        ランダム生成は行わない(run_game.pyのarea_4スキャン順と対応させるため)。"""
-        spawn_pool = DEFENDER_SPAWNS if len(DEFENDER_SPAWNS) >= len(ROSTER_ORDER) else WALKABLE
-        for i, name in enumerate(ROSTER_ORDER):
-            pos = spawn_pool[i]
+    def _build_fixed_defenders(self, used, count):
+        if len(DEFENDER_SPAWNS) < count:
+            raise ValueError("Retake map has fewer defender start cells than requested players")
+        names = random.sample(ROSTER_ORDER, count)
+        starts = random.sample(DEFENDER_SPAWNS, count)
+        for name, pos in zip(names, starts):
             used.add(pos)
             stats = EFFECTIVE_STATS[name]
             self.chars.append(
                 SimChar(name, "D", pos, role=stats["role"], override_stats=stats)
             )
 
-    def _build_attackers(self, used):
-        """敵(Attacker)側は従来通りランダムスポーン・既定値のまま
-        (将来ここだけ差し替え可能な設計)。"""
-        hold_candidates = [p for p in self.site_zone if GRID[p[0], p[1]] != 2 and p not in used]
-        pool = hold_candidates if hold_candidates else [p for p in WALKABLE if p not in used]
-
-        candidates = list(pool)
-        random.shuffle(candidates)
-        chosen = candidates[:5]
-        used.update(chosen)
-        while len(chosen) < 5:
-            extra = random.choice(WALKABLE)
-            if extra not in used:
-                chosen.append(extra)
-                used.add(extra)
-
-        for i, pos in enumerate(chosen):
-            self.chars.append(SimChar(f"Attacker{i+1}", "A", pos, role=None))
+    def _build_attackers(self, used, count, side):
+        starts = _select_enemy_starts(side, count, used)
+        for i, pos in enumerate(starts):
+            self.chars.append(SimChar(f"Attacker{i + 1}", "A", pos, role=None))
 
     def defenders(self):
         return [c for c in self.chars if c.team == "D"]
@@ -790,6 +935,16 @@ class RetakeEnv:
     def apply_ability(self, char):
         ability = char.ability_name
         pr, pc = self.planted_pos
+        visible_enemies = [
+            enemy for enemy in self.attackers()
+            if enemy.is_alive and self.check_line_of_sight(char, enemy)
+        ]
+        target_pos = choose_ability_target(
+            char, GRID, visible_enemies, self.planted_pos, self.site_side
+        )
+        if target_pos is None:
+            return
+        tr, tc = target_pos
         # 💡追加: 効果量を記録(報酬側で参照)。valueの意味はability種別ごとに異なる
         # (FLASH/RECON=新たに効果を受けた敵の人数, SMOKE=LOSが遮断された生存attacker人数)。
         effect = {"type": ability, "value": 0}
@@ -799,7 +954,7 @@ class RetakeEnv:
             newly_blinded = 0
             for enemy in self.chars:
                 if enemy.team != char.team and enemy.is_alive:
-                    if has_los((pr, pc), tuple(enemy.pos), self.smoke_cells()):
+                    if has_los((tr, tc), tuple(enemy.pos), self.smoke_cells()):
                         if enemy.blind_remaining <= 0:
                             newly_blinded += 1
                         enemy.blind_remaining = max(enemy.blind_remaining, BLIND_DURATION_TICKS)
@@ -812,7 +967,7 @@ class RetakeEnv:
             for enemy in self.chars:
                 if enemy.team != char.team and enemy.is_alive:
                     er, ec = enemy.pos
-                    if max(abs(er - pr), abs(ec - pc)) <= radius:
+                    if max(abs(er - tr), abs(ec - tc)) <= radius:
                         if enemy.reveal_remaining <= 0:
                             newly_revealed += 1
                         enemy.reveal_remaining = max(enemy.reveal_remaining, REVEAL_DURATION_TICKS)
@@ -822,8 +977,8 @@ class RetakeEnv:
             char.smoke_charges -= 1
             cells = {
                 (rr, cc)
-                for rr in range(pr - 1, pr + 2)
-                for cc in range(pc - 1, pc + 2)
+                for rr in range(tr - 1, tr + 2)
+                for cc in range(tc - 1, tc + 2)
                 if _in_bounds((rr, cc)) and GRID[rr, cc] != 1
             }
             # 💡追加: 設置前後でplanted_posへのLOSが通っていた生存attacker数を比較し、
@@ -839,6 +994,7 @@ class RetakeEnv:
                 if a.is_alive and has_los(tuple(a.pos), (pr, pc), self.smoke_cells())
             )
             effect["value"] = max(0, pre_los_count - post_los_count)
+            effect["covers_spike"] = tuple(self.planted_pos) in cells
 
         self.last_ability_effects[char.name] = effect
 
@@ -870,8 +1026,49 @@ class RetakeEnv:
         dist_to_plant = max(abs(pr - r), abs(pc - c))
         mask[ACTION_DEFUSE] = bool(not self.is_defused and dist_to_plant <= 1)
 
+        # Keep the retake moving whenever an unoccupied step shortens the
+        # walkable path to the spike. Ability and ultimate actions stay enabled.
+        raw_dist = self.dist_map[r, c] if self.dist_map is not None else -1
+        under_direct_threat = any(
+            enemy.is_alive and self.check_line_of_sight(char, enemy)
+            for enemy in self.attackers()
+        )
+        if under_direct_threat:
+            # Preserve the learned combat choice: staying fires automatically,
+            # while movement, defuse, and tactical actions remain selectable.
+            mask[4] = True
+        elif dist_to_plant <= 1:
+            # At the spike with no visible threat, prevent idle/walk-away
+            # actions while leaving defuse and tactical choices to the policy.
+            mask[:5] = False
+        elif raw_dist > 1:
+            advancing_actions = []
+            for action in range(4):
+                if not mask[action]:
+                    continue
+                dr, dc = MOVE_DELTAS[action]
+                next_dist = self.dist_map[r + dr, c + dc]
+                if 0 <= next_dist < raw_dist:
+                    advancing_actions.append(action)
+            if advancing_actions:
+                for action in range(4):
+                    mask[action] = action in advancing_actions
+                mask[4] = False
+            else:
+                # If allies temporarily block the route, wait for the next tick.
+                mask[4] = True
+        else:
+            mask[4] = True
+
         has_charge = char.own_ability_charge() > 0
-        mask[ACTION_ABILITY] = bool(has_charge)
+        visible_enemies = [
+            enemy for enemy in self.attackers()
+            if enemy.is_alive and self.check_line_of_sight(char, enemy)
+        ]
+        has_target = choose_ability_target(
+            char, GRID, visible_enemies, self.planted_pos, self.site_side
+        ) is not None
+        mask[ACTION_ABILITY] = bool(has_charge and self.combat_started and has_target)
 
         # facing は経路・combat 状態から自動決定するため、TURN action は使わない。
         mask[ACTION_TURN_BASE:ACTION_ULTIMATE] = False
@@ -880,6 +1077,22 @@ class RetakeEnv:
             tuple(char.pos) in self.available_orbs
             and orb_priority(char, self.defenders())
         )
+        if (
+            dist_to_plant <= 1
+            and self.detonate_timer <= (
+                DEFUSE_REQUIRED_TICKS + ORB_COLLECT_REQUIRED_TICKS
+                + DEFUSE_SAFETY_MARGIN_TICKS
+            )
+        ):
+            # Orb collection takes five stationary ticks; preserve that time
+            # for an available defuse.
+            mask[ACTION_ORB] = False
+
+        if dist_to_plant <= 1 and not under_direct_threat:
+            # Once the site is safe, do not let utility, ultimates, or orbs
+            # postpone the objective. Smoke should be set before this point.
+            mask[:] = False
+            mask[ACTION_DEFUSE] = not self.is_defused
 
         return mask
 
@@ -1156,6 +1369,8 @@ class RetakeEnv:
                     current_los_revealed.add(b.name)
 
         self.last_shots = self._resolve_shots(current_los_revealed)
+        if self.last_shots:
+            self.combat_started = True
 
         for char in self.chars:
             char.los_revealed = char.is_alive and char.name in current_los_revealed
@@ -1286,6 +1501,10 @@ def snapshot_before(env):
             "dist_to_plant": dist_val,
             "defuse_timer": char.defuse_timer,
             "ability_charge": char.own_ability_charge(),
+            "ability_target": choose_ability_target(
+                char, GRID, visible_enemies, env.planted_pos, env.site_side
+            ),
+            "combat_started": env.combat_started,
             "self_sighting": bool(visible_enemies),
             "team_sighting": env.team_sighting.last_seen_enemy is not None,
             "ultimate_target": target_pos,
@@ -1378,37 +1597,18 @@ def compute_rewards(env, before, chosen_actions):
         smoke_ready_before = (
             char.ability_name == "SMOKE"
             and b["ability_charge"] > 0
-            and 0 <= b["dist_to_plant"] <= SMOKE_READY_BFS_RADIUS
+            and b["combat_started"]
+            and b["ability_target"] is not None
         )
         if action_id == ACTION_ABILITY:
-            if char.ability_name == "SMOKE":
-                # 💡追加: SMOKEは接近して味方と合流してから投げるものではなく、
-                # 遠くから先に視界を潰すためのもの。BFS距離11以内なら単独でも良しとする。
-                raw_dist_to_plant = env.dist_map[char.pos[0], char.pos[1]]
-                ready = 0 <= raw_dist_to_plant <= SMOKE_READY_BFS_RADIUS
-            else:
-                char_dist_to_plant = max(abs(pr - char.pos[0]), abs(pc - char.pos[1]))
-                ready = char_dist_to_plant <= ENTRY_READY_RADIUS and allies_near_entry >= MIN_ALLIES_FOR_ENTRY
-            # 💡追加: 実際に視認していなくても、既知の侵入経路(KNOWN_ENTRY_POINTS_*)
-            # 付近であれば「敵がそこにいるはず」という構造的な予測に基づく投げとみなす。
-            near_known_corridor = env.active_entry_points and min(
-                (
-                    max(abs(p[0] - char.pos[0]), abs(p[1] - char.pos[1]))
-                    for p in env.active_entry_points
-                ),
-                default=float("inf"),
-            ) <= ENTRY_CORRIDOR_RADIUS
-            if ready or time_critical_for_entry:
+            ready = b["combat_started"] and b["ability_target"] is not None
+            if ready:
                 reward += ABILITY_GOOD_USE_BONUS
-                if char.ability_name == "SMOKE" and smoke_ready_before:
-                    # 射程に入った直後ほど高く評価する。距離11で最大となるため、
-                    # スパイクへさらに接近してから撃つより、境界 tick で撃つ方を学習する。
-                    reward += SMOKE_EARLY_CAST_BONUS * (
-                        b["dist_to_plant"] / SMOKE_READY_BFS_RADIUS
+                if smoke_ready_before:
+                    target_dist = _chebyshev_distance(b["ability_target"], env.planted_pos)
+                    reward += SMOKE_EARLY_CAST_BONUS * max(
+                        0.0, 1.0 - target_dist / (ABILITY_TARGET_RANGE + 1.0)
                     )
-                # 💡追加: タイミングが適切な場合、実際の効果量に応じて追加報酬。
-                # 効果が全くなければ(誰も巻き込めなかった/LOSを1つも遮断できなかった)
-                # 無駄撃ちとしてペナルティを与える。
                 effect = env.last_ability_effects.get(name, {"type": None, "value": 0})
                 if effect["type"] == "FLASH":
                     reward += FLASH_EFFECT_BONUS_PER_ENEMY * effect["value"]
@@ -1416,15 +1616,10 @@ def compute_rewards(env, before, chosen_actions):
                     reward += RECON_EFFECT_BONUS_PER_ENEMY * effect["value"]
                 elif effect["type"] == "SMOKE":
                     reward += SMOKE_EFFECT_BONUS_PER_BLOCKED * effect["value"]
-                # 💡追加: SMOKEは「設置時点でLOSを遮断できたか」ではなく
-                # 「その後の解除を隠せたか」で評価したいため、即時効果0でも
-                # no-effectペナルティは科さない(評価はdefuse系の新ボーナスに委ねる)。
-                # 既知の侵入経路付近からの投げも同様に免除する(FLASH/RECONが
-                # これまで盲目的な先読み投げを学習できなかった主因への対処)。
-                if effect["value"] == 0 and effect["type"] != "SMOKE" and not near_known_corridor:
+                    if effect.get("covers_spike"):
+                        reward += SMOKE_COVER_SPIKE_BONUS
+                if effect["value"] == 0 and effect["type"] != "SMOKE":
                     reward += ABILITY_NO_EFFECT_PENALTY
-                if near_known_corridor:
-                    reward += ABILITY_CORRIDOR_PREEMPT_BONUS
             else:
                 reward += ABILITY_PREMATURE_PENALTY
         elif action_id == ACTION_ULTIMATE:
@@ -1437,12 +1632,6 @@ def compute_rewards(env, before, chosen_actions):
                 )
         elif action_id == ACTION_ORB:
             reward += env.last_orb_rewards.get(name, 0.0)
-        elif smoke_ready_before:
-            # チャージを残したまま射程内を進むほどペナルティを大きくする。
-            # 行動をマスク/強制せず、即時スモークが最適になるよう学習側だけで誘導する。
-            delay_depth = 1.0 - (b["dist_to_plant"] / SMOKE_READY_BFS_RADIUS)
-            reward += SMOKE_DELAY_PENALTY + SMOKE_DELAY_DISTANCE_SCALE * delay_depth
-
         if char.defuse_timer > b["defuse_timer"]:
             reward += DEFUSE_PROGRESS_REWARD
             # 💡変更: tickごと/開始時のボーナスは中断してもリセットされずに得られてしまい
@@ -1635,19 +1824,16 @@ def train_step(net, target_net, optimizer, replay, batch_size, gamma):
 
 
 def main():
-    global SITE_LEFT_PROB, KNOWN_POS_PROB
+    global SITE_LEFT_PROB
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--site-left-prob", type=float, default=SITE_LEFT_PROB,
                          help="左サイトを選ぶ確率(残りは右サイト)")
-    parser.add_argument("--known-pos-prob", type=float, default=KNOWN_POS_PROB,
-                         help="選択したサイト内で既知プラント位置を使う確率")
     args = parser.parse_args()
     SITE_LEFT_PROB = args.site_left_prob
-    KNOWN_POS_PROB = args.known_pos_prob
 
     print(f"[INIT] device = {DEVICE}")
-    print(f"[INIT] site_left_prob = {SITE_LEFT_PROB}, known_pos_prob = {KNOWN_POS_PROB}")
+    print(f"[INIT] site_left_prob = {SITE_LEFT_PROB}")
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     env = RetakeEnv(min_detonate_ticks=SPIKE_DETONATION_TICKS, max_detonate_ticks=SPIKE_DETONATION_TICKS, attacker_hold_radius=4)
@@ -1685,12 +1871,13 @@ def main():
 
     # 診断用: 起動時に一度だけ出力
     for name, pos in zip(ROSTER_ORDER, DEFENDER_SPAWNS):
-        for label, cell in [("LEFT_1", KNOWN_PLANT_LEFT[0]), ("LEFT_2", KNOWN_PLANT_LEFT[1]),
-                            ("RIGHT_1", KNOWN_PLANT_RIGHT[0])]:
+        for label, cell in (("LEFT", PLANT_POSITIONS["left"]), ("RIGHT", PLANT_POSITIONS["right"])):
             dmap = ov1_common_rl.bfs_distance_map(GRID, cell)
             print(f"{name}@{pos} -> {label}{cell}: dist={dmap[pos[0], pos[1]]}")
+    print(f"retake spawns={len(DEFENDER_SPAWNS)}, A={len(ATTACKER_SPAWNS['left'])}, "
+          f"B={len(ATTACKER_SPAWNS['right'])}, ability_targets="
+          f"{ {key: len(value) for key, value in ABILITY_TARGET_POINTS.items()} }")
     print(f"min_detonate_ticks={SPIKE_DETONATION_TICKS}, DEFUSE_REQUIRED_TICKS={DEFUSE_REQUIRED_TICKS}")
-
 
     start_time = time.perf_counter()
 

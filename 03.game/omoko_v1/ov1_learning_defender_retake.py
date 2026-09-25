@@ -46,9 +46,20 @@ from game_core import (
 )
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
-from ov1_train_defender_retake import KNOWN_ENTRY_POINTS_LEFT, KNOWN_ENTRY_POINTS_RIGHT, ENTRY_CORRIDOR_RADIUS
-from ov1_train_defender_retake import _facing_from_delta, _facing_towards
-from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
+from ov1_train_defender_retake import (
+    ENTRY_POINTS,
+    SITE_BOUNDARY_COL,
+    _facing_from_delta,
+    _facing_towards,
+    choose_ability_target,
+)
+from ov1_ultimate_training import (
+    ORB_COLLECT_REQUIRED_TICKS,
+    orb_context,
+    orb_priority,
+    ultimate_context,
+    ultimate_ready,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -347,6 +358,10 @@ class Ov1LearningDefenderRetakeController:
         self.team_sighting = _TeamSightingMemory()
         self._processed_this_tick = set()
         self._active_entry_points = []  # このラウンドのサイト(左/右)に対応する既知侵入経路
+        self._round_was_planted = False
+        self._retake_combat_started = False
+        self._retake_start_tick = None
+        self._retake_hp_snapshot = {}
 
         self._debug_log_path = "defender_retake_debug.log"
 
@@ -359,6 +374,10 @@ class Ov1LearningDefenderRetakeController:
         self.team_sighting.reset()
         self._processed_this_tick.clear()
         self._active_entry_points = []
+        self._round_was_planted = False
+        self._retake_combat_started = False
+        self._retake_start_tick = None
+        self._retake_hp_snapshot = {}
 
     def _ensure_dist_map(self, grid, planted_pos):
         planted_pos = (int(planted_pos[0]), int(planted_pos[1]))
@@ -376,9 +395,8 @@ class Ov1LearningDefenderRetakeController:
 
         # ov1_train_defender_retake.pyのSITE_BOUNDARY_COL(=WIDTH//2)判定と
         # 同一ロジックでサイトを決め、既知侵入経路を確定する。
-        site_boundary_col = width // 2
         self._active_entry_points = (
-            KNOWN_ENTRY_POINTS_LEFT if planted_pos[1] < site_boundary_col else KNOWN_ENTRY_POINTS_RIGHT
+            ENTRY_POINTS["left"] if planted_pos[1] < SITE_BOUNDARY_COL else ENTRY_POINTS["right"]
         )
 
     def _maybe_advance_tick(self, char, grid, chars):
@@ -389,6 +407,31 @@ class Ov1LearningDefenderRetakeController:
             self._processed_this_tick.clear()
             self.team_sighting.update(grid, char.team, chars)
         self._processed_this_tick.add(char.name)
+
+    def _update_retake_combat_state(self, game_state, chars, visible_enemies):
+        tick = int(game_state.get("battle_tick", 0))
+        if not self._round_was_planted:
+            self._round_was_planted = True
+            self._retake_start_tick = tick
+            self._retake_combat_started = False
+            self._retake_hp_snapshot = {
+                c.name: (float(getattr(c, "hp", 0)), bool(getattr(c, "is_alive", True)))
+                for c in chars
+            }
+            return
+
+        for c in chars:
+            previous = self._retake_hp_snapshot.get(c.name)
+            current = (float(getattr(c, "hp", 0)), bool(getattr(c, "is_alive", True)))
+            if previous is not None and (current[0] < previous[0] or (previous[1] and not current[1])):
+                self._retake_combat_started = True
+            self._retake_hp_snapshot[c.name] = current
+
+        # Allow the first post-plant combat tick before unlocking utility.
+        if tick <= self._retake_start_tick:
+            return
+        if visible_enemies:
+            self._retake_combat_started = True
 
     def _nearest_visible_entry_point(self, grid, pos):
         """既知侵入経路(_active_entry_points)のうち、posから視認できるものだけを
@@ -528,8 +571,12 @@ class Ov1LearningDefenderRetakeController:
 
     # -- 行動マスク ---------------------------------------------------------
     # train_defender_retake.py の action_mask() と同一ロジック
-    # (敵視認による移動禁止は撤廃済み。学習側と一致させる)。
-    def _action_mask(self, char, grid, chars, available_orbs=()):
+    # (危険な場面の行動選択は学習済み方策に任せ、学習側と一致させる)。
+    def _action_mask(
+        self, char, grid, chars, available_orbs=(),
+        under_direct_threat=False, detonate_timer=0.0,
+        combat_started=False, ability_target_available=False,
+    ):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         occupied = {
@@ -552,7 +599,39 @@ class Ov1LearningDefenderRetakeController:
         dist_to_plant = max(abs(pr - r), abs(pc - c))
         mask[ACTION_DEFUSE] = dist_to_plant <= 1
 
-        mask[ACTION_ABILITY] = _ability_charge(char) > 0
+        # Keep the retake moving whenever an unoccupied step shortens the
+        # walkable path to the spike. Ability and ultimate actions stay enabled.
+        raw_dist = self._dist_map[r, c] if self._dist_map is not None else -1
+        if under_direct_threat:
+            # Preserve the learned combat choice: staying fires automatically,
+            # while movement, defuse, and tactical actions remain selectable.
+            mask[4] = True
+        elif dist_to_plant <= 1:
+            # At the spike with no visible threat, prevent idle/walk-away
+            # actions while leaving defuse and tactical choices to the policy.
+            mask[:5] = False
+        elif raw_dist > 1:
+            advancing_actions = []
+            for action in range(4):
+                if not mask[action]:
+                    continue
+                dr, dc = MOVE_DELTAS[action]
+                next_dist = self._dist_map[r + dr, c + dc]
+                if 0 <= next_dist < raw_dist:
+                    advancing_actions.append(action)
+            if advancing_actions:
+                for action in range(4):
+                    mask[action] = action in advancing_actions
+                mask[4] = False
+            else:
+                # If allies temporarily block the route, wait for the next tick.
+                mask[4] = True
+        else:
+            mask[4] = True
+
+        mask[ACTION_ABILITY] = bool(
+            _ability_charge(char) > 0 and combat_started and ability_target_available
+        )
 
         # train側と同じく、facingは自動決定する。
         mask[ACTION_TURN_BASE:ACTION_ULTIMATE] = False
@@ -564,6 +643,20 @@ class Ov1LearningDefenderRetakeController:
         mask[ACTION_ORB] = (
             (r, c) in available_orbs and orb_priority(char, allies)
         )
+        if (
+            dist_to_plant <= 1
+            and detonate_timer <= (
+                DEFUSE_REQUIRED_TICKS + ORB_COLLECT_REQUIRED_TICKS
+                + DEFUSE_SAFETY_MARGIN_TICKS
+            )
+        ):
+            # Orb collection takes five stationary ticks; preserve that time
+            # for an available defuse.
+            mask[ACTION_ORB] = False
+
+        if dist_to_plant <= 1 and not under_direct_threat:
+            mask[:] = False
+            mask[ACTION_DEFUSE] = True
 
         return mask
 
@@ -580,31 +673,59 @@ class Ov1LearningDefenderRetakeController:
         # (上位のフェーズ切替側で search フェーズのコントローラーへ
         # 委譲する想定)。
         if not is_planted or planted_pos is None:
+            self._round_was_planted = False
+            self._retake_combat_started = False
+            self._retake_start_tick = None
+            self._retake_hp_snapshot = {}
             return list(char.pos)
 
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         detonate_timer = float(game_state.get("detonate_timer", 0.0))
 
-        smoke_enemy = _smoke_visible_enemy(
-            char, chars, grid, game_state.get("smoke_cells") or set()
-        )
-        if smoke_enemy is not None:
-            return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
-
         self._ensure_dist_map(grid, planted_pos)
         self._maybe_advance_tick(char, grid, chars)
 
         enemies = [e for e in chars if e.team != char.team]
+        smoke_cells = game_state.get("smoke_cells") or set()
         visible_enemies = [
-            e for e in enemies if e.is_alive and _has_los(grid, tuple(char.pos), tuple(e.pos))
+            e for e in enemies
+            if e.is_alive
+            and _has_los(grid, tuple(char.pos), tuple(e.pos))
+            and (
+                getattr(char, "sees_through_smoke", False)
+                or not any(cell in smoke_cells for cell in _line_cells(tuple(char.pos), tuple(e.pos)))
+            )
         ]
+        under_direct_threat = any(
+            getattr(char, "sees_through_smoke", False)
+            or not any(
+                cell in smoke_cells
+                for cell in _line_cells(tuple(char.pos), tuple(enemy.pos))
+            )
+            for enemy in visible_enemies
+        )
+        self._update_retake_combat_state(game_state, chars, visible_enemies)
+        smoke_enemy = _smoke_visible_enemy(char, chars, grid, smoke_cells)
+        if smoke_enemy is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
+
+        site_side = "left" if int(planted_pos[1]) < SITE_BOUNDARY_COL else "right"
+        ability_target = choose_ability_target(
+            char, grid, visible_enemies, planted_pos, site_side
+        )
 
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
         available_orbs = {
             tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
         }
-        mask = self._action_mask(char, grid, chars, available_orbs)
+        mask = self._action_mask(
+            char, grid, chars, available_orbs,
+            under_direct_threat=under_direct_threat,
+            detonate_timer=detonate_timer,
+            combat_started=self._retake_combat_started,
+            ability_target_available=ability_target is not None,
+        )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(mask).to(DEVICE)
@@ -667,9 +788,7 @@ class Ov1LearningDefenderRetakeController:
             turn_dir = forced_facing or TURN_DIRS[action_idx - ACTION_TURN_BASE]
             return list(char.pos), {"facing": turn_dir}
 
-        # ACTION_ABILITY: 学習環境(RetakeEnv.apply_ability)がプラント地点
-        # 中心に効果を計算する設計だったため、狙点は常にplanted_posとする。
-        target_pos = (int(planted_pos[0]), int(planted_pos[1]))
+        target_pos = ability_target
         if forced_facing is not None:
             char.facing = forced_facing
         return list(char.pos), {"ability": char.ability_name, "target": target_pos}
