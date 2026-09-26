@@ -1,0 +1,7365 @@
+{
+  "scenario": {
+    "scenario_name": "retake_a_site_custom",
+    "description": "マップクリックで配置したカスタムシナリオ",
+    "planted_pos": [
+      5,
+      40
+    ],
+    "detonate_timer": 40,
+    "round_timer": 60,
+    "attackers": [
+      {
+        "name": "夢の街",
+        "pos": [
+          10,
+          38
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      },
+      {
+        "name": "いぐるん",
+        "pos": [
+          10,
+          39
+        ],
+        "facing": "E",
+        "ability_charges": 2,
+        "ultimate_points": 0
+      },
+      {
+        "name": "ろびぃな",
+        "pos": [
+          4,
+          38
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      },
+      {
+        "name": "Tortlilyan",
+        "pos": [
+          4,
+          42
+        ],
+        "facing": "E",
+        "ability_charges": 0,
+        "ultimate_points": 0
+      },
+      {
+        "name": "えんぺん",
+        "pos": [
+          10,
+          41
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      }
+    ],
+    "defenders": [
+      {
+        "name": "Xdll",
+        "pos": [
+          5,
+          32
+        ],
+        "facing": "E",
+        "ability_charges": 2,
+        "ultimate_points": 0
+      },
+      {
+        "name": "SyouTa",
+        "pos": [
+          6,
+          32
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      },
+      {
+        "name": "Absol",
+        "pos": [
+          7,
+          31
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      },
+      {
+        "name": "eKo",
+        "pos": [
+          8,
+          31
+        ],
+        "facing": "E",
+        "ability_charges": 2,
+        "ultimate_points": 8
+      },
+      {
+        "name": "SugarZ3ro",
+        "pos": [
+          4,
+          31
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      }
+    ],
+    "initial_smokes": [],
+    "created_at": "2026-09-25T20:21:16.569554"
+  },
+  "winner": "defenders",
+  "total_ticks": 19,
+  "replay_frames": [
+    {
+      "round": 1,
+      "tick": 0,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 40,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            10,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            4,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            4,
+            42
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            41
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            5,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            6,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 8,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 1,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 39,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            5,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            4,
+            41
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            5,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            3,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [
+        {
+          "path": [
+            [
+              10,
+              38
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              3,
+              39
+            ],
+            [
+              2,
+              40
+            ]
+          ],
+          "progress": 3
+        }
+      ],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            31
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            31
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 2,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 38,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            6,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            31
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [
+        {
+          "path": [
+            [
+              10,
+              38
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              3,
+              39
+            ],
+            [
+              2,
+              40
+            ]
+          ],
+          "progress": 6
+        }
+      ],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            32
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            32
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 3,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 37,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            5,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            32
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 10,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            2,
+            40
+          ],
+          "remaining_ticks": 2
+        }
+      ],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 4,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 36,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "W",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            6,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 9,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 24
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            2,
+            40
+          ],
+          "remaining_ticks": 1
+        },
+        {
+          "pos": [
+            9,
+            38
+          ],
+          "remaining_ticks": 2
+        }
+      ],
+      "recon_bursts": [
+        {
+          "cells": [
+            [
+              10,
+              34
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              12,
+              34
+            ],
+            [
+              5,
+              37
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              9,
+              35
+            ],
+            [
+              8,
+              39
+            ],
+            [
+              10,
+              36
+            ],
+            [
+              7,
+              37
+            ],
+            [
+              6,
+              41
+            ],
+            [
+              12,
+              36
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              8,
+              41
+            ],
+            [
+              10,
+              38
+            ],
+            [
+              11,
+              37
+            ],
+            [
+              6,
+              34
+            ],
+            [
+              12,
+              38
+            ],
+            [
+              4,
+              34
+            ],
+            [
+              8,
+              34
+            ],
+            [
+              10,
+              40
+            ],
+            [
+              9,
+              42
+            ],
+            [
+              11,
+              39
+            ],
+            [
+              6,
+              36
+            ],
+            [
+              12,
+              40
+            ],
+            [
+              4,
+              36
+            ],
+            [
+              8,
+              36
+            ],
+            [
+              10,
+              42
+            ],
+            [
+              11,
+              41
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              12,
+              42
+            ],
+            [
+              4,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              10,
+              35
+            ],
+            [
+              9,
+              37
+            ],
+            [
+              11,
+              34
+            ],
+            [
+              6,
+              40
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              12,
+              35
+            ],
+            [
+              4,
+              40
+            ],
+            [
+              5,
+              41
+            ],
+            [
+              8,
+              40
+            ],
+            [
+              10,
+              37
+            ],
+            [
+              9,
+              39
+            ],
+            [
+              11,
+              36
+            ],
+            [
+              6,
+              42
+            ],
+            [
+              7,
+              41
+            ],
+            [
+              12,
+              37
+            ],
+            [
+              5,
+              34
+            ],
+            [
+              8,
+              42
+            ],
+            [
+              10,
+              39
+            ],
+            [
+              9,
+              41
+            ],
+            [
+              11,
+              38
+            ],
+            [
+              6,
+              35
+            ],
+            [
+              7,
+              34
+            ],
+            [
+              4,
+              35
+            ],
+            [
+              5,
+              36
+            ],
+            [
+              8,
+              35
+            ],
+            [
+              9,
+              34
+            ],
+            [
+              11,
+              40
+            ],
+            [
+              6,
+              37
+            ],
+            [
+              7,
+              36
+            ],
+            [
+              5,
+              38
+            ],
+            [
+              8,
+              37
+            ],
+            [
+              9,
+              36
+            ],
+            [
+              11,
+              42
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              7,
+              38
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              11,
+              35
+            ],
+            [
+              7,
+              40
+            ],
+            [
+              12,
+              39
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              9,
+              40
+            ],
+            [
+              10,
+              41
+            ],
+            [
+              7,
+              42
+            ],
+            [
+              12,
+              41
+            ],
+            [
+              5,
+              35
+            ],
+            [
+              4,
+              37
+            ]
+          ],
+          "remaining_ticks": 1
+        }
+      ],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 5,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 35,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            7,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 8,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 23
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            9,
+            38
+          ],
+          "remaining_ticks": 1
+        }
+      ],
+      "recon_bursts": [
+        {
+          "cells": [
+            [
+              10,
+              34
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              12,
+              34
+            ],
+            [
+              5,
+              37
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              9,
+              35
+            ],
+            [
+              8,
+              39
+            ],
+            [
+              10,
+              36
+            ],
+            [
+              7,
+              37
+            ],
+            [
+              6,
+              41
+            ],
+            [
+              12,
+              36
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              8,
+              41
+            ],
+            [
+              10,
+              38
+            ],
+            [
+              11,
+              37
+            ],
+            [
+              6,
+              34
+            ],
+            [
+              12,
+              38
+            ],
+            [
+              4,
+              34
+            ],
+            [
+              8,
+              34
+            ],
+            [
+              10,
+              40
+            ],
+            [
+              9,
+              42
+            ],
+            [
+              11,
+              39
+            ],
+            [
+              6,
+              36
+            ],
+            [
+              12,
+              40
+            ],
+            [
+              4,
+              36
+            ],
+            [
+              8,
+              36
+            ],
+            [
+              10,
+              42
+            ],
+            [
+              11,
+              41
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              12,
+              42
+            ],
+            [
+              4,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              10,
+              35
+            ],
+            [
+              9,
+              37
+            ],
+            [
+              11,
+              34
+            ],
+            [
+              6,
+              40
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              12,
+              35
+            ],
+            [
+              4,
+              40
+            ],
+            [
+              5,
+              41
+            ],
+            [
+              8,
+              40
+            ],
+            [
+              10,
+              37
+            ],
+            [
+              9,
+              39
+            ],
+            [
+              11,
+              36
+            ],
+            [
+              6,
+              42
+            ],
+            [
+              7,
+              41
+            ],
+            [
+              12,
+              37
+            ],
+            [
+              5,
+              34
+            ],
+            [
+              8,
+              42
+            ],
+            [
+              10,
+              39
+            ],
+            [
+              9,
+              41
+            ],
+            [
+              11,
+              38
+            ],
+            [
+              6,
+              35
+            ],
+            [
+              7,
+              34
+            ],
+            [
+              4,
+              35
+            ],
+            [
+              5,
+              36
+            ],
+            [
+              8,
+              35
+            ],
+            [
+              9,
+              34
+            ],
+            [
+              11,
+              40
+            ],
+            [
+              6,
+              37
+            ],
+            [
+              7,
+              36
+            ],
+            [
+              5,
+              38
+            ],
+            [
+              8,
+              37
+            ],
+            [
+              9,
+              36
+            ],
+            [
+              11,
+              42
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              7,
+              38
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              11,
+              35
+            ],
+            [
+              7,
+              40
+            ],
+            [
+              12,
+              39
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              9,
+              40
+            ],
+            [
+              10,
+              41
+            ],
+            [
+              7,
+              42
+            ],
+            [
+              12,
+              41
+            ],
+            [
+              5,
+              35
+            ],
+            [
+              4,
+              37
+            ]
+          ],
+          "remaining_ticks": 1
+        }
+      ],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 6,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 34,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            7,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 7,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 22
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 24
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 200,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 7,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 33,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            6,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 6,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 21
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 23
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 160,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 8,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 32,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            37
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 5,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 20
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 22
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [
+        {
+          "name": "eKo:MONITOR:0",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 120,
+          "target": "ろびぃな"
+        },
+        {
+          "name": "eKo:MONITOR:1",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 200,
+          "target": "夢の街"
+        }
+      ],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 9,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 31,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            2,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 4,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 19
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 21
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 10,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 30,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            3,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 3,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 18
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 20
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 11,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 29,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 2,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 17
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 19
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 12,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 28,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            39
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 1,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 16
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 18
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 13,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 27,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "NW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "Tortlilyan",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 0,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 15
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 17
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 14,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 26,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            10,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            8,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 14
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 16
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 15,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 25,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            9,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            7,
+            33
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 13
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 15
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 16,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 24,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            7,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            7,
+            34
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 12
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 14
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 17,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 23,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            7,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 11
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 13
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 18,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 22,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            7,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 10
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 12
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 19,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 22,
+      "attacker_wins": 0,
+      "defender_wins": 1,
+      "planted": true,
+      "round_over": true,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": null,
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "W",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 1,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "ろびぃな",
+          "display_name": "ろびぃな",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "SW",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 1,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Tortlilyan",
+          "display_name": "-調子にのる-とうやま",
+          "team": "A",
+          "pos": [
+            8,
+            40
+          ],
+          "hp": 70.0,
+          "alive": true,
+          "facing": "SW",
+          "has_spike": true,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "RAID",
+          "ultimate_points": 1,
+          "ultimate_cost": 3,
+          "ability": "HUNT",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "えんぺん",
+          "display_name": "えんぺん",
+          "team": "A",
+          "pos": [
+            8,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "Xdll",
+          "display_name": "Xdll",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SyouTa",
+          "display_name": "SyouTa",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "Absol",
+          "display_name": "Absol",
+          "team": "D",
+          "pos": [
+            7,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "eKo",
+          "display_name": "eKo",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "SugarZ3ro",
+          "display_name": "SugarZ3ro",
+          "team": "D",
+          "pos": [
+            4,
+            40
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "ESCAPE",
+          "ultimate_points": 0,
+          "ultimate_cost": 6,
+          "ability": "SMOKE",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [
+        {
+          "cells": [
+            [
+              7,
+              37
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              7,
+              36
+            ]
+          ],
+          "remaining_ticks": 9
+        },
+        {
+          "cells": [
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              4,
+              40
+            ]
+          ],
+          "remaining_ticks": 11
+        }
+      ],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    }
+  ],
+  "round_records": [],
+  "player_stats": [
+    {
+      "name": "夢の街",
+      "team": "attackers",
+      "survived": true,
+      "final_hp": 100
+    },
+    {
+      "name": "いぐるん",
+      "team": "attackers",
+      "survived": true,
+      "final_hp": 60
+    },
+    {
+      "name": "ろびぃな",
+      "team": "attackers",
+      "survived": true,
+      "final_hp": 20
+    },
+    {
+      "name": "Tortlilyan",
+      "team": "attackers",
+      "survived": true,
+      "final_hp": 70.0
+    },
+    {
+      "name": "えんぺん",
+      "team": "attackers",
+      "survived": true,
+      "final_hp": 100
+    },
+    {
+      "name": "Xdll",
+      "team": "defenders",
+      "survived": false,
+      "final_hp": 0
+    },
+    {
+      "name": "SyouTa",
+      "team": "defenders",
+      "survived": false,
+      "final_hp": 0
+    },
+    {
+      "name": "Absol",
+      "team": "defenders",
+      "survived": false,
+      "final_hp": 0
+    },
+    {
+      "name": "eKo",
+      "team": "defenders",
+      "survived": true,
+      "final_hp": 60
+    },
+    {
+      "name": "SugarZ3ro",
+      "team": "defenders",
+      "survived": true,
+      "final_hp": 60
+    }
+  ]
+}

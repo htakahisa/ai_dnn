@@ -1,0 +1,3734 @@
+{
+  "scenario": {
+    "scenario_name": "retake_a_site_custom",
+    "description": "マップクリックで配置したカスタムシナリオ",
+    "planted_pos": [
+      5,
+      40
+    ],
+    "detonate_timer": 40,
+    "round_timer": 60,
+    "attackers": [
+      {
+        "name": "夢の街",
+        "pos": [
+          10,
+          38
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 0
+      },
+      {
+        "name": "いぐるん",
+        "pos": [
+          10,
+          39
+        ],
+        "facing": "E",
+        "ability_charges": 2,
+        "ultimate_points": 0
+      }
+    ],
+    "defenders": [
+      {
+        "name": "夢の街",
+        "pos": [
+          7,
+          35
+        ],
+        "facing": "E",
+        "ability_charges": 1,
+        "ultimate_points": 5
+      }
+    ],
+    "initial_smokes": [],
+    "created_at": "2026-09-25T16:25:57.985267"
+  },
+  "winner": "defenders",
+  "total_ticks": 25,
+  "replay_frames": [
+    {
+      "round": 1,
+      "tick": 0,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 40,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            10,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 1,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 39,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 2,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            35
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [
+        {
+          "path": [
+            [
+              10,
+              38
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              3,
+              39
+            ],
+            [
+              2,
+              40
+            ]
+          ],
+          "progress": 3
+        }
+      ],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 2,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 38,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 1,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [
+        {
+          "path": [
+            [
+              10,
+              38
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              3,
+              39
+            ],
+            [
+              2,
+              40
+            ]
+          ],
+          "progress": 6
+        }
+      ],
+      "recon_projectiles": [
+        {
+          "path": [
+            [
+              9,
+              39
+            ],
+            [
+              8,
+              39
+            ],
+            [
+              7,
+              38
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              5,
+              38
+            ]
+          ],
+          "progress": 3
+        }
+      ],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 3,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 37,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            9,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [
+        {
+          "path": [
+            [
+              7,
+              36
+            ],
+            [
+              7,
+              37
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              6,
+              40
+            ]
+          ],
+          "progress": 3
+        }
+      ],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            2,
+            40
+          ],
+          "remaining_ticks": 2
+        }
+      ],
+      "recon_bursts": [
+        {
+          "cells": [
+            [
+              1,
+              40
+            ],
+            [
+              2,
+              39
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              3,
+              40
+            ],
+            [
+              5,
+              37
+            ],
+            [
+              4,
+              39
+            ],
+            [
+              9,
+              35
+            ],
+            [
+              8,
+              39
+            ],
+            [
+              1,
+              42
+            ],
+            [
+              2,
+              41
+            ],
+            [
+              7,
+              37
+            ],
+            [
+              6,
+              41
+            ],
+            [
+              3,
+              42
+            ],
+            [
+              5,
+              39
+            ],
+            [
+              4,
+              41
+            ],
+            [
+              8,
+              41
+            ],
+            [
+              1,
+              35
+            ],
+            [
+              2,
+              34
+            ],
+            [
+              6,
+              34
+            ],
+            [
+              3,
+              35
+            ],
+            [
+              4,
+              34
+            ],
+            [
+              8,
+              34
+            ],
+            [
+              1,
+              37
+            ],
+            [
+              9,
+              42
+            ],
+            [
+              2,
+              36
+            ],
+            [
+              6,
+              36
+            ],
+            [
+              3,
+              37
+            ],
+            [
+              4,
+              36
+            ],
+            [
+              8,
+              36
+            ],
+            [
+              1,
+              39
+            ],
+            [
+              2,
+              38
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              4,
+              38
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              9,
+              37
+            ],
+            [
+              2,
+              40
+            ],
+            [
+              6,
+              40
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              4,
+              40
+            ],
+            [
+              5,
+              41
+            ],
+            [
+              8,
+              40
+            ],
+            [
+              9,
+              39
+            ],
+            [
+              2,
+              42
+            ],
+            [
+              6,
+              42
+            ],
+            [
+              7,
+              41
+            ],
+            [
+              5,
+              34
+            ],
+            [
+              8,
+              42
+            ],
+            [
+              9,
+              41
+            ],
+            [
+              2,
+              35
+            ],
+            [
+              6,
+              35
+            ],
+            [
+              7,
+              34
+            ],
+            [
+              4,
+              35
+            ],
+            [
+              3,
+              39
+            ],
+            [
+              5,
+              36
+            ],
+            [
+              8,
+              35
+            ],
+            [
+              9,
+              34
+            ],
+            [
+              2,
+              37
+            ],
+            [
+              1,
+              41
+            ],
+            [
+              6,
+              37
+            ],
+            [
+              7,
+              36
+            ],
+            [
+              3,
+              41
+            ],
+            [
+              5,
+              38
+            ],
+            [
+              8,
+              37
+            ],
+            [
+              9,
+              36
+            ],
+            [
+              1,
+              34
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              7,
+              38
+            ],
+            [
+              3,
+              34
+            ],
+            [
+              5,
+              40
+            ],
+            [
+              4,
+              42
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              1,
+              36
+            ],
+            [
+              7,
+              40
+            ],
+            [
+              3,
+              36
+            ],
+            [
+              5,
+              42
+            ],
+            [
+              9,
+              40
+            ],
+            [
+              1,
+              38
+            ],
+            [
+              7,
+              42
+            ],
+            [
+              3,
+              38
+            ],
+            [
+              5,
+              35
+            ],
+            [
+              4,
+              37
+            ]
+          ],
+          "remaining_ticks": 1
+        },
+        {
+          "cells": [
+            [
+              10,
+              43
+            ],
+            [
+              13,
+              42
+            ],
+            [
+              7,
+              35
+            ],
+            [
+              12,
+              43
+            ],
+            [
+              14,
+              40
+            ],
+            [
+              9,
+              35
+            ],
+            [
+              8,
+              39
+            ],
+            [
+              10,
+              36
+            ],
+            [
+              13,
+              35
+            ],
+            [
+              7,
+              37
+            ],
+            [
+              6,
+              41
+            ],
+            [
+              12,
+              36
+            ],
+            [
+              14,
+              42
+            ],
+            [
+              8,
+              41
+            ],
+            [
+              10,
+              38
+            ],
+            [
+              13,
+              37
+            ],
+            [
+              11,
+              37
+            ],
+            [
+              6,
+              43
+            ],
+            [
+              12,
+              38
+            ],
+            [
+              14,
+              35
+            ],
+            [
+              8,
+              43
+            ],
+            [
+              10,
+              40
+            ],
+            [
+              9,
+              42
+            ],
+            [
+              11,
+              39
+            ],
+            [
+              6,
+              36
+            ],
+            [
+              12,
+              40
+            ],
+            [
+              14,
+              37
+            ],
+            [
+              8,
+              36
+            ],
+            [
+              10,
+              42
+            ],
+            [
+              11,
+              41
+            ],
+            [
+              6,
+              38
+            ],
+            [
+              12,
+              42
+            ],
+            [
+              8,
+              38
+            ],
+            [
+              10,
+              35
+            ],
+            [
+              9,
+              37
+            ],
+            [
+              11,
+              43
+            ],
+            [
+              6,
+              40
+            ],
+            [
+              7,
+              39
+            ],
+            [
+              12,
+              35
+            ],
+            [
+              8,
+              40
+            ],
+            [
+              10,
+              37
+            ],
+            [
+              9,
+              39
+            ],
+            [
+              11,
+              36
+            ],
+            [
+              13,
+              39
+            ],
+            [
+              6,
+              42
+            ],
+            [
+              7,
+              41
+            ],
+            [
+              12,
+              37
+            ],
+            [
+              8,
+              42
+            ],
+            [
+              10,
+              39
+            ],
+            [
+              9,
+              41
+            ],
+            [
+              11,
+              38
+            ],
+            [
+              13,
+              41
+            ],
+            [
+              6,
+              35
+            ],
+            [
+              7,
+              43
+            ],
+            [
+              14,
+              39
+            ],
+            [
+              8,
+              35
+            ],
+            [
+              9,
+              43
+            ],
+            [
+              11,
+              40
+            ],
+            [
+              13,
+              43
+            ],
+            [
+              6,
+              37
+            ],
+            [
+              7,
+              36
+            ],
+            [
+              14,
+              41
+            ],
+            [
+              8,
+              37
+            ],
+            [
+              9,
+              36
+            ],
+            [
+              11,
+              42
+            ],
+            [
+              13,
+              36
+            ],
+            [
+              6,
+              39
+            ],
+            [
+              7,
+              38
+            ],
+            [
+              14,
+              43
+            ],
+            [
+              9,
+              38
+            ],
+            [
+              11,
+              35
+            ],
+            [
+              13,
+              38
+            ],
+            [
+              7,
+              40
+            ],
+            [
+              12,
+              39
+            ],
+            [
+              14,
+              36
+            ],
+            [
+              9,
+              40
+            ],
+            [
+              10,
+              41
+            ],
+            [
+              13,
+              40
+            ],
+            [
+              7,
+              42
+            ],
+            [
+              12,
+              41
+            ],
+            [
+              14,
+              38
+            ]
+          ],
+          "remaining_ticks": 1
+        }
+      ],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 4,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 36,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 10,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 10,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            2,
+            40
+          ],
+          "remaining_ticks": 1
+        },
+        {
+          "pos": [
+            6,
+            40
+          ],
+          "remaining_ticks": 2
+        }
+      ],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 5,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 35,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 9,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 9,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [
+        {
+          "pos": [
+            6,
+            40
+          ],
+          "remaining_ticks": 1
+        }
+      ],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 6,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 34,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 8,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 8,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 7,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 33,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 7,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 7,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 8,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 32,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 6,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 6,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            36
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 9,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 31,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 5,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 5,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            37
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "E",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 10,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 30,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 60.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 4,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 4,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            7,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "SE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 11,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 29,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 3,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 3,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            6,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 12,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 28,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            9,
+            38
+          ],
+          "hp": 20.0,
+          "alive": true,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 2,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 2,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 13,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 27,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 1,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 1,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            4,
+            38
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": true,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 14,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 26,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            4,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 15,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 25,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 16,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 24,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 17,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 23,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 18,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 22,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 19,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 21,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 20,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 20,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 21,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 19,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 22,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 18,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 23,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 17,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 24,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 16,
+      "attacker_wins": 0,
+      "defender_wins": 0,
+      "planted": true,
+      "round_over": false,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    },
+    {
+      "round": 1,
+      "tick": 25,
+      "setup": false,
+      "setup_ticks_remaining": 0,
+      "round_timer": 60,
+      "detonate_timer": 16,
+      "attacker_wins": 0,
+      "defender_wins": 1,
+      "planted": true,
+      "round_over": true,
+      "target_plant_pos": [
+        5,
+        40
+      ],
+      "planted_pos": [
+        5,
+        40
+      ],
+      "spike_pos": [
+        5,
+        40
+      ],
+      "available_orbs": [],
+      "chars": [
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "A",
+          "pos": [
+            10,
+            38
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "N",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 0,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "いぐるん",
+          "display_name": "いぐるん",
+          "team": "A",
+          "pos": [
+            8,
+            39
+          ],
+          "hp": 0.0,
+          "alive": false,
+          "facing": "NE",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "MONITOR",
+          "ultimate_points": 0,
+          "ultimate_cost": 8,
+          "ability": "RECON",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "A",
+            "D"
+          ]
+        },
+        {
+          "name": "夢の街",
+          "display_name": "夢の街",
+          "team": "D",
+          "pos": [
+            5,
+            39
+          ],
+          "hp": 100.0,
+          "alive": true,
+          "facing": "S",
+          "has_spike": false,
+          "blind": 0,
+          "revealed": false,
+          "ultimate": "TUNNEL",
+          "ultimate_points": 5,
+          "ultimate_cost": 5,
+          "ability": "FLASH",
+          "ability_charges": 0,
+          "orb_collect_timer": 0,
+          "visible_to": [
+            "D"
+          ]
+        }
+      ],
+      "smokes": [],
+      "flash_projectiles": [],
+      "recon_projectiles": [],
+      "flash_bursts": [],
+      "recon_bursts": [],
+      "monitor_drones": [],
+      "escape_portals": [],
+      "tunnel_bursts": []
+    }
+  ],
+  "round_records": [],
+  "player_stats": [
+    {
+      "name": "夢の街",
+      "team": "attackers",
+      "survived": false,
+      "final_hp": 0
+    },
+    {
+      "name": "いぐるん",
+      "team": "attackers",
+      "survived": false,
+      "final_hp": 0
+    },
+    {
+      "name": "夢の街",
+      "team": "defenders",
+      "survived": true,
+      "final_hp": 100
+    }
+  ]
+}

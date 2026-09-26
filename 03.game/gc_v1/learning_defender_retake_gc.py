@@ -23,7 +23,7 @@ character_stats_gc.py 側の定義に基づき、run_game.py の既存エンジ�
     0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=STAY, 5=DEFUSE, 6=ABILITY,
     7=ULTIMATE, 8=COLLECT_ORB
 観測ベクトルも同ファイルの build_observation() と要素・並び順を完全一致
-させている(OBS_DIM=53)。旧37次元チェックポイントにも読込互換性を持たせる。
+させている(OBS_DIM=69)。旧37/53/59/60/62次元チェックポイントにも読込互換性を持たせる。
 インデックスコメントを明示して対応関係を追跡できるようにしている。
 
 アビリティ使用時のターゲットは、学習環境(RetakeEnv.apply_ability)が
@@ -53,8 +53,12 @@ try:
     from .gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
     from .defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
+        RETAKE_UTILITY_CONTEXT_DIM,
+        assign_retake_lane_targets,
         retake_coordination_features,
         retake_coordination_state,
+        retake_utility_features,
+        retake_utility_state,
     )
     from .ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
@@ -71,8 +75,12 @@ except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot, facing_towards
     from defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
+        RETAKE_UTILITY_CONTEXT_DIM,
+        assign_retake_lane_targets,
         retake_coordination_features,
         retake_coordination_state,
+        retake_utility_features,
+        retake_utility_state,
     )
     from ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
@@ -91,12 +99,16 @@ BASE_OBS_DIM = 37
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
 LEGACY_OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
-OBS_DIM = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
+RETAKE_UTILITY_RECENT_INDEX = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
+RETAKE_LANE_TARGET_INDEX = RETAKE_UTILITY_RECENT_INDEX + 1
+RETAKE_UTILITY_CONTEXT_INDEX = RETAKE_LANE_TARGET_INDEX + 2
+OBS_DIM = RETAKE_UTILITY_CONTEXT_INDEX + RETAKE_UTILITY_CONTEXT_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
+UTILITY_SETUP_RADIUS = SITE_ZONE_RADIUS
 DEFUSE_SAFETY_MARGIN_TICKS = 4
 ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
@@ -339,7 +351,7 @@ class LearningDefenderRetakeGCController:
             )
             self.model.facing_head_version = facing_version
             self.facing_head_enabled = (
-                self.model_obs_dim == OBS_DIM
+                self.model_obs_dim >= RETAKE_UTILITY_RECENT_INDEX
                 and self.model_action_dim == N_ACTIONS
                 and facing_version >= 1
                 and not any(
@@ -365,6 +377,10 @@ class LearningDefenderRetakeGCController:
         self._site_zone = None
         self._dist_map_source = None  # 再計算要否判定用: 直前のplanted_pos
 
+        self._last_charge_state = {}
+        self._last_detonate_timer = None
+        self._utility_recent_min_timer = None
+        self._lane_targets = {}
         self._debug_log_path = "defender_retake_gc_debug.log"
 
     # -- ラウンド開始時のリセット -----------------------------------------
@@ -372,6 +388,36 @@ class LearningDefenderRetakeGCController:
         self._dist_map = None
         self._site_zone = None
         self._dist_map_source = None
+        self._last_charge_state = {}
+        self._last_detonate_timer = None
+        self._utility_recent_min_timer = None
+        self._lane_targets = {}
+
+    def _observe_utility_use(self, chars, team, detonate_timer):
+        if (
+            self._last_detonate_timer is not None
+            and detonate_timer > self._last_detonate_timer
+        ):
+            self._last_charge_state = {}
+            self._utility_recent_min_timer = None
+        current = {
+            ally.name: (
+                int(_ability_charge(ally)),
+                int(getattr(ally, "ultimate_points", 0)),
+            )
+            for ally in chars if ally.team == team
+        }
+        if any(
+            name in self._last_charge_state
+            and (
+                charges[0] < self._last_charge_state[name][0]
+                or charges[1] < self._last_charge_state[name][1]
+            )
+            for name, charges in current.items()
+        ):
+            self._utility_recent_min_timer = detonate_timer - 2
+        self._last_charge_state = current
+        self._last_detonate_timer = detonate_timer
 
     def _ensure_dist_map(self, grid, planted_pos):
         planted_pos = (int(planted_pos[0]), int(planted_pos[1]))
@@ -386,6 +432,7 @@ class LearningDefenderRetakeGCController:
             if 0 <= self._dist_map[r, c] <= SITE_ZONE_RADIUS
         }
         self._dist_map_source = planted_pos
+        self._lane_targets = {}
 
     # -- 観測構築 ----------------------------------------------------------
     # train_defender_retake.py の build_observation() と要素・並び順を
@@ -449,11 +496,14 @@ class LearningDefenderRetakeGCController:
             nearest_ally_dist = 1.0
         obs[17] = nearest_ally_dist  # [17] 最近接味方距離
 
-        # 味方アビリティ発動中フラグ。smoke情報がgame_stateに無いため、
-        # 敵側のデバフ状態(blind/reveal)のみで近似する。
+        # 味方ユーティリティ効果中の近似。スパイク周囲のsmokeと敵のデバフを観測する。
+        spike_smoked = any(
+            max(abs(int(cell[0]) - pr), abs(int(cell[1]) - pc)) <= 1
+            for cell in game_state.get("smoke_cells", ())
+        )
         obs[18] = (
             1.0
-            if any(
+            if spike_smoked or any(
                 e.is_alive
                 and (
                     getattr(e, "blind_remaining", 0) > 0
@@ -520,8 +570,25 @@ class LearningDefenderRetakeGCController:
             defuse_ticks=DEFUSE_REQUIRED_TICKS,
             safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
         )
-        obs[LEGACY_OBS_DIM:OBS_DIM] = retake_coordination_features(
+        obs[LEGACY_OBS_DIM:RETAKE_UTILITY_RECENT_INDEX] = retake_coordination_features(
             coordination, SPIKE_DETONATION_TICKS
+        )
+        obs[RETAKE_UTILITY_RECENT_INDEX] = float(
+            self._utility_recent_min_timer is not None
+            and detonate_timer >= self._utility_recent_min_timer
+        )
+        lane_target = self._lane_targets.get(char.name, planted_pos)
+        obs[RETAKE_LANE_TARGET_INDEX:RETAKE_UTILITY_CONTEXT_INDEX] = (
+            (lane_target[0] - r) / height,
+            (lane_target[1] - c) / width,
+        )
+        utility = retake_utility_state(
+            allies, enemies, planted_pos,
+            game_state.get("smoke_cells", ()), UTILITY_SETUP_RADIUS,
+            self._dist_map,
+        )
+        obs[RETAKE_UTILITY_CONTEXT_INDEX:OBS_DIM] = retake_utility_features(
+            utility
         )
 
         return obs
@@ -562,6 +629,18 @@ class LearningDefenderRetakeGCController:
         ) is not None
         mask[ACTION_COLLECT_ORB] = can_collect_orb(char, available_orbs)
 
+        if dist_to_plant <= 1 and int(getattr(char, "defuse_timer", 0)) > 0:
+            mask[:] = False
+            mask[ACTION_DEFUSE] = True
+        elif any(
+            ally is not char
+            and ally.team == char.team
+            and getattr(ally, "is_alive", True)
+            and int(getattr(ally, "defuse_timer", 0)) > 0
+            for ally in chars
+        ):
+            mask[ACTION_DEFUSE] = False
+
         return mask
 
     def _select_facing(self, obs, action_idx):
@@ -569,7 +648,7 @@ class LearningDefenderRetakeGCController:
             return None
         with torch.no_grad():
             obs_t = torch.as_tensor(
-                obs, dtype=torch.float32, device=DEVICE
+                obs[:self.model_obs_dim], dtype=torch.float32, device=DEVICE
             ).unsqueeze(0)
             values = self.model.facing_values(
                 obs_t, torch.tensor([action_idx], device=DEVICE)
@@ -594,6 +673,7 @@ class LearningDefenderRetakeGCController:
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         detonate_timer = float(game_state.get("detonate_timer", 0.0))
+        self._observe_utility_use(chars, char.team, detonate_timer)
         smoke_cells = {
             tuple(map(int, cell))
             for cell in game_state.get("smoke_cells", ())
@@ -619,6 +699,17 @@ class LearningDefenderRetakeGCController:
         alive_defenders = [
             d for d in chars if d.team == char.team and getattr(d, "is_alive", True)
         ]
+        if not self._lane_targets:
+            self._lane_targets = assign_retake_lane_targets(
+                grid,
+                planted_pos,
+                alive_defenders,
+                self._dist_map,
+                detonate_timer,
+                entry_radius=ENTRY_READY_RADIUS,
+                defuse_ticks=DEFUSE_REQUIRED_TICKS,
+                safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+            )
         alive_enemies = [
             e for e in enemies if getattr(e, "is_alive", True)
         ]
@@ -861,7 +952,9 @@ class LearningDefenderRetakeGCController:
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
 
-        facing = self._select_facing(obs, action_idx)
+        # The battle engine forces facing toward a firing enemy; don't let the
+        # learned facing head override that combat-facing behavior.
+        facing = None if visible_enemies else self._select_facing(obs, action_idx)
         if facing is not None:
             char.facing = facing
 

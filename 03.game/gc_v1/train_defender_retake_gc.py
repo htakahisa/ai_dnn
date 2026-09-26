@@ -20,6 +20,8 @@ import random
 import sys
 import os
 import argparse
+import copy
+import shutil
 from collections import deque, namedtuple
 import time
 
@@ -66,11 +68,16 @@ try:
     )
     from .defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
+        RETAKE_UTILITY_CONTEXT_DIM,
+        assign_retake_lane_targets,
         bfs_distance_map as objective_distance_map,
         nearest_orb_assignment,
         path_distance,
+        retake_approach_sector,
         retake_coordination_features,
         retake_coordination_state,
+        retake_utility_features,
+        retake_utility_state,
         shortest_legal_action,
     )
     from .ultimate_tactics_gc import (
@@ -94,11 +101,16 @@ except ImportError:
     )
     from defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
+        RETAKE_UTILITY_CONTEXT_DIM,
+        assign_retake_lane_targets,
         bfs_distance_map as objective_distance_map,
         nearest_orb_assignment,
         path_distance,
+        retake_approach_sector,
         retake_coordination_features,
         retake_coordination_state,
+        retake_utility_features,
+        retake_utility_state,
         shortest_legal_action,
     )
     from ultimate_tactics_gc import (
@@ -115,6 +127,8 @@ DEVICE = torch.device("cpu")
 SAVE_DIR = Path(__file__).resolve().parent / "data" / "defender_retake_gc_data"
 BEST_MODEL_PATH = SAVE_DIR / "dqn_defender_retake_gc_best_by_eval.pt"
 FINAL_MODEL_PATH = SAVE_DIR / "dqn_defender_retake_gc_final.pt"
+PROMOTION_BACKUP_DIR = SAVE_DIR.parent / "defender_gc_model_backups"
+RETAKE_ARCHIVE_DIR = SAVE_DIR / "retake_checkpoint_archive"
 
 # ============================================================
 # マップ読み込み
@@ -520,7 +534,10 @@ BASE_OBS_DIM = 37
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
 LEGACY_OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
-OBS_DIM = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
+RETAKE_UTILITY_RECENT_INDEX = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
+RETAKE_LANE_TARGET_INDEX = RETAKE_UTILITY_RECENT_INDEX + 1
+RETAKE_UTILITY_CONTEXT_INDEX = RETAKE_LANE_TARGET_INDEX + 2
+OBS_DIM = RETAKE_UTILITY_CONTEXT_INDEX + RETAKE_UTILITY_CONTEXT_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
@@ -529,10 +546,12 @@ ACTION_ABILITY = 6
 ACTION_ULTIMATE = 7
 ACTION_COLLECT_ORB = 8
 FACING_HEAD_VERSION = 2
+TRAINING_REVISION = "defender_retake_utility_setup_v8"
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
-MIN_ALLIES_FOR_ENTRY = 1
+UTILITY_SETUP_RADIUS = SITE_ZONE_RADIUS
+MIN_ALLIES_FOR_ENTRY = 2
 ROLE_INDEX = {"フラッシュ": 0, "スモーカー": 1, "シーカー": 2, "タイガー": 3}
 
 # 💡追加: 「解除が安全かどうか」の判定を、起爆タイマーの割合(detonate_frac)ではなく
@@ -571,6 +590,10 @@ class RetakeEnv:
             for orb in self.available_orbs
         }
         self.orb_collections = 0
+        self.ability_uses = 0
+        self.retake_utility_push_until = -1
+        self.retake_utility_types_used = set()
+        self.crossfire_entry_rewarded = set()
 
         self.planted_pos = (
             random.choice(PLANT_CELLS) if PLANT_CELLS else random.choice(WALKABLE)
@@ -595,6 +618,20 @@ class RetakeEnv:
         self.chars = []
         self._build_fixed_defenders(used)
         self._build_attackers(used)
+        self.retake_lane_targets = assign_retake_lane_targets(
+            GRID,
+            self.planted_pos,
+            self.defenders(),
+            self.dist_map,
+            self.detonate_timer,
+            entry_radius=ENTRY_READY_RADIUS,
+            defuse_ticks=DEFUSE_REQUIRED_TICKS,
+            safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
+        )
+        self.retake_lane_maps = {
+            target: objective_distance_map(GRID, target)
+            for target in set(self.retake_lane_targets.values())
+        }
 
     def _build_fixed_defenders(self, used):
         """gc_v1固定ロースターをDEFENDER_SPAWNS順に固定配置し、実効ステータスをセットする。
@@ -723,11 +760,18 @@ class RetakeEnv:
         mask[ACTION_DEFUSE] = bool(not self.is_defused and dist_to_plant <= 1)
 
         has_charge = char.own_ability_charge() > 0
-        mask[ACTION_ABILITY] = bool(has_charge and not self.ally_ability_active(char))
+        # An active smoke must not disable a teammate's flash or recon.
+        mask[ACTION_ABILITY] = bool(has_charge)
         mask[ACTION_ULTIMATE] = bool(
             char.ultimate_cost > 0 and char.ultimate_points >= char.ultimate_cost
         )
         mask[ACTION_COLLECT_ORB] = can_collect_orb(char, self.available_orbs)
+
+        if self.active_defuser_name == char.name and char.defuse_timer > 0:
+            mask[:] = False
+            mask[ACTION_DEFUSE] = dist_to_plant <= 1
+        elif self.active_defuser_name is not None:
+            mask[ACTION_DEFUSE] = False
 
         # 💡追加: 時間に余裕があり(time_critical_for_entryでない)、かつ敵が視認できている場合、
         # 移動action(0-3)をマスクして足を止めさせる(撃ち合い中の移動は不利なため)。
@@ -849,8 +893,23 @@ class RetakeEnv:
             defuse_ticks=DEFUSE_REQUIRED_TICKS,
             safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
         )
-        expanded[LEGACY_OBS_DIM:OBS_DIM] = retake_coordination_features(
+        expanded[LEGACY_OBS_DIM:RETAKE_UTILITY_RECENT_INDEX] = retake_coordination_features(
             coordination, SPIKE_DETONATION_TICKS
+        )
+        expanded[RETAKE_UTILITY_RECENT_INDEX] = float(
+            self.tick <= self.retake_utility_push_until
+        )
+        lane_target = self.retake_lane_targets.get(char.name, self.planted_pos)
+        expanded[RETAKE_LANE_TARGET_INDEX:RETAKE_UTILITY_CONTEXT_INDEX] = (
+            (lane_target[0] - r) / h,
+            (lane_target[1] - c) / w,
+        )
+        utility = retake_utility_state(
+            allies, enemies, self.planted_pos, self.smoke_cells(),
+            UTILITY_SETUP_RADIUS, self.dist_map,
+        )
+        expanded[RETAKE_UTILITY_CONTEXT_INDEX:OBS_DIM] = retake_utility_features(
+            utility
         )
         return expanded
 
@@ -889,7 +948,14 @@ class RetakeEnv:
 
         for char in self.chars:
             if char.name in pending_ability:
+                previous_charge = char.own_ability_charge()
                 self.apply_ability(char)
+                if char.own_ability_charge() < previous_charge:
+                    self.ability_uses += 1
+                    self.retake_utility_types_used.add(char.ability_name)
+                    self.retake_utility_push_until = max(
+                        self.retake_utility_push_until, self.tick + 3
+                    )
 
         for char in self.defenders():
             if char.name not in pending_orb or not can_collect_orb(
@@ -940,6 +1006,9 @@ class RetakeEnv:
                 next_positions[char.name] = [
                     char.pos[0] + step[0], char.pos[1] + step[1]
                 ]
+            self.retake_utility_push_until = max(
+                self.retake_utility_push_until, self.tick + 3
+            )
 
         pr, pc = self.planted_pos
         for char in self.chars:
@@ -1113,6 +1182,7 @@ KILL_REWARD = 3.0
 KILL_ON_DEBUFFED_BONUS = 1.5
 DEATH_PENALTY = -3.0
 DEFUSE_PROGRESS_REWARD = 0.3
+DEFUSE_INTERRUPT_PENALTY = -1.0
 UNSAFE_DEFUSE_PENALTY = -0.5
 DEFUSE_WIN_REWARD = 10.0
 LOSS_PENALTY = -10.0
@@ -1120,11 +1190,14 @@ TICK_TIME_PENALTY = -0.01
 ORB_PROGRESS_REWARD = 0.50
 ORB_COLLECTION_REWARD = 3.00
 ORB_ROUND_MISS_PENALTY = 1.00
-RETAKE_WAIT_REWARD = 0.08
 RETAKE_EARLY_PEEK_PENALTY = -0.60
 RETAKE_UTILITY_PREP_BONUS = 0.60
 RETAKE_UTILITY_ENTRY_BONUS = 0.75
+RETAKE_UTILITY_FOLLOWUP_REWARD = 0.35
 RETAKE_DRY_ENTRY_PENALTY = -0.50
+RETAKE_CROSSFIRE_ENTRY_BONUS = 0.50
+RETAKE_UTILITY_CHAIN_BONUS = 0.75
+RETAKE_UNUSED_FOLLOWUP_ENTRY_PENALTY = -1.25
 
 
 def snapshot_before(env):
@@ -1147,8 +1220,20 @@ def snapshot_before(env):
         ready_allies = [
             ally
             for ally in env.defenders()
-            if ally.is_alive and int(env.dist_map[ally.pos[0], ally.pos[1]]) <= ENTRY_READY_RADIUS
+            if ally.is_alive
+            and 0 <= int(env.dist_map[ally.pos[0], ally.pos[1]]) <= ENTRY_READY_RADIUS
         ]
+        utility = retake_utility_state(
+            env.defenders(), env.attackers(), env.planted_pos,
+            env.smoke_cells(), UTILITY_SETUP_RADIUS, env.dist_map,
+        )
+        active_utility_types = {
+            ability for ability, active_key in (
+                ("SMOKE", "smoke_active"),
+                ("FLASH", "blind_active"),
+                ("RECON", "reveal_active"),
+            ) if utility[active_key]
+        }
         before[char.name] = {
             "alive": char.is_alive,
             "in_zone": (r, c) in env.site_zone,
@@ -1158,6 +1243,11 @@ def snapshot_before(env):
             "ultimate_points": char.ultimate_points,
             "coordination": coordination,
             "ally_ability_active": env.ally_ability_active(char),
+            "active_utility_types": active_utility_types,
+            "unused_followup_utility": bool(
+                (utility["remaining"]["FLASH"] and not utility["blind_active"])
+                or (utility["remaining"]["RECON"] and not utility["reveal_active"])
+            ),
             "team_utility_available": any(
                 ally.own_ability_charge() > 0
                 or (
@@ -1202,46 +1292,87 @@ def compute_rewards(env, before, chosen_actions):
             for a in allies_alive
             if max(abs(pr - a.pos[0]), abs(pc - a.pos[1])) <= ENTRY_READY_RADIUS
         )
+        support_required = min(MIN_ALLIES_FOR_ENTRY, len(allies_alive))
 
         # 💡変更: detonate_frac(割合)ではなく、残りtickの絶対値で「時間切れ間近か」を判定する。
         time_critical_for_entry = env.detonate_timer <= ENTRY_SAFETY_MARGIN_TICKS
 
         if in_zone_now and not b["in_zone"]:
-            if allies_near_entry >= MIN_ALLIES_FOR_ENTRY or time_critical_for_entry:
+            if allies_near_entry >= support_required or time_critical_for_entry:
                 reward += ENTRY_WITH_SUPPORT_BONUS
             else:
                 reward += ENTRY_ALONE_PENALTY
         elif (
             in_zone_now
-            and allies_near_entry < MIN_ALLIES_FOR_ENTRY
+            and allies_near_entry < support_required
             and not time_critical_for_entry
         ):
             reward += ENTRY_ALONE_LINGER_PENALTY
         elif not in_zone_now:
             reward += APPROACH_REWARD_SCALE * (b["dist_to_plant"] - dist_now)
 
+        if (
+            env.tick <= env.retake_utility_push_until
+            and dist_now < b["dist_to_plant"]
+        ):
+            reward += RETAKE_UTILITY_FOLLOWUP_REWARD
+
+        if (
+            name not in env.crossfire_entry_rewarded
+            and b["dist_to_plant"] > ENTRY_READY_RADIUS
+            and dist_now <= ENTRY_READY_RADIUS
+            and any(enemy.is_alive for enemy in env.attackers())
+        ):
+            own_sector = retake_approach_sector(char.pos, env.planted_pos)
+            if own_sector != "center" and any(
+                ally is not char
+                and 0 <= int(env.dist_map[ally.pos[0], ally.pos[1]]) <= ENTRY_READY_RADIUS
+                and retake_approach_sector(ally.pos, env.planted_pos)
+                not in ("center", own_sector)
+                for ally in allies_alive
+            ):
+                reward += RETAKE_CROSSFIRE_ENTRY_BONUS
+                env.crossfire_entry_rewarded.add(name)
+
         action_id = chosen_actions.get(name)
         coordination = b["coordination"]
-        if coordination["should_wait"]:
-            if action_id == 4:
-                reward += RETAKE_WAIT_REWARD
-            elif in_zone_now:
-                reward += RETAKE_EARLY_PEEK_PENALTY
+        if (
+            coordination["should_wait"]
+            and action_id in (0, 1, 2, 3)
+            and in_zone_now
+            and not b["in_zone"]
+        ):
+            reward += RETAKE_EARLY_PEEK_PENALTY
         if action_id in (ACTION_ABILITY, ACTION_ULTIMATE):
             if coordination["team_ready"] or coordination["must_commit"]:
                 reward += RETAKE_UTILITY_PREP_BONUS
+        if (
+            action_id == ACTION_ABILITY
+            and b["active_utility_types"]
+            and char.ability_name not in b["active_utility_types"]
+        ):
+            reward += RETAKE_UTILITY_CHAIN_BONUS
         if in_zone_now and not b["in_zone"] and coordination["team_ready"]:
             if b["ally_ability_active"] or env.ally_ability_active(char):
                 reward += RETAKE_UTILITY_ENTRY_BONUS
             elif b["team_utility_available"] and not coordination["must_commit"]:
                 reward += RETAKE_DRY_ENTRY_PENALTY
+        if (
+            in_zone_now and not b["in_zone"]
+            and b["unused_followup_utility"]
+            and b["active_utility_types"]
+            and not coordination["must_commit"]
+            and any(enemy.is_alive for enemy in env.attackers())
+            and not any(
+                enemy.is_alive
+                and (enemy.blind_remaining > 0 or enemy.reveal_remaining > 0)
+                for enemy in env.attackers()
+            )
+        ):
+            reward += RETAKE_UNUSED_FOLLOWUP_ENTRY_PENALTY
 
         if action_id == ACTION_ABILITY:
-            char_dist_to_plant = max(abs(pr - char.pos[0]), abs(pc - char.pos[1]))
-            ready = (
-                char_dist_to_plant <= ENTRY_READY_RADIUS
-                and allies_near_entry >= MIN_ALLIES_FOR_ENTRY
-            )
+            ready = 0 <= raw_now <= UTILITY_SETUP_RADIUS
             if ready or time_critical_for_entry:
                 reward += ABILITY_GOOD_USE_BONUS
             else:
@@ -1257,6 +1388,8 @@ def compute_rewards(env, before, chosen_actions):
 
         if char.defuse_timer > b["defuse_timer"]:
             reward += DEFUSE_PROGRESS_REWARD
+        elif b["defuse_timer"] > 0 and char.defuse_timer == 0:
+            reward += DEFUSE_INTERRUPT_PENALTY
 
         if (
             action_id == ACTION_DEFUSE
@@ -1376,14 +1509,18 @@ def select_action(net, state, mask, epsilon):
             q_values = net(state_t).squeeze(0).cpu().numpy()
         q_values = np.where(mask, q_values, -np.inf)
         base_action = int(np.argmax(q_values))
+    return base_action, select_facing(net, state, base_action, epsilon)
+
+
+def select_facing(net, state, action, epsilon):
     with torch.no_grad():
         state_t = torch.from_numpy(state).float().unsqueeze(0).to(DEVICE)
-        facing_values = net.facing_values(state_t, [base_action]).squeeze(0)
+        facing_values = net.facing_values(state_t, [action]).squeeze(0)
     if random.random() < epsilon:
         facing_idx = random.randrange(len(FACING_DIRS))
     else:
         facing_idx = int(facing_values.argmax().item())
-    return base_action, FACING_DIRS[facing_idx]
+    return FACING_DIRS[facing_idx]
 
 
 def compute_td_loss(net, target_net, batch, gamma):
@@ -1462,13 +1599,88 @@ def defender_orb_teacher_action(env, char, mask):
     return shortest_legal_action(orb_map, char.pos, mask, MOVE_DELTAS)
 
 
-def retake_teacher_action(env, char, mask):
-    """Teacher for shortest-path regroup, utility preparation and entry."""
-    orb_action = defender_orb_teacher_action(env, char, mask)
-    if orb_action is not None:
-        return orb_action
+def retake_teacher_utility_actor(env, allies, utility):
+    """Choose a useful setup cast before entering the close combat area."""
+    enemies = [enemy for enemy in env.attackers() if enemy.is_alive]
+    if not enemies or not utility["ready"]:
+        return None
+    defuse_eta = min(
+        max(0, path_distance(env.dist_map, ally) - 1) + DEFUSE_REQUIRED_TICKS
+        for ally in allies
+    )
+    active_defuser = next(
+        (ally for ally in allies if ally.name == env.active_defuser_name), None
+    )
+    if active_defuser is not None:
+        defuse_eta = max(0, DEFUSE_REQUIRED_TICKS - active_defuser.defuse_timer)
+    if env.detonate_timer <= defuse_eta:
+        return None
+    # A spike-centred smoke blocks the spike-centred flash LOS. Put the
+    # information/flash effects in place first and smoke immediately after.
+    for ability, active_key in (
+        ("RECON", "reveal_active"),
+        ("FLASH", "blind_active"),
+        ("SMOKE", "smoke_active"),
+    ):
+        if utility[active_key] or ability in env.retake_utility_types_used:
+            continue
+        if ability == "FLASH" and not any(
+            has_los(env.planted_pos, tuple(enemy.pos), env.smoke_cells())
+            for enemy in enemies
+        ):
+            continue
+        if ability == "RECON" and not any(
+            max(abs(enemy.pos[0] - env.planted_pos[0]),
+                abs(enemy.pos[1] - env.planted_pos[1])) <= RECON_REVEAL_SIZE // 2
+            for enemy in enemies
+        ):
+            continue
+        candidates = [
+            ally for ally in utility["ready"]
+            if ally.ability_name == ability and ally.own_ability_charge() > 0
+            and ally.name != env.active_defuser_name
+        ]
+        if candidates:
+            return min(candidates, key=lambda ally: (path_distance(env.dist_map, ally), ally.name))
+    return None
 
+
+def retake_teacher_action(env, char, mask):
+    """Teacher for coordinated entry through distinct reachable approaches."""
     allies = [ally for ally in env.defenders() if ally.is_alive]
+    if env.active_defuser_name is not None:
+        if env.active_defuser_name == char.name and mask[ACTION_DEFUSE]:
+            return ACTION_DEFUSE
+        utility = retake_utility_state(
+            allies, env.attackers(), env.planted_pos,
+            env.smoke_cells(), UTILITY_SETUP_RADIUS, env.dist_map,
+        )
+        if retake_teacher_utility_actor(env, allies, utility) is char and mask[ACTION_ABILITY]:
+            return ACTION_ABILITY
+        return 4
+
+    enemies_alive = any(enemy.is_alive for enemy in env.attackers())
+    if not enemies_alive:
+        adjacent = [
+            ally for ally in allies
+            if max(
+                abs(ally.pos[0] - env.planted_pos[0]),
+                abs(ally.pos[1] - env.planted_pos[1]),
+            ) <= 1
+        ]
+        if adjacent:
+            designated = min(adjacent, key=lambda ally: (path_distance(env.dist_map, ally), ally.name))
+            if designated.name == char.name and mask[ACTION_DEFUSE]:
+                return ACTION_DEFUSE
+            return 4
+        next_action = shortest_legal_action(env.dist_map, char.pos, mask, MOVE_DELTAS)
+        return 4 if next_action is None else next_action
+
+    utility_recent = env.tick <= env.retake_utility_push_until
+    utility = retake_utility_state(
+        allies, env.attackers(), env.planted_pos,
+        env.smoke_cells(), UTILITY_SETUP_RADIUS, env.dist_map,
+    )
     coordination = retake_coordination_state(
         char,
         allies,
@@ -1478,28 +1690,45 @@ def retake_teacher_action(env, char, mask):
         defuse_ticks=DEFUSE_REQUIRED_TICKS,
         safety_margin=DEFUSE_SAFETY_MARGIN_TICKS,
     )
+    utility_actor = retake_teacher_utility_actor(env, allies, utility)
+    if utility_actor is char and mask[ACTION_ABILITY]:
+        return ACTION_ABILITY
+    if utility_actor is not None and coordination["self_distance"] <= UTILITY_SETUP_RADIUS:
+        return 4
+    if not utility_recent and not coordination["must_commit"]:
+        lane_target = env.retake_lane_targets.get(char.name)
+        if (
+            lane_target is not None
+            and tuple(map(int, char.pos)) != lane_target
+            and coordination["self_distance"] >= ENTRY_READY_RADIUS
+        ):
+            lane_map = env.retake_lane_maps[lane_target]
+            next_action = shortest_legal_action(
+                lane_map, char.pos, mask, MOVE_DELTAS
+            )
+            if next_action is not None:
+                return next_action
     if coordination["self_distance"] > ENTRY_READY_RADIUS:
         return shortest_legal_action(env.dist_map, char.pos, mask, MOVE_DELTAS)
     if coordination["should_wait"]:
         return 4
 
-    ready_allies = [
-        ally
-        for ally in allies
-        if 0 <= path_distance(env.dist_map, ally) <= ENTRY_READY_RADIUS
-    ]
-    utility_options = []
-    if not env.ally_ability_active(char) and not coordination["must_commit"]:
-        for ally in ready_allies:
-            if ally.own_ability_charge() > 0:
-                utility_options.append((0, ally.name, ally, ACTION_ABILITY))
-            if ally.ultimate_cost > 0 and ally.ultimate_points >= ally.ultimate_cost:
-                utility_options.append((1, ally.name, ally, ACTION_ULTIMATE))
-    if utility_options:
-        _priority, _name, utility_actor, utility_action = min(utility_options)
-        if utility_actor.name == char.name and mask[utility_action]:
-            return utility_action
-        return 4
+    if not coordination["must_commit"]:
+        if not utility_recent and not any(
+            utility[key] for key in ("smoke_active", "blind_active", "reveal_active")
+        ):
+            ultimate_options = sorted(
+                (ally for ally in utility["ready"]
+                 if ally.ultimate_cost > 0
+                 and ally.ultimate_points >= ally.ultimate_cost),
+                key=lambda ally: ally.name,
+            )
+            if ultimate_options:
+                return (
+                    ACTION_ULTIMATE
+                    if ultimate_options[0].name == char.name and mask[ACTION_ULTIMATE]
+                    else 4
+                )
 
     designated = min(
         allies,
@@ -1515,10 +1744,38 @@ def retake_teacher_action(env, char, mask):
     return 4 if next_action is None else next_action
 
 
-def optimize_demonstrations(net, optimizer, samples, weight=2.0, batch_size=64):
-    if not samples or weight <= 0:
+def optimize_demonstrations(
+    net, optimizer, samples, weight=2.0, batch_size=64, ability_samples=None,
+):
+    if (not samples and not ability_samples) or weight <= 0:
         return None
-    batch = random.sample(list(samples), min(batch_size, len(samples)))
+    all_samples = list(samples)
+    utility_samples = []
+    ordinary_samples = []
+    for sample in all_samples:
+        (utility_samples if sample[1] == ACTION_ABILITY else ordinary_samples).append(
+            sample
+        )
+    if ability_samples is not None:
+        utility_samples = list(ability_samples)
+    # Teacher rollouts contain many more movement/wait labels than ability
+    # labels. Reserve one quarter of each minibatch for utility actions so
+    # those demonstrations are not diluted by the common actions.
+    target_size = min(batch_size, len(utility_samples) + len(ordinary_samples))
+    if target_size == 0:
+        return None
+    utility_size = min(len(utility_samples), max(1, target_size // 4))
+    selected_utility = random.sample(utility_samples, utility_size)
+    batch = list(selected_utility)
+    ordinary_size = min(len(ordinary_samples), target_size - utility_size)
+    batch.extend(random.sample(ordinary_samples, ordinary_size))
+    remaining = target_size - len(batch)
+    if remaining:
+        selected_ids = {id(sample) for sample in selected_utility}
+        unused_utility = [
+            sample for sample in utility_samples if id(sample) not in selected_ids
+        ]
+        batch.extend(random.sample(unused_utility, min(remaining, len(unused_utility))))
     states, actions, masks = zip(*batch)
     states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32, device=DEVICE)
     actions_t = torch.as_tensor(actions, dtype=torch.long, device=DEVICE)
@@ -1538,9 +1795,11 @@ def optimize_demonstrations(net, optimizer, samples, weight=2.0, batch_size=64):
     return float(loss.detach())
 
 
-def scheduled_teacher_probability(episode, total_episodes, final=0.10):
+def scheduled_teacher_probability(
+    episode, total_episodes, final=0.10, initial=0.80,
+):
     fraction = min(1.0, max(0.0, (episode - 1) / max(1, total_episodes - 1)))
-    return 0.80 + fraction * (float(final) - 0.80)
+    return float(initial) + fraction * (float(final) - float(initial))
 
 
 def optimize_facing(net, optimizer, samples, weight=0.35, batch_size=64):
@@ -1593,10 +1852,13 @@ def optimize_ultimate_classification(net, optimizer, positives, negatives, weigh
 def run_episode(
     env, net, target_net, replay, epsilon, obs_dim,
     facing_samples=None, ultimate_positives=None, ultimate_negatives=None,
+    teacher_samples=None, teacher_probability=0.0,
+    ability_teacher_samples=None,
 ):
     env.reset()
     zero_obs = np.zeros(obs_dim, dtype=np.float32)
     zero_mask = np.zeros(N_ACTIONS, dtype=bool)
+    episode_teacher_samples = []
 
     while True:
         terminal, reason = env.is_terminal()
@@ -1604,6 +1866,9 @@ def run_episode(
             break
 
         before = snapshot_before(env)
+        use_team_teacher = (
+            teacher_probability > 0.0 and random.random() < teacher_probability
+        )
 
         obs_before, mask_before, chosen_actions = {}, {}, {}
         for char in env.defenders():
@@ -1612,17 +1877,41 @@ def run_episode(
             state = env.build_observation(char)
             mask = env.action_mask(char)
             action, facing = select_action(net, state, mask, epsilon)
+            if teacher_probability > 0.0:
+                teacher_action = retake_teacher_action(env, char, mask)
+                if teacher_action == ACTION_ABILITY and ability_teacher_samples is not None:
+                    # The teacher checked charge, setup distance, cast effect
+                    # and time to defuse. Keep this local label even if the
+                    # student's later movement causes the round to be lost.
+                    ability_teacher_samples.append(
+                        (state.copy(), ACTION_ABILITY, mask.copy())
+                    )
+                if (
+                    teacher_action is not None
+                    and use_team_teacher
+                ):
+                    action = int(teacher_action)
+                    facing = select_facing(net, state, action, epsilon)
+                    if teacher_samples is not None:
+                        episode_teacher_samples.append(
+                            (state.copy(), action, mask.copy())
+                        )
             target = confidence = None
-            if facing_samples is not None:
+            in_combat = any(
+                enemy.is_alive and env.check_line_of_sight(char, enemy)
+                for enemy in env.attackers()
+            )
+            if in_combat:
+                # Combat orientation is owned by the game, not the facing head.
+                facing = getattr(char, "facing", "S")
+            elif facing_samples is not None:
                 target, confidence = observable_facing_target(env, char, action)
-                # Training always executes the teacher direction.  Evaluation
-                # calls this loop without facing_samples and stays model-driven.
                 facing = FACING_DIRS[target]
             char.facing = facing
             obs_before[char.name] = state
             mask_before[char.name] = mask
             chosen_actions[char.name] = action
-            if facing_samples is not None:
+            if facing_samples is not None and not in_combat:
                 facing_samples.append((state.copy(), action, target, confidence))
             if mask[ACTION_ULTIMATE]:
                 tactical = tactical_ultimate_window(
@@ -1672,14 +1961,50 @@ def run_episode(
                 next_mask,
             )
 
+    # A route or ability choice from a failed retake is not a proven
+    # demonstration. Keep the transition in replay with its actual reward,
+    # but supervise the policy only with successful complete retakes.
+    if env.is_defused and teacher_samples is not None:
+        teacher_samples.extend(episode_teacher_samples)
     return env.is_defused, env.tick
 
 
-def train_step(net, target_net, optimizer, replay, batch_size, gamma):
+def train_step(
+    net, target_net, optimizer, replay, batch_size, gamma,
+    anchor_replay=None, reference_net=None,
+):
     if len(replay) < batch_size:
         return None
-    batch = replay.sample(batch_size)
+    anchor_size = (
+        batch_size // 4
+        if anchor_replay is not None and len(anchor_replay) >= batch_size // 4
+        else 0
+    )
+    batch = replay.sample(batch_size - anchor_size)
+    if anchor_size:
+        anchor_batch = anchor_replay.sample(anchor_size)
+        batch = Transition(
+            *(current + anchor for current, anchor in zip(batch, anchor_batch))
+        )
     loss = compute_td_loss(net, target_net, batch, gamma)
+    if reference_net is not None:
+        states = torch.from_numpy(np.stack(batch.state)).float().to(DEVICE)
+        masks = torch.from_numpy(np.stack(batch.mask)).bool().to(DEVICE)
+        current_q = net(states)
+        with torch.no_grad():
+            reference_q = reference_net(states)
+        counts = masks.sum(dim=1, keepdim=True).clamp_min(1)
+        current_advantage = current_q - (current_q * masks).sum(
+            dim=1, keepdim=True
+        ) / counts
+        reference_advantage = reference_q - (reference_q * masks).sum(
+            dim=1, keepdim=True
+        ) / counts
+        # Keep the incumbent policy as a light anchor, not a hard barrier to
+        # learning the teacher-guided retake sequence.
+        loss = loss + 1.0 * F.smooth_l1_loss(
+            current_advantage[masks], reference_advantage[masks]
+        )
     optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=10.0)
@@ -1688,34 +2013,102 @@ def train_step(net, target_net, optimizer, replay, batch_size, gamma):
 
 
 def expand_retake_policy_state(checkpoint, net):
-    """Warm-start 49-observation/8-action retake from the legacy 37/7 model."""
+    """Preserve existing behavior when appending observation/action features."""
     source = checkpoint.get("model_state_dict", checkpoint)
     target = net.state_dict()
     old_obs = int(source["feature.0.weight"].shape[1])
     old_actions = int(source["adv_head.2.weight"].shape[0])
+    new_obs = int(target["feature.0.weight"].shape[1])
+    new_actions = int(target["adv_head.2.weight"].shape[0])
+    if old_obs > new_obs or old_actions > new_actions:
+        raise ValueError(
+            f"retake checkpoint is larger than model: "
+            f"obs {old_obs}->{new_obs}, actions {old_actions}->{new_actions}"
+        )
     for key, value in source.items():
-        if key in target and target[key].shape == value.shape:
+        if key not in target:
+            continue
+        if target[key].shape == value.shape:
             target[key] = value.detach().clone()
-    if old_obs == BASE_OBS_DIM:
-        target["feature.0.weight"][:, :BASE_OBS_DIM] = source["feature.0.weight"]
-        target["feature.0.weight"][:, BASE_OBS_DIM:ORB_CONTEXT_OBS_DIM] = 0.0
-    if old_actions == LEGACY_N_ACTIONS:
-        target["adv_head.2.weight"][:LEGACY_N_ACTIONS] = source["adv_head.2.weight"]
-        target["adv_head.2.bias"][:LEGACY_N_ACTIONS] = source["adv_head.2.bias"]
+        elif key in ("feature.0.weight", "facing_feature.0.weight"):
+            if (
+                value.ndim != 2
+                or value.shape[0] != target[key].shape[0]
+                or value.shape[1] > target[key].shape[1]
+            ):
+                raise ValueError(f"incompatible retake input layer: {key}")
+            expanded = torch.zeros_like(target[key])
+            expanded[:, :value.shape[1]] = value
+            target[key] = expanded
+        elif key in ("adv_head.2.weight", "adv_head.2.bias"):
+            if (
+                value.shape[0] > target[key].shape[0]
+                or value.shape[1:] != target[key].shape[1:]
+            ):
+                raise ValueError(f"incompatible retake action layer: {key}")
+            expanded = target[key].clone()
+            expanded[:value.shape[0]] = value
+            target[key] = expanded
+        elif key == "facing_output.weight":
+            hidden = target[key].shape[1] - new_actions
+            old_hidden = value.shape[1] - old_actions
+            if value.shape[0] != target[key].shape[0] or old_hidden != hidden:
+                raise ValueError(f"incompatible retake facing output: {key}")
+            expanded = torch.zeros_like(target[key])
+            expanded[:, :hidden] = value[:, :hidden]
+            expanded[:, hidden : hidden + old_actions] = value[:, hidden:]
+            target[key] = expanded
+        else:
+            raise ValueError(
+                f"unsupported retake checkpoint shape: {key} "
+                f"{tuple(value.shape)} -> {tuple(target[key].shape)}"
+            )
     net.load_state_dict(target)
     return old_obs, old_actions
 
 
-def checkpoint_payload(net, episode, metrics=None):
-    return {
+def train_only_new_retake_context(net, old_obs):
+    """Protect the learned action policy while fitting appended inputs."""
+    for name, parameter in net.named_parameters():
+        if name.startswith(("feature.", "value_head.", "adv_head.")):
+            parameter.requires_grad_(name == "feature.0.weight")
+    net.feature[0].weight.register_hook(
+        lambda gradient: torch.cat(
+            (torch.zeros_like(gradient[:, :old_obs]), gradient[:, old_obs:]), dim=1
+        )
+    )
+
+
+def checkpoint_payload(net, episode, metrics=None, protected_obs_dim=None):
+    payload = {
         "model_state_dict": net.state_dict(),
         "episode": int(episode),
         "obs_dim": OBS_DIM,
         "n_actions": N_ACTIONS,
         "facing_head_version": FACING_HEAD_VERSION,
-        "training_revision": "defender_retake_current",
+        "training_revision": TRAINING_REVISION,
         "evaluation": metrics or {},
     }
+    if protected_obs_dim is not None:
+        payload["protected_obs_dim"] = protected_obs_dim
+    return payload
+
+
+def has_retake_crossfire(env):
+    """Whether two defenders see one attacker from different sides of the spike."""
+    defenders = [unit for unit in env.defenders() if unit.is_alive]
+    for enemy in env.attackers():
+        if not enemy.is_alive:
+            continue
+        sectors = {
+            retake_approach_sector(unit.pos, env.planted_pos)
+            for unit in defenders
+            if env.check_line_of_sight(unit, enemy)
+        }
+        sectors.discard("center")
+        if len(sectors) >= 2:
+            return True
+    return False
 
 
 def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 5026091700, 6026091700)):
@@ -1732,14 +2125,19 @@ def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 50260917
         )
         counts = {"defused": 0, "detonated": 0, "defenders_wiped": 0, "timeout": 0}
         entered = 0
+        crossfire = 0
+        ability_uses = 0
+        multi_utility = 0
         for _ in range(episodes_per_seed):
             env.reset()
             entered_this_round = False
+            crossfire_this_round = False
             while True:
                 terminal, reason = env.is_terminal()
                 if terminal:
                     counts[reason] = counts.get(reason, 0) + 1
                     break
+                crossfire_this_round |= has_retake_crossfire(env)
                 actions = {}
                 for char in env.defenders():
                     if not char.is_alive:
@@ -1751,12 +2149,18 @@ def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 50260917
                     entered_this_round |= tuple(char.pos) in env.site_zone
                 env.step_tick(actions)
             entered += int(entered_this_round)
+            crossfire += int(crossfire_this_round)
+            ability_uses += env.ability_uses
+            multi_utility += int(env.ability_uses >= 2)
         total = float(episodes_per_seed)
         rows.append(
             {
                 "seed": seed,
                 "defuse_rate": counts["defused"] / total,
                 "entry_rate": entered / total,
+                "crossfire_rate": crossfire / total,
+                "ability_uses_per_round": ability_uses / total,
+                "multi_utility_rate": multi_utility / total,
                 "wipe_rate": counts["defenders_wiped"] / total,
                 "timeout_rate": counts["timeout"] / total,
             }
@@ -1769,6 +2173,13 @@ def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 50260917
         "defuse_rate": float(np.mean([row["defuse_rate"] for row in rows])),
         "worst_defuse_rate": min(row["defuse_rate"] for row in rows),
         "entry_rate": float(np.mean([row["entry_rate"] for row in rows])),
+        "crossfire_rate": float(np.mean([row["crossfire_rate"] for row in rows])),
+        "ability_uses_per_round": float(np.mean([
+            row["ability_uses_per_round"] for row in rows
+        ])),
+        "multi_utility_rate": float(np.mean([
+            row["multi_utility_rate"] for row in rows
+        ])),
         "worst_entry_rate": min(row["entry_rate"] for row in rows),
         "wipe_rate": float(np.mean([row["wipe_rate"] for row in rows])),
         "timeout_rate": float(np.mean([row["timeout_rate"] for row in rows])),
@@ -1776,14 +2187,65 @@ def evaluate_retake_fixed(net, episodes_per_seed=30, seeds=(3026091700, 50260917
     }
 
 
+def verify_expanded_retake_baseline(net, checkpoint_evaluation, episodes_per_seed):
+    """Catch a broken warm start before spending hundreds of training rounds."""
+    random_state = random.getstate()
+    numpy_state = np.random.get_state()
+    try:
+        metrics = evaluate_retake_fixed(net, episodes_per_seed=episodes_per_seed)
+    finally:
+        random.setstate(random_state)
+        np.random.set_state(numpy_state)
+    print(
+        "[WARM START EVAL] "
+        f"defuse={metrics['defuse_rate']:.3f} "
+        f"entry={metrics['entry_rate']:.3f} "
+        f"worst_defuse={metrics['worst_defuse_rate']:.3f} "
+        f"abilities={metrics['ability_uses_per_round']:.2f} "
+        f"multi_utility={metrics['multi_utility_rate']:.3f}"
+    )
+    comparable = (
+        checkpoint_evaluation.get("episodes") == metrics["episodes"]
+        and checkpoint_evaluation.get("seeds") == metrics["seeds"]
+        and "defuse_rate" in checkpoint_evaluation
+        and "entry_rate" in checkpoint_evaluation
+    )
+    if comparable and (
+        metrics["defuse_rate"] < checkpoint_evaluation["defuse_rate"] - 0.05
+        or metrics["entry_rate"] < checkpoint_evaluation["entry_rate"] - 0.05
+    ):
+        raise RuntimeError(
+            "expanded retake warm start regressed before training: "
+            f"defuse {checkpoint_evaluation['defuse_rate']:.3f} -> "
+            f"{metrics['defuse_rate']:.3f}, entry "
+            f"{checkpoint_evaluation['entry_rate']:.3f} -> "
+            f"{metrics['entry_rate']:.3f}; best checkpoint was not changed"
+        )
+    return metrics
+
+
 def retake_selection_score(metrics):
     return (
-        metrics["worst_defuse_rate"],
         metrics["defuse_rate"],
+        metrics["worst_defuse_rate"],
+        metrics.get("multi_utility_rate", 0.0),
+        metrics.get("crossfire_rate", 0.0),
+        metrics["entry_rate"],
         metrics["worst_entry_rate"],
         -metrics["wipe_rate"],
         -metrics["timeout_rate"],
     )
+
+
+def archive_best_checkpoint():
+    if not BEST_MODEL_PATH.exists():
+        return None
+    RETAKE_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    archive_path = RETAKE_ARCHIVE_DIR / (
+        f"dqn_defender_retake_gc_{time.time_ns()}.pt"
+    )
+    shutil.copy2(BEST_MODEL_PATH, archive_path)
+    return archive_path
 
 
 def scheduled_learning_rate(episode, initial_lr, decay_start=1000, decay_end=2500, minimum_scale=0.20):
@@ -1793,12 +2255,61 @@ def scheduled_learning_rate(episode, initial_lr, decay_start=1000, decay_end=250
     return initial_lr * (1.0 - fraction * (1.0 - minimum_scale))
 
 
+def exploration_epsilon(episode, start_episode, total_episodes, warm_start):
+    if warm_start:
+        elapsed = max(0, episode - start_episode - 1)
+        return 0.02 + 0.06 * max(0.0, 1.0 - elapsed / 1000)
+    decay_episodes = max(1, int(total_episodes * 0.8))
+    return 0.02 + 0.98 * max(0.0, 1.0 - episode / decay_episodes)
+
+
+def collect_successful_baseline_replay(net, obs_dim, target_wins=20, max_episodes=80):
+    """Keep successful old-policy retakes available during fine-tuning."""
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    was_training = net.training
+    baseline = ReplayBuffer(capacity=100_000)
+    wins = 0
+    attempts = 0
+    try:
+        random.seed(20260925)
+        np.random.seed(20260925)
+        net.eval()
+        env = RetakeEnv(
+            min_detonate_ticks=15,
+            max_detonate_ticks=SPIKE_DETONATION_TICKS,
+            attacker_hold_radius=4,
+        )
+        for attempts in range(1, max_episodes + 1):
+            episode_replay = ReplayBuffer()
+            defused, _ticks = run_episode(
+                env, net, None, episode_replay, 0.0, obs_dim
+            )
+            if defused:
+                baseline.buffer.extend(episode_replay.buffer)
+                wins += 1
+                if wins >= target_wins:
+                    break
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        net.train(was_training)
+    if wins == 0:
+        raise RuntimeError("warm-start policy produced no successful retake episodes")
+    print(
+        f"[BASELINE REPLAY] wins={wins}/{attempts} "
+        f"transitions={len(baseline)}"
+    )
+    return baseline
+
+
 def main(
     episodes=EPISODE_COUNT,
-    eval_every=250,
+    eval_every=None,
     eval_episodes_per_seed=30,
     learning_rate=None,
-    early_stop_patience=5,
+    early_stop_patience=0,
+    fresh_start=False,
 ):
     print(f"[INIT] device = {DEVICE}")
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -1818,57 +2329,172 @@ def main(
     checkpoint = None
     start_episode = 0
     best_score = None
-    if BEST_MODEL_PATH.exists():
-        checkpoint = torch.load(BEST_MODEL_PATH, map_location=DEVICE, weights_only=False)
-        old_obs, old_actions = expand_retake_policy_state(checkpoint, net)
-        print(f"[WARM START] {BEST_MODEL_PATH} obs={old_obs} actions={old_actions}")
-        if isinstance(checkpoint, dict):
-            start_episode = int(checkpoint.get("episode", 0))
-            evaluation = checkpoint.get("evaluation") or {}
-            required = {
-                "worst_defuse_rate",
-                "defuse_rate",
-                "worst_entry_rate",
-                "wipe_rate",
-                "timeout_rate",
-            }
-            if required.issubset(evaluation):
-                best_score = retake_selection_score(evaluation)
+    baseline_evaluation = {}
+    protected_obs_dim = None
+    candidate_paths = []
+    if fresh_start:
+        print("[FRESH START] model weights will be randomly initialized")
+    else:
+        if BEST_MODEL_PATH.exists():
+            candidate_paths.append(BEST_MODEL_PATH)
+        candidate_paths.extend(sorted(PROMOTION_BACKUP_DIR.glob(
+            "*/dqn_defender_retake_gc_best_by_eval.pt"
+        )))
+    selected_path = None
+    current_score = None
+    incumbent_floor_score = None
+    if fresh_start and BEST_MODEL_PATH.exists():
+        old_checkpoint = torch.load(
+            BEST_MODEL_PATH, map_location=DEVICE, weights_only=False
+        )
+        old_evaluation = old_checkpoint.get("evaluation") or {}
+        expected_episodes = eval_episodes_per_seed * 3
+        if (
+            old_checkpoint.get("training_revision") == TRAINING_REVISION
+            and old_evaluation.get("episodes") == expected_episodes
+            and old_evaluation.get("seeds") == [3026091700, 5026091700, 6026091700]
+            and "multi_utility_rate" in old_evaluation
+        ):
+            incumbent_floor_score = retake_selection_score(old_evaluation)
+        else:
+            incumbent_net = DuelingQNet(obs_dim, N_ACTIONS).to(DEVICE)
+            expand_retake_policy_state(old_checkpoint, incumbent_net)
+            python_state = random.getstate()
+            numpy_state = np.random.get_state()
+            try:
+                incumbent_metrics = evaluate_retake_fixed(
+                    incumbent_net, episodes_per_seed=eval_episodes_per_seed
+                )
+            finally:
+                random.setstate(python_state)
+                np.random.set_state(numpy_state)
+            incumbent_floor_score = retake_selection_score(incumbent_metrics)
+        print(
+            "[FRESH START FLOOR] existing best remains protected until beaten; "
+            f"defuse={incumbent_floor_score[0]:.3f} "
+            f"worst_defuse={incumbent_floor_score[1]:.3f}"
+        )
+    for candidate_path in candidate_paths:
+        try:
+            candidate_checkpoint = torch.load(
+                candidate_path, map_location=DEVICE, weights_only=False
+            )
+            candidate_net = DuelingQNet(obs_dim, N_ACTIONS).to(DEVICE)
+            old_obs, old_actions = expand_retake_policy_state(
+                candidate_checkpoint, candidate_net
+            )
+            print(
+                f"[WARM START CANDIDATE] {candidate_path} "
+                f"obs={old_obs} actions={old_actions}"
+            )
+            evaluation = candidate_checkpoint.get("evaluation") or {}
+            revision = candidate_checkpoint.get("training_revision")
+            comparable = evaluation if revision == TRAINING_REVISION else {}
+            if revision != TRAINING_REVISION:
                 print(
-                    f"[RESUME BASELINE] episode={start_episode} "
+                    f"[BASELINE REVISION] {revision!r} -> "
+                    f"{TRAINING_REVISION}; using fresh evaluation as baseline"
+                )
+            metrics = verify_expanded_retake_baseline(
+                candidate_net, comparable, eval_episodes_per_seed
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            if candidate_path == BEST_MODEL_PATH:
+                raise
+            print(f"[WARM START SKIP] {candidate_path}: {exc}")
+            continue
+        score = retake_selection_score(metrics)
+        if candidate_path == BEST_MODEL_PATH:
+            current_score = score
+            if (
+                revision != TRAINING_REVISION
+                and evaluation.get("episodes") == metrics["episodes"]
+                and evaluation.get("seeds") == metrics["seeds"]
+                and "defuse_rate" in evaluation
+                and "worst_defuse_rate" in evaluation
+            ):
+                # Do not overwrite a stronger prior revision simply because
+                # the changed action mask lowered its fresh warm-start score.
+                incumbent_floor_score = retake_selection_score(evaluation)
+                print(
+                    "[INCUMBENT FLOOR] "
                     f"defuse={evaluation['defuse_rate']:.3f} "
                     f"worst_defuse={evaluation['worst_defuse_rate']:.3f}"
                 )
+        if best_score is None or score > best_score:
+            best_score = score
+            baseline_evaluation = metrics
+            checkpoint = candidate_checkpoint
+            net = candidate_net
+            selected_path = candidate_path
+            start_episode = int(candidate_checkpoint.get("episode", 0))
+    if candidate_paths and selected_path is None:
+        raise RuntimeError("no usable defender-retake warm-start checkpoint")
+    if selected_path is not None:
+        print(
+            f"[WARM START SELECTED] {selected_path} episode={start_episode} "
+            f"defuse={baseline_evaluation['defuse_rate']:.3f} "
+            f"worst_defuse={baseline_evaluation['worst_defuse_rate']:.3f}"
+        )
+        if selected_path != BEST_MODEL_PATH and (
+            current_score is None or best_score > current_score
+        ) and (
+            incumbent_floor_score is None or best_score > incumbent_floor_score
+        ):
+            archive_path = archive_best_checkpoint()
+            if archive_path is not None:
+                print(f"[WARM START ARCHIVE] {archive_path}")
+            torch.save(
+                checkpoint_payload(net, start_episode, baseline_evaluation),
+                BEST_MODEL_PATH,
+            )
+            print(f"[WARM START RECOVERED] {BEST_MODEL_PATH}")
+        # Expansion starts with zero weights on new features. Subsequent
+        # updates train the complete policy so movement and defuse can change.
+    evaluation_interval = (
+        int(eval_every) if eval_every is not None
+        else (100 if checkpoint is not None else 250)
+    )
+    if evaluation_interval <= 0:
+        raise ValueError("eval_every must be positive")
     target_net.load_state_dict(net.state_dict())
     target_net.eval()
 
-    modern_resume = (
-        checkpoint is not None
-        and old_obs == OBS_DIM
-        and old_actions == N_ACTIONS
-    )
+    best_train_state = copy.deepcopy(net.state_dict())
+    best_train_episode = start_episode
+    best_train_metrics = baseline_evaluation
+
     initial_lr = float(
         learning_rate
         if learning_rate is not None
-        else (3e-6 if modern_resume else 1e-5)
+        else 1e-5
     )
-    print(f"[INIT] learning_rate={initial_lr:.2e} start_episode={start_episode}")
-    optimizer = torch.optim.Adam(net.parameters(), lr=initial_lr)
+    print(
+        f"[INIT] learning_rate={initial_lr:.2e} "
+        f"start_episode={start_episode} eval_every={evaluation_interval}"
+    )
+    optimizer = torch.optim.Adam(
+        (parameter for parameter in net.parameters() if parameter.requires_grad),
+        lr=initial_lr,
+    )
     replay = ReplayBuffer(capacity=100_000)
+    reference_net = copy.deepcopy(net).eval() if checkpoint is not None else None
+    if reference_net is not None:
+        for parameter in reference_net.parameters():
+            parameter.requires_grad_(False)
+    anchor_replay = (
+        collect_successful_baseline_replay(net, obs_dim)
+        if checkpoint is not None else None
+    )
     facing_samples = deque(maxlen=50_000)
     ultimate_positive_samples = deque(maxlen=20_000)
     ultimate_negative_samples = deque(maxlen=20_000)
+    teacher_samples = deque(maxlen=50_000)
+    ability_teacher_samples = deque(maxlen=10_000)
 
     num_episodes = episodes
     batch_size = 256
     gamma = 0.99
-    target_update_every = 1000
-    epsilon_start, epsilon_end, epsilon_decay_episodes = (
-        1.0,
-        0.02,
-        max(1, int(num_episodes * 0.8)),
-    )
-
     global_step = 0
     win_history = deque(maxlen=200)
     no_improvement_evals = 0
@@ -1877,12 +2503,34 @@ def main(
     start_time = time.perf_counter()
     for episode in range(start_episode + 1, num_episodes + 1):
         last_episode = episode
-        current_lr = scheduled_learning_rate(episode, initial_lr)
+        if checkpoint is not None:
+            current_lr = scheduled_learning_rate(
+                episode,
+                initial_lr,
+                decay_start=start_episode + 2000,
+                decay_end=start_episode + 8000,
+                minimum_scale=0.5,
+            )
+        else:
+            current_lr = scheduled_learning_rate(episode, initial_lr)
         for group in optimizer.param_groups:
             group["lr"] = current_lr
-        epsilon = epsilon_end + (epsilon_start - epsilon_end) * max(
-            0.0, 1.0 - episode / epsilon_decay_episodes
+        epsilon = exploration_epsilon(
+            episode, start_episode, num_episodes, checkpoint is not None
         )
+        if checkpoint is not None:
+            # Continuing a working policy with 75% teacher overrides makes
+            # most experience come from the teacher instead of that policy.
+            teacher_probability = scheduled_teacher_probability(
+                episode - start_episode,
+                max(1, num_episodes - start_episode),
+                initial=0.35,
+                final=0.10,
+            )
+        else:
+            teacher_probability = scheduled_teacher_probability(
+                episode, num_episodes, final=0.15
+            )
 
         defused, ticks_used = run_episode(
             env,
@@ -1894,15 +2542,26 @@ def main(
             facing_samples,
             ultimate_positive_samples,
             ultimate_negative_samples,
+            teacher_samples,
+            teacher_probability,
+            ability_teacher_samples,
         )
         win_history.append(1 if defused else 0)
 
         for _ in range(max(1, ticks_used)):
-            loss = train_step(net, target_net, optimizer, replay, batch_size, gamma)
+            loss = train_step(
+                net, target_net, optimizer, replay, batch_size, gamma,
+                anchor_replay=anchor_replay, reference_net=reference_net,
+            )
             if loss is not None:
                 soft_update(target_net, net)
             if global_step % 4 == 0:
                 optimize_facing(net, optimizer, facing_samples)
+            if global_step % 4 == 0:
+                optimize_demonstrations(
+                    net, optimizer, teacher_samples, weight=1.0, batch_size=32,
+                    ability_samples=ability_teacher_samples,
+                )
             if global_step % 8 == 0:
                 optimize_ultimate_classification(
                     net,
@@ -1912,7 +2571,7 @@ def main(
                 )
             global_step += 1
 
-        if episode % eval_every == 0:
+        if episode % evaluation_interval == 0:
             metrics = evaluate_retake_fixed(
                 net, episodes_per_seed=eval_episodes_per_seed
             )
@@ -1921,6 +2580,7 @@ def main(
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
             start_time = time.perf_counter()
+            ability_demos = len(ability_teacher_samples)
 
             print(
                 f"[FIXED-SEED EVAL EP {episode}/{num_episodes}] "
@@ -1928,19 +2588,53 @@ def main(
                 f"worst_defuse={metrics['worst_defuse_rate']:.3f} "
                 f"entry={metrics['entry_rate']:.3f} "
                 f"worst_entry={metrics['worst_entry_rate']:.3f} "
-                f"wipe={metrics['wipe_rate']:.3f} lr={current_lr:.2e} "
+                f"crossfire={metrics['crossfire_rate']:.3f} "
+                f"abilities={metrics['ability_uses_per_round']:.2f} "
+                f"multi_utility={metrics['multi_utility_rate']:.3f} "
+                f"wipe={metrics['wipe_rate']:.3f} "
+                f"teacher={teacher_probability:.3f} epsilon={epsilon:.3f} "
+                f"winning_demos={len(teacher_samples)} "
+                f"ability_demos={ability_demos} "
+                f"lr={current_lr:.2e} "
                 f"elapsed={elapsed_time:.1f}s"
             )
-            if best_score is None or score > best_score:
+            if episode - start_episode >= 1000 and ability_demos < 32:
+                raise RuntimeError(
+                    "utility teacher produced fewer than 32 usable ability labels "
+                    "after 1000 episodes; training stopped before spending more "
+                    "episodes on an empty utility demonstration buffer; "
+                    "saved best checkpoints were not changed by this check"
+                )
+            if (
+                (best_score is None or score > best_score)
+                and (
+                    incumbent_floor_score is None
+                    or score > incumbent_floor_score
+                )
+            ):
                 best_score = score
                 no_improvement_evals = 0
-                torch.save(checkpoint_payload(net, episode, metrics), BEST_MODEL_PATH)
+                best_train_state = copy.deepcopy(net.state_dict())
+                best_train_episode = episode
+                best_train_metrics = metrics
+                if reference_net is not None:
+                    reference_net.load_state_dict(best_train_state)
+                archive_path = archive_best_checkpoint()
+                if archive_path is not None:
+                    print(f"  -> archived previous best: {archive_path}")
+                torch.save(
+                    checkpoint_payload(net, episode, metrics, protected_obs_dim),
+                    BEST_MODEL_PATH,
+                )
                 print(f"  -> fixed-seed winner updated: {BEST_MODEL_PATH}")
             else:
                 no_improvement_evals += 1
+                patience = (
+                    f"/{early_stop_patience}" if early_stop_patience > 0 else ""
+                )
                 print(
-                    f"  -> no improvement: {no_improvement_evals}/"
-                    f"{early_stop_patience}; best checkpoint kept"
+                    f"  -> no improvement: {no_improvement_evals}{patience}; "
+                    "best checkpoint kept, training continues"
                 )
                 if (
                     early_stop_patience > 0
@@ -1952,17 +2646,36 @@ def main(
                     )
                     break
 
-    torch.save(checkpoint_payload(net, last_episode), FINAL_MODEL_PATH)
+    if (
+        incumbent_floor_score is None
+        or (best_score is not None and best_score > incumbent_floor_score)
+    ):
+        net.load_state_dict(best_train_state)
+        torch.save(
+            checkpoint_payload(
+                net, best_train_episode, best_train_metrics, protected_obs_dim
+            ),
+            FINAL_MODEL_PATH,
+        )
+    else:
+        print("[FINAL] incumbent was not beaten; final checkpoint kept")
     print("[DONE] training finished.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train current GC defender-retake policy")
     parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
-    parser.add_argument("--eval-every", type=int, default=250)
+    parser.add_argument("--eval-every", type=int, default=None)
     parser.add_argument("--eval-episodes-per-seed", type=int, default=30)
     parser.add_argument("--learning-rate", type=float, default=None)
-    parser.add_argument("--early-stop-patience", type=int, default=5)
+    parser.add_argument(
+        "--early-stop-patience", type=int, default=0,
+        help="Stop after this many evaluations without improvement (0 disables).",
+    )
+    parser.add_argument(
+        "--fresh-start", action="store_true",
+        help="Ignore all warm-start checkpoints and train from random weights.",
+    )
     args = parser.parse_args()
     main(
         episodes=args.episodes,
@@ -1970,4 +2683,5 @@ if __name__ == "__main__":
         eval_episodes_per_seed=args.eval_episodes_per_seed,
         learning_rate=args.learning_rate,
         early_stop_patience=args.early_stop_patience,
+        fresh_start=args.fresh_start,
     )

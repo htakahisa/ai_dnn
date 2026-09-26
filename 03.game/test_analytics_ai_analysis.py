@@ -80,6 +80,8 @@ class MatchPageTests(unittest.TestCase):
             "maps": [
                 {
                     "initial_attacker": "Alpha",
+                    "score1": 1,
+                    "score2": 0,
                     "player_stats": [],
                     "round_records": [
                         {
@@ -108,9 +110,14 @@ class MatchPageTests(unittest.TestCase):
                 client = app.test_client()
                 index_response = client.get("/")
                 self.assertEqual(index_response.status_code, 200)
-                self.assertIn(b"/match/sample/sample_inference.json", index_response.data)
-                detail_response = client.get("/match/sample/sample_inference.json")
+                self.assertIn(b"/match/sample/sample_original.json", index_response.data)
+                detail_response = client.get("/match/sample/sample_original.json")
                 self.assertEqual(detail_response.status_code, 200)
+                self.assertEqual(
+                    json.loads((match_dir / "sample_original.json").read_text(encoding="utf-8")),
+                    original,
+                )
+                self.assertFalse((match_dir / "sample_inference.json").exists())
                 self.assertEqual(
                     [call.args[1] for call in ai_mock.call_args_list],
                     ["Alpha", "Bravo"],

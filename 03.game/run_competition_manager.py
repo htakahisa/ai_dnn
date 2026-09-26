@@ -2559,11 +2559,6 @@ class CompetitionApp:
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
-        # 戦術シミュレーション手動モード用の変数を初期化
-        self.current_simulator = None
-        self.current_action_handlers = None
-        self.max_ticks = 0
-        self.simulation_step_count = 0
         self.series_score_var = tk.StringVar(value="-")
         self.power_team_var = tk.StringVar(value=self.names[0])
         self.power_summary_var = tk.StringVar(value="チームを選択して計算してください")
@@ -2698,22 +2693,26 @@ class CompetitionApp:
         """戦術シミュレーション設定ウィンドウを開く"""
         import tkinter as tk
         from tkinter import ttk, messagebox
-        from tactical_simulator import TacticalSimulator, RetakeScenario
+        from tactical_simulator import (
+            TacticalSimulator,
+            RetakeScenario,
+            get_character_resource_profile,
+        )
         from map_data import NEW_MAZE_STR
 
         # マップデータをパース
         maze = NEW_MAZE_STR.strip().splitlines()
         maze_height = len(maze)
         maze_width = len(maze[0])
-        cell_size = 18  # マップの1セルのサイズ(px)
+        cell_size = 20  # マップの1セルのサイズ(px)
 
         # 設定ウィンドウを作成
         sim_window = tk.Toplevel(self.root)
         sim_window.title("戦術シミュレーター - マップクリック配置")
-        window_width = maze_width * cell_size + 300
-        window_height = max(maze_height * cell_size + 150, 820)
+        window_width = maze_width * cell_size + 470
+        window_height = max(maze_height * cell_size + 150, 720)
         sim_window.geometry(f"{window_width}x{window_height}")
-        sim_window.minsize(window_width, window_height)
+        sim_window.minsize(maze_width * 12 + 470, 550)
 
         # 左側：マップCanvas
         canvas_frame = ttk.LabelFrame(sim_window, text="マップ（クリックで配置）")
@@ -2725,11 +2724,30 @@ class CompetitionApp:
             height=maze_height * cell_size,
             bg="#000000",
         )
-        canvas.pack()
+        canvas.pack(fill="both", expand=True)
 
-        # 右側：設定パネル
-        settings_frame = ttk.LabelFrame(sim_window, text="シナリオ設定")
-        settings_frame.pack(side=tk.RIGHT, padx=10, pady=5, fill="y")
+        # 右側：設定パネル（選手別設定を含めて縦にスクロール可能）
+        settings_container = ttk.Frame(sim_window)
+        settings_container.pack(side=tk.RIGHT, padx=10, pady=5, fill="y")
+        settings_canvas = tk.Canvas(settings_container, width=420, highlightthickness=0)
+        settings_canvas.pack(side=tk.LEFT, fill="y")
+        settings_scroll = ttk.Scrollbar(
+            settings_container, orient="vertical", command=settings_canvas.yview
+        )
+        settings_scroll.pack(side=tk.RIGHT, fill="y")
+        settings_canvas.configure(yscrollcommand=settings_scroll.set)
+        settings_frame = ttk.LabelFrame(settings_canvas, text="シナリオ設定")
+        settings_window = settings_canvas.create_window(
+            (0, 0), window=settings_frame, anchor="nw"
+        )
+        settings_frame.bind(
+            "<Configure>",
+            lambda _event: settings_canvas.configure(scrollregion=settings_canvas.bbox("all")),
+        )
+        settings_canvas.bind(
+            "<Configure>",
+            lambda event: settings_canvas.itemconfigure(settings_window, width=event.width),
+        )
 
         # シナリオ名
         ttk.Label(settings_frame, text="シナリオ名:").grid(
@@ -2815,14 +2833,18 @@ class CompetitionApp:
 
         def clear_all_placed():
             """配置したオブジェクトを全て消去"""
+            if playback["simulator"] is not None and not playback["finished"]:
+                return
             for item in canvas_items:
                 canvas.delete(item)
             canvas_items.clear()
             placed_attackers.clear()
             placed_defenders.clear()
+            player_resources.clear()
             nonlocal placed_spike
             placed_spike = None
             redraw_all_placed()
+            refresh_resource_list()
 
         def redraw_all_placed():
             """全ての配置済みオブジェクトを再描画"""
@@ -2832,7 +2854,12 @@ class CompetitionApp:
                 cx = x * cell_size + cell_size / 2
                 cy = y * cell_size + cell_size / 2
                 item = canvas.create_oval(
-                    cx - 8, cy - 8, cx + 8, cy + 8, fill="#ff4400", tags="spike"
+                    cx - cell_size * 0.44,
+                    cy - cell_size * 0.44,
+                    cx + cell_size * 0.44,
+                    cy + cell_size * 0.44,
+                    fill="#ff4400",
+                    tags="spike",
                 )
                 canvas_items.append(item)
                 text_item = canvas.create_text(cx, cy, text="💣", font=("Arial", 10))
@@ -2842,7 +2869,12 @@ class CompetitionApp:
                 cx = x * cell_size + cell_size / 2
                 cy = y * cell_size + cell_size / 2
                 item = canvas.create_oval(
-                    cx - 7, cy - 7, cx + 7, cy + 7, fill="#0066ff", tags="attacker"
+                    cx - cell_size * 0.39,
+                    cy - cell_size * 0.39,
+                    cx + cell_size * 0.39,
+                    cy + cell_size * 0.39,
+                    fill="#0066ff",
+                    tags="attacker",
                 )
                 canvas_items.append(item)
                 text_item = canvas.create_text(
@@ -2854,7 +2886,12 @@ class CompetitionApp:
                 cx = x * cell_size + cell_size / 2
                 cy = y * cell_size + cell_size / 2
                 item = canvas.create_oval(
-                    cx - 7, cy - 7, cx + 7, cy + 7, fill="#00cc00", tags="defender"
+                    cx - cell_size * 0.39,
+                    cy - cell_size * 0.39,
+                    cx + cell_size * 0.39,
+                    cy + cell_size * 0.39,
+                    fill="#00cc00",
+                    tags="defender",
                 )
                 canvas_items.append(item)
                 text_item = canvas.create_text(
@@ -2864,6 +2901,8 @@ class CompetitionApp:
 
         def on_canvas_click(event):
             """Canvasクリック時の処理"""
+            if playback["simulator"] is not None and not playback["finished"]:
+                return
             x = event.x // cell_size
             y = event.y // cell_size
             if x < 0 or x >= maze_width or y < 0 or y >= maze_height:
@@ -2921,6 +2960,7 @@ class CompetitionApp:
                 canvas.delete(item)
             canvas_items.clear()
             redraw_all_placed()
+            refresh_resource_list()
 
         # クリアボタン
         ttk.Button(settings_frame, text="全てクリア", command=clear_all_placed).grid(
@@ -3023,25 +3063,216 @@ class CompetitionApp:
             row=3, column=1, padx=5, pady=5
         )
 
-        # 手動操作モード
+        def selected_player_names(team, count):
+            roster_var = attacker_roster_var if team == "A" else defender_roster_var
+            entered = [name.strip() for name in roster_var.get().split(",") if name.strip()]
+            return [
+                entered[index] if index < len(entered) else f"{team}_player_{index}"
+                for index in range(count)
+            ]
+
+        resource_frame = ttk.LabelFrame(settings_frame, text="プレイヤー別リソース（再生中は残数）")
+        resource_frame.grid(row=11, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        resource_tree = ttk.Treeview(
+            resource_frame,
+            columns=("player", "ability", "ultimate"),
+            show="headings",
+            height=5,
+            selectmode="browse",
+        )
+        for column, label, width in (
+            ("player", "プレイヤー", 115),
+            ("ability", "アビリティ", 95),
+            ("ultimate", "ウルト", 65),
+        ):
+            resource_tree.heading(column, text=label)
+            resource_tree.column(column, width=width, stretch=False)
+        resource_tree.grid(row=0, column=0, columnspan=2, sticky="ew")
+        resource_scroll = ttk.Scrollbar(
+            resource_frame, orient="vertical", command=resource_tree.yview
+        )
+        resource_scroll.grid(row=0, column=2, sticky="ns")
+        resource_tree.configure(yscrollcommand=resource_scroll.set)
+
+        selected_player_var = tk.StringVar(value="マップにプレイヤーを配置してください")
+        ttk.Label(resource_frame, textvariable=selected_player_var).grid(
+            row=1, column=0, columnspan=3, sticky="w", padx=5, pady=(5, 0)
+        )
+        ability_charges_var = tk.IntVar(value=0)
+        ultimate_points_var = tk.IntVar(value=0)
+        ability_label = ttk.Label(resource_frame, text="アビリティ残数")
+        ability_label.grid(row=2, column=0, sticky="w", padx=5)
+        ultimate_label = ttk.Label(resource_frame, text="ウルトポイント")
+        ultimate_label.grid(row=3, column=0, sticky="w", padx=5)
+        ability_spin = ttk.Spinbox(
+            resource_frame, from_=0, to=2, textvariable=ability_charges_var,
+            width=6, state="disabled",
+        )
+        ability_spin.grid(row=2, column=1, sticky="w", padx=5)
+        ultimate_spin = ttk.Spinbox(
+            resource_frame, from_=0, to=8, textvariable=ultimate_points_var,
+            width=6, state="disabled",
+        )
+        ultimate_spin.grid(row=3, column=1, sticky="w", padx=5)
+        apply_resource_button = ttk.Button(resource_frame, text="選択した選手に反映", state="disabled")
+        apply_resource_button.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+
+        # 配置座標をキーにするので、途中のプレイヤーを削除しても設定がずれない。
+        player_resources = {}
+
+        def refresh_resource_list(*_args):
+            selected = resource_tree.selection()
+            selected_id = selected[0] if selected else None
+            existing_rows = resource_tree.get_children()
+            if existing_rows:
+                resource_tree.delete(*existing_rows)
+            active_keys = set()
+            for team, placements in (("A", placed_attackers), ("D", placed_defenders)):
+                names = selected_player_names(team, len(placements))
+                for index, (x, y, _label) in enumerate(placements):
+                    key = (team, x, y)
+                    active_keys.add(key)
+                    name = names[index]
+                    profile = get_character_resource_profile(name)
+                    if key not in player_resources or player_resources[key]["name"] != name:
+                        player_resources[key] = {
+                            "name": name,
+                            "ability_charges": profile["max_charges"],
+                            "ultimate_points": 0,
+                        }
+                    resource = player_resources[key]
+                    resource_tree.insert(
+                        "", "end", iid=f"{team}:{index}",
+                        values=(
+                            f"{team}{index + 1} {name}",
+                            f"{profile['ability']} {resource['ability_charges']}/{profile['max_charges']}",
+                            f"{resource['ultimate_points']}/{profile['ultimate_cost']}",
+                        ),
+                    )
+            for key in list(player_resources):
+                if key not in active_keys:
+                    del player_resources[key]
+            if selected_id and resource_tree.exists(selected_id):
+                resource_tree.selection_set(selected_id)
+                on_resource_select()
+            else:
+                selected_player_var.set("プレイヤーを選択してください")
+                ability_spin.config(state="disabled")
+                ultimate_spin.config(state="disabled")
+                apply_resource_button.config(state="disabled")
+
+        def selected_resource():
+            selected = resource_tree.selection()
+            if not selected:
+                return None
+            team, index_text = selected[0].split(":")
+            placements = placed_attackers if team == "A" else placed_defenders
+            index = int(index_text)
+            if index >= len(placements):
+                return None
+            x, y, _label = placements[index]
+            return (team, x, y), player_resources[(team, x, y)]
+
+        def on_resource_select(_event=None):
+            selected = selected_resource()
+            if selected is None:
+                return
+            _key, resource = selected
+            profile = get_character_resource_profile(resource["name"])
+            selected_player_var.set(resource["name"])
+            ability_label.config(text=f"{profile['ability']} 残数 (最大{profile['max_charges']})")
+            ultimate_label.config(
+                text=f"{profile['ultimate']} ポイント (最大{profile['ultimate_cost']})"
+            )
+            ability_charges_var.set(resource["ability_charges"])
+            ultimate_points_var.set(resource["ultimate_points"])
+            editable = not (playback["simulator"] is not None and not playback["finished"])
+            ability_spin.config(
+                to=profile["max_charges"],
+                state="normal" if editable and profile["max_charges"] else "disabled",
+            )
+            ultimate_spin.config(
+                to=profile["ultimate_cost"], state="normal" if editable else "disabled"
+            )
+            apply_resource_button.config(state="normal" if editable else "disabled")
+
+        def apply_selected_resource():
+            selected = selected_resource()
+            if selected is None:
+                return True
+            _key, resource = selected
+            profile = get_character_resource_profile(resource["name"])
+            try:
+                charges = ability_charges_var.get()
+                points = ultimate_points_var.get()
+            except (tk.TclError, ValueError):
+                messagebox.showerror("入力エラー", "アビリティ残数とウルトポイントを整数で入力してください")
+                return False
+            if not 0 <= charges <= profile["max_charges"]:
+                messagebox.showerror(
+                    "入力エラー", f"{resource['name']}のアビリティ残数は0～{profile['max_charges']}です"
+                )
+                return False
+            if not 0 <= points <= profile["ultimate_cost"]:
+                messagebox.showerror(
+                    "入力エラー", f"{resource['name']}のウルトポイントは0～{profile['ultimate_cost']}です"
+                )
+                return False
+            resource["ability_charges"] = charges
+            resource["ultimate_points"] = points
+            refresh_resource_list()
+            return True
+
+        resource_tree.bind("<<TreeviewSelect>>", on_resource_select)
+        apply_resource_button.config(command=apply_selected_resource)
+        attacker_roster_var.trace_add("write", refresh_resource_list)
+        defender_roster_var.trace_add("write", refresh_resource_list)
+        refresh_resource_list()
+
+        # 再生設定
         manual_frame = ttk.LabelFrame(settings_frame, text="実行設定")
         manual_frame.grid(row=12, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
-        manual_mode_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            manual_frame, text="手動操作モード(1tickずつ)", variable=manual_mode_var
-        ).grid(row=0, column=0, padx=5, pady=5)
         max_ticks_var = tk.IntVar(value=100)
         ttk.Label(manual_frame, text="最大ticks:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="w"
+            row=0, column=0, padx=5, pady=5, sticky="w"
         )
         ttk.Spinbox(
             manual_frame, from_=50, to=500, textvariable=max_ticks_var, width=10
-        ).grid(row=1, column=1, padx=5, pady=5)
+        ).grid(row=0, column=1, padx=5, pady=5)
 
-        # 手動ステップボタン（初期状態は無効）
+        play_button = ttk.Button(manual_frame, text="再生", state="disabled")
+        play_button.grid(row=1, column=0, padx=5, pady=5)
+        pause_button = ttk.Button(manual_frame, text="停止", state="disabled")
+        pause_button.grid(row=1, column=1, padx=5, pady=5)
         step_button = ttk.Button(manual_frame, text="次の1tick実行", state="disabled")
         step_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+        playback = {
+            "simulator": None,
+            "after_id": None,
+            "playing": False,
+            "finished": False,
+            "max_ticks": 0,
+            "render": None,
+        }
+        simulation_items = []
+
+        def pause_simulation():
+            playback["playing"] = False
+            if playback["after_id"] is not None:
+                sim_window.after_cancel(playback["after_id"])
+                playback["after_id"] = None
+            if playback["simulator"] is not None and not playback["finished"]:
+                play_button.config(state="normal")
+                pause_button.config(state="disabled")
+                self.status_var.set("シミュレーション停止中")
+
+        def close_sim_window():
+            pause_simulation()
+            sim_window.destroy()
+
+        sim_window.protocol("WM_DELETE_WINDOW", close_sim_window)
 
         # マップ初期描画
         draw_base_map()
@@ -3049,6 +3280,8 @@ class CompetitionApp:
 
         # シミュレーション開始処理
         def start_simulation():
+            if not apply_selected_resource():
+                return
             if not placed_spike:
                 messagebox.showerror("エラー", "爆弾(スパイク)を配置してください")
                 return
@@ -3063,40 +3296,26 @@ class CompetitionApp:
             attacker_ai_key = ai_keys[selected_attacker_ai_name]
             defender_ai_key = ai_keys[selected_defender_ai_name]
 
-            # 配置した人数分だけ名前を自動生成（どのAIでも任意の人数で動作可能）
-            attacker_names = [f"A_player_{i}" for i in range(len(placed_attackers))]
-            defender_names = [f"D_player_{i}" for i in range(len(placed_defenders))]
-
-            # ロスター入力欄に名前が指定されていればそちらを優先使用
-            user_attacker_names = [
-                name.strip()
-                for name in attacker_roster_var.get().split(",")
-                if name.strip()
-            ]
-            user_defender_names = [
-                name.strip()
-                for name in defender_roster_var.get().split(",")
-                if name.strip()
-            ]
-
-            # ユーザーが入力した名前が足りない分は自動生成した名前を使用
-            for i in range(len(attacker_names)):
-                if i < len(user_attacker_names):
-                    attacker_names[i] = user_attacker_names[i]
-            for i in range(len(defender_names)):
-                if i < len(user_defender_names):
-                    defender_names[i] = user_defender_names[i]
-            # どのAIでも任意の人数で動作可能なのでチェックを削除
+            attacker_names = selected_player_names("A", len(placed_attackers))
+            defender_names = selected_player_names("D", len(placed_defenders))
 
             # プレイヤー情報を収集
             attackers = []
             for i, (x, y, _) in enumerate(placed_attackers):
-                name = attacker_names[i] if i < len(attacker_names) else f"Attacker_{i}"
-                attackers.append({"name": name, "pos": (y, x), "facing": "E"})
+                resource = player_resources[("A", x, y)]
+                attackers.append({
+                    "name": attacker_names[i], "pos": (y, x), "facing": "E",
+                    "ability_charges": resource["ability_charges"],
+                    "ultimate_points": resource["ultimate_points"],
+                })
             defenders = []
             for i, (x, y, _) in enumerate(placed_defenders):
-                name = defender_names[i] if i < len(defender_names) else f"Defender_{i}"
-                defenders.append({"name": name, "pos": (y, x), "facing": "E"})
+                resource = player_resources[("D", x, y)]
+                defenders.append({
+                    "name": defender_names[i], "pos": (y, x), "facing": "E",
+                    "ability_charges": resource["ability_charges"],
+                    "ultimate_points": resource["ultimate_points"],
+                })
 
             # シナリオ作成
             scenario = RetakeScenario(
@@ -3129,24 +3348,37 @@ class CompetitionApp:
 
             action_handlers = create_default_handlers()
 
-            simulation_items = []
-
             def render_simulation(simulator):
                 """シミュレーション中の状態を設定画面へ反映する。"""
-                import time
-
-                # canvasが存在するか確認してからdelete
-                if canvas.winfo_exists():
-                    for item in simulation_items:
-                        try:
-                            canvas.delete(item)
-                        except:
-                            pass
-                    simulation_items.clear()
-                else:
-                    # canvasが存在しない場合はシミュレーションを停止
-                    self.simulation_stop_flag = True
+                if not canvas.winfo_exists():
                     return
+
+                def cell_center(pos):
+                    row, col = pos
+                    return (
+                        col * cell_size + cell_size / 2,
+                        row * cell_size + cell_size / 2,
+                    )
+
+                def draw_cell_overlay(cells, color, stipple):
+                    for row, col in cells:
+                        x1 = col * cell_size + 1
+                        y1 = row * cell_size + 1
+                        simulation_items.append(
+                            canvas.create_rectangle(
+                                x1,
+                                y1,
+                                x1 + cell_size - 2,
+                                y1 + cell_size - 2,
+                                fill=color,
+                                outline="",
+                                stipple=stipple,
+                            )
+                        )
+
+                for item in simulation_items:
+                    canvas.delete(item)
+                simulation_items.clear()
 
                 if simulator.is_planted and simulator.planted_pos:
                     row, col = simulator.planted_pos
@@ -3154,10 +3386,10 @@ class CompetitionApp:
                     cy = row * cell_size + cell_size / 2
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - 8,
-                            cy - 8,
-                            cx + 8,
-                            cy + 8,
+                            cx - cell_size * 0.44,
+                            cy - cell_size * 0.44,
+                            cx + cell_size * 0.44,
+                            cy + cell_size * 0.44,
                             fill="#ff4400",
                             outline="#ffd166",
                             width=2,
@@ -3179,25 +3411,168 @@ class CompetitionApp:
                             )
                         )
 
+                # RECON reveals its full scanned area; TUNNEL marks its warning
+                # and active corridor with different shades.
+                for burst in simulator.recon_bursts:
+                    draw_cell_overlay(burst.get("cells", []), "#54d8ed", "gray50")
+                for burst in simulator.tunnel_bursts:
+                    warning = burst.get("phase", "warning") == "warning"
+                    draw_cell_overlay(
+                        burst.get("cells", []),
+                        "#c7a6df" if warning else "#6f36a8",
+                        "gray25" if warning else "gray50",
+                    )
+
+                # FLASH and RECON projectiles show their travelled path and head.
+                for projectile in simulator.flash_projectiles:
+                    path = projectile.get("path", [])
+                    if not path:
+                        continue
+                    end_index = min(int(projectile.get("progress", 0)), len(path) - 1)
+                    if end_index > 0:
+                        coords = [coordinate for pos in path[:end_index + 1]
+                                  for coordinate in cell_center(pos)]
+                        simulation_items.append(
+                            canvas.create_line(
+                                *coords, fill="#f4d03f", width=2, dash=(3, 3)
+                            )
+                        )
+                    cx, cy = cell_center(path[end_index])
+                    radius = 4
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - radius, cy - radius, cx + radius, cy + radius,
+                            fill="#fff4a3", outline="#d4ac0d",
+                        )
+                    )
+                for projectile in simulator.recon_projectiles:
+                    path = projectile.get("path", [])
+                    if not path:
+                        continue
+                    end_index = min(int(projectile.get("progress", 0)), len(path) - 1)
+                    if end_index > 0:
+                        coords = [coordinate for pos in path[:end_index + 1]
+                                  for coordinate in cell_center(pos)]
+                        simulation_items.append(
+                            canvas.create_line(
+                                *coords, fill="#65d8e8", width=2, dash=(3, 3)
+                            )
+                        )
+                    cx, cy = cell_center(path[end_index])
+                    simulation_items.append(
+                        canvas.create_polygon(
+                            cx - 6, cy + 3, cx + 5, cy - 5, cx + 7, cy - 2,
+                            cx - 3, cy + 5, fill="#9eeaf4", outline="#2aa9bd",
+                        )
+                    )
+
+                for burst in simulator.flash_bursts:
+                    cx, cy = cell_center(burst["pos"])
+                    radius = cell_size * 0.7
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - radius, cy - radius, cx + radius, cy + radius,
+                            fill="#fff7bf", outline="#f1c40f", width=2,
+                            stipple="gray50",
+                        )
+                    )
+
+                # ESCAPE's destination portal and RAID's brief dash trail.
+                for portal in simulator.escape_portals:
+                    cx, cy = cell_center(portal["pos"])
+                    radius = cell_size * 0.42
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - radius, cy - radius, cx + radius, cy + radius,
+                            fill="#dff8ff", outline="#67d5ff", width=2,
+                            stipple="gray25",
+                        )
+                    )
+                    simulation_items.append(
+                        canvas.create_text(
+                            cx, cy, text=str(portal.get("remaining_ticks", "")),
+                            fill="#12394a", font=("Arial", 7, "bold"),
+                        )
+                    )
+                for trail in simulator.ultimate_trails:
+                    x1, y1 = cell_center(trail["start"])
+                    x2, y2 = cell_center(trail["end"])
+                    simulation_items.append(
+                        canvas.create_line(
+                            x1, y1, x2, y2, fill="#ff4fd8", width=4,
+                            arrow=tk.LAST, dash=(4, 2),
+                        )
+                    )
+
+                explosion = getattr(simulator, "explosion_effect", None)
+                if explosion is not None:
+                    cx, cy = cell_center(explosion["pos"])
+                    progress = min(1.0, explosion.get("ticks_elapsed", 0) / 4.0)
+                    radius = 4 + (cell_size * 8 - 4) * progress
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - radius, cy - radius, cx + radius, cy + radius,
+                            fill="#f04b32", outline="#ffe4a8", width=2,
+                            stipple="gray50",
+                        )
+                    )
+
                 team_counts = {"A": 0, "D": 0}
+                player_indices = {"A": 0, "D": 0}
                 for char in simulator.chars:
+                    team = char.team
+                    player_index = player_indices[team]
+                    player_indices[team] += 1
+                    profile = get_character_resource_profile(char.name)
+                    charge_count = {
+                        "SMOKE": char.smoke_charges,
+                        "FLASH": char.flash_charges,
+                        "RECON": char.recon_charges,
+                    }.get(char.ability_name, 0)
+                    row_id = f"{team}:{player_index}"
+                    if resource_tree.exists(row_id):
+                        resource_tree.item(
+                            row_id,
+                            values=(
+                                f"{team}{player_index + 1} {char.name}",
+                                f"{char.ability_name} {charge_count}/{profile['max_charges']}",
+                                f"{char.ultimate_points}/{char.ultimate_cost}",
+                            ),
+                        )
                     if not char.is_alive:
                         continue
                     row, col = char.pos
                     cx = col * cell_size + cell_size / 2
                     cy = row * cell_size + cell_size / 2
-                    team = char.team
                     team_counts[team] += 1
                     fill = "#0066ff" if team == "A" else "#00cc00"
                     text_fill = "white" if team == "A" else "black"
+                    outline = (
+                        "#59e3f0"
+                        if char.reveal_remaining > 0 or char.los_revealed
+                        else "#ffffff"
+                    )
+                    if char.blind_remaining > 0:
+                        simulation_items.append(
+                            canvas.create_oval(
+                                cx - 10,
+                                cy - 10,
+                                cx + 10,
+                                cy + 10,
+                                fill="#fff7bf",
+                                outline="#f1c40f",
+                                stipple="gray50",
+                            )
+                        )
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - 7,
-                            cy - 7,
-                            cx + 7,
-                            cy + 7,
+                            cx - cell_size * 0.39,
+                            cy - cell_size * 0.39,
+                            cx + cell_size * 0.39,
+                            cy + cell_size * 0.39,
                             fill=fill,
-                            outline="#ffffff",
+                            outline=outline,
+                            width=2,
                         )
                     )
                     simulation_items.append(
@@ -3205,21 +3580,36 @@ class CompetitionApp:
                             cx,
                             cy,
                             text=f"{team}{team_counts[team]}",
-                            font=("Arial", 7, "bold"),
+                            font=("Arial", 8, "bold"),
                             fill=text_fill,
                         )
                     )
 
+                # MONITOR ultimate drones are independent units on the map.
+                for drone in simulator.monitor_drones:
+                    if not drone.is_alive:
+                        continue
+                    cx, cy = cell_center(drone.pos)
+                    radius = cell_size * 0.34
+                    simulation_items.append(
+                        canvas.create_oval(
+                            cx - radius, cy - radius, cx + radius, cy + radius,
+                            fill="#58d3f7", outline="#12394a", width=2,
+                        )
+                    )
+                    simulation_items.append(
+                        canvas.create_text(
+                            cx, cy, text=str(int(drone.hp)), fill="#08202a",
+                            font=("Arial", 6, "bold"),
+                        )
+                    )
+
                 self.status_var.set(
-                    f"実行中: {simulator.total_ticks}/{max_ticks_var.get()} ticks  "
+                    f"実行中: {simulator.total_ticks}/{playback['max_ticks']} ticks  "
                     f"A:{team_counts['A']}人 D:{team_counts['D']}人"
                 )
-                canvas.update_idletasks()
-                sim_window.update()
-                time.sleep(0.04)
 
             self.status_var.set(f"シミュレーション開始: {scenario.scenario_name}")
-            sim_window.update()
 
             try:
                 # 選択したAIキーを取得
@@ -3235,90 +3625,110 @@ class CompetitionApp:
                     defender_ai_name=defender_ai_key,
                     custom_roster=custom_roster,
                 )
-                if not manual_mode_var.get():
-                    # シミュレーションをループ実行
-                    # シミュレーションを1回だけ実行（ラウンド終了で停止）
-                    def run_single_simulation():
-                        # シミュレーションを実行
-                        result = simulator.run(
-                            action_handlers,
-                            max_ticks=max_ticks_var.get(),
-                            on_tick=render_simulation,
+                playback.update(
+                    simulator=simulator,
+                    max_ticks=max_ticks_var.get(),
+                    playing=True,
+                    finished=False,
+                )
+                if resource_tree.selection():
+                    on_resource_select()
+                start_button.config(state="disabled")
+                play_button.config(state="disabled")
+                pause_button.config(state="normal")
+                step_button.config(state="normal")
+                render_simulation(simulator)
+
+                def finish_simulation():
+                    if playback["finished"]:
+                        return
+                    playback["finished"] = True
+                    playback["playing"] = False
+                    playback["after_id"] = None
+                    play_button.config(state="disabled")
+                    pause_button.config(state="disabled")
+                    step_button.config(state="disabled")
+                    start_button.config(state="normal")
+                    if resource_tree.selection():
+                        on_resource_select()
+                    result = simulator.result()
+                    saved_path = simulator.save_result(result)
+                    team_names = {
+                        "attackers": simulator.attacker_team_name,
+                        "defenders": simulator.defender_team_name,
+                    }
+                    reason_names = {
+                        "detonated": "スパイク爆破",
+                        "defused": "スパイク解除",
+                        "defender_wipe": "防衛側全滅",
+                        "attacker_wipe": "攻撃側全滅",
+                        "time_expired": "時間切れ",
+                        "round_end": "ラウンド終了",
+                    }
+                    winner_name = team_names.get(result.winner)
+                    if winner_name:
+                        reason_name = reason_names.get(result.reason, "ラウンド終了")
+                        outcome = f"勝者: {winner_name} / 理由: {reason_name}"
+                        messagebox.showinfo(
+                            "ラウンド結果",
+                            f"勝者: {winner_name}\n終了理由: {reason_name}\n経過: {result.total_ticks} ticks",
+                            parent=sim_window,
                         )
+                    else:
+                        outcome = "最大tickに到達（ラウンド未決着）"
+                    self.status_var.set(
+                        f"シミュレーション完了 ({outcome}, {result.total_ticks}ticks): {saved_path}"
+                    )
 
-                        # ラウンド終了後にステータスを更新
-                        self.status_var.set("シミュレーションが終了しました")
-
-                    # シミュレーションを別スレッドで実行（UIがフリーズしないように）
-                    import threading
-
-                    threading.Thread(target=run_single_simulation, daemon=True).start()
-                else:
-                    # 手動モード初期化
-                    self.current_simulator = simulator
-                    self.current_action_handlers = action_handlers
-                    self.max_ticks = max_ticks_var.get()
-                    self.simulation_step_count = 0
-
-                    def execute_step():
+                def advance_tick():
+                    playback["after_id"] = None
+                    if playback["finished"] or not sim_window.winfo_exists():
+                        return
+                    try:
+                        simulator.step(action_handlers)
+                        render_simulation(simulator)
                         if (
-                            not self.current_simulator
-                            or self.current_simulator.round_over
-                            or self.simulation_step_count >= self.max_ticks
+                            not simulator.simulation_active
+                            or simulator.total_ticks >= playback["max_ticks"]
                         ):
-                            if self.current_simulator:
-                                result = type(
-                                    "SimulationResult",
-                                    (object,),
-                                    {
-                                        "winner": (
-                                            "attackers"
-                                            if self.current_simulator.attacker_wins
-                                            > self.current_simulator.defender_wins
-                                            else "defenders"
-                                        ),
-                                        "total_ticks": self.simulation_step_count,
-                                        "replay_frames": self.current_simulator.replay_frames,
-                                    },
-                                )()
-                                saved_path = self.current_simulator.save_result(result)
-                                self.status_var.set(
-                                    f"シミュレーション完了! {saved_path}"
-                                )
-                                messagebox.showinfo(
-                                    "完了",
-                                    f"シミュレーションが終了しました\n保存先: {saved_path}",
-                                )
-                                self.current_simulator = None
-                            step_button.config(state="disabled")
-                            return
+                            finish_simulation()
+                        elif playback["playing"]:
+                            playback["after_id"] = sim_window.after(200, advance_tick)
+                    except Exception as exc:
+                        pause_simulation()
+                        start_button.config(state="normal")
+                        play_button.config(state="disabled")
+                        step_button.config(state="disabled")
+                        playback["finished"] = True
+                        if resource_tree.selection():
+                            on_resource_select()
+                        traceback.print_exc()
+                        messagebox.showerror("エラー", f"シミュレーションエラー: {exc}")
 
-                        # 1tick実行
-                        simulator = self.current_simulator
-                        simulator._record_replay_frame()
-                        simulator._apply_player_actions(self.current_action_handlers)
-                        simulator._build_occupancy_counts()
-                        try:
-                            for c in simulator._move_order():
-                                if c.is_alive:
-                                    simulator.move_character(c)
-                        finally:
-                            simulator._clear_occupancy_counts()
-                        if simulator.round_timer > 0:
-                            simulator.round_timer -= 1
-                        if simulator.detonate_timer > 0:
-                            simulator.detonate_timer -= 1
-                        simulator.process_battle()
-                        simulator.battle_tick += 1
-                        self.simulation_step_count += 1
+                def resume_simulation():
+                    if playback["finished"] or playback["playing"]:
+                        return
+                    playback["playing"] = True
+                    play_button.config(state="disabled")
+                    pause_button.config(state="normal")
+                    playback["after_id"] = sim_window.after(200, advance_tick)
+
+                def execute_step():
+                    if playback["finished"]:
+                        return
+                    pause_simulation()
+                    advance_tick()
+                    if not playback["finished"]:
                         self.status_var.set(
-                            f"手動実行中: {self.simulation_step_count}ticks経過"
+                            f"停止中: {simulator.total_ticks}/{playback['max_ticks']} ticks"
                         )
 
-                    step_button.config(command=execute_step, state="normal")
+                play_button.config(command=resume_simulation)
+                pause_button.config(command=pause_simulation)
+                step_button.config(command=execute_step)
+                playback["render"] = render_simulation
+                playback["after_id"] = sim_window.after(200, advance_tick)
             except Exception as e:
-                import traceback
-
                 traceback.print_exc()
                 messagebox.showerror("エラー", f"シミュレーションエラー: {str(e)}")
 
@@ -3327,6 +3737,27 @@ class CompetitionApp:
             settings_frame, text="シミュレーション開始", command=start_simulation
         )
         start_button.grid(row=13, column=0, columnspan=2, padx=5, pady=15)
+
+        def resize_map(event):
+            nonlocal cell_size
+            if event.width < 100 or event.height < 100:
+                return
+            new_cell_size = max(
+                8,
+                int(min(event.width / maze_width, event.height / maze_height)),
+            )
+            if new_cell_size == cell_size:
+                return
+            cell_size = new_cell_size
+            canvas.delete("all")
+            canvas_items.clear()
+            simulation_items.clear()
+            draw_base_map()
+            redraw_all_placed()
+            if playback["simulator"] is not None and playback["render"]:
+                playback["render"](playback["simulator"])
+
+        canvas.bind("<Configure>", resize_map, add="+")
 
     def run_tactical_simulation(self) -> None:
         """戦術シミュレーションの設定ウィンドウを開く"""

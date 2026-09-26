@@ -60,7 +60,7 @@ class GhostChampionsV1AttackerController(BaseController):
         # side swap. Only force Absol when the GC roster is actually attacking;
         # otherwise this would overwrite the opponent's configured holder.
         attacker_names = {
-            str(name) for name in getattr(game, "attacker_roster", [])
+            str(name) for name in (getattr(game, "attacker_roster", None) or ())
         }
         if "Absol" in attacker_names and hasattr(game, "spike_holder_name"):
             game.spike_holder_name = "Absol"

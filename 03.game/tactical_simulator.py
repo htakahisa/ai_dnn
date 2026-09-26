@@ -20,6 +20,8 @@ from game_core import (
     SPIKE_DETONATION_TICKS,
     TICK_TIME,
     Character,
+    ULTIMATE_COSTS,
+    ULTIMATE_NAMES,
     get_character_combat_stats,
 )
 from run_game import VisualFPSBattle
@@ -28,6 +30,23 @@ from map_data import NEW_MAZE_STR
 
 SIMULATION_OUTPUT_DIR = Path("tactical_simulations")
 SIMULATION_OUTPUT_DIR.mkdir(exist_ok=True)
+
+
+def get_character_resource_profile(name: str) -> dict[str, Any]:
+    """Return the character's normal ability and ultimate limits for the editor."""
+    role = get_character_combat_stats(name).get("role", "フラッシュ")
+    ability, max_charges = {
+        "フラッシュ": ("FLASH", 1),
+        "スモーカー": ("SMOKE", 1),
+        "シーカー": ("RECON", 2),
+        "タイガー": ("HUNT", 0),
+    }.get(role, ("FLASH", 1))
+    return {
+        "ability": ability,
+        "max_charges": max_charges,
+        "ultimate": ULTIMATE_NAMES.get(role, "TUNNEL"),
+        "ultimate_cost": ULTIMATE_COSTS.get(role, 5),
+    }
 
 
 @dataclass
@@ -58,6 +77,7 @@ class SimulationResult:
     scenario: RetakeScenario
     winner: str  # "attackers" or "defenders"
     total_ticks: int
+    reason: str = "unknown"
     replay_frames: List[dict[str, Any]] = field(default_factory=list)
     round_records: List[dict[str, Any]] = field(default_factory=list)
     player_stats: List[dict[str, Any]] = field(default_factory=list)
@@ -97,18 +117,15 @@ class TacticalSimulator(VisualFPSBattle):
             initial_defender_team_ai=defender_ai,
             headless=True,  # UIを無効化してヘッドレス実行
         )
-        # セットアップフェーズを無効化（リテイクシーンなので既にファイトフェーズ）
-        # in_defender_setup_phaseプロパティの内部フラグをFalseに設定してセットアップフェーズを無効化
-        self._in_defender_setup_phase = False
-        # defender_setup_ticks_remainingの内部変数に直接代入
-        self._defender_setup_ticks_remaining = 0
+        # The parent starts defender setup in init_round(). This retake scenario
+        # starts with a planted spike, so the live setup state must be finished.
+        self.defender_setup_phase.finish()
 
         self.simulation_active = True
 
         # リテイクシナリオに基づいてゲーム状態を上書き
         self.current_round = 1
         self.battle_tick = 0
-        self._defender_setup_ticks_remaining = 0
         self.round_timer = scenario.round_timer
         self.detonate_timer = scenario.detonate_timer
         self.attacker_wins = 0
@@ -128,6 +145,7 @@ class TacticalSimulator(VisualFPSBattle):
         self.monitor_drones = []
         self.escape_portals = []
         self.tunnel_bursts = []
+        self.ultimate_trails = []
         self.available_orbs = []
         self.match_over = False
         self.replay_frames = []  # リプレイフレームを初期化
@@ -140,6 +158,7 @@ class TacticalSimulator(VisualFPSBattle):
         self.analytics_tracker.round_history = []
         # 勝者フラグ
         self.winner = None
+        self.result_reason = "unknown"
         self.total_ticks = 0
 
     def _normalize_fixed_rosters(self, attacker_ai_name: str, defender_ai_name: str):
@@ -172,7 +191,6 @@ class TacticalSimulator(VisualFPSBattle):
         name = data["name"]
         pos = data["pos"]
         facing = data.get("facing", "N")
-        stats = get_character_combat_stats(name)
 
         char = Character(
             name=name,
@@ -181,17 +199,27 @@ class TacticalSimulator(VisualFPSBattle):
             text_color="#ffffff" if team == "A" else "#000000",
             bg_color="#0066ff" if team == "A" else "#00cc00",
         )
+        char.facing = facing
         # 親クラスで必要なプロパティを全て設定
         char.is_alive = True
         char.blind_remaining = 0
         char.los_revealed = False
-        char.ultimate_name = ""
-        char.ultimate_points = 0
-        char.ultimate_cost = 7
-        char.ability_name = ""
-        char.smoke_charges = 1
-        char.flash_charges = 2
-        char.recon_charges = 1
+        ultimate_points = int(data.get("ultimate_points", 0))
+        if not 0 <= ultimate_points <= char.ultimate_cost:
+            raise ValueError(f"{name}: ウルトポイントは0～{char.ultimate_cost}で指定してください")
+        char.ultimate_points = ultimate_points
+        if "ability_charges" in data:
+            charge_field = {
+                "SMOKE": "smoke_charges",
+                "FLASH": "flash_charges",
+                "RECON": "recon_charges",
+            }.get(char.ability_name)
+            max_charges = getattr(char, charge_field) if charge_field else 0
+            charges = int(data["ability_charges"])
+            if not 0 <= charges <= max_charges:
+                raise ValueError(f"{name}: アビリティ残数は0～{max_charges}で指定してください")
+            if charge_field:
+                setattr(char, charge_field, charges)
         char.orb_collect_timer = 0
         # キャラクターにbase_iqが存在しない場合のフォールバック
         if not hasattr(char, "base_iq"):
@@ -211,6 +239,96 @@ class TacticalSimulator(VisualFPSBattle):
                 if handler:
                     handler(char, self)
 
+    def init_round(self):
+        # The parent ends every headless round by immediately starting another one.
+        # A tactical simulation contains exactly one round, so preserve its end state.
+        if getattr(self, "simulation_active", False) and self.round_over:
+            self.current_round -= 1  # check_match_winner incremented it before this call
+            self.match_over = True
+            self.simulation_active = False
+            self._final_frame_recorded = True  # check_match_winner captured the terminal frame
+            return
+        super().init_round()
+
+    def step(self, action_handlers: Dict[str, Callable]) -> bool:
+        """Advance one tick; return False once the scenario's round has ended."""
+        if not self.simulation_active or self.round_over:
+            return False
+
+        self._final_frame_recorded = False
+        self._record_replay_frame()
+        self._apply_player_actions(action_handlers)
+        self.ultimate_trails = [
+            trail
+            for trail in getattr(self, "ultimate_trails", [])
+            if trail["remaining_ticks"] > 1
+        ]
+        for trail in self.ultimate_trails:
+            trail["remaining_ticks"] -= 1
+        self._build_occupancy_counts()
+        try:
+            for char in self._move_order():
+                if char.is_alive:
+                    old_pos = tuple(char.pos)
+                    old_ultimate_points = char.ultimate_points
+                    self.move_character(char)
+                    new_pos = tuple(char.pos)
+                    if (
+                        char.ultimate_name == "RAID"
+                        and char.ultimate_points < old_ultimate_points
+                        and new_pos != old_pos
+                    ):
+                        self.ultimate_trails.append(
+                            {
+                                "start": old_pos,
+                                "end": new_pos,
+                                "team": char.team,
+                                "remaining_ticks": 2,
+                            }
+                        )
+        finally:
+            self._clear_occupancy_counts()
+
+        # process_battle advances battle_tick and the active round/spike timer.
+        self.process_battle()
+        self.total_ticks += 1
+        if self.round_over:
+            self.winner = "attackers" if self.attacker_wins else "defenders"
+            chars = getattr(self, "chars", [])
+            alive_attackers = any(c.is_alive for c in chars if c.team == "A")
+            alive_defenders = any(c.is_alive for c in chars if c.team == "D")
+            is_planted = getattr(self, "is_planted", False)
+            if getattr(self, "is_defused", False):
+                self.result_reason = "defused"
+            elif is_planted and getattr(self, "detonate_timer", 1) <= 0:
+                self.result_reason = "detonated"
+            elif is_planted and chars and not alive_defenders:
+                self.result_reason = "defender_wipe"
+            elif not is_planted and getattr(self, "round_timer", 1) <= 0:
+                self.result_reason = "time_expired"
+            elif not is_planted and chars and not alive_attackers:
+                self.result_reason = "attacker_wipe"
+            elif not is_planted and chars and not alive_defenders:
+                self.result_reason = "defender_wipe"
+            else:
+                self.result_reason = "round_end"
+            self.simulation_active = False
+        return self.simulation_active
+
+    def result(self) -> SimulationResult:
+        """Capture the final state and build a result for automatic or stepped play."""
+        if not getattr(self, "_final_frame_recorded", False):
+            self._record_replay_frame()
+            self._final_frame_recorded = True
+        return SimulationResult(
+            scenario=self.scenario,
+            winner=self.winner,
+            total_ticks=self.total_ticks,
+            reason=self.result_reason,
+            replay_frames=self.replay_frames,
+            player_stats=self._generate_player_stats(),
+        )
+
     def run(
         self,
         action_handlers: Dict[str, Callable],
@@ -221,72 +339,10 @@ class TacticalSimulator(VisualFPSBattle):
         print(f"シミュレーション開始: {self.scenario.scenario_name}")
 
         while self.simulation_active and self.total_ticks < max_ticks:
-            # デバッグ用に状態を出力
-            print(
-                f"[tick={self.total_ticks}] round_over={self.round_over}, round_timer={self.round_timer}, detonat_timer={self.detonate_timer}"
-            )
-
-            # フレームをキャプチャ（親クラスの_record_replay_frameを使用）
-            self._record_replay_frame()
-
-            # ラウンドが既に終了していれば直ちに停止
-            if self.round_over:
-                print(f"[ループ開始時] round_overがTrueなので終了します")
-                break
-
-            # プレイヤーの行動を適用
-            self._apply_player_actions(action_handlers)
-
-            # 親クラスのバトルロジックを実行（run_headless_loopのロジックを参考に）
-            self._build_occupancy_counts()
-            try:
-                for c in self._move_order():
-                    if c.is_alive:
-                        self.move_character(c)
-            finally:
-                self._clear_occupancy_counts()
-
-            # タイマーを先に更新（親クラスのprocess_battle内で使用されるため）
-            if self.round_timer > 0:
-                self.round_timer -= 1
-            if self.detonate_timer > 0:
-                self.detonate_timer -= 1
-
-            # 戦闘処理を実行（process_battle内で勝利条件もチェックされる）
-            self.process_battle()
-
-            # ラウンドが終了していれば直ちに停止（process_battle後に必ずチェック）
-            if self.round_over:
-                # 新しいラウンドが自動的に開始されないように試合を強制終了
-                self.match_over = True
-                self.winner = (
-                    "attackers"
-                    if self.attacker_wins > self.defender_wins
-                    else "defenders"
-                )
-                print(
-                    f"シミュレーション終了: 勝者={self.winner}, 経過ticks={self.total_ticks}"
-                )
-                break
-
-            self.battle_tick += 1
-            self.total_ticks += 1
+            self.step(action_handlers)
             if on_tick is not None:
                 on_tick(self)
-
-        # 最終フレームを保存
-        self._record_replay_frame()
-
-        # 結果を生成
-        result = SimulationResult(
-            scenario=self.scenario,
-            winner=self.winner,
-            total_ticks=self.total_ticks,
-            replay_frames=self.replay_frames,
-            player_stats=self._generate_player_stats(),
-        )
-
-        return result
+        return self.result()
 
     def _generate_player_stats(self) -> List[dict]:
         """プレイヤーの統計を生成"""
@@ -312,6 +368,7 @@ class TacticalSimulator(VisualFPSBattle):
         output = {
             "scenario": asdict(result.scenario),
             "winner": result.winner,
+            "reason": result.reason,
             "total_ticks": result.total_ticks,
             "replay_frames": result.replay_frames,
             "round_records": result.round_records,

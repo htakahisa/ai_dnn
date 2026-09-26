@@ -1,0 +1,277 @@
+{
+  "match_metadata": {
+    "team1": "Omoko Gaming",
+    "team2": "Ghost Champions",
+    "team1_score": 1,
+    "team2_score": 2,
+    "total_rounds": 21,
+    "timestamp": "2026-09-25T15:55:28.938367"
+  },
+  "map_aggregate": {
+    "overall_team_metrics": {
+      "team_a": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0,
+        "plants": 0,
+        "defuses": 0,
+        "round_win": 0,
+        "round_lose": 0
+      },
+      "team_d": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0,
+        "plants": 0,
+        "defuses": 0,
+        "round_win": 0,
+        "round_lose": 0
+      }
+    },
+    "overall_tactic_metrics": {
+      "entry_fights": 0,
+      "entry_wins": 0,
+      "post_plant_wins": 0,
+      "retake_wins": 0,
+      "fakes": 0,
+      "default_execs": 0,
+      " executes": 0
+    },
+    "entry_winrate": 0.0,
+    "post_plant_winrate": 0,
+    "retake_winrate": 0,
+    "side_outcomes": {
+      "as_attacker": {
+        "wins": 0,
+        "total": 0
+      },
+      "as_defender": {
+        "wins": 0,
+        "total": 0
+      }
+    },
+    "entry_site_stats": {
+      "site_a": {
+        "entries": 0,
+        "wins": 0
+      },
+      "site_b": {
+        "entries": 0,
+        "wins": 0
+      }
+    },
+    "top_mvps": []
+  },
+  "round_features": [
+    {
+      "round_number": 1,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 2,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 3,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 4,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 5,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 6,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 7,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 8,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 9,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 10,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 11,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 12,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 13,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 14,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 15,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 16,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 17,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 18,
+      "winner": "attacker",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 19,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 20,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    },
+    {
+      "round_number": 21,
+      "winner": "defender",
+      "entry_attempted": false,
+      "post_plant_occurred": false,
+      "retake_attempted": false,
+      "team_a_kills": 0,
+      "team_d_kills": 0,
+      "length": 0
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import numpy as np
 
 
 RETAKE_COORDINATION_DIM = 6
+RETAKE_UTILITY_CONTEXT_DIM = 7
 
 
 def bfs_distance_map(grid, goal):
@@ -62,6 +63,78 @@ def shortest_legal_action(dist_map, pos, mask, move_deltas):
         if 0 <= distance < current:
             candidates.append((distance, int(action)))
     return min(candidates)[1] if candidates else None
+
+
+def retake_approach_sector(pos, objective):
+    """Group nearby firing positions by their bearing from the spike."""
+    dr = int(pos[0]) - int(objective[0])
+    dc = int(pos[1]) - int(objective[1])
+    if dr == 0 and dc == 0:
+        return "center"
+    if abs(dr) >= abs(dc):
+        return "north" if dr < 0 else "south"
+    return "west" if dc < 0 else "east"
+
+
+def assign_retake_lane_targets(
+    grid, objective, defenders, objective_dist_map, remaining_ticks,
+    *, entry_radius, defuse_ticks, safety_margin, max_detour_ticks=8,
+):
+    """Choose feasible entry positions from different sides of the objective.
+
+    This supplies a training target and an observation feature. The deployed
+    policy still chooses its own movement action.
+    """
+    objective = tuple(map(int, objective))
+    frontier = {}
+    height, width = grid.shape
+    for r in range(height):
+        for c in range(width):
+            distance = int(objective_dist_map[r, c])
+            if 2 <= distance <= int(entry_radius):
+                sector = retake_approach_sector((r, c), objective)
+                frontier.setdefault(sector, []).append((r, c))
+
+    targets = {}
+    sector_uses = {}
+    budget = float(remaining_ticks) - int(defuse_ticks) - int(safety_margin)
+    alive = [unit for unit in defenders if getattr(unit, "is_alive", True)]
+    for unit in sorted(alive, key=lambda ally: (path_distance(objective_dist_map, ally), ally.name)):
+        name = unit.name
+        if path_distance(objective_dist_map, unit) <= 1:
+            targets[name] = tuple(map(int, unit.pos))
+            continue
+        from_unit = bfs_distance_map(grid, unit.pos)
+        options = []
+        for sector, cells in frontier.items():
+            reachable = []
+            for cell in cells:
+                travel = int(from_unit[cell])
+                if travel < 0:
+                    continue
+                total = travel + max(0, int(objective_dist_map[cell]) - 1)
+                if total <= budget:
+                    reachable.append((total, travel, cell))
+            if reachable:
+                total, travel, cell = min(reachable)
+                options.append((sector, total, travel, cell))
+        if not options:
+            targets[name] = objective
+            continue
+        shortest = min(option[1] for option in options)
+        feasible = [
+            option for option in options
+            if option[1] <= shortest + int(max_detour_ticks)
+        ]
+        sector, _total, _travel, target = min(
+            feasible,
+            key=lambda option: (
+                sector_uses.get(option[0], 0), option[1], option[0], option[3]
+            ),
+        )
+        targets[name] = target
+        sector_uses[sector] = sector_uses.get(sector, 0) + 1
+    return targets
 
 
 def retake_coordination_state(
@@ -131,6 +204,65 @@ def retake_coordination_features(state, normalizer):
     )
 
 
+def retake_utility_state(
+    allies, enemies, objective, smoke_cells, entry_radius, distance_map=None,
+):
+    """Observable utility already in effect and charges near the spike."""
+    pr, pc = map(int, objective)
+
+    def ready_to_cast(ally):
+        r, c = map(int, ally.pos)
+        if distance_map is not None:
+            distance = int(distance_map[r, c])
+            return 0 <= distance <= int(entry_radius)
+        return max(abs(r - pr), abs(c - pc)) <= int(entry_radius)
+
+    ready = [
+        ally for ally in allies
+        if getattr(ally, "is_alive", True)
+        and ready_to_cast(ally)
+    ]
+    remaining = {"SMOKE": 0, "FLASH": 0, "RECON": 0}
+    charges = {"SMOKE": "smoke_charges", "FLASH": "flash_charges", "RECON": "recon_charges"}
+    for ally in ready:
+        ability = str(getattr(ally, "ability_name", "")).upper()
+        if ability in remaining and int(getattr(ally, charges[ability], 0)) > 0:
+            remaining[ability] += 1
+    alive_enemies = [enemy for enemy in enemies if getattr(enemy, "is_alive", True)]
+    return {
+        "ready": ready,
+        "remaining": remaining,
+        "smoke_active": any(
+            max(abs(int(cell[0]) - pr), abs(int(cell[1]) - pc)) <= 1
+            for cell in smoke_cells
+        ),
+        "blind_active": any(
+            int(getattr(enemy, "blind_remaining", 0)) > 0
+            for enemy in alive_enemies
+        ),
+        "reveal_active": any(
+            int(getattr(enemy, "reveal_remaining", 0)) > 0
+            for enemy in alive_enemies
+        ),
+    }
+
+
+def retake_utility_features(state):
+    remaining = state["remaining"]
+    return np.asarray(
+        (
+            min(1.0, remaining["SMOKE"] / 5.0),
+            min(1.0, remaining["FLASH"] / 5.0),
+            min(1.0, remaining["RECON"] / 5.0),
+            float(state["smoke_active"]),
+            float(state["blind_active"]),
+            float(state["reveal_active"]),
+            min(1.0, len(state["ready"]) / 5.0),
+        ),
+        dtype=np.float32,
+    )
+
+
 def nearest_orb_assignment(chars, available_orbs, grid, cache, max_radius):
     """Assign one nearby ult-hungry defender to one orb by path distance."""
     candidates = []
@@ -151,4 +283,3 @@ def nearest_orb_assignment(chars, available_orbs, grid, cache, max_radius):
                     (distance, str(getattr(char, "name", "")), orb, char, dist_map)
                 )
     return min(candidates, key=lambda row: row[:3]) if candidates else None
-

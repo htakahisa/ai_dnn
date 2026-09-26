@@ -38,6 +38,12 @@ except (ImportError, ValueError):
     MAP_GRID = []
 
 
+def _original_match_path(match_path):
+    if match_path.endswith("_inference.json"):
+        return match_path[: -len("_inference.json")] + "_original.json"
+    return match_path
+
+
 def _load_replay_frames(original_data):
     """Load state frames from the source result when the web copy omitted them."""
     maps = original_data.get("maps") or []
@@ -81,11 +87,8 @@ def _load_match_for_path(match_path):
     original_path = full_match_path.with_name(
         full_match_path.name.replace("_inference.json", "_original.json")
     )
-    if original_path.exists():
-        with original_path.open("r", encoding="utf-8") as file:
-            return calculate_match_data_from_original(json.load(file))
-    with full_match_path.open("r", encoding="utf-8") as file:
-        return json.load(file)
+    with original_path.open("r", encoding="utf-8") as file:
+        return calculate_match_data_from_original(json.load(file))
 
 
 def save_training_labels(match_path):
@@ -134,7 +137,7 @@ def save_training_labels(match_path):
 
 
 def match_detail(match_path):
-    """個別試合の詳細ページ：originalから計算したデータをinference.jsonに書き出して0値を解消"""
+    """個別試合の詳細ページ：original.jsonから表示用データを計算する。"""
     try:
         full_match_path = (SERIES_DATA_DIR / match_path).resolve()
         if not full_match_path.is_relative_to(SERIES_DATA_DIR.resolve()):
@@ -181,14 +184,8 @@ def match_detail(match_path):
                 }
             # originalから計算した正しいデータを生成
             match_data = calculate_match_data_from_original(original_data)
-            # 【重要】計算したデータをinference.jsonに書き出して保存（0値問題を解消）
-            with open(full_match_path, "w", encoding="utf-8") as f:
-                json.dump(match_data, f, ensure_ascii=False, indent=2)
-            print(f"inference.json updated: {full_match_path}")
         else:
-            # 万が一originalがない場合は既存のinferenceを読み込む
-            with open(full_match_path, "r", encoding="utf-8") as f:
-                match_data = json.load(f)
+            return "Original match file not found", 404
 
         replay_frames = (
             _load_replay_frames(original_data) if "original_data" in locals() else []
@@ -224,12 +221,14 @@ def match_detail(match_path):
                     try:
                         record = json.loads(line)
                         if (
-                            record["match_path"] == match_path
+                            _original_match_path(record["match_path"])
+                            == _original_match_path(match_path)
                             and record["team_name"] == team1
                         ):
                             label_keys[team1].update(record.get("labels", {}).keys())
                         elif (
-                            record["match_path"] == match_path
+                            _original_match_path(record["match_path"])
+                            == _original_match_path(match_path)
                             and record["team_name"] == team2
                         ):
                             label_keys[team2].update(record.get("labels", {}).keys())
@@ -282,7 +281,10 @@ def get_missing_label_stats():
                     continue
                 try:
                     record = json.loads(line)
-                    key = (record["match_path"], record["team_name"])
+                    key = (
+                        _original_match_path(record["match_path"]),
+                        record["team_name"],
+                    )
                     labels_by_match.setdefault(key, set()).update(
                         record.get("labels", {}).keys()
                     )
@@ -332,11 +334,9 @@ def get_all_matches():
                                         folder.stat().st_mtime, timezone.utc
                                     ).isoformat(),
                                 },
-                                "path": (
-                                    original_file.relative_to(SERIES_DATA_DIR)
-                                    .as_posix()
-                                    .replace("_original.json", "_inference.json")
-                                ),
+                                "path": original_file.relative_to(
+                                    SERIES_DATA_DIR
+                                ).as_posix(),
                             }
                         )
                     except Exception as e:
@@ -359,6 +359,8 @@ def save_favorite(match_path):
                 favorites = json.load(f)
 
         # 既存のお気に入りにあるか確認
+        favorites = [_original_match_path(path) for path in favorites]
+        match_path = _original_match_path(match_path)
         if match_path in favorites:
             favorites.remove(match_path)
         else:
@@ -377,7 +379,7 @@ def get_favorites():
     """お気に入りの試合パス一覧を取得"""
     if FAVORITES_PATH.exists():
         with FAVORITES_PATH.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            return [_original_match_path(path) for path in json.load(f)]
     return []
 
 
