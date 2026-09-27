@@ -91,7 +91,7 @@ from ov1_common_attacker import (
     print_effective_stats,
 )
 
-EPISODE_COUNT = 8000
+EPISODE_COUNT = 4000
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)
 
 # ---------------------------------------------------------------------------

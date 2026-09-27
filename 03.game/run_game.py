@@ -290,6 +290,8 @@ class VisualFPSBattle(
         self.sides_swapped = False
         self.overtime = False
         self.last_overtime_swap_round = 0
+        self.halftime_attacker_score = None
+        self.halftime_defender_score = None
         self.battle_tick = 0
         self.match_stats = {}
         self.analytics_tracker = CombatTracker()
@@ -582,6 +584,8 @@ class VisualFPSBattle(
             return
 
         if not self.sides_swapped and self.current_round >= 13:
+            self.halftime_attacker_score = int(self.attacker_wins)
+            self.halftime_defender_score = int(self.defender_wins)
             self._swap_sides()
             self.sides_swapped = True
             return

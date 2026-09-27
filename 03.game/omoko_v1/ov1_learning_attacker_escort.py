@@ -938,13 +938,7 @@ class Ov1LearningAttackerEscortController:
         if not available_orbs:
             return None
 
-        allies = [
-            other for other in chars
-            if getattr(other, "is_alive", True) and other.team == char.team
-        ]
-        if not orb_priority(char, allies):
-            return None
-        if self._get_char_state(char)["tick"] <= self.hold_ticks:
+        if int(getattr(char, "ultimate_points", 0)) >= int(getattr(char, "ultimate_cost", 0)):
             return None
 
         # A shared sighting is still actionable enemy information, even when
@@ -956,7 +950,7 @@ class Ov1LearningAttackerEscortController:
             return None
 
         remaining = int(game_state.get("round_timer", self.max_ticks - self._get_char_state(char)["tick"]))
-        if remaining < ESCORT_ORB_MIN_REMAINING_TICKS:
+        if remaining <= 0:
             return None
 
         candidates = []
@@ -1072,6 +1066,20 @@ class Ov1LearningAttackerEscortController:
         orb_target = self._opportunistic_orb_target(
             char, grid, chars, available_orbs, game_state
         )
+        # Escort's safety conditions take priority over the learned combat
+        # policy: when an orb is nearby and no enemy is present, go collect it.
+        if orb_target is not None:
+            r, c = int(char.pos[0]), int(char.pos[1])
+            if (r, c) != orb_target:
+                occupied = {
+                    (int(other.pos[0]), int(other.pos[1]))
+                    for other in chars
+                    if other is not char and getattr(other, "is_alive", True)
+                }
+                orb_next = _bfs_next_step(grid, (r, c), orb_target, occupied)
+                if orb_next != (r, c):
+                    return [int(orb_next[0]), int(orb_next[1])], {"facing": getattr(char, "facing", "N")}
+            return [r, c], "COLLECT_ORB"
         obs = self._build_obs(char, game_state, st)
         mask = self._action_mask(
             char, grid, chars, carry_pos, available_orbs, orb_target=orb_target

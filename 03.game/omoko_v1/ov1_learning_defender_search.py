@@ -103,7 +103,8 @@ ALL_FACINGS = FACING_DIRS
 SIGHTING_STALENESS_CAP = 30
 ABILITY_RANGE = 8
 REACH_RADIUS = 0  # 担当ポジションへ「到着した」とみなすBFS距離(学習側train_defender_search.pyと一致させる)
-SCHEDULED_SMOKE_DELAY_TICKS = 18
+SCHEDULED_SMOKE_DELAY_TICKS = 31
+SMOKE_INITIAL_COOLDOWN_TICKS = 30
 RIGHT_FIGHT_MIN_KILLS = 2
 RIGHT_FIGHT_QUIET_TICKS = 5
 
@@ -490,12 +491,16 @@ def _compute_fixed_assignments():
     前提とした観測であるため、推論側でも必ず同じ割当を使う必要がある。
     (自己完結ルールにより、学習ファイルをimportせずロジックを複製する)
     """
-    setup_assignment = {
-        name: _find_marker_position(SEARCH_MAZE_STR, chr(ord("a") + i))
-        for i, name in enumerate(ROSTER_ORDER)
-    }
     defense_assignment = {
         name: _find_marker_position(SEARCH_MAZE_STR, chr(ord("A") + i))
+        for i, name in enumerate(ROSTER_ORDER)
+    }
+    setup_assignment = {
+        name: (
+            _find_marker_position(SEARCH_MAZE_STR, chr(ord("a") + i))
+            if chr(ord("a") + i) in SEARCH_MAZE_STR
+            else defense_assignment[name]
+        )
         for i, name in enumerate(ROSTER_ORDER)
     }
     return setup_assignment, defense_assignment
@@ -1189,6 +1194,7 @@ class Ov1LearningDefenderSearchController:
     def _action_mask(
         self, char, grid, chars, lock_movement=False, in_setup_phase=False,
         has_target_info=False, forced_facing=None, available_orbs=(),
+        allow_ability=True,
     ):
         """lock_movement=True の場合、stay以外の移動を禁止する。
         交戦中は静止させ、射撃の当たりやすさを優先する。
@@ -1220,6 +1226,7 @@ class Ov1LearningDefenderSearchController:
 
         if (
             in_setup_phase
+            or not allow_ability
             or _ability_charge(char) <= 0
             or char.ability_name == "HUNT"
             or not has_target_info
@@ -1265,7 +1272,20 @@ class Ov1LearningDefenderSearchController:
         if is_planted:
             return list(char.pos)
 
-        scheduled_smoke_target = self._scheduled_smoke_target(char, game_state)
+        battle_tick = game_state.get("battle_tick")
+        if battle_tick is None:
+            round_tick = ROUND_DURATION_TICKS - int(
+                game_state.get("round_timer", ROUND_DURATION_TICKS)
+            ) + 1
+        else:
+            round_tick = int(battle_tick) + 1
+        smoke_allowed = (
+            str(getattr(char, "ability_name", "")).upper() != "SMOKE"
+            or round_tick > SMOKE_INITIAL_COOLDOWN_TICKS
+        )
+        scheduled_smoke_target = (
+            self._scheduled_smoke_target(char, game_state) if smoke_allowed else None
+        )
         team_in_contact = any(
             enemy.is_alive and enemy.team != char.team
             and any(ally.is_alive and ally.team == char.team
@@ -1350,9 +1370,6 @@ class Ov1LearningDefenderSearchController:
                 self._site_positions_cache = [(grid.shape[0] / 2.0, grid.shape[1] / 2.0)]
 
         self._ensure_defense_assignment(char, grid, chars)
-        round_tick = game_state.get("battle_tick")
-        if round_tick is None:
-            round_tick = ROUND_DURATION_TICKS - int(game_state.get("round_timer", ROUND_DURATION_TICKS)) + 1
         self._maybe_advance_tick(
             char, grid, chars, game_state.get("spike_pos"), int(round_tick),
         )
@@ -1391,7 +1408,7 @@ class Ov1LearningDefenderSearchController:
 
         # 味方が現在視認している敵には、射線を持たない味方がアビリティで支援する。
         # 投射物の着弾点とスモーク後の味方射線は共通の幾何判定で確認する。
-        if not hold_for_shot and _ability_charge(char) > 0:
+        if not hold_for_shot and _ability_charge(char) > 0 and smoke_allowed:
             role = str(char.ability_name).upper()
             support_plan = find_support_ability_plan(
                 grid, char,
@@ -1443,6 +1460,7 @@ class Ov1LearningDefenderSearchController:
             grid,
             chars,
             lock_movement=hold_for_shot,
+            allow_ability=smoke_allowed,
             has_target_info=has_target_info, forced_facing=forced_facing,
             available_orbs={
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())

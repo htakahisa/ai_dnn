@@ -310,13 +310,17 @@ def _find_marker_positions(maze_str, char):
     ]
 
 
-SETUP_ASSIGNMENT = {
-    name: _find_marker_position(SEARCH_MAZE_STR, ch)
-    for name, ch in SETUP_POSITION_CHARS.items()
-}
 DEFENSE_ASSIGNMENT = {
     name: _find_marker_position(SEARCH_MAZE_STR, ch)
     for name, ch in DEFENSE_POSITION_CHARS.items()
+}
+SETUP_ASSIGNMENT = {
+    name: (
+        _find_marker_position(SEARCH_MAZE_STR, ch)
+        if ch in SEARCH_MAZE_STR
+        else DEFENSE_ASSIGNMENT[name]
+    )
+    for name, ch in SETUP_POSITION_CHARS.items()
 }
 
 # SETUP_POSITIONS/DEFENSE_POSITIONS はロースター順の担当地点リスト(既存コードとの互換用)。
