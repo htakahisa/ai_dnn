@@ -791,6 +791,10 @@ class BattleLogicMixin:
                 # 覚醒等でmove_steps_per_tickが2以上のキャラは、
                 # コントローラーが選んだ1手の方向へそのまま延長して進む。
                 extra_steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+                if action_type == "MOVE" and isinstance(ability_payload, dict):
+                    step_limit = ability_payload.get("move_step_limit")
+                    if step_limit is not None:
+                        extra_steps = min(extra_steps, max(0, int(step_limit) - 1))
                 for _ in range(extra_steps):
                     prev = tuple(char.pos)
                     cand_r, cand_c = prev[0] + dr, prev[1] + dc
@@ -1361,6 +1365,68 @@ class BattleLogicMixin:
             self.is_defused = True
             self.active_defuser_name = None
 
+    def _force_ai_facing_visible_enemy(self):
+        """Override AI facing toward the nearest enemy with a clear shot line."""
+        def controller_matches(controller, predicate):
+            pending = [controller]
+            seen = set()
+            while pending:
+                current = pending.pop()
+                if current is None or id(current) in seen:
+                    continue
+                seen.add(id(current))
+                if predicate(current):
+                    return True
+                pending.extend(
+                    getattr(current, attr, None)
+                    for attr in ("inner", "inner_controller", "controller")
+                )
+            return False
+
+        for char in self.chars:
+            if not char.is_alive:
+                continue
+            controller = (
+                self.attacker_controller if char.team == "A"
+                else self.defender_controller
+            )
+            if controller_matches(
+                controller, lambda current: isinstance(current, UserInputController)
+            ):
+                continue
+            if not controller_matches(
+                controller,
+                lambda current: any(
+                    cls.__name__.startswith("GhostChampionsV1")
+                    for cls in type(current).__mro__
+                ),
+            ):
+                continue
+            candidates = [
+                enemy for enemy in self.chars
+                if enemy.is_alive
+                and enemy.team != char.team
+                and self.check_shot_line_of_sight(char, enemy)
+            ]
+            if not candidates:
+                continue
+            defusers = [
+                enemy for enemy in candidates
+                if self.is_planted and getattr(enemy, "defuse_timer", 0) > 0
+            ]
+            target_pool = defusers if defusers else candidates
+            target = min(
+                target_pool,
+                key=lambda enemy: (
+                    max(abs(enemy.pos[0] - char.pos[0]), abs(enemy.pos[1] - char.pos[1])),
+                    enemy.hp,
+                    enemy.name,
+                ),
+            )
+            facing = self._facing_towards(char.pos, target.pos)
+            if facing in FACING_VECTORS:
+                char.facing = facing
+
     def process_battle(self):
         self.battle_tick += 1
         self._ensure_round_tracking_state()
@@ -1405,6 +1471,7 @@ class BattleLogicMixin:
 
         # 現在の射線状況は先に計算するが、射線リビール状態への反映は射撃後に行う。
         # そのため、初めて敵を視認したTickの射撃は通常の回避率で判定される。
+        self._force_ai_facing_visible_enemy()
         current_los_revealed_names = self._current_los_revealed_names()
         alive = [c for c in self.chars if c.is_alive]
         engagements = [

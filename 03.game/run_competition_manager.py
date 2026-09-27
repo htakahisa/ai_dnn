@@ -15,6 +15,7 @@ from datetime import datetime
 from itertools import combinations
 from pathlib import Path
 from typing import Any, Callable
+from series_data_validation import series_export_skip_reason
 
 import numpy as np
 import tkinter as tk
@@ -265,6 +266,10 @@ def calculate_side_outcomes(rounds):
 
 
 def generate_inference_input(match_data):
+    skip_reason = series_export_skip_reason(match_data)
+    if skip_reason:
+        print(f"[Competition Auto-Save] Skipped series_data export: {skip_reason}")
+        return None
     all_rounds = []
     for map_data in match_data["maps"]:
         all_rounds.extend(map_data.get("round_records", []))
@@ -371,7 +376,9 @@ class SeriesResult:
 
 def seed_all(seed: int) -> None:
     random.seed(seed)
-    np.random.seed(seed)
+    # NumPy's legacy RandomState accepts only unsigned 32-bit seeds, while
+    # match/evaluation seeds may intentionally use a larger namespace.
+    np.random.seed(int(seed) % (2**32))
     try:
         import torch
 

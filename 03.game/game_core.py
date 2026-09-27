@@ -42,10 +42,10 @@ ROUND_TRANSITION_TICKS = 2
 ORB_COLLECT_REQUIRED_TICKS = 5
 ORB_ULTIMATE_POINTS = 2
 ULTIMATE_COSTS = {
-    "タイガー": 3,
-    "スモーカー": 6,
-    "シーカー": 8,
-    "フラッシュ": 5,
+    "タイガー": 2,
+    "スモーカー": 5,
+    "シーカー": 6,
+    "フラッシュ": 8,
 }
 ULTIMATE_NAMES = {
     "タイガー": "RAID",
@@ -53,7 +53,7 @@ ULTIMATE_NAMES = {
     "シーカー": "MONITOR",
     "フラッシュ": "TUNNEL",
 }
-RAID_DISTANCE_CELLS = 5
+RAID_DISTANCE_CELLS = 6
 ESCAPE_WARP_DELAY_TICKS = 10
 MONITOR_DRONE_HP = 200
 MONITOR_COLLISION_REVEAL_TICKS = 10
@@ -74,7 +74,7 @@ FACING_VECTORS = {
     "W": (-1, 0),
     "NW": (-0.70710678, -0.70710678),
 }
-SHOOTING_SITE_DIGREE = 90.0   #左右の視認可能な角度
+SHOOTING_SITE_DIGREE = 90.0  # 左右の視認可能な角度
 FACING_INDICATOR_LENGTH_RATIO = 0.55  # cell_sizeに対する短い線の長さの比率
 CLUTCH_ACE_BANNER_TICKS = (
     10  # クラッチ/エース演出の追加表示Tick数（TICK_TIME=100msなら約1秒）
@@ -669,8 +669,10 @@ def _refresh_condition_modifier(character):
     sampled = float(getattr(character, "sampled_condition_modifier", old))
     new = max(-0.40, min(0.40, sampled + character.condition_bonus))
     character.condition_modifier = new
-    for attr, base_attr in (("accuracy", "base_accuracy_before_condition"),
-                           ("hs_rate", "base_hs_rate_before_condition")):
+    for attr, base_attr in (
+        ("accuracy", "base_accuracy_before_condition"),
+        ("hs_rate", "base_hs_rate_before_condition"),
+    ):
         current = float(getattr(character, attr))
         base = float(getattr(character, base_attr, current / max(0.01, 1.0 + old)))
         setattr(character, attr, max(0.0, current + base * (new - old)))
@@ -715,23 +717,32 @@ def _apply_combo_bonus(character, stat_key, value):
     elif attr == "mental":
         character.mental = max(
             0.0,
-                min(
-                    20.0,
+            min(
+                20.0,
                 float(getattr(character, "mental", 5.0)) + amount,
             ),
         )
     elif attr == "condition_bonus":
         if not hasattr(character, "sampled_condition_modifier"):
-            character.sampled_condition_modifier = float(getattr(character, "condition_modifier", 0.0))
-        character.condition_bonus = float(getattr(character, "condition_bonus", 0.0)) + amount
+            character.sampled_condition_modifier = float(
+                getattr(character, "condition_modifier", 0.0)
+            )
+        character.condition_bonus = (
+            float(getattr(character, "condition_bonus", 0.0)) + amount
+        )
         _refresh_condition_modifier(character)
     elif attr == "move_steps_per_tick":
         current_steps = int(getattr(character, "move_steps_per_tick", 1))
         character.move_steps_per_tick = max(1, current_steps + int(round(amount)))
     elif attr == "form_variance":
         old_max_delta = float(getattr(character, "max_condition_delta", 0.0))
-        old_modifier = float(getattr(character, "sampled_condition_modifier",
-                                     getattr(character, "condition_modifier", 0.0)))
+        old_modifier = float(
+            getattr(
+                character,
+                "sampled_condition_modifier",
+                getattr(character, "condition_modifier", 0.0),
+            )
+        )
         old_ratio = old_modifier / old_max_delta if old_max_delta > 0.0 else 0.0
         character.form_variance = max(
             0.0,
@@ -742,7 +753,9 @@ def _apply_combo_bonus(character, stat_key, value):
         # amplitude immediately to this active round.
         character.sampled_condition_modifier = max(
             -character.max_condition_delta,
-            min(character.max_condition_delta, old_ratio * character.max_condition_delta),
+            min(
+                character.max_condition_delta, old_ratio * character.max_condition_delta
+            ),
         )
         character.condition_bonus = float(getattr(character, "condition_bonus", 0.0))
         _refresh_condition_modifier(character)

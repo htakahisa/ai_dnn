@@ -2,10 +2,15 @@
 
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
 
-from gc_v1.gc_facing import FACING_DIRS, nearest_alive_enemy_facing
+from gc_v1.gc_facing import (
+    FACING_DIRS,
+    nearest_alive_enemy_facing,
+    nearest_visible_enemy_facing,
+)
 from gc_v1 import train_defender_retake_gc as retake
 from gc_v1 import train_defender_search_gc as search
 
@@ -34,6 +39,19 @@ class NearestEnemyFacingTests(unittest.TestCase):
             "NW",
         )
 
+    def test_combat_override_ignores_nearer_enemy_without_clear_shot_line(self):
+        actor = unit("defender", "D", (4, 4))
+        blocked_near = unit("blocked", "A", (4, 5))
+        visible_far = unit("visible", "A", (4, 7))
+
+        facing = nearest_visible_enemy_facing(
+            actor,
+            [blocked_near, visible_far],
+            lambda _actor, enemy: enemy.name == "visible",
+        )
+
+        self.assertEqual(facing, "E")
+
     def test_search_teacher_prefers_unseen_nearest_enemy_over_observation_fallback(self):
         actor = unit("defender", "D", (4, 4))
         enemy = unit("attacker", "A", (4, 6))
@@ -41,14 +59,15 @@ class NearestEnemyFacingTests(unittest.TestCase):
         # A stale observation points west; privileged training state points east.
         obs[17], obs[18], obs[19] = 1.0, 0.0, -1.0
 
-        target, confidence = search.observable_facing_target(
-            obs, 0, actor, [enemy]
-        )
+        with patch.object(search, "has_los", return_value=True):
+            target, confidence = search.observable_facing_target(
+                obs, 0, actor, [enemy]
+            )
 
         self.assertEqual(FACING_DIRS[target], "E")
         self.assertEqual(confidence, 1.0)
 
-    def test_retake_teacher_does_not_require_line_of_sight(self):
+    def test_retake_teacher_uses_fallback_when_enemy_is_not_visible(self):
         actor = unit("defender", "D", (4, 4))
         enemy = unit("attacker", "A", (2, 4))
         env = SimpleNamespace(
@@ -57,10 +76,10 @@ class NearestEnemyFacingTests(unittest.TestCase):
             planted_pos=(8, 8),
         )
 
-        target, confidence = retake.observable_facing_target(env, actor, 0)
+        target, confidence = retake.observable_facing_target(env, actor, 4)
 
-        self.assertEqual(FACING_DIRS[target], "N")
-        self.assertEqual(confidence, 1.0)
+        self.assertEqual(FACING_DIRS[target], "SE")
+        self.assertEqual(confidence, 0.60)
 
 
 if __name__ == "__main__":

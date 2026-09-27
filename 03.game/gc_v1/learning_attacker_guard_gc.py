@@ -77,9 +77,11 @@ except ImportError:
     from positioning_gc import guard_candidates
 try:
     from .postplant_utils import postplant_watch_cells
+    from .gc_facing import facing_towards
     from .ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 except ImportError:
     from postplant_utils import postplant_watch_cells
+    from gc_facing import facing_towards
     from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, can_collect_orb
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -134,9 +136,7 @@ class AttackerGuardDuelingDQN(nn.Module):
 # ---------------------------------------------------------------------------
 # 補助関数(LOS / BFS)。abilities_los.py / train_attacker_guard.py の複製実装。
 #
-# 注意: game_state には smokes(煙リスト)が含まれないため、この推論用LOSは
-# 壁のみを考慮する(スモークによる遮蔽は考慮しない)。同様に own_smoke_active
-# も常に0として扱う(learning_defender_search_gc.py と同じ簡略化方針)。
+# LOS uses the public smoke_cells signal and matches engine adjacency rules.
 # ---------------------------------------------------------------------------
 def _line_cells(p1, p2):
     y0, x0 = int(p1[0]), int(p1[1])
@@ -584,6 +584,61 @@ class LearningAttackerGuardGCController:
                 }
         return None
 
+    def _smoke_defuse_interrupt(self, char, game_state, active_defuse_info):
+        """Prioritize a broadcast defuse tap over the policy's hold/utility.
+
+        Hidden defusers need not appear in perceived chars. Route to the public
+        spike, never to a hidden opponent's position inferred from the tap.
+        """
+        if active_defuse_info is None:
+            return None
+        grid = game_state["grid"]
+        spike = tuple(game_state["planted_pos"])
+        smoke = set(game_state.get("smoke_cells", ()))
+        zone = set(postplant_watch_cells(grid, spike))
+        start = tuple(char.pos)
+        if not (smoke & zone or smoke.intersection(_line_cells(start, spike))):
+            return None
+
+        chars = game_state.get("chars", ())
+        occupied = {tuple(c.pos) for c in chars
+                    if c.is_alive and c.name != char.name}
+        for enemy in chars:
+            if not enemy.is_alive or enemy.name != active_defuse_info["name"]:
+                continue
+            ignores_smoke = (getattr(char, "sees_through_smoke", False)
+                             or getattr(enemy, "reveal_remaining", 0) > 0)
+            line = _line_cells(start, tuple(enemy.pos))
+            if (_has_los(grid, start, tuple(enemy.pos), () if ignores_smoke else smoke)
+                    and not any(cell in occupied for cell in line[1:-1])):
+                facing = facing_towards(start, enemy.pos)
+                return (list(start), {"facing": facing}) if facing else list(start)
+
+        # Occupancy-aware BFS may temporarily move away from the spike to get
+        # around a teammate or a wall. Prefer the center: from it every legal
+        # defuse cell is within the engine's smoke-visible adjacency range.
+        queue = deque([start])
+        first_steps = {start: start}
+        fallback = None
+        while queue:
+            cell = queue.popleft()
+            if cell == spike:
+                step = first_steps[cell]
+                break
+            if cell in zone and cell != start and fallback is None:
+                fallback = first_steps[cell]
+            for dr, dc in CARDINAL:
+                nxt = (cell[0] + dr, cell[1] + dc)
+                if (not (0 <= nxt[0] < grid.shape[0] and 0 <= nxt[1] < grid.shape[1])
+                        or grid[nxt] == 1 or nxt in occupied or nxt in first_steps):
+                    continue
+                first_steps[nxt] = nxt if cell == start else first_steps[cell]
+                queue.append(nxt)
+        else:
+            step = fallback if fallback is not None else start
+        facing = facing_towards(step, spike) or facing_towards(start, step)
+        return (list(step), {"facing": facing}) if facing else list(step)
+
     # -- 観測構築 ----------------------------------------------------------
     # train_attacker_guard.py の build_observation() と要素・並び順を
     # 完全一致させること。
@@ -799,6 +854,10 @@ class LearningAttackerGuardGCController:
             for cell in watch_cells
         )
         active_defuse_info = self._active_defuse_info(game_state)
+
+        interrupt = self._smoke_defuse_interrupt(char, game_state, active_defuse_info)
+        if interrupt is not None:
+            return interrupt
 
         obs, visible_enemies = self._build_observation(
             char, game_state, unit_has_spike_los, active_defuse_info, detonate_timer

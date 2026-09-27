@@ -59,6 +59,7 @@ from character_stats_gc import (
 )
 
 from gc_search_config import GC_DEFENSE_DEPTH_BIAS_BY_MARKER
+from gc_facing import nearest_visible_enemy_facing
 
 from game_core import (
     MAX_HP,
@@ -1188,6 +1189,18 @@ class SearchEnv:
                 self.spike_ground_pos = tuple(dropped_holder.pos)
                 dropped_holder.has_spike = False
 
+        smoke_cells = self._smoke_cells()
+        units = self.defenders + self.attackers
+        for unit in units:
+            facing = nearest_visible_enemy_facing(
+                unit,
+                units,
+                lambda actor, enemy: has_los(
+                    tuple(actor.pos), tuple(enemy.pos), smoke_cells
+                ),
+            )
+            if facing is not None:
+                unit.facing = facing
         self._resolve_shots()
 
         for u in self.defenders + self.attackers:

@@ -111,7 +111,7 @@ class MatchPageTests(unittest.TestCase):
                 index_response = client.get("/")
                 self.assertEqual(index_response.status_code, 200)
                 self.assertIn(b"/match/sample/sample_original.json", index_response.data)
-                detail_response = client.get("/match/sample/sample_original.json")
+                detail_response = client.get("/match/sample/sample_original.json", follow_redirects=True)
                 self.assertEqual(detail_response.status_code, 200)
                 self.assertEqual(
                     json.loads((match_dir / "sample_original.json").read_text(encoding="utf-8")),

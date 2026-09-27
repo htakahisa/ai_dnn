@@ -1,5 +1,13 @@
-def calculate_match_data_from_original(original_data):
+def calculate_match_data_from_original(original_data, map_index=None):
     """original.jsonの生データからmap_aggregateやround_featuresを計算して補完（ダミーテンプレート不使用、チーム別に集計）"""
+    series_data = original_data
+    selected_map = None
+    if map_index is not None:
+        maps = original_data.get("maps", [])
+        if type(map_index) is not int or not 0 <= map_index < len(maps):
+            raise ValueError("Invalid map index")
+        selected_map = maps[map_index]
+        original_data = {**original_data, "maps": [selected_map]}
     team1 = original_data["team1"]
     team2 = original_data["team2"]
 
@@ -214,10 +222,39 @@ def calculate_match_data_from_original(original_data):
             team_tactics[team]["defender_winrate"] = 0.0
 
     # プレイヤー単位で取得できるミクロ指標をチームへ集約する。
+    ability_assist_available = {team1: False, team2: False}
+    ability_use_available = {team1: False, team2: False}
     for map_data in original_data.get("maps", []):
+        # Some originals have map totals without per-round player metrics.
+        round_players = [
+            player
+            for record in map_data.get("round_records", [])
+            for player in record.get("players", {}).values()
+        ]
+        for team in team_tactics:
+            team_round_players = [p for p in round_players if p.get("team") == team]
+            team_map_players = [
+                p for p in map_data.get("player_stats", []) if p.get("team") == team
+            ]
+            for key in (
+                "kills", "deaths", "assists", "first_kills", "first_deaths",
+                "one_v_one_participated", "one_v_one_won",
+                "preaim_angle_sum", "preaim_angle_count",
+            ):
+                if not any(key in p for p in team_round_players):
+                    team_tactics[team][key] += sum(p.get(key, 0) for p in team_map_players)
         players_by_name = {
             p.get("name"): p.get("team") for p in map_data.get("player_stats", [])
         }
+        for record in map_data.get("round_records", []):
+            players_by_name.update(
+                (name, player.get("team"))
+                for name, player in record.get("players", {}).items()
+                if player.get("team") in team_tactics
+            )
+        if "assist_events" in map_data:
+            for team in team_tactics:
+                ability_assist_available[team] = True
         for event in map_data.get("assist_events", []):
             team = players_by_name.get(event.get("assister"))
             if team in team_tactics and event.get("method") in {"flash", "recon", "smoke"}:
@@ -225,12 +262,19 @@ def calculate_match_data_from_original(original_data):
         previous = {}
         for frame in map_data.get("replay_frames", []):
             for char in frame.get("chars", []):
+                if "ability_charges" not in char:
+                    continue
                 name = char.get("name")
-                team = char.get("team")
-                charges = int(char.get("ability_charges", 0))
-                if name in previous and team in team_tactics:
-                    team_tactics[team]["ability_uses"] += max(0, previous[name] - charges)
-                previous[name] = charges
+                # Replay teams are side IDs (A/D); player names identify the club.
+                team = players_by_name.get(name, char.get("team"))
+                if team not in team_tactics:
+                    continue
+                key = (frame.get("round"), team, name)
+                charges = int(char["ability_charges"])
+                if key in previous:
+                    ability_use_available[team] = True
+                    team_tactics[team]["ability_uses"] += max(0, previous[key] - charges)
+                previous[key] = charges
 
     for team in [team1, team2]:
         t = team_tactics[team]
@@ -247,16 +291,39 @@ def calculate_match_data_from_original(original_data):
         # Smaller values therefore indicate better pre-aim alignment.
         t["preaim_error_mean"] = t["preaim_angle_mean"]
 
-    ability_data_available = int(
-        any(
-            "ability_charges" in char
-            for map_data in original_data.get("maps", [])
-            for frame in map_data.get("replay_frames", [])
-            for char in frame.get("chars", [])
-        )
-    )
+    original_rounds = [
+        record
+        for map_data in original_data.get("maps", [])
+        for record in map_data.get("round_records", [])
+    ]
     for team in [team1, team2]:
-        team_tactics[team]["ability_data_available"] = ability_data_available
+        t = team_tactics[team]
+        t["ability_assist_data_available"] = int(ability_assist_available[team])
+        t["ability_use_data_available"] = int(ability_use_available[team])
+        t["ability_data_available"] = int(
+            ability_assist_available[team] or ability_use_available[team]
+        )
+        t["round_data_available"] = int(bool(original_rounds))
+        t["macro_data_available"] = int(any(r.get("tactic") for r in original_rounds))
+        team_players = [
+            player
+            for map_data in original_data.get("maps", [])
+            for player in map_data.get("player_stats", [])
+            if player.get("team") == team
+        ] + [
+            player
+            for record in original_rounds
+            for player in record.get("players", {}).values()
+            if player.get("team") == team
+        ]
+        t["micro_data_available"] = int(
+            any("kills" in p and "deaths" in p for p in team_players)
+        )
+        t["first_death_data_available"] = int(any("first_deaths" in p for p in team_players))
+        t["duel_data_available"] = int(
+            any("one_v_one_participated" in p and "one_v_one_won" in p for p in team_players)
+        )
+        t["preaim_data_available"] = int(t["preaim_angle_count"] > 0)
 
     # プレイヤー別のスタッツを整形
     player_stats = []
@@ -271,8 +338,8 @@ def calculate_match_data_from_original(original_data):
                     "firstd": p.get("first_deaths", 0),
                     "one_v_one_participated": p.get("one_v_one_participated", 0),
                     "1v1_winrate": (
-                        p["one_v_one_won"] / p["one_v_one_participated"]
-                        if p["one_v_one_participated"] > 0
+                        p.get("one_v_one_won", 0) / p.get("one_v_one_participated", 0)
+                        if p.get("one_v_one_participated", 0) > 0
                         else 0.0
                     ),
                     "preaim_angle_sum": p.get("preaim_angle_sum", 0.0),
@@ -308,10 +375,17 @@ def calculate_match_data_from_original(original_data):
         "match_metadata": {
             "team1": team1,
             "team2": team2,
-            "team1_score": original_data["team1_score"],
-            "team2_score": original_data["team2_score"],
+            "team1_score": selected_map.get("score1", 0) if selected_map is not None else original_data["team1_score"],
+            "team2_score": selected_map.get("score2", 0) if selected_map is not None else original_data["team2_score"],
+            "scope": "map" if selected_map is not None else "series",
+            "map_index": map_index,
+            "map_number": selected_map.get("number", map_index + 1) if selected_map is not None else None,
+            "map_name": selected_map.get("map_name", f"Map {map_index + 1}") if selected_map is not None else "Series",
+            "map_count": len(series_data.get("maps", [])),
+            "series_team1_score": series_data["team1_score"],
+            "series_team2_score": series_data["team2_score"],
             "total_rounds": len(all_rounds),
-            "timestamp": "2026-09-22T18:19:16.045087",
+            "timestamp": series_data.get("timestamp", ""),
         },
         "map_aggregate": {
             # チーム別にメトリクスを格納

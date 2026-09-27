@@ -14,6 +14,8 @@ from collections import defaultdict
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from series_data_validation import series_export_skip_reason
+
 
 def evaluate_series(
     source, carry_model=None, guard_model=None, escort_model=None, save_replay=False
@@ -140,6 +142,10 @@ def calculate_side_outcomes(all_rounds):
 
 
 def generate_inference_input(series_data, output_dir=None):
+    skip_reason = series_export_skip_reason(series_data)
+    if skip_reason:
+        print(f"[Auto-Organized Series] Skipped series_data export: {skip_reason}")
+        return None
     team1_name = series_data["team1"]
     team2_name = series_data["team2"]
     series_score = (

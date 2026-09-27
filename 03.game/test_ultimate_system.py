@@ -7,6 +7,7 @@ from battle_logic import BattleLogicMixin
 from game_core import Character, ORB_COLLECT_REQUIRED_TICKS
 from map_data import NEW_MAZE_STR
 from gc_v1.ultimate_tactics_gc import (
+    ESCAPE_MIN_TRAVEL_CELLS,
     build_ultimate_action,
     can_collect_orb,
     orb_context_features,
@@ -92,6 +93,22 @@ class UltimateSystemTests(unittest.TestCase):
         )
         self.assertEqual(build_ultimate_action(grid, seeker, chars), {"ultimate": "MONITOR"})
         self.assertEqual(build_ultimate_action(grid, flash, chars), {"ultimate": "TUNNEL"})
+
+    def test_escape_turns_nearby_anchor_into_meaningful_teleport(self):
+        grid = np.zeros((20, 20), dtype=np.int32)
+        smoker = make_character("Demon1", "A", (10, 10), 6)
+
+        action = build_ultimate_action(
+            grid, smoker, [smoker], destination=(10, 11)
+        )
+
+        self.assertIsNotNone(action)
+        target = action["target"]
+        self.assertGreaterEqual(
+            max(abs(target[0] - 10), abs(target[1] - 10)),
+            ESCAPE_MIN_TRAVEL_CELLS,
+        )
+        self.assertNotEqual(target, (10, 11))
 
     def test_role_ultimate_costs(self):
         expected = {

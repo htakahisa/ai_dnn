@@ -30,6 +30,7 @@ import torch
 
 from game_core import PLANT_REQUIRED_TICKS
 from positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
+from gc_v1.opponent_site_gc import attack_plant_cells, enforce_attack_target, forced_attack_site
 
 # Keep this import exact: runtime must use the same observation/action semantics
 # as the final Macro model.
@@ -147,13 +148,42 @@ def _bfs_next_step(grid, start, goal, occupied):
         return start
 
     h, w = grid.shape
+    blocked = {tuple(map(int, pos)) for pos in occupied}
+    blocked.discard(start)
+    goal_is_free = (
+        0 <= goal[0] < h
+        and 0 <= goal[1] < w
+        and int(grid[goal[0], goal[1]]) != 1
+        and goal not in blocked
+    )
+    if goal_is_free:
+        goals = {goal}
+    else:
+        # A teammate can occupy a macro waypoint.  Do not route onto that
+        # cell (the engine will reject the move); route to its nearest free
+        # walkable neighbor instead so attackers do not stall one step short.
+        goals = set()
+        for radius in range(1, max(h, w) + 1):
+            goals = {
+                (r, c)
+                for r in range(max(0, goal[0] - radius), min(h, goal[0] + radius + 1))
+                for c in range(max(0, goal[1] - radius), min(w, goal[1] + radius + 1))
+                if abs(r - goal[0]) + abs(c - goal[1]) == radius
+                and int(grid[r, c]) != 1
+                and (r, c) not in blocked
+            }
+            if goals:
+                break
+        if not goals:
+            return start
+
     q = deque([start])
     parent = {start: None}
     reached = None
 
     while q:
         cur = q.popleft()
-        if cur == goal:
+        if cur in goals:
             reached = cur
             break
         r, c = cur
@@ -165,25 +195,13 @@ def _bfs_next_step(grid, start, goal, occupied):
                 continue
             if int(grid[nxt[0], nxt[1]]) == 1:
                 continue
-            if nxt in occupied and nxt != goal:
+            if nxt in blocked:
                 continue
             parent[nxt] = cur
             q.append(nxt)
 
     if reached is None:
-        # If exact goal is occupied/unreachable, use a neighbor that lowers
-        # Manhattan distance and is legal.
-        r, c = start
-        candidates = []
-        for dr, dc in CARDINAL:
-            nxt = (r + dr, c + dc)
-            if not (0 <= nxt[0] < h and 0 <= nxt[1] < w):
-                continue
-            if int(grid[nxt[0], nxt[1]]) == 1 or nxt in occupied:
-                continue
-            d = abs(nxt[0] - goal[0]) + abs(nxt[1] - goal[1])
-            candidates.append((d, nxt))
-        return min(candidates)[1] if candidates else start
+        return start
 
     step = reached
     while parent[step] is not None and parent[step] != start:
@@ -339,6 +357,7 @@ class LearningAttackerMacroGCController:
         self._last_macro_decision_tick = None
         self._last_strategy = None
         self._last_q_values = None
+        self._opening_macro_decided = False
 
         # Real-game-only plant commitment state.  This deliberately lives
         # outside MacroEnv, so the trained 68-dim policy is unchanged.
@@ -347,6 +366,14 @@ class LearningAttackerMacroGCController:
         self._plant_commit_side = None
         self._plant_commit_start_tick = None
         self._attacker_wait_ticks = {}
+        self._fake_contact_key = None
+        self._fake_contact_confirmed = False
+        self._fake_peak_key = None
+        self._fake_peak_stages = {}
+        self._fake_peak_targets = {}
+        self._lurk_plan = None
+        self._lurk_route_key = None
+        self._lurk_route_state = {}
 
         if self.verbose:
             print(
@@ -358,6 +385,7 @@ class LearningAttackerMacroGCController:
 
     def set_game(self, game):
         self.game = game
+        self.env.forced_target_site = forced_attack_site(game)
 
     def reset_round(self):
         # Opening strategy is NOT forced to DEFAULT.
@@ -369,8 +397,17 @@ class LearningAttackerMacroGCController:
         self._last_macro_decision_tick = None
         self._last_strategy = self.env.current_strategy
         self._last_q_values = None
+        self._opening_macro_decided = False
         self._clear_plant_commit()
         self._attacker_wait_ticks.clear()
+        self._fake_contact_key = None
+        self._fake_contact_confirmed = False
+        self._fake_peak_key = None
+        self._fake_peak_stages.clear()
+        self._fake_peak_targets.clear()
+        self._lurk_plan = None
+        self._lurk_route_key = None
+        self._lurk_route_state.clear()
 
     def _clear_plant_commit(self):
         self._plant_commit_holder = None
@@ -403,6 +440,7 @@ class LearningAttackerMacroGCController:
             0 <= r < grid.shape[0]
             and 0 <= c < grid.shape[1]
             and int(grid[r, c]) == 2
+            and (r, c) in attack_plant_cells(getattr(self, "game", None), grid)
         )
 
     def _carrier_in_immediate_danger(self, holder, game_state):
@@ -456,6 +494,224 @@ class LearningAttackerMacroGCController:
             if any(_has_los(grid, attacker.pos, defender.pos) for attacker in attackers):
                 return True
         return False
+
+    def _lurk_group_names(self):
+        """Return the independent fake/lurk players for the active strategy."""
+        strategy = str(getattr(self.env, "current_strategy", "") or "")
+        plan = getattr(self, "_lurk_plan", None)
+        if plan is not None and plan["strategy"] == strategy:
+            return set(plan["names"])
+        if strategy in {"FAKE_A_TO_B", "FAKE_B_TO_A"}:
+            names = set(getattr(self.env, "_fake_group_names", set()))
+            fake_sides = getattr(self.env, "_fake_sides", None)
+            side = fake_sides()[0] if callable(fake_sides) else getattr(self.env, "_fake_side", None)
+            sides = {name: side for name in names}
+        elif strategy == "DEFAULT":
+            assignments = getattr(self.env, "assignment", {}) or {}
+            names = {
+                name for name, assignment in assignments.items()
+                if len(assignment) >= 3 and assignment[2] in {
+                    "OPPOSITE_SCOUT", "OPPOSITE_SCOUT_LURK",
+                    "OPPOSITE_SCOUT_DEEP"
+                }
+            }
+            sides = {name: assignments[name][0] for name in names}
+        else:
+            self._lurk_plan = None
+            return set()
+        if names:
+            self._lurk_plan = {"strategy": strategy, "names": frozenset(names), "sides": sides}
+        return names
+
+    def lurk_coordination_result(self, char, game_state):
+        """Own every pre-contact action, including blocked movement and fake rotation."""
+        names = self._lurk_group_names()
+        if (game_state.get("is_planted") or not names
+                or self._observe_fake_group_contact()):
+            return None
+        name = getattr(char, "name", None)
+        if name not in names:
+            return list(map(int, char.pos)), "MOVE"
+        side = self._lurk_plan["sides"].get(name)
+        if side not in {SIDE_A, SIDE_B}:
+            return list(map(int, char.pos)), "MOVE"
+        return self._lurk_push_step(char, game_state, side)
+
+    def _observe_fake_group_contact(self):
+        """Latch real engagement by an independent fake/lurk player.
+
+        Area control alone is not a fake: the main group may only leave its
+        hold after a fake-side player has appeared in a real engagement.  The
+        battle engine's previous-tick engagement list is used so hidden enemy
+        positions are never consulted for this decision.
+        """
+        strategy = str(getattr(self.env, "current_strategy", "") or "")
+        fake_names = frozenset(self._lurk_group_names())
+        if strategy not in {"FAKE_A_TO_B", "FAKE_B_TO_A", "DEFAULT"} or not fake_names:
+            self._fake_contact_key = None
+            self._fake_contact_confirmed = False
+            self._fake_peak_key = None
+            self._fake_peak_stages.clear()
+            self._fake_peak_targets.clear()
+            return False
+
+        key = (strategy, tuple(sorted(fake_names)))
+        if self._fake_contact_key != key:
+            self._fake_contact_key = key
+            self._fake_contact_confirmed = False
+        if self._fake_contact_confirmed:
+            return True
+
+        current_game = getattr(self, "game", None)
+        game = getattr(current_game, "real_game", current_game)
+        for first, second in getattr(game, "last_engagements", ()) or ():
+            first_team = getattr(first, "team", None)
+            second_team = getattr(second, "team", None)
+            if first_team == second_team:
+                continue
+            attacker = (
+                first
+                if first_team == "A"
+                else second if second_team == "A" else None
+            )
+            if attacker is not None and getattr(attacker, "name", None) in fake_names:
+                self._fake_contact_confirmed = True
+                return True
+        return False
+
+    def _fake_main_wait_result(self, char, game_state=None):
+        """Keep the main force concealed until the lurker actually engages."""
+        if (
+            str(getattr(self.env, "current_strategy", "") or "")
+            not in {"FAKE_A_TO_B", "FAKE_B_TO_A", "DEFAULT"}
+            or not self._lurk_group_names()
+            or getattr(char, "name", None) in self._lurk_group_names()
+            or self._observe_fake_group_contact()
+        ):
+            return None
+        return list(map(int, char.pos)), "MOVE"
+
+    def _fake_sell_progress_result(self, char, game_state):
+        """Keep a fake seller pushing through the site until contact."""
+        if (
+            str(getattr(self.env, "current_strategy", "") or "")
+            not in {"FAKE_A_TO_B", "FAKE_B_TO_A"}
+            or getattr(char, "name", None)
+            not in set(getattr(self.env, "_fake_group_names", set()))
+            or self._observe_fake_group_contact()
+        ):
+            return None
+
+        fake_side, _real_side = self.env._fake_sides()
+        if fake_side not in {SIDE_A, SIDE_B}:
+            return None
+        return self._lurk_push_step(char, game_state, fake_side)
+
+    def _default_lurk_progress_result(self, char, game_state):
+        """Make a separated DEFAULT lurker actually take the first peek."""
+        name = getattr(char, "name", None)
+        if (getattr(self.env, "current_strategy", None) != "DEFAULT"
+                or name not in self._lurk_group_names()
+                or self._observe_fake_group_contact()):
+            return None
+
+        side = self._lurk_plan["sides"][name]
+        if side not in {SIDE_A, SIDE_B}:
+            return None
+        return self._lurk_push_step(char, game_state, side)
+
+    def _lurk_push_step(self, char, game_state, side):
+        """Take the shortest site approach, then keep searching that same site."""
+        name = getattr(char, "name", None)
+        group = self._lurk_group_names()
+        key = (getattr(self.env, "current_strategy", None), tuple(sorted(group)))
+        if getattr(self, "_lurk_route_key", None) != key:
+            self._lurk_route_key = key
+            self._lurk_route_state = {}
+        state = self._lurk_route_state.setdefault(name, {
+            "target": None, "visited": set(), "side": side,
+            "initial": getattr(self.env, "targets", {}).get(name),
+        })
+        # Keep the original opposite-side assignment even if a later macro
+        # target refresh tries to pull this player back toward the main group.
+        side = state["side"]
+        grid = np.asarray(game_state["grid"])
+        current = tuple(map(int, char.pos))
+        occupied = {
+            tuple(map(int, other.pos)) for other in game_state.get("chars", [])
+            if getattr(other, "name", None) != name and bool(getattr(other, "is_alive", True))
+        }
+        if state["target"] is not None and current == state["target"]:
+            state["visited"].add(state["target"])
+            state["target"] = None
+
+        plant_cells = [
+            tuple(map(int, p)) for p in zip(*np.where(grid == 2))
+            if side_of_pos(tuple(map(int, p))) == side
+        ]
+        # Forward/deep markers are approach hints, not places to patrol before
+        # peeking. A legal plant cell ensures the route crosses the site entry.
+        cells = plant_cells or ([tuple(map(int, state["initial"]))]
+                                if state["initial"] is not None else [])
+        if state["visited"]:
+            cells = list(dict.fromkeys(cells + [tuple(map(int, p)) for p in _site_cells(side)]))
+        cells = [p for p in cells if 0 <= p[0] < grid.shape[0]
+                 and 0 <= p[1] < grid.shape[1] and int(grid[p]) != 1
+                 and p != current]
+        candidates = [p for p in cells if p not in occupied and p not in state["visited"]]
+        if not candidates:
+            # Revisiting is allowed after sweeping the site. Keep ownership
+            # even if everyone is blocked, so Escort cannot route us to main.
+            candidates = [p for p in cells if p not in occupied]
+            if candidates:
+                state["visited"].clear()
+        ranked = sorted((d, p) for p in candidates
+                        if (d := _bfs_distance(grid, current, p)) is not None)
+        if state["target"] in candidates:
+            ranked.sort(key=lambda item: item[1] != state["target"])
+        for _distance, target in ranked:
+            next_pos = _bfs_next_step(grid, current, target, occupied)
+            if tuple(next_pos) != current:
+                state["target"] = target
+                self.env.targets[name] = target
+                return list(map(int, next_pos)), "MOVE"
+        state["target"] = None
+        return list(current), "MOVE"
+
+    def _carrier_site_plant_result(self, char, holder, game_state):
+        """Once the carrier enters a site, ignore the macro entry waypoint."""
+        if getattr(char, "name", None) != getattr(holder, "name", None):
+            return None
+        grid = np.asarray(game_state["grid"])
+        current = tuple(map(int, char.pos))
+        r, c = current
+        if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]):
+            return None
+        if int(grid[r, c]) == 2 and current in attack_plant_cells(getattr(self, "game", None), grid):
+            return list(current), "PLANT"
+        if (forced_attack_site(getattr(self, "game", None)) is not None
+                and side_of_pos(current) != SIDE_A):
+            return None
+        # Value 5 is an ultimate orb in the real map, not a site-area marker.
+        if current not in {tuple(p) for side in (SIDE_A, SIDE_B) for p in _site_cells(side)}:
+            return None
+        side = side_of_pos(current)
+        plants = attack_plant_cells(getattr(self, "game", None), grid)
+        same_site = [p for p in plants if side_of_pos(p) == side]
+        targets = same_site or plants
+        distances = [(d, p) for p in targets
+                     if (d := _bfs_distance(grid, current, p)) is not None]
+        if not distances:
+            return None
+        target = min(distances, key=lambda item: (item[0], item[1]))[1]
+        occupied = {
+            tuple(map(int, other.pos)) for other in game_state.get("chars", [])
+            if other is not char and bool(getattr(other, "is_alive", True))
+        }
+        next_pos = _bfs_next_step(grid, current, target, occupied)
+        if tuple(next_pos) == current:
+            return None
+        return list(map(int, next_pos)), "MOVE"
 
     def _carrier_supporters(self, holder, game_state, max_distance=3):
         return [
@@ -549,7 +805,7 @@ class LearningAttackerMacroGCController:
         def nearest_plant(site_side):
             cells = [
                 tuple(map(int, p))
-                for p in zip(*np.where(grid == 2))
+                for p in attack_plant_cells(getattr(self, "game", None), grid)
                 if side_of_pos(tuple(map(int, p))) == site_side
             ]
             if not cells:
@@ -781,9 +1037,7 @@ class LearningAttackerMacroGCController:
         )
         grid = np.asarray(game_state["grid"])
         current = tuple(map(int, holder.pos))
-        plant_positions = [
-            (int(r), int(c)) for r, c in zip(*np.where(grid == 2))
-        ]
+        plant_positions = attack_plant_cells(getattr(self, "game", None), grid)
         if not plant_positions:
             return None
 
@@ -840,7 +1094,7 @@ class LearningAttackerMacroGCController:
         # objective instead of trusting the stale target.
         if target_distance is None or target_distance > 12:
             nearby_plants = []
-            for r, c in zip(*np.where(grid == 2)):
+            for r, c in attack_plant_cells(getattr(self, "game", None), grid):
                 plant = (int(r), int(c))
                 distance = _bfs_distance(grid, current, plant)
                 if distance is not None and distance <= 12:
@@ -1134,13 +1388,25 @@ class LearningAttackerMacroGCController:
 
         self._update_information_from_real_game(game_state)
 
+        # Capture the independent group before shadow phase progression can
+        # refresh its assignments or replace an opposite-site role.
+        self._lurk_group_names()
         # Advance internal option phases against REAL positions, not simulated
         # MacroEnv movement/combat.
         for a in self.env._living_attackers():
             if hasattr(self.env, "_advance_assignment_phase_if_needed"):
                 self.env._advance_assignment_phase_if_needed(a)
 
-        if hasattr(self.env, "_update_fake_option_phase"):
+        fake_contact = self._observe_fake_group_contact()
+        fake_waiting_for_contact = (
+            str(getattr(self.env, "current_strategy", "") or "")
+            in {"FAKE_A_TO_B", "FAKE_B_TO_A"}
+            and not fake_contact
+        )
+        if (
+            hasattr(self.env, "_update_fake_option_phase")
+            and not fake_waiting_for_contact
+        ):
             self.env._update_fake_option_phase()
         if hasattr(self.env, "_update_tactical_history"):
             self.env._update_tactical_history()
@@ -1158,6 +1424,14 @@ class LearningAttackerMacroGCController:
         self._last_macro_decision_tick = int(tick_id)
         obs = self.env.build_observation()
         mask = self.env.action_mask()
+        forced_side = forced_attack_site(getattr(self, "game", None))
+        if forced_side is not None:
+            self.env.forced_target_site = forced_side
+            mask = np.asarray(mask, dtype=bool).copy()
+            mask &= np.array([s == "DEFAULT" or self._strategy_target_side(s) == forced_side
+                              for s in STRATEGIES])
+            if not mask.any():
+                mask[STRATEGY_TO_INDEX["DEFAULT"]] = True
 
         x = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         with torch.no_grad():
@@ -1168,6 +1442,37 @@ class LearningAttackerMacroGCController:
         action_idx = int(np.argmax(q_masked))
         strategy = STRATEGIES[action_idx]
         self._last_q_values = q.copy()
+
+        # Once a Fake/DEFAULT split has assigned an independent lurker, do
+        # not let the macro DQN silently abandon that first-contact plan for
+        # Split/Rush merely because no fight has happened yet. The lurker
+        # runtime keeps advancing until an actual engagement is recorded.
+        current_strategy = str(getattr(self.env, "current_strategy", "") or "")
+        opening_decision = not getattr(self, "_opening_macro_decided", True)
+        if opening_decision:
+            # MacroEnv.reset creates a placeholder DEFAULT assignment. Allow
+            # the first DQN choice before committing to its independent group.
+            self._lurk_plan = None
+        if (not opening_decision
+                and current_strategy in {"FAKE_A_TO_B", "FAKE_B_TO_A", "DEFAULT"}
+                and self._lurk_group_names()
+                and not self._observe_fake_group_contact()):
+            strategy = current_strategy
+        self._opening_macro_decided = True
+
+        if forced_side is not None:
+            # A pre-contact lock may still contain a B-bound old strategy.
+            strategy = {
+                "B_RUSH": "A_RUSH", "MID_TO_B": "A_SPLIT", "B_SPLIT": "A_SPLIT",
+                "FAKE_A_TO_B": "FAKE_B_TO_A", "ROTATE_A_TO_B": "ROTATE_B_TO_A",
+                "REHIT_B": "REHIT_A",
+            }.get(strategy, strategy)
+            if strategy != current_strategy:
+                self._lurk_plan = None
+            if strategy == "DEFAULT" and getattr(self.env, "target_site", None) != forced_side:
+                self.env._apply_strategy_assignments("DEFAULT", initial=False)
+                self._lurk_plan = None
+            enforce_attack_target(self.game)
 
         if strategy != self.env.current_strategy:
             old_strategy = self.env.current_strategy
@@ -1238,6 +1543,10 @@ class LearningAttackerMacroGCController:
         change it when the Macro strategy changes target site.
         """
         if self.game is None:
+            return
+
+        if forced_attack_site(self.game) is not None:
+            enforce_attack_target(self.game)
             return
 
         # Plant Commitment wins over later strategic retargeting.
@@ -1350,6 +1659,18 @@ class LearningAttackerMacroGCController:
                 and self._holder_on_plant_cell(holder, game_state)):
             self._start_plant_commit(holder, game_state)
 
+        synced_for_lurk_gate = False
+        # An independent Fake/DEFAULT lurker is the first-contact trigger.
+        # Gate before every deadline/fast-plant fallback so the carrier or
+        # main force cannot peek first, even when the clock is nearly out.
+        strategy = getattr(self.env, "current_strategy", None)
+        if strategy in {"DEFAULT", "FAKE_A_TO_B", "FAKE_B_TO_A"}:
+            self._sync_tick_once(game_state)
+            synced_for_lurk_gate = True
+            default_wait = self._fake_main_wait_result(char, game_state)
+            if default_wait is not None:
+                return default_wait
+
         if self._plant_commit_holder is not None:
             forced = self._plant_commit_result(char, holder, game_state)
             if forced is not None:
@@ -1376,7 +1697,17 @@ class LearningAttackerMacroGCController:
         if emergency is not None:
             return emergency
 
-        self._sync_tick_once(game_state)
+        if not synced_for_lurk_gate:
+            self._sync_tick_once(game_state)
+        # During a fake, the separate unit must create the first firefight.
+        # Holding here is intentionally above PLANT/ABILITY forwarding and
+        # carrier/escort routing so no lower layer can make the main force
+        # peek or enter before the sell has actually drawn contact.  The hard
+        # plant deadline remains above this gate and can still abort a fake.
+        if getattr(self.env, "current_strategy", None) != "DEFAULT":
+            fake_wait = self._fake_main_wait_result(char, game_state)
+            if fake_wait is not None:
+                return fake_wait
 
         if self._is_special_phase_result(base_result):
             return base_result

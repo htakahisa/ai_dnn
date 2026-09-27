@@ -1934,7 +1934,9 @@ class MacroEnv:
         carrier = self._carrier()
 
         # 本命sideはランダム性を残す。
-        main_side = random.choice([SIDE_A, SIDE_B])
+        main_side = getattr(self, "forced_target_site", None)
+        if main_side not in {SIDE_A, SIDE_B}:
+            main_side = random.choice([SIDE_A, SIDE_B])
         opposite_side = SIDE_B if main_side == SIDE_A else SIDE_A
 
         self.target_site = main_side

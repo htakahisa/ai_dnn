@@ -26,6 +26,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from game_core import RECON_REVEAL_SIZE, RECON_SPEED_CELLS_PER_TICK
 from learning_defender_opening_macro_gc import (
     ABILITY_ORDER,
     OBS_DIM,
@@ -33,10 +34,15 @@ from learning_defender_opening_macro_gc import (
     EXEC_WAIT,
     EXECUTE,
     EXEC_CANCEL,
+    _bfs_dist_map,
     _visible_enemies,
     _team_visible_enemies,
     LearningDefenderOpeningMacroGCController as _BaseOpeningMacro,
 )
+
+
+RECON_REVEAL_RADIUS = RECON_REVEAL_SIZE // 2
+RECON_PROJECTILE_SPEED = RECON_SPEED_CELLS_PER_TICK
 
 
 class OpeningSelectionQNet(nn.Module):
@@ -296,6 +302,48 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
         # cannot leave a selected smoke unused forever.
         return self.tick >= 20
 
+    def _recon_arrival_ready(self, game_state):
+        """Wait until an attacker can enter the recon burst as it lands.
+
+        A fixed opening delay is not enough because lineup targets can be much
+        farther from the attacker spawn than others.  Estimate the projectile
+        flight time and cast only when a living attacker is within that many
+        movement ticks of the 9x9 reveal area.  The positions here are the
+        controller's perceived positions, so this does not bypass IQ filtering.
+        """
+        plan = self.plans.get("RECON")
+        target = getattr(plan, "target", None) if plan is not None else None
+        if target is None:
+            return False
+
+        target = tuple(map(int, target))
+        origin = getattr(plan, "origin", None)
+        origin = tuple(map(int, origin)) if origin is not None else target
+        projectile_cells = max(
+            abs(target[0] - origin[0]),
+            abs(target[1] - origin[1]),
+        )
+        flight_ticks = (
+            projectile_cells + RECON_PROJECTILE_SPEED - 1
+        ) // RECON_PROJECTILE_SPEED
+        arrival_distance = RECON_REVEAL_RADIUS + flight_ticks
+
+        grid = game_state["grid"]
+        target_dist = _bfs_dist_map(grid, [target])
+        for attacker in game_state.get("chars", []):
+            if (
+                getattr(attacker, "team", None) != "A"
+                or not getattr(attacker, "is_alive", True)
+            ):
+                continue
+            r, c = map(int, attacker.pos)
+            if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]):
+                continue
+            distance = int(target_dist[r, c])
+            if 0 <= distance <= arrival_distance:
+                return True
+        return False
+
     def _select_from_q(self, q):
         q = np.asarray(q, dtype=np.float32)
         if self.runtime_greedy:
@@ -375,6 +423,8 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
         if now < ready_tick + delay:
             return EXEC_WAIT
         if ability == "SMOKE" and not self._smoke_arrival_ready(game_state):
+            return EXEC_WAIT
+        if ability == "RECON" and not self._recon_arrival_ready(game_state):
             return EXEC_WAIT
         return EXECUTE
 

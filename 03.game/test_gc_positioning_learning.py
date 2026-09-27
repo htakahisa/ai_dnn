@@ -251,14 +251,42 @@ class PositioningLearningTests(unittest.TestCase):
 
     def test_real_carry_warm_start_preserves_legacy_deployed_values(self):
         from gc_v1.train_attacker_carry_gc_real import expanded_state
-        old = carry_runtime.AttackerCarryDuelingDQN()
-        modern = carry_runtime.AttackerCarryDuelingDQN(obs_dim=31)
-        modern.load_state_dict(expanded_state({"model_state_dict": old.state_dict()}))
+        old = carry_runtime.AttackerCarryDuelingDQN(obs_dim=29, action_dim=11)
+        modern = carry_runtime.AttackerCarryDuelingDQN(obs_dim=31, action_dim=13)
+        expanded = expanded_state({"model_state_dict": old.state_dict()})
+        modern.load_state_dict(expanded)
         old_obs = torch.rand(8, 29)
         old_obs[:, 3] = 0  # Actual v2 decision timing.
-        new_obs = torch.cat((old_obs, torch.rand(8, 2)), dim=1)
+        new_obs = torch.cat((old_obs, torch.zeros(8, 2)), dim=1)
         new_obs[:, 3] = 1
-        torch.testing.assert_close(old(old_obs), modern(new_obs))
+        old_q = old(old_obs)
+        new_q = modern(new_obs)[:, :11]
+        # Dueling centering shifts all retained Q values by the same constant
+        # when new action rows are added, but must preserve their ranking.
+        torch.testing.assert_close(
+            old_q - old_q[:, :1], new_q - new_q[:, :1]
+        )
+        self.assertEqual(expanded["advantage_head.2.weight"].shape[0], 13)
+        self.assertEqual(expanded["facing_head.weight"].shape[1], 128 + 13)
+        self.assertEqual(expanded["facing_output.weight"].shape[1], 64 + 13)
+        actions = torch.arange(8) % old.action_dim
+        torch.testing.assert_close(
+            old.facing_values(old_obs, actions),
+            modern.facing_values(new_obs, actions),
+        )
+
+    def test_real_carry_warm_start_appends_orb_after_existing_ultimate(self):
+        from gc_v1.train_attacker_carry_gc_real import expanded_state
+        old = carry_runtime.AttackerCarryDuelingDQN(obs_dim=29, action_dim=12)
+        state = expanded_state({"model_state_dict": old.state_dict()})
+        torch.testing.assert_close(
+            state["advantage_head.2.weight"][:12],
+            old.advantage_head[2].weight,
+        )
+        torch.testing.assert_close(
+            state["facing_output.weight"][:, : 64 + 12],
+            old.facing_output.weight,
+        )
 
     def test_series_evaluation_restores_model_paths_on_failure(self):
         from gc_v1 import evaluate_real_series_gc as evaluation

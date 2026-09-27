@@ -23,6 +23,10 @@ class DefenderRetakeCoordinationTests(unittest.TestCase):
             LearningDefenderRetakeGCController)
         c._dist_map = None
         c._dist_map_source = None
+        c._last_charge_state = {}
+        c._last_detonate_timer = None
+        c._utility_recent_min_timer = None
+        c._lane_targets = {}
         c.verbose = False
         return c
 
@@ -74,6 +78,27 @@ class DefenderRetakeCoordinationTests(unittest.TestCase):
                  "planted_pos": [5, 5], "detonate_timer": 40,
                  "smoke_cells": {(5, 5), (5, 6)}}
         self.assertEqual(c.decide_move(me, state), ([5, 5], "DEFUSE"))
+
+    def test_facing_checkpoint_cannot_stay_far_from_retake(self):
+        c = self.controller()
+        c.facing_head_enabled = True
+        me = defender("me", (9, 9))
+        ally_a = defender("ally-a", (8, 8))
+        ally_b = defender("ally-b", (7, 9))
+        enemy = NS(name="enemy", pos=[1, 2], team="A", is_alive=True,
+                   blind_remaining=0, reveal_remaining=0, hp=100, max_hp=100)
+        state = {"grid": np.zeros((12, 12), dtype=int),
+                 "chars": [me, ally_a, ally_b, enemy], "is_planted": True,
+                 "planted_pos": [1, 1], "detonate_timer": 45,
+                 "smoke_cells": ()}
+
+        result = c.decide_move(me, state)
+
+        self.assertNotEqual(result, list(me.pos))
+        self.assertLess(
+            abs(result[0] - 1) + abs(result[1] - 1),
+            abs(me.pos[0] - 1) + abs(me.pos[1] - 1),
+        )
 
 
 if __name__ == "__main__":

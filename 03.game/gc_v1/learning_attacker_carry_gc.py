@@ -793,7 +793,7 @@ class LearningAttackerCarryGCController:
                 )
         return obs
 
-    def _build_mask(self, char, chars, on_site):
+    def _build_mask(self, char, chars, on_site, ultimate_target=None):
         grid = self.game.grid
         height, width = grid.shape
         occupied = {
@@ -801,7 +801,9 @@ class LearningAttackerCarryGCController:
             for o in chars
             if o is not char and getattr(o, "is_alive", True)
         }
-        action_dim = ACTION_DIM if self.positioning_version >= 12 else (12 if self.positioning_version >= 9 else LEGACY_ACTION_DIM)
+        expanded_actions = bool(getattr(self, "expanded_action_space", False))
+        action_dim = (ACTION_DIM if self.positioning_version >= 12 or expanded_actions
+                      else 12 if self.positioning_version >= 9 else LEGACY_ACTION_DIM)
         mask = np.ones(action_dim, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
         for move_idx, (dr, dc) in enumerate(MOVES):
@@ -835,16 +837,17 @@ class LearningAttackerCarryGCController:
             mask[[3, 5, 7, 9]] = False
             mask[1] = mask[1] and self._learned_ability_target(char, chars) is not None
 
-        if self.positioning_version >= 9:
+        if self.positioning_version >= 9 or expanded_actions:
             try:
                 from .navigation_intent_gc import navigation_intent
             except ImportError:
                 from navigation_intent_gc import navigation_intent
-            goal = navigation_intent(self.game, char)[0]
+            goal = (navigation_intent(self.game, char)[0]
+                    if self.positioning_version >= 9 else ultimate_target)
             mask[ULTIMATE_ACTION_INDEX] = build_ultimate_action(
                 grid, char, chars, destination=goal
             ) is not None
-        if self.positioning_version >= 12:
+        if self.positioning_version >= 12 or expanded_actions:
             mask[COLLECT_ORB_ACTION_INDEX] = can_collect_orb(
                 char, getattr(self.game, "available_orbs", ())
             )
@@ -1079,7 +1082,7 @@ class LearningAttackerCarryGCController:
             self._reached_waypoint,
             target_plant_pos,
         )
-        mask = self._build_mask(char, chars, on_site)
+        mask = self._build_mask(char, chars, on_site, ultimate_target=target_plant_pos)
         action_idx = self._select_action(obs, mask)
         facing = self._select_facing(obs, action_idx)
         if facing is not None and not getattr(char, "facing_forced_this_tick", False):
@@ -1088,7 +1091,9 @@ class LearningAttackerCarryGCController:
             # from taking damage remains authoritative for that tick.
             char.facing = facing
 
-        if self.positioning_version >= 9 and action_idx == ULTIMATE_ACTION_INDEX:
+        if ((self.positioning_version >= 9
+             or getattr(self, "expanded_action_space", False))
+                and action_idx == ULTIMATE_ACTION_INDEX):
             ultimate = build_ultimate_action(
                 grid, char, chars, destination=route_goal or target_plant_pos
             )

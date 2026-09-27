@@ -8,6 +8,9 @@ GC_DIR = ROOT / "gc_v1"
 if str(GC_DIR) not in sys.path:
     sys.path.insert(0, str(GC_DIR))
 
+from gc_v1.retrieve_tactics_gc import SpikeRecoveryCoordinator, _path
+from gc_v1.opponent_site_gc import attack_plant_cells, enforce_attack_target, forced_attack_site
+
 def _paths(data_dir, *names):
     base = GC_DIR / "data" / data_dir
     return tuple(base / n for n in names)
@@ -51,6 +54,7 @@ class GhostChampionsV1AttackerController(BaseController):
         self.retrieve = _load("learning_attacker_retrieve_gc",("LearningAttackerRetrieveGCController","LearningAttackerRetrieveTouyamaController"),RETRIEVE,greedy)
         self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=True)
         self.site_ability_used_by_team = False
+        self.spike_recovery = SpikeRecoveryCoordinator()
         print(f"[GC v1][A] carry={self.carry is not None} escort={self.escort is not None} retrieve={self.retrieve is not None} guard={self.guard is not None}")
 
     def set_game(self, game):
@@ -72,6 +76,10 @@ class GhostChampionsV1AttackerController(BaseController):
     def _ensure_absol_carrier(self):
         if self.game is None:
             return
+        if getattr(getattr(self, "spike_recovery", None), "plan", None) is not None:
+            # A recovered spike belongs to its actual picker, not the original
+            # opening carrier. IQ views call set_game for every character.
+            return
         attackers = [
             c for c in getattr(self.game, "chars", [])
             if getattr(c, "team", None) == "A"
@@ -84,6 +92,8 @@ class GhostChampionsV1AttackerController(BaseController):
 
     def reset_round(self):
         self.site_ability_used_by_team = False
+        if hasattr(self, "spike_recovery"):
+            self.spike_recovery.reset_round()
         self._ensure_absol_carrier()
         for c in (self.fallback,self.carry,self.escort,self.retrieve,self.guard):
             if c is not None and hasattr(c,"reset_round"):
@@ -228,7 +238,50 @@ class GhostChampionsV1AttackerController(BaseController):
             return None
         return list(min(candidates, key=lambda p: max(abs(p[0] - ally.pos[0]), abs(p[1] - ally.pos[1]))))
 
+    def _recovery_result(self, char, game_state):
+        recovery = getattr(self, "spike_recovery", None)
+        if recovery is None:
+            if game_state.get("spike_pos") is None or game_state.get("is_planted"):
+                return None
+            self.spike_recovery = recovery = SpikeRecoveryCoordinator()
+        return recovery.decide_move(char, game_state, getattr(self, "game", None))
+
     def decide_move(self, char, game_state):
+        game_state = self._attack_site_state(game_state)
+        result = self._decide_phase_move(char, game_state)
+        return self._restrict_plant_result(char, game_state, result)
+
+    def _attack_site_state(self, game_state):
+        if forced_attack_site(getattr(self, "game", None)) is not None:
+            game_state = dict(game_state)
+            enforce_attack_target(self.game, game_state)
+        return game_state
+
+    def _restrict_plant_result(self, char, game_state, result):
+        # Last boundary for legacy/model PLANT outputs on the wrong site.
+        # Ordinary lurk/fake movement and pre-contact holds remain untouched.
+        if (game_state.get("is_planted") or not getattr(char, "has_spike", False)
+                or forced_attack_site(getattr(self, "game", None)) is None
+                or not isinstance(result, tuple) or len(result) < 2
+                or result[1] != "PLANT"):
+            return result
+        cells = attack_plant_cells(self.game, game_state["grid"])
+        if tuple(char.pos) in cells:
+            return result
+        occupied = {tuple(c.pos) for c in game_state.get("chars", [])
+                    if c.name != char.name and c.is_alive}
+        routes = [route for p in cells
+                  if (route := _path(game_state["grid"], tuple(char.pos), p, occupied))]
+        route = min(routes, key=len) if routes else [tuple(char.pos)]
+        step = route[1] if len(route) > 1 else route[0]
+        if int(getattr(char, "move_steps_per_tick", 1)) > 1:
+            return list(step), "MOVE", {"move_step_limit": 1}
+        return list(step), "MOVE"
+
+    def _decide_phase_move(self, char, game_state):
+        recovery_result = self._recovery_result(char, game_state)
+        if recovery_result is not None:
+            return recovery_result
         if game_state.get("is_planted"):
             return self._use(self.guard,char,game_state)
         if getattr(char,"has_spike",False):

@@ -731,8 +731,7 @@ class LearningDefenderRetakeGCController:
         # A defuse is consecutive: turning to fight or selecting an ability
         # resets its progress. Keep the same defuser committed once started.
         if (
-            not getattr(self, "facing_head_enabled", False)
-            and is_designated
+            is_designated
             and cheb_dist <= 1
             and int(getattr(char, "defuse_timer", 0)) > 0
         ):
@@ -758,8 +757,6 @@ class LearningDefenderRetakeGCController:
         }
         smoke_covers_spike = bool(spike_area & smoke_cells)
         if (
-            not getattr(self, "facing_head_enabled", False)
-            and
             str(getattr(char, "ability_name", "")).upper() == "SMOKE"
             and int(getattr(char, "smoke_charges", 0)) > 0
             and (near_defuser or active_defuser)
@@ -786,7 +783,7 @@ class LearningDefenderRetakeGCController:
         # Attacker全滅後は戦術判断を終了し、「解除だけ」を最優先する。
         # 既に誰かが隣接していれば、その1人を即解除担当に固定。
         # まだ誰も隣接していなければ、生存Defender全員を最短でSpikeへ寄せる。
-        if not getattr(self, "facing_head_enabled", False) and not alive_enemies:
+        if not alive_enemies:
             adjacent = [
                 d for d in alive_defenders
                 if max(
@@ -819,8 +816,7 @@ class LearningDefenderRetakeGCController:
 
         # 解除デッドライン: 指定解除担当は戦闘判断よりSpikeを優先。
         if (
-            not getattr(self, "facing_head_enabled", False)
-            and is_designated
+            is_designated
             and must_commit_now
         ):
             if cheb_dist <= 1:
@@ -844,8 +840,7 @@ class LearningDefenderRetakeGCController:
         # Inside smoke, start the protected defuse without waiting for the
         # network/deadline. Adjacent enemies remain visible by game rules.
         if (
-            not getattr(self, "facing_head_enabled", False)
-            and is_designated
+            is_designated
             and cheb_dist <= 1
             and (r0, c0) in smoke_cells
             and not visible_enemies
@@ -853,10 +848,12 @@ class LearningDefenderRetakeGCController:
             return list(char.pos), "DEFUSE"
 
         # 遠距離からは全員BFS最短。サイト近辺(3マス以内)に入ってからDQNへ戻す。
-        if (
-            not getattr(self, "facing_head_enabled", False)
-            and raw_dist > ENTRY_READY_RADIUS
-        ):
+        # Reaching the retake area is a hard objective constraint, including
+        # for the newer checkpoints with a facing head.  Previously this was
+        # guarded by ``not facing_head_enabled``; those checkpoints could
+        # repeatedly choose STAY while several defenders survived far from
+        # the spike until detonation.
+        if raw_dist > ENTRY_READY_RADIUS:
             forced_next = _bfs_next_step_avoiding_occupied(
                 self._dist_map, grid, char, chars
             )

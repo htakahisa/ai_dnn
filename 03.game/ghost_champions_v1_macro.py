@@ -97,14 +97,23 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         return super()._cover_result(char, game_state, result)
 
     def decide_move(self, char, game_state):
+        game_state = self._attack_site_state(game_state)
+        result = self._decide_macro_move(char, game_state)
+        return self._restrict_plant_result(char, game_state, result)
+
+    def _decide_macro_move(self, char, game_state):
         learned_carry = getattr(getattr(self, "carry", None), "positioning_version", 0) >= 1
         if learned_carry and not game_state.get("is_planted"):
             game_state = dict(game_state)
             target = team_plant_target(getattr(self, "game", None))
             if target is not None:
                 game_state["target_plant_pos"] = target
+        # Recovery is an uninterrupted pickup -> nearest legal plant sequence.
+        # The original fake/lurk plan must not hold its new carrier after pickup.
+        recovery_result = self._recovery_result(char, game_state)
+        if recovery_result is not None:
+            return recovery_result
         if (self.macro_controller is not None
-                and learned_carry
                 and not game_state.get("is_planted")
                 and any(getattr(c, "has_spike", False) and c.is_alive
                         for c in game_state.get("chars", []))):
@@ -112,6 +121,14 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
             target = team_plant_target(getattr(self, "game", None))
             if target is not None:
                 game_state["target_plant_pos"] = target
+            # Resolve the independent first-contact plan before any Carry or
+            # Escort action. A blocked lurker still belongs to this plan; the
+            # learned policy must not turn that hold into a reunion with main.
+            lurk_result_fn = getattr(self.macro_controller, "lurk_coordination_result", None)
+            if callable(lurk_result_fn):
+                lurk_result = lurk_result_fn(char, game_state)
+                if isinstance(lurk_result, tuple) and len(lurk_result) == 2:
+                    return lurk_result
         # Existing phase router first decides Carry/Escort/Retrieve/Guard.
         base_result = super().decide_move(char, game_state)
 
@@ -120,6 +137,11 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
 
         # Guard owns post-plant.
         if bool(game_state.get("is_planted", False)):
+            # Do not replace a defuse interruption with a different duel's
+            # micro-cover route, including when using a legacy Guard model.
+            if any(timer > 0 for timer, _required in
+                   (game_state.get("defender_defuse_info") or {}).values()):
+                return base_result
             if getattr(getattr(self, "guard", None), "positioning_version", 0) >= 1:
                 return base_result
             micro_cover = self._micro_cover_result(char, game_state)
@@ -139,6 +161,55 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
         )
         if holder is None:
             return base_result
+
+        # Carry/Escort checkpoints normally return before Macro.coordinate().
+        # Keep the main force behind an independent fake/lurk player until
+        # that player actually takes contact, for both Fake and DEFAULT.
+        macro_env = getattr(self.macro_controller, "env", None)
+        strategy = getattr(macro_env, "current_strategy", None)
+        fake_selling = (strategy in {"FAKE_A_TO_B", "FAKE_B_TO_A"}
+                        and getattr(macro_env, "_fake_phase", None) == "SELL")
+        default_with_lurk = (strategy == "DEFAULT" and bool(
+            self.macro_controller._lurk_group_names()
+        )) if hasattr(self.macro_controller, "_lurk_group_names") else False
+        if fake_selling or default_with_lurk:
+            fake_wait = self.macro_controller._fake_main_wait_result(
+                char,
+                game_state,
+            )
+            if fake_wait is not None:
+                return fake_wait
+            progress_fake = getattr(
+                self.macro_controller,
+                "_fake_sell_progress_result",
+                None,
+            )
+            if callable(progress_fake):
+                fake_progress = progress_fake(char, game_state)
+                if fake_progress is not None:
+                    return fake_progress
+            progress_lurk = getattr(
+                self.macro_controller,
+                "_default_lurk_progress_result",
+                None,
+            )
+            if callable(progress_lurk):
+                lurk_progress = progress_lurk(char, game_state)
+                if lurk_progress is not None:
+                    return lurk_progress
+
+        # Entry geometry is only an approach hint. Once the carrier reaches a
+        # site-area tile, plant on the legal cell there instead of insisting
+        # on the originally selected macro route/entry waypoint.
+        site_plant_result = getattr(
+            self.macro_controller, "_carrier_site_plant_result", None
+        )
+        if callable(site_plant_result):
+            site_plant = site_plant_result(char, holder, game_state)
+            if (isinstance(site_plant, tuple) and len(site_plant) == 2
+                    and isinstance(site_plant[1], str)
+                    and site_plant[1] in {"MOVE", "PLANT"}):
+                return site_plant
 
         # Macro selects the target site; retrained Carry owns its route and
         # planting. Its training includes the complete spawn-to-site approach.
