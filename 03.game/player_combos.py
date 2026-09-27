@@ -526,6 +526,17 @@ COMBOS = [
         "renames": {},
     },
     {
+        "name": "Gorigons",
+        "players": ("ごりまる", "ごんごん", "ごんた", "くんた", "くりまる"),
+        "bonuses": {
+            "accuracy": 0.3,
+            "hs_rate": 0.2,
+            "dodge_rate": 0.22,
+            "reaction": 22,
+        },
+        "renames": {},
+    },
+    {
         "name": "1st contact",
         "players": ("Lar0k",),
         "bonuses": {
