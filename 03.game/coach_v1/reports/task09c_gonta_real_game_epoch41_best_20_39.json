@@ -1,0 +1,42 @@
+{
+  "candidate": "coach_v1\\checkpoints\\experiments\\task09c_gonta\\epoch41_best.pt",
+  "seeds": [
+    20,
+    39
+  ],
+  "encounter": "near",
+  "by_side": {
+    "attacker": {
+      "baseline": {
+        "unforced_aligned_45": 33,
+        "unforced_sighting_actions": 119,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "recon_enemy_hits": 59
+      },
+      "candidate": {
+        "unforced_aligned_45": 100,
+        "unforced_sighting_actions": 135,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "recon_enemy_hits": 84
+      }
+    },
+    "defender": {
+      "baseline": {
+        "unforced_aligned_45": 217,
+        "unforced_sighting_actions": 319,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "recon_enemy_hits": 100
+      },
+      "candidate": {
+        "unforced_aligned_45": 140,
+        "unforced_sighting_actions": 180,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "recon_enemy_hits": 100
+      }
+    }
+  }
+}

@@ -183,3 +183,23 @@ point/jitter/random positions. `python -m coach_v1.evaluate_task09b_gongon
 `PYTHONHASHSEED=0`. Add `--verify-routed` to run `GongonPolicy()` as well and
 assert that it matches the side-specific checkpoint. The Task 10 evaluator's
 `gongon_routed=True` is opt-in so earlier comparisons remain reproducible.
+
+## Task 09-C Gonta facing and RECON
+
+`python -m coach_v1.experiment_task09c_gonta` fine tunes slot 2 from the
+archived staged baseline at `checkpoints/experiments/task09c_gonta/baseline_best.pt`.
+It keeps 1400 of 2000 training examples from the 70/20/10 watch-point
+curriculum and adds 600 legal five-player observations across near, west,
+east, crossfire, and natural encounters. Current shared sightings provide
+the facing teacher and a legal RECON target; with no sighting, the rollout
+facing loss is zero and RECON use is labeled false. Enemy truth is used only
+to stage evaluation/training encounters, never for actor input or labels.
+
+The selected `epoch41_best.pt` is copied to the official Gonta `best.pt` and
+`latest.pt`; the prior official files are archived as `baseline_best.pt` and
+`baseline_latest.pt`. `GontaPolicy()` or `CharacterPolicy(2)` loads the
+selected checkpoint without a runtime rule. `validate_task09c_gonta` checks
+independent point/jitter/random staged examples. `evaluate_task09c_gonta`
+compares actual game actions, RECON activation, and enemy effect events under
+the fixed STAY/HOLD coach. Use `PYTHONHASHSEED=0` for the recorded real-game
+comparison. See `HANDOFF-09-C.md` for results and limitations.
