@@ -222,3 +222,28 @@ selected checkpoint. `validate_task09d_kunta` checks independent
 point/jitter/random examples. `evaluate_task09d_kunta` compares Kunta's actual
 facing, FLASH activation, and enemy effect events in the fixed STAY/HOLD game.
 See `HANDOFF-09-D.md` for measurements and limitations.
+
+## Task 09-E Kurimaru facing and FLASH
+
+`python -m coach_v1.experiment_task09e_kurimaru` fine tunes slot 4 from
+`checkpoints/experiments/task09e_kurimaru/baseline_best.pt`. The training set
+contains 1400 examples from the 70/20/10 watch-point curriculum and 600
+five-player examples from near, west, east, crossfire, and natural encounters.
+Only current legal shared sightings and the existing FLASH action mask provide
+rollout labels. Unsighted rollout examples accept every facing and label FLASH
+as unused. Enemy truth is used only to stage encounters and evaluate effects.
+
+The first full fine tune improved facing but reduced FLASH effects in the game.
+`python -m coach_v1.experiment_task09e_kurimaru_facing_only --distill-ability`
+instead uses the prior slot 4 actor's ability actions as labels while learning
+facing from legal reports. Its `ability_distill/epoch86_latest.pt` is the
+selected official `best.pt` and `latest.pt`; both prior official files are
+archived in `task09e_kurimaru/` as `baseline_best.pt` and
+`baseline_latest.pt`.
+
+`validate_task09e_kurimaru` compares independent point, jitter, and legal
+random positions as well as ability actions on identical observations.
+`evaluate_task09e_kurimaru` compares actual slot 4 facing, FLASH activation,
+and slot-attributed enemy effects with a fixed STAY/HOLD coach. Use
+`PYTHONHASHSEED=0` for the recorded real-game comparison. See
+`HANDOFF-09-E.md` for results and limitations.

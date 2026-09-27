@@ -1,0 +1,42 @@
+{
+  "candidate": "coach_v1\\checkpoints\\experiments\\task09e_kurimaru\\ability_distill\\epoch86_latest.pt",
+  "seeds": [
+    20,
+    39
+  ],
+  "encounter": "near",
+  "by_side": {
+    "attacker": {
+      "baseline": {
+        "unforced_aligned_45": 20,
+        "unforced_sighting_actions": 103,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 12
+      },
+      "candidate": {
+        "unforced_aligned_45": 71,
+        "unforced_sighting_actions": 96,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 15
+      }
+    },
+    "defender": {
+      "baseline": {
+        "unforced_aligned_45": 117,
+        "unforced_sighting_actions": 169,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 60
+      },
+      "candidate": {
+        "unforced_aligned_45": 134,
+        "unforced_sighting_actions": 163,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 60
+      }
+    }
+  }
+}
