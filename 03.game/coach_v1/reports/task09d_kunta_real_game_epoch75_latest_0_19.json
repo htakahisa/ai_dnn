@@ -1,0 +1,42 @@
+{
+  "candidate": "coach_v1\\checkpoints\\experiments\\task09d_kunta\\epoch75_latest.pt",
+  "seeds": [
+    0,
+    19
+  ],
+  "encounter": "near",
+  "by_side": {
+    "attacker": {
+      "baseline": {
+        "unforced_aligned_45": 67,
+        "unforced_sighting_actions": 97,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 19
+      },
+      "candidate": {
+        "unforced_aligned_45": 77,
+        "unforced_sighting_actions": 103,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 25
+      }
+    },
+    "defender": {
+      "baseline": {
+        "unforced_aligned_45": 0,
+        "unforced_sighting_actions": 31,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 0
+      },
+      "candidate": {
+        "unforced_aligned_45": 144,
+        "unforced_sighting_actions": 203,
+        "ability_requests": 20,
+        "ability_successes": 20,
+        "flash_enemy_hits": 60
+      }
+    }
+  }
+}

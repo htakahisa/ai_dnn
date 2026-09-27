@@ -112,12 +112,16 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
     )
     team_code = "A" if side is Side.ATTACKER else "D"
     effects = {"flash_enemy_hits": 0, "recon_enemy_hits": 0}
+    flash_hits_by_slot = {str(slot): 0 for slot in range(5)}
+    own_name_to_slot = {name: slot for slot, name in enumerate(roster)}
     original_record = game.analytics_tracker.record_contribution
     def record_contribution(assister, victim, tick, method):
         if (assister is not None and victim is not None
                 and assister.team == team_code and victim.team != team_code
                 and method in ("flash", "recon")):
             effects[f"{method}_enemy_hits"] += 1
+            if method == "flash" and str(assister.name) in own_name_to_slot:
+                flash_hits_by_slot[str(own_name_to_slot[str(assister.name)])] += 1
         return original_record(assister, victim, tick, method)
     game.analytics_tracker.record_contribution = record_contribution
     initial_round = game.current_round
@@ -232,6 +236,7 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
         "ability_successes": ability_successes,
         "ability_activated_by_type": ability_activated_by_type,
         **effects,
+        "flash_enemy_hits_by_slot": flash_hits_by_slot,
         "sightline_opportunities": sightline_opportunities,
         "sightline_covered": sightline_covered,
         "sighting_actions": sighting_actions,

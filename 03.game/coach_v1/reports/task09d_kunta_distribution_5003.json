@@ -1,0 +1,118 @@
+{
+  "seed": 5003,
+  "samples": 2400,
+  "checkpoints": {
+    "baseline": {
+      "attacker_point": {
+        "samples": 838,
+        "loss": 1.1090768342370918,
+        "facing_accuracy": 0.6157517899761337,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "attacker_jitter": {
+        "samples": 231,
+        "loss": 1.2275356952246133,
+        "facing_accuracy": 0.6103896103896104,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "attacker_random": {
+        "samples": 131,
+        "loss": 1.003369557948513,
+        "facing_accuracy": 0.6564885496183206,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_point": {
+        "samples": 844,
+        "loss": 1.0873141876329178,
+        "facing_accuracy": 0.6172985781990521,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_jitter": {
+        "samples": 227,
+        "loss": 1.1801749607014762,
+        "facing_accuracy": 0.5947136563876652,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_random": {
+        "samples": 129,
+        "loss": 1.1695070464250654,
+        "facing_accuracy": 0.6124031007751938,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      }
+    },
+    "candidate": {
+      "attacker_point": {
+        "samples": 838,
+        "loss": 0.6143476473687657,
+        "facing_accuracy": 0.7398568019093079,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "attacker_jitter": {
+        "samples": 231,
+        "loss": 0.7110380267813092,
+        "facing_accuracy": 0.696969696969697,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "attacker_random": {
+        "samples": 131,
+        "loss": 0.6782967889084275,
+        "facing_accuracy": 0.732824427480916,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_point": {
+        "samples": 844,
+        "loss": 0.7879855915268451,
+        "facing_accuracy": 0.6729857819905213,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_jitter": {
+        "samples": 227,
+        "loss": 0.8883981245204741,
+        "facing_accuracy": 0.5903083700440529,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "defender_random": {
+        "samples": 129,
+        "loss": 0.8837515722902477,
+        "facing_accuracy": 0.689922480620155,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      }
+    }
+  }
+}

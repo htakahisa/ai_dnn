@@ -203,3 +203,22 @@ independent point/jitter/random staged examples. `evaluate_task09c_gonta`
 compares actual game actions, RECON activation, and enemy effect events under
 the fixed STAY/HOLD coach. Use `PYTHONHASHSEED=0` for the recorded real-game
 comparison. See `HANDOFF-09-C.md` for results and limitations.
+
+## Task 09-D Kunta facing and FLASH
+
+`python -m coach_v1.experiment_task09d_kunta` fine tunes slot 3 from the
+archived staged baseline at `checkpoints/experiments/task09d_kunta/baseline_best.pt`.
+It combines 1400 examples from the 70/20/10 watch-point curriculum with 600
+legal five-player observations from near, west, east, crossfire, and natural
+encounters. Current shared sightings and the existing FLASH target mask supply
+the rollout labels. When there is no current sighting, all facings are accepted
+and FLASH use is labeled false. Enemy positions are used only to stage rounds
+and to measure game effects after acting.
+
+The selected `epoch75_latest.pt` is copied to Kunta's official `best.pt` and
+`latest.pt`. The prior official checkpoints are archived as `baseline_best.pt`
+and `baseline_latest.pt`. `KuntaPolicy()` and `CharacterPolicy(3)` load the
+selected checkpoint. `validate_task09d_kunta` checks independent
+point/jitter/random examples. `evaluate_task09d_kunta` compares Kunta's actual
+facing, FLASH activation, and enemy effect events in the fixed STAY/HOLD game.
+See `HANDOFF-09-D.md` for measurements and limitations.
