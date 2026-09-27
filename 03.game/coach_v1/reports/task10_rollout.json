@@ -1,0 +1,140 @@
+[
+  {
+    "side": "attacker",
+    "seed": 7,
+    "checkpoint_variant": "best",
+    "coach": "fixed STAY/HOLD dummy",
+    "opponent": "default",
+    "encounter": "natural",
+    "live_ticks": 80,
+    "setup_coach_calls": 0,
+    "live_coach_calls": 80,
+    "logged_actions": 400,
+    "facing_applied": 400,
+    "facing_actions": 400,
+    "forced_facing_actions": 7,
+    "unforced_applied": 393,
+    "ability_requests": 0,
+    "ability_successes": 0,
+    "ability_activated_by_type": {
+      "SMOKE": 0,
+      "FLASH": 0,
+      "RECON": 0
+    },
+    "flash_enemy_hits": 0,
+    "recon_enemy_hits": 0,
+    "sightline_opportunities": 8,
+    "sightline_covered": 8,
+    "sighting_actions": 40,
+    "sighting_aligned_45": 25,
+    "unforced_sighting_actions": 33,
+    "unforced_aligned_45": 18,
+    "per_slot": {
+      "0": {
+        "actions": 80,
+        "sighting_actions": 8,
+        "aligned_45": 1,
+        "unforced_sighting_actions": 8,
+        "unforced_aligned_45": 1
+      },
+      "1": {
+        "actions": 80,
+        "sighting_actions": 8,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 8,
+        "unforced_aligned_45": 0
+      },
+      "2": {
+        "actions": 80,
+        "sighting_actions": 8,
+        "aligned_45": 8,
+        "unforced_sighting_actions": 8,
+        "unforced_aligned_45": 8
+      },
+      "3": {
+        "actions": 80,
+        "sighting_actions": 8,
+        "aligned_45": 8,
+        "unforced_sighting_actions": 8,
+        "unforced_aligned_45": 8
+      },
+      "4": {
+        "actions": 80,
+        "sighting_actions": 8,
+        "aligned_45": 8,
+        "unforced_sighting_actions": 1,
+        "unforced_aligned_45": 1
+      }
+    },
+    "round_finished": false
+  },
+  {
+    "side": "defender",
+    "seed": 7,
+    "checkpoint_variant": "best",
+    "coach": "fixed STAY/HOLD dummy",
+    "opponent": "default",
+    "encounter": "natural",
+    "live_ticks": 80,
+    "setup_coach_calls": 20,
+    "live_coach_calls": 80,
+    "logged_actions": 500,
+    "facing_applied": 400,
+    "facing_actions": 400,
+    "forced_facing_actions": 0,
+    "unforced_applied": 400,
+    "ability_requests": 0,
+    "ability_successes": 0,
+    "ability_activated_by_type": {
+      "SMOKE": 0,
+      "FLASH": 0,
+      "RECON": 0
+    },
+    "flash_enemy_hits": 0,
+    "recon_enemy_hits": 0,
+    "sightline_opportunities": 0,
+    "sightline_covered": 0,
+    "sighting_actions": 0,
+    "sighting_aligned_45": 0,
+    "unforced_sighting_actions": 0,
+    "unforced_aligned_45": 0,
+    "per_slot": {
+      "0": {
+        "actions": 80,
+        "sighting_actions": 0,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 0,
+        "unforced_aligned_45": 0
+      },
+      "1": {
+        "actions": 80,
+        "sighting_actions": 0,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 0,
+        "unforced_aligned_45": 0
+      },
+      "2": {
+        "actions": 80,
+        "sighting_actions": 0,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 0,
+        "unforced_aligned_45": 0
+      },
+      "3": {
+        "actions": 80,
+        "sighting_actions": 0,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 0,
+        "unforced_aligned_45": 0
+      },
+      "4": {
+        "actions": 80,
+        "sighting_actions": 0,
+        "aligned_45": 0,
+        "unforced_sighting_actions": 0,
+        "unforced_aligned_45": 0
+      }
+    },
+    "round_finished": false
+  }
+]

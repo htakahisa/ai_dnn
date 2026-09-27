@@ -1,0 +1,2123 @@
+{
+  "character": "gorimaru",
+  "training": "360 staged examples plus legal 5v5 rollout observations",
+  "train_rollout_examples": 774,
+  "train_rollout_sighted": 595,
+  "validation_rollout_examples": 192,
+  "validation_rollout_sighted": 147,
+  "holdout_rollout_examples": 238,
+  "holdout_rollout_sighted": 181,
+  "checkpoints": {
+    "official_best": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\baseline_best.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 5.5419509907563524,
+          "facing_accuracy": 0.3177083333333333,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 4.376701288637908,
+          "facing_accuracy": 0.391304347826087,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 7.246486199366582,
+          "facing_accuracy": 0.2077922077922078,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 6.612938588979293,
+          "facing_accuracy": 0.22448979591836735,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2786253094673157,
+          "facing_accuracy": 0.6,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 6.107600568723278,
+          "facing_accuracy": 0.25210084033613445,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 5.000536581642669,
+          "facing_accuracy": 0.3310344827586207,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 7.772996205155567,
+          "facing_accuracy": 0.12903225806451613,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 7.291562991906266,
+          "facing_accuracy": 0.14917127071823205,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2786253094673157,
+          "facing_accuracy": 0.6,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch70_best": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch70_best.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 1.289142628510793,
+          "facing_accuracy": 0.4947916666666667,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 1.2533455734667571,
+          "facing_accuracy": 0.5478260869565217,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 1.3439799423341627,
+          "facing_accuracy": 0.4155844155844156,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 1.5788546289716447,
+          "facing_accuracy": 0.36054421768707484,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 1.7462250825737704,
+          "facing_accuracy": 0.4369747899159664,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 1.6157695901804956,
+          "facing_accuracy": 0.42758620689655175,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 1.8945107883022678,
+          "facing_accuracy": 0.45161290322580644,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 2.0625150289324767,
+          "facing_accuracy": 0.32044198895027626,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch70_latest": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch70_latest.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 1.5588141481081645,
+          "facing_accuracy": 0.4895833333333333,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 1.5157060198161914,
+          "facing_accuracy": 0.5478260869565217,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 1.5680548804146903,
+          "facing_accuracy": 0.4025974025974026,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 1.8449464768779522,
+          "facing_accuracy": 0.3673469387755102,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.323990488052368,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 2.35373020272295,
+          "facing_accuracy": 0.4495798319327731,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 1.9388602084126967,
+          "facing_accuracy": 0.43448275862068964,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 2.7762816670120403,
+          "facing_accuracy": 0.4731182795698925,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 2.7612518724157007,
+          "facing_accuracy": 0.3314917127071823,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.323990488052368,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch90_best": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch90_best.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 1.289142628510793,
+          "facing_accuracy": 0.4947916666666667,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 1.2533455734667571,
+          "facing_accuracy": 0.5478260869565217,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 1.3439799423341627,
+          "facing_accuracy": 0.4155844155844156,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 1.5788546289716447,
+          "facing_accuracy": 0.36054421768707484,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 1.7462250825737704,
+          "facing_accuracy": 0.4369747899159664,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 1.6157695901804956,
+          "facing_accuracy": 0.42758620689655175,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 1.8945107883022678,
+          "facing_accuracy": 0.45161290322580644,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 2.0625150289324767,
+          "facing_accuracy": 0.32044198895027626,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch90_latest": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch90_latest.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 1.8013436297575633,
+          "facing_accuracy": 0.4375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 1.8698939686236173,
+          "facing_accuracy": 0.46956521739130436,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 1.9034536767315555,
+          "facing_accuracy": 0.38961038961038963,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 2.2626804453986034,
+          "facing_accuracy": 0.2925170068027211,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.5886523842811584,
+          "facing_accuracy": 0.6125,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 2.774781916321827,
+          "facing_accuracy": 0.47058823529411764,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.75,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 2.213899246577559,
+          "facing_accuracy": 0.46206896551724136,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 3.3460296277076966,
+          "facing_accuracy": 0.4838709677419355,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.7,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 3.26965482063715,
+          "facing_accuracy": 0.34806629834254144,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.75,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.5886523842811584,
+          "facing_accuracy": 0.6125,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch130_best": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch130_best.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 1.289142628510793,
+          "facing_accuracy": 0.4947916666666667,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 1.2533455734667571,
+          "facing_accuracy": 0.5478260869565217,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 1.3439799423341627,
+          "facing_accuracy": 0.4155844155844156,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 1.5788546289716447,
+          "facing_accuracy": 0.36054421768707484,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.95,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 1.7462250825737704,
+          "facing_accuracy": 0.4369747899159664,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 1.6157695901804956,
+          "facing_accuracy": 0.42758620689655175,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 1.8945107883022678,
+          "facing_accuracy": 0.45161290322580644,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 2.0625150289324767,
+          "facing_accuracy": 0.32044198895027626,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.85,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.2373202800750733,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    },
+    "epoch130_latest": {
+      "path": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task09a_gorimaru_rollout\\epoch130_latest.pt",
+      "validation": {
+        "rollout_all": {
+          "samples": 192,
+          "loss": 2.471624265114466,
+          "facing_accuracy": 0.4635416666666667,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 115,
+          "loss": 2.664797508198282,
+          "facing_accuracy": 0.5304347826086957,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 77,
+          "loss": 2.4288190758073487,
+          "facing_accuracy": 0.36363636363636365,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 147,
+          "loss": 3.1793139305244495,
+          "facing_accuracy": 0.32653061224489793,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.9,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.828598928451538,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "holdout": {
+        "rollout_all": {
+          "samples": 238,
+          "loss": 3.243739537832116,
+          "facing_accuracy": 0.42857142857142855,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.75,
+          "ability_effective_rate": null
+        },
+        "rollout_attacker": {
+          "samples": 145,
+          "loss": 2.9591952255059932,
+          "facing_accuracy": 0.3931034482758621,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.7,
+          "ability_effective_rate": null
+        },
+        "rollout_defender": {
+          "samples": 93,
+          "loss": 3.578871306552682,
+          "facing_accuracy": 0.4838709677419355,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.8,
+          "ability_effective_rate": null
+        },
+        "rollout_sighted": {
+          "samples": 181,
+          "loss": 3.8545406997533136,
+          "facing_accuracy": 0.30939226519337015,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 0.75,
+          "ability_effective_rate": null
+        },
+        "staged": {
+          "samples": 80,
+          "loss": 1.828598928451538,
+          "facing_accuracy": 0.6375,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "step": 23,
+      "samples": 80,
+      "loss": 5.2322896957397464,
+      "facing_accuracy": 0.1625,
+      "ability_accuracy": 0.8,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.75,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 2,
+      "step": 46,
+      "samples": 80,
+      "loss": 3.165959882736206,
+      "facing_accuracy": 0.1,
+      "ability_accuracy": 0.8,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.875,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 3,
+      "step": 69,
+      "samples": 80,
+      "loss": 2.7813986778259276,
+      "facing_accuracy": 0.1875,
+      "ability_accuracy": 0.875,
+      "unused_ability_accuracy": 0.890625,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 4,
+      "step": 92,
+      "samples": 80,
+      "loss": 2.5897692680358886,
+      "facing_accuracy": 0.1875,
+      "ability_accuracy": 0.8125,
+      "unused_ability_accuracy": 0.984375,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 5,
+      "step": 115,
+      "samples": 80,
+      "loss": 2.559499216079712,
+      "facing_accuracy": 0.1625,
+      "ability_accuracy": 0.85,
+      "unused_ability_accuracy": 0.96875,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 6,
+      "step": 138,
+      "samples": 80,
+      "loss": 2.472401809692383,
+      "facing_accuracy": 0.175,
+      "ability_accuracy": 0.8875,
+      "unused_ability_accuracy": 0.875,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 7,
+      "step": 161,
+      "samples": 80,
+      "loss": 2.3957292556762697,
+      "facing_accuracy": 0.225,
+      "ability_accuracy": 0.9125,
+      "unused_ability_accuracy": 0.953125,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 8,
+      "step": 184,
+      "samples": 80,
+      "loss": 2.318424844741821,
+      "facing_accuracy": 0.2375,
+      "ability_accuracy": 0.9125,
+      "unused_ability_accuracy": 0.953125,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 9,
+      "step": 207,
+      "samples": 80,
+      "loss": 2.343516969680786,
+      "facing_accuracy": 0.2625,
+      "ability_accuracy": 0.8625,
+      "unused_ability_accuracy": 0.984375,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 10,
+      "step": 230,
+      "samples": 80,
+      "loss": 2.198156547546387,
+      "facing_accuracy": 0.3375,
+      "ability_accuracy": 0.95,
+      "unused_ability_accuracy": 0.9375,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 11,
+      "step": 253,
+      "samples": 80,
+      "loss": 2.1783361434936523,
+      "facing_accuracy": 0.2625,
+      "ability_accuracy": 0.9625,
+      "unused_ability_accuracy": 0.953125,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 12,
+      "step": 276,
+      "samples": 80,
+      "loss": 2.1250240564346314,
+      "facing_accuracy": 0.3375,
+      "ability_accuracy": 0.9125,
+      "unused_ability_accuracy": 0.984375,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 13,
+      "step": 299,
+      "samples": 80,
+      "loss": 1.9519442081451417,
+      "facing_accuracy": 0.35,
+      "ability_accuracy": 0.9875,
+      "unused_ability_accuracy": 0.984375,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 14,
+      "step": 322,
+      "samples": 80,
+      "loss": 1.923376441001892,
+      "facing_accuracy": 0.3875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 15,
+      "step": 345,
+      "samples": 80,
+      "loss": 1.9814253091812133,
+      "facing_accuracy": 0.35,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 16,
+      "step": 368,
+      "samples": 80,
+      "loss": 1.8712668895721436,
+      "facing_accuracy": 0.35,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 17,
+      "step": 391,
+      "samples": 80,
+      "loss": 1.7021177291870118,
+      "facing_accuracy": 0.4875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 18,
+      "step": 414,
+      "samples": 80,
+      "loss": 1.8369868278503418,
+      "facing_accuracy": 0.4375,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 19,
+      "step": 437,
+      "samples": 80,
+      "loss": 1.6566215753555298,
+      "facing_accuracy": 0.55,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 20,
+      "step": 460,
+      "samples": 80,
+      "loss": 1.5987520456314086,
+      "facing_accuracy": 0.5375,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 21,
+      "step": 483,
+      "samples": 80,
+      "loss": 1.5610307455062866,
+      "facing_accuracy": 0.5125,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 22,
+      "step": 506,
+      "samples": 80,
+      "loss": 1.69585177898407,
+      "facing_accuracy": 0.5125,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 23,
+      "step": 529,
+      "samples": 80,
+      "loss": 1.6110414743423462,
+      "facing_accuracy": 0.5125,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 24,
+      "step": 552,
+      "samples": 80,
+      "loss": 1.4824636459350586,
+      "facing_accuracy": 0.55,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 25,
+      "step": 575,
+      "samples": 80,
+      "loss": 1.4439806699752809,
+      "facing_accuracy": 0.5375,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 26,
+      "step": 598,
+      "samples": 80,
+      "loss": 1.4072817325592042,
+      "facing_accuracy": 0.525,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 27,
+      "step": 621,
+      "samples": 80,
+      "loss": 1.5228338479995727,
+      "facing_accuracy": 0.525,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 28,
+      "step": 644,
+      "samples": 80,
+      "loss": 1.477924609184265,
+      "facing_accuracy": 0.5375,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 29,
+      "step": 667,
+      "samples": 80,
+      "loss": 1.360806655883789,
+      "facing_accuracy": 0.55,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 30,
+      "step": 690,
+      "samples": 80,
+      "loss": 1.3887988090515138,
+      "facing_accuracy": 0.5125,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 31,
+      "step": 713,
+      "samples": 80,
+      "loss": 1.3909098148345946,
+      "facing_accuracy": 0.525,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 32,
+      "step": 736,
+      "samples": 80,
+      "loss": 1.3069531679153443,
+      "facing_accuracy": 0.5625,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 33,
+      "step": 759,
+      "samples": 80,
+      "loss": 1.3614419221878051,
+      "facing_accuracy": 0.5875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 34,
+      "step": 782,
+      "samples": 80,
+      "loss": 1.36971173286438,
+      "facing_accuracy": 0.55,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 35,
+      "step": 805,
+      "samples": 80,
+      "loss": 1.3379804611206054,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 36,
+      "step": 828,
+      "samples": 80,
+      "loss": 1.4576600790023804,
+      "facing_accuracy": 0.4875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 37,
+      "step": 851,
+      "samples": 80,
+      "loss": 1.3117810249328614,
+      "facing_accuracy": 0.575,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 38,
+      "step": 874,
+      "samples": 80,
+      "loss": 1.3052880883216857,
+      "facing_accuracy": 0.5625,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 39,
+      "step": 897,
+      "samples": 80,
+      "loss": 1.3213140726089478,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 40,
+      "step": 920,
+      "samples": 80,
+      "loss": 1.3430912494659424,
+      "facing_accuracy": 0.5875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 41,
+      "step": 943,
+      "samples": 80,
+      "loss": 1.3110154390335083,
+      "facing_accuracy": 0.6125,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 42,
+      "step": 966,
+      "samples": 80,
+      "loss": 1.346203327178955,
+      "facing_accuracy": 0.5875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 43,
+      "step": 989,
+      "samples": 80,
+      "loss": 1.3207218408584596,
+      "facing_accuracy": 0.575,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 44,
+      "step": 1012,
+      "samples": 80,
+      "loss": 1.3031049966812134,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 45,
+      "step": 1035,
+      "samples": 80,
+      "loss": 1.3016082048416138,
+      "facing_accuracy": 0.5875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 46,
+      "step": 1058,
+      "samples": 80,
+      "loss": 1.4170456409454346,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 47,
+      "step": 1081,
+      "samples": 80,
+      "loss": 1.318770670890808,
+      "facing_accuracy": 0.5875,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 48,
+      "step": 1104,
+      "samples": 80,
+      "loss": 1.400033450126648,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 49,
+      "step": 1127,
+      "samples": 80,
+      "loss": 1.3404955983161926,
+      "facing_accuracy": 0.575,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 50,
+      "step": 1150,
+      "samples": 80,
+      "loss": 1.2786253094673157,
+      "facing_accuracy": 0.6,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 1.0,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 51,
+      "step": 1221,
+      "samples": 272,
+      "loss": 1.5063259811962353,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8333333333333334,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 52,
+      "step": 1292,
+      "samples": 272,
+      "loss": 1.527250794803395,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8333333333333334,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 53,
+      "step": 1363,
+      "samples": 272,
+      "loss": 1.3795932811849259,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8611111111111112,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 54,
+      "step": 1434,
+      "samples": 272,
+      "loss": 1.3192131729686962,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 55,
+      "step": 1505,
+      "samples": 272,
+      "loss": 1.402154571869794,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 56,
+      "step": 1576,
+      "samples": 272,
+      "loss": 1.3042731881141663,
+      "facing_accuracy": 0.5551470588235294,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 57,
+      "step": 1647,
+      "samples": 272,
+      "loss": 1.3952853364102982,
+      "facing_accuracy": 0.5441176470588235,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 58,
+      "step": 1718,
+      "samples": 272,
+      "loss": 1.3149472404928768,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 59,
+      "step": 1789,
+      "samples": 272,
+      "loss": 1.2739007613238167,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9722222222222222,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 60,
+      "step": 1860,
+      "samples": 272,
+      "loss": 1.2809837355333216,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9722222222222222,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 61,
+      "step": 1931,
+      "samples": 272,
+      "loss": 1.3388106016551746,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9722222222222222,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 62,
+      "step": 2002,
+      "samples": 272,
+      "loss": 1.371526490239536,
+      "facing_accuracy": 0.5514705882352942,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 63,
+      "step": 2073,
+      "samples": 272,
+      "loss": 1.355521559715271,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 64,
+      "step": 2144,
+      "samples": 272,
+      "loss": 1.37231161664514,
+      "facing_accuracy": 0.5220588235294118,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 65,
+      "step": 2215,
+      "samples": 272,
+      "loss": 1.46905136459014,
+      "facing_accuracy": 0.5073529411764706,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 66,
+      "step": 2286,
+      "samples": 272,
+      "loss": 1.611116770435782,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 67,
+      "step": 2357,
+      "samples": 272,
+      "loss": 1.5066072765518637,
+      "facing_accuracy": 0.5220588235294118,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 68,
+      "step": 2428,
+      "samples": 272,
+      "loss": 1.54640031562132,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 69,
+      "step": 2499,
+      "samples": 272,
+      "loss": 1.4688544694115133,
+      "facing_accuracy": 0.5220588235294118,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 70,
+      "step": 2570,
+      "samples": 272,
+      "loss": 1.4897483657388126,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 71,
+      "step": 2641,
+      "samples": 272,
+      "loss": 1.571847109233632,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 72,
+      "step": 2712,
+      "samples": 272,
+      "loss": 1.5474502865005941,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 73,
+      "step": 2783,
+      "samples": 272,
+      "loss": 1.6543054124888252,
+      "facing_accuracy": 0.5110294117647058,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 74,
+      "step": 2854,
+      "samples": 272,
+      "loss": 1.682839639046613,
+      "facing_accuracy": 0.5073529411764706,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 75,
+      "step": 2925,
+      "samples": 272,
+      "loss": 1.521212588338291,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 76,
+      "step": 2996,
+      "samples": 272,
+      "loss": 1.6449286271544064,
+      "facing_accuracy": 0.4852941176470588,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 77,
+      "step": 3067,
+      "samples": 272,
+      "loss": 1.6551182655727161,
+      "facing_accuracy": 0.5073529411764706,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 78,
+      "step": 3138,
+      "samples": 272,
+      "loss": 1.7142109590418197,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 79,
+      "step": 3209,
+      "samples": 272,
+      "loss": 1.6522228332126843,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 80,
+      "step": 3280,
+      "samples": 272,
+      "loss": 1.6683828550226547,
+      "facing_accuracy": 0.5110294117647058,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 81,
+      "step": 3351,
+      "samples": 272,
+      "loss": 1.6005201269598568,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 82,
+      "step": 3422,
+      "samples": 272,
+      "loss": 1.7961124462239884,
+      "facing_accuracy": 0.4852941176470588,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 83,
+      "step": 3493,
+      "samples": 272,
+      "loss": 1.7802778973298914,
+      "facing_accuracy": 0.5,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 84,
+      "step": 3564,
+      "samples": 272,
+      "loss": 1.652379670563866,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 85,
+      "step": 3635,
+      "samples": 272,
+      "loss": 1.7085097011397867,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 86,
+      "step": 3706,
+      "samples": 272,
+      "loss": 1.78393856567495,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 87,
+      "step": 3777,
+      "samples": 272,
+      "loss": 1.7166490449624903,
+      "facing_accuracy": 0.5551470588235294,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 88,
+      "step": 3848,
+      "samples": 272,
+      "loss": 1.72389439274283,
+      "facing_accuracy": 0.5,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 89,
+      "step": 3919,
+      "samples": 272,
+      "loss": 1.7489638503860025,
+      "facing_accuracy": 0.5110294117647058,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 90,
+      "step": 3990,
+      "samples": 272,
+      "loss": 1.7387873810880325,
+      "facing_accuracy": 0.4889705882352941,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 91,
+      "step": 4061,
+      "samples": 272,
+      "loss": 1.724445055512821,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 92,
+      "step": 4132,
+      "samples": 272,
+      "loss": 1.7329828686573927,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 93,
+      "step": 4203,
+      "samples": 272,
+      "loss": 1.7370676152846392,
+      "facing_accuracy": 0.5477941176470589,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 94,
+      "step": 4274,
+      "samples": 272,
+      "loss": 1.8189968431697172,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 95,
+      "step": 4345,
+      "samples": 272,
+      "loss": 1.896180180942311,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 96,
+      "step": 4416,
+      "samples": 272,
+      "loss": 1.7496432065963745,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 97,
+      "step": 4487,
+      "samples": 272,
+      "loss": 1.9038152168778812,
+      "facing_accuracy": 0.5257352941176471,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 98,
+      "step": 4558,
+      "samples": 272,
+      "loss": 1.9248276528190165,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 99,
+      "step": 4629,
+      "samples": 272,
+      "loss": 1.9897419705110437,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 100,
+      "step": 4700,
+      "samples": 272,
+      "loss": 1.7163472526213701,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9722222222222222,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 101,
+      "step": 4771,
+      "samples": 272,
+      "loss": 1.849699013373431,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 102,
+      "step": 4842,
+      "samples": 272,
+      "loss": 1.895113047431497,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 103,
+      "step": 4913,
+      "samples": 272,
+      "loss": 1.9127090468126184,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 104,
+      "step": 4984,
+      "samples": 272,
+      "loss": 1.7346659898757935,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 105,
+      "step": 5055,
+      "samples": 272,
+      "loss": 2.153327959425309,
+      "facing_accuracy": 0.5,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 106,
+      "step": 5126,
+      "samples": 272,
+      "loss": 2.1378362564479603,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.8888888888888888,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 107,
+      "step": 5197,
+      "samples": 272,
+      "loss": 1.8615731877439163,
+      "facing_accuracy": 0.5220588235294118,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 108,
+      "step": 5268,
+      "samples": 272,
+      "loss": 1.9360183652709513,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 109,
+      "step": 5339,
+      "samples": 272,
+      "loss": 1.9295771753086763,
+      "facing_accuracy": 0.5073529411764706,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 110,
+      "step": 5410,
+      "samples": 272,
+      "loss": 2.004932526279898,
+      "facing_accuracy": 0.5183823529411765,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 111,
+      "step": 5481,
+      "samples": 272,
+      "loss": 1.9108333903200485,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9166666666666666,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 112,
+      "step": 5552,
+      "samples": 272,
+      "loss": 1.963249634293949,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 113,
+      "step": 5623,
+      "samples": 272,
+      "loss": 1.9997201947604908,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 114,
+      "step": 5694,
+      "samples": 272,
+      "loss": 2.0115375869414387,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 115,
+      "step": 5765,
+      "samples": 272,
+      "loss": 2.0894446162616505,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 116,
+      "step": 5836,
+      "samples": 272,
+      "loss": 1.9748291373252869,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 117,
+      "step": 5907,
+      "samples": 272,
+      "loss": 2.047910420333638,
+      "facing_accuracy": 0.5220588235294118,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 118,
+      "step": 5978,
+      "samples": 272,
+      "loss": 2.1454566296409157,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 119,
+      "step": 6049,
+      "samples": 272,
+      "loss": 2.023506956941941,
+      "facing_accuracy": 0.5441176470588235,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 120,
+      "step": 6120,
+      "samples": 272,
+      "loss": 2.078066001920139,
+      "facing_accuracy": 0.5404411764705882,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 121,
+      "step": 6191,
+      "samples": 272,
+      "loss": 2.112466293222764,
+      "facing_accuracy": 0.5330882352941176,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 122,
+      "step": 6262,
+      "samples": 272,
+      "loss": 2.119654143557829,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 123,
+      "step": 6333,
+      "samples": 272,
+      "loss": 2.1008642070433674,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 124,
+      "step": 6404,
+      "samples": 272,
+      "loss": 2.158408885492998,
+      "facing_accuracy": 0.5110294117647058,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 125,
+      "step": 6475,
+      "samples": 272,
+      "loss": 2.201043237658108,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 126,
+      "step": 6546,
+      "samples": 272,
+      "loss": 2.224523698582369,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 127,
+      "step": 6617,
+      "samples": 272,
+      "loss": 2.195302433827344,
+      "facing_accuracy": 0.5441176470588235,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 128,
+      "step": 6688,
+      "samples": 272,
+      "loss": 2.1878049268442044,
+      "facing_accuracy": 0.5294117647058824,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 129,
+      "step": 6759,
+      "samples": 272,
+      "loss": 2.2004922593341156,
+      "facing_accuracy": 0.5367647058823529,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    },
+    {
+      "epoch": 130,
+      "step": 6830,
+      "samples": 272,
+      "loss": 2.282499166095958,
+      "facing_accuracy": 0.5147058823529411,
+      "ability_accuracy": 1.0,
+      "unused_ability_accuracy": 1.0,
+      "target_accuracy": 0.9444444444444444,
+      "ability_effective_rate": null
+    }
+  ]
+}

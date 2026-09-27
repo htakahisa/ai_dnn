@@ -1,0 +1,291 @@
+{
+  "kind": "staged-supervised-curriculum",
+  "epochs": 80,
+  "characters": {
+    "gorimaru": {
+      "training_categories": {
+        "point": 245,
+        "jitter": 74,
+        "random": 41
+      },
+      "validation_categories": {
+        "point": 51,
+        "jitter": 20,
+        "random": 9
+      },
+      "validation": {
+        "samples": 80,
+        "loss": 1.2786253094673157,
+        "facing_accuracy": 0.6,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "validation_ability_use_labels": 16,
+      "validation_predicted_ability_uses": 16,
+      "validation_ability_use_recall": 1.0,
+      "validation_sightings": 38,
+      "by_category": {
+        "point": {
+          "samples": 51,
+          "loss": 1.443152299114302,
+          "facing_accuracy": 0.5686274509803921,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 20,
+          "loss": 1.1666324973106383,
+          "facing_accuracy": 0.6,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 9,
+          "loss": 0.5950833559036255,
+          "facing_accuracy": 0.7777777777777778,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "best_loss": 1.2786253094673157,
+      "training_step": 1840,
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gorimaru"
+    },
+    "gongon": {
+      "training_categories": {
+        "point": 254,
+        "jitter": 75,
+        "random": 31
+      },
+      "validation_categories": {
+        "point": 56,
+        "jitter": 17,
+        "random": 7
+      },
+      "validation": {
+        "samples": 80,
+        "loss": 0.8126763820648193,
+        "facing_accuracy": 0.725,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "validation_ability_use_labels": 0,
+      "validation_predicted_ability_uses": 0,
+      "validation_ability_use_recall": null,
+      "validation_sightings": 42,
+      "by_category": {
+        "point": {
+          "samples": 56,
+          "loss": 0.7676981432097298,
+          "facing_accuracy": 0.75,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 17,
+          "loss": 0.9493171309723574,
+          "facing_accuracy": 0.5882352941176471,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 7,
+          "loss": 0.8406606316566467,
+          "facing_accuracy": 0.8571428571428571,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": null,
+          "ability_effective_rate": null
+        }
+      },
+      "best_loss": 0.8126763820648193,
+      "training_step": 1840,
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gongon"
+    },
+    "gonta": {
+      "training_categories": {
+        "point": 248,
+        "jitter": 66,
+        "random": 46
+      },
+      "validation_categories": {
+        "point": 52,
+        "jitter": 17,
+        "random": 11
+      },
+      "validation": {
+        "samples": 80,
+        "loss": 1.2357123136520385,
+        "facing_accuracy": 0.525,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "validation_ability_use_labels": 17,
+      "validation_predicted_ability_uses": 17,
+      "validation_ability_use_recall": 1.0,
+      "validation_sightings": 46,
+      "by_category": {
+        "point": {
+          "samples": 52,
+          "loss": 1.3678719814007099,
+          "facing_accuracy": 0.5192307692307693,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 17,
+          "loss": 1.2317451571716982,
+          "facing_accuracy": 0.4117647058823529,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 11,
+          "loss": 0.6148541569709778,
+          "facing_accuracy": 0.7272727272727273,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "best_loss": 1.2357123136520385,
+      "training_step": 1840,
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gonta"
+    },
+    "kunta": {
+      "training_categories": {
+        "point": 252,
+        "jitter": 76,
+        "random": 32
+      },
+      "validation_categories": {
+        "point": 57,
+        "jitter": 18,
+        "random": 5
+      },
+      "validation": {
+        "samples": 80,
+        "loss": 0.9745298266410828,
+        "facing_accuracy": 0.6375,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "validation_ability_use_labels": 19,
+      "validation_predicted_ability_uses": 19,
+      "validation_ability_use_recall": 1.0,
+      "validation_sightings": 43,
+      "by_category": {
+        "point": {
+          "samples": 57,
+          "loss": 0.9205192954916703,
+          "facing_accuracy": 0.6666666666666666,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 18,
+          "loss": 0.9357886181937324,
+          "facing_accuracy": 0.6111111111111112,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 5,
+          "loss": 1.6985889673233032,
+          "facing_accuracy": 0.4,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "best_loss": 0.9745298266410828,
+      "training_step": 1840,
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\kunta"
+    },
+    "kurimaru": {
+      "training_categories": {
+        "point": 251,
+        "jitter": 71,
+        "random": 38
+      },
+      "validation_categories": {
+        "point": 59,
+        "jitter": 15,
+        "random": 6
+      },
+      "validation": {
+        "samples": 80,
+        "loss": 1.1695186972618103,
+        "facing_accuracy": 0.6125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "validation_ability_use_labels": 15,
+      "validation_predicted_ability_uses": 15,
+      "validation_ability_use_recall": 1.0,
+      "validation_sightings": 40,
+      "by_category": {
+        "point": {
+          "samples": 59,
+          "loss": 1.2474563869379334,
+          "facing_accuracy": 0.5932203389830508,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "jitter": {
+          "samples": 15,
+          "loss": 0.7747613787651062,
+          "facing_accuracy": 0.7333333333333333,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        },
+        "random": {
+          "samples": 6,
+          "loss": 1.3900216817855835,
+          "facing_accuracy": 0.5,
+          "ability_accuracy": 1.0,
+          "unused_ability_accuracy": 1.0,
+          "target_accuracy": 1.0,
+          "ability_effective_rate": null
+        }
+      },
+      "best_loss": 1.1695186972618103,
+      "training_step": 1840,
+      "checkpoint_directory": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\kurimaru"
+    }
+  }
+}
