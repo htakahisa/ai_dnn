@@ -5,392 +5,337 @@ from datetime import datetime, timezone
 import sys
 
 if __package__:
-    from .analysis_branching import (
-        AI_ANALYSIS_RULES,
-        AnalysisUnavailableError,
-        analyze_match_data,
-    )
+    from .analysis_branching import AI_ANALYSIS_RULES, AnalysisUnavailableError, analyze_match_data
     from .match_calculation import calculate_match_data_from_original
-else:
-    from analysis_branching import (
-        AI_ANALYSIS_RULES,
-        AnalysisUnavailableError,
-        analyze_match_data,
+    from .map_analysis_data import (
+        load_original, map_key, original_match_path, record_map_index,
+        team_features, validate_map_index,
     )
+else:
+    from analysis_branching import AI_ANALYSIS_RULES, AnalysisUnavailableError, analyze_match_data
     from match_calculation import calculate_match_data_from_original
+    from map_analysis_data import (
+        load_original, map_key, original_match_path, record_map_index,
+        team_features, validate_map_index,
+    )
 
 ANALYTICS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = ANALYTICS_DIR.parent
 SERIES_DATA_DIR = PROJECT_ROOT / "series_data"
 TRAINING_LABELS_PATH = ANALYTICS_DIR / "training_labels.jsonl"
+PENDING_LABELS_PATH = ANALYTICS_DIR / "training_labels_pending_maps.jsonl"
 COMPETITION_RESULTS_DIR = PROJECT_ROOT / "competition_results"
+FAVORITES_PATH = ANALYTICS_DIR / "favorites.json"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 try:
     from map_data import NEW_MAZE_STR
-
     MAP_GRID = [
         [int(cell) for cell in row.strip()]
-        for row in NEW_MAZE_STR.strip().splitlines()
-        if row.strip()
+        for row in NEW_MAZE_STR.strip().splitlines() if row.strip()
     ]
 except (ImportError, ValueError):
     MAP_GRID = []
 
 
-def _original_match_path(match_path):
-    if match_path.endswith("_inference.json"):
-        return match_path[: -len("_inference.json")] + "_original.json"
-    return match_path
+_original_match_path = original_match_path
 
 
-def _load_replay_frames(original_data):
-    """Load state frames from the source result when the web copy omitted them."""
+def _load_replay_frames(original_data, map_index=0):
+    """Recover only the selected map, matching the series and map identity."""
     maps = original_data.get("maps") or []
-    if maps and maps[0].get("replay_frames"):
-        return maps[0]["replay_frames"]
-
-    team1 = original_data.get("team1")
-    team2 = original_data.get("team2")
-    map_data = maps[0] if maps else {}
-    score1 = map_data.get("score1")
-    score2 = map_data.get("score2")
-    candidates = []
-    file_pattern = (
-        f"series_{str(team1).replace(' ', '_')}_vs_"
-        f"{str(team2).replace(' ', '_')}_{original_data.get('team1_score', 0)}-"
-        f"{original_data.get('team2_score', 0)}_*.json"
+    validate_map_index(map_index, len(maps))
+    selected = maps[map_index]
+    if selected.get("replay_frames"):
+        return selected["replay_frames"]
+    signature = [
+        (m.get("number"), m.get("seed"), m.get("score1"), m.get("score2"))
+        for m in maps
+    ]
+    team1, team2 = original_data["team1"], original_data["team2"]
+    pattern = (
+        f"series_{team1.replace(' ', '_')}_vs_{team2.replace(' ', '_')}_"
+        f"{original_data.get('team1_score', 0)}-{original_data.get('team2_score', 0)}_*.json"
     )
-    for path in COMPETITION_RESULTS_DIR.glob(file_pattern):
+    candidates = []
+    for path in COMPETITION_RESULTS_DIR.glob(pattern):
         try:
             with path.open("r", encoding="utf-8") as file:
                 result = json.load(file)
             if result.get("team1") != team1 or result.get("team2") != team2:
                 continue
-            for result_map in result.get("maps", []):
-                if (
-                    result_map.get("score1") == score1
-                    and result_map.get("score2") == score2
-                    and result_map.get("replay_frames")
-                ):
-                    candidates.append((path.stat().st_mtime, result_map["replay_frames"]))
-        except (OSError, ValueError, json.JSONDecodeError):
+            result_maps = result.get("maps", [])
+            if [
+                (m.get("number"), m.get("seed"), m.get("score1"), m.get("score2"))
+                for m in result_maps
+            ] != signature:
+                continue
+            frames = result_maps[map_index].get("replay_frames")
+            if frames:
+                candidates.append((path.stat().st_mtime, frames))
+        except (OSError, ValueError, KeyError, IndexError):
             continue
     return max(candidates, default=(0, []), key=lambda item: item[0])[1]
 
 
-def _load_match_for_path(match_path):
-    """ラベル保存時にも、表示時と同じ計算済み特徴量を作る。"""
-    full_match_path = (SERIES_DATA_DIR / match_path).resolve()
-    if not full_match_path.is_relative_to(SERIES_DATA_DIR.resolve()):
-        raise ValueError("Invalid match path")
-    original_path = full_match_path.with_name(
-        full_match_path.name.replace("_inference.json", "_original.json")
-    )
-    with original_path.open("r", encoding="utf-8") as file:
-        return calculate_match_data_from_original(json.load(file))
+def _label_records(path):
+    if not path.exists():
+        return []
+    records = []
+    with path.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+                record["match_path"] = original_match_path(record["match_path"])
+                records.append(record)
+            except (ValueError, KeyError, TypeError) as exc:
+                print(f"Error parsing training label {path}:{line_number}: {exc}")
+    return records
 
 
-def save_training_labels(match_path):
-    """画面で入力したチーム別ラベルを、XGBoost学習用JSONLとして保存する。"""
-    try:
-        match_data = _load_match_for_path(match_path)
-        team_names = (
-            match_data["match_metadata"]["team1"],
-            match_data["match_metadata"]["team2"],
+def _map_labels(match_path, map_index, map_count):
+    labels = {}
+    for record in _label_records(TRAINING_LABELS_PATH):
+        if record["match_path"] != match_path:
+            continue
+        if record_map_index(record, map_count) != map_index:
+            continue
+        labels.setdefault(record["team_name"], {}).update(
+            {key: value for key, value in record.get("labels", {}).items() if value is not None}
         )
-        for team_name in team_names:
-            labels = {}
-            for rule in AI_ANALYSIS_RULES:
-                field = f"{team_name}__{rule['variable']}"
-                if rule["type"] == "bool":
-                    labels[rule["variable"]] = field in request.form
-                else:
-                    value = request.form.get(
-                        field,
-                        rule.get("default", rule["enum_values"][0]),
-                    )
-                    if value not in rule["enum_values"]:
-                        return f"Invalid enum value: {rule['variable']}", 400
-                    labels[rule["variable"]] = value
+    return labels
 
-            team_data = dict(match_data)
-            team_data["map_aggregate"] = match_data["map_aggregate"][team_name]
-            team_data["player_stats"] = [
-                player
-                for player in match_data["player_stats"]
-                if player.get("team") == team_name
-            ]
-            record = {
-                "match_path": match_path,
-                "team_name": team_name,
-                "features": team_data,
-                "labels": labels,
-                "labeled_at": datetime.now(timezone.utc).isoformat(),
-            }
-            TRAINING_LABELS_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with TRAINING_LABELS_PATH.open("a", encoding="utf-8") as file:
+
+def _legacy_labels(match_path):
+    labels = {}
+    # Also support older, not-yet-migrated JSONL files.
+    for source in (PENDING_LABELS_PATH, TRAINING_LABELS_PATH):
+        for record in _label_records(source):
+            if record["match_path"] == match_path and "map_index" not in record:
+                labels.setdefault(record["team_name"], {}).update(record.get("labels", {}))
+    return labels
+
+
+def _load_match_for_path(match_path, map_index=None):
+    canonical_path, original = load_original(match_path, SERIES_DATA_DIR)
+    if map_index is None:
+        if len(original["maps"]) != 1:
+            raise ValueError("マップを選択してください")
+        map_index = 0
+    return calculate_match_data_from_original(original, map_index)
+
+
+def _map_listing(match_path, original, timestamp):
+    result = []
+    for map_index, data in enumerate(original["maps"]):
+        result.append({
+            "folder_name": Path(match_path).parent.name,
+            "path": match_path,
+            "map_index": map_index,
+            "key": map_key(match_path, map_index),
+            "metadata": {
+                "team1": original["team1"], "team2": original["team2"],
+                "team1_score": data.get("score1", 0), "team2_score": data.get("score2", 0),
+                "series_team1_score": original["team1_score"],
+                "series_team2_score": original["team2_score"],
+                "map_number": data.get("number", map_index + 1),
+                "map_count": len(original["maps"]),
+                "map_name": data.get("map_name", f"Map {map_index + 1}"),
+                "total_rounds": len(data.get("round_records", [])),
+                "timestamp": timestamp,
+            },
+        })
+    return result
+
+
+def save_training_labels(match_path, map_index=None):
+    try:
+        match_path, original = load_original(match_path, SERIES_DATA_DIR)
+        if map_index is None:
+            if len(original["maps"]) != 1:
+                return "マップを選択してください", 400
+            map_index = 0
+        validate_map_index(map_index, len(original["maps"]))
+        match_data = calculate_match_data_from_original(original, map_index)
+        existing = _map_labels(match_path, map_index, len(original["maps"]))
+        records = []
+        for team in (original["team1"], original["team2"]):
+            labels = dict(existing.get(team, {}))
+            for rule in AI_ANALYSIS_RULES:
+                variable = rule["variable"]
+                field = f"{team}__{variable}"
+                # Only fields shown/submitted by this form are updated.
+                if f"{field}__present" not in request.form:
+                    continue
+                if rule["type"] == "bool":
+                    labels[variable] = field in request.form
+                else:
+                    value = request.form.get(field)
+                    if value not in rule["enum_values"]:
+                        return f"Invalid enum value: {variable}", 400
+                    labels[variable] = value
+            records.append({
+                "schema_version": 3, "scope": "map",
+                "match_path": match_path, "map_index": map_index,
+                "map_number": match_data["match_metadata"]["map_number"],
+                "team_name": team, "features": team_features(match_data, team),
+                "labels": labels, "labeled_at": datetime.now(timezone.utc).isoformat(),
+            })
+        TRAINING_LABELS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with TRAINING_LABELS_PATH.open("a", encoding="utf-8") as file:
+            for record in records:
                 file.write(json.dumps(record, ensure_ascii=False) + "\n")
-        return redirect(url_for("match_detail", match_path=match_path))
-    except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
+        return redirect(url_for("map_detail", match_path=match_path, map_index=map_index))
+    except (OSError, KeyError, ValueError, TypeError) as exc:
         return f"ラベル保存に失敗しました: {exc}", 400
 
 
-def match_detail(match_path):
-    """個別試合の詳細ページ：original.jsonから表示用データを計算する。"""
+def match_detail(match_path, map_index=None):
     try:
-        full_match_path = (SERIES_DATA_DIR / match_path).resolve()
-        if not full_match_path.is_relative_to(SERIES_DATA_DIR.resolve()):
-            return "Invalid match path", 400
-        # まずoriginal.jsonのパスを取得（同じフォルダ内の_original.jsonを読み込む）
-        original_path = full_match_path.with_name(
-            full_match_path.name.replace("_inference.json", "_original.json")
-        )
-        if original_path.exists():
-            with open(original_path, "r", encoding="utf-8") as f:
-                original_data = json.load(f)
-            # Replay data has existed in two shapes.  Older files expose
-            # ``rounds`` directly, while competition output stores the same
-            # information in ``maps[0].round_records``.  Keep the template's
-            # replay contract stable for both formats.
-            if "rounds" not in original_data:
-                first_map = (original_data.get("maps") or [{}])[0]
-                round_records = []
-                initial_attacker = first_map.get("initial_attacker")
-                for index, record in enumerate(first_map.get("round_records", [])):
-                    round_record = dict(record)
-                    if initial_attacker:
-                        attacker_team = (
-                            initial_attacker
-                            if index % 2 == 0
-                            else (
-                                original_data["team2"]
-                                if initial_attacker == original_data["team1"]
-                                else original_data["team1"]
-                            )
-                        )
-                        round_record.setdefault("attacker_team", attacker_team)
-                        round_record.setdefault(
-                            "defender_team",
-                            original_data["team2"]
-                            if attacker_team == original_data["team1"]
-                            else original_data["team1"],
-                        )
-                    round_records.append(round_record)
-                original_data = {
-                    **original_data,
-                    "rounds": round_records,
-                    "players": first_map.get("player_stats", []),
-                }
-            # originalから計算した正しいデータを生成
-            match_data = calculate_match_data_from_original(original_data)
-        else:
-            return "Original match file not found", 404
-
-        replay_frames = (
-            _load_replay_frames(original_data) if "original_data" in locals() else []
-        )
-
-        # チーム別にAI分析結果を生成
-        team1 = match_data["match_metadata"]["team1"]
-        team2 = match_data["match_metadata"]["team2"]
-        # 各チームのデータを正しくマージして分析を実行（map_aggregate内のチーム別データを優先）
-        team1_full_data = match_data.copy()
-        team1_full_data["map_aggregate"] = match_data["map_aggregate"][team1]
-        team1_full_data["player_stats"] = [
-            p for p in match_data["player_stats"] if p["team"] == team1
+        match_path, original = load_original(match_path, SERIES_DATA_DIR)
+        timestamp = datetime.fromtimestamp(
+            (SERIES_DATA_DIR / match_path).stat().st_mtime, timezone.utc
+        ).isoformat()
+        maps = _map_listing(match_path, original, timestamp)
+        if map_index is None:
+            if len(maps) == 1:
+                return redirect(url_for("map_detail", match_path=match_path, map_index=0))
+            return render_template("series.html", series=original, maps=maps)
+        validate_map_index(map_index, len(maps))
+        selected = original["maps"][map_index]
+        match_data = calculate_match_data_from_original(original, map_index)
+        match_data["match_metadata"]["timestamp"] = timestamp
+        replay_frames = _load_replay_frames(original, map_index)
+        replay_rounds = [
+            {
+                **record,
+                "attacker_team": features["attacker_team"],
+                "defender_team": features["defender_team"],
+                "winner": features["winner_team"],
+            }
+            for record, features in zip(selected.get("round_records", []), match_data["round_features"])
         ]
-
-        team2_full_data = match_data.copy()
-        team2_full_data["map_aggregate"] = match_data["map_aggregate"][team2]
-        team2_full_data["player_stats"] = [
-            p for p in match_data["player_stats"] if p["team"] == team2
-        ]
-
-        # 不足しているラベルを確認
-        required_variables = {rule["variable"] for rule in AI_ANALYSIS_RULES}
-        team1_missing = []
-        team2_missing = []
-        label_keys = {team1: set(), team2: set()}
-        if TRAINING_LABELS_PATH.exists():
-            with TRAINING_LABELS_PATH.open("r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        record = json.loads(line)
-                        if (
-                            _original_match_path(record["match_path"])
-                            == _original_match_path(match_path)
-                            and record["team_name"] == team1
-                        ):
-                            label_keys[team1].update(record.get("labels", {}).keys())
-                        elif (
-                            _original_match_path(record["match_path"])
-                            == _original_match_path(match_path)
-                            and record["team_name"] == team2
-                        ):
-                            label_keys[team2].update(record.get("labels", {}).keys())
-                    except Exception as e:
-                        print(f"Error parsing training label: {e}")
-        team1_missing = list(required_variables - label_keys[team1])
-        team2_missing = list(required_variables - label_keys[team2])
-
+        replay_data = {
+            "team1": original["team1"], "team2": original["team2"],
+            "rounds": replay_rounds,
+            "players": selected.get("player_stats", []),
+            "team1_score": selected.get("score1", 0),
+            "team2_score": selected.get("score2", 0),
+        }
+        labels = _map_labels(match_path, map_index, len(maps))
+        required = {rule["variable"] for rule in AI_ANALYSIS_RULES}
+        missing = {
+            team: sorted(required - set(labels.get(team, {})))
+            for team in (original["team1"], original["team2"])
+        }
         match_data["ai_analysis"] = {}
         match_data["ai_analysis_errors"] = {}
-        for team_name, team_data in (
-            (team1, team1_full_data),
-            (team2, team2_full_data),
-        ):
+        for team in (original["team1"], original["team2"]):
             try:
-                match_data["ai_analysis"][team_name] = analyze_match_data(
-                    team_data, team_name
-                )
+                match_data["ai_analysis"][team] = analyze_match_data(team_features(match_data, team), team)
             except AnalysisUnavailableError as exc:
-                match_data["ai_analysis"][team_name] = []
-                match_data["ai_analysis_errors"][team_name] = str(exc)
-        # original_dataもテンプレートに渡してリプレイ再生を可能にする
+                match_data["ai_analysis"][team] = []
+                match_data["ai_analysis_errors"][team] = str(exc)
         return render_template(
-            "match.html",
-            match=match_data,
-            match_path=match_path,
-            analysis_rules=AI_ANALYSIS_RULES,
-            missing_labels={team1: team1_missing, team2: team2_missing},
-            original_data=original_data if "original_data" in locals() else None,
-            replay_frames=replay_frames,
-            map_grid=MAP_GRID,
+            "match.html", match=match_data, match_path=match_path, map_index=map_index,
+            maps=maps, analysis_rules=AI_ANALYSIS_RULES, missing_labels=missing,
+            legacy_labels=_legacy_labels(match_path) if len(maps) > 1 else {},
+            original_data=replay_data, replay_frames=replay_frames, map_grid=MAP_GRID,
         )
-    except Exception as e:
+    except FileNotFoundError:
+        return "Original match file not found", 404
+    except ValueError as exc:
+        return str(exc), 400
+    except Exception as exc:
         import traceback
-
         traceback.print_exc()
-        return f"Error loading match: {str(e)}", 500
-
-
-def get_missing_label_stats():
-    """training_labels.jsonlから不足しているラベル項目を持つ試合を抽出"""
-    required_variables = {rule["variable"] for rule in AI_ANALYSIS_RULES}
-    labels_by_match = {}
-
-    if TRAINING_LABELS_PATH.exists():
-        with TRAINING_LABELS_PATH.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    record = json.loads(line)
-                    key = (
-                        _original_match_path(record["match_path"]),
-                        record["team_name"],
-                    )
-                    labels_by_match.setdefault(key, set()).update(
-                        record.get("labels", {}).keys()
-                    )
-                except Exception as e:
-                    print(f"Error parsing training label: {e}")
-    return [
-        {
-            "match_path": match_path,
-            "team_name": team_name,
-            "missing_labels": list(required_variables - labels),
-            "labeled_at": "",
-        }
-        for (match_path, team_name), labels in labels_by_match.items()
-        if required_variables - labels
-    ]
+        return f"Error loading match: {exc}", 500
 
 
 def get_all_matches():
-    """series_data内の全試合一覧を取得"""
     matches = []
     if SERIES_DATA_DIR.exists():
-        for folder in SERIES_DATA_DIR.iterdir():
-            if folder.is_dir():
-                # original.jsonを優先的に探す
-                original_file = next(
-                    (f for f in folder.iterdir() if f.name.endswith("_original.json")),
-                    None,
-                )
-                if original_file:
-                    try:
-                        with open(original_file, "r", encoding="utf-8") as f:
-                            original_data = json.load(f)
-                        # メタデータだけ抽出して一覧用に整形
-                        matches.append(
-                            {
-                                "folder_name": folder.name,
-                                "metadata": {
-                                    "team1": original_data["team1"],
-                                    "team2": original_data["team2"],
-                                    "team1_score": original_data["team1_score"],
-                                    "team2_score": original_data["team2_score"],
-                                    "total_rounds": sum(
-                                        m["score1"] + m["score2"]
-                                        for m in original_data.get("maps", [])
-                                    ),
-                                    "timestamp": datetime.fromtimestamp(
-                                        folder.stat().st_mtime, timezone.utc
-                                    ).isoformat(),
-                                },
-                                "path": original_file.relative_to(
-                                    SERIES_DATA_DIR
-                                ).as_posix(),
-                            }
-                        )
-                    except Exception as e:
-                        print(f"Error loading {folder.name}: {e}")
-    return sorted(
-        matches, key=lambda x: x["metadata"].get("timestamp", ""), reverse=True
-    )
+        for path in SERIES_DATA_DIR.glob("*/*_original.json"):
+            try:
+                match_path, original = load_original(path.relative_to(SERIES_DATA_DIR).as_posix(), SERIES_DATA_DIR)
+                timestamp = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+                matches.extend(_map_listing(match_path, original, timestamp))
+            except (OSError, KeyError, ValueError) as exc:
+                print(f"Error loading {path}: {exc}")
+    return sorted(matches, key=lambda item: (item["metadata"]["timestamp"], -item["map_index"]), reverse=True)
 
 
-# お気に入りを保存するファイルパス
-FAVORITES_PATH = Path(__file__).parent / "favorites.json"
-
-
-def save_favorite(match_path):
-    """試合をお気に入りに登録/解除する"""
-    try:
-        favorites = []
-        if FAVORITES_PATH.exists():
-            with FAVORITES_PATH.open("r", encoding="utf-8") as f:
-                favorites = json.load(f)
-
-        # 既存のお気に入りにあるか確認
-        favorites = [_original_match_path(path) for path in favorites]
-        match_path = _original_match_path(match_path)
-        if match_path in favorites:
-            favorites.remove(match_path)
-        else:
-            favorites.append(match_path)
-
-        # 保存
-        with FAVORITES_PATH.open("w", encoding="utf-8") as f:
-            json.dump(favorites, f, ensure_ascii=False)
-
-        return redirect(url_for("index"))
-    except Exception as e:
-        return f"お気に入りの保存に失敗しました: {e}", 400
+def get_missing_label_stats(matches=None):
+    matches = get_all_matches() if matches is None else matches
+    counts = {item["path"]: item["metadata"]["map_count"] for item in matches}
+    labels = {}
+    for record in _label_records(TRAINING_LABELS_PATH):
+        path = record["match_path"]
+        if path not in counts:
+            continue
+        index = record_map_index(record, counts[path])
+        if index is None:
+            continue
+        key = (path, index, record["team_name"])
+        labels.setdefault(key, set()).update(
+            name for name, value in record.get("labels", {}).items() if value is not None
+        )
+    required = {rule["variable"] for rule in AI_ANALYSIS_RULES}
+    return [
+        {
+            "match_path": item["path"], "map_index": item["map_index"],
+            "map_number": item["metadata"]["map_number"], "team_name": team,
+            "missing_labels": sorted(required - labels.get((item["path"], item["map_index"], team), set())),
+            "labeled_at": "",
+        }
+        for item in matches
+        for team in (item["metadata"]["team1"], item["metadata"]["team2"])
+        if required - labels.get((item["path"], item["map_index"], team), set())
+    ]
 
 
 def get_favorites():
-    """お気に入りの試合パス一覧を取得"""
-    if FAVORITES_PATH.exists():
-        with FAVORITES_PATH.open("r", encoding="utf-8") as f:
-            return [_original_match_path(path) for path in json.load(f)]
-    return []
+    if not FAVORITES_PATH.exists():
+        return []
+    with FAVORITES_PATH.open("r", encoding="utf-8") as file:
+        favorites = json.load(file)
+    normalized = []
+    for value in favorites:
+        path, separator, index = value.partition("#map=")
+        normalized.append(map_key(path, int(index)) if separator else original_match_path(path))
+    return normalized
+
+
+def save_favorite(match_path, map_index=None):
+    try:
+        match_path, original = load_original(match_path, SERIES_DATA_DIR)
+        if map_index is None:
+            if len(original["maps"]) != 1:
+                return "マップを選択してください", 400
+            map_index = 0
+        validate_map_index(map_index, len(original["maps"]))
+        favorites = get_favorites()
+        # Preserve old series favorites as favorites of all its maps.
+        if match_path in favorites:
+            favorites.remove(match_path)
+            favorites.extend(map_key(match_path, index) for index in range(len(original["maps"])))
+        key = map_key(match_path, map_index)
+        if key in favorites:
+            favorites.remove(key)
+        else:
+            favorites.append(key)
+        with FAVORITES_PATH.open("w", encoding="utf-8") as file:
+            json.dump(list(dict.fromkeys(favorites)), file, ensure_ascii=False, indent=2)
+        return redirect(url_for("index"))
+    except (OSError, ValueError, KeyError) as exc:
+        return f"お気に入りの保存に失敗しました: {exc}", 400
 
 
 def index():
-    """トップページ：試合一覧表示＋不足項目のある試合を表示"""
     matches = get_all_matches()
-    missing_labels = get_missing_label_stats()
-    favorites = get_favorites()
     return render_template(
-        "index.html",
-        matches=matches,
-        missing_labels=missing_labels,
-        favorites=favorites,
+        "index.html", matches=matches,
+        missing_labels=get_missing_label_stats(matches), favorites=get_favorites(),
     )

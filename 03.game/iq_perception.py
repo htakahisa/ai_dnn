@@ -349,6 +349,8 @@ class IQPerceptionEngine:
 
     def build_perceived_state(self, *, viewer, game_state, game_view):
         state = dict(game_state)
+        # defender_defuse_info is a public cross-team tap notification, not
+        # visual information. Preserve it even when the defuser is omitted.
         state["grid"] = game_view.grid
         state["chars"] = game_view.chars
         state["spike_pos"] = game_view.spike_pos

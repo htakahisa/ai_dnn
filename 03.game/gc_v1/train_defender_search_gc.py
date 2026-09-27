@@ -78,6 +78,7 @@ try:
         facing_from_delta,
         facing_towards,
         nearest_alive_enemy_facing,
+        nearest_visible_enemy_facing,
     )
     from .ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
@@ -108,6 +109,7 @@ except ImportError:
         facing_from_delta,
         facing_towards,
         nearest_alive_enemy_facing,
+        nearest_visible_enemy_facing,
     )
     from ultimate_tactics_gc import (
         ORB_CONTEXT_DIM,
@@ -1445,6 +1447,17 @@ class SearchEnv:
                 self.spike_ground_pos = tuple(dropped_holder.pos)
                 dropped_holder.has_spike = False
 
+        smoke_cells = self._smoke_cells()
+        for unit in self.defenders + self.attackers:
+            facing = nearest_visible_enemy_facing(
+                unit,
+                self.defenders + self.attackers,
+                lambda actor, enemy: has_los(
+                    tuple(actor.pos), tuple(enemy.pos), smoke_cells
+                ),
+            )
+            if facing is not None:
+                unit.facing = facing
         self._resolve_shots()
 
         for u in self.defenders + self.attackers:
@@ -1910,13 +1923,19 @@ def select_actions_batch(policy_net, obs_dict, mask_dict, epsilon):
     return actions
 
 
-def observable_facing_target(obs, action, char=None, enemies=()):
-    """Build a facing label, preferring the nearest-enemy training target."""
+def observable_facing_target(obs, action, char=None, enemies=(), smoke_cells=None):
+    """Build a facing label, preferring an enemy with current shot LOS."""
     if char is not None:
-        direction = nearest_alive_enemy_facing(char, enemies)
+        direction = nearest_visible_enemy_facing(
+            char,
+            enemies,
+            lambda actor, enemy: has_los(
+                tuple(actor.pos), tuple(enemy.pos), smoke_cells or set()
+            ),
+        )
         if direction is not None:
             return FACING_DIRS.index(direction), 1.0
-    if obs[9] > 0.5 and (obs[22] != 0.0 or obs[23] != 0.0):
+    if char is None and obs[9] > 0.5 and (obs[22] != 0.0 or obs[23] != 0.0):
         direction = facing_from_delta(np.sign(obs[22]), np.sign(obs[23]))
         return FACING_DIRS.index(direction), 1.0
     if obs[17] > 0.5 and (obs[18] != 0.0 or obs[19] != 0.0):
@@ -2206,6 +2225,7 @@ def train(
                     action_dict[name],
                     defender_by_name.get(name),
                     env.attackers,
+                    env._smoke_cells(),
                 )
                 # Always execute the same nearest-enemy direction recorded as
                 # supervision.  select_actions_batch remains unchanged for eval.

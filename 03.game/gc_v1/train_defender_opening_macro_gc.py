@@ -25,10 +25,18 @@ import inspect
 import json
 import math
 import random
+import sys
 from collections import deque, Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+# Support both direct-file and module execution from the repository root.
+_HERE = Path(__file__).resolve().parent
+_ROOT = _HERE.parent
+for _path in (_ROOT, _HERE):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 import numpy as np
 import torch

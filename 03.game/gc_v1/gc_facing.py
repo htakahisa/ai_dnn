@@ -71,6 +71,38 @@ def nearest_alive_enemy_facing(char, characters) -> str | None:
     return facing_towards(source, tuple(nearest.pos))
 
 
+def nearest_visible_enemy_facing(char, characters, is_visible) -> str | None:
+    """Face the nearest living enemy with a clear firing line.
+
+    ``is_visible`` receives ``(char, enemy)`` and should use the same LOS rule
+    as the combat simulator.  This is used as a deterministic combat override,
+    not as a policy label for enemies behind cover.
+    """
+    source = tuple(char.pos)
+    enemies = [
+        other
+        for other in characters
+        if getattr(other, "is_alive", True)
+        and getattr(other, "team", None) != getattr(char, "team", None)
+        and tuple(other.pos) != source
+        and is_visible(char, other)
+    ]
+    if not enemies:
+        return None
+    nearest = min(
+        enemies,
+        key=lambda other: (
+            max(
+                abs(int(other.pos[0]) - int(source[0])),
+                abs(int(other.pos[1]) - int(source[1])),
+            ),
+            int(getattr(other, "hp", 100)),
+            str(getattr(other, "name", "")),
+        ),
+    )
+    return facing_towards(source, tuple(nearest.pos))
+
+
 def encode_action(base_action: int, facing: str) -> int:
     return int(base_action) * len(FACING_DIRS) + FACING_DIRS.index(facing)
 

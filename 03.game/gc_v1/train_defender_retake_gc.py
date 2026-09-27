@@ -65,6 +65,7 @@ try:
         append_facing_onehot,
         facing_towards,
         nearest_alive_enemy_facing,
+        nearest_visible_enemy_facing,
     )
     from .defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
@@ -98,6 +99,7 @@ except ImportError:
         append_facing_onehot,
         facing_towards,
         nearest_alive_enemy_facing,
+        nearest_visible_enemy_facing,
     )
     from defender_objectives_gc import (
         RETAKE_COORDINATION_DIM,
@@ -546,7 +548,7 @@ ACTION_ABILITY = 6
 ACTION_ULTIMATE = 7
 ACTION_COLLECT_ORB = 8
 FACING_HEAD_VERSION = 2
-TRAINING_REVISION = "defender_retake_utility_setup_v8"
+TRAINING_REVISION = "defender_retake_utility_setup_v9_visible_enemy_facing"
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
@@ -1053,6 +1055,16 @@ class RetakeEnv:
             smoke["remaining_ticks"] -= 1
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
+        units = self.defenders() + self.attackers()
+        for unit in units:
+            facing = nearest_visible_enemy_facing(
+                unit,
+                units,
+                lambda actor, enemy: self.check_line_of_sight(actor, enemy),
+            )
+            if facing is not None:
+                unit.facing = facing
+
         current_los_revealed = set()
         alive = [c for c in self.chars if c.is_alive]
         for i, a in enumerate(alive):
@@ -1556,7 +1568,11 @@ def observable_facing_target(env, char, action):
         current = getattr(char, "facing", "S")
         return FACING_DIRS.index(current) if current in FACING_DIRS else FACING_DIRS.index("S")
 
-    facing = nearest_alive_enemy_facing(char, env.attackers())
+    facing = nearest_visible_enemy_facing(
+        char,
+        env.attackers(),
+        lambda actor, enemy: env.check_line_of_sight(actor, enemy),
+    )
     if facing is not None:
         return facing_index(facing), 1.0
     if action in MOVE_DELTAS and MOVE_DELTAS[action] != (0, 0):
@@ -2201,8 +2217,8 @@ def verify_expanded_retake_baseline(net, checkpoint_evaluation, episodes_per_see
         f"defuse={metrics['defuse_rate']:.3f} "
         f"entry={metrics['entry_rate']:.3f} "
         f"worst_defuse={metrics['worst_defuse_rate']:.3f} "
-        f"abilities={metrics['ability_uses_per_round']:.2f} "
-        f"multi_utility={metrics['multi_utility_rate']:.3f}"
+        f"abilities={metrics.get('ability_uses_per_round', 0.0):.2f} "
+        f"multi_utility={metrics.get('multi_utility_rate', 0.0):.3f}"
     )
     comparable = (
         checkpoint_evaluation.get("episodes") == metrics["episodes"]

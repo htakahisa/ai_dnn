@@ -28,6 +28,8 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(HERE))
 
+from series_data_validation import series_export_skip_reason
+
 import learning_attacker_carry_gc as runtime
 from positioning_gc import (
     REGISTERED_PLANT_CELLS,
@@ -110,6 +112,10 @@ def calculate_side_outcomes(rounds):
 
 
 def generate_inference_input(series_data, output_dir=None):
+    skip_reason = series_export_skip_reason(series_data)
+    if skip_reason:
+        print(f"[Auto-Saved New Match] Skipped series_data export: {skip_reason}")
+        return None
     team1_name = series_data.get("team1", "TeamA")
     team2_name = series_data.get("team2", "TeamB")
     series_score = (
@@ -258,15 +264,72 @@ def generate_inference_input(series_data, output_dir=None):
 
 def expanded_state(checkpoint):
     state = dict(checkpoint["model_state_dict"])
-    weights = state["feature.0.weight"]
-    if weights.shape[1] == runtime.OBS_DIM:
+    # Both the action trunk and the facing trunk consume the observation.
+    # Expanding only ``feature.0`` leaves ``facing_feature.0`` at 29 inputs
+    # and makes the 31-input warm-start model impossible to load.
+    for key in ("feature.0.weight", "facing_feature.0.weight"):
+        weights = state.get(key)
+        if weights is None or weights.shape[1] != runtime.OBS_DIM:
+            continue
         expanded = weights.new_zeros((weights.shape[0], runtime.REAL_OBS_DIM))
         expanded[:, : runtime.OBS_DIM] = weights
         # Legacy runtime always supplied zero here (the engine clears the
         # flag before deciding). Preserve its deployed policy initially and
         # learn the corrected previous-move feature from actual transitions.
         expanded[:, 3] = 0
-        state["feature.0.weight"] = expanded
+        state[key] = expanded
+
+    action_weight_key = "advantage_head.2.weight"
+    action_bias_key = "advantage_head.2.bias"
+    old_action_dim = int(state[action_weight_key].shape[0])
+    target_action_dim = int(runtime.ACTION_DIM)
+    if old_action_dim > target_action_dim:
+        raise ValueError(
+            f"Carry checkpoint has {old_action_dim} actions; "
+            f"runtime supports {target_action_dim}"
+        )
+    if old_action_dim < target_action_dim:
+        old_weight = state[action_weight_key]
+        old_bias = state[action_bias_key]
+        new_weight = old_weight.new_zeros(
+            (target_action_dim, old_weight.shape[1])
+        )
+        new_bias = old_bias.new_full(
+            (target_action_dim,), float(old_bias.min()) - 0.5
+        )
+        new_weight[:old_action_dim] = old_weight
+        new_bias[:old_action_dim] = old_bias
+        state[action_weight_key] = new_weight
+        state[action_bias_key] = new_bias
+
+        # Facing heads condition on a one-hot encoding of the selected action.
+        # Preserve every old action column and add zero-initialized columns for
+        # the new ultimate/orb actions so legacy facing behavior is unchanged.
+        facing_heads = [("facing_head.weight", state["feature.2.bias"].numel())]
+        if "facing_output.weight" in state:
+            facing_feature_bias = state.get("facing_feature.2.bias")
+            if facing_feature_bias is None:
+                raise ValueError(
+                    "Carry checkpoint has facing_output but no facing features"
+                )
+            facing_heads.append(
+                ("facing_output.weight", facing_feature_bias.numel())
+            )
+        for key, old_hidden in facing_heads:
+            facing_weight = state.get(key)
+            if facing_weight is None:
+                continue
+            expected_old_width = int(old_hidden) + old_action_dim
+            if facing_weight.shape[1] != expected_old_width:
+                raise ValueError(
+                    f"Carry checkpoint {key} width {facing_weight.shape[1]} "
+                    f"does not match hidden/actions {expected_old_width}"
+                )
+            expanded_facing = facing_weight.new_zeros(
+                (facing_weight.shape[0], int(old_hidden) + target_action_dim)
+            )
+            expanded_facing[:, :expected_old_width] = facing_weight
+            state[key] = expanded_facing
     return state
 
 
@@ -319,6 +382,9 @@ class RealCarrySession:
             inner.macro_controller.learned_positioning = True
         self.controller.policy_net = policy
         self.controller.positioning_version = VERSION
+        # Keep the legacy observation layout while enabling appended actions
+        # in this fine-tuning session and its replay masks.
+        self.controller.expanded_action_space = True
         self.controller._select_action = self.choose_action
         self.controller.greedy = True
         self.controller.debug = False
@@ -520,7 +586,8 @@ def train(args):
     policy = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM)
     incompatible = policy.load_state_dict(expanded_state(checkpoint), strict=False)
     missing = [
-        key for key in incompatible.missing_keys if not key.startswith("facing_head.")
+        key for key in incompatible.missing_keys
+        if not key.startswith(("facing_head.", "facing_feature.", "facing_output."))
     ]
     if missing or incompatible.unexpected_keys:
         raise RuntimeError(
@@ -572,7 +639,7 @@ def train(args):
             evaluation=evaluation,
             source_model=str(args.init_model),
             source_model_sha256=source_hash,
-            success_rate=evaluation["plant_rate"],
+            success_rate=evaluation.get("plant_rate"),
             training_parameters={
                 "seed": args.seed,
                 "gamma": args.gamma,
@@ -595,16 +662,22 @@ def train(args):
                 flush=True,
             )
         if episode % args.eval_interval == 0 or episode == args.episodes:
+            # Preserve the trained weights before the validation episodes so
+            # a validation-side exception cannot discard the completed block.
+            save("dqn_attacker_carry_gc_latest.pt", episode,
+                 {"status": "validation_pending"})
             previous_consume = session.consume
             session.consume = lambda *a: None
             previous_py, previous_np = random.getstate(), np.random.get_state()
-            evaluation = [
-                session.run_episode(args.eval_seed + i, augment=False, save_replay=True)
-                for i in range(args.eval_episodes)
-            ]
-            session.consume = previous_consume
-            random.setstate(previous_py)
-            np.random.set_state(previous_np)
+            try:
+                evaluation = [
+                    session.run_episode(args.eval_seed + i, augment=False)
+                    for i in range(args.eval_episodes)
+                ]
+            finally:
+                session.consume = previous_consume
+                random.setstate(previous_py)
+                np.random.set_state(previous_np)
             metrics = {
                 "episodes": len(evaluation),
                 "seed": args.eval_seed,

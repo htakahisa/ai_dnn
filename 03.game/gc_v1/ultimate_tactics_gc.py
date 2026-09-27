@@ -6,6 +6,7 @@ import numpy as np
 ULTIMATE_CONTEXT_DIM = 4
 ORB_CONTEXT_DIM = 4
 ATTACKER_ORB_APPROACH_RADIUS = 8
+ESCAPE_MIN_TRAVEL_CELLS = 6
 
 FACING_STEPS = {
     "N": (-1, 0), "NE": (-1, 1), "E": (0, 1), "SE": (1, 1),
@@ -107,8 +108,13 @@ def _escape_target(grid, char, chars, destination):
         return None
     destination = tuple(map(int, destination))
     occupied = _occupied(chars, char)
-    candidates = []
-    for radius in range(4):
+    char_pos = tuple(map(int, char.pos))
+    # ESCAPE is a global teleport with a long wind-up.  Treat a destination
+    # near the caster as an objective anchor and select the closest meaningful
+    # landing around it instead of spending the ultimate for a one-cell warp.
+    # A far, legal requested destination is still selected exactly.
+    for radius in range(max(grid.shape)):
+        candidates = []
         for dr in range(-radius, radius + 1):
             for dc in range(-radius, radius + 1):
                 if max(abs(dr), abs(dc)) != radius:
@@ -116,10 +122,16 @@ def _escape_target(grid, char, chars, destination):
                 cell = (destination[0] + dr, destination[1] + dc)
                 if (0 <= cell[0] < grid.shape[0] and 0 <= cell[1] < grid.shape[1]
                         and grid[cell] != 1 and cell not in occupied
-                        and cell != tuple(map(int, char.pos))):
-                    candidates.append((abs(dr) + abs(dc), cell))
+                        and max(abs(cell[0] - char_pos[0]),
+                                abs(cell[1] - char_pos[1]))
+                        >= ESCAPE_MIN_TRAVEL_CELLS):
+                    travel = max(
+                        abs(cell[0] - char_pos[0]),
+                        abs(cell[1] - char_pos[1]),
+                    )
+                    candidates.append((-travel, abs(dr) + abs(dc), cell))
         if candidates:
-            return min(candidates)[1]
+            return min(candidates)[2]
     return None
 
 

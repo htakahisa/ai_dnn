@@ -24,6 +24,20 @@ else:
 app = Flask(__name__)
 app.add_url_rule("/match/<path:match_path>", view_func=match_detail)
 app.add_url_rule(
+    "/match/<path:match_path>/maps/<int:map_index>",
+    endpoint="map_detail", view_func=match_detail,
+)
+app.add_url_rule(
+    "/match/<path:match_path>/maps/<int:map_index>/label",
+    endpoint="map_save_training_labels", view_func=save_training_labels,
+    methods=["POST"],
+)
+app.add_url_rule(
+    "/match/<path:match_path>/maps/<int:map_index>/favorite",
+    endpoint="map_save_favorite", view_func=save_favorite,
+    methods=["POST"],
+)
+app.add_url_rule(
     "/match/<path:match_path>/label",
     view_func=save_training_labels,
     methods=["POST"],

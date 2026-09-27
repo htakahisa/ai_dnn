@@ -218,7 +218,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     "Alien Rex": TeamPreset(
         name="Alien Rex",
         short_name="ARX",
-        players=("alecks", "mindfreak", "Wo0t", "something", "eggseterr"),
+        players=("alecks", "mindfreak", "Wo0t", "something", "eggsterr"),
         igl="mindfreak",
         spike_holder="Wo0t",
         description="開始時、somethingがcgrsに変化",

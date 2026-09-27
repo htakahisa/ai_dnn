@@ -117,6 +117,29 @@ AI_ANALYSIS_RULES = [
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "analysis_models.pkl"
 
 
+ANALYSIS_DATA_FLAGS = {
+    "entry_coordination_needed": "macro_data_available",
+    "first_deaths_issue": "first_death_data_available",
+    "retake_coordination_needed": "round_data_available",
+    "post_plant_defense_needed": "round_data_available",
+    "plant_opportunities_needed": "round_data_available",
+    "team_role_imbalance": "micro_data_available",
+    "duel_support_needed": "duel_data_available",
+    "attack_variation_needed": "macro_data_available",
+    "time_management_needed": "round_data_available",
+    "site_focus": "macro_data_available",
+    "ability_usage": "ability_data_available",
+    "macro_precision": "macro_data_available",
+    "micro_precision": "micro_data_available",
+}
+
+
+def analysis_data_available(data, variable):
+    flag = ANALYSIS_DATA_FLAGS[variable]
+    # Older feature records do not have availability flags.
+    return bool(data.get("map_aggregate", {}).get(flag, 1))
+
+
 def _feature_vector(data, feature_names):
     """学習スクリプトと共有する、数値特徴量の取り出し口。"""
     aggregate = data.get("map_aggregate", {})
@@ -127,6 +150,19 @@ def _feature_vector(data, feature_names):
         for key, value in aggregate.items()
         if isinstance(value, (int, float)) and not isinstance(value, bool)
     }
+    for flag, keys in (
+        ("ability_use_data_available", ("ability_uses", "ability_use_rate")),
+        ("ability_assist_data_available", ("ability_assists", "ability_assist_rate")),
+        ("first_death_data_available", ("first_deaths", "first_death_rate")),
+        ("duel_data_available", ("one_v_one_participated", "one_v_one_won", "one_v_one_winrate")),
+        (
+            "preaim_data_available",
+            ("preaim_angle_sum", "preaim_angle_mean", "preaim_error_mean"),
+        ),
+    ):
+        if aggregate.get(flag) == 0:
+            for key in keys:
+                values[f"map_{key}"] = float("nan")
     values["round_count"] = len(rounds)
     values["site_a_count"] = sum(r.get("site") == "A" for r in rounds)
     values["site_b_count"] = sum(r.get("site") == "B" for r in rounds)
@@ -139,6 +175,12 @@ def _feature_vector(data, feature_names):
             p.get(key, 0) for p in players if isinstance(p.get(key, 0), (int, float))
         ]
         values[f"player_{key}_mean"] = sum(numbers) / len(numbers) if numbers else 0.0
+    for flag, name in (
+        ("first_death_data_available", "player_firstd_mean"),
+        ("duel_data_available", "player_1v1_winrate_mean"),
+    ):
+        if aggregate.get(flag) == 0:
+            values[name] = float("nan")
     return [[float(values.get(name, 0.0)) for name in feature_names]]
 
 
@@ -151,12 +193,20 @@ def _request_ai_decisions(data, team_name):
     try:
         with MODEL_PATH.open("rb") as file:
             bundle = pickle.load(file)
+        if data.get("match_metadata", {}).get("scope") == "map" and bundle.get("analysis_scope") != "map":
+            raise AnalysisUnavailableError(
+                "このモデルはシリーズ単位の教師データで学習されています。マップ単位の教師データで再学習してください。"
+            )
         feature_names = bundle["feature_names"]
         models = bundle["models"]
+        class_values = bundle.get("class_values", {})
         row = _feature_vector(data, feature_names)
         decisions = {}
         for rule in AI_ANALYSIS_RULES:
-            model = models[rule["variable"]]
+            variable = rule["variable"]
+            if variable not in models or not analysis_data_available(data, variable):
+                continue
+            model = models[variable]
             probabilities = model.predict_proba(row)[0]
             classes = list(model.classes_)
             value = classes[
@@ -166,9 +216,12 @@ def _request_ai_decisions(data, team_name):
                 decisions[rule["variable"]] = bool(value)
             else:
                 class_index = int(value)
-                if class_index < 0 or class_index >= len(rule["enum_values"]):
+                enum_values = class_values.get(variable, rule["enum_values"])
+                if class_index < 0 or class_index >= len(enum_values):
                     raise ValueError(f"enum class index out of range: {class_index}")
-                decisions[rule["variable"]] = rule["enum_values"][class_index]
+                decisions[variable] = enum_values[class_index]
+        if not decisions:
+            raise AnalysisUnavailableError("この試合のデータに対応する学習済みモデルがありません。")
         return decisions
     except (OSError, KeyError, ValueError, AttributeError, ImportError) as exc:
         raise AnalysisUnavailableError(
@@ -176,15 +229,19 @@ def _request_ai_decisions(data, team_name):
         ) from exc
 
 
-def format_ai_decisions(decisions):
+def format_ai_decisions(decisions, *, allow_partial=False):
     """AI の型付き判定のみを許可し、固定の表示文へ変換する。"""
-    if not isinstance(decisions, dict) or set(decisions) != {
-        rule["variable"] for rule in AI_ANALYSIS_RULES
-    }:
+    variables = {rule["variable"] for rule in AI_ANALYSIS_RULES}
+    if not isinstance(decisions, dict) or (
+        not set(decisions).issubset(variables)
+        or (not allow_partial and set(decisions) != variables)
+    ):
         raise AnalysisUnavailableError("AI の判定項目が一致しません。")
 
     results = []
     for rule in AI_ANALYSIS_RULES:
+        if rule["variable"] not in decisions:
+            continue
         value = decisions[rule["variable"]]
         if rule["type"] == "bool":
             if type(value) is not bool:
@@ -192,7 +249,7 @@ def format_ai_decisions(decisions):
             if not value:
                 # attack_variation_neededがfalseの場合、site_focusの値に応じてメッセージを追加
                 if rule["variable"] == "attack_variation_needed":
-                    site_focus_value = decisions["site_focus"]
+                    site_focus_value = decisions.get("site_focus")
                     if site_focus_value in ["A", "B"]:
                         site_text = f"{site_focus_value}サイト"
                         results.append(
@@ -226,4 +283,4 @@ def format_ai_decisions(decisions):
 
 def analyze_match_data(data, team_name):
     """分析データを AI に渡し、改善点を {variable, value, text} 形式で返す。"""
-    return format_ai_decisions(_request_ai_decisions(data, team_name))
+    return format_ai_decisions(_request_ai_decisions(data, team_name), allow_partial=True)
