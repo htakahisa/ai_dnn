@@ -14,6 +14,11 @@ from coach_v1.test_coach_v1_task03_team_perception import FakeCharacter, FakeGam
 from coach_v1.training.character_environment import CharacterAction
 from coach_v1.common.constants import FIXED_ROSTER
 from coach_v1.observation.coach_encoder import COACH_GRID_CHANNELS
+from coach_v1.learning_character_gorimaru import GorimaruPolicy
+from coach_v1.learning_character_gongon import GongonPolicy
+from coach_v1.learning_character_gonta import GontaPolicy
+from coach_v1.learning_character_kunta import KuntaPolicy
+from coach_v1.learning_character_kurimaru import KurimaruPolicy
 
 
 class DummyCoach:
@@ -169,6 +174,30 @@ class CoordinatorTest(unittest.TestCase):
         team = DualRoleTeamAI("coach", lambda: controller, lambda: controller)
         team.bind_game(game)
         self.assertIs(controller, team.get_attacker_controller())
+
+    def test_task09_policies_integrate_on_both_sides_without_hidden_enemy_position(self):
+        actors = {
+            0: GorimaruPolicy(),
+            1: GongonPolicy(),
+            2: GontaPolicy(),
+            3: KuntaPolicy(),
+            4: KurimaruPolicy(),
+        }
+        for side in (Side.ATTACKER, Side.DEFENDER):
+            with self.subTest(side=side):
+                results = []
+                for enemy_pos in ((4, 6), (4, 7)):
+                    game, allies, _ = make_game(side=side, enemy_pos=enemy_pos)
+                    controller, coach, _ = make_coordinator(
+                        game, side=side, coach=DummyCoach(MovementAction.STAY),
+                        actors=actors,
+                    )
+                    outputs = [controller.decide_move(ally, {}) for ally in allies]
+                    self.assertFalse(controller._snapshot.sightings)
+                    self.assertEqual(1, len(coach.calls))
+                    self.assertEqual(5, len(controller.action_log))
+                    results.append(outputs)
+                self.assertEqual(results[0], results[1])
 
 
 if __name__ == "__main__":

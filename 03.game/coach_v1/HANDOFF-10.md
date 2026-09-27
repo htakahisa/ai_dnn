@@ -68,3 +68,23 @@ HANDOFF-09 の「Task 10 接続後の実戦評価を経て判断する」に対�
 - 新規: `coach_v1/evaluate_task10_rollout.py`、`coach_v1/reports/task10_rollout.json`、`coach_v1/reports/task10_near_rollout.json`、`coach_v1/reports/task10_near_facing_best_rollout.json`
 - 実行例: `python -m coach_v1.evaluate_task10_rollout --near --ticks 20 --seed 0 --seeds 10 --output coach_v1/reports/task10_near_rollout.json`
 - 実験checkpoint比較: 上記に `--variant facing_best` を追加する。
+
+## 2026-09-27 追補: Task 09-A〜E 完了後の再確認
+
+### 結論と確認範囲
+
+- `01.MODEL_DETAIL.md`、`02.ALL_TASKS.md`、Task 09-A〜E の引き継ぎ、`coordinator.py`、知覚・観測・行動解決、各 `learning_character_*.py` と正式 checkpoint の接続を確認した。各 character policy は既存の `act(CharacterObservation) -> CharacterAction` 契約を維持しており、Task 10 の coordinator 本体に変更は不要だった。
+- ごんごんの `GongonPolicy()` は観測上の side に応じて defender 専用 checkpoint を選ぶ。ほか4人も各 slot 専用の正式 checkpoint を使う。coach は引き続き外部注入で、attacker/defender の coach checkpoint 接続は Task 11 の範囲とした。
+- core、`team_ai.py`、train/learning、正式 checkpoint は変更していない。推論側の戦術ロジックや経路探索も追加していない。
+
+### 追加検証と結果
+
+- `test_coach_v1_task10_coordinator.py` に、Task 09 の正式 character policy 5人を coordinator に接続する回帰テストを1件追加した。attacker/defender の両方で5人全員を実行し、coach 呼び出しが各 tick 1回、行動ログが5件になることを確認した。
+- 同テストでは、未視認敵の実位置を合法な2地点で入れ替えても、両陣営の5人の最終行動が同一になることを確認した。既存テストの coach/character 観測 grid・vector の不変性も維持された。生ゲームや未視認敵座標を actor に渡す変更はない。
+- `python -X utf8 -m unittest coach_v1.test_coach_v1_task10_coordinator -q`: **10件成功**。`python -X utf8 -m unittest discover -s coach_v1 -p test_coach_v1_task*.py -q`: **121件成功**。`python -X utf8 -m compileall -q coach_v1`、`git diff --check -- coach_v1` も成功。
+
+### 変更ファイル、残課題、次の推奨タスク
+
+- 変更: `coach_v1/test_coach_v1_task10_coordinator.py`（回帰テスト1件）、`coach_v1/HANDOFF-10.md`（本追補）。
+- 残課題: 学習済み coach actor と attacker/defender 別 checkpoint は未実装。固定 STAY/HOLD coach による既存の実ゲーム比較から、自然な移動条件での勝率や能力の戦術的効果は判断できない。
+- 次は **Task 11（coach 学習環境とモデル）**。凍結した5人の character checkpoint と本 coordinator を用いて side 別 coach を学習・接続し、自然な移動条件で再評価する。
