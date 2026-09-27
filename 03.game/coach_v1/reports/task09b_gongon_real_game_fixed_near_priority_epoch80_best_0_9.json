@@ -1,0 +1,37 @@
+{
+  "candidate": "coach_v1\\checkpoints\\experiments\\task09b_gongon\\fixed_near_priority\\epoch80_best.pt",
+  "seeds": [
+    0,
+    9
+  ],
+  "by_side": {
+    "attacker": {
+      "baseline": {
+        "unforced_aligned_45": 51,
+        "unforced_sighting_actions": 73,
+        "sighting_actions": 89,
+        "ability_requests": 0
+      },
+      "candidate": {
+        "unforced_aligned_45": 44,
+        "unforced_sighting_actions": 66,
+        "sighting_actions": 84,
+        "ability_requests": 0
+      }
+    },
+    "defender": {
+      "baseline": {
+        "unforced_aligned_45": 14,
+        "unforced_sighting_actions": 136,
+        "sighting_actions": 153,
+        "ability_requests": 0
+      },
+      "candidate": {
+        "unforced_aligned_45": 131,
+        "unforced_sighting_actions": 143,
+        "sighting_actions": 168,
+        "ability_requests": 0
+      }
+    }
+  }
+}

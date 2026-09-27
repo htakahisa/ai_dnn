@@ -22,6 +22,7 @@ from coach_v1.common.types import Facing, MovementAction, ObjectiveAction, Side,
 from coach_v1.common.constants import FACING_DELTAS
 from coach_v1.coordinator import TeamExecutionCoordinator
 from coach_v1.learning_character_base import CharacterPolicy
+from coach_v1.learning_character_gongon import GongonPolicy
 from coach_v1.observation.character_encoder import CoachInstruction
 
 
@@ -76,7 +77,8 @@ def _aligned_with_shared_sighting(character, sightings) -> bool:
 def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
              variant: str = "best",
              checkpoint_overrides: Mapping[int, Path] | None = None,
-             trace_slot: int | None = None) -> dict:
+             trace_slot: int | None = None,
+             gongon_routed: bool = False) -> dict:
     random.seed(seed)
     coach = StayCoach()
     if variant not in {"best", "facing_best"}:
@@ -85,6 +87,8 @@ def evaluate(side: Side, *, ticks: int, seed: int, near: bool = False,
         if checkpoint_overrides and slot in checkpoint_overrides:
             return CharacterPolicy(slot, checkpoint_overrides[slot])
         if variant == "best":
+            if slot == 1 and gongon_routed:
+                return GongonPolicy()
             return CharacterPolicy(slot)
         path = (CHECKPOINTS_DIR / "experiments" / "task09_data360"
                 / FIXED_ROSTER[slot].checkpoint_id / "facing_best.pt")

@@ -158,3 +158,28 @@ policy's exact actor-safe observation and measures the prior target in the
 same positions and facings without applying it to the match. Use
 `PYTHONHASHSEED=0` to reproduce the recorded 10-seed comparisons. These are
 potential shot lanes, not a measured change in kills or match wins.
+
+## Task 09-B Gongon facing
+
+`python -m coach_v1.experiment_task09b_gongon` compares the original Gongon
+checkpoint with balanced 5v5 supplemental examples. The follow-up
+`python -m coach_v1.experiment_task09b_gongon_near --fixed` increases attacker
+close-contact examples in the evaluation geometry. Both retain 1400 of 2000
+training examples from the 70/20/10 watch-point curriculum. Current legal
+shared sightings provide the facing teacher; unseen enemies never provide a
+label or actor input. With no current sighting, the 5v5 facing loss is zero.
+HUNT has no active use action.
+
+Gongon needs different checkpoints by side in this fixed-map version.
+`GongonPolicy()` loads `characters/gongon/best.pt` for attacker and
+`characters/gongon/defender_best.pt` for defender using the observation's
+legal side feature. An explicit `GongonPolicy(path)` continues to load one
+specified checkpoint. The original `best.pt` remains unchanged. Use
+`GongonPolicy()` when constructing the slot 1 actor for the coordinator.
+
+`python -m coach_v1.validate_task09b_gongon` evaluates independent
+point/jitter/random positions. `python -m coach_v1.evaluate_task09b_gongon
+<candidate> --start 20 --stop 40` compares actual game actions, with
+`PYTHONHASHSEED=0`. Add `--verify-routed` to run `GongonPolicy()` as well and
+assert that it matches the side-specific checkpoint. The Task 10 evaluator's
+`gongon_routed=True` is opt-in so earlier comparisons remain reproducible.
