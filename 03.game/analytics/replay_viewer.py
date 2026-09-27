@@ -262,6 +262,13 @@ class ReplayViewer(tk.Toplevel):
         # not team-perfect, but remains a useful backwards-compatible view.
         return bool(char.get("revealed", False))
 
+    def _draw_neon_bolt(self, row, col):
+        x, y, size = col*self.cell, row*self.cell, self.cell
+        points = (x+size*.60, y+size*.08, x+size*.35, y+size*.43,
+                  x+size*.65, y+size*.48, x+size*.40, y+size*.92)
+        self.canvas.create_line(*points, fill="#218dff", width=5)
+        self.canvas.create_line(*points, fill="#e5fcff", width=2)
+
     def draw_frame(self):
         self.canvas.delete("all")
         frame = self.frames[self.index] if self.frames else {}
@@ -380,6 +387,21 @@ class ReplayViewer(tk.Toplevel):
                 fill="#f8fdff",
                 outline="#bae6fd",
             )
+        for trap in frame.get("ramp_traps", []):
+            if self.view_mode.get() in ("A", "D") and trap.get("team") != self.view_mode.get():
+                continue
+            r, c = trap["pos"]
+            self.canvas.create_oval(c*self.cell+4, r*self.cell+4,
+                (c+1)*self.cell-4, (r+1)*self.cell-4,
+                fill="#1773d1", outline="#7edcff", width=2)
+        for burst in frame.get("neon_bursts", []):
+            warning = burst.get("phase") == "warning"
+            for r, c in burst.get("cells", []):
+                self.canvas.create_rectangle(c*self.cell, r*self.cell,
+                    (c+1)*self.cell, (r+1)*self.cell,
+                    fill="#b5e5ff" if warning else "#167eff", outline="#9ddcff", stipple="gray25")
+                if not warning:
+                    self._draw_neon_bolt(r, c)
         for char in frame.get("chars", []):
             if not self._char_visible(char):
                 continue
@@ -411,6 +433,8 @@ class ReplayViewer(tk.Toplevel):
                     fill="white",
                     font=("Arial", 9, "bold"),
                 )
+            if char.get("electric", 0) > 0:
+                self._draw_neon_bolt(r, c)
             self.canvas.create_text(
                 (c + 0.5) * self.cell,
                 r * self.cell - 2,

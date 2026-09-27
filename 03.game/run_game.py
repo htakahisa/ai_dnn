@@ -45,6 +45,7 @@ from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
 from fnatic_v1_rules import FnaticV1AttackerController, FnaticV1DefenderController
+from fnatic_v3.controller import FnaticV3AttackerController, FnaticV3DefenderController
 
 from game_core import (
     Character,
@@ -80,6 +81,13 @@ FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
+
+    if normalized in {"fnatic_v3", "fnatic v3"}:
+        return DualRoleTeamAI(
+            name="Fnatic v3",
+            attacker_factory=FnaticV3AttackerController,
+            defender_factory=FnaticV3DefenderController,
+        )
 
     if normalized == "fnatic_v1":
         return DualRoleTeamAI(
@@ -376,6 +384,7 @@ class VisualFPSBattle(
                     "facing": str(getattr(char, "facing", "")),
                     "has_spike": bool(getattr(char, "has_spike", False)),
                     "blind": int(getattr(char, "blind_remaining", 0)),
+                    "electric": int(getattr(char, "electric_remaining", 0)),
                     "revealed": bool(getattr(char, "los_revealed", False)),
                     "ultimate": str(getattr(char, "ultimate_name", "")),
                     "ultimate_points": int(getattr(char, "ultimate_points", 0)),
@@ -388,6 +397,7 @@ class VisualFPSBattle(
                         getattr(char, "smoke_charges", 0)
                         + getattr(char, "flash_charges", 0)
                         + getattr(char, "recon_charges", 0)
+                        + getattr(char, "ramp_charges", 0)
                     ),
                     "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
                     # Per-team visibility is stored for fog-of-war replay views.
@@ -477,6 +487,19 @@ class VisualFPSBattle(
                     }
                     for item in getattr(self, "escape_portals", [])
                 ],
+                "ramp_traps": [
+                    {"pos": pos(item["pos"]), "owner": item["owner"], "team": item["team"]}
+                    for item in getattr(self, "ramp_traps", [])
+                ],
+                "neon_bursts": [
+                    {
+                        "pos": pos(item["pos"]),
+                        "cells": [list(map(int, cell)) for cell in sorted(item["cells"])],
+                        "phase": item["phase"],
+                        "remaining_ticks": int(item["remaining_ticks"]),
+                    }
+                    for item in getattr(self, "neon_bursts", [])
+                ],
                 "tunnel_bursts": [
                     {
                         "cells": [
@@ -562,9 +585,18 @@ class VisualFPSBattle(
             self.current_attacker_team_ai,
         )
 
+        self._reset_ultimate_points()
         self._recover_bad_mental_state(self.SIDE_SWAP_MENTAL_RECOVERY)
 
         self._refresh_active_controllers()
+
+    def _reset_ultimate_points(self):
+        """Clear every player's current and carried-over ultimate points."""
+        for saved in self.match_stats.values():
+            saved["ultimate_points"] = 0
+        for char in getattr(self, "chars", []):
+            char.ultimate_points = 0
+            self._save_ultimate_points(char)
 
     def _recover_bad_mental_state(self, amount):
         """Move only positive mental pressure toward neutral by ``amount``."""
@@ -723,6 +755,9 @@ class VisualFPSBattle(
 
     def init_round(self):
         self._swap_sides_if_needed()
+        # OT starts every round from zero, even when side swaps are disabled.
+        if self.overtime:
+            self._reset_ultimate_points()
         self.round_over = False
         if self.analytics_tracker is not None:
             self.analytics_tracker.begin_round()
@@ -877,6 +912,8 @@ class VisualFPSBattle(
         self.monitor_drone_serial = 0
         self.escape_portals = []
         self.tunnel_bursts = []
+        self.ramp_traps = []
+        self.neon_bursts = []
         self.available_orbs = set(zip(*np.where(self.grid == 5)))
         self.ability_mode = None
         self.ultimate_mode = None

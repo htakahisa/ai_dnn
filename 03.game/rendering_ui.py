@@ -157,10 +157,16 @@ class RenderingUIMixin:
             return
 
         # 選択中キャラクターは、ロールに対応したアビリティ一つだけ使用できる。
-        if selected and selected.ability_name in ("SMOKE", "FLASH", "RECON"):
+        if selected and selected.ability_name in ("SMOKE", "FLASH", "RECON", "RAMP"):
             ability_name = selected.ability_name
             panel = self._ability_button_bounds(ability_name)
             if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
+                if ability_name == "RAMP":
+                    self.execute_ai_ability(selected, {"ability": "RAMP"})
+                    self.ability_mode = None
+                    self.ultimate_mode = None
+                    self.draw()
+                    return
                 same_is_armed = self.ability_mode == (ability_name, selected.team, selected.name)
                 if same_is_armed:
                     self.ability_mode = None
@@ -181,7 +187,7 @@ class RenderingUIMixin:
             panel = self._ultimate_button_bounds()
             if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
                 if selected.ultimate_points >= selected.ultimate_cost:
-                    if ultimate_name == "ESCAPE":
+                    if ultimate_name in ("ESCAPE", "NEON"):
                         armed = self.ultimate_mode == (
                             ultimate_name, selected.team, selected.name
                         )
@@ -381,7 +387,7 @@ class RenderingUIMixin:
 
     def _draw_compact_ability_icon(self, ability_name, cx, cy, available):
         """構えるUIと同じ意匠の小型アビリティアイコンを描く。"""
-        active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
+        active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff"}[ability_name]
         fill = active_color if available else "#59616c"
         outline = "#f8c471" if available else "#7f8c8d"
         if ability_name == "SMOKE":
@@ -395,9 +401,40 @@ class RenderingUIMixin:
         elif ability_name == "RECON":
             self.canvas.create_polygon(cx-8, cy+3, cx+5, cy-5, cx+8, cy-2, cx-4, cy+6,
                                        fill=fill, outline=outline)
+        elif ability_name == "RAMP":
+            self.canvas.create_oval(cx-7, cy-7, cx+7, cy+7, fill=fill, outline="#bdefff", width=2)
+            self.canvas.create_line(cx-2, cy-5, cx+2, cy-1, cx-2, cy+1, cx+2, cy+5,
+                                    fill="#ecfcff", width=2)
         else:  # HUNT
             self.canvas.create_text(cx, cy, text="H", fill=fill, font=("Arial", 10, "bold"))
 
+
+    def _draw_neon_bolt(self, x, y):
+        size = self.cell_size
+        points = (x+size*.60, y+size*.08, x+size*.35, y+size*.43,
+                  x+size*.65, y+size*.48, x+size*.40, y+size*.92)
+        self.canvas.create_line(*points, fill="#218dff", width=5)
+        self.canvas.create_line(*points, fill="#e5fcff", width=2)
+
+    def _draw_engineer_effects(self):
+        viewer_team = self.get_viewer_team()
+        live_owners = {char.name for char in self.chars if char.is_alive}
+        for trap in getattr(self, "ramp_traps", []):
+            if trap["owner"] not in live_owners or (viewer_team is not None and trap["team"] != viewer_team):
+                continue
+            row, col = trap["pos"]
+            x, y = self._map_x(col*self.cell_size), row*self.cell_size
+            self.canvas.create_oval(x+4, y+4, x+self.cell_size-4, y+self.cell_size-4,
+                                    fill="#1773d1", outline="#7edcff", width=2)
+        for burst in getattr(self, "neon_bursts", []):
+            warning = burst["phase"] == "warning"
+            for row, col in burst["cells"]:
+                x, y = self._map_x(col*self.cell_size), row*self.cell_size
+                self.canvas.create_rectangle(x, y, x+self.cell_size, y+self.cell_size,
+                    fill="#b5e5ff" if warning else "#167eff",
+                    outline="#9ddcff" if warning else "#5edaff", stipple="gray25")
+                if not warning:
+                    self._draw_neon_bolt(x, y)
 
     def _draw_team_panel(self, team, x0, title, accent):
         """左右パネルへHP・K/D・アビリティ・現在の戦闘ステータスを表示する。"""
@@ -512,11 +549,12 @@ class RenderingUIMixin:
                 "SMOKE": char.smoke_charges,
                 "FLASH": char.flash_charges,
                 "RECON": char.recon_charges,
+                "RAMP": getattr(char, "ramp_charges", 0),
                 "HUNT": 1,
             }[ability]
             available = char.is_alive and (charges > 0 or ability == "HUNT")
             self._draw_compact_ability_icon(ability, x0 + 27, y + 91, available)
-            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP"}[ability]
+            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP", "RAMP": "ランプ"}[ability]
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
             self.canvas.create_text(
                 x0 + 43, y + 91,
@@ -857,6 +895,8 @@ class RenderingUIMixin:
                 fill="#f8fdff", outline="#b8efff", width=2,
             )
 
+        self._draw_engineer_effects()
+
         for drone in getattr(self, "monitor_drones", []):
             if not drone.is_alive:
                 continue
@@ -908,6 +948,8 @@ class RenderingUIMixin:
                 self.canvas.create_oval(x1+2, row*self.cell_size+2, x1+self.cell_size-2, (row+1)*self.cell_size-2,
                                         outline="#fff2a8", width=2, dash=(2, 2))
                 self.canvas.create_text(cx, cy, text="✦", fill="#fff7c2", font=("Arial", 9, "bold"))
+            if getattr(char, "electric_remaining", 0) > 0:
+                self._draw_neon_bolt(x1, row*self.cell_size)
             if self._is_revealed(char):
                 self.canvas.create_rectangle(x1+3, row*self.cell_size+3, x1+self.cell_size-3, (row+1)*self.cell_size-3,
                                              outline="#7de3f2", width=2, dash=(4, 2))
@@ -965,11 +1007,12 @@ class RenderingUIMixin:
             if bounds and selected:
                 ability_name = selected.ability_name
                 x1, y1, x2, y2 = bounds
-                accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c"}[ability_name]
+                accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff"}[ability_name]
                 charges = {
                     "SMOKE": selected.smoke_charges,
                     "FLASH": selected.flash_charges,
                     "RECON": selected.recon_charges,
+                    "RAMP": getattr(selected, "ramp_charges", 0),
                     "HUNT": 1,
                 }[ability_name]
                 armed = self.ability_mode == (ability_name, selected.team, selected.name)
@@ -982,6 +1025,9 @@ class RenderingUIMixin:
                 if ability_name == "HUNT":
                     state = "HUNT / ハンター（常時発動）"
                     help_text = "キル時 HP +50"
+                elif ability_name == "RAMP":
+                    state = f"ランプ  残り {charges}"
+                    help_text = "クリックして自分のマスに設置"
                 else:
                     label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
                     state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
@@ -1008,13 +1054,13 @@ class RenderingUIMixin:
                     self.canvas.create_text(
                         (ux1 + ux2) / 2, uy1 + 22,
                         text=(
-                            f"{ultimate_name}  "
+                            f"{'ネオン' if ultimate_name == 'NEON' else ultimate_name}  "
                             f"{selected.ultimate_points}/{selected.ultimate_cost}"
                         ),
                         fill=ult_accent, font=("Arial", 10, "bold"),
                     )
                     ult_help = (
-                        "行き先を選択（再クリックで解除）"
+                        ("中心マスを選択（再クリックで解除）" if ultimate_name == "NEON" else "行き先を選択（再クリックで解除）")
                         if ultimate_armed
                         else ("クリックして発動" if ready else "ポイント不足")
                     )

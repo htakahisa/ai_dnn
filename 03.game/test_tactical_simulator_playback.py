@@ -23,7 +23,7 @@ class TacticalSimulatorPlaybackTest(unittest.TestCase):
             self.assertEqual(profile["ultimate_cost"], char.ultimate_cost, name)
             self.assertEqual(
                 profile["max_charges"],
-                char.smoke_charges + char.flash_charges + char.recon_charges,
+                char.smoke_charges + char.flash_charges + char.recon_charges + char.ramp_charges,
                 name,
             )
 
@@ -32,7 +32,7 @@ class TacticalSimulatorPlaybackTest(unittest.TestCase):
         scenario.planted_pos = (7, 4)
         scenario.attackers = [{
             "name": "Xdll", "pos": (7, 3), "facing": "E",
-            "ability_charges": 1, "ultimate_points": 8,
+            "ability_charges": 1, "ultimate_points": 6,
         }]
         scenario.defenders = [{
             "name": "Absol", "pos": (9, 3), "facing": "N",
@@ -46,7 +46,7 @@ class TacticalSimulatorPlaybackTest(unittest.TestCase):
         attacker, defender = simulator.chars
         self.assertEqual(get_character_resource_profile("Xdll")["max_charges"], 2)
         self.assertEqual((attacker.ability_name, attacker.recon_charges), ("RECON", 1))
-        self.assertEqual((attacker.ultimate_name, attacker.ultimate_points), ("MONITOR", 8))
+        self.assertEqual((attacker.ultimate_name, attacker.ultimate_points), ("MONITOR", 6))
         self.assertEqual((defender.flash_charges, defender.ultimate_points), (0, 5))
         self.assertTrue(simulator.execute_ai_ability(
             attacker, {"ability": "RECON", "target": (8, 3)}

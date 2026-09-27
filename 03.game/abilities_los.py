@@ -21,6 +21,12 @@ from game_core import (
     TUNNEL_ACTIVE_TICKS,
     TUNNEL_HALF_WIDTH,
     TUNNEL_WARNING_TICKS,
+    RAMP_CHAIN_DISTANCE_CELLS,
+    RAMP_ELECTRIC_TICKS,
+    NEON_RADIUS_CELLS,
+    NEON_WARNING_TICKS,
+    NEON_ACTIVE_TICKS,
+    NEON_DAMAGE_PER_TICK,
 )
 
 ULTIMATE_FACING_STEPS = {
@@ -72,8 +78,8 @@ class AbilityLosMixin:
     def execute_ai_ultimate(self, owner, ultimate_action):
         """Execute an ultimate requested by a controller.
 
-        Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL", ...}``.
-        ESCAPE additionally requires a destination in ``target``.
+        Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL|NEON", ...}``.
+        ESCAPE and NEON additionally require a cell in ``target``.
         """
         if not owner.is_alive or not isinstance(ultimate_action, dict):
             return False
@@ -83,6 +89,33 @@ class AbilityLosMixin:
             return False
         if owner.ultimate_points < owner.ultimate_cost:
             return False
+        if ultimate_name in ("RAID", "ESCAPE") and self._ramp_blocks_movement(owner):
+            return False
+
+        if ultimate_name == "NEON":
+            target = ultimate_action.get("target")
+            if not isinstance(target, (list, tuple)) or len(target) != 2:
+                return False
+            row, col = int(target[0]), int(target[1])
+            if not (0 <= row < self.height and 0 <= col < self.width):
+                return False
+            if self.grid[row, col] == 1:
+                return False
+            cells = {
+                (rr, cc)
+                for rr in range(max(0, row - NEON_RADIUS_CELLS), min(self.height, row + NEON_RADIUS_CELLS + 1))
+                for cc in range(max(0, col - NEON_RADIUS_CELLS), min(self.width, col + NEON_RADIUS_CELLS + 1))
+                if self.grid[rr, cc] != 1
+            }
+            if not hasattr(self, "neon_bursts"):
+                self.neon_bursts = []
+            self.neon_bursts.append({
+                "pos": (row, col), "cells": cells, "phase": "warning",
+                "remaining_ticks": NEON_WARNING_TICKS,
+                "owner": owner.name, "team": owner.team,
+            })
+            self._spend_ultimate(owner)
+            return True
 
         if ultimate_name == "RAID":
             step = ULTIMATE_FACING_STEPS.get(owner.facing)
@@ -90,6 +123,7 @@ class AbilityLosMixin:
                 return False
             destination = tuple(owner.pos)
             old_pos = tuple(owner.pos)
+            path = []
             for distance in range(1, RAID_DISTANCE_CELLS + 1):
                 candidate = (
                     old_pos[0] + step[0] * distance,
@@ -104,12 +138,18 @@ class AbilityLosMixin:
                 if self._is_position_occupied(owner, candidate, old_pos):
                     break
                 destination = candidate
+                path.append(candidate)
             if destination == old_pos:
                 return False
-            owner.pos = [destination[0], destination[1]]
             owner.moved_this_tick = True
-            self._update_occupancy_after_move(old_pos, destination)
             self._spend_ultimate(owner)
+            for destination in path:
+                previous = tuple(owner.pos)
+                owner.pos = list(destination)
+                self._update_occupancy_after_move(previous, destination)
+                self._trigger_ramp_traps(owner)
+                if self._ramp_blocks_movement(owner):
+                    break
             return True
 
         if ultimate_name == "ESCAPE":
@@ -192,6 +232,111 @@ class AbilityLosMixin:
 
         return False
 
+    def _remove_dead_ramp_traps(self):
+        live_owners = {char.name for char in self.chars if char.is_alive}
+        self.ramp_traps = [
+            trap for trap in getattr(self, "ramp_traps", [])
+            if trap["owner"] in live_owners
+        ]
+
+    def _ramp_blocks_movement(self, char):
+        if getattr(char, "electric_remaining", 0) <= 0:
+            return False
+        applied_tick = getattr(char, "electric_applied_tick", None)
+        return applied_tick is None or self.battle_tick + 1 < applied_tick + RAMP_ELECTRIC_TICKS
+
+    def _ramp_reachable_cells(self, start):
+        """Flood up to five cardinal steps through walkable cells."""
+        distances = {start: 0}
+        queue = deque([start])
+        while queue:
+            row, col = queue.popleft()
+            distance = distances[(row, col)]
+            if distance >= RAMP_CHAIN_DISTANCE_CELLS:
+                continue
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                cell = (row + dr, col + dc)
+                if cell in distances:
+                    continue
+                if not (0 <= cell[0] < self.height and 0 <= cell[1] < self.width):
+                    continue
+                if self.grid[cell[0], cell[1]] == 1:
+                    continue
+                distances[cell] = distance + 1
+                queue.append(cell)
+        return distances.keys()
+
+    def _trigger_ramp_traps(self, char):
+        if not getattr(self, "ramp_traps", None):
+            return
+        self._remove_dead_ramp_traps()
+        if not char.is_alive:
+            return
+        triggered = [
+            trap for trap in self.ramp_traps
+            if trap["team"] != char.team and trap["pos"] == tuple(char.pos)
+        ]
+        if not triggered:
+            return
+        self.ramp_traps = [trap for trap in self.ramp_traps if trap not in triggered]
+        # A connected component is visited once, even if chains form cycles.
+        affected = {char.name}
+        queue = deque([char])
+        enemies = [enemy for enemy in self.chars if enemy.is_alive and enemy.team == char.team]
+        while queue:
+            source = queue.popleft()
+            source.electric_remaining = RAMP_ELECTRIC_TICKS
+            # Movement precedes process_battle's tick increment and status decay.
+            source.electric_applied_tick = int(getattr(self, "battle_tick", 0)) + 1
+            source.reveal_remaining = max(source.reveal_remaining, RAMP_ELECTRIC_TICKS)
+            tracker = getattr(self, "analytics_tracker", None)
+            if tracker is not None:
+                owner = next((owner for owner in self.chars if owner.name == triggered[0]["owner"]), None)
+                tracker.record_contribution(owner, source, self.battle_tick + 1, "ramp")
+            reachable = self._ramp_reachable_cells(tuple(source.pos))
+            for enemy in enemies:
+                if enemy.name not in affected and tuple(enemy.pos) in reachable:
+                    affected.add(enemy.name)
+                    queue.append(enemy)
+
+    def _advance_engineer_effects(self):
+        self._remove_dead_ramp_traps()
+        for char in self.chars:
+            if getattr(char, "electric_applied_tick", None) != self.battle_tick:
+                char.electric_remaining = max(0, getattr(char, "electric_remaining", 0) - 1)
+            char.reveal_remaining = max(char.reveal_remaining, char.electric_remaining)
+        remaining_bursts = []
+        owners = {char.name: char for char in self.chars}
+        for burst in getattr(self, "neon_bursts", []):
+            remaining = int(burst["remaining_ticks"])
+            if burst["phase"] == "warning":
+                if remaining > 0:
+                    burst["remaining_ticks"] = remaining - 1
+                    remaining_bursts.append(burst)
+                    continue
+                burst["phase"] = "active"
+                remaining = NEON_ACTIVE_TICKS
+            if remaining <= 0:
+                continue
+            owner = owners.get(burst["owner"])
+            for char in self.chars:
+                if char.is_alive and char.team != burst["team"] and tuple(char.pos) in burst["cells"]:
+                    damage = NEON_DAMAGE_PER_TICK
+                    tracker = getattr(self, "analytics_tracker", None)
+                    if tracker is not None:
+                        tracker.record_contribution(owner, char, self.battle_tick, "damage")
+                    # Respect the same once-per-round lethal-hit passive as gunfire.
+                    if char.hp <= damage and char.hp >= char.max_hp and getattr(char, "iron_will_charges", 0) > 0:
+                        char.iron_will_charges -= 1
+                        char.hp = 1
+                    else:
+                        char.hp = max(0, char.hp - damage)
+                        if char.hp <= 0 and owner is not None:
+                            self._kill_character(owner, char)
+            burst["remaining_ticks"] = remaining - 1
+            remaining_bursts.append(burst)
+        self.neon_bursts = remaining_bursts
+
     def _tunnel_cells(self, start, facing):
         """Wide, wall-piercing Paranoia-style corridor in facing direction."""
         vector = FACING_VECTORS.get(facing)
@@ -249,6 +394,10 @@ class AbilityLosMixin:
                 remaining_portals.append(portal)
                 continue
 
+            if getattr(owner, "electric_remaining", 0) > 0:
+                remaining_portals.append(portal)
+                continue
+
             old_pos = tuple(owner.pos)
             destination = tuple(portal["pos"])
             smoke_cells = self._smoke_cells()
@@ -262,6 +411,7 @@ class AbilityLosMixin:
                 old_pos in smoke_cells and destination not in smoke_cells
             )
             owner.stopped_after_move_this_tick = False
+            self._trigger_ramp_traps(owner)
 
         self.escape_portals = remaining_portals
 
@@ -364,6 +514,16 @@ class AbilityLosMixin:
             return False
 
         ability_name = str(ability_action.get("ability", "")).upper()
+        if ability_name == "RAMP":
+            if owner.ability_name != "RAMP" or owner.ramp_charges <= 0:
+                return False
+            self._remove_dead_ramp_traps()
+            position = tuple(owner.pos)
+            if any(trap["pos"] == position and trap["team"] == owner.team for trap in self.ramp_traps):
+                return False
+            self.ramp_traps.append({"pos": position, "owner": owner.name, "team": owner.team})
+            owner.ramp_charges -= 1
+            return True
         target = ability_action.get("target")
         if not isinstance(target, (list, tuple)) or len(target) != 2:
             return False
