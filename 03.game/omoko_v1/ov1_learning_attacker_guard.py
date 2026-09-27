@@ -692,6 +692,35 @@ class Ov1LearningAttackerGuardController:
         unit_has_spike_los = _has_los(grid, tuple(char.pos), tuple(planted_pos), smoke_cells)
         active_defuse_info = self._active_defuse_info(game_state)
 
+        # Defuse progress is shared information even when smoke hides the
+        # defender. The learned policy can otherwise repeatedly choose stay
+        # because neither the enemy position nor LOS to the spike is visible.
+        # Commit to the shortest legal route to the spike until an enemy is
+        # visible (the normal combat policy then takes over).
+        if active_defuse_info is not None:
+            visible_to_unit = [
+                e for e in chars
+                if e.is_alive and e.team != char.team
+                and _has_los(grid, char.pos, e.pos, smoke_cells)
+            ]
+            if not visible_to_unit:
+                r, c = int(char.pos[0]), int(char.pos[1])
+                current_dist = int(self.spike_dist_map[r, c])
+                occupied = {
+                    tuple(map(int, other.pos)) for other in chars
+                    if other is not char and getattr(other, "is_alive", True)
+                }
+                progress = []
+                for dr, dc in CARDINAL:
+                    nr, nc = r + dr, c + dc
+                    if (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
+                            and grid[nr, nc] != 1 and (nr, nc) not in occupied
+                            and 0 <= int(self.spike_dist_map[nr, nc]) < current_dist):
+                        progress.append((int(self.spike_dist_map[nr, nc]), (nr, nc)))
+                if progress:
+                    _, next_pos = min(progress)
+                    return list(next_pos), {"facing": _facing_towards(next_pos, planted_pos)}
+
         obs, visible_enemies = self._build_observation(
             char, game_state, unit_has_spike_los, active_defuse_info, detonate_timer, smoke_cells
         )

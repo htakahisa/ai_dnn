@@ -47,11 +47,16 @@ from game_core import (
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_train_defender_retake import (
+    ABILITY_TARGET_POINTS,
+    ABILITY_TARGET_RANGE,
     ENTRY_POINTS,
+    RETAKE_ROUTE_POINTS,
+    RECON_REVEAL_SIZE,
     SITE_BOUNDARY_COL,
     _facing_from_delta,
     _facing_towards,
-    choose_ability_target,
+    _chebyshev_distance,
+    has_wall_los,
 )
 from ov1_ultimate_training import (
     ORB_COLLECT_REQUIRED_TICKS,
@@ -73,6 +78,7 @@ N_ACTIONS = 13
 
 SITE_ZONE_RADIUS = 6
 ENTRY_READY_RADIUS = 3
+FLASH_PUSH_TICKS = 6
 DEFUSE_SAFETY_MARGIN_TICKS = 4
 ENTRY_SAFETY_MARGIN_TICKS = DEFUSE_SAFETY_MARGIN_TICKS + ENTRY_READY_RADIUS
 
@@ -219,34 +225,6 @@ def _good_directions(dist_map, grid, r, c):
     return good
 
 
-def _bfs_best_direction(dist_map, r0, c0):
-    if dist_map is None:
-        return 0, 0
-    current = dist_map[r0, c0]
-    if current < 0:
-        return 0, 0
-    best = (0, 0)
-    best_distance = current
-    for dr, dc in CARDINAL_MOVES:
-        nr, nc = r0 + dr, c0 + dc
-        if 0 <= nr < dist_map.shape[0] and 0 <= nc < dist_map.shape[1]:
-            if 0 <= dist_map[nr, nc] < best_distance:
-                best = (dr, dc)
-                best_distance = dist_map[nr, nc]
-    return best
-
-
-def _planned_route_facing(dist_map, pos):
-    r0, c0 = int(pos[0]), int(pos[1])
-    first = _bfs_best_direction(dist_map, r0, c0)
-    if first == (0, 0):
-        return None
-    nr, nc = r0 + first[0], c0 + first[1]
-    second = _bfs_best_direction(dist_map, nr, nc)
-    desired = second if second != (0, 0) and second != first else first
-    return _facing_from_delta(desired[0], desired[1], None)
-
-
 def _forced_combat_facing(char, visible_enemies, enemies):
     if visible_enemies:
         target = min(
@@ -358,6 +336,11 @@ class Ov1LearningDefenderRetakeController:
         self.team_sighting = _TeamSightingMemory()
         self._processed_this_tick = set()
         self._active_entry_points = []  # このラウンドのサイト(左/右)に対応する既知侵入経路
+        self._active_t_points = []
+        self._retake_t_reached = False
+        self._retake_waypoints_reached = set()
+        self._flash_push_until = {}
+        self._used_ability_targets = set()
         self._round_was_planted = False
         self._retake_combat_started = False
         self._retake_start_tick = None
@@ -374,6 +357,11 @@ class Ov1LearningDefenderRetakeController:
         self.team_sighting.reset()
         self._processed_this_tick.clear()
         self._active_entry_points = []
+        self._active_t_points = []
+        self._retake_t_reached = False
+        self._retake_waypoints_reached.clear()
+        self._flash_push_until.clear()
+        self._used_ability_targets.clear()
         self._round_was_planted = False
         self._retake_combat_started = False
         self._retake_start_tick = None
@@ -395,9 +383,147 @@ class Ov1LearningDefenderRetakeController:
 
         # ov1_train_defender_retake.pyのSITE_BOUNDARY_COL(=WIDTH//2)判定と
         # 同一ロジックでサイトを決め、既知侵入経路を確定する。
-        self._active_entry_points = (
-            ENTRY_POINTS["left"] if planted_pos[1] < SITE_BOUNDARY_COL else ENTRY_POINTS["right"]
+        side = "left" if planted_pos[1] < SITE_BOUNDARY_COL else "right"
+        self._active_t_points = ENTRY_POINTS[side]
+        self._active_entry_points = RETAKE_ROUTE_POINTS[side]
+
+    def _route_lane_for_char(self, char):
+        try:
+            return ROSTER_ORDER.index(char.name) % 2
+        except ValueError:
+            # Stable fallback for an unexpected roster member.
+            return sum(ord(ch) for ch in str(char.name)) % 2
+
+    def _has_passed_route_point(self, pos, waypoint, grid):
+        pos = tuple(map(int, pos))
+        waypoint = tuple(map(int, waypoint))
+        if pos == waypoint:
+            return True
+        pos_to_spike = int(self._dist_map[pos])
+        waypoint_to_spike = int(self._dist_map[waypoint])
+        pos_to_waypoint = int(_bfs_distance_map(grid, waypoint)[pos])
+        return (
+            pos_to_spike >= 0
+            and pos_to_spike <= waypoint_to_spike
+            and waypoint_to_spike == pos_to_waypoint + pos_to_spike
         )
+
+    def _movement_dist_map(self, char, grid, chars):
+        """Route through T, then split into two U lanes before the spike."""
+        if len(self._active_entry_points) != 2 or not self._active_t_points:
+            return self._dist_map
+        pos = tuple(map(int, char.pos))
+        allies = [
+            ally for ally in chars
+            if ally.team == char.team and getattr(ally, "is_alive", True)
+        ]
+        if not self._retake_t_reached:
+            if any(
+                self._has_passed_route_point(ally.pos, waypoint, grid)
+                for ally in allies for waypoint in self._active_t_points
+            ):
+                # One teammate passing T releases the whole team to the U split.
+                self._retake_t_reached = True
+            else:
+                t_routes = [
+                    (_bfs_distance_map(grid, waypoint), waypoint)
+                    for waypoint in self._active_t_points
+                ]
+                reachable = [
+                    (int(route[pos]), route)
+                    for route, _ in t_routes if route[pos] >= 0
+                ]
+                return min(reachable, key=lambda item: item[0])[1] if reachable else self._dist_map
+
+        lane = self._route_lane_for_char(char)
+        waypoint = self._active_entry_points[lane]
+        for ally in allies:
+            ally_lane = self._route_lane_for_char(ally)
+            if ally_lane == lane and self._has_passed_route_point(ally.pos, waypoint, grid):
+                self._retake_waypoints_reached.add(lane)
+                break
+        if lane in self._retake_waypoints_reached:
+            return self._dist_map
+        return _bfs_distance_map(grid, waypoint)
+
+    def _choose_ability_target(self, char, grid, visible_enemies, planted_pos,
+                               site_side, smoke_cells):
+        """Choose an eligible retake target not already used this round."""
+        ability = str(getattr(char, "ability_name", "")).upper()
+        points = ABILITY_TARGET_POINTS.get(ability, [])
+        side_points = [
+            tuple(point) for point in points
+            if (point[1] < SITE_BOUNDARY_COL) == (site_side == "left")
+        ]
+        enemy_points = [
+            tuple(map(int, enemy.pos)) for enemy in visible_enemies
+            if getattr(enemy, "is_alive", True)
+        ]
+        candidates = list(dict.fromkeys(
+            side_points if ability == "SMOKE" else side_points + enemy_points
+        ))
+        valid = []
+        for target in candidates:
+            if _chebyshev_distance(char.pos, target) > ABILITY_TARGET_RANGE:
+                continue
+            if ability != "SMOKE" and not has_wall_los(grid, char.pos, target):
+                continue
+            if (ability, target) in self._used_ability_targets:
+                continue
+            if ability == "SMOKE":
+                footprint = {
+                    (r, c)
+                    for r in range(target[0] - 1, target[0] + 2)
+                    for c in range(target[1] - 1, target[1] + 2)
+                    if 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]
+                    and grid[r, c] != 1
+                }
+                if footprint & smoke_cells:
+                    continue
+            valid.append(target)
+        if not valid:
+            return None
+
+        def score(target):
+            distance = _chebyshev_distance(char.pos, target)
+            if ability == "SMOKE":
+                footprint = {
+                    (r, c)
+                    for r in range(target[0] - 1, target[0] + 2)
+                    for c in range(target[1] - 1, target[1] + 2)
+                    if 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]
+                    and grid[r, c] != 1
+                }
+                blocks_spike_los = sum(
+                    1 for enemy in visible_enemies
+                    if has_wall_los(grid, tuple(enemy.pos), planted_pos)
+                    and any(
+                        cell in footprint
+                        for cell in _line_cells(tuple(enemy.pos), planted_pos)
+                    )
+                )
+                return (
+                    int(tuple(planted_pos) in footprint),
+                    blocks_spike_los,
+                    -distance,
+                    target,
+                )
+            if ability == "FLASH":
+                utility = sum(
+                    1 for enemy in visible_enemies
+                    if has_wall_los(grid, target, tuple(enemy.pos))
+                )
+            elif ability == "RECON":
+                radius = RECON_REVEAL_SIZE // 2
+                utility = sum(
+                    1 for enemy in visible_enemies
+                    if _chebyshev_distance(target, enemy.pos) <= radius
+                )
+            else:
+                utility = 0
+            return (utility, -distance, target)
+
+        return max(valid, key=score)
 
     def _maybe_advance_tick(self, char, grid, chars):
         """同じキャラクターが再び呼ばれたら新しいtickに入ったとみなし、
@@ -576,6 +702,7 @@ class Ov1LearningDefenderRetakeController:
         self, char, grid, chars, available_orbs=(),
         under_direct_threat=False, detonate_timer=0.0,
         combat_started=False, ability_target_available=False,
+        movement_dist_map=None,
     ):
         mask = np.zeros(N_ACTIONS, dtype=bool)
         r, c = int(char.pos[0]), int(char.pos[1])
@@ -599,24 +726,25 @@ class Ov1LearningDefenderRetakeController:
         dist_to_plant = max(abs(pr - r), abs(pc - c))
         mask[ACTION_DEFUSE] = dist_to_plant <= 1
 
-        # Keep the retake moving whenever an unoccupied step shortens the
-        # walkable path to the spike. Ability and ultimate actions stay enabled.
-        raw_dist = self._dist_map[r, c] if self._dist_map is not None else -1
+        # With no direct threat, keep advancing along the selected route until
+        # the spike is within defuse range. Ability and ultimate stay enabled.
+        route_dist_map = movement_dist_map if movement_dist_map is not None else self._dist_map
+        raw_dist = route_dist_map[r, c] if route_dist_map is not None else -1
         if under_direct_threat:
-            # Preserve the learned combat choice: staying fires automatically,
-            # while movement, defuse, and tactical actions remain selectable.
+            # Stop to shoot whenever an enemy is visible through LOS.
+            mask[:4] = False
             mask[4] = True
         elif dist_to_plant <= 1:
             # At the spike with no visible threat, prevent idle/walk-away
             # actions while leaving defuse and tactical choices to the policy.
             mask[:5] = False
-        elif raw_dist > 1:
+        elif raw_dist > 0:
             advancing_actions = []
             for action in range(4):
                 if not mask[action]:
                     continue
                 dr, dc = MOVE_DELTAS[action]
-                next_dist = self._dist_map[r + dr, c + dc]
+                next_dist = route_dist_map[r + dr, c + dc]
                 if 0 <= next_dist < raw_dist:
                     advancing_actions.append(action)
             if advancing_actions:
@@ -687,6 +815,28 @@ class Ov1LearningDefenderRetakeController:
         self._maybe_advance_tick(char, grid, chars)
 
         enemies = [e for e in chars if e.team != char.team]
+        all_enemies_eliminated = not any(
+            getattr(enemy, "is_alive", True) for enemy in enemies
+        )
+        if all_enemies_eliminated:
+            # Elimination is authoritative; do not feed stale sightings back
+            # into the learned policy after the last attacker has died.
+            self.team_sighting.reset()
+        tick = int(game_state.get("battle_tick", 0))
+        enemy_blinded = any(
+            getattr(enemy, "is_alive", True)
+            and getattr(enemy, "blind_remaining", 0) > 0
+            for enemy in enemies
+        )
+        blinded_enemies = [
+            enemy for enemy in enemies
+            if getattr(enemy, "is_alive", True)
+            and getattr(enemy, "blind_remaining", 0) > 0
+        ]
+        flash_push_active = (
+            enemy_blinded
+            or tick <= self._flash_push_until.get(char.name, -1)
+        )
         smoke_cells = game_state.get("smoke_cells") or set()
         visible_enemies = [
             e for e in enemies
@@ -705,26 +855,39 @@ class Ov1LearningDefenderRetakeController:
             )
             for enemy in visible_enemies
         )
+        flash_assault = flash_push_active and (
+            not visible_enemies
+            or all(getattr(enemy, "blind_remaining", 0) > 0 for enemy in visible_enemies)
+        )
+        stop_for_combat = under_direct_threat and not flash_assault
         self._update_retake_combat_state(game_state, chars, visible_enemies)
         smoke_enemy = _smoke_visible_enemy(char, chars, grid, smoke_cells)
         if smoke_enemy is not None:
             return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
 
         site_side = "left" if int(planted_pos[1]) < SITE_BOUNDARY_COL else "right"
-        ability_target = choose_ability_target(
-            char, grid, visible_enemies, planted_pos, site_side
+        ability_target = self._choose_ability_target(
+            char, grid, visible_enemies, planted_pos, site_side, smoke_cells
         )
 
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
         available_orbs = {
             tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
         }
+        # Once the attackers are eliminated, take the shortest route straight
+        # to the spike; the T entry waypoint is only for a contested retake.
+        movement_dist_map = (
+            self._dist_map
+            if all_enemies_eliminated
+            else self._movement_dist_map(char, grid, chars)
+        )
         mask = self._action_mask(
             char, grid, chars, available_orbs,
-            under_direct_threat=under_direct_threat,
+            under_direct_threat=stop_for_combat,
             detonate_timer=detonate_timer,
             combat_started=self._retake_combat_started,
             ability_target_available=ability_target is not None,
+            movement_dist_map=movement_dist_map,
         )
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
@@ -735,18 +898,137 @@ class Ov1LearningDefenderRetakeController:
             q_values[~mask_t] = -1e9
             action_idx = int(torch.argmax(q_values).item())
 
-        forced_facing = _forced_combat_facing(char, visible_enemies, enemies)
-        if forced_facing is None and action_idx <= 3:
-            dr, dc = MOVE_DELTAS[action_idx]
-            first_step = _bfs_best_direction(
-                self._dist_map, int(char.pos[0]), int(char.pos[1])
-            )
-            if (dr, dc) == first_step:
-                forced_facing = _planned_route_facing(self._dist_map, char.pos)
+        if all_enemies_eliminated:
+            r, c = map(int, char.pos)
+            pr, pc = map(int, planted_pos)
+            if max(abs(pr - r), abs(pc - c)) <= 1:
+                action_idx = ACTION_DEFUSE
+            else:
+                occupied = {
+                    tuple(map(int, other.pos))
+                    for other in chars
+                    if other is not char and getattr(other, "is_alive", True)
+                }
+                raw_dist = self._dist_map[r, c]
+                advancing = []
+                for action, (dr, dc) in MOVE_DELTAS.items():
+                    if action >= 4:
+                        continue
+                    nr, nc = r + dr, c + dc
+                    if (
+                        mask[action]
+                        and (nr, nc) not in occupied
+                        and 0 <= self._dist_map[nr, nc] < raw_dist
+                    ):
+                        advancing.append(action)
+                action_idx = advancing[0] if advancing else 4
+        elif flash_assault and max(
+            abs(int(planted_pos[0]) - int(char.pos[0])),
+            abs(int(planted_pos[1]) - int(char.pos[1])),
+        ) > 1:
+            # A flash creates a short entry window. Keep moving forward on the
+            # current retake route while automatic fire continues during movement.
+            r, c = map(int, char.pos)
+            raw_dist = movement_dist_map[r, c]
+            advancing = []
+            for action, (dr, dc) in MOVE_DELTAS.items():
+                if action >= 4 or not mask[action]:
+                    continue
+                nr, nc = r + dr, c + dc
+                if not (0 <= movement_dist_map[nr, nc] < raw_dist):
+                    continue
+                # A blinded target can still shoot. Keep at least one full
+                # tile between the retaker and that target during the push.
+                if any(
+                    max(abs(nr - int(enemy.pos[0])), abs(nc - int(enemy.pos[1]))) <= 1
+                    for enemy in blinded_enemies
+                ):
+                    continue
+                advancing.append(action)
+            if advancing:
+                action_idx = advancing[0]
+            elif blinded_enemies:
+                # Hold and fire rather than rushing into point-blank range.
+                action_idx = 4
+
+        enemy_on_spike = any(
+            getattr(enemy, "is_alive", True)
+            and tuple(map(int, enemy.pos)) == tuple(map(int, planted_pos))
+            for enemy in enemies
+        )
+        adjacent_to_spike = max(
+            abs(int(planted_pos[0]) - int(char.pos[0])),
+            abs(int(planted_pos[1]) - int(char.pos[1])),
+        ) <= 1
+        if enemy_on_spike and adjacent_to_spike:
+            # Use a smoke-covered defuse tile when it is not exposed to an
+            # enemy standing just outside the smoke.
+            occupied = {
+                tuple(map(int, other.pos))
+                for other in chars
+                if other is not char and getattr(other, "is_alive", True)
+            }
+            smoke_defuse_options = []
+            pr, pc = map(int, planted_pos)
+            for nr in range(max(0, pr - 1), min(grid.shape[0], pr + 2)):
+                for nc in range(max(0, pc - 1), min(grid.shape[1], pc + 2)):
+                    target = (nr, nc)
+                    if (
+                        grid[target] == 1
+                        or target not in smoke_cells
+                        or target in occupied
+                    ):
+                        continue
+                    exposed_to_enemy = any(
+                        getattr(enemy, "is_alive", True)
+                        and tuple(map(int, enemy.pos)) not in smoke_cells
+                        and max(
+                            abs(nr - int(enemy.pos[0])),
+                            abs(nc - int(enemy.pos[1])),
+                        ) <= 1
+                        for enemy in enemies
+                    )
+                    if exposed_to_enemy:
+                        continue
+                    route_dist_map = _bfs_distance_map(grid, target)
+                    distance = int(route_dist_map[tuple(map(int, char.pos))])
+                    if distance >= 0:
+                        smoke_defuse_options.append((distance, target, route_dist_map))
+
+            if smoke_defuse_options:
+                _, smoke_target, smoke_route = min(smoke_defuse_options, key=lambda item: (item[0], item[1]))
+                pos = tuple(map(int, char.pos))
+                if pos == smoke_target:
+                    action_idx = ACTION_DEFUSE
+                else:
+                    smoke_step = None
+                    for action, (dr, dc) in MOVE_DELTAS.items():
+                        if action >= 4:
+                            continue
+                        nr, nc = pos[0] + dr, pos[1] + dc
+                        if (
+                            0 <= nr < grid.shape[0]
+                            and 0 <= nc < grid.shape[1]
+                            and grid[nr, nc] != 1
+                            and (nr, nc) not in occupied
+                            and 0 <= smoke_route[nr, nc] < smoke_route[pos]
+                        ):
+                            smoke_step = action
+                            break
+                    action_idx = smoke_step if smoke_step is not None else 4
+            else:
+                # No covered defuse tile is safe, so hold fire on the spike.
+                action_idx = 4
+            forced_facing = _facing_towards(tuple(char.pos), tuple(planted_pos))
+        elif action_idx <= 3 and not visible_enemies:
+            forced_facing = _facing_towards(tuple(char.pos), tuple(planted_pos))
             if forced_facing is None:
+                dr, dc = MOVE_DELTAS[action_idx]
                 forced_facing = _facing_from_delta(
                     dr, dc, getattr(char, "facing", "S")
                 )
+        else:
+            forced_facing = _forced_combat_facing(char, visible_enemies, enemies)
 
         if self.verbose:
             with open(self._debug_log_path, "a", encoding="utf-8") as f:
@@ -789,6 +1071,9 @@ class Ov1LearningDefenderRetakeController:
             return list(char.pos), {"facing": turn_dir}
 
         target_pos = ability_target
+        self._used_ability_targets.add((str(char.ability_name).upper(), tuple(target_pos)))
+        if action_idx == ACTION_ABILITY and str(char.ability_name).upper() == "FLASH":
+            self._flash_push_until[char.name] = tick + FLASH_PUSH_TICKS
         if forced_facing is not None:
             char.facing = forced_facing
         return list(char.pos), {"ability": char.ability_name, "target": target_pos}

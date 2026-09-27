@@ -6,6 +6,7 @@ import json
 import queue
 import random
 import secrets
+import shutil
 import threading
 import traceback
 from collections import defaultdict
@@ -127,6 +128,8 @@ class MResult:
     initial_attacker: str
     overtime: bool
     player_stats: list[PlayerMapStat]
+    halftime_team1_score: int | None = None
+    halftime_team2_score: int | None = None
     total_rounds: int = 0
     gunfights: list[dict[str, Any]] = field(default_factory=list)
     assist_events: list[dict[str, Any]] = field(default_factory=list)
@@ -601,6 +604,63 @@ def build_player_leaderboards(
     }
 
 
+def compact_map_result(result: MResult) -> dict[str, Any]:
+    """Return the fields needed in tournament summaries and leaderboards."""
+    return {
+        "number": result.number,
+        "seed": result.seed,
+        "team1": result.team1,
+        "team2": result.team2,
+        "score1": result.score1,
+        "score2": result.score2,
+        "halftime_team1_score": result.halftime_team1_score,
+        "halftime_team2_score": result.halftime_team2_score,
+        "winner": result.winner,
+        "mvp1": asdict(result.mvp1),
+        "mvp2": asdict(result.mvp2),
+        "initial_attacker": result.initial_attacker,
+        "overtime": result.overtime,
+        "player_stats": [asdict(stat) for stat in result.player_stats],
+        "total_rounds": result.total_rounds,
+    }
+
+
+def compact_map_model(result: MResult) -> MResult:
+    return MResult(
+        number=result.number,
+        seed=result.seed,
+        team1=result.team1,
+        team2=result.team2,
+        score1=result.score1,
+        score2=result.score2,
+        winner=result.winner,
+        mvp1=result.mvp1,
+        mvp2=result.mvp2,
+        initial_attacker=result.initial_attacker,
+        overtime=result.overtime,
+        player_stats=result.player_stats,
+        halftime_team1_score=result.halftime_team1_score,
+        halftime_team2_score=result.halftime_team2_score,
+        total_rounds=result.total_rounds,
+    )
+
+
+def compact_series_result(series: SeriesResult) -> SeriesResult:
+    """Keep only tournament summary data; full analytics are saved per series."""
+    maps = [compact_map_model(item) for item in series.maps]
+    return SeriesResult(
+        team1=series.team1,
+        team2=series.team2,
+        maps_to_win=series.maps_to_win,
+        team1_wins=series.team1_wins,
+        team2_wins=series.team2_wins,
+        winner=series.winner,
+        loser=series.loser,
+        maps=maps,
+        total_rounds=series.total_rounds,
+    )
+
+
 def _key_for_name(
     keys: list[TeamPlayerKey],
     name: str,
@@ -789,6 +849,13 @@ def play_map(
                 row.update(extra)
     winner = team1.name if score1 > score2 else team2.name
 
+    half_attacker = getattr(game, "halftime_attacker_score", None)
+    half_defender = getattr(game, "halftime_defender_score", None)
+    if attacker is team1:
+        halftime_team1_score, halftime_team2_score = half_attacker, half_defender
+    else:
+        halftime_team1_score, halftime_team2_score = half_defender, half_attacker
+
     return MResult(
         number=map_number,
         seed=int(seed),
@@ -805,6 +872,8 @@ def play_map(
             player_stats_from_match_stats(game.match_stats, team1_keys, team1.name)
             + player_stats_from_match_stats(game.match_stats, team2_keys, team2.name)
         ),
+        halftime_team1_score=halftime_team1_score,
+        halftime_team2_score=halftime_team2_score,
         total_rounds=int(score1 + score2),
         gunfights=exported.get("gunfights", []) if analytics is not None else [],
         assist_events=(
@@ -1367,7 +1436,7 @@ def run_double_elimination(
             team_controllers=team_controllers,
             context_label=context,
         )
-        completed_series.append(series)
+        completed_series.append(compact_series_result(series))
 
         records[series.winner]["wins"] += 1
         records[series.loser]["losses"] += 1
@@ -1384,7 +1453,7 @@ def run_double_elimination(
             "loser": series.loser,
             "team1_wins": series.team1_wins,
             "team2_wins": series.team2_wins,
-            "maps": [asdict(item) for item in series.maps],
+            "maps": [compact_map_result(item) for item in series.maps],
             "status": "finished",
         }
         emit_match(final)
@@ -1659,7 +1728,7 @@ def run_round_robin(
             team_controllers=team_controllers,
             context_label=context,
         )
-        completed_series.append(series)
+        completed_series.append(compact_series_result(series))
 
         table[series.winner]["series_wins"] += 1
         table[series.loser]["series_losses"] += 1
@@ -1740,14 +1809,15 @@ class TeamRatingStore:
             if self._rating_scale_migrated:
                 backup = self.path.with_suffix(".2500.bak")
                 if not backup.exists():
-                    backup.write_bytes(self.path.read_bytes())
+                    shutil.copyfile(self.path, backup)
             self.save()
 
     def _load(self) -> None:
         if not self.path.exists():
             return
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            with self.path.open("r", encoding="utf-8") as stream:
+                data = json.load(stream)
             saved_default = float(
                 data.get(
                     "default_rating",
@@ -1813,10 +1883,8 @@ class TeamRatingStore:
             },
             "history": self.history,
         }
-        self.path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        with self.path.open("w", encoding="utf-8") as stream:
+            json.dump(data, stream, ensure_ascii=False, indent=2)
 
     def get(self, team: str) -> float:
         if team not in self.ratings:
@@ -5639,18 +5707,28 @@ class CompetitionApp:
                 elif kind == "map":
                     result: MResult = event[1]
                     context = event[2]
-                    self.visual_series_maps.append(result)
+                    self.visual_series_maps.append(compact_map_model(result))
                     self.redraw_visual()
                     ot = " [OT]" if result.overtime else ""
                     header = f"{context} / " if context else ""
                     self.append(
                         f"{header}MAP {result.number}{ot}\n"
                         f"  Seed: {result.seed}\n"
-                        f"  {result.team1} {result.score1} - {result.score2} {result.team2}\n"
-                        f"  Winner: {result.winner}\n"
-                        f"  Initial Attacker: {result.initial_attacker}\n"
-                        f"  {result.team1} MVP: {result.mvp1.name} {result.mvp1.kills}K/{result.mvp1.deaths}D\n"
-                        f"  {result.team2} MVP: {result.mvp2.name} {result.mvp2.kills}K/{result.mvp2.deaths}D\n"
+                        f"  {result.team1} {result.score1} - {result.score2} {result.team2}"
+                        + (
+                            f" (前半 {result.team1} {result.halftime_team1_score} - "
+                            f"{result.team2} {result.halftime_team2_score} / 後半 "
+                            f"{result.team1} {result.score1 - result.halftime_team1_score} - "
+                            f"{result.team2} {result.score2 - result.halftime_team2_score})"
+                            if result.halftime_team1_score is not None
+                            and result.halftime_team2_score is not None
+                            else ""
+                        )
+                        + "\n"
+                        + f"  Winner: {result.winner}\n"
+                        + f"  Initial Attacker: {result.initial_attacker}\n"
+                        + f"  {result.team1} MVP: {result.mvp1.name} {result.mvp1.kills}K/{result.mvp1.deaths}D\n"
+                        + f"  {result.team2} MVP: {result.mvp2.name} {result.mvp2.kills}K/{result.mvp2.deaths}D\n"
                         + "-" * 78
                         + "\n"
                     )
@@ -5743,14 +5821,8 @@ class CompetitionApp:
                         for name, value in self.rating_store.ranking()
                     }
                     try:
-                        Path(path).write_text(
-                            json.dumps(
-                                data,
-                                ensure_ascii=False,
-                                indent=2,
-                            ),
-                            encoding="utf-8",
-                        )
+                        with Path(path).open("w", encoding="utf-8") as stream:
+                            json.dump(data, stream, ensure_ascii=False, indent=2)
                     except Exception as exc:
                         self.append(f"\n[WARN] 結果JSONへのRating追記失敗: {exc}\n")
 

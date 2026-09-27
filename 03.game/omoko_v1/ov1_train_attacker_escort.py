@@ -834,9 +834,8 @@ class EscortEnv:
             return None
         if self._nearest_visible_enemy(self.escort_pos[i], max_range=None)[0] is not None:
             return None
-        if self.max_ticks - self.tick < ESCORT_ORB_MIN_REMAINING_TICKS:
-            return None
-        if not orb_priority(self.escort_ultimate[i], self.escort_ultimate):
+        if (not self.escort_ultimate[i].ultimate_cost
+                or self.escort_ultimate[i].ultimate_points >= self.escort_ultimate[i].ultimate_cost):
             return None
 
         pos = tuple(self.escort_pos[i])

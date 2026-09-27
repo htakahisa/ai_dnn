@@ -103,7 +103,7 @@ def _parse_retake_map(maze_str, marker_terrain):
 
 
 GRID, RETAKE_MARKERS = _parse_retake_map(
-    RETAKE_MAZE_STR, {"A": 0, "B": 0, "T": 0, "a": 2, "b": 2}
+    RETAKE_MAZE_STR, {"A": 0, "B": 0, "T": 0, "U": 0, "a": 2, "b": 2}
 )
 HEIGHT, WIDTH = GRID.shape
 SITE_BOUNDARY_COL = WIDTH // 2
@@ -120,6 +120,10 @@ PLANT_POSITIONS = {
 ENTRY_POINTS = {
     "left": [p for p in RETAKE_MARKERS.get("T", []) if p[1] < SITE_BOUNDARY_COL],
     "right": [p for p in RETAKE_MARKERS.get("T", []) if p[1] >= SITE_BOUNDARY_COL],
+}
+RETAKE_ROUTE_POINTS = {
+    "left": [p for p in RETAKE_MARKERS.get("U", []) if p[1] < SITE_BOUNDARY_COL],
+    "right": [p for p in RETAKE_MARKERS.get("U", []) if p[1] >= SITE_BOUNDARY_COL],
 }
 
 
@@ -153,6 +157,8 @@ if len(RETAKE_MARKERS.get("a", [])) != 1 or len(RETAKE_MARKERS.get("b", [])) != 
     raise ValueError("Retake map must contain exactly one a and one b spike location")
 if not ENTRY_POINTS["left"] or not ENTRY_POINTS["right"]:
     raise ValueError("Retake map must provide at least one T entry point on each site")
+if any(len(points) != 2 for points in RETAKE_ROUTE_POINTS.values()):
+    raise ValueError("Retake map must provide exactly two U route points on each site")
 
 # 💡追加: 左右サイトのプラント位置サンプリング用。
 # 既知プラント位置(実際に攻撃側が狙いやすい座標)を優先的に学習させつつ、
@@ -349,8 +355,11 @@ def choose_ability_target(char, grid, visible_enemies, planted_pos, side):
             near_spike = _chebyshev_distance(target, planted_pos) <= 2
             return covers_spike * 10 + blocked_lines * 2 + int(near_spike)
 
-        fixed_smokes = fixed_targets
-        candidates = list(dict.fromkeys(fixed_smokes + enemy_targets))
+        # Retake smoke is a map lineup utility: only use the annotated S
+        # positions, and only once one is within the configured cast range.
+        # Adding visible enemy positions here let the policy spend smoke
+        # immediately at phase start even when every S marker was out of range.
+        candidates = fixed_targets
         if not candidates:
             return None
         return min(candidates, key=lambda p: (-smoke_utility(p), _chebyshev_distance(char.pos, p), p))
