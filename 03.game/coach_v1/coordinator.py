@@ -90,6 +90,9 @@ class TeamExecutionCoordinator:
         self._belief = None
         self._instructions = None
         self.memory.reset()
+        reset_actor = getattr(self.coach, "reset_round", None)
+        if callable(reset_actor):
+            reset_actor()
 
     def decide_move(self, char, game_state):
         if self.game is None:
@@ -109,6 +112,9 @@ class TeamExecutionCoordinator:
         if key != self._cache_key:
             if self._cache_key is not None and key[1].round_number != self._cache_key[1].round_number:
                 self.memory.reset()
+                reset_actor = getattr(self.coach, "reset_round", None)
+                if callable(reset_actor):
+                    reset_actor()
             snapshot = self.sensor.build(game=self.game, side=self.side)
             belief = self.memory.update(snapshot)
             situation = _situation(snapshot)

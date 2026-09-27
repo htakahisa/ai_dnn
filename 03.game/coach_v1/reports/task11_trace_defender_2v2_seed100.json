@@ -1,0 +1,1480 @@
+{
+  "side": "defender",
+  "stage": "2v2",
+  "seed": 100,
+  "checkpoint": "coach_v1\\checkpoints\\coach\\defender\\stage_2v2.pt",
+  "ticks": [
+    {
+      "tick": 0,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          1,
+          18
+        ],
+        [
+          1,
+          19
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        3,
+        4
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            1,
+            18
+          ],
+          "requested": [
+            2,
+            18
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            1,
+            19
+          ],
+          "requested": [
+            2,
+            19
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 27.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.04,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 1,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          2,
+          18
+        ],
+        [
+          2,
+          19
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_W"
+      ],
+      "legal_moves": [
+        5,
+        4
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            2,
+            18
+          ],
+          "requested": [
+            3,
+            18
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            2,
+            19
+          ],
+          "requested": [
+            2,
+            18
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 2.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.004,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 2,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          3,
+          18
+        ],
+        [
+          2,
+          18
+        ]
+      ],
+      "movement": [
+        "MOVE_W",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        3,
+        5
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            3,
+            18
+          ],
+          "requested": [
+            3,
+            17
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            2,
+            18
+          ],
+          "requested": [
+            3,
+            18
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 3,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          3,
+          17
+        ],
+        [
+          3,
+          18
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_W"
+      ],
+      "legal_moves": [
+        5,
+        3
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            3,
+            17
+          ],
+          "requested": [
+            4,
+            17
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            3,
+            18
+          ],
+          "requested": [
+            3,
+            17
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 3.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.006,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 4,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          4,
+          17
+        ],
+        [
+          3,
+          17
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4,
+        5
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            4,
+            17
+          ],
+          "requested": [
+            5,
+            17
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            3,
+            17
+          ],
+          "requested": [
+            4,
+            17
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 7.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.014,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 5,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          5,
+          17
+        ],
+        [
+          4,
+          17
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        3,
+        4
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            5,
+            17
+          ],
+          "requested": [
+            6,
+            17
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            4,
+            17
+          ],
+          "requested": [
+            5,
+            17
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 6,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          6,
+          17
+        ],
+        [
+          5,
+          17
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4,
+        3
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            6,
+            17
+          ],
+          "requested": [
+            7,
+            17
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            5,
+            17
+          ],
+          "requested": [
+            6,
+            17
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 7,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          7,
+          17
+        ],
+        [
+          6,
+          17
+        ]
+      ],
+      "movement": [
+        "MOVE_W",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        3,
+        4
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            7,
+            17
+          ],
+          "requested": [
+            7,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            6,
+            17
+          ],
+          "requested": [
+            7,
+            17
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 8,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          7,
+          16
+        ],
+        [
+          7,
+          17
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_W"
+      ],
+      "legal_moves": [
+        3,
+        3
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            7,
+            16
+          ],
+          "requested": [
+            8,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            7,
+            17
+          ],
+          "requested": [
+            7,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 9,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          8,
+          16
+        ],
+        [
+          7,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        3,
+        3
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            8,
+            16
+          ],
+          "requested": [
+            9,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            7,
+            16
+          ],
+          "requested": [
+            8,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 10,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          9,
+          16
+        ],
+        [
+          8,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        5,
+        3
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            9,
+            16
+          ],
+          "requested": [
+            10,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            8,
+            16
+          ],
+          "requested": [
+            9,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 11,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          10,
+          16
+        ],
+        [
+          9,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4,
+        5
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            10,
+            16
+          ],
+          "requested": [
+            11,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            9,
+            16
+          ],
+          "requested": [
+            10,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 12,
+      "alive_slots": [
+        0,
+        1
+      ],
+      "positions": [
+        [
+          11,
+          16
+        ],
+        [
+          10,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S",
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4,
+        4
+      ],
+      "actions": [
+        {
+          "slot": 0,
+          "result": "MOVE",
+          "start": [
+            11,
+            16
+          ],
+          "requested": [
+            12,
+            16
+          ]
+        },
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            10,
+            16
+          ],
+          "requested": [
+            11,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 2.0,
+        "move_requests": 2.0,
+        "executed_moves": 2.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": -0.05,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 13,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          11,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            11,
+            16
+          ],
+          "requested": [
+            12,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 14,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          12,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            12,
+            16
+          ],
+          "requested": [
+            13,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 15,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          13,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            13,
+            16
+          ],
+          "requested": [
+            14,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 24.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.04,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 16,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          14,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        4
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            14,
+            16
+          ],
+          "requested": [
+            15,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 5.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.01,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 17,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          15,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        5
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            15,
+            16
+          ],
+          "requested": [
+            16,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 18,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          16,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_N"
+      ],
+      "legal_moves": [
+        2
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            16,
+            16
+          ],
+          "requested": [
+            15,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 4.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.008,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 19,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          15,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        5
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            15,
+            16
+          ],
+          "requested": [
+            16,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 20,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          16,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_N"
+      ],
+      "legal_moves": [
+        2
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            16,
+            16
+          ],
+          "requested": [
+            15,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 21,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          15,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        5
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            15,
+            16
+          ],
+          "requested": [
+            16,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 22,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          16,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_N"
+      ],
+      "legal_moves": [
+        2
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            16,
+            16
+          ],
+          "requested": [
+            15,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 23,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          15,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_S"
+      ],
+      "legal_moves": [
+        5
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            15,
+            16
+          ],
+          "requested": [
+            16,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    },
+    {
+      "tick": 24,
+      "alive_slots": [
+        1
+      ],
+      "positions": [
+        [
+          16,
+          16
+        ]
+      ],
+      "movement": [
+        "MOVE_N"
+      ],
+      "legal_moves": [
+        2
+      ],
+      "actions": [
+        {
+          "slot": 1,
+          "result": "MOVE",
+          "start": [
+            16,
+            16
+          ],
+          "requested": [
+            15,
+            16
+          ]
+        }
+      ],
+      "metrics": {
+        "new_clear_cells": 0.0,
+        "invalid_moves": 0.0,
+        "round_win": 0.0,
+        "move_commands": 1.0,
+        "move_requests": 1.0,
+        "executed_moves": 1.0,
+        "blocked_ally": 0.0,
+        "blocked_enemy": 0.0,
+        "blocked_other": 0.0,
+        "ability_actions": 0.0,
+        "reward_clear": 0.0,
+        "reward_invalid": 0.0,
+        "reward_death": 0.0,
+        "reward_objective": 0.0,
+        "reward_win": 0.0
+      }
+    }
+  ]
+}

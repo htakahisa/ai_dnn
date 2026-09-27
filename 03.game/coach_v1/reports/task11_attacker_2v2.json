@@ -1,0 +1,35 @@
+{
+  "side": "attacker",
+  "stage": "2v2",
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109
+  ],
+  "checkpoint": "coach_v1\\checkpoints\\coach\\attacker\\stage_2v2.pt",
+  "checkpoint_sha256": "cbaad313833758f3baffc372cc3a1a4b1b2a23acd91f249928a2abb407da0bf5",
+  "training_step": 100,
+  "results": {
+    "trained": {
+      "reward": 0.12760000000000007,
+      "new_clear_cells": 64.3,
+      "invalid_moves": 0.1,
+      "round_win": 0.0,
+      "ticks": 25.0
+    },
+    "random": {
+      "reward": 0.024599999999999993,
+      "new_clear_cells": 24.3,
+      "invalid_moves": 2.4,
+      "round_win": 0.0,
+      "ticks": 25.0
+    }
+  }
+}
