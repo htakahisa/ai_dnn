@@ -374,6 +374,7 @@ class LearningAttackerMacroGCController:
         self._lurk_plan = None
         self._lurk_route_key = None
         self._lurk_route_state = {}
+        self._lurk_reunion = None
 
         if self.verbose:
             print(
@@ -408,6 +409,7 @@ class LearningAttackerMacroGCController:
         self._lurk_plan = None
         self._lurk_route_key = None
         self._lurk_route_state.clear()
+        self._lurk_reunion = None
 
     def _clear_plant_commit(self):
         self._plant_commit_holder = None
@@ -525,6 +527,7 @@ class LearningAttackerMacroGCController:
 
     def lurk_coordination_result(self, char, game_state):
         """Own every pre-contact action, including blocked movement and fake rotation."""
+        self._observe_lurk_clear_site(game_state)
         names = self._lurk_group_names()
         if (game_state.get("is_planted") or not names
                 or self._observe_fake_group_contact()):
@@ -537,13 +540,79 @@ class LearningAttackerMacroGCController:
             return list(map(int, char.pos)), "MOVE"
         return self._lurk_push_step(char, game_state, side)
 
+    def _observe_lurk_clear_site(self, game_state):
+        """Let the main group join a lurker who has entered an unopposed site."""
+        if (getattr(self, "_lurk_reunion", None) is not None
+                or game_state.get("is_planted") or "grid" not in game_state):
+            return
+        names = self._lurk_group_names()
+        if not names or self._observe_fake_group_contact():
+            return
+        attackers = [a for a in self._real_attackers(game_state)
+                     if bool(getattr(a, "is_alive", True))]
+        holder = next((a for a in attackers if getattr(a, "has_spike", False)), None)
+        if holder is None or self._holder_on_plant_cell(holder, game_state):
+            return
+        grid = np.asarray(game_state["grid"])
+        plant_cells = attack_plant_cells(getattr(self, "game", None), grid)
+        visible_counts = self._visible_defender_counts(game_state)
+        for lurker in attackers:
+            if lurker.name not in names:
+                continue
+            side = self._lurk_plan["sides"].get(lurker.name)
+            if side not in {SIDE_A, SIDE_B} or visible_counts[side]:
+                continue
+            cells = [p for p in plant_cells if side_of_pos(p) == side]
+            pos = tuple(map(int, lurker.pos))
+            if not cells or pos not in set(cells) | set(_site_cells(side)):
+                continue
+            # Clearance is inferred from attacker vision, never from hidden
+            # defender positions. Reaching an approach waypoint is not enough.
+            ranked = sorted((d, p) for p in preferred_plant_cells(grid, cells)
+                            if (d := _bfs_distance(grid, holder.pos, p)) is not None)
+            if not ranked:
+                continue
+            occupied = {tuple(map(int, a.pos)) for a in attackers if a is not holder}
+            target = next((p for _d, p in ranked if p not in occupied), ranked[0][1])
+            self._lurk_reunion = {"side": side, "target": target, "names": frozenset(names)}
+            self.env.previous_strategy = self.env.current_strategy
+            self.env.current_strategy = f"{side}_SPLIT"
+            self.env.strategy_age = 0
+            apply_assignments = getattr(self.env, "_apply_strategy_assignments", None)
+            if callable(apply_assignments):
+                apply_assignments(self.env.current_strategy, initial=False)
+            self._lurk_plan = None
+            self._apply_lurk_reunion(game_state)
+            return
+
+    def _apply_lurk_reunion(self, game_state):
+        """Keep the cleared site as the shared destination until planting."""
+        reunion = getattr(self, "_lurk_reunion", None)
+        if reunion is None or game_state.get("is_planted"):
+            return
+        side = reunion["side"]
+        target = getattr(self, "_plant_commit_pos", None) or reunion["target"]
+        self.env.target_site = side
+        if getattr(self, "game", None) is not None:
+            set_team_plant_target(self.game, target)
+        game_state["target_plant_pos"] = target
+        for attacker in self._real_attackers(game_state):
+            if not bool(getattr(attacker, "is_alive", True)):
+                continue
+            is_lurker = attacker.name in reunion["names"]
+            self.env.assignment[attacker.name] = (
+                side, "SITE", "OPPOSITE_SCOUT" if is_lurker else "MAIN")
+            # The lurker holds the site while the carrier and cover arrive.
+            self.env.targets[attacker.name] = (
+                tuple(map(int, attacker.pos)) if is_lurker else target)
+
     def _observe_fake_group_contact(self):
         """Latch real engagement by an independent fake/lurk player.
 
-        Area control alone is not a fake: the main group may only leave its
-        hold after a fake-side player has appeared in a real engagement.  The
-        battle engine's previous-tick engagement list is used so hidden enemy
-        positions are never consulted for this decision.
+        Area control alone does not count as contact. An unopposed site entry
+        is handled separately by _observe_lurk_clear_site. The battle engine's
+        previous-tick engagement list is used so hidden enemy positions are
+        never consulted for this decision.
         """
         strategy = str(getattr(self.env, "current_strategy", "") or "")
         fake_names = frozenset(self._lurk_group_names())
@@ -580,7 +649,9 @@ class LearningAttackerMacroGCController:
         return False
 
     def _fake_main_wait_result(self, char, game_state=None):
-        """Keep the main force concealed until the lurker actually engages."""
+        """Wait for lurk contact or arrival at an unopposed site."""
+        if game_state is not None:
+            self._observe_lurk_clear_site(game_state)
         if (
             str(getattr(self.env, "current_strategy", "") or "")
             not in {"FAKE_A_TO_B", "FAKE_B_TO_A", "DEFAULT"}
@@ -1387,6 +1458,7 @@ class LearningAttackerMacroGCController:
         )
 
         self._update_information_from_real_game(game_state)
+        self._observe_lurk_clear_site(game_state)
 
         # Capture the independent group before shadow phase progression can
         # refresh its assignments or replace an opposite-site role.
@@ -1394,7 +1466,8 @@ class LearningAttackerMacroGCController:
         # Advance internal option phases against REAL positions, not simulated
         # MacroEnv movement/combat.
         for a in self.env._living_attackers():
-            if hasattr(self.env, "_advance_assignment_phase_if_needed"):
+            if (getattr(self, "_lurk_reunion", None) is None
+                    and hasattr(self.env, "_advance_assignment_phase_if_needed")):
                 self.env._advance_assignment_phase_if_needed(a)
 
         fake_contact = self._observe_fake_group_contact()
@@ -1412,8 +1485,13 @@ class LearningAttackerMacroGCController:
             self.env._update_tactical_history()
 
         self._maybe_decide_macro(tick_id)
+        self._apply_lurk_reunion(game_state)
 
     def _maybe_decide_macro(self, tick_id):
+        if getattr(self, "_lurk_reunion", None) is not None:
+            # Finish the reunion/plant instead of immediately rotating away
+            # from the site that the independent lurker just secured.
+            return
         macro_interval = max(1, LOW_LEVEL_TICKS_PER_MACRO_STEP)
         if (
             self._last_macro_decision_tick is not None
@@ -1543,6 +1621,12 @@ class LearningAttackerMacroGCController:
         change it when the Macro strategy changes target site.
         """
         if self.game is None:
+            return
+
+        reunion = getattr(self, "_lurk_reunion", None)
+        if reunion is not None:
+            target = getattr(self, "_plant_commit_pos", None) or reunion["target"]
+            set_team_plant_target(self.game, target)
             return
 
         if forced_attack_site(self.game) is not None:

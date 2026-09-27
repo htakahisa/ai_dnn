@@ -79,11 +79,11 @@ class UltimateSystemTests(unittest.TestCase):
 
     def test_gc_learned_ultimate_payloads_are_executable(self):
         grid = np.zeros((9, 12), dtype=np.int32)
-        tiger = make_character("something", "A", (4, 1), 3)
+        tiger = make_character("something", "A", (4, 1), 2)
         tiger.facing = "E"
-        smoker = make_character("Demon1", "A", (2, 2), 6)
-        seeker = make_character("Leo", "A", (3, 2), 8)
-        flash = make_character("Chronicle", "A", (5, 2), 5)
+        smoker = make_character("Demon1", "A", (2, 2), 5)
+        seeker = make_character("Leo", "A", (3, 2), 6)
+        flash = make_character("Chronicle", "A", (5, 2), 8)
         chars = [tiger, smoker, seeker, flash]
 
         self.assertEqual(build_ultimate_action(grid, tiger, chars), {"ultimate": "RAID"})
@@ -112,10 +112,11 @@ class UltimateSystemTests(unittest.TestCase):
 
     def test_role_ultimate_costs(self):
         expected = {
-            "something": ("RAID", 3),
-            "Demon1": ("ESCAPE", 6),
-            "Leo": ("MONITOR", 8),
-            "Chronicle": ("TUNNEL", 5),
+            "something": ("RAID", 2),
+            "Demon1": ("ESCAPE", 5),
+            "Leo": ("MONITOR", 6),
+            "Chronicle": ("TUNNEL", 8),
+            "Alfajer": ("NEON", 9),
         }
         for name, (ultimate, cost) in expected.items():
             char = make_character(name, "A", (1, 1), 99)
@@ -207,7 +208,7 @@ class UltimateSystemTests(unittest.TestCase):
 
     def test_tunnel_warns_five_ticks_then_blinds_for_three_active_ticks(self):
         game = UltimateTestGame()
-        flash = make_character("Chronicle", "A", (4, 2), 5)
+        flash = make_character("Chronicle", "A", (4, 2), 8)
         flash.facing = "E"
         enemy_ahead = make_character("Demon1", "D", (4, 8))
         enemy_behind = make_character("Leo", "D", (4, 1))
@@ -301,8 +302,8 @@ class UltimateSystemTests(unittest.TestCase):
         game.chars = [shooter, target]
 
         game._kill_character(shooter, target)
-        self.assertEqual(shooter.ultimate_points, 3)
-        self.assertEqual(game.match_stats[shooter.name]["ultimate_points"], 3)
+        self.assertEqual(shooter.ultimate_points, 2)
+        self.assertEqual(game.match_stats[shooter.name]["ultimate_points"], 2)
 
 
 if __name__ == "__main__":

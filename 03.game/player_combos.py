@@ -42,8 +42,8 @@ COMBOS = [
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
         "bonuses": {
-            "hs_rate": 0.1,
-            "accuracy": 0.25,
+            "hs_rate": -0.1,
+            "accuracy": 0.2,
             "iq": 40,
             "dodge_rate": 0.15,
             "mental": 9,

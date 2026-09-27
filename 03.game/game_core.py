@@ -46,12 +46,14 @@ ULTIMATE_COSTS = {
     "スモーカー": 5,
     "シーカー": 6,
     "フラッシュ": 8,
+    "エンジニア": 9,
 }
 ULTIMATE_NAMES = {
     "タイガー": "RAID",
     "スモーカー": "ESCAPE",
     "シーカー": "MONITOR",
     "フラッシュ": "TUNNEL",
+    "エンジニア": "NEON",
 }
 RAID_DISTANCE_CELLS = 6
 ESCAPE_WARP_DELAY_TICKS = 10
@@ -61,6 +63,12 @@ TUNNEL_BLIND_TICKS = 15
 TUNNEL_HALF_WIDTH = 2.5
 TUNNEL_WARNING_TICKS = 5
 TUNNEL_ACTIVE_TICKS = 3
+RAMP_CHAIN_DISTANCE_CELLS = 5
+RAMP_ELECTRIC_TICKS = 5
+NEON_RADIUS_CELLS = 3
+NEON_WARNING_TICKS = 10
+NEON_ACTIVE_TICKS = 10
+NEON_DAMAGE_PER_TICK = 10
 
 # 向き(facing)関連
 FACING_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
@@ -540,6 +548,7 @@ class Character:
             "スモーカー": "SMOKE",
             "シーカー": "RECON",
             "タイガー": "HUNT",
+            "エンジニア": "RAMP",
         }.get(self.role, "FLASH")
         self.ultimate_name = ULTIMATE_NAMES.get(self.role, "TUNNEL")
         self.ultimate_cost = ULTIMATE_COSTS.get(self.role, 5)
@@ -548,6 +557,9 @@ class Character:
         self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
         self.recon_charges = 2 if self.ability_name == "RECON" else 0
+        self.ramp_charges = 2 if self.ability_name == "RAMP" else 0
+        self.electric_remaining = 0
+        self.electric_applied_tick = None
         self.blind_remaining = 0.0
         self.reveal_remaining = 0.0
         self.los_revealed = False

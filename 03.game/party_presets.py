@@ -68,7 +68,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="FNC",
         players=("Leo", "Boaster", "Derke", "Chronicle", "Alfajer"),
         igl="Boaster",
-        spike_holder="Derke",
+        spike_holder="Leo",
         description="IQ、個人能力共に高水準。それぞれが自分の仕事をこなす、2023年で1番強かったチーム",
     ),
     "EG2023": TeamPreset(

@@ -35,7 +35,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "Leo": CharacterStats("Leo", 0.27, 0.22, 150, 0.83, 135, "シーカー", 65, 1, 10),
     "Alfajer": CharacterStats(
-        "Alfajer", 0.45, 0.13, 60, 0.91, 145, "タイガー", 60, 4, 7
+        "Alfajer", 0.45, 0.13, 60, 0.91, 145, "エンジニア", 60, 4, 7
     ),
     "Derke": CharacterStats("Derke", 0.35, 0.24, 90, 0.75, 115, "タイガー", 90, 8, 8),
     "Boaster": CharacterStats(
@@ -133,7 +133,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "crashies", 0.28, 0.17, 140, 0.68, 80, "シーカー", 45, 0, 3
     ),
     "FNS": CharacterStats("FNS", 0.17, 0.13, 190, 0.63, 70, "スモーカー", 10, 0, 7),
-    "nAts": CharacterStats("nAts", 0.29, 0.18, 140, 0.72, 88, "スモーカー", 50, 9, 9),
+    "nAts": CharacterStats("nAts", 0.29, 0.18, 140, 0.72, 88, "エンジニア", 50, 9, 9),
     "Lar0k": CharacterStats("Lar0k", 0.34, 0.18, 85, 0.73, 123, "タイガー", 50, 4, 5),
     "skuba": CharacterStats(
         "skuba", 0.31, 0.17, 105, 0.71, 100, "スモーカー", 50, 6, 8
@@ -209,7 +209,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "alecks", 0.38, 0.13, 145, 0.7, 115, "タイガー", 115, 9, 9
     ),
     "icy": CharacterStats("icy", 0.26, 0.21, 75, 0.78, 95, "タイガー", 35, 5, 9),
-    "yay": CharacterStats("yay", 0.41, 0.14, 70, 0.8, 100, "フラッシュ", 90, 9, 4),
+    "yay": CharacterStats("yay", 0.41, 0.14, 70, 0.8, 100, "タイガー", 90, 9, 4),
     "ろびぃな": CharacterStats(
         "ろびぃな", 0.25, 0.55, 80, 0.65, 122, "スモーカー", 50, 5, 8
     ),
@@ -272,11 +272,19 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
     ),
     "A-Train": CharacterStats("A-Train", 0.3, 1, 160, 0.8, 210, "シーカー", 195, 10, 0),
     "Deep": CharacterStats("Deep", 0.8, 0.7, 170, 0.7, 170, "シーカー", 170, 7, 7),
-    "ごりまる": CharacterStats("ごりまる",0.4,0.15,125,0.6,110,"スモーカー",50,1, 9),
-    "ごんごん": CharacterStats("ごんごん",0.3,0.2,55,0.7,125,"タイガー",50,8, 8),
-    "ごんた": CharacterStats("ごんた",0.25,0.25,55,0.75,125,"シーカー",50,5, 7),
-    "くんた": CharacterStats("くんた",0.25,0.2,95,0.65,130,"フラッシュ",50,3, 6),
-    "くりまる": CharacterStats("くりまる",0.35,0.3,100,0.7,115,"フラッシュ",50,3, 7),
+    "ごりまる": CharacterStats(
+        "ごりまる", 0.4, 0.15, 55, 0.6, 110, "スモーカー", 50, 1, 9
+    ),
+    "ごんごん": CharacterStats(
+        "ごんごん", 0.3, 0.2, 55, 0.7, 125, "タイガー", 50, 8, 8
+    ),
+    "ごんた": CharacterStats("ごんた", 0.25, 0.25, 55, 0.75, 125, "シーカー", 50, 5, 7),
+    "くんた": CharacterStats(
+        "くんた", 0.25, 0.2, 95, 0.65, 130, "フラッシュ", 50, 3, 6
+    ),
+    "くりまる": CharacterStats(
+        "くりまる", 0.35, 0.3, 135, 0.7, 115, "フラッシュ", 50, 3, 7
+    ),
 }
 
 

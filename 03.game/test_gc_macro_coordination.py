@@ -174,6 +174,173 @@ class MacroCoordinationTests(unittest.TestCase):
             (list(holder.pos), "MOVE"),
         )
 
+    def clear_site_controller(self, strategy="DEFAULT", side="B"):
+        from map_data import NEW_MAZE_STR
+
+        controller, holder, units = self.cover_controller(strategy, "SELL")
+        grid = np.array([[int(cell) for cell in line]
+                         for line in NEW_MAZE_STR.strip().splitlines()], dtype=np.int8)
+        cells = [tuple(map(int, p)) for p in zip(*np.where(grid == 2))
+                 if runtime.side_of_pos(p) == side]
+        holder.pos = (23, 21)
+        units[1].pos, units[2].pos = (23, 20), (24, 21)
+        lurker = units[3]
+        lurker.pos = cells[0]
+        units[4].pos = (23, 18)
+        other_side = "A" if side == "B" else "B"
+        controller.env.assignment[lurker.name] = (side, "INFO", "OPPOSITE_SCOUT")
+        controller.env._fake_group_names = {lurker.name}
+        controller.env._fake_sides = lambda: (side, other_side)
+        controller.env.targets = {c.name: c.pos for c in units}
+        controller.game = NS(grid=grid, chars=units, battle_tick=1,
+                             last_engagements=[], target_plant_pos=(8, 3) if side == "B" else (7, 40))
+        controller._fake_contact_key = None
+        controller._fake_contact_confirmed = False
+        controller._plant_commit_pos = None
+        state = {"grid": grid, "chars": units, "is_planted": False}
+        return controller, holder, lurker, state
+
+    def test_clear_lurk_site_releases_main_and_retargets_both_fake_directions(self):
+        for strategy, side in (("DEFAULT", "A"), ("DEFAULT", "B"),
+                               ("FAKE_A_TO_B", "A"), ("FAKE_B_TO_A", "B")):
+            with self.subTest(strategy=strategy, side=side):
+                controller, holder, lurker, state = self.clear_site_controller(strategy, side)
+                self.assertIsNone(controller.lurk_coordination_result(holder, state))
+                self.assertEqual(controller.env.target_site, side)
+                target = controller.game.target_plant_pos
+                self.assertEqual(runtime.side_of_pos(target), side)
+                self.assertEqual(int(state["grid"][target]), 2)
+                self.assertNotEqual(target, lurker.pos)
+                self.assertEqual(controller.env.targets[holder.name], target)
+                self.assertIsNone(controller._fake_main_wait_result(holder, state))
+                self.assertFalse(controller._fake_contact_confirmed)
+                # A later Macro decision may not immediately abandon the reunion.
+                controller._maybe_decide_macro(10)
+                controller._retarget_real_plant_position(f"{side}_SPLIT")
+                self.assertEqual(controller.game.target_plant_pos, target)
+
+    def test_lurk_approach_and_dead_lurker_do_not_release_main(self):
+        for alive, pos in ((True, (23, 18)), (False, (7, 40))):
+            with self.subTest(alive=alive):
+                controller, holder, lurker, state = self.clear_site_controller()
+                lurker.pos, lurker.is_alive = pos, alive
+                self.assertEqual(controller.lurk_coordination_result(holder, state),
+                                 (list(holder.pos), "MOVE"))
+                self.assertIsNone(getattr(controller, "_lurk_reunion", None))
+
+    def test_visible_or_revealed_site_defender_prevents_clearance(self):
+        for revealed in (False, True):
+            with self.subTest(revealed=revealed):
+                controller, holder, lurker, state = self.clear_site_controller()
+                defender = NS(name="defender", team="D", is_alive=True,
+                              pos=(lurker.pos[0], lurker.pos[1] + 1), revealed=revealed)
+                state["chars"].append(defender)
+                with patch.object(runtime, "_has_los", return_value=not revealed):
+                    self.assertEqual(controller.lurk_coordination_result(holder, state),
+                                     (list(holder.pos), "MOVE"))
+
+    def test_hidden_defenders_do_not_supply_clearance_information(self):
+        controller, holder, lurker, state = self.clear_site_controller()
+        state["chars"].append(NS(name="hidden", team="D", is_alive=True,
+                                 pos=(lurker.pos[0], lurker.pos[1] + 1)))
+        with patch.object(runtime, "_has_los", return_value=False):
+            self.assertIsNone(controller.lurk_coordination_result(holder, state))
+        self.assertEqual(controller.env.target_site, "B")
+
+    def test_opposite_site_defender_does_not_block_clear_lurk_site(self):
+        controller, holder, _lurker, state = self.clear_site_controller()
+        state["chars"].append(NS(name="opposite", team="D", is_alive=True,
+                                 pos=(8, 3), revealed=True))
+        self.assertIsNone(controller.lurk_coordination_result(holder, state))
+        self.assertEqual(controller.env.target_site, "B")
+
+    def test_clear_lurk_site_respects_existing_opponent_site_restriction(self):
+        controller, holder, _lurker, state = self.clear_site_controller()
+        from gc_v1.opponent_site_gc import TOUYAMA_ROSTER
+
+        controller.game.defender_roster = list(TOUYAMA_ROSTER)
+        self.assertEqual(controller.lurk_coordination_result(holder, state),
+                         (list(holder.pos), "MOVE"))
+
+    def test_iq_wrapper_passes_clear_lurk_site_to_learned_carry(self):
+        from iq_controller_adapter import IQAwareController
+
+        macro, holder, _lurker, state = self.clear_site_controller()
+        macro._sync_tick_once = lambda state: None
+        wrapper = GhostChampionsV1AttackerController.__new__(GhostChampionsV1AttackerController)
+        wrapper.macro_controller = macro
+        wrapper.carry = NS(positioning_version=1)
+        wrapper.escort = NS(positioning_version=2)
+        macro.game.current_round = 1
+        macro.game.is_planted = False
+        macro.game.spike_pos = None
+        macro.game.planted_pos = None
+        macro.game.round_timer = 180
+        macro.game.detonate_timer = 0
+        for char in state["chars"]:
+            char.hp = 100
+
+        def set_game(view):
+            wrapper.game = view
+            macro.set_game(view)
+
+        wrapper.set_game = set_game
+        adapter = IQAwareController(wrapper)
+        game = macro.game
+        adapter.set_game(game)
+        observed_targets = []
+
+        def carry_action(char, perceived_state):
+            observed_targets.append(perceived_state["target_plant_pos"])
+            return ([22, 21], "MOVE")
+
+        with patch.object(base_gc.GhostChampionsV1AttackerController, "decide_move",
+                          side_effect=carry_action):
+            self.assertEqual(adapter.decide_move(holder, state), ([22, 21], "MOVE"))
+        self.assertEqual(len(observed_targets), 1)
+        self.assertEqual(runtime.side_of_pos(observed_targets[0]), "B")
+        self.assertEqual(game.target_plant_pos, observed_targets[0])
+
+    def test_real_macro_sync_keeps_reunion_and_round_reset_restores_lurk_gate(self):
+        controller, holder, lurker, state = self.clear_site_controller("FAKE_B_TO_A", "B")
+        old_env = controller.env
+        controller.env = training.MacroEnv()
+        controller.env.reset(forced_curriculum_mode="FREE")
+        controller.env.attackers = state["chars"]
+        controller.env.current_strategy = old_env.current_strategy
+        controller.env.assignment = old_env.assignment
+        controller.env.targets = old_env.targets
+        controller.env._fake_group_names = old_env._fake_group_names
+        controller.env._fake_sides = old_env._fake_sides
+        controller._last_real_tick = None
+        controller._fake_peak_key = None
+        controller._fake_peak_stages = {}
+        controller._fake_peak_targets = {}
+        controller._attacker_wait_ticks = {}
+        controller._lurk_route_state = {}
+        controller._sync_tick_once(state)
+        target = controller.game.target_plant_pos
+        self.assertEqual(runtime.side_of_pos(target), "B")
+        for tick in (2, 3, 6):
+            controller.game.battle_tick = tick
+            controller._sync_tick_once(state)
+            self.assertEqual(controller.game.target_plant_pos, target)
+            self.assertEqual(controller.env.targets[holder.name], target)
+            self.assertEqual(controller.env.targets[lurker.name], lurker.pos)
+        # A carrier already planting at another legal cell keeps its commitment.
+        controller._plant_commit_pos = lurker.pos
+        controller.game.battle_tick = 7
+        controller._sync_tick_once(state)
+        self.assertEqual(controller.game.target_plant_pos, lurker.pos)
+        controller.reset_round()
+        self.assertIsNone(controller._lurk_reunion)
+        self.assertIsNone(controller._plant_commit_pos)
+        controller.env.current_strategy = "DEFAULT"
+        controller.env.assignment = {lurker.name: ("B", "INFO", "OPPOSITE_SCOUT")}
+        lurker.pos = (23, 18)
+        self.assertEqual(controller.lurk_coordination_result(holder, state),
+                         (list(holder.pos), "MOVE"))
+
     def test_default_lurk_keeps_advancing_when_model_waits(self):
         controller = runtime.LearningAttackerMacroGCController.__new__(
             runtime.LearningAttackerMacroGCController

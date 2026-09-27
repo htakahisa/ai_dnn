@@ -393,6 +393,7 @@ class BattleLogicMixin:
             self.label.config(text=f"⚔️ Round {self.current_round} LIVE", fg="black")
 
     def move_character(self, char):
+        self._trigger_ramp_traps(char)
         r, c = char.pos
         old_pos = tuple(char.pos)
 
@@ -736,6 +737,10 @@ class BattleLogicMixin:
         if explicit_facing in FACING_VECTORS and not char.facing_forced_this_tick:
             char.facing = explicit_facing
 
+        if self._ramp_blocks_movement(char):
+            self._finalize_movement_transition_state(char)
+            return
+
         if isinstance(next_pos, (list, tuple, np.ndarray)) and len(next_pos) == 2:
             nr, nc = int(next_pos[0]), int(next_pos[1])
             in_bounds = 0 <= nr < self.height and 0 <= nc < self.width
@@ -787,6 +792,7 @@ class BattleLogicMixin:
                     (nr, nc),
                 )
                 char.pos = [nr, nc]
+                self._trigger_ramp_traps(char)
 
                 # 覚醒等でmove_steps_per_tickが2以上のキャラは、
                 # コントローラーが選んだ1手の方向へそのまま延長して進む。
@@ -796,6 +802,8 @@ class BattleLogicMixin:
                     if step_limit is not None:
                         extra_steps = min(extra_steps, max(0, int(step_limit) - 1))
                 for _ in range(extra_steps):
+                    if self._ramp_blocks_movement(char):
+                        break
                     prev = tuple(char.pos)
                     cand_r, cand_c = prev[0] + dr, prev[1] + dc
                     cand_in_bounds = (
@@ -807,6 +815,7 @@ class BattleLogicMixin:
                         break
                     self._update_occupancy_after_move(prev, (cand_r, cand_c))
                     char.pos = [cand_r, cand_c]
+                    self._trigger_ramp_traps(char)
 
         char.moved_this_tick = tuple(char.pos) != old_pos
         self._finalize_movement_transition_state(char)
@@ -1034,6 +1043,7 @@ class BattleLogicMixin:
     def _kill_character(self, shooter, target):
         target.hp = 0
         target.is_alive = False
+        self._remove_dead_ramp_traps()
         target.just_died = True
         target.deaths += 1
         shooter.kills += 1
@@ -1396,7 +1406,7 @@ class BattleLogicMixin:
                 continue
             if not controller_matches(
                 controller,
-                lambda current: any(
+                lambda current: bool(getattr(current, "auto_face_visible_enemy", False)) or any(
                     cls.__name__.startswith("GhostChampionsV1")
                     for cls in type(current).__mro__
                 ),
@@ -1437,6 +1447,7 @@ class BattleLogicMixin:
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
             char.reveal_remaining = max(0, char.reveal_remaining - 1)
+        self._advance_engineer_effects()
         self._advance_timed_awakenings()
         for burst in self.flash_bursts:
             burst["remaining_ticks"] -= 1

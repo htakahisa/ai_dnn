@@ -93,7 +93,7 @@ def tactical_ultimate_window(char, context):
         return objective or (engaged and urgent)
     if name == "MONITOR":
         return objective and not engaged
-    if name == "TUNNEL":
+    if name in {"TUNNEL", "NEON"}:
         return engaged or objective
     return False
 
@@ -140,6 +140,21 @@ def build_ultimate_action(grid, char, chars, destination=None):
     if not ultimate_ready(char):
         return None
     name = str(getattr(char, "ultimate_name", "")).upper()
+    if name == "NEON":
+        target = destination
+        if target is None:
+            enemies = [enemy for enemy in chars
+                       if getattr(enemy, "is_alive", True) and enemy.team != char.team]
+            if not enemies:
+                return None
+            target = max(enemies, key=lambda enemy: sum(
+                max(abs(enemy.pos[0] - other.pos[0]), abs(enemy.pos[1] - other.pos[1])) <= 3
+                for other in enemies
+            )).pos
+        target = tuple(map(int, target))
+        if not (0 <= target[0] < grid.shape[0] and 0 <= target[1] < grid.shape[1]) or grid[target] == 1:
+            return None
+        return {"ultimate": name, "target": target}
     if name == "ESCAPE":
         target = _escape_target(grid, char, chars, destination)
         return None if target is None else {"ultimate": name, "target": target}

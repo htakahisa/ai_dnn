@@ -36,6 +36,7 @@ CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
+    "Fnatic v3": "fnatic_v3",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3.1": "toru_ai_v3.1",
@@ -54,7 +55,7 @@ RATING_FILE = RESULT_DIR / "team_ratings.json"
 DEFAULT_TEAM_RATING = 1500.0
 RATING_K_FACTOR = 40.0
 UNUSED = "（未使用）"
-MAX_TEAM_SLOTS = 20
+MAX_TEAM_SLOTS = 30
 
 
 class TeamPlayerKey(str):
@@ -2817,11 +2818,15 @@ class CompetitionApp:
         )
         settings_frame.bind(
             "<Configure>",
-            lambda _event: settings_canvas.configure(scrollregion=settings_canvas.bbox("all")),
+            lambda _event: settings_canvas.configure(
+                scrollregion=settings_canvas.bbox("all")
+            ),
         )
         settings_canvas.bind(
             "<Configure>",
-            lambda event: settings_canvas.itemconfigure(settings_window, width=event.width),
+            lambda event: settings_canvas.itemconfigure(
+                settings_window, width=event.width
+            ),
         )
 
         # シナリオ名
@@ -3050,6 +3055,7 @@ class CompetitionApp:
         available_ais = [
             ("Touyama Gaming v2", "touyama_gaming_v2"),
             ("Touyama Gaming v1", "touyama_gaming_v1"),
+            ("Fnatic v3", "fnatic_v3"),
             ("Fnatic v2", "fnatic_v2"),
             ("Fnatic v1", "fnatic_v1"),
             ("Toru AI v3.1", "toru_ai_v3.1"),
@@ -3140,13 +3146,17 @@ class CompetitionApp:
 
         def selected_player_names(team, count):
             roster_var = attacker_roster_var if team == "A" else defender_roster_var
-            entered = [name.strip() for name in roster_var.get().split(",") if name.strip()]
+            entered = [
+                name.strip() for name in roster_var.get().split(",") if name.strip()
+            ]
             return [
                 entered[index] if index < len(entered) else f"{team}_player_{index}"
                 for index in range(count)
             ]
 
-        resource_frame = ttk.LabelFrame(settings_frame, text="プレイヤー別リソース（再生中は残数）")
+        resource_frame = ttk.LabelFrame(
+            settings_frame, text="プレイヤー別リソース（再生中は残数）"
+        )
         resource_frame.grid(row=11, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
         resource_tree = ttk.Treeview(
             resource_frame,
@@ -3180,16 +3190,26 @@ class CompetitionApp:
         ultimate_label = ttk.Label(resource_frame, text="ウルトポイント")
         ultimate_label.grid(row=3, column=0, sticky="w", padx=5)
         ability_spin = ttk.Spinbox(
-            resource_frame, from_=0, to=2, textvariable=ability_charges_var,
-            width=6, state="disabled",
+            resource_frame,
+            from_=0,
+            to=2,
+            textvariable=ability_charges_var,
+            width=6,
+            state="disabled",
         )
         ability_spin.grid(row=2, column=1, sticky="w", padx=5)
         ultimate_spin = ttk.Spinbox(
-            resource_frame, from_=0, to=8, textvariable=ultimate_points_var,
-            width=6, state="disabled",
+            resource_frame,
+            from_=0,
+            to=8,
+            textvariable=ultimate_points_var,
+            width=6,
+            state="disabled",
         )
         ultimate_spin.grid(row=3, column=1, sticky="w", padx=5)
-        apply_resource_button = ttk.Button(resource_frame, text="選択した選手に反映", state="disabled")
+        apply_resource_button = ttk.Button(
+            resource_frame, text="選択した選手に反映", state="disabled"
+        )
         apply_resource_button.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
 
         # 配置座標をキーにするので、途中のプレイヤーを削除しても設定がずれない。
@@ -3209,7 +3229,10 @@ class CompetitionApp:
                     active_keys.add(key)
                     name = names[index]
                     profile = get_character_resource_profile(name)
-                    if key not in player_resources or player_resources[key]["name"] != name:
+                    if (
+                        key not in player_resources
+                        or player_resources[key]["name"] != name
+                    ):
                         player_resources[key] = {
                             "name": name,
                             "ability_charges": profile["max_charges"],
@@ -3217,7 +3240,9 @@ class CompetitionApp:
                         }
                     resource = player_resources[key]
                     resource_tree.insert(
-                        "", "end", iid=f"{team}:{index}",
+                        "",
+                        "end",
+                        iid=f"{team}:{index}",
                         values=(
                             f"{team}{index + 1} {name}",
                             f"{profile['ability']} {resource['ability_charges']}/{profile['max_charges']}",
@@ -3255,13 +3280,17 @@ class CompetitionApp:
             _key, resource = selected
             profile = get_character_resource_profile(resource["name"])
             selected_player_var.set(resource["name"])
-            ability_label.config(text=f"{profile['ability']} 残数 (最大{profile['max_charges']})")
+            ability_label.config(
+                text=f"{profile['ability']} 残数 (最大{profile['max_charges']})"
+            )
             ultimate_label.config(
                 text=f"{profile['ultimate']} ポイント (最大{profile['ultimate_cost']})"
             )
             ability_charges_var.set(resource["ability_charges"])
             ultimate_points_var.set(resource["ultimate_points"])
-            editable = not (playback["simulator"] is not None and not playback["finished"])
+            editable = not (
+                playback["simulator"] is not None and not playback["finished"]
+            )
             ability_spin.config(
                 to=profile["max_charges"],
                 state="normal" if editable and profile["max_charges"] else "disabled",
@@ -3281,16 +3310,21 @@ class CompetitionApp:
                 charges = ability_charges_var.get()
                 points = ultimate_points_var.get()
             except (tk.TclError, ValueError):
-                messagebox.showerror("入力エラー", "アビリティ残数とウルトポイントを整数で入力してください")
+                messagebox.showerror(
+                    "入力エラー",
+                    "アビリティ残数とウルトポイントを整数で入力してください",
+                )
                 return False
             if not 0 <= charges <= profile["max_charges"]:
                 messagebox.showerror(
-                    "入力エラー", f"{resource['name']}のアビリティ残数は0～{profile['max_charges']}です"
+                    "入力エラー",
+                    f"{resource['name']}のアビリティ残数は0～{profile['max_charges']}です",
                 )
                 return False
             if not 0 <= points <= profile["ultimate_cost"]:
                 messagebox.showerror(
-                    "入力エラー", f"{resource['name']}のウルトポイントは0～{profile['ultimate_cost']}です"
+                    "入力エラー",
+                    f"{resource['name']}のウルトポイントは0～{profile['ultimate_cost']}です",
                 )
                 return False
             resource["ability_charges"] = charges
@@ -3378,19 +3412,27 @@ class CompetitionApp:
             attackers = []
             for i, (x, y, _) in enumerate(placed_attackers):
                 resource = player_resources[("A", x, y)]
-                attackers.append({
-                    "name": attacker_names[i], "pos": (y, x), "facing": "E",
-                    "ability_charges": resource["ability_charges"],
-                    "ultimate_points": resource["ultimate_points"],
-                })
+                attackers.append(
+                    {
+                        "name": attacker_names[i],
+                        "pos": (y, x),
+                        "facing": "E",
+                        "ability_charges": resource["ability_charges"],
+                        "ultimate_points": resource["ultimate_points"],
+                    }
+                )
             defenders = []
             for i, (x, y, _) in enumerate(placed_defenders):
                 resource = player_resources[("D", x, y)]
-                defenders.append({
-                    "name": defender_names[i], "pos": (y, x), "facing": "E",
-                    "ability_charges": resource["ability_charges"],
-                    "ultimate_points": resource["ultimate_points"],
-                })
+                defenders.append(
+                    {
+                        "name": defender_names[i],
+                        "pos": (y, x),
+                        "facing": "E",
+                        "ability_charges": resource["ability_charges"],
+                        "ultimate_points": resource["ultimate_points"],
+                    }
+                )
 
             # シナリオ作成
             scenario = RetakeScenario(
@@ -3505,8 +3547,11 @@ class CompetitionApp:
                         continue
                     end_index = min(int(projectile.get("progress", 0)), len(path) - 1)
                     if end_index > 0:
-                        coords = [coordinate for pos in path[:end_index + 1]
-                                  for coordinate in cell_center(pos)]
+                        coords = [
+                            coordinate
+                            for pos in path[: end_index + 1]
+                            for coordinate in cell_center(pos)
+                        ]
                         simulation_items.append(
                             canvas.create_line(
                                 *coords, fill="#f4d03f", width=2, dash=(3, 3)
@@ -3516,8 +3561,12 @@ class CompetitionApp:
                     radius = 4
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - radius, cy - radius, cx + radius, cy + radius,
-                            fill="#fff4a3", outline="#d4ac0d",
+                            cx - radius,
+                            cy - radius,
+                            cx + radius,
+                            cy + radius,
+                            fill="#fff4a3",
+                            outline="#d4ac0d",
                         )
                     )
                 for projectile in simulator.recon_projectiles:
@@ -3526,8 +3575,11 @@ class CompetitionApp:
                         continue
                     end_index = min(int(projectile.get("progress", 0)), len(path) - 1)
                     if end_index > 0:
-                        coords = [coordinate for pos in path[:end_index + 1]
-                                  for coordinate in cell_center(pos)]
+                        coords = [
+                            coordinate
+                            for pos in path[: end_index + 1]
+                            for coordinate in cell_center(pos)
+                        ]
                         simulation_items.append(
                             canvas.create_line(
                                 *coords, fill="#65d8e8", width=2, dash=(3, 3)
@@ -3536,8 +3588,16 @@ class CompetitionApp:
                     cx, cy = cell_center(path[end_index])
                     simulation_items.append(
                         canvas.create_polygon(
-                            cx - 6, cy + 3, cx + 5, cy - 5, cx + 7, cy - 2,
-                            cx - 3, cy + 5, fill="#9eeaf4", outline="#2aa9bd",
+                            cx - 6,
+                            cy + 3,
+                            cx + 5,
+                            cy - 5,
+                            cx + 7,
+                            cy - 2,
+                            cx - 3,
+                            cy + 5,
+                            fill="#9eeaf4",
+                            outline="#2aa9bd",
                         )
                     )
 
@@ -3546,8 +3606,13 @@ class CompetitionApp:
                     radius = cell_size * 0.7
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - radius, cy - radius, cx + radius, cy + radius,
-                            fill="#fff7bf", outline="#f1c40f", width=2,
+                            cx - radius,
+                            cy - radius,
+                            cx + radius,
+                            cy + radius,
+                            fill="#fff7bf",
+                            outline="#f1c40f",
+                            width=2,
                             stipple="gray50",
                         )
                     )
@@ -3558,15 +3623,23 @@ class CompetitionApp:
                     radius = cell_size * 0.42
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - radius, cy - radius, cx + radius, cy + radius,
-                            fill="#dff8ff", outline="#67d5ff", width=2,
+                            cx - radius,
+                            cy - radius,
+                            cx + radius,
+                            cy + radius,
+                            fill="#dff8ff",
+                            outline="#67d5ff",
+                            width=2,
                             stipple="gray25",
                         )
                     )
                     simulation_items.append(
                         canvas.create_text(
-                            cx, cy, text=str(portal.get("remaining_ticks", "")),
-                            fill="#12394a", font=("Arial", 7, "bold"),
+                            cx,
+                            cy,
+                            text=str(portal.get("remaining_ticks", "")),
+                            fill="#12394a",
+                            font=("Arial", 7, "bold"),
                         )
                     )
                 for trail in simulator.ultimate_trails:
@@ -3574,8 +3647,14 @@ class CompetitionApp:
                     x2, y2 = cell_center(trail["end"])
                     simulation_items.append(
                         canvas.create_line(
-                            x1, y1, x2, y2, fill="#ff4fd8", width=4,
-                            arrow=tk.LAST, dash=(4, 2),
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            fill="#ff4fd8",
+                            width=4,
+                            arrow=tk.LAST,
+                            dash=(4, 2),
                         )
                     )
 
@@ -3586,8 +3665,13 @@ class CompetitionApp:
                     radius = 4 + (cell_size * 8 - 4) * progress
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - radius, cy - radius, cx + radius, cy + radius,
-                            fill="#f04b32", outline="#ffe4a8", width=2,
+                            cx - radius,
+                            cy - radius,
+                            cx + radius,
+                            cy + radius,
+                            fill="#f04b32",
+                            outline="#ffe4a8",
+                            width=2,
                             stipple="gray50",
                         )
                     )
@@ -3668,13 +3752,21 @@ class CompetitionApp:
                     radius = cell_size * 0.34
                     simulation_items.append(
                         canvas.create_oval(
-                            cx - radius, cy - radius, cx + radius, cy + radius,
-                            fill="#58d3f7", outline="#12394a", width=2,
+                            cx - radius,
+                            cy - radius,
+                            cx + radius,
+                            cy + radius,
+                            fill="#58d3f7",
+                            outline="#12394a",
+                            width=2,
                         )
                     )
                     simulation_items.append(
                         canvas.create_text(
-                            cx, cy, text=str(int(drone.hp)), fill="#08202a",
+                            cx,
+                            cy,
+                            text=str(int(drone.hp)),
+                            fill="#08202a",
                             font=("Arial", 6, "bold"),
                         )
                     )
