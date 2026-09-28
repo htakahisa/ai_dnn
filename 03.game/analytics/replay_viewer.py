@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_data import NEW_MAZE_STR
+from ability_effects import draw_raid_wind
 
 
 class ReplayViewer(tk.Toplevel):
@@ -387,6 +388,8 @@ class ReplayViewer(tk.Toplevel):
                 fill="#f8fdff",
                 outline="#bae6fd",
             )
+        for trail in frame.get("ultimate_trails", []):
+            draw_raid_wind(self.canvas, trail, self.cell)
         for trap in frame.get("ramp_traps", []):
             if self.view_mode.get() in ("A", "D") and trap.get("team") != self.view_mode.get():
                 continue

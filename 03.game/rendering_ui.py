@@ -10,6 +10,7 @@ from map_data_defender_setup import (
 import math
 from pathlib import Path
 import tkinter as tk
+from ability_effects import draw_raid_wind
 from party_presets import get_team_short_name
 
 from controllers import UserInputController
@@ -233,7 +234,8 @@ class RenderingUIMixin:
                 if ability_name == "SMOKE" and owner.smoke_charges > 0:
                     cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
                              if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
-                    self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "owner": owner.name})
+                    self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS,
+                                        "owner": owner.name, "team": owner.team, "center": (r, c)})
                     owner.smoke_charges -= 1
                 elif ability_name == "FLASH" and owner.flash_charges > 0:
                     path = self._projectile_path(tuple(owner.pos), (r, c))
@@ -896,6 +898,8 @@ class RenderingUIMixin:
             )
 
         self._draw_engineer_effects()
+        for trail in getattr(self, "ultimate_trails", []):
+            draw_raid_wind(self.canvas, trail, self.cell_size, self.map_offset_x)
 
         for drone in getattr(self, "monitor_drones", []):
             if not drone.is_alive:

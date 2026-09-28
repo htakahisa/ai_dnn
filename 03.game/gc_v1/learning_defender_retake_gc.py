@@ -916,16 +916,7 @@ class LearningDefenderRetakeGCController:
             and getattr(char, "blind_remaining", 0) <= 0
             and not time_critical
         ):
-            nearest = min(
-                visible_enemies,
-                key=lambda e: max(
-                    abs(int(e.pos[0]) - r0), abs(int(e.pos[1]) - c0)
-                ),
-            )
-            facing = facing_towards(char.pos, nearest.pos)
-            if facing is not None:
-                char.facing = facing
-                return list(char.pos), {"facing": facing}
+            # Holding in combat must not implement a second auto-aim rule.
             return list(char.pos)
 
         obs = self._build_observation(
@@ -951,7 +942,8 @@ class LearningDefenderRetakeGCController:
 
         # The battle engine forces facing toward a firing enemy; don't let the
         # learned facing head override that combat-facing behavior.
-        facing = None if visible_enemies else self._select_facing(obs, action_idx)
+        facing = (None if getattr(char, "facing_forced_this_tick", False)
+                  else self._select_facing(obs, action_idx))
         if facing is not None:
             char.facing = facing
 

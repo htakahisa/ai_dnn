@@ -8,6 +8,15 @@ from .map_data_guard_plant_fnatic import NEW_MAZE_STR as PLANT_MAZE
 from .map_data_guard_fnatic import NEW_MAZE_STR as GUARD_MAZE
 
 
+def region(cell, grid):
+    """Map columns: left third A, middle third Mid, right third B."""
+    if cell[1] < grid.shape[1] / 3:
+        return 'A'
+    if cell[1] >= grid.shape[1] * 2 / 3:
+        return 'B'
+    return 'MID'
+
+
 def parse_grid(text):
     rows = [line.strip() for line in text.splitlines() if line.strip()]
     if not rows or len({len(row) for row in rows}) != 1:
@@ -15,15 +24,16 @@ def parse_grid(text):
     return np.array([[int(cell) for cell in row] for row in rows], dtype=np.int32)
 
 
-def distances(start, grid):
-    """Walking distances, ignoring temporary character occupancy."""
+def distances(start, grid, blocked=()):
+    """Walking distances with optional occupied-cell exclusions."""
     result = {start: 0}
+    blocked = set(blocked) - {start}
     queue = deque([start])
     while queue:
         r, c = queue.popleft()
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             cell = (r + dr, c + dc)
-            if (cell in result or not (0 <= cell[0] < grid.shape[0]
+            if (cell in result or cell in blocked or not (0 <= cell[0] < grid.shape[0]
                                       and 0 <= cell[1] < grid.shape[1])
                     or grid[cell] == 1):
                 continue

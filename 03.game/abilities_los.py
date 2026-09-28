@@ -17,6 +17,7 @@ from game_core import (
     MONITOR_COLLISION_REVEAL_TICKS,
     MONITOR_DRONE_HP,
     RAID_DISTANCE_CELLS,
+    RAID_TRAIL_TICKS,
     TUNNEL_BLIND_TICKS,
     TUNNEL_ACTIVE_TICKS,
     TUNNEL_HALF_WIDTH,
@@ -80,6 +81,7 @@ class AbilityLosMixin:
 
         Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL|NEON", ...}``.
         ESCAPE and NEON additionally require a cell in ``target``.
+        RAID and TUNNEL can set ``facing`` for the direction of the cast.
         """
         if not owner.is_alive or not isinstance(ultimate_action, dict):
             return False
@@ -118,7 +120,8 @@ class AbilityLosMixin:
             return True
 
         if ultimate_name == "RAID":
-            step = ULTIMATE_FACING_STEPS.get(owner.facing)
+            facing = ultimate_action.get("facing", owner.facing)
+            step = ULTIMATE_FACING_STEPS.get(facing)
             if step is None:
                 return False
             destination = tuple(owner.pos)
@@ -141,15 +144,26 @@ class AbilityLosMixin:
                 path.append(candidate)
             if destination == old_pos:
                 return False
+            owner.facing = facing
             owner.moved_this_tick = True
             self._spend_ultimate(owner)
+            traversed = [old_pos]
             for destination in path:
                 previous = tuple(owner.pos)
                 owner.pos = list(destination)
                 self._update_occupancy_after_move(previous, destination)
+                traversed.append(destination)
                 self._trigger_ramp_traps(owner)
                 if self._ramp_blocks_movement(owner):
                     break
+            if not hasattr(self, "ultimate_trails"):
+                self.ultimate_trails = []
+            self.ultimate_trails.append({
+                "start": old_pos, "end": tuple(owner.pos), "cells": traversed,
+                "direction": step, "team": owner.team, "owner": owner.name,
+                "remaining_ticks": RAID_TRAIL_TICKS,
+                "created_tick": int(getattr(self, "battle_tick", 0)) + 1,
+            })
             return True
 
         if ultimate_name == "ESCAPE":
@@ -215,9 +229,11 @@ class AbilityLosMixin:
             return True
 
         if ultimate_name == "TUNNEL":
-            cells = self._tunnel_cells(tuple(owner.pos), owner.facing)
+            facing = ultimate_action.get("facing", owner.facing)
+            cells = self._tunnel_cells(tuple(owner.pos), facing)
             if not cells:
                 return False
+            owner.facing = facing
             self.tunnel_bursts.append(
                 {
                     "cells": cells,
@@ -231,6 +247,15 @@ class AbilityLosMixin:
             return True
 
         return False
+
+    def _advance_raid_trails(self):
+        trails = []
+        for trail in getattr(self, "ultimate_trails", []):
+            if trail.get("created_tick") != self.battle_tick:
+                trail["remaining_ticks"] -= 1
+            if trail["remaining_ticks"] > 0:
+                trails.append(trail)
+        self.ultimate_trails = trails
 
     def _remove_dead_ramp_traps(self):
         live_owners = {char.name for char in self.chars if char.is_alive}
@@ -266,7 +291,7 @@ class AbilityLosMixin:
                 queue.append(cell)
         return distances.keys()
 
-    def _trigger_ramp_traps(self, char):
+    def _trigger_ramp_traps(self, char, *, during_battle=False):
         if not getattr(self, "ramp_traps", None):
             return
         self._remove_dead_ramp_traps()
@@ -287,12 +312,12 @@ class AbilityLosMixin:
             source = queue.popleft()
             source.electric_remaining = RAMP_ELECTRIC_TICKS
             # Movement precedes process_battle's tick increment and status decay.
-            source.electric_applied_tick = int(getattr(self, "battle_tick", 0)) + 1
+            source.electric_applied_tick = int(getattr(self, "battle_tick", 0)) + (0 if during_battle else 1)
             source.reveal_remaining = max(source.reveal_remaining, RAMP_ELECTRIC_TICKS)
             tracker = getattr(self, "analytics_tracker", None)
             if tracker is not None:
                 owner = next((owner for owner in self.chars if owner.name == triggered[0]["owner"]), None)
-                tracker.record_contribution(owner, source, self.battle_tick + 1, "ramp")
+                tracker.record_contribution(owner, source, source.electric_applied_tick, "ramp")
             reachable = self._ramp_reachable_cells(tuple(source.pos))
             for enemy in enemies:
                 if enemy.name not in affected and tuple(enemy.pos) in reachable:
@@ -411,7 +436,7 @@ class AbilityLosMixin:
                 old_pos in smoke_cells and destination not in smoke_cells
             )
             owner.stopped_after_move_this_tick = False
-            self._trigger_ramp_traps(owner)
+            self._trigger_ramp_traps(owner, during_battle=True)
 
         self.escape_portals = remaining_portals
 
@@ -550,6 +575,8 @@ class AbilityLosMixin:
                     "cells": cells,
                     "remaining_ticks": SMOKE_DURATION_TICKS,
                     "owner": owner.name,
+                    "team": owner.team,
+                    "center": (r, c),
                 }
             )
             owner.smoke_charges -= 1

@@ -11,7 +11,7 @@ COMBOS = [
     {
         "name": "天才と悪魔",
         "players": ("jawgemo", "Demon1"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.1},
         "renames": {},
     },
     {
@@ -29,23 +29,22 @@ COMBOS = [
     {
         "name": "犬猿の仲",
         "players": ("Aspas", "Demon1"),
-        "bonuses": {"hs_rate": 0.15},
+        "bonuses": {"hs_rate": 0.1},
         "renames": {},
     },
     {
         "name": "寡黙な羊たちの晩餐",
         "players": ("Alfajer", "Leo"),
-        "bonuses": {"hs_rate": 0.2},
+        "bonuses": {"hs_rate": 0.1},
         "renames": {},
     },
     {
         "name": "世界一の名門",
         "players": ("Alfajer", "Boaster", "Chronicle", "Derke", "Leo"),
         "bonuses": {
-            "hs_rate": 0.1,
+            "hs_rate": -0.1,
             "accuracy": 0.25,
             "iq": 40,
-            "dodge_rate": 0.15,
             "mental": 9,
         },
         "renames": {},

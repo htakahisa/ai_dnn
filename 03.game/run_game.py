@@ -385,7 +385,7 @@ class VisualFPSBattle(
                     "has_spike": bool(getattr(char, "has_spike", False)),
                     "blind": int(getattr(char, "blind_remaining", 0)),
                     "electric": int(getattr(char, "electric_remaining", 0)),
-                    "revealed": bool(getattr(char, "los_revealed", False)),
+                    "revealed": bool(getattr(char, "los_revealed", False) or getattr(char, "reveal_remaining", 0) > 0),
                     "ultimate": str(getattr(char, "ultimate_name", "")),
                     "ultimate_points": int(getattr(char, "ultimate_points", 0)),
                     "ultimate_cost": int(getattr(char, "ultimate_cost", 0)),
@@ -487,9 +487,20 @@ class VisualFPSBattle(
                     }
                     for item in getattr(self, "escape_portals", [])
                 ],
+                "ultimate_trails": [
+                    {
+                        "start": pos(item["start"]), "end": pos(item["end"]),
+                        "cells": [pos(cell) for cell in item["cells"]],
+                        "direction": list(item["direction"]),
+                        "team": item["team"], "owner": item["owner"],
+                        "remaining_ticks": int(item["remaining_ticks"]),
+                    }
+                    for item in getattr(self, "ultimate_trails", [])
+                ],
                 "ramp_traps": [
                     {"pos": pos(item["pos"]), "owner": item["owner"], "team": item["team"]}
                     for item in getattr(self, "ramp_traps", [])
+                    if any(char.is_alive and char.name == item["owner"] for char in self.chars)
                 ],
                 "neon_bursts": [
                     {
@@ -912,6 +923,7 @@ class VisualFPSBattle(
         self.monitor_drone_serial = 0
         self.escape_portals = []
         self.tunnel_bursts = []
+        self.ultimate_trails = []
         self.ramp_traps = []
         self.neon_bursts = []
         self.available_orbs = set(zip(*np.where(self.grid == 5)))

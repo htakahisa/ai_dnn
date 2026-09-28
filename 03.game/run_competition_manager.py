@@ -22,6 +22,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from map_data import NEW_MAZE_STR
+from ability_effects import draw_raid_wind
 from party_presets import all_preset_names, canonical_preset_name, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from game_core import PLAYER_COMBOS, get_character_combat_stats
@@ -706,6 +707,7 @@ def play_map(
     team2_series_wins: int = 0,
     series_maps_to_win: int = 1,
     mental_fatigue_state: dict[str, float] | None = None,
+    series_tactical_state: dict[str, Any] | None = None,
 ) -> MResult:
     seed_all(seed)
 
@@ -760,6 +762,7 @@ def play_map(
         "defender_maps_won": defender_series_wins,
         "defender_maps_lost": defender_series_losses,
         "mental_fatigue": dict(mental_fatigue_state or {}),
+        "fnatic_memory": series_tactical_state if series_tactical_state is not None else {},
     }
 
     output_context = (
@@ -935,6 +938,7 @@ def run_series_core(
     wins2 = 0
     maps: list[MResult] = []
     mental_fatigue_state: dict[str, float] = {}
+    series_tactical_state: dict[str, Any] = {}
 
     while wins1 < need and wins2 < need:
         map_number = len(maps) + 1
@@ -987,6 +991,7 @@ def run_series_core(
                 wins2,
                 need,
                 mental_fatigue_state,
+                series_tactical_state,
             )
         else:
             result = play_map(
@@ -1001,6 +1006,7 @@ def run_series_core(
                 wins2,
                 need,
                 mental_fatigue_state,
+                series_tactical_state,
             )
         maps.append(result)
 
@@ -3493,6 +3499,13 @@ class CompetitionApp:
                             )
                         )
 
+                def draw_neon_bolt(row, col):
+                    x, y = col*cell_size, row*cell_size
+                    points = (x+cell_size*.60, y+cell_size*.08, x+cell_size*.35, y+cell_size*.43,
+                              x+cell_size*.65, y+cell_size*.48, x+cell_size*.40, y+cell_size*.92)
+                    simulation_items.append(canvas.create_line(*points, fill="#218dff", width=5))
+                    simulation_items.append(canvas.create_line(*points, fill="#e5fcff", width=2))
+
                 for item in simulation_items:
                     canvas.delete(item)
                 simulation_items.clear()
@@ -3539,6 +3552,19 @@ class CompetitionApp:
                         "#c7a6df" if warning else "#6f36a8",
                         "gray25" if warning else "gray50",
                     )
+                for trap in simulator.ramp_traps:
+                    cx, cy = cell_center(trap["pos"])
+                    radius = cell_size * 0.30
+                    simulation_items.append(canvas.create_oval(
+                        cx-radius, cy-radius, cx+radius, cy+radius,
+                        fill="#1773d1", outline="#7edcff", width=2,
+                    ))
+                for burst in simulator.neon_bursts:
+                    warning = burst["phase"] == "warning"
+                    draw_cell_overlay(burst["cells"], "#b5e5ff" if warning else "#167eff", "gray25")
+                    if not warning:
+                        for row, col in burst["cells"]:
+                            draw_neon_bolt(row, col)
 
                 # FLASH and RECON projectiles show their travelled path and head.
                 for projectile in simulator.flash_projectiles:
@@ -3643,20 +3669,7 @@ class CompetitionApp:
                         )
                     )
                 for trail in simulator.ultimate_trails:
-                    x1, y1 = cell_center(trail["start"])
-                    x2, y2 = cell_center(trail["end"])
-                    simulation_items.append(
-                        canvas.create_line(
-                            x1,
-                            y1,
-                            x2,
-                            y2,
-                            fill="#ff4fd8",
-                            width=4,
-                            arrow=tk.LAST,
-                            dash=(4, 2),
-                        )
-                    )
+                    simulation_items.extend(draw_raid_wind(canvas, trail, cell_size))
 
                 explosion = getattr(simulator, "explosion_effect", None)
                 if explosion is not None:
@@ -3687,6 +3700,7 @@ class CompetitionApp:
                         "SMOKE": char.smoke_charges,
                         "FLASH": char.flash_charges,
                         "RECON": char.recon_charges,
+                        "RAMP": char.ramp_charges,
                     }.get(char.ability_name, 0)
                     row_id = f"{team}:{player_index}"
                     if resource_tree.exists(row_id):
@@ -3743,6 +3757,9 @@ class CompetitionApp:
                             fill=text_fill,
                         )
                     )
+
+                    if char.electric_remaining > 0:
+                        draw_neon_bolt(row, col)
 
                 # MONITOR ultimate drones are independent units on the map.
                 for drone in simulator.monitor_drones:
@@ -5539,6 +5556,7 @@ class CompetitionApp:
             team2_series_wins: int,
             series_maps_to_win: int,
             mental_fatigue_state: dict[str, float] | None = None,
+            series_tactical_state: dict[str, Any] | None = None,
         ) -> MResult:
             user_match = "user" in {
                 team1_controller_key,
@@ -5557,6 +5575,7 @@ class CompetitionApp:
                     team2_series_wins,
                     series_maps_to_win,
                     mental_fatigue_state,
+                    series_tactical_state,
                 )
 
             request = {
@@ -5570,6 +5589,7 @@ class CompetitionApp:
                 "team2_series_wins": team2_series_wins,
                 "series_maps_to_win": series_maps_to_win,
                 "mental_fatigue_state": mental_fatigue_state,
+                "series_tactical_state": series_tactical_state,
                 "done": threading.Event(),
                 "result": None,
                 "error": None,
@@ -5609,6 +5629,7 @@ class CompetitionApp:
                 request["team2_series_wins"],
                 request["series_maps_to_win"],
                 request["mental_fatigue_state"],
+                request.get("series_tactical_state"),
             )
         except BaseException as exc:
             request["error"] = exc

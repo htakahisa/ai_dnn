@@ -270,7 +270,8 @@ class ComboAwakeningMixin:
         char.hunter_active = role == "タイガー"
         char.smoke_charges = 1 if char.ability_name == "SMOKE" else 0
         char.flash_charges = 1 if char.ability_name == "FLASH" else 0
-        char.recon_charges = 1 if char.ability_name == "RECON" else 0
+        char.recon_charges = 2 if char.ability_name == "RECON" else 0
+        char.ramp_charges = 2 if char.ability_name == "RAMP" else 0
 
     def _awakening_condition_met(self, event, char, event_name):
         """覚醒イベントの発動条件を判定する。
@@ -622,7 +623,8 @@ class ComboAwakeningMixin:
 
                 char.smoke_charges = 1 if char.ability_name == "SMOKE" else 0
                 char.flash_charges = 1 if char.ability_name == "FLASH" else 0
-                char.recon_charges = 1 if char.ability_name == "RECON" else 0
+                char.recon_charges = 2 if char.ability_name == "RECON" else 0
+                char.ramp_charges = 2 if char.ability_name == "RAMP" else 0
             bonuses = event.get("bonuses", {})
             if isinstance(bonuses, dict):
                 for key, value in bonuses.items():
@@ -686,8 +688,9 @@ class ComboAwakeningMixin:
             # Deepの毎ラウンドウルト満タン効果
             if getattr(char, "start_round_with_full_ult", False):
                 char.ultimate_points = char.ultimate_cost
-            # Stormfrontの毎ラウンドアビリティ2つ所持効果
-            abilities_per_round = getattr(char, "abilities_per_round", 1)
+            # リコンの通常所持数は2。覚醒による所持数指定があれば優先する。
+            default_charges = 2 if char.ability_name == "RECON" else 1
+            abilities_per_round = getattr(char, "abilities_per_round", default_charges)
             if char.ability_name == "SMOKE":
                 char.smoke_charges = abilities_per_round
             elif char.ability_name == "FLASH":

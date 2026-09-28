@@ -262,34 +262,11 @@ class TacticalSimulator(VisualFPSBattle):
         self._final_frame_recorded = False
         self._record_replay_frame()
         self._apply_player_actions(action_handlers)
-        self.ultimate_trails = [
-            trail
-            for trail in getattr(self, "ultimate_trails", [])
-            if trail["remaining_ticks"] > 1
-        ]
-        for trail in self.ultimate_trails:
-            trail["remaining_ticks"] -= 1
         self._build_occupancy_counts()
         try:
             for char in self._move_order():
                 if char.is_alive:
-                    old_pos = tuple(char.pos)
-                    old_ultimate_points = char.ultimate_points
                     self.move_character(char)
-                    new_pos = tuple(char.pos)
-                    if (
-                        char.ultimate_name == "RAID"
-                        and char.ultimate_points < old_ultimate_points
-                        and new_pos != old_pos
-                    ):
-                        self.ultimate_trails.append(
-                            {
-                                "start": old_pos,
-                                "end": new_pos,
-                                "team": char.team,
-                                "remaining_ticks": 2,
-                            }
-                        )
         finally:
             self._clear_occupancy_counts()
 
