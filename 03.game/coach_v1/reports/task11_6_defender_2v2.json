@@ -1,0 +1,60 @@
+{
+  "side": "defender",
+  "stage": "2v2",
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109
+  ],
+  "checkpoint": "coach_v1\\checkpoints\\coach\\defender\\observation_v2\\latest.pt",
+  "checkpoint_sha256": "ac70cafe29723fdb48077b88c34004ae967a7dab71c6acbc03b242886ae23399",
+  "training_step": 400,
+  "collision_penalty": 0.01,
+  "results": {
+    "trained": {
+      "reward": 0.24699999999999958,
+      "new_clear_cells": 138.5,
+      "invalid_moves": 0.0,
+      "round_win": 0.0,
+      "ticks": 25.0,
+      "move_commands": 41.0,
+      "move_requests": 41.0,
+      "executed_moves": 41.0,
+      "blocked_ally": 0.0,
+      "blocked_enemy": 0.0,
+      "blocked_other": 0.0,
+      "ability_actions": 0.0,
+      "reward_clear": 0.24699999999999958,
+      "reward_invalid": 0.0,
+      "reward_death": 0.0,
+      "reward_objective": 0.0,
+      "reward_win": 0.0
+    },
+    "random": {
+      "reward": 0.04980000000000001,
+      "new_clear_cells": 34.5,
+      "invalid_moves": 0.7,
+      "round_win": 0.0,
+      "ticks": 25.0,
+      "move_commands": 34.4,
+      "move_requests": 34.3,
+      "executed_moves": 33.6,
+      "blocked_ally": 0.7,
+      "blocked_enemy": 0.0,
+      "blocked_other": 0.0,
+      "ability_actions": 0.1,
+      "reward_clear": 0.06180000000000002,
+      "reward_invalid": -0.007000000000000001,
+      "reward_death": -0.005,
+      "reward_objective": 0.0,
+      "reward_win": 0.0
+    }
+  }
+}

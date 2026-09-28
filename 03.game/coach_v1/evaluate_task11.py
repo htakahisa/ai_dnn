@@ -33,7 +33,8 @@ def evaluate(side: Side, *, stage: str, seeds: range, max_ticks: int,
         for seed in seeds:
             environment = CoachTrainingEnvironment(side, seed=seed, stage=stage,
                                                     max_ticks=max_ticks,
-                                                    collision_penalty=collision_penalty)
+                                                    collision_penalty=collision_penalty,
+                                                    observation_version=policy.encoder.version)
             state = environment.reset()
             policy.reset_round()
             rng = random.Random(seed + 1409)

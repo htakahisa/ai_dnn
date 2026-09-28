@@ -1,4 +1,4 @@
-"""Compatibility versions frozen by coach_v1/03.DESIGN.md."""
+"""Versioned interfaces; v1 remains readable after the Task 11.6 coach v2 addition."""
 
 from dataclasses import dataclass
 
@@ -6,7 +6,8 @@ from .types import ModelFamily
 
 
 CHECKPOINT_SCHEMA_VERSION = "coach-checkpoint-v1"
-COACH_OBSERVATION_VERSION = "coach-observation-v1"
+LEGACY_COACH_OBSERVATION_VERSION = "coach-observation-v1"
+COACH_OBSERVATION_VERSION = "coach-observation-v2"
 COACH_ACTION_VERSION = "coach-action-v1"
 CHARACTER_OBSERVATION_VERSION = "character-observation-v1"
 CHARACTER_ACTION_VERSION = "character-action-v1"

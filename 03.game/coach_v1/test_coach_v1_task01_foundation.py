@@ -87,7 +87,7 @@ class CoachV1Task01FoundationTest(unittest.TestCase):
 
     def test_versions_and_separate_checkpoint_destinations_are_frozen(self):
         self.assertEqual("coach-checkpoint-v1", CHECKPOINT_SCHEMA_VERSION)
-        self.assertEqual("coach-observation-v1", COACH_OBSERVATION_VERSION)
+        self.assertEqual("coach-observation-v2", COACH_OBSERVATION_VERSION)
         self.assertEqual("coach-action-v1", COACH_ACTION_VERSION)
         self.assertEqual("character-observation-v1", CHARACTER_OBSERVATION_VERSION)
         self.assertEqual("character-action-v1", CHARACTER_ACTION_VERSION)
@@ -163,7 +163,7 @@ class CoachV1Task01FoundationTest(unittest.TestCase):
         with self.assertRaisesRegex(
             CheckpointCompatibilityError, "observation version"
         ):
-            dataclasses.replace(expected, observation_version="coach-observation-v2")
+            dataclasses.replace(expected, observation_version="coach-observation-v3")
 
     def test_foundation_has_no_actor_observation_or_enemy_truth_reference(self):
         common_dir = ROOT / "common"

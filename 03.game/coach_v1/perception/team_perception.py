@@ -86,6 +86,14 @@ class SpikeSharedInfo:
 
 
 @dataclass(frozen=True)
+class PublicRoundClock:
+    """Public countdowns; the inactive countdown is zero."""
+
+    round_ticks_remaining: int
+    detonation_ticks_remaining: int
+
+
+@dataclass(frozen=True)
 class TeamPerceptionSnapshot:
     """Immutable current-tick input boundary shared by all five actor slots."""
 
@@ -98,6 +106,7 @@ class TeamPerceptionSnapshot:
     visible_viewer_count: CountGrid
     smoke_cells: Tuple[GridPosition, ...]
     spike: SpikeSharedInfo
+    clock: PublicRoundClock = PublicRoundClock(0, 0)
 
     def sighting_for(self, enemy_id: str) -> Optional[EnemySighting]:
         return next(
@@ -235,6 +244,12 @@ class TeamPerceptionBuilder:
             visible_viewer_count=viewer_count,
             smoke_cells=tuple(sorted(smoke_cells)),
             spike=_copy_spike(game, parsed_side, allies, rows, columns),
+            clock=PublicRoundClock(
+                round_ticks_remaining=max(0, int(getattr(game, "round_timer", 0)))
+                if not bool(getattr(game, "is_planted", False)) else 0,
+                detonation_ticks_remaining=max(0, int(getattr(game, "detonate_timer", 0)))
+                if bool(getattr(game, "is_planted", False)) else 0,
+            ),
         )
 
     def _visible_cells(

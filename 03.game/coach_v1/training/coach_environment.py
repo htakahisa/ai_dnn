@@ -15,6 +15,7 @@ from team_ai import DualRoleTeamAI
 
 from coach_v1.common.constants import FIXED_ROSTER, MAP_COLUMNS, MAP_ROWS
 from coach_v1.common.types import MovementAction, ObjectiveAction, Side, TacticalIntent
+from coach_v1.common.versions import COACH_OBSERVATION_VERSION
 from coach_v1.coordinator import TeamExecutionCoordinator
 from coach_v1.learning_character_base import CharacterPolicy
 from coach_v1.learning_character_gongon import GongonPolicy
@@ -35,7 +36,8 @@ _STAY = tuple(CoachInstruction(MovementAction.STAY, ObjectiveAction.NONE,
 
 
 class _QueuedCoach:
-    def __init__(self) -> None:
+    def __init__(self, encoder: CoachObservationEncoder) -> None:
+        self.encoder = encoder
         self.next_actions: tuple[CoachInstruction, ...] | None = None
         self.last_observation: CoachObservation | None = None
 
@@ -66,14 +68,15 @@ class CoachTrainingEnvironment:
     """Runs frozen character policies and one learned coach in a real round."""
 
     def __init__(self, side: Side, *, seed: int, stage: str = "2v1",
-                 max_ticks: int = 40, collision_penalty: float = 0.01) -> None:
+                 max_ticks: int = 40, collision_penalty: float = 0.01,
+                 observation_version: str = COACH_OBSERVATION_VERSION) -> None:
         if (not isinstance(side, Side) or stage not in CURRICULUM or max_ticks <= 0
                 or not np.isfinite(collision_penalty) or collision_penalty < 0):
             raise ValueError("invalid coach curriculum configuration")
         self.side, self.seed, self.stage, self.max_ticks = side, seed, stage, max_ticks
         self.collision_penalty = float(collision_penalty)
         self.sensor = TeamPerceptionBuilder()
-        self.encoder = CoachObservationEncoder()
+        self.encoder = CoachObservationEncoder(version=observation_version)
         config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
         self.memory = BeliefMemory(config.for_side(side))
         # These checkpoint-backed character policies remain frozen throughout coach training.
@@ -84,11 +87,12 @@ class CoachTrainingEnvironment:
                                for slot in range(5)}
         for policy in self.characters.values():
             policy.model.requires_grad_(False)
-        self.queue = _QueuedCoach()
+        self.queue = _QueuedCoach(self.encoder)
         self.controller = TeamExecutionCoordinator(side, self.queue, self.characters)
         self.game = None
         self.ticks = 0
         self.state: CoachTrainingState | None = None
+        self._pending_moves: tuple = ()
 
     def reset(self, *, episode: int = 0) -> CoachTrainingState:
         random.seed(self.seed + episode)
@@ -96,6 +100,7 @@ class CoachTrainingEnvironment:
         self.queue.next_actions = None
         self.controller.reset_round()
         self.ticks = 0
+        self._pending_moves = ()
         opponent = _build_team_ai("default")
         own = DualRoleTeamAI("coach_v1_training", lambda: self.controller,
                              lambda: self.controller)
@@ -138,15 +143,31 @@ class CoachTrainingEnvironment:
         )
         for character, placement in zip(enemies[:enemy_count], scenario.enemies):
             character.pos = list(placement.position)
+        self._prepare_tick()
         self.state = self._observe()
         return self.state
+
+    def _prepare_tick(self) -> None:
+        """Advance opponents preceding our first actor in the real move order."""
+        ordered = tuple(self.game._move_order())
+        own_code = "A" if self.side is Side.ATTACKER else "D"
+        first_own = next((index for index, character in enumerate(ordered)
+                          if character.team == own_code), len(ordered))
+        self.game._build_occupancy_counts()
+        try:
+            for character in ordered[:first_own]:
+                if character.is_alive:
+                    self.game.move_character(character)
+        finally:
+            self.game._clear_occupancy_counts()
+        self._pending_moves = ordered[first_own:]
 
     def _observe(self) -> CoachTrainingState:
         # move_character applies last tick's forced facing immediately before
         # requesting the first controller action. Mirror that public state so
         # the stored policy input matches the actual actor call.
         own_code = "A" if self.side is Side.ATTACKER else "D"
-        first = next((c for c in self.game._move_order() if c.team == own_code), None)
+        first = next((c for c in self._pending_moves if c.team == own_code), None)
         if first is not None and getattr(first, "forced_facing_next_tick", None):
             first.facing = first.forced_facing_next_tick
         snapshot = self.sensor.build(game=self.game, side=self.side)
@@ -187,12 +208,9 @@ class CoachTrainingEnvironment:
         blocked_ally = blocked_enemy = blocked_other = ability_actions = 0
         self.game._build_occupancy_counts()
         try:
-            # The pre-step actor observation is captured before any moves.
-            # Process this team first so the logged policy input is exactly
-            # what the coordinator receives on either side.
-            ordered = self.game._move_order()
-            for character in ([c for c in ordered if c.team == own_code]
-                              + [c for c in ordered if c.team != own_code]):
+            # Opponents before our first actor already moved in _prepare_tick.
+            # Continue the original game order without moving them twice.
+            for character in self._pending_moves:
                 if character.is_alive:
                     log_count = len(self.controller.action_log)
                     occupied = {tuple(other.pos): other.team for other in self.game.chars
@@ -218,6 +236,7 @@ class CoachTrainingEnvironment:
                         blocked_other += 1
         finally:
             self.game._clear_occupancy_counts()
+            self._pending_moves = ()
         if self.queue.next_actions is not None:
             raise RuntimeError("coach was not invoked by the game")
         if (not np.array_equal(self.queue.last_observation.grid, before.observation.grid)
@@ -238,6 +257,8 @@ class CoachTrainingEnvironment:
         done = bool(round_ended or self.ticks >= self.max_ticks)
         # A time-limit truncation still has a valid next observation. Count
         # the final tick's newly cleared cells before ending the episode.
+        if not round_ended and self.ticks < self.max_ticks:
+            self._prepare_tick()
         next_state = None if round_ended else self._observe()
         if next_state is None:
             new_clear = sum(

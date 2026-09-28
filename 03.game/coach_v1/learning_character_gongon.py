@@ -7,11 +7,11 @@ from pathlib import Path
 from coach_v1.common.constants import CHARACTER_CHECKPOINT_PATHS
 from coach_v1.learning_character_base import CharacterPolicy
 from coach_v1.observation.character_encoder import CharacterInputError, CharacterObservation
-from coach_v1.observation.coach_encoder import COACH_VECTOR_FIELDS
+from coach_v1.observation.coach_encoder import LEGACY_COACH_VECTOR_FIELDS
 
 
-_ATTACKER_INDEX = COACH_VECTOR_FIELDS.index("side_attacker")
-_DEFENDER_INDEX = COACH_VECTOR_FIELDS.index("side_defender")
+_ATTACKER_INDEX = LEGACY_COACH_VECTOR_FIELDS.index("side_attacker")
+_DEFENDER_INDEX = LEGACY_COACH_VECTOR_FIELDS.index("side_defender")
 
 
 class GongonPolicy(CharacterPolicy):

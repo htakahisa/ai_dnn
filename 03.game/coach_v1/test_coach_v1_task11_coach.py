@@ -33,7 +33,7 @@ class CoachTask11Test(unittest.TestCase):
         actor = CoachActorModel()
         critic = CoachCritic()
         grid = torch.zeros(2, 27, 26, 44)
-        vector = torch.zeros(2, 84)
+        vector = torch.zeros(2, 86)
         move, intent, objective, hidden = actor(grid, vector)
         self.assertEqual((2, 5, 5), tuple(move.shape))
         self.assertEqual((2, 5, 9), tuple(intent.shape))
@@ -250,7 +250,7 @@ class CoachTask11Test(unittest.TestCase):
     def test_feedback_input_and_legacy_checkpoint_are_separate(self):
         actor = CoachActorModel(CoachModelConfig(action_feedback=True))
         grid = torch.zeros(1, 27, 26, 44)
-        vector = torch.zeros(1, 84)
+        vector = torch.zeros(1, 86)
         with self.assertRaises(ValueError):
             actor(grid, vector, feedback=torch.zeros(1, 5, 6))
         with tempfile.TemporaryDirectory() as root:
@@ -351,7 +351,7 @@ class CoachTask11Test(unittest.TestCase):
 def trajectory_observation(environment, step):
     from coach_v1.observation.coach_encoder import CoachObservation
     return CoachObservation(step.grid, step.vector,
-                            "coach-observation-v1", environment.encoder.map_hash,
+                            environment.encoder.version, environment.encoder.map_hash,
                             environment.encoder.watch_points_hash)
 
 

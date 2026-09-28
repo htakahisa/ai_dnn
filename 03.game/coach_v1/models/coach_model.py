@@ -11,10 +11,10 @@ from map_data_defender_setup import get_setup_mask
 
 from coach_v1.common.constants import MAP_COLUMNS, MAP_ROWS, MOVEMENT_DELTAS, ROSTER_SIZE
 from coach_v1.common.types import MovementAction, ObjectiveAction, TacticalIntent
-from coach_v1.common.versions import COACH_OBSERVATION_VERSION
+from coach_v1.common.versions import COACH_OBSERVATION_VERSION, LEGACY_COACH_OBSERVATION_VERSION
 from coach_v1.observation.character_encoder import CoachInstruction
 from coach_v1.observation.coach_encoder import (
-    COACH_GRID_CHANNELS, COACH_VECTOR_FIELDS, CoachObservation,
+    COACH_GRID_CHANNELS, COACH_VECTOR_FIELDS, LEGACY_COACH_VECTOR_FIELDS, CoachObservation,
     CoachObservationEncoder, CoachObservationInputError,
 )
 
@@ -46,7 +46,8 @@ class CoachActorModel(nn.Module):
     def __init__(self, config: CoachModelConfig = CoachModelConfig()) -> None:
         super().__init__()
         if (config.grid_channels != len(COACH_GRID_CHANNELS)
-                or config.vector_features != len(COACH_VECTOR_FIELDS)
+                or config.vector_features not in (len(COACH_VECTOR_FIELDS),
+                                                  len(LEGACY_COACH_VECTOR_FIELDS))
                 or min(config.hidden_channels, config.hidden_features) <= 0):
             raise ValueError("invalid coach model configuration")
         self.config = config
@@ -152,9 +153,14 @@ def legal_action_mask(observation: CoachObservation) -> CoachActionMask:
     if not isinstance(observation, CoachObservation):
         raise TypeError("coach action mask requires actor observation")
     grid, vector = observation.grid, observation.vector
-    if grid.shape != (len(COACH_GRID_CHANNELS), MAP_ROWS, MAP_COLUMNS) or vector.shape != (len(COACH_VECTOR_FIELDS),):
+    expected_fields = (LEGACY_COACH_VECTOR_FIELDS
+                       if observation.version == LEGACY_COACH_OBSERVATION_VERSION
+                       else COACH_VECTOR_FIELDS if observation.version == COACH_OBSERVATION_VERSION
+                       else ())
+    if (not expected_fields or grid.shape != (len(COACH_GRID_CHANNELS), MAP_ROWS, MAP_COLUMNS)
+            or vector.shape != (len(expected_fields),)):
         raise CoachObservationInputError("coach observation shape mismatch")
-    fields = {name: i for i, name in enumerate(COACH_VECTOR_FIELDS)}
+    fields = {name: i for i, name in enumerate(expected_fields)}
     movement = np.zeros((ROSTER_SIZE, len(MOVES)), dtype=np.bool_)
     objective = np.zeros((ROSTER_SIZE, len(OBJECTIVES)), dtype=np.bool_)
     planted = bool(vector[fields["spike_planted"]])
@@ -199,6 +205,8 @@ class CoachPolicy:
 
     def __init__(self, model: CoachActorModel, encoder: CoachObservationEncoder,
                  *, device: str = "cpu") -> None:
+        if model.config.vector_features != len(encoder.vector_fields):
+            raise CoachObservationInputError("coach model and encoder vector size disagree")
         self.model = model.to(device).eval()
         self.encoder = encoder
         self.device = device
@@ -213,7 +221,7 @@ class CoachPolicy:
 
     def act(self, observation: CoachObservation) -> tuple[CoachInstruction, ...]:
         if (not isinstance(observation, CoachObservation)
-                or observation.version != COACH_OBSERVATION_VERSION
+                or observation.version != self.encoder.version
                 or observation.map_hash != self.encoder.map_hash
                 or observation.watch_points_hash != self.encoder.watch_points_hash):
             raise CoachObservationInputError("coach policy observation mismatch")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import torch
@@ -24,14 +25,16 @@ def load_coach_policy(side: Side, path: Path | None = None, *, device: str = "cp
     config_values = dict(metadata.model_config)
     config_values.setdefault("action_feedback", False)  # checkpoints made before feedback input
     config = CoachModelConfig(**config_values)
-    encoder = CoachObservationEncoder()
+    encoder = CoachObservationEncoder(version=metadata.observation_version)
     expected = build_checkpoint_metadata(
         target=ModelTarget.coach(side), map_hash=encoder.map_hash,
         watch_points_hash=encoder.watch_points_hash,
         model_config=config.to_dict(), training_seed=metadata.training_seed,
         training_step=0,
     )
-    validate_checkpoint_compatibility(metadata, expected)
+    validate_checkpoint_compatibility(
+        metadata, replace(expected, observation_version=encoder.version)
+    )
     encoder.validate_checkpoint(metadata, side=side)
     if payload.get("optimizer_state_dict") is not None or "critic_state_dict" in payload:
         raise ValueError("actor checkpoint contains training-only state")

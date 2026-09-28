@@ -8,7 +8,10 @@ import numpy as np
 
 from coach_v1.common.constants import FIXED_ROSTER, MAP_COLUMNS, MAP_ROWS, MOVEMENT_DELTAS
 from coach_v1.common.types import ModelFamily, MovementAction, ObjectiveAction, TacticalIntent
-from coach_v1.common.versions import CHARACTER_ACTION_VERSION, CHARACTER_OBSERVATION_VERSION
+from coach_v1.common.versions import (
+    CHARACTER_ACTION_VERSION, CHARACTER_OBSERVATION_VERSION,
+    LEGACY_COACH_OBSERVATION_VERSION,
+)
 from coach_v1.observation.coach_encoder import CoachObservationEncoder
 from coach_v1.perception.belief_memory import BeliefSnapshot
 from coach_v1.perception.team_perception import TeamPerceptionSnapshot
@@ -55,7 +58,8 @@ class CharacterObservationEncoder:
     """Adds only own slot and coach's external instruction to shared actor data."""
 
     def __init__(self) -> None:
-        self._coach_encoder = CoachObservationEncoder()
+        # Character checkpoints retain their original 106-field contract.
+        self._coach_encoder = CoachObservationEncoder(version=LEGACY_COACH_OBSERVATION_VERSION)
 
     @property
     def map_hash(self) -> str:

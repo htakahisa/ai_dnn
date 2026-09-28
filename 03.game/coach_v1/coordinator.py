@@ -65,7 +65,9 @@ class TeamExecutionCoordinator:
         self.characters = dict(characters)
         self.game = None
         self.sensor = TeamPerceptionBuilder()
-        self.encoder = CoachObservationEncoder()
+        self.encoder = (coach.encoder if isinstance(getattr(coach, "encoder", None),
+                                                    CoachObservationEncoder)
+                        else CoachObservationEncoder())
         self.character_environment = CharacterEnvironment()
         config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
         self.memory = BeliefMemory(config.for_side(side))

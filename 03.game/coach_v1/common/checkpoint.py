@@ -12,7 +12,10 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 from .constants import CHARACTER_CHECKPOINT_IDS, FIXED_ROSTER_NAMES
 from .types import ModelFamily, ModelTarget, Side
-from .versions import CHECKPOINT_SCHEMA_VERSION, interface_versions_for
+from .versions import (
+    CHECKPOINT_SCHEMA_VERSION, COACH_OBSERVATION_VERSION,
+    LEGACY_COACH_OBSERVATION_VERSION, interface_versions_for,
+)
 
 
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -76,7 +79,11 @@ class CheckpointMetadata:
                 f"unsupported checkpoint schema: {self.schema_version!r}"
             )
         current_versions = interface_versions_for(self.model_family)
-        if self.observation_version != current_versions.observation:
+        allowed_observations = ({LEGACY_COACH_OBSERVATION_VERSION,
+                                 COACH_OBSERVATION_VERSION}
+                                if self.model_family is ModelFamily.COACH
+                                else {current_versions.observation})
+        if self.observation_version not in allowed_observations:
             raise CheckpointCompatibilityError(
                 f"unsupported observation version: {self.observation_version!r}"
             )

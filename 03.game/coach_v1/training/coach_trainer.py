@@ -51,7 +51,10 @@ class CoachTrainer:
         if not isinstance(side, Side) or not isinstance(seed, int) or isinstance(seed, bool):
             raise ValueError("side and integer seed required")
         self.side, self.seed, self.config, self.device = side, seed, config, device
-        self.directory = Path(directory) if directory else COACH_CHECKPOINT_PATHS[side.value]
+        # Keep v1 production checkpoints intact until a v2 policy is trained
+        # and explicitly promoted by the later round curriculum.
+        self.directory = (Path(directory) if directory
+                          else COACH_CHECKPOINT_PATHS[side.value] / "observation_v2")
         self.encoder = CoachObservationEncoder()
         random.seed(seed)
         np.random.seed(seed)
@@ -212,11 +215,18 @@ class CoachTrainer:
 
     def save(self) -> Path:
         self.directory.mkdir(parents=True, exist_ok=True)
+        actor_path = self.directory / "latest.pt"
+        if actor_path.exists():
+            existing = torch.load(actor_path, map_location="cpu", weights_only=False)
+            existing_version = CheckpointMetadata.from_dict(
+                existing["metadata"]
+            ).observation_version
+            if existing_version != self.encoder.version:
+                raise ValueError("refusing to overwrite a coach checkpoint with a different observation version")
         # Actor file contains neither critic weights nor optimizer/training truth.
         actor = build_checkpoint_payload(metadata=self._metadata(),
                                          model_state_dict=self.actor.state_dict(),
                                          optimizer_state_dict=None)
-        actor_path = self.directory / "latest.pt"
         temporary = actor_path.with_suffix(".tmp")
         torch.save(actor, temporary)
         temporary.replace(actor_path)

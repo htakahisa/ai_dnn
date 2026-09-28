@@ -17,9 +17,10 @@ from coach_v1.training.coach_environment import CoachTrainingEnvironment
 
 def trace(side: Side, stage: str, checkpoint: Path, *, seed: int,
           max_ticks: int) -> dict:
-    environment = CoachTrainingEnvironment(side, seed=seed, stage=stage,
-                                           max_ticks=max_ticks)
     policy = load_coach_policy(side, checkpoint)
+    environment = CoachTrainingEnvironment(side, seed=seed, stage=stage,
+                                           max_ticks=max_ticks,
+                                           observation_version=policy.encoder.version)
     state = environment.reset()
     policy.reset_round()
     ticks = []

@@ -1,4 +1,4 @@
-"""Fixed-map, actor-only coach observation contract (coach-observation-v1).
+"""Fixed-map, actor-only coach observation contracts (v1 and v2).
 
 The only dynamic inputs are copied team perception and belief DTOs. This
 module never accepts a game, Character, critic tensor, or hidden enemy state.
@@ -13,6 +13,7 @@ from typing import Tuple
 
 import numpy as np
 
+from game_core import ROUND_DURATION_TICKS, SPIKE_DETONATION_TICKS
 from map_data import NEW_MAZE_STR
 
 from coach_v1.common.constants import (
@@ -24,7 +25,9 @@ from coach_v1.common.constants import (
 )
 from coach_v1.common.hashing import map_sha256, normalize_map_text
 from coach_v1.common.types import Facing, ModelFamily, Side
-from coach_v1.common.versions import COACH_OBSERVATION_VERSION
+from coach_v1.common.versions import (
+    COACH_OBSERVATION_VERSION, LEGACY_COACH_OBSERVATION_VERSION,
+)
 from coach_v1.common.watch_points import (
     ATTACKER_SITUATIONS,
     DEFENDER_SITUATIONS,
@@ -32,7 +35,7 @@ from coach_v1.common.watch_points import (
     load_watch_points,
 )
 from coach_v1.perception.belief_memory import BeliefSnapshot, normalize_age
-from coach_v1.perception.team_perception import TeamPerceptionSnapshot
+from coach_v1.perception.team_perception import PublicRoundClock, TeamPerceptionSnapshot
 
 
 AGE_CAP_TICKS = 256
@@ -57,11 +60,15 @@ _SLOT_VECTOR_FIELDS = (
     "alive", "hp", "normal_ability_available", "has_spike", "row", "column",
     *(f"facing_{facing.value}" for facing in FACING_ORDER),
 )
-COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + tuple(
+_SLOT_FIELDS = tuple(
     f"slot_{slot}_{field}"
     for slot in range(ROSTER_SIZE)
     for field in _SLOT_VECTOR_FIELDS
 )
+LEGACY_COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + _SLOT_FIELDS
+COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + (
+    "round_time_remaining", "detonation_time_remaining",
+) + _SLOT_FIELDS
 
 
 class CoachObservationInputError(ValueError):
@@ -80,7 +87,13 @@ class CoachObservation:
 class CoachObservationEncoder:
     """Convert safe snapshots to copied CNN and vector inputs for all 5 slots."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, version: str = COACH_OBSERVATION_VERSION) -> None:
+        if version not in {LEGACY_COACH_OBSERVATION_VERSION, COACH_OBSERVATION_VERSION}:
+            raise CoachObservationInputError("unsupported coach observation version")
+        self.version = version
+        self.vector_fields = (LEGACY_COACH_VECTOR_FIELDS
+                              if version == LEGACY_COACH_OBSERVATION_VERSION
+                              else COACH_VECTOR_FIELDS)
         map_text = normalize_map_text(NEW_MAZE_STR)
         map_rows = tuple(map_text.split("\n"))
         if len(map_rows) != MAP_ROWS or any(len(row) != MAP_COLUMNS for row in map_rows):
@@ -107,7 +120,7 @@ class CoachObservationEncoder:
         if (
             getattr(metadata, "model_family", None) is not ModelFamily.COACH
             or getattr(metadata, "target_id", None) != side.value
-            or getattr(metadata, "observation_version", None) != COACH_OBSERVATION_VERSION
+            or getattr(metadata, "observation_version", None) != self.version
             or getattr(metadata, "map_hash", None) != self._map_hash
             or getattr(metadata, "watch_points_hash", None) != self.watch_points_hash
             or getattr(metadata, "roster", None) != tuple(slot.character_name for slot in FIXED_ROSTER)
@@ -171,8 +184,8 @@ class CoachObservationEncoder:
             if position is not None:
                 channels[name][position] = 1.0
 
-        vector = np.zeros(len(COACH_VECTOR_FIELDS), dtype=np.float32)
-        fields = {name: index for index, name in enumerate(COACH_VECTOR_FIELDS)}
+        vector = np.zeros(len(self.vector_fields), dtype=np.float32)
+        fields = {name: index for index, name in enumerate(self.vector_fields)}
         vector[fields[f"side_{snapshot.side.value}"]] = 1.0
         vector[fields[f"situation_{situation}"]] = 1.0
         vector[fields["defender_setup"]] = float(snapshot.tick.phase == "defender_setup")
@@ -182,6 +195,13 @@ class CoachObservationEncoder:
         vector[fields["allies_alive"]] = sum(ally.is_alive for ally in snapshot.allies) / ROSTER_SIZE
         vector[fields["enemies_alive"]] = sum(enemy.is_alive for enemy in snapshot.enemies) / ROSTER_SIZE
         vector[fields["enemies_sighted"]] = len(snapshot.sightings) / ROSTER_SIZE
+        if self.version == COACH_OBSERVATION_VERSION:
+            vector[fields["round_time_remaining"]] = min(
+                snapshot.clock.round_ticks_remaining, ROUND_DURATION_TICKS
+            ) / ROUND_DURATION_TICKS
+            vector[fields["detonation_time_remaining"]] = min(
+                snapshot.clock.detonation_ticks_remaining, SPIKE_DETONATION_TICKS
+            ) / SPIKE_DETONATION_TICKS
         for ally in snapshot.allies:
             if not ally.is_alive:
                 continue  # Dead slots retain their fixed offset and remain all zero.
@@ -200,7 +220,7 @@ class CoachObservationEncoder:
         grid.setflags(write=False)
         vector.setflags(write=False)
         return CoachObservation(
-            grid, vector, COACH_OBSERVATION_VERSION,
+            grid, vector, self.version,
             self._map_hash, self.watch_points_hash,
         )
 
@@ -230,6 +250,11 @@ def _validate_inputs(
 ) -> None:
     if not isinstance(snapshot.side, Side):
         raise CoachObservationInputError("invalid side")
+    if (not isinstance(snapshot.clock, PublicRoundClock)
+            or any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+                   for value in (snapshot.clock.round_ticks_remaining,
+                                 snapshot.clock.detonation_ticks_remaining))):
+        raise CoachObservationInputError("invalid public round clock")
     allowed = ATTACKER_SITUATIONS if snapshot.side is Side.ATTACKER else DEFENDER_SITUATIONS
     if situation not in allowed:
         raise CoachObservationInputError("situation does not match side")
