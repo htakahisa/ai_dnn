@@ -56,6 +56,8 @@ def build_coach_v1_team(
     attacker_checkpoint: Path | None = None,
     defender_checkpoint: Path | None = None,
     character_checkpoints: Mapping[str, Path] | None = None,
+    attacker_coach=None,
+    defender_coach=None,
     device: str = "cpu",
 ) -> DualRoleTeamAI:
     """Build the trained dual-role team with strict side-specific coaches.
@@ -67,9 +69,11 @@ def build_coach_v1_team(
 
     def controller(side: Side) -> TeamExecutionCoordinator:
         if side is Side.ATTACKER:
-            coach = load_attacker_coach(attacker_checkpoint, device=device)
+            coach = (attacker_coach if attacker_coach is not None else
+                     load_attacker_coach(attacker_checkpoint, device=device))
         else:
-            coach = load_defender_coach(defender_checkpoint, device=device)
+            coach = (defender_coach if defender_coach is not None else
+                     load_defender_coach(defender_checkpoint, device=device))
         return TeamExecutionCoordinator(
             side,
             coach,

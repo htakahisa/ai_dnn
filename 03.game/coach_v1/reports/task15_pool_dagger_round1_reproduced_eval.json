@@ -1,0 +1,218 @@
+{
+  "candidate": {
+    "attacker_checkpoint": "coach_v1\\checkpoints\\experiments\\task15_pool_dagger_round1\\attacker\\latest.pt",
+    "attacker_sha256": "76cdb9af8109e74b4a8e6a2de1e68e17198351e775083de195d056e425c7c3ab",
+    "defender_checkpoint": "coach_v1\\checkpoints\\experiments\\task15_pool_dagger_round1\\defender\\latest.pt",
+    "defender_sha256": "f09a3151da6195b09d1f55ea396a72e754ed9187491cddd354911aa1762c3698"
+  },
+  "overall": {
+    "matches": 10,
+    "wins": 3,
+    "win_rate": 0.3,
+    "round_point_rate": 0.3699421965317919
+  },
+  "opponents": {
+    "coach_v1_task11_6": {
+      "matches": 2,
+      "wins": 2,
+      "win_rate": 1.0,
+      "round_point_rate": 1.0,
+      "score_margin_per_match": 13.0
+    },
+    "gc_v1": {
+      "matches": 2,
+      "wins": 0,
+      "win_rate": 0.0,
+      "round_point_rate": 0.07142857142857142,
+      "score_margin_per_match": -12.0
+    },
+    "omoko_v1": {
+      "matches": 2,
+      "wins": 0,
+      "win_rate": 0.0,
+      "round_point_rate": 0.0,
+      "score_margin_per_match": -13.0
+    },
+    "simple_random": {
+      "matches": 2,
+      "wins": 1,
+      "win_rate": 0.5,
+      "round_point_rate": 0.5230769230769231,
+      "score_margin_per_match": 1.5
+    },
+    "touyama_v2": {
+      "matches": 2,
+      "wins": 0,
+      "win_rate": 0.0,
+      "round_point_rate": 0.07142857142857142,
+      "score_margin_per_match": -12.0
+    }
+  },
+  "recommended_weights": {
+    "omoko_v1": 1.5,
+    "touyama_v2": 1.4285714285714286,
+    "gc_v1": 1.4285714285714286,
+    "simple_random": 0.48846153846153845,
+    "coach_v1_task11_6": 0.5
+  },
+  "matches": [
+    {
+      "opponent_id": "omoko_v1",
+      "opponent_kind": "existing_ai",
+      "difficulty": 1,
+      "seed": 1500,
+      "coach_started_as": "attacker",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "rounds": 13,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "omoko_v1",
+      "opponent_kind": "existing_ai",
+      "difficulty": 1,
+      "seed": 1501,
+      "coach_started_as": "defender",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "rounds": 13,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "touyama_v2",
+      "opponent_kind": "existing_ai",
+      "difficulty": 2,
+      "seed": 1500,
+      "coach_started_as": "attacker",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "rounds": 13,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "touyama_v2",
+      "opponent_kind": "existing_ai",
+      "difficulty": 2,
+      "seed": 1501,
+      "coach_started_as": "defender",
+      "coach_score": 2,
+      "opponent_score": 13,
+      "rounds": 15,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "gc_v1",
+      "opponent_kind": "existing_ai",
+      "difficulty": 3,
+      "seed": 1500,
+      "coach_started_as": "attacker",
+      "coach_score": 2,
+      "opponent_score": 13,
+      "rounds": 15,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "gc_v1",
+      "opponent_kind": "existing_ai",
+      "difficulty": 3,
+      "seed": 1501,
+      "coach_started_as": "defender",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "rounds": 13,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "simple_random",
+      "opponent_kind": "existing_ai",
+      "difficulty": 1,
+      "seed": 1500,
+      "coach_started_as": "attacker",
+      "coach_score": 21,
+      "opponent_score": 23,
+      "rounds": 44,
+      "won": false,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "simple_random",
+      "opponent_kind": "existing_ai",
+      "difficulty": 1,
+      "seed": 1501,
+      "coach_started_as": "defender",
+      "coach_score": 13,
+      "opponent_score": 8,
+      "rounds": 21,
+      "won": true,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "coach_v1_task11_6",
+      "opponent_kind": "historical_coach",
+      "difficulty": 2,
+      "seed": 1500,
+      "coach_started_as": "attacker",
+      "coach_score": 13,
+      "opponent_score": 0,
+      "rounds": 13,
+      "won": true,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "coach_v1_task11_6",
+      "opponent_kind": "historical_coach",
+      "difficulty": 2,
+      "seed": 1501,
+      "coach_started_as": "defender",
+      "coach_score": 13,
+      "opponent_score": 0,
+      "rounds": 13,
+      "won": true,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    }
+  ],
+  "promotion": {
+    "promoted": false,
+    "reasons": [
+      "gc_v1: round point rate regressed by 0.062"
+    ],
+    "candidate_overall": {
+      "matches": 10,
+      "wins": 3,
+      "win_rate": 0.3,
+      "round_point_rate": 0.3699421965317919
+    },
+    "incumbent_overall": {
+      "matches": 10,
+      "wins": 3,
+      "win_rate": 0.3,
+      "round_point_rate": 0.36075949367088606
+    }
+  }
+}

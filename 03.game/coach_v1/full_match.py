@@ -78,6 +78,7 @@ def run_headless_full_match(
     seed: int = 14,
     coach_team_name: str = "coach_v1",
     opponent_team_name: str = "opponent",
+    allow_mirrored_roster: bool = False,
 ) -> FullMatchResult:
     """Run one complete map through the unmodified game lifecycle."""
 
@@ -88,7 +89,11 @@ def run_headless_full_match(
         raise ValueError("opponent roster must contain five players")
     if len(set(opponent_roster)) != len(opponent_roster):
         raise ValueError("opponent roster contains duplicate players")
-    if set(opponent_roster) & set(FIXED_ROSTER_NAMES):
+    overlap = set(opponent_roster) & set(FIXED_ROSTER_NAMES)
+    mirrored_roster = bool(overlap) and (
+        allow_mirrored_roster and opponent_roster == tuple(FIXED_ROSTER_NAMES)
+    )
+    if overlap and not mirrored_roster:
         raise ValueError("opponent roster must not overlap the fixed Gorigons roster")
     if opponent_spike_holder not in opponent_roster or opponent_igl not in opponent_roster:
         raise ValueError("opponent spike holder and IGL must belong to its roster")
@@ -101,6 +106,26 @@ def run_headless_full_match(
     coach_roster = tuple(FIXED_ROSTER_NAMES)
     coach_holder = "ごんた"
     coach_igl = "ごりまる"
+    if mirrored_roster:
+        # The game already supports same-display-name players through a
+        # team-qualified string key used by its competition runner.  Preserve
+        # the fixed Gorigons names seen by both coach policies while keeping
+        # ability owners, match stats, and analytics identities distinct.
+        from run_competition_manager import TeamPlayerKey
+
+        coach_roster = tuple(TeamPlayerKey(name, "task15:candidate")
+                             for name in FIXED_ROSTER_NAMES)
+        opponent_roster = tuple(TeamPlayerKey(name, "task15:historical")
+                                for name in FIXED_ROSTER_NAMES)
+        coach_holder = next(name for name in coach_roster if str(name) == "ごんた")
+        coach_igl = next(name for name in coach_roster if str(name) == "ごりまる")
+        opponent_spike_holder = next(
+            name for name in opponent_roster
+            if str(name) == str(opponent_spike_holder)
+        )
+        opponent_igl = next(
+            name for name in opponent_roster if str(name) == str(opponent_igl)
+        )
     if coach_starts_as is Side.ATTACKER:
         attacker_ai, defender_ai = coach_team_ai, opponent_team_ai
         attacker_roster, defender_roster = coach_roster, opponent_roster
@@ -158,8 +183,15 @@ def audit_completed_match(
     if not replay or not records:
         raise RuntimeError("completed match is missing replay or round records")
 
-    current_attackers = {str(name) for name in (game.attacker_roster or ())}
-    coach_is_attacker = current_attackers == set(FIXED_ROSTER_NAMES)
+    # Team identity remains unambiguous for mirrored-roster self-play, while
+    # comparing roster names does not.  VisualFPSBattle owns side swapping and
+    # keeps these two object references current.
+    if game.current_attacker_team_ai is coach_team_ai:
+        coach_is_attacker = True
+    elif game.current_defender_team_ai is coach_team_ai:
+        coach_is_attacker = False
+    else:
+        raise RuntimeError("coach team is not assigned to either side")
     coach_score = int(game.attacker_wins if coach_is_attacker else game.defender_wins)
     opponent_score = int(game.defender_wins if coach_is_attacker else game.attacker_wins)
     reasons = Counter(str(record.get("reason", "unknown")) for record in records)

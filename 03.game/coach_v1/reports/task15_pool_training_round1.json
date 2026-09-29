@@ -1,0 +1,43 @@
+{
+  "matches": [
+    {
+      "opponent_id": "omoko_v1",
+      "seed": 1600,
+      "coach_started_as": "attacker",
+      "coach_score": 1,
+      "opponent_score": 13,
+      "attacker_samples": 304,
+      "defender_samples": 196,
+      "attacker_teacher_move_agreement": 0.7239583333333334,
+      "defender_teacher_move_agreement": 0.34776902887139105,
+      "attacker_loss": 1.4263514280319214,
+      "defender_loss": 1.4816594123840332
+    },
+    {
+      "opponent_id": "touyama_v2",
+      "seed": 1601,
+      "coach_started_as": "defender",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "attacker_samples": 100,
+      "defender_samples": 1332,
+      "attacker_teacher_move_agreement": 0.5462686567164179,
+      "defender_teacher_move_agreement": 0.34598562949078415,
+      "attacker_loss": 1.452583909034729,
+      "defender_loss": 1.2538241147994995
+    },
+    {
+      "opponent_id": "gc_v1",
+      "seed": 1602,
+      "coach_started_as": "attacker",
+      "coach_score": 5,
+      "opponent_score": 13,
+      "attacker_samples": 840,
+      "defender_samples": 720,
+      "attacker_teacher_move_agreement": 0.7483271375464684,
+      "defender_teacher_move_agreement": 0.4095238095238095,
+      "attacker_loss": 1.2603873014450073,
+      "defender_loss": 1.141849398612976
+    }
+  ]
+}

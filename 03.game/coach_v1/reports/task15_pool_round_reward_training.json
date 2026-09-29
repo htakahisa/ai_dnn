@@ -1,0 +1,43 @@
+{
+  "matches": [
+    {
+      "opponent_id": "omoko_v1",
+      "seed": 1700,
+      "coach_started_as": "attacker",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "attacker_rounds": 12,
+      "attacker_round_wins": 0,
+      "defender_rounds": 1,
+      "defender_round_wins": 0,
+      "attacker_loss": -2.0361948013305664,
+      "defender_loss": -4.826924800872803
+    },
+    {
+      "opponent_id": "touyama_v2",
+      "seed": 1701,
+      "coach_started_as": "defender",
+      "coach_score": 0,
+      "opponent_score": 13,
+      "attacker_rounds": 1,
+      "attacker_round_wins": 0,
+      "defender_rounds": 12,
+      "defender_round_wins": 0,
+      "attacker_loss": -2.184342384338379,
+      "defender_loss": -5.247424125671387
+    },
+    {
+      "opponent_id": "gc_v1",
+      "seed": 1702,
+      "coach_started_as": "attacker",
+      "coach_score": 4,
+      "opponent_score": 13,
+      "attacker_rounds": 12,
+      "attacker_round_wins": 3,
+      "defender_rounds": 5,
+      "defender_round_wins": 1,
+      "attacker_loss": -1.2379976511001587,
+      "defender_loss": -3.0028672218322754
+    }
+  ]
+}

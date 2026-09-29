@@ -1,0 +1,30 @@
+{
+  "matches": [
+    {
+      "opponent_id": "touyama_v2",
+      "seed": 1710,
+      "coach_started_as": "attacker",
+      "coach_score": 1,
+      "opponent_score": 13,
+      "attacker_rounds": 12,
+      "attacker_round_wins": 1,
+      "defender_rounds": 2,
+      "defender_round_wins": 0,
+      "attacker_loss": -1.8897159099578857,
+      "defender_loss": -4.5202412605285645
+    },
+    {
+      "opponent_id": "simple_random",
+      "seed": 1711,
+      "coach_started_as": "defender",
+      "coach_score": 6,
+      "opponent_score": 13,
+      "attacker_rounds": 7,
+      "attacker_round_wins": 3,
+      "defender_rounds": 12,
+      "defender_round_wins": 3,
+      "attacker_loss": -0.9340224266052246,
+      "defender_loss": -2.036128044128418
+    }
+  ]
+}

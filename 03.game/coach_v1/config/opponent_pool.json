@@ -1,0 +1,48 @@
+{
+  "schema_version": "coach-opponent-pool-v1",
+  "opponents": [
+    {
+      "id": "omoko_v1",
+      "kind": "existing_ai",
+      "ai_key": "omoko_gaming_v1",
+      "preset": "Omoko Gaming",
+      "difficulty": 1,
+      "weight": 1.0
+    },
+    {
+      "id": "touyama_v2",
+      "kind": "existing_ai",
+      "ai_key": "touyama_gaming_v2",
+      "preset": "Touyama Gaming",
+      "difficulty": 2,
+      "weight": 1.0
+    },
+    {
+      "id": "gc_v1",
+      "kind": "existing_ai",
+      "ai_key": "gc_v1",
+      "preset": "Ghost Champions",
+      "difficulty": 3,
+      "weight": 1.0
+    },
+    {
+      "id": "simple_random",
+      "kind": "existing_ai",
+      "ai_key": "default",
+      "preset": "Ghost Champions",
+      "difficulty": 1,
+      "weight": 0.5
+    },
+    {
+      "id": "coach_v1_task11_6",
+      "kind": "historical_coach",
+      "preset": "Gorigons",
+      "difficulty": 2,
+      "weight": 1.0,
+      "attacker_checkpoint": "checkpoints/coach/attacker/observation_v2/latest.pt",
+      "attacker_sha256": "81d186bc2f3b267d106c21c7e382362e2145adbd125066c83b663e6bf101cec7",
+      "defender_checkpoint": "checkpoints/coach/defender/observation_v2/latest.pt",
+      "defender_sha256": "ac70cafe29723fdb48077b88c34004ae967a7dab71c6acbc03b242886ae23399"
+    }
+  ]
+}
