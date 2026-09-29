@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -57,9 +58,12 @@ class CharacterObservation:
 class CharacterObservationEncoder:
     """Adds only own slot and coach's external instruction to shared actor data."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, watch_points_path: Path | None = None) -> None:
         # Character checkpoints retain their original 106-field contract.
-        self._coach_encoder = CoachObservationEncoder(version=LEGACY_COACH_OBSERVATION_VERSION)
+        self._coach_encoder = CoachObservationEncoder(
+            version=LEGACY_COACH_OBSERVATION_VERSION,
+            watch_points_path=watch_points_path,
+        )
 
     @property
     def map_hash(self) -> str:

@@ -129,3 +129,124 @@ Task 17 の比較本体を (1)～(3) より先に始めない。
 警戒ポイント半径のテストも含む。`compileall` と `git diff --check` も成功。
 GC の実試合で更新された既存デバッグログは元へ戻し、Task 16 専用ファイルと
 `coordinator.py`・`full_match.py` 以外の既存変更を残していない。
+
+## 2026-09-30 継続確認：地点採否と ability 計測
+
+ユーザーから Task 17 前に上記2点の確認を依頼された。GC を実行する際は PowerShell で
+`$env:GC_SEARCH_DEBUG = "0"` を設定した。
+
+### 地点レビュー
+
+`review_task16.py` で候補の正確な kill event、直前 replay、警戒ポイントの周辺分布を
+照合し、`reports/task16_review.json` を出した。replay の `visible_to` は UI 用の
+チーム LOS 判定で、actor の合法な sighting と同一ではないことが判明した。
+`DecisionAudit` に `TeamPerceptionSnapshot.sightings` の合法な報告 ID・報告座標だけを
+記録し、同じ seed・全5相手・各2試合を再実行した。未視認敵の実位置はこの監査記録へ
+追加していない。10試合228候補の集計結果は再現した。
+
+| 地点 | side/phase | 実キラーからの死亡 | 直前 actor sighting | 既存分布 | 判断 |
+|---|---|---:|---:|---|---|
+| `[11,31]` | attacker/pre-plant | 13件、3試合・8round、omoko/touyama | 3/13 | 半径外 | 新規追加を推奨する候補 |
+| `[7,34]` | defender/pre-plant | 6件、3試合・6round、omoko/simple | 1/6 | 半径外 | 新規追加を推奨する候補 |
+| `[12,40]` | defender/retake | 15件、4試合・8round、gc/simple | 8/15 | 半径外 | retake の移動・護衛要因も調べてから判断 |
+| `[6,23]` | attacker/pre-plant | 25件、4試合・18round、3相手 | 13/25 | 既存2ポイントの半径内 | 新規追加は見送り、既存分布での失敗を診断 |
+
+直前 actor sighting は死亡直前の coach 計算でキラー ID が共有報告に含まれた件数。
+位置は合法な報告座標であり、キラーの実座標は試合後の照合にだけ使う。
+`[11,31]` と `[7,34]` は追加の根拠があるが、Task 16 方針に従い**設定へ自動追加しない**。
+採用する場合は point 設定と該当学習・checkpoint を更新し、独立評価をやり直す。
+
+### ability 有効率の計測確認
+
+`ability_effect_audit.py` を追加した。試合後評価に限って既存 `execute_ai_ability` の戻り値、
+FLASH/RECON の projectile 着弾、SMOKE の有効中の射線差を記録する。
+actor 観測、推論判断、core は変更しない。
+
+- 分母は**成立し、着弾または観測窓を終えた通常能力使用**。失敗した要求と未解決の投射物は
+  別件数として残し、率の分母へ混ぜない。
+- FLASH/RECON は、その projectile の着弾で敵の blind/reveal 継続時間が増えた場合を有効とする。
+  projectile のオブジェクト ID で cast と着弾を対応付け、同じ owner の投射物が逆順に
+  着弾しても混同しない。
+- SMOKE は、既存射線ルールを使った同一状態の smoke 有無比較を各 active replay frame で行う。
+  敵の遮断射線 pair-tick が味方より多い場合を有効とする。
+- HUNT は v1 の通常能力使用 mask にないため、この率の対象外とする。
+
+`probe_ability_effects.py` で未使用 seed 1610–1611 の default AI（Ghost Champions）戦を両開始 side で実行し、
+`reports/task17_ability_readiness.json` に全72件の使用記録を保存した。
+全72件が成立・解決した。SMOKE は10/19、FLASHは15/27、RECONは12/26が上記定義で有効。
+これは**計測経路の実戦確認**であり、2試合から能力性能を結論しない。
+同じ seed 1610・attacker 開始で監査なしの通常試合も実行し、監査ありと同じ
+14-16・延長30ラウンドの結果を確認した（`reports/task17_ability_control.json`）。
+合成テスト4件で失敗 cast の除外、未解決 cast の除外、逆順着弾の帰属、SMOKE の射線差を検証した。
+Task 17 の比較では同じ定義を比較相手にも適用し、相手・seed を増やす必要がある。
+
+これにより、Task 17 前の未決事項は `[11,31]`・`[7,34]` の採否と、それを採用する場合の
+再学習である。ability 有効率は計測方法と分母を実試合まで検証済み。
+
+継続確認後の `python -X utf8 -m unittest discover -s coach_v1 -p
+'test_coach_v1_task*.py' -q` は **192件成功**。`compileall` と `git diff --check` も成功。
+追加ファイルは `review_task16.py`、`ability_effect_audit.py`、`probe_ability_effects.py`、
+上記2レポート、対応する2テスト。core・watch point 設定・checkpoint は変更していない。
+
+## 2026-09-30 追加採用：2地点と対応checkpoint
+
+ユーザー判断により、上記の追加推奨2地点を正式設定へ採用した。マップ本体は変更していない。
+
+| ID | 位置 | side / situation | facing | 重要度 | 周辺半径 |
+|---|---|---|---|---:|---:|
+| `watch_r11_c31` | `[11,31]` | attacker / carry・retrieve | W | 4 | 1 |
+| `watch_r07_c34` | `[7,34]` | defender / search | W | 4 | 1 |
+
+向きは候補レポートの**味方被害者の向き**を転用していない。実際のキラーの向きを
+replayで再確認し、`[11,31]` の確認可能な6例は全てW、`[7,34]` のdefender側6例は
+Wが4、SWが1、NWが1だったためWとした。対象局面を狭め、既存のguard・retake分布を
+不用意に増やさない。`[6,23]` は既存ポイントでカバー済み、`[12,40]` はretake行動の
+診断待ちとして採用していない。`config/watch_points_map.py`と
+`config/watch_points.json`を同期し、35→37地点、新hashは
+`c632c399cb359a46ee82c8c2120a74ac5367575a78730ed390110f191f06336e`。
+Task 16の旧レビュー・replayは追加前の証拠として保存した。新地点はScenarioGeneratorの
+実サンプリングでも両局面に入ることを自動テストで確認した。
+
+### 再学習と互換性
+
+警戒ポイントhashはcoach 2本、キャラクター5人6本（ごんごんdefender専用を含む）の
+観測契約に含まれる。旧重みを初期値として新設定の70/20/10局面で再学習し、
+`checkpoints/experiments/task16_watch_added/`へ候補を分離した。元の正式checkpointは
+`checkpoints/experiments/task16_watch_prechange/`へ退避してから更新した。
+キャラクターの独立局面160例でのfacing正解率は、旧重み→新候補の順で
+ごりまる0.450→0.500、ごんごん0.625→0.631、ごんた0.519→0.606、
+くんた0.550→0.556、くりまる0.644→0.669。ごんごんdefender専用は80例で
+0.650→0.650、lossは0.757→0.753。これらは訓練用局面の指標で、実戦能力の代用ではない。
+coachはattackerを12 episode・105更新、defenderを均衡学習2 cycle・30更新した。
+defenderの4局面validationではselection score -1.013→-1.007、過剰rotation率
+0.221→0.138、無効移動率0.036→0.005。4局面の勝利は両方0である。
+
+Task 15と同じseed 1510–1511・5相手各2試合の昇格判定は、旧版3/10勝・得点率
+0.346に対し新設定版4/10勝・0.415で **`promoted=true`**。
+historical coachには両試合13-0。主要3相手ではomoko_v1得点率0.037→0.071、
+gc_v1 0.133→0.333、touyama_v2 0.037→0。touyamaは2試合で1ラウンドの低下で
+既存ゲートの許容値0.05以内だが、勝てていない課題は継続する。
+詳細は`reports/task16_watch_added_promotion.json`、キャラクター・coachの各retrain
+reportを参照。旧実験checkpointとTask 15 historical opponentの再現性のため、
+`config/watch_points_before_task16.json`（旧hash一致）と退避キャラクターを保持し、
+過去モデルだけに設定パスを明示している。新旧の観測・belief・checkpointが混在しない
+統合テストとhistorical実戦2試合が成功した。coreと推論時の戦術・経路処理は変更していない。
+
+### 標準出力の確認
+
+作業前に`environment.py`のユーザー変更を確認し、そのまま保持した。
+`touyama_v2`、`omoko_v1`、`gc_v1`の学習・評価コードに、ゲーム実行時のstdoutを
+読み取って成績や行動を決める処理は見つからない。GC内の`redirect_stdout`は出力を
+捨てる用途である。今回の10試合評価もPowerShell側でstdoutを捨てて完走し、
+結果はJSONから判定した。なお、現行`run_game.py`で3フラグが使用される箇所は
+各モデルの**import時の出力抑制**だけであり、試合中の全printを制御する実装とは
+確認できない。この周辺ファイルは変更していない。
+
+### 検証と残課題
+
+- 設定検証は37地点、両新地点の実サンプリング確認と新旧teamのcheckpoint読込が成功。
+- 変更後の全Taskテストは196件成功。旧実験を含む関連23件も成功。
+- `compileall`と`git diff --check`成功。未視認敵の実位置を差し替える既存のactor観測テストも通過。
+- touyama_v2に対する得点が2試合で0。相手・seedを増やすTask 17の比較評価で
+  継続確認する。今回の2地点採用と新旧checkpoint整合性は完了したため、
+  この互換性作業を持ち越してTask 17をやり直す必要はない。

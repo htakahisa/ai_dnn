@@ -1,0 +1,1348 @@
+{
+  "definition": {
+    "denominator": "successful and resolved normal-ability casts",
+    "FLASH": "at least one enemy gains blind duration at this projectile's impact",
+    "RECON": "at least one enemy gains reveal duration at this projectile's impact",
+    "SMOKE": "more enemy than ally directed shot-lane pair-ticks blocked during active replay frames",
+    "unresolved": "excluded from denominator and reported separately",
+    "HUNT": "excluded: this slot has no normal-ability cast in the v1 action mask"
+  },
+  "matches": [
+    {
+      "seed": 1610,
+      "start_side": "attacker",
+      "coach_score": 14,
+      "opponent_score": 16,
+      "ability_events": 48
+    },
+    {
+      "seed": 1611,
+      "start_side": "defender",
+      "coach_score": 4,
+      "opponent_score": 13,
+      "ability_events": 24
+    }
+  ],
+  "summary": {
+    "SMOKE": {
+      "requests": 19,
+      "successful_casts": 19,
+      "resolved_casts": 19,
+      "effective_casts": 10,
+      "effective_rate": 0.5263157894736842
+    },
+    "FLASH": {
+      "requests": 27,
+      "successful_casts": 27,
+      "resolved_casts": 27,
+      "effective_casts": 15,
+      "effective_rate": 0.5555555555555556
+    },
+    "RECON": {
+      "requests": 26,
+      "successful_casts": 26,
+      "resolved_casts": 26,
+      "effective_casts": 12,
+      "effective_rate": 0.46153846153846156
+    }
+  },
+  "events": [
+    {
+      "round": 1,
+      "tick": 79,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        6,
+        19
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 2,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        2,
+        21
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro",
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 2,
+      "tick": 27,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        8,
+        22
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 2,
+      "tick": 27,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        1,
+        20
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 2,
+      "tick": 27,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        2,
+        20
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro",
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 3,
+      "tick": 52,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        4,
+        39
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 3,
+      "tick": 52,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        2,
+        29
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 3,
+      "tick": 52,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        6,
+        42
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 3,
+      "tick": 52,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        2,
+        29
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 4,
+      "tick": 23,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        4,
+        25
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 4,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        7,
+        21
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro",
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 4,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        7,
+        21
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 4,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 4,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        6,
+        21
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 5,
+      "tick": 26,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        6,
+        17
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SugarZ3ro",
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 5,
+      "tick": 26,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        7,
+        33
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 14,
+      "ally_lane_pair_ticks_blocked": 13,
+      "match_seed": 1610
+    },
+    {
+      "round": 5,
+      "tick": 26,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        7,
+        33
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 5,
+      "tick": 26,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        6,
+        17
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 9,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        9,
+        18
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 9,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        6,
+        20
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 9,
+      "tick": 55,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        7,
+        39
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 29,
+      "ally_lane_pair_ticks_blocked": 2,
+      "match_seed": 1610
+    },
+    {
+      "round": 10,
+      "tick": 54,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        2,
+        29
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 14,
+      "tick": 45,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        10,
+        30
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SyouTa",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 14,
+      "tick": 68,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        7,
+        37
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 14,
+      "tick": 73,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        2,
+        39
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Xdll"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 15,
+      "tick": 54,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        5,
+        42
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 17,
+      "tick": 52,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        4,
+        40
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 6,
+      "ally_lane_pair_ticks_blocked": 2,
+      "match_seed": 1610
+    },
+    {
+      "round": 17,
+      "tick": 52,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        4,
+        40
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 20,
+      "tick": 47,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        5,
+        34
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Xdll",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 20,
+      "tick": 58,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        14,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 20,
+      "tick": 63,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        10,
+        38
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 2,
+      "ally_lane_pair_ticks_blocked": 6,
+      "match_seed": 1610
+    },
+    {
+      "round": 22,
+      "tick": 53,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        9,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 1,
+      "match_seed": 1610
+    },
+    {
+      "round": 22,
+      "tick": 53,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        10,
+        39
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 22,
+      "tick": 57,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        7,
+        34
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 23,
+      "tick": 42,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        7,
+        30
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 23,
+      "tick": 42,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        7,
+        30
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 23,
+      "tick": 48,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        10,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 2,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 25,
+      "tick": 57,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        4,
+        33
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 26,
+      "tick": 46,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        10,
+        29
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SyouTa",
+        "Xdll",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 26,
+      "tick": 46,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        10,
+        29
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SyouTa"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 26,
+      "tick": 49,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        12,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 3,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 26,
+      "tick": 54,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        8,
+        38
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 27,
+      "tick": 20,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        16,
+        26
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 27,
+      "tick": 20,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        6,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SugarZ3ro"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 27,
+      "tick": 57,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        2,
+        37
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 28,
+      "tick": 50,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        5,
+        34
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 28,
+      "tick": 57,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        4,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 28,
+      "tick": 81,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        5,
+        40
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 29,
+      "tick": 57,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        1,
+        22
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1610
+    },
+    {
+      "round": 2,
+      "tick": 41,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        8,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SyouTa",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 2,
+      "tick": 41,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        8,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Xdll"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 3,
+      "tick": 42,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        6,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Xdll",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 3,
+      "tick": 54,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        6,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 1,
+      "match_seed": 1611
+    },
+    {
+      "round": 4,
+      "tick": 40,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        14,
+        25
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 3,
+      "match_seed": 1611
+    },
+    {
+      "round": 4,
+      "tick": 40,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        7,
+        35
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 6,
+      "tick": 44,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        9,
+        31
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 3,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 6,
+      "tick": 44,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        10,
+        33
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "SugarZ3ro",
+        "Xdll"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 6,
+      "tick": 45,
+      "side": "defender",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        10,
+        32
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 7,
+      "tick": 67,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        20,
+        42
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 9,
+      "tick": 99,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        5,
+        42
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 10,
+      "tick": 62,
+      "side": "defender",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        13,
+        40
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Absol",
+        "SugarZ3ro"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 10,
+      "tick": 64,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        10,
+        40
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 12,
+      "tick": 42,
+      "side": "defender",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        13,
+        30
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 1,
+      "ally_lane_pair_ticks_blocked": 4,
+      "match_seed": 1611
+    },
+    {
+      "round": 12,
+      "tick": 42,
+      "side": "defender",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        13,
+        30
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 14,
+      "tick": 34,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        6,
+        18
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 15,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        7,
+        35
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 15,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        1,
+        20
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 1,
+      "match_seed": 1611
+    },
+    {
+      "round": 15,
+      "tick": 24,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        2,
+        23
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "Xdll",
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 16,
+      "tick": 26,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        22,
+        24
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 17,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "ごんた",
+      "ability": "RECON",
+      "target": [
+        3,
+        18
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 17,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "ごりまる",
+      "ability": "SMOKE",
+      "target": [
+        3,
+        25
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 12,
+      "ally_lane_pair_ticks_blocked": 7,
+      "match_seed": 1611
+    },
+    {
+      "round": 17,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "くんた",
+      "ability": "FLASH",
+      "target": [
+        3,
+        25
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [
+        "eKo"
+      ],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    },
+    {
+      "round": 17,
+      "tick": 25,
+      "side": "attacker",
+      "owner": "くりまる",
+      "ability": "FLASH",
+      "target": [
+        3,
+        25
+      ],
+      "cast_success": true,
+      "resolved": true,
+      "affected_enemies": [],
+      "enemy_lane_pair_ticks_blocked": 0,
+      "ally_lane_pair_ticks_blocked": 0,
+      "match_seed": 1611
+    }
+  ]
+}

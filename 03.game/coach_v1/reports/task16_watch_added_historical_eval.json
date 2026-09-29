@@ -1,0 +1,56 @@
+{
+  "candidate": {
+    "attacker_checkpoint": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\coach\\attacker\\latest.pt",
+    "attacker_sha256": "3ae623afda2a8a96e042d1b12560abea77c014ce68028a5d2ea2def0e25b0ab7",
+    "defender_checkpoint": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\coach\\defender\\latest.pt",
+    "defender_sha256": "a175cfdaf08a3c6c3c0bb01b06ef85ce8b225d8ef0adc783897e2aa896c70cdc"
+  },
+  "overall": {
+    "matches": 2,
+    "wins": 2,
+    "win_rate": 1.0,
+    "round_point_rate": 1.0
+  },
+  "opponents": {
+    "coach_v1_task11_6": {
+      "matches": 2,
+      "wins": 2,
+      "win_rate": 1.0,
+      "round_point_rate": 1.0,
+      "score_margin_per_match": 13.0
+    }
+  },
+  "recommended_weights": {
+    "coach_v1_task11_6": 0.5
+  },
+  "matches": [
+    {
+      "opponent_id": "coach_v1_task11_6",
+      "opponent_kind": "historical_coach",
+      "difficulty": 2,
+      "seed": 1510,
+      "coach_started_as": "attacker",
+      "coach_score": 13,
+      "opponent_score": 0,
+      "rounds": 13,
+      "won": true,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    },
+    {
+      "opponent_id": "coach_v1_task11_6",
+      "opponent_kind": "historical_coach",
+      "difficulty": 2,
+      "seed": 1511,
+      "coach_started_as": "defender",
+      "coach_score": 13,
+      "opponent_score": 0,
+      "rounds": 13,
+      "won": true,
+      "memory_reset_ok": true,
+      "side_checkpoint_switch_ok": true,
+      "replay_ok": true
+    }
+  ]
+}

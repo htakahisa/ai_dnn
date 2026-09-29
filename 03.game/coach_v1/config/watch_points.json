@@ -297,6 +297,26 @@
       ]
     },
     {
+      "id": "watch_r07_c34",
+      "position": [
+        7,
+        34
+      ],
+      "importance": 4,
+      "facing": "W",
+      "sides": [
+        "defender"
+      ],
+      "situations": [
+        "search"
+      ],
+      "random_radius": 1,
+      "tags": [
+        "corner",
+        "off_angle"
+      ]
+    },
+    {
       "id": "right_site_west_entry",
       "position": [
         7,
@@ -512,6 +532,27 @@
       ],
       "random_radius": 2,
       "tags": [
+        "off_angle"
+      ]
+    },
+    {
+      "id": "watch_r11_c31",
+      "position": [
+        11,
+        31
+      ],
+      "importance": 4,
+      "facing": "W",
+      "sides": [
+        "attacker"
+      ],
+      "situations": [
+        "carry",
+        "retrieve"
+      ],
+      "random_radius": 1,
+      "tags": [
+        "long_angle",
         "off_angle"
       ]
     },

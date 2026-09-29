@@ -1,0 +1,55 @@
+{
+  "old_watch_hash": "2c5ff118249917e926f0c7c8aba206642aaa5a45a2d33b29cbfa8dcb9aee31b7",
+  "new_watch_hash": "c632c399cb359a46ee82c8c2120a74ac5367575a78730ed390110f191f06336e",
+  "coaches": {
+    "attacker": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\coach\\attacker\\task12\\latest.pt",
+      "source_sha256": "b4c6a609b8364cec348fdea3587e446a8ae943de41099175bc0481bbd7a737de",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\coach\\attacker\\latest.pt",
+      "old_training_step": 1841,
+      "new_training_step": 1946,
+      "new_episodes": 12,
+      "validation": null
+    },
+    "defender": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\coach\\defender\\task13\\latest.pt",
+      "source_sha256": "4a3d216266d2b588f1e0f67165665df6d51a543452c8efa9dedb7296974ea792",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\coach\\defender\\latest.pt",
+      "old_training_step": 1995,
+      "new_training_step": 2025,
+      "new_episodes": 16,
+      "validation": {
+        "before": {
+          "seeds": [
+            3600,
+            3601,
+            3602,
+            3603
+          ],
+          "reward": -0.9799999999999999,
+          "round_win": -1.0,
+          "plant_prevention_rate": 0.0,
+          "retake_success_rate": 0.0,
+          "overrotation_rate": 0.22108843537414966,
+          "invalid_move_rate": 0.035868005738880916,
+          "selection_score": -1.0128478220556514
+        },
+        "after": {
+          "seeds": [
+            3600,
+            3601,
+            3602,
+            3603
+          ],
+          "reward": -0.8735000000000002,
+          "round_win": -1.0,
+          "plant_prevention_rate": 0.0,
+          "retake_success_rate": 0.0,
+          "overrotation_rate": 0.13804713804713806,
+          "invalid_move_rate": 0.005291005291005291,
+          "selection_score": -1.0071669071669072
+        }
+      }
+    }
+  }
+}

@@ -13,14 +13,18 @@ from coach_v1.training.character_trainer import load_character_model
 
 
 class CharacterPolicy:
-    def __init__(self, slot: int, path: Path | None = None, *, device: str = "cpu") -> None:
+    def __init__(self, slot: int, path: Path | None = None, *, device: str = "cpu",
+                 watch_points_path: Path | None = None) -> None:
         if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < len(FIXED_ROSTER):
             raise ValueError("invalid fixed-roster slot")
         checkpoint = Path(path) if path is not None else CHARACTER_CHECKPOINT_PATHS[FIXED_ROSTER[slot].checkpoint_id] / "best.pt"
-        self.model: CharacterModel = load_character_model(checkpoint, slot=slot, device=device)
+        self.model: CharacterModel = load_character_model(
+            checkpoint, slot=slot, device=device,
+            watch_points_path=watch_points_path)
         self.slot = slot
         self.device = device
-        self.encoder = CharacterObservationEncoder()
+        self.encoder = CharacterObservationEncoder(
+            watch_points_path=watch_points_path)
 
     def act(self, observation: CharacterObservation) -> CharacterAction:
         if (not isinstance(observation, CharacterObservation)

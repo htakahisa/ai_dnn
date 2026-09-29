@@ -9,6 +9,8 @@ from typing import Any, Callable, Mapping, Sequence
 
 from party_presets import get_preset
 
+from coach_v1.common.constants import CHECKPOINTS_DIR, CHARACTER_CHECKPOINT_IDS
+from coach_v1.common.watch_point_versions import LEGACY_WATCH_POINTS_PATH
 from coach_v1.common.types import Side
 from coach_v1.full_match import FullMatchResult, run_headless_full_match
 from coach_v1.opponent_pool import OpponentKind, OpponentPool, OpponentSpec
@@ -149,10 +151,15 @@ def build_opponent_team(spec: OpponentSpec, *, device: str = "cpu"):
 
     if spec.kind is OpponentKind.HISTORICAL_COACH:
         spec.verify_checkpoints()
+        archived = CHECKPOINTS_DIR / "experiments" / "task16_watch_prechange" / "characters"
         return build_coach_v1_team(
             name=spec.opponent_id,
             attacker_checkpoint=spec.attacker_checkpoint,
             defender_checkpoint=spec.defender_checkpoint,
+            character_checkpoints={name: archived / name / "best.pt"
+                                   for name in CHARACTER_CHECKPOINT_IDS},
+            gongon_defender_checkpoint=archived / "gongon" / "defender_best.pt",
+            watch_points_config_path=LEGACY_WATCH_POINTS_PATH,
             device=device,
         )
     # Import lazily because run_game imports every legacy team implementation.

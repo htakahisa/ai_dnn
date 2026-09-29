@@ -146,11 +146,15 @@ class HardPointTest(unittest.TestCase):
         report = {"candidates": [
             {"side": "attacker", "position": [6, 23], "member_positions": [[6, 23]]},
             {"side": "attacker", "position": [11, 31], "member_positions": [[11, 31]]},
+            {"side": "defender", "position": [7, 34], "member_positions": [[7, 34]]},
         ]}
         annotated = annotate_watch_coverage(report)["candidates"]
         self.assertIn("watch_r06_c25", annotated[0]["covering_watch_point_ids"])
         self.assertEqual([], annotated[0]["uncovered_positions"])
-        self.assertEqual([[11, 31]], annotated[1]["uncovered_positions"])
+        self.assertIn("watch_r11_c31", annotated[1]["covering_watch_point_ids"])
+        self.assertEqual([], annotated[1]["uncovered_positions"])
+        self.assertIn("watch_r07_c34", annotated[2]["covering_watch_point_ids"])
+        self.assertEqual([], annotated[2]["uncovered_positions"])
 
 
 if __name__ == "__main__":

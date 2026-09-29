@@ -1,0 +1,27 @@
+{
+  "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gongon\\defender_best.pt",
+  "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\gongon_defender\\best.pt",
+  "old_watch_hash": "2c5ff118249917e926f0c7c8aba206642aaa5a45a2d33b29cbfa8dcb9aee31b7",
+  "new_watch_hash": "c632c399cb359a46ee82c8c2120a74ac5367575a78730ed390110f191f06336e",
+  "train_count": 360,
+  "validation_count": 80,
+  "holdout_count": 80,
+  "baseline": {
+    "samples": 80,
+    "loss": 0.7566923856735229,
+    "facing_accuracy": 0.65,
+    "ability_accuracy": 1.0,
+    "unused_ability_accuracy": 1.0,
+    "target_accuracy": null,
+    "ability_effective_rate": null
+  },
+  "candidate_holdout": {
+    "samples": 80,
+    "loss": 0.7529362082481384,
+    "facing_accuracy": 0.65,
+    "ability_accuracy": 1.0,
+    "unused_ability_accuracy": 1.0,
+    "target_accuracy": null,
+    "ability_effective_rate": null
+  }
+}

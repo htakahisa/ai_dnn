@@ -20,6 +20,9 @@ from run_game import VisualFPSBattle, _build_team_ai
 from team_ai import DualRoleTeamAI
 
 from coach_v1.common.constants import CHECKPOINTS_DIR, FIXED_ROSTER, REPORTS_DIR
+from coach_v1.common.watch_point_versions import (
+    LEGACY_WATCH_POINTS_HASH, LEGACY_WATCH_POINTS_PATH,
+)
 from coach_v1.common.types import Side
 from coach_v1.coordinator import TeamExecutionCoordinator
 from coach_v1.evaluate_task10_rollout import StayCoach
@@ -37,8 +40,9 @@ ENCOUNTERS = ("near", "west", "east", "crossfire", "natural")
 
 
 class _RecordedGorimaru:
-    def __init__(self, checkpoint: Path) -> None:
-        self.policy = CharacterPolicy(0, checkpoint)
+    def __init__(self, checkpoint: Path, watch_points_path: Path | None) -> None:
+        self.policy = CharacterPolicy(0, checkpoint,
+                                      watch_points_path=watch_points_path)
         self.observation = None
 
     def act(self, observation):
@@ -99,12 +103,19 @@ def marginal_shot_lanes(game, own_team: str, smoke: dict) -> dict[str, int]:
 
 def _new_game(side: Side, checkpoint: Path, seed: int, encounter: str):
     random.seed(seed)
+    checkpoint_meta = torch.load(checkpoint, map_location="cpu", weights_only=False)["metadata"]
+    historical = checkpoint_meta["watch_points_hash"] == LEGACY_WATCH_POINTS_HASH
+    watch_points_path = LEGACY_WATCH_POINTS_PATH if historical else None
+    archived = CHECKPOINTS_DIR / "experiments" / "task16_watch_prechange" / "characters"
     coach = StayCoach()
-    recorder = _RecordedGorimaru(checkpoint)
+    recorder = _RecordedGorimaru(checkpoint, watch_points_path)
     coordinator = TeamExecutionCoordinator(
         side, coach,
-        {slot: recorder if slot == 0 else CharacterPolicy(slot)
+        {slot: recorder if slot == 0 else CharacterPolicy(
+            slot, archived / FIXED_ROSTER[slot].checkpoint_id / "best.pt"
+            if historical else None, watch_points_path=watch_points_path)
          for slot in range(5)},
+        watch_points_path=watch_points_path,
     )
     team = DualRoleTeamAI("coach_v1_smoke_eval", lambda: coordinator,
                           lambda: coordinator)
@@ -138,7 +149,10 @@ def evaluate_smoke(*, side: Side, seed: int, encounter: str,
                    shadow_checkpoint: Path | None = None) -> dict:
     """Run one real round; evaluative truth is never given to an actor."""
     game, coordinator, own_team, recorder = _new_game(side, checkpoint, seed, encounter)
-    shadow_policy = (CharacterPolicy(0, shadow_checkpoint)
+    shadow_policy = (CharacterPolicy(0, shadow_checkpoint,
+                                     watch_points_path=(LEGACY_WATCH_POINTS_PATH
+                                                        if recorder.policy.encoder.watch_points_hash == LEGACY_WATCH_POINTS_HASH
+                                                        else None))
                      if shadow_checkpoint is not None else None)
     initial_round = game.current_round
     requests = successes = 0

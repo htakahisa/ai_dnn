@@ -55,6 +55,7 @@ class FullMatchResult:
     coach_actions: tuple[Any, ...] = ()
     coach_decisions: tuple[Any, ...] = ()
     kill_events: tuple[dict[str, Any], ...] = ()
+    ability_events: tuple[dict[str, Any], ...] = ()
 
 
 def seed_all(seed: int) -> None:
@@ -83,6 +84,7 @@ def run_headless_full_match(
     opponent_team_name: str = "opponent",
     allow_mirrored_roster: bool = False,
     capture_referee_events: bool = False,
+    capture_ability_events: bool = False,
 ) -> FullMatchResult:
     """Run one complete map through the unmodified game lifecycle."""
 
@@ -184,6 +186,11 @@ def run_headless_full_match(
             )
 
         game._record_replay_frame = record_replay_frame
+    ability_audit = None
+    if capture_ability_events:
+        from coach_v1.ability_effect_audit import AbilityEffectAudit
+
+        ability_audit = AbilityEffectAudit(game, coach_team_ai).install()
     game.run()
     return audit_completed_match(
         game,
@@ -193,6 +200,7 @@ def run_headless_full_match(
         coach_team_name=coach_team_name,
         opponent_team_name=opponent_team_name,
         kill_events=tuple(kill_events),
+        ability_events=(tuple(ability_audit.events) if ability_audit is not None else ()),
     )
 
 
@@ -205,6 +213,7 @@ def audit_completed_match(
     coach_team_name: str,
     opponent_team_name: str,
     kill_events: tuple[dict[str, Any], ...] = (),
+    ability_events: tuple[dict[str, Any], ...] = (),
 ) -> FullMatchResult:
     """Validate side switching, round memory, terminal state, and replay."""
 
@@ -285,7 +294,7 @@ def audit_completed_match(
             and summary.replay_ok):
         raise RuntimeError(f"coach_v1 full-match audit failed: {summary}")
     actions = tuple(action for item in coordinators for action in item.action_log)
-    return FullMatchResult(summary, replay, records, actions, audits, kill_events)
+    return FullMatchResult(summary, replay, records, actions, audits, kill_events, ability_events)
 
 
 def _validate_replay(replay: tuple[dict[str, Any], ...], rounds: int) -> bool:
@@ -317,6 +326,10 @@ def write_match_artifacts(
     report["round_records"] = list(result.round_records)
     if result.kill_events:
         report["kill_events"] = list(result.kill_events)
+    if any("coach_side" in frame for frame in result.replay):
+        report["coach_decisions"] = [asdict(item) for item in result.coach_decisions]
+    if result.ability_events:
+        report["ability_events"] = list(result.ability_events)
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )

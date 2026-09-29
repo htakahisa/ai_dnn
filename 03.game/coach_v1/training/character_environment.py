@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 from coach_v1.common.constants import FIXED_ROSTER, MOVEMENT_DELTAS
@@ -44,8 +45,9 @@ class CharacterStep:
 class CharacterEnvironment:
     """Build one actor step and translate its legal action to the game API."""
 
-    def __init__(self) -> None:
-        self.encoder = CharacterObservationEncoder()
+    def __init__(self, *, watch_points_path: Path | None = None) -> None:
+        self.encoder = CharacterObservationEncoder(
+            watch_points_path=watch_points_path)
 
     def prepare(self, snapshot: TeamPerceptionSnapshot, belief: BeliefSnapshot,
                 *, situation: str, slot: int, instruction: CoachInstruction,

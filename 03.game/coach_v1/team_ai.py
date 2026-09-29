@@ -16,6 +16,7 @@ from coach_v1.common.constants import CHARACTER_CHECKPOINT_IDS
 from coach_v1.common.types import Side
 from coach_v1.coordinator import TeamExecutionCoordinator
 from coach_v1.learning_character_gongon import GongonPolicy
+from coach_v1.learning_character_base import CharacterPolicy
 from coach_v1.learning_character_gonta import GontaPolicy
 from coach_v1.learning_character_gorimaru import GorimaruPolicy
 from coach_v1.learning_character_kunta import KuntaPolicy
@@ -37,11 +38,23 @@ def _character_actors(
     checkpoint_paths: Mapping[str, Path] | None,
     *,
     device: str,
+    watch_points_path: Path | None = None,
+    gongon_defender_checkpoint: Path | None = None,
 ):
     paths = dict(checkpoint_paths or {})
     unknown = set(paths) - set(CHARACTER_CHECKPOINT_IDS)
     if unknown:
         raise ValueError(f"unknown character checkpoint ids: {sorted(unknown)}")
+    if watch_points_path is not None:
+        return {
+            slot: (GongonPolicy(paths.get(checkpoint_id), device=device,
+                                defender_path=gongon_defender_checkpoint,
+                                watch_points_path=watch_points_path)
+                   if slot == 1 else CharacterPolicy(
+                       slot, paths.get(checkpoint_id), device=device,
+                       watch_points_path=watch_points_path))
+            for slot, checkpoint_id in enumerate(CHARACTER_CHECKPOINT_IDS)
+        }
     return {
         slot: policy_type(paths.get(checkpoint_id), device=device)
         for slot, (checkpoint_id, policy_type) in enumerate(
@@ -56,6 +69,8 @@ def build_coach_v1_team(
     attacker_checkpoint: Path | None = None,
     defender_checkpoint: Path | None = None,
     character_checkpoints: Mapping[str, Path] | None = None,
+    gongon_defender_checkpoint: Path | None = None,
+    watch_points_config_path: Path | None = None,
     attacker_coach=None,
     defender_coach=None,
     device: str = "cpu",
@@ -70,14 +85,24 @@ def build_coach_v1_team(
     def controller(side: Side) -> TeamExecutionCoordinator:
         if side is Side.ATTACKER:
             coach = (attacker_coach if attacker_coach is not None else
-                     load_attacker_coach(attacker_checkpoint, device=device))
+                     load_attacker_coach(
+                         attacker_checkpoint, device=device,
+                         **({"watch_points_path": watch_points_config_path}
+                            if watch_points_config_path is not None else {})))
         else:
             coach = (defender_coach if defender_coach is not None else
-                     load_defender_coach(defender_checkpoint, device=device))
+                     load_defender_coach(
+                         defender_checkpoint, device=device,
+                         **({"watch_points_path": watch_points_config_path}
+                            if watch_points_config_path is not None else {})))
         return TeamExecutionCoordinator(
             side,
             coach,
-            _character_actors(character_checkpoints, device=device),
+            _character_actors(
+                character_checkpoints, device=device,
+                watch_points_path=watch_points_config_path,
+                gongon_defender_checkpoint=gongon_defender_checkpoint),
+            watch_points_path=watch_points_config_path,
         )
 
     return DualRoleTeamAI(

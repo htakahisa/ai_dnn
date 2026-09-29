@@ -1,4 +1,6 @@
 from __future__ import annotations
+import contextlib
+import io
 from typing import Any, Callable
 
 from iq_controller_adapter import IQAwareController
@@ -8,6 +10,48 @@ from iq_perception import (
     PerceivedGameView,
 )
 from controllers import UserInputController
+from environment import (
+    GC_STDOUT_LOGS_ENABLED,
+    OMOKO_V1_STDOUT_LOGS_ENABLED,
+    TOUYAMA_V2_STDOUT_LOGS_ENABLED,
+)
+
+
+def _team_stdout_logs_enabled(name: str) -> bool:
+    normalized = str(name).strip().lower()
+    if normalized in {"ghost champions", "ghost champions v1", "gc", "gc_v1"}:
+        return GC_STDOUT_LOGS_ENABLED
+    if normalized in {"omoko gaming v1", "omoko_v1"}:
+        return OMOKO_V1_STDOUT_LOGS_ENABLED
+    if normalized in {"touyama gaming v2", "touyama_gaming_v2"}:
+        return TOUYAMA_V2_STDOUT_LOGS_ENABLED
+    return True
+
+
+class _QuietController:
+    def __init__(self, inner):
+        self.inner = inner
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    @staticmethod
+    def _call(method, *args, **kwargs):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return method(*args, **kwargs)
+
+    def set_game(self, game):
+        method = getattr(self.inner, "set_game", None)
+        if callable(method):
+            return self._call(method, game)
+
+    def reset_round(self):
+        method = getattr(self.inner, "reset_round", None)
+        if callable(method):
+            return self._call(method)
+
+    def decide_move(self, char, game_state):
+        return self._call(self.inner.decide_move, char, game_state)
 
 
 class PrivateInfoController:
@@ -78,6 +122,7 @@ class DualRoleTeamAI:
         perception_engine: IQPerceptionEngine | None = None,
     ):
         self.name = str(name)
+        self.stdout_logs_enabled = _team_stdout_logs_enabled(self.name)
         self.attacker_factory = attacker_factory
         self.defender_factory = defender_factory
         self.use_iq_perception = bool(use_iq_perception)
@@ -88,18 +133,27 @@ class DualRoleTeamAI:
 
     def _wrap(self, controller):
         if getattr(controller, "handles_team_perception", False):
+            wrapped = controller
+        elif isinstance(controller, IQAwareController):
+            wrapped = controller
+        elif isinstance(controller, UserInputController):
             return controller
-        if isinstance(controller, IQAwareController):
-            return controller
-        if isinstance(controller, UserInputController):
-            return controller
-        if not self.use_iq_perception:
-            return PrivateInfoController(controller)
-        return IQAwareController(controller, self.perception_engine)
+        elif not self.use_iq_perception:
+            wrapped = PrivateInfoController(controller)
+        else:
+            wrapped = IQAwareController(controller, self.perception_engine)
+
+        return wrapped if self.stdout_logs_enabled else _QuietController(wrapped)
+
+    def _create_controller(self, factory):
+        if self.stdout_logs_enabled:
+            return factory()
+        with contextlib.redirect_stdout(io.StringIO()):
+            return factory()
 
     def get_attacker_controller(self):
         if self._attacker_controller is None:
-            raw = self.attacker_factory()
+            raw = self._create_controller(self.attacker_factory)
             if raw is None:
                 raise RuntimeError(f"{self.name}: attacker_factoryがNoneを返しました")
             self._attacker_controller = self._wrap(raw)
@@ -108,7 +162,7 @@ class DualRoleTeamAI:
 
     def get_defender_controller(self):
         if self._defender_controller is None:
-            raw = self.defender_factory()
+            raw = self._create_controller(self.defender_factory)
             if raw is None:
                 raise RuntimeError(f"{self.name}: defender_factoryがNoneを返しました")
             self._defender_controller = self._wrap(raw)

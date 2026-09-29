@@ -9,6 +9,7 @@ changes require a new observation version and retraining.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -87,7 +88,8 @@ class CoachObservation:
 class CoachObservationEncoder:
     """Convert safe snapshots to copied CNN and vector inputs for all 5 slots."""
 
-    def __init__(self, *, version: str = COACH_OBSERVATION_VERSION) -> None:
+    def __init__(self, *, version: str = COACH_OBSERVATION_VERSION,
+                 watch_points_path: Path | None = None) -> None:
         if version not in {LEGACY_COACH_OBSERVATION_VERSION, COACH_OBSERVATION_VERSION}:
             raise CoachObservationInputError("unsupported coach observation version")
         self.version = version
@@ -100,7 +102,8 @@ class CoachObservationEncoder:
             raise CoachObservationInputError("fixed map shape changed")
         if any(cell not in "012345" for row in map_rows for cell in row):
             raise CoachObservationInputError("fixed map has unsupported cells")
-        config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
+        config = load_watch_points(watch_points_path or WATCH_POINTS_CONFIG_PATH,
+                                   NEW_MAZE_STR)
         self._map_hash = map_sha256(NEW_MAZE_STR)
         self._config: WatchPointConfig = config
         self._map_rows = map_rows

@@ -257,12 +257,13 @@ class CharacterTrainer:
         self.history = list(payload["history"])
 
 
-def load_character_model(path: Path, *, slot: int, device: str = "cpu") -> CharacterModel:
+def load_character_model(path: Path, *, slot: int, device: str = "cpu",
+                         watch_points_path: Path | None = None) -> CharacterModel:
     """Load only the matching character's model after full metadata checks."""
     payload = torch.load(path, map_location=device, weights_only=False)
     metadata = CheckpointMetadata.from_dict(payload["metadata"])
     config = CharacterModelConfig(**metadata.model_config)
-    encoder = CharacterObservationEncoder()
+    encoder = CharacterObservationEncoder(watch_points_path=watch_points_path)
     expected = build_checkpoint_metadata(
         target=ModelTarget.character(FIXED_ROSTER[slot].checkpoint_id),
         map_hash=encoder.map_hash,

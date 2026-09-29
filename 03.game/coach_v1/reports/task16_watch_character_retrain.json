@@ -1,0 +1,130 @@
+{
+  "old_watch_hash": "2c5ff118249917e926f0c7c8aba206642aaa5a45a2d33b29cbfa8dcb9aee31b7",
+  "new_watch_hash": "c632c399cb359a46ee82c8c2120a74ac5367575a78730ed390110f191f06336e",
+  "train_count": 720,
+  "validation_count": 160,
+  "holdout_count": 160,
+  "epochs": 8,
+  "characters": {
+    "gorimaru": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gorimaru\\best.pt",
+      "source_sha256": "7d60e62fddb2a80156c5c1158ab5204e5d6348ba25592e3881d98e24515cb846",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\gorimaru\\best.pt",
+      "baseline_holdout": {
+        "samples": 160,
+        "loss": 1.8986159026622773,
+        "facing_accuracy": 0.45,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "candidate_holdout": {
+        "samples": 160,
+        "loss": 1.2101005017757416,
+        "facing_accuracy": 0.5,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 8
+    },
+    "gongon": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gongon\\best.pt",
+      "source_sha256": "762afe25c5bf746e6dc78b5e696963069dbaf08a229431b63e0a01249126a0c1",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\gongon\\best.pt",
+      "baseline_holdout": {
+        "samples": 160,
+        "loss": 1.3370581060647964,
+        "facing_accuracy": 0.625,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "candidate_holdout": {
+        "samples": 160,
+        "loss": 1.2080446600914,
+        "facing_accuracy": 0.63125,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": null,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 8
+    },
+    "gonta": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\gonta\\best.pt",
+      "source_sha256": "aa9d39924edf0bbec2aebc3aa796ba3e088595a9b90f184634eed6f14e3b9681",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\gonta\\best.pt",
+      "baseline_holdout": {
+        "samples": 160,
+        "loss": 1.2042682409286498,
+        "facing_accuracy": 0.51875,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "candidate_holdout": {
+        "samples": 160,
+        "loss": 1.0509929656982422,
+        "facing_accuracy": 0.60625,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 8
+    },
+    "kunta": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\kunta\\best.pt",
+      "source_sha256": "3c34a095f144acf536ed02970bedea791e7d43ad21d0f082d065233a49d27d72",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\kunta\\best.pt",
+      "baseline_holdout": {
+        "samples": 160,
+        "loss": 1.829521906375885,
+        "facing_accuracy": 0.55,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "candidate_holdout": {
+        "samples": 160,
+        "loss": 1.1281224191188812,
+        "facing_accuracy": 0.55625,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 8
+    },
+    "kurimaru": {
+      "source": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\characters\\kurimaru\\best.pt",
+      "source_sha256": "51e4d266119d099986a908dc354ac7203612b8c0d39f4a2b229dd5a11f05ecf4",
+      "candidate": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\coach_v1\\checkpoints\\experiments\\task16_watch_added\\characters\\kurimaru\\best.pt",
+      "baseline_holdout": {
+        "samples": 160,
+        "loss": 0.860824140906334,
+        "facing_accuracy": 0.64375,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "candidate_holdout": {
+        "samples": 160,
+        "loss": 0.8540383338928222,
+        "facing_accuracy": 0.66875,
+        "ability_accuracy": 1.0,
+        "unused_ability_accuracy": 1.0,
+        "target_accuracy": 1.0,
+        "ability_effective_rate": null
+      },
+      "best_epoch": 8
+    }
+  }
+}

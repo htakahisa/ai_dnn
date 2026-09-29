@@ -16,7 +16,8 @@ from coach_v1.models.coach_model import CoachActorModel, CoachModelConfig, Coach
 from coach_v1.observation.coach_encoder import CoachObservationEncoder
 
 
-def load_coach_policy(side: Side, path: Path | None = None, *, device: str = "cpu") -> CoachPolicy:
+def load_coach_policy(side: Side, path: Path | None = None, *, device: str = "cpu",
+                      watch_points_path: Path | None = None) -> CoachPolicy:
     if not isinstance(side, Side):
         raise ValueError("coach side must be attacker or defender")
     checkpoint = Path(path) if path is not None else COACH_CHECKPOINT_PATHS[side.value] / "latest.pt"
@@ -25,7 +26,8 @@ def load_coach_policy(side: Side, path: Path | None = None, *, device: str = "cp
     config_values = dict(metadata.model_config)
     config_values.setdefault("action_feedback", False)  # checkpoints made before feedback input
     config = CoachModelConfig(**config_values)
-    encoder = CoachObservationEncoder(version=metadata.observation_version)
+    encoder = CoachObservationEncoder(version=metadata.observation_version,
+                                      watch_points_path=watch_points_path)
     expected = build_checkpoint_metadata(
         target=ModelTarget.coach(side), map_hash=encoder.map_hash,
         watch_points_hash=encoder.watch_points_hash,

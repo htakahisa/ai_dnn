@@ -7,6 +7,7 @@ Coach and character actors receive copied, actor-safe observations.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping, Protocol, Sequence
 
 import numpy as np
@@ -49,8 +50,8 @@ class ActionLog:
 class DecisionAudit:
     """One record for each team-wide coach calculation.
 
-    The record contains public clock data and legal watch-point belief ages.
-    It retains no observation, enemy position, or live game reference.
+    The record contains public clock data, legal watch-point belief ages, and
+    legal team sightings. It retains no unseen enemy position or game reference.
     """
 
     round_number: int
@@ -59,6 +60,7 @@ class DecisionAudit:
     side: Side
     memory_tick: int
     watch_point_ages: tuple[tuple[str, tuple[int, int], int], ...] = ()
+    sightings: tuple[tuple[str, tuple[int, int]], ...] = ()
 
 
 class TeamExecutionCoordinator:
@@ -71,7 +73,8 @@ class TeamExecutionCoordinator:
     handles_team_perception = True
 
     def __init__(self, side: Side, coach: CoachActor,
-                 characters: Mapping[int, CharacterActor]) -> None:
+                 characters: Mapping[int, CharacterActor], *,
+                 watch_points_path: Path | None = None) -> None:
         if not isinstance(side, Side):
             raise ValueError("side must be attacker or defender")
         if set(characters) != set(range(ROSTER_SIZE)):
@@ -83,9 +86,13 @@ class TeamExecutionCoordinator:
         self.sensor = TeamPerceptionBuilder()
         self.encoder = (coach.encoder if isinstance(getattr(coach, "encoder", None),
                                                     CoachObservationEncoder)
-                        else CoachObservationEncoder())
-        self.character_environment = CharacterEnvironment()
-        config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
+                        else CoachObservationEncoder(watch_points_path=watch_points_path))
+        self.character_environment = CharacterEnvironment(
+            watch_points_path=watch_points_path)
+        config = load_watch_points(watch_points_path or WATCH_POINTS_CONFIG_PATH,
+                                   NEW_MAZE_STR)
+        if self.encoder.watch_points_hash != config.config_hash:
+            raise ValueError("coach encoder and coordinator watch points differ")
         self.memory = BeliefMemory(config.for_side(side))
         self._cache_key = None
         self._snapshot = None
@@ -158,6 +165,10 @@ class TeamExecutionCoordinator:
                      point.confirmation_age if point.confirmation_age is not None
                      else belief.memory_tick)
                     for point in belief.watch_points
+                ),
+                sightings=tuple(
+                    (sighting.enemy_id, sighting.reported_position)
+                    for sighting in snapshot.sightings
                 ),
             ))
 

@@ -23,7 +23,7 @@ from coach_v1.convert_watch_points_map import (
 
 
 ROOT = Path(__file__).resolve().parent
-EXPECTED_CONFIG_HASH = "2c5ff118249917e926f0c7c8aba206642aaa5a45a2d33b29cbfa8dcb9aee31b7"
+EXPECTED_CONFIG_HASH = "c632c399cb359a46ee82c8c2120a74ac5367575a78730ed390110f191f06336e"
 MARKED_MAP_PATH = ROOT / "config" / "watch_points_map.py"
 
 
@@ -43,15 +43,30 @@ class CoachV1Task02WatchPointsTest(unittest.TestCase):
         self.assertEqual(map_sha256(NEW_MAZE_STR), self.config.map_hash)
         self.assertEqual(EXPECTED_CONFIG_HASH, self.config.config_hash)
         self.assertEqual(canonical_json_sha256(self.raw), self.config.config_hash)
-        self.assertEqual(35, len(self.config.points))
+        self.assertEqual(37, len(self.config.points))
 
     def test_json_coordinates_are_generated_from_marked_map(self):
         marked_map = load_marked_map(MARKED_MAP_PATH)
         positions = extract_watch_positions(marked_map, NEW_MAZE_STR)
-        self.assertEqual(35, len(positions))
+        self.assertEqual(37, len(positions))
         self.assertEqual(set(positions), {point.position for point in self.config.points})
         generated = convert_map_to_config(marked_map, NEW_MAZE_STR, self.raw)
         self.assertEqual(generated, self.raw)
+
+    def test_task16_adopted_points_are_limited_to_reviewed_situations(self):
+        by_id = {point.point_id: point for point in self.config.points}
+        attacker = by_id["watch_r11_c31"]
+        defender = by_id["watch_r07_c34"]
+        self.assertEqual((11, 31), attacker.position)
+        self.assertEqual((Side.ATTACKER,), attacker.sides)
+        self.assertEqual(("carry", "retrieve"), attacker.situations)
+        self.assertEqual(Facing.W, attacker.facing)
+        self.assertEqual(1, attacker.random_radius)
+        self.assertEqual((7, 34), defender.position)
+        self.assertEqual((Side.DEFENDER,), defender.sides)
+        self.assertEqual(("search",), defender.situations)
+        self.assertEqual(Facing.W, defender.facing)
+        self.assertEqual(1, defender.random_radius)
 
     def test_all_points_are_unique_walkable_and_fully_typed(self):
         point_ids = [point.point_id for point in self.config.points]

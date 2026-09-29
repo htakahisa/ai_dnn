@@ -1,0 +1,2728 @@
+[
+  {
+    "position": [
+      6,
+      23
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "N",
+    "kills": 25,
+    "opponents": [
+      "gc_v1",
+      "omoko_v1",
+      "simple_random"
+    ],
+    "matches": 4,
+    "rounds": 18,
+    "existing_distribution": [
+      "watch_r06_c25",
+      "watch_r08_c23"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 22,
+    "predeath_killer_unseen": 3,
+    "actor_sighting_known": 25,
+    "predeath_actor_sighted": 13,
+    "reviewed_events": 25,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 1,
+        "tick": 2,
+        "killer": "おもこ",
+        "victim": "くりまる",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          22,
+          22
+        ],
+        "victim_facing": "NW",
+        "distance": 17,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          24
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 1,
+        "tick": 11,
+        "killer": "おもこ",
+        "victim": "くんた",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          14,
+          22
+        ],
+        "victim_facing": "E",
+        "distance": 9,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 3,
+        "tick": 13,
+        "killer": "おもこ",
+        "victim": "くりまる",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          12,
+          23
+        ],
+        "victim_facing": "N",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 3,
+        "tick": 14,
+        "killer": "おもこ",
+        "victim": "くんた",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          14,
+          23
+        ],
+        "victim_facing": "E",
+        "distance": 8,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 4,
+        "tick": 11,
+        "killer": "おもこ",
+        "victim": "くりまる",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          14,
+          23
+        ],
+        "victim_facing": "E",
+        "distance": 8,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          5,
+          25
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 5,
+        "tick": 2,
+        "killer": "おもこ",
+        "victim": "くりまる",
+        "killer_position": [
+          6,
+          23
+        ],
+        "killer_predeath_position": [
+          6,
+          23
+        ],
+        "victim_position": [
+          22,
+          22
+        ],
+        "victim_facing": "NW",
+        "distance": 17,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          21
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      10,
+      38
+    ],
+    "side": "defender",
+    "phase": "retake",
+    "facing": "S",
+    "kills": 15,
+    "opponents": [
+      "gc_v1",
+      "simple_random",
+      "touyama_v2"
+    ],
+    "matches": 5,
+    "rounds": 9,
+    "existing_distribution": [
+      "watch_r10_c38"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 13,
+    "predeath_killer_unseen": 2,
+    "actor_sighting_known": 15,
+    "predeath_actor_sighted": 13,
+    "reviewed_events": 15,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 15,
+        "tick": 53,
+        "killer": "Absol",
+        "victim": "くりまる",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          38
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          11,
+          40
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 15,
+        "tick": 56,
+        "killer": "Absol",
+        "victim": "くんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          39
+        ],
+        "victim_facing": "S",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 15,
+        "tick": 63,
+        "killer": "Absol",
+        "victim": "ごりまる",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          2,
+          39
+        ],
+        "victim_facing": "S",
+        "distance": 9,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 15,
+        "tick": 69,
+        "killer": "Absol",
+        "victim": "ごんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          39
+        ],
+        "victim_facing": "S",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          41
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 1,
+        "tick": 60,
+        "killer": "Absol",
+        "victim": "くりまる",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          38
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 5,
+        "tick": 53,
+        "killer": "Absol",
+        "victim": "くんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          38
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          38
+        ],
+        "planted": true
+      }
+    ]
+  },
+  {
+    "position": [
+      10,
+      38
+    ],
+    "side": "defender",
+    "phase": "retake",
+    "facing": "SW",
+    "kills": 10,
+    "opponents": [
+      "gc_v1",
+      "simple_random",
+      "touyama_v2"
+    ],
+    "matches": 3,
+    "rounds": 6,
+    "existing_distribution": [
+      "watch_r10_c38"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 9,
+    "predeath_killer_unseen": 1,
+    "actor_sighting_known": 10,
+    "predeath_actor_sighted": 7,
+    "reviewed_events": 10,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1601_defender.json",
+        "round": 3,
+        "tick": 78,
+        "killer": "いぐるん",
+        "victim": "ごんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          8,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 6,
+        "tick": 53,
+        "killer": "Absol",
+        "victim": "くりまる",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          7,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 5,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 6,
+        "tick": 56,
+        "killer": "Absol",
+        "victim": "くんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          6,
+          40
+        ],
+        "victim_facing": "SW",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          9,
+          40
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 6,
+        "tick": 68,
+        "killer": "Absol",
+        "victim": "ごんた",
+        "killer_position": [
+          10,
+          38
+        ],
+        "killer_predeath_position": [
+          10,
+          38
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          36
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1601_defender.json",
+        "round": 3,
+        "tick": 62,
+        "killer": "夢の街",
+        "victim": "くりまる",
+        "killer_position": [
+          10,
+          39
+        ],
+        "killer_predeath_position": [
+          10,
+          39
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "SW",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          12,
+          38
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1601_defender.json",
+        "round": 10,
+        "tick": 58,
+        "killer": "夢の街",
+        "victim": "くりまる",
+        "killer_position": [
+          10,
+          39
+        ],
+        "killer_predeath_position": [
+          10,
+          39
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "SW",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          40
+        ],
+        "planted": true
+      }
+    ]
+  },
+  {
+    "position": [
+      7,
+      36
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "E",
+    "kills": 12,
+    "opponents": [
+      "gc_v1",
+      "touyama_v2"
+    ],
+    "matches": 3,
+    "rounds": 11,
+    "existing_distribution": [
+      "right_site_west_entry"
+    ],
+    "uncovered_positions": [
+      [
+        7,
+        34
+      ]
+    ],
+    "predeath_killer_visible": 10,
+    "predeath_killer_unseen": 2,
+    "actor_sighting_known": 12,
+    "predeath_actor_sighted": 10,
+    "reviewed_events": 12,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 2,
+        "tick": 37,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          36
+        ],
+        "killer_predeath_position": [
+          7,
+          37
+        ],
+        "victim_position": [
+          6,
+          32
+        ],
+        "victim_facing": "E",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          34
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 3,
+        "tick": 36,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          36
+        ],
+        "killer_predeath_position": [
+          7,
+          36
+        ],
+        "victim_position": [
+          6,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          36
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 5,
+        "tick": 40,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          36
+        ],
+        "killer_predeath_position": [
+          7,
+          36
+        ],
+        "victim_position": [
+          7,
+          34
+        ],
+        "victim_facing": "NE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          36
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 12,
+        "tick": 36,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          36
+        ],
+        "killer_predeath_position": [
+          7,
+          37
+        ],
+        "victim_position": [
+          6,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 7,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          40
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1601_defender.json",
+        "round": 14,
+        "tick": 40,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          36
+        ],
+        "killer_predeath_position": [
+          7,
+          36
+        ],
+        "victim_position": [
+          7,
+          34
+        ],
+        "victim_facing": "E",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          33
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 6,
+        "tick": 36,
+        "killer": "ろびぃな",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          37
+        ],
+        "killer_predeath_position": [
+          7,
+          37
+        ],
+        "victim_position": [
+          6,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 7,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          4,
+          34
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      12,
+      40
+    ],
+    "side": "defender",
+    "phase": "retake",
+    "facing": "S",
+    "kills": 15,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 4,
+    "rounds": 8,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        12,
+        40
+      ],
+      [
+        13,
+        40
+      ],
+      [
+        14,
+        40
+      ]
+    ],
+    "predeath_killer_visible": 12,
+    "predeath_killer_unseen": 3,
+    "actor_sighting_known": 15,
+    "predeath_actor_sighted": 8,
+    "reviewed_events": 15,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 21,
+        "tick": 80,
+        "killer": "Xdll",
+        "victim": "ごんた",
+        "killer_position": [
+          12,
+          40
+        ],
+        "killer_predeath_position": [
+          13,
+          40
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "NW",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          12,
+          39
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 24,
+        "tick": 70,
+        "killer": "Absol",
+        "victim": "くんた",
+        "killer_position": [
+          12,
+          40
+        ],
+        "killer_predeath_position": [
+          13,
+          40
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 7,
+        "tick": 60,
+        "killer": "Absol",
+        "victim": "くんた",
+        "killer_position": [
+          12,
+          40
+        ],
+        "killer_predeath_position": [
+          11,
+          40
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 10,
+        "tick": 55,
+        "killer": "eKo",
+        "victim": "くりまる",
+        "killer_position": [
+          12,
+          40
+        ],
+        "killer_predeath_position": [
+          13,
+          40
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "S",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 10,
+        "tick": 69,
+        "killer": "eKo",
+        "victim": "くんた",
+        "killer_position": [
+          12,
+          40
+        ],
+        "killer_predeath_position": [
+          12,
+          39
+        ],
+        "victim_position": [
+          9,
+          40
+        ],
+        "victim_facing": "E",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          12,
+          40
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 5,
+        "tick": 51,
+        "killer": "SyouTa",
+        "victim": "くりまる",
+        "killer_position": [
+          13,
+          40
+        ],
+        "killer_predeath_position": [
+          13,
+          40
+        ],
+        "victim_position": [
+          7,
+          38
+        ],
+        "victim_facing": "E",
+        "distance": 8,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": true
+      }
+    ]
+  },
+  {
+    "position": [
+      11,
+      31
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "E",
+    "kills": 13,
+    "opponents": [
+      "omoko_v1",
+      "touyama_v2"
+    ],
+    "matches": 3,
+    "rounds": 8,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        11,
+        31
+      ],
+      [
+        11,
+        32
+      ]
+    ],
+    "predeath_killer_visible": 11,
+    "predeath_killer_unseen": 2,
+    "actor_sighting_known": 13,
+    "predeath_actor_sighted": 3,
+    "reviewed_events": 13,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 4,
+        "tick": 13,
+        "killer": "ひつじさん",
+        "victim": "くんた",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          22
+        ],
+        "victim_facing": "E",
+        "distance": 12,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 4,
+        "tick": 15,
+        "killer": "ひつじさん",
+        "victim": "ごりまる",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          21
+        ],
+        "victim_facing": "W",
+        "distance": 13,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 8,
+        "tick": 17,
+        "killer": "ひつじさん",
+        "victim": "ごりまる",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          23
+        ],
+        "victim_facing": "E",
+        "distance": 11,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 14,
+        "killer": "ひつじさん",
+        "victim": "ごんた",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          22
+        ],
+        "victim_facing": "NW",
+        "distance": 12,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 10,
+        "tick": 13,
+        "killer": "ひつじさん",
+        "victim": "くんた",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          22
+        ],
+        "victim_facing": "E",
+        "distance": 12,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          13,
+          31
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 11,
+        "tick": 13,
+        "killer": "ひつじさん",
+        "victim": "くんた",
+        "killer_position": [
+          11,
+          31
+        ],
+        "killer_predeath_position": [
+          11,
+          31
+        ],
+        "victim_position": [
+          14,
+          22
+        ],
+        "victim_facing": "E",
+        "distance": 12,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      7,
+      34
+    ],
+    "side": "defender",
+    "phase": "pre_plant",
+    "facing": "E",
+    "kills": 6,
+    "opponents": [
+      "omoko_v1",
+      "simple_random"
+    ],
+    "matches": 3,
+    "rounds": 6,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        7,
+        34
+      ]
+    ],
+    "predeath_killer_visible": 6,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 6,
+    "predeath_actor_sighted": 1,
+    "reviewed_events": 6,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 1,
+        "tick": 49,
+        "killer": "Xdll",
+        "victim": "くりまる",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          33
+        ],
+        "victim_position": [
+          8,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          33
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 3,
+        "tick": 41,
+        "killer": "SugarZ3ro",
+        "victim": "ごんた",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          33
+        ],
+        "victim_position": [
+          7,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 11,
+        "tick": 40,
+        "killer": "SyouTa",
+        "victim": "くりまる",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          33
+        ],
+        "victim_position": [
+          7,
+          29
+        ],
+        "victim_facing": "E",
+        "distance": 4,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 13,
+        "tick": 39,
+        "killer": "とりさん",
+        "victim": "くりまる",
+        "killer_position": [
+          7,
+          32
+        ],
+        "killer_predeath_position": [
+          8,
+          32
+        ],
+        "victim_position": [
+          7,
+          31
+        ],
+        "victim_facing": "SE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 18,
+        "tick": 40,
+        "killer": "Xdll",
+        "victim": "くりまる",
+        "killer_position": [
+          7,
+          33
+        ],
+        "killer_predeath_position": [
+          7,
+          32
+        ],
+        "victim_position": [
+          7,
+          30
+        ],
+        "victim_facing": "E",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 22,
+        "tick": 44,
+        "killer": "SugarZ3ro",
+        "victim": "ごんた",
+        "killer_position": [
+          7,
+          35
+        ],
+        "killer_predeath_position": [
+          7,
+          34
+        ],
+        "victim_position": [
+          7,
+          33
+        ],
+        "victim_facing": "E",
+        "distance": 1,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      11,
+      30
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "NE",
+    "kills": 7,
+    "opponents": [
+      "gc_v1",
+      "omoko_v1"
+    ],
+    "matches": 3,
+    "rounds": 5,
+    "existing_distribution": [
+      "center_mid_angle"
+    ],
+    "uncovered_positions": [
+      [
+        10,
+        30
+      ],
+      [
+        11,
+        31
+      ]
+    ],
+    "predeath_killer_visible": 6,
+    "predeath_killer_unseen": 1,
+    "actor_sighting_known": 7,
+    "predeath_actor_sighted": 5,
+    "reviewed_events": 7,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 1,
+        "tick": 16,
+        "killer": "ねこさん",
+        "victim": "ごんた",
+        "killer_position": [
+          11,
+          30
+        ],
+        "killer_predeath_position": [
+          11,
+          30
+        ],
+        "victim_position": [
+          14,
+          23
+        ],
+        "victim_facing": "NE",
+        "distance": 10,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          13,
+          30
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 3,
+        "tick": 27,
+        "killer": "ねこさん",
+        "victim": "ごんごん",
+        "killer_position": [
+          11,
+          30
+        ],
+        "killer_predeath_position": [
+          11,
+          30
+        ],
+        "victim_position": [
+          12,
+          28
+        ],
+        "victim_facing": "S",
+        "distance": 3,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 6,
+        "tick": 26,
+        "killer": "ねこさん",
+        "victim": "ごんた",
+        "killer_position": [
+          11,
+          30
+        ],
+        "killer_predeath_position": [
+          11,
+          30
+        ],
+        "victim_position": [
+          12,
+          29
+        ],
+        "victim_facing": "E",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          13,
+          27
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 6,
+        "tick": 28,
+        "killer": "ねこさん",
+        "victim": "ごんごん",
+        "killer_position": [
+          11,
+          30
+        ],
+        "killer_predeath_position": [
+          11,
+          30
+        ],
+        "victim_position": [
+          12,
+          29
+        ],
+        "victim_facing": "NE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          12,
+          30
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 10,
+        "tick": 31,
+        "killer": "SugarZ3ro",
+        "victim": "ごんた",
+        "killer_position": [
+          10,
+          30
+        ],
+        "killer_predeath_position": [
+          10,
+          30
+        ],
+        "victim_position": [
+          12,
+          29
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          11,
+          32
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 13,
+        "tick": 31,
+        "killer": "SugarZ3ro",
+        "victim": "ごんた",
+        "killer_position": [
+          10,
+          30
+        ],
+        "killer_predeath_position": [
+          10,
+          30
+        ],
+        "victim_position": [
+          12,
+          29
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          12,
+          31
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      13,
+      31
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "S",
+    "kills": 5,
+    "opponents": [
+      "gc_v1",
+      "touyama_v2"
+    ],
+    "matches": 2,
+    "rounds": 4,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        13,
+        31
+      ]
+    ],
+    "predeath_killer_visible": 3,
+    "predeath_killer_unseen": 2,
+    "actor_sighting_known": 5,
+    "predeath_actor_sighted": 3,
+    "reviewed_events": 5,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 3,
+        "tick": 39,
+        "killer": "いぐるん",
+        "victim": "ごんた",
+        "killer_position": [
+          13,
+          31
+        ],
+        "killer_predeath_position": [
+          13,
+          31
+        ],
+        "victim_position": [
+          8,
+          33
+        ],
+        "victim_facing": "E",
+        "distance": 7,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          33
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 4,
+        "tick": 39,
+        "killer": "いぐるん",
+        "victim": "ごんた",
+        "killer_position": [
+          13,
+          31
+        ],
+        "killer_predeath_position": [
+          13,
+          31
+        ],
+        "victim_position": [
+          8,
+          33
+        ],
+        "victim_facing": "E",
+        "distance": 7,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          29
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 4,
+        "tick": 35,
+        "killer": "いぐるん",
+        "victim": "ごんごん",
+        "killer_position": [
+          14,
+          31
+        ],
+        "killer_predeath_position": [
+          14,
+          31
+        ],
+        "victim_position": [
+          6,
+          30
+        ],
+        "victim_facing": "SE",
+        "distance": 9,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 9,
+        "tick": 34,
+        "killer": "いぐるん",
+        "victim": "ごんた",
+        "killer_position": [
+          14,
+          31
+        ],
+        "killer_predeath_position": [
+          14,
+          31
+        ],
+        "victim_position": [
+          11,
+          31
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          13,
+          30
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 10,
+        "tick": 35,
+        "killer": "SugarZ3ro",
+        "victim": "ごんごん",
+        "killer_position": [
+          12,
+          30
+        ],
+        "killer_predeath_position": [
+          12,
+          30
+        ],
+        "victim_position": [
+          6,
+          30
+        ],
+        "victim_facing": "S",
+        "distance": 6,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      3,
+      31
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "NW",
+    "kills": 5,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 3,
+    "existing_distribution": [
+      "watch_r04_c31"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 5,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 5,
+    "predeath_actor_sighted": 4,
+    "reviewed_events": 5,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 6,
+        "tick": 31,
+        "killer": "eKo",
+        "victim": "くんた",
+        "killer_position": [
+          3,
+          31
+        ],
+        "killer_predeath_position": [
+          3,
+          31
+        ],
+        "victim_position": [
+          7,
+          33
+        ],
+        "victim_facing": "E",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 6,
+        "tick": 34,
+        "killer": "eKo",
+        "victim": "ごりまる",
+        "killer_position": [
+          3,
+          31
+        ],
+        "killer_predeath_position": [
+          3,
+          31
+        ],
+        "victim_position": [
+          7,
+          33
+        ],
+        "victim_facing": "W",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          2,
+          32
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 6,
+        "tick": 39,
+        "killer": "eKo",
+        "victim": "ごんた",
+        "killer_position": [
+          3,
+          31
+        ],
+        "killer_predeath_position": [
+          3,
+          31
+        ],
+        "victim_position": [
+          7,
+          34
+        ],
+        "victim_facing": "NW",
+        "distance": 7,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          2,
+          28
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 8,
+        "tick": 41,
+        "killer": "SyouTa",
+        "victim": "ごんごん",
+        "killer_position": [
+          3,
+          31
+        ],
+        "killer_predeath_position": [
+          3,
+          31
+        ],
+        "victim_position": [
+          7,
+          33
+        ],
+        "victim_facing": "N",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          3,
+          31
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 8,
+        "tick": 34,
+        "killer": "SugarZ3ro",
+        "victim": "くんた",
+        "killer_position": [
+          4,
+          32
+        ],
+        "killer_predeath_position": [
+          4,
+          33
+        ],
+        "victim_position": [
+          5,
+          34
+        ],
+        "victim_facing": "NW",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          4,
+          33
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      8,
+      23
+    ],
+    "side": "defender",
+    "phase": "pre_plant",
+    "facing": "SW",
+    "kills": 4,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 3,
+    "existing_distribution": [
+      "watch_r08_c23"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 3,
+    "predeath_killer_unseen": 1,
+    "actor_sighting_known": 4,
+    "predeath_actor_sighted": 1,
+    "reviewed_events": 4,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 1,
+        "tick": 24,
+        "killer": "Xdll",
+        "victim": "くんた",
+        "killer_position": [
+          8,
+          23
+        ],
+        "killer_predeath_position": [
+          8,
+          23
+        ],
+        "victim_position": [
+          7,
+          25
+        ],
+        "victim_facing": "SW",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 11,
+        "tick": 23,
+        "killer": "Xdll",
+        "victim": "くんた",
+        "killer_position": [
+          8,
+          23
+        ],
+        "killer_predeath_position": [
+          8,
+          23
+        ],
+        "victim_position": [
+          7,
+          25
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 11,
+        "tick": 26,
+        "killer": "Xdll",
+        "victim": "ごんた",
+        "killer_position": [
+          8,
+          23
+        ],
+        "killer_predeath_position": [
+          8,
+          23
+        ],
+        "victim_position": [
+          7,
+          25
+        ],
+        "victim_facing": "SW",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          21
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 1,
+        "tick": 41,
+        "killer": "eKo",
+        "victim": "ごんごん",
+        "killer_position": [
+          8,
+          23
+        ],
+        "killer_predeath_position": [
+          9,
+          23
+        ],
+        "victim_position": [
+          7,
+          25
+        ],
+        "victim_facing": "SW",
+        "distance": 4,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      6,
+      18
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "W",
+    "kills": 3,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 3,
+    "rounds": 3,
+    "existing_distribution": [
+      "center_north_entry"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 3,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 3,
+    "predeath_actor_sighted": 3,
+    "reviewed_events": 3,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1601_defender.json",
+        "round": 13,
+        "tick": 37,
+        "killer": "eKo",
+        "victim": "ごんごん",
+        "killer_position": [
+          6,
+          18
+        ],
+        "killer_predeath_position": [
+          6,
+          18
+        ],
+        "victim_position": [
+          6,
+          32
+        ],
+        "victim_facing": "S",
+        "distance": 14,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          21
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 6,
+        "tick": 32,
+        "killer": "Xdll",
+        "victim": "ごんごん",
+        "killer_position": [
+          6,
+          18
+        ],
+        "killer_predeath_position": [
+          6,
+          17
+        ],
+        "victim_position": [
+          7,
+          28
+        ],
+        "victim_facing": "W",
+        "distance": 12,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          17
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 47,
+        "killer": "Xdll",
+        "victim": "ごんごん",
+        "killer_position": [
+          6,
+          17
+        ],
+        "killer_predeath_position": [
+          6,
+          17
+        ],
+        "victim_position": [
+          7,
+          39
+        ],
+        "victim_facing": "W",
+        "distance": 23,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          3,
+          17
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      6,
+      20
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "NW",
+    "kills": 5,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [
+      "center_north_entry"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 5,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 5,
+    "predeath_actor_sighted": 5,
+    "reviewed_events": 5,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 16,
+        "killer": "SyouTa",
+        "victim": "くりまる",
+        "killer_position": [
+          6,
+          20
+        ],
+        "killer_predeath_position": [
+          6,
+          20
+        ],
+        "victim_position": [
+          9,
+          23
+        ],
+        "victim_facing": "NW",
+        "distance": 6,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          20
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 17,
+        "killer": "SyouTa",
+        "victim": "くんた",
+        "killer_position": [
+          6,
+          20
+        ],
+        "killer_predeath_position": [
+          6,
+          20
+        ],
+        "victim_position": [
+          11,
+          23
+        ],
+        "victim_facing": "E",
+        "distance": 8,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          22
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 19,
+        "killer": "SyouTa",
+        "victim": "ごりまる",
+        "killer_position": [
+          6,
+          20
+        ],
+        "killer_predeath_position": [
+          6,
+          20
+        ],
+        "victim_position": [
+          12,
+          23
+        ],
+        "victim_facing": "NE",
+        "distance": 9,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          9,
+          18
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 9,
+        "tick": 21,
+        "killer": "SyouTa",
+        "victim": "ごんた",
+        "killer_position": [
+          6,
+          20
+        ],
+        "killer_predeath_position": [
+          6,
+          20
+        ],
+        "victim_position": [
+          13,
+          24
+        ],
+        "victim_facing": "NW",
+        "distance": 11,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          21
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 7,
+        "tick": 16,
+        "killer": "Absol",
+        "victim": "くりまる",
+        "killer_position": [
+          7,
+          21
+        ],
+        "killer_predeath_position": [
+          6,
+          21
+        ],
+        "victim_position": [
+          9,
+          23
+        ],
+        "victim_facing": "NW",
+        "distance": 5,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          21
+        ],
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      7,
+      34
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "NE",
+    "kills": 3,
+    "opponents": [
+      "gc_v1",
+      "touyama_v2"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        7,
+        34
+      ]
+    ],
+    "predeath_killer_visible": 1,
+    "predeath_killer_unseen": 2,
+    "actor_sighting_known": 3,
+    "predeath_actor_sighted": 1,
+    "reviewed_events": 3,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\touyama_v2_1600_attacker.json",
+        "round": 10,
+        "tick": 34,
+        "killer": "Tortlilyan",
+        "victim": "ごりまる",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          34
+        ],
+        "victim_position": [
+          12,
+          30
+        ],
+        "victim_facing": "NE",
+        "distance": 9,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          7,
+          34
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 3,
+        "tick": 26,
+        "killer": "SugarZ3ro",
+        "victim": "ごんた",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          34
+        ],
+        "victim_position": [
+          12,
+          28
+        ],
+        "victim_facing": "E",
+        "distance": 11,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 3,
+        "tick": 29,
+        "killer": "SugarZ3ro",
+        "victim": "ごんごん",
+        "killer_position": [
+          7,
+          34
+        ],
+        "killer_predeath_position": [
+          7,
+          34
+        ],
+        "victim_position": [
+          12,
+          28
+        ],
+        "victim_facing": "N",
+        "distance": 11,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      2,
+      24
+    ],
+    "side": "attacker",
+    "phase": "pre_plant",
+    "facing": "NW",
+    "kills": 2,
+    "opponents": [
+      "gc_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        2,
+        24
+      ]
+    ],
+    "predeath_killer_visible": 1,
+    "predeath_killer_unseen": 1,
+    "actor_sighting_known": 2,
+    "predeath_actor_sighted": 0,
+    "reviewed_events": 2,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\gc_v1_1600_attacker.json",
+        "round": 11,
+        "tick": 23,
+        "killer": "SyouTa",
+        "victim": "くりまる",
+        "killer_position": [
+          2,
+          24
+        ],
+        "killer_predeath_position": [
+          2,
+          24
+        ],
+        "victim_position": [
+          4,
+          25
+        ],
+        "victim_facing": "E",
+        "distance": 3,
+        "killer_visible_to_coach": false,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 18,
+        "tick": 24,
+        "killer": "eKo",
+        "victim": "くりまる",
+        "killer_position": [
+          2,
+          24
+        ],
+        "killer_predeath_position": [
+          2,
+          23
+        ],
+        "victim_position": [
+          3,
+          25
+        ],
+        "victim_facing": "N",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  },
+  {
+    "position": [
+      3,
+      40
+    ],
+    "side": "defender",
+    "phase": "retake",
+    "facing": "SE",
+    "kills": 2,
+    "opponents": [
+      "omoko_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [
+      "watch_r02_c40",
+      "watch_r03_c38"
+    ],
+    "uncovered_positions": [],
+    "predeath_killer_visible": 2,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 2,
+    "predeath_actor_sighted": 2,
+    "reviewed_events": 2,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1601_defender.json",
+        "round": 4,
+        "tick": 71,
+        "killer": "おもこ",
+        "victim": "ごりまる",
+        "killer_position": [
+          3,
+          40
+        ],
+        "killer_predeath_position": [
+          3,
+          40
+        ],
+        "victim_position": [
+          2,
+          39
+        ],
+        "victim_facing": "SE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          3,
+          40
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 22,
+        "tick": 66,
+        "killer": "SugarZ3ro",
+        "victim": "ごりまる",
+        "killer_position": [
+          4,
+          40
+        ],
+        "killer_predeath_position": [
+          3,
+          40
+        ],
+        "victim_position": [
+          2,
+          39
+        ],
+        "victim_facing": "SE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          3,
+          40
+        ],
+        "planted": true
+      }
+    ]
+  },
+  {
+    "position": [
+      8,
+      40
+    ],
+    "side": "defender",
+    "phase": "retake",
+    "facing": "SE",
+    "kills": 2,
+    "opponents": [
+      "omoko_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        8,
+        40
+      ]
+    ],
+    "predeath_killer_visible": 2,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 2,
+    "predeath_actor_sighted": 2,
+    "reviewed_events": 2,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1601_defender.json",
+        "round": 4,
+        "tick": 72,
+        "killer": "ひつじさん",
+        "victim": "ごんた",
+        "killer_position": [
+          8,
+          40
+        ],
+        "killer_predeath_position": [
+          8,
+          40
+        ],
+        "victim_position": [
+          7,
+          39
+        ],
+        "victim_facing": "NE",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          6,
+          39
+        ],
+        "planted": true
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1601_defender.json",
+        "round": 1,
+        "tick": 78,
+        "killer": "SyouTa",
+        "victim": "くんた",
+        "killer_position": [
+          8,
+          40
+        ],
+        "killer_predeath_position": [
+          8,
+          39
+        ],
+        "victim_position": [
+          7,
+          38
+        ],
+        "victim_facing": "E",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          8,
+          40
+        ],
+        "planted": true
+      }
+    ]
+  },
+  {
+    "position": [
+      10,
+      31
+    ],
+    "side": "defender",
+    "phase": "pre_plant",
+    "facing": "SW",
+    "kills": 2,
+    "opponents": [
+      "omoko_v1",
+      "simple_random"
+    ],
+    "matches": 2,
+    "rounds": 2,
+    "existing_distribution": [],
+    "uncovered_positions": [
+      [
+        10,
+        31
+      ],
+      [
+        11,
+        32
+      ]
+    ],
+    "predeath_killer_visible": 2,
+    "predeath_killer_unseen": 0,
+    "actor_sighting_known": 2,
+    "predeath_actor_sighted": 1,
+    "reviewed_events": 2,
+    "examples": [
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\simple_random_1600_attacker.json",
+        "round": 20,
+        "tick": 65,
+        "killer": "SyouTa",
+        "victim": "くんた",
+        "killer_position": [
+          10,
+          31
+        ],
+        "killer_predeath_position": [
+          10,
+          31
+        ],
+        "victim_position": [
+          9,
+          33
+        ],
+        "victim_facing": "SW",
+        "distance": 3,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": true,
+        "actor_reported_position": [
+          10,
+          31
+        ],
+        "planted": false
+      },
+      {
+        "opponent_replay": "coach_v1\\reports\\task16_candidates_replays\\omoko_v1_1600_attacker.json",
+        "round": 13,
+        "tick": 45,
+        "killer": "とりさん",
+        "victim": "ごんた",
+        "killer_position": [
+          11,
+          32
+        ],
+        "killer_predeath_position": [
+          10,
+          32
+        ],
+        "victim_position": [
+          9,
+          33
+        ],
+        "victim_facing": "S",
+        "distance": 2,
+        "killer_visible_to_coach": true,
+        "killer_in_actor_sightings": false,
+        "actor_reported_position": null,
+        "planted": false
+      }
+    ]
+  }
+]

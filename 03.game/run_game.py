@@ -4,9 +4,23 @@ Keep this file as the executable entry point. The implementation is split into
 five focused modules beside it.
 """
 
+import contextlib
+import io
 import random
 import tkinter as tk
 import numpy as np
+
+from environment import (
+    GC_STDOUT_LOGS_ENABLED,
+    OMOKO_V1_STDOUT_LOGS_ENABLED,
+    TOUYAMA_V2_STDOUT_LOGS_ENABLED,
+)
+
+
+def _runtime_import_output(logs_enabled):
+    if logs_enabled:
+        return contextlib.nullcontext()
+    return contextlib.redirect_stdout(io.StringIO())
 
 
 from learning_attacker_ai_v2 import LearningAttackerAIv2Controller
@@ -29,18 +43,21 @@ from policy_defender_controller import PolicyDefenderController
 from touyama_v1.touyama_defender_controller import TouyamaDefenderController
 from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
 
-from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
-from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
+with _runtime_import_output(TOUYAMA_V2_STDOUT_LOGS_ENABLED):
+    from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
+    from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
 
-from omoko_v1.ov1_attacker_controller import Ov1AttackerController
-from omoko_v1.ov1_defender_controller import Ov1DefenderController
+with _runtime_import_output(OMOKO_V1_STDOUT_LOGS_ENABLED):
+    from omoko_v1.ov1_attacker_controller import Ov1AttackerController
+    from omoko_v1.ov1_defender_controller import Ov1DefenderController
 # from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
 # from omoko_v1.ov1_defender_real_controller import Ov1DefenderRealController
 
-from ghost_champions_v1_macro import (
-    GhostChampionsV1AttackerController,
-    GhostChampionsV1DefenderController,
-)
+with _runtime_import_output(GC_STDOUT_LOGS_ENABLED):
+    from ghost_champions_v1_macro import (
+        GhostChampionsV1AttackerController,
+        GhostChampionsV1DefenderController,
+    )
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
