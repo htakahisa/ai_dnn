@@ -32,6 +32,7 @@ OBS_DIM=36: train_defender_search.py と完全に一致させること。
 """
 
 from collections import deque
+import os
 
 import random
 
@@ -136,6 +137,14 @@ _MODEL_CANDIDATES = (
 DEFAULT_MODEL_PATH = next(
     (str(p) for p in _MODEL_CANDIDATES if p.is_file()), str(_MODEL_CANDIDATES[0])
 )
+
+
+def _resolve_verbose(verbose):
+    if verbose is not None:
+        return bool(verbose)
+    return os.environ.get("GC_SEARCH_DEBUG", "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -519,9 +528,9 @@ class LearningDefenderSearchGCController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=None):
         self.greedy = greedy
-        self.verbose = verbose
+        self.verbose = _resolve_verbose(verbose)
         # Runtime game/view reference used for active smoke information.
         self.game = None
         self.model_mode = "factorized"

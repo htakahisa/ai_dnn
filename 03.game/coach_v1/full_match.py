@@ -52,6 +52,9 @@ class FullMatchResult:
     summary: FullMatchSummary
     replay: tuple[dict[str, Any], ...]
     round_records: tuple[dict[str, Any], ...]
+    coach_actions: tuple[Any, ...] = ()
+    coach_decisions: tuple[Any, ...] = ()
+    kill_events: tuple[dict[str, Any], ...] = ()
 
 
 def seed_all(seed: int) -> None:
@@ -79,6 +82,7 @@ def run_headless_full_match(
     coach_team_name: str = "coach_v1",
     opponent_team_name: str = "opponent",
     allow_mirrored_roster: bool = False,
+    capture_referee_events: bool = False,
 ) -> FullMatchResult:
     """Run one complete map through the unmodified game lifecycle."""
 
@@ -154,6 +158,32 @@ def run_headless_full_match(
         defender_team_name=defender_name,
         disable_side_swap=False,
     )
+    kill_events: list[dict[str, Any]] = []
+    if capture_referee_events:
+        # Match-local postmortem instrumentation. The original tracker still
+        # performs every game update; no actor or perception path reads this.
+        original_record_kill = game.analytics_tracker.record_kill
+
+        def record_kill(killer, victim, tick):
+            kill_events.append({
+                "round": int(game.current_round), "tick": int(tick),
+                "killer": str(killer.name), "killer_team": str(killer.team),
+                "killer_position": [int(killer.pos[0]), int(killer.pos[1])],
+                "victim": str(victim.name), "victim_team": str(victim.team),
+            })
+            return original_record_kill(killer, victim, tick)
+
+        game.analytics_tracker.record_kill = record_kill
+        original_replay_frame = game._record_replay_frame
+
+        def record_replay_frame():
+            original_replay_frame()
+            game.replay_frames[-1]["coach_side"] = (
+                "attacker" if game.current_attacker_team_ai is coach_team_ai
+                else "defender"
+            )
+
+        game._record_replay_frame = record_replay_frame
     game.run()
     return audit_completed_match(
         game,
@@ -162,6 +192,7 @@ def run_headless_full_match(
         seed=seed,
         coach_team_name=coach_team_name,
         opponent_team_name=opponent_team_name,
+        kill_events=tuple(kill_events),
     )
 
 
@@ -173,6 +204,7 @@ def audit_completed_match(
     seed: int,
     coach_team_name: str,
     opponent_team_name: str,
+    kill_events: tuple[dict[str, Any], ...] = (),
 ) -> FullMatchResult:
     """Validate side switching, round memory, terminal state, and replay."""
 
@@ -252,7 +284,8 @@ def audit_completed_match(
     if not (summary.memory_reset_ok and summary.side_checkpoint_switch_ok
             and summary.replay_ok):
         raise RuntimeError(f"coach_v1 full-match audit failed: {summary}")
-    return FullMatchResult(summary, replay, records)
+    actions = tuple(action for item in coordinators for action in item.action_log)
+    return FullMatchResult(summary, replay, records, actions, audits, kill_events)
 
 
 def _validate_replay(replay: tuple[dict[str, Any], ...], rounds: int) -> bool:
@@ -282,6 +315,8 @@ def write_match_artifacts(
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = result.summary.to_dict()
     report["round_records"] = list(result.round_records)
+    if result.kill_events:
+        report["kill_events"] = list(result.kill_events)
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )

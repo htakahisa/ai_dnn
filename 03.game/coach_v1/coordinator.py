@@ -49,9 +49,8 @@ class ActionLog:
 class DecisionAudit:
     """One record for each team-wide coach calculation.
 
-    The record deliberately contains only public clock data and the belief
-    clock.  It is used by full-match integration checks without retaining an
-    observation or a reference to the live game.
+    The record contains public clock data and legal watch-point belief ages.
+    It retains no observation, enemy position, or live game reference.
     """
 
     round_number: int
@@ -59,6 +58,7 @@ class DecisionAudit:
     tick: int
     side: Side
     memory_tick: int
+    watch_point_ages: tuple[tuple[str, tuple[int, int], int], ...] = ()
 
 
 class TeamExecutionCoordinator:
@@ -153,6 +153,12 @@ class TeamExecutionCoordinator:
                 tick=snapshot.tick.tick,
                 side=self.side,
                 memory_tick=belief.memory_tick,
+                watch_point_ages=tuple(
+                    (point.point_id, point.position,
+                     point.confirmation_age if point.confirmation_age is not None
+                     else belief.memory_tick)
+                    for point in belief.watch_points
+                ),
             ))
 
         snapshot = self._snapshot
