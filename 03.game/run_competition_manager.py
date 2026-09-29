@@ -22,10 +22,13 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from map_data import NEW_MAZE_STR
-from ability_effects import draw_raid_wind
+from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
+                            draw_contract_status, draw_serenade_flash,
+                            draw_ash_projectiles, draw_balemoon_warnings,
+                            TUNNEL_WARNING_COLOR, TUNNEL_ACTIVE_COLOR)
 from party_presets import all_preset_names, canonical_preset_name, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
-from game_core import PLAYER_COMBOS, get_character_combat_stats
+from game_core import PLAYER_COMBOS, get_character_combat_stats, TICK_TIME, validate_tick_time_ms
 from tactical_simulator import (
     TacticalSimulator,
     RetakeScenario,
@@ -38,6 +41,8 @@ CONTROLLER_OPTIONS = {
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
+    "FRC v1（学習モデル）": "frc_v1",
+    "FRC v1（基礎ルール）": "frc_v1_baseline",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3.1": "toru_ai_v3.1",
@@ -708,6 +713,7 @@ def play_map(
     series_maps_to_win: int = 1,
     mental_fatigue_state: dict[str, float] | None = None,
     series_tactical_state: dict[str, Any] | None = None,
+    tick_time_ms: int | Callable[[], int] = TICK_TIME,
 ) -> MResult:
     seed_all(seed)
 
@@ -786,6 +792,7 @@ def play_map(
             defender_team_name=defender.name,
             disable_side_swap=False,
             series_context=series_context,
+            tick_time_ms=tick_time_ms,
         )
 
         if render:
@@ -2638,6 +2645,9 @@ class CompetitionApp:
         self.seed_mode_var = tk.StringVar(value="random")
         self.seed_var = tk.StringVar(value="42")
         self.render_var = tk.BooleanVar(value=False)
+        self.tick_time_ms = TICK_TIME
+        self.tick_time_var = tk.StringVar(value=str(TICK_TIME))
+        self.tick_time_var.trace_add("write", self._on_tick_time_change)
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
@@ -2755,7 +2765,23 @@ class CompetitionApp:
         )
         self.tactical_sim_button.grid(row=0, column=11, padx=(8, 0))
         frame.grid_columnconfigure(12, weight=1)
+        timing_frame = tk.Frame(frame)
+        timing_frame.grid(row=1, column=0, columnspan=13, sticky="w", pady=(8, 0))
+        tk.Label(timing_frame, text="1tickの時間 (ms)").pack(side="left")
+        self.tick_time_spin = tk.Spinbox(
+            timing_frame, from_=1, to=10000, increment=10,
+            textvariable=self.tick_time_var, width=7,
+        )
+        self.tick_time_spin.pack(side="left", padx=(6, 12))
+        tk.Label(timing_frame, text="100ms = 0.1秒 ／ 描画・シミュレーションに随時反映").pack(side="left")
         self._update_seed_entry_state()
+
+    def _on_tick_time_change(self, *_args) -> None:
+        try:
+            self.tick_time_ms = validate_tick_time_ms(self.tick_time_var.get())
+        except ValueError:
+            # 入力途中の空欄などでは、直前の有効な値を使う。
+            pass
 
     def _on_render_toggle(self) -> None:
         self.live_render_enabled = bool(self.render_var.get())
@@ -3395,6 +3421,11 @@ class CompetitionApp:
 
         # シミュレーション開始処理
         def start_simulation():
+            try:
+                self.tick_time_ms = validate_tick_time_ms(self.tick_time_var.get())
+            except ValueError as exc:
+                messagebox.showerror("設定エラー", str(exc))
+                return
             if not apply_selected_resource():
                 return
             if not placed_spike:
@@ -3549,9 +3580,12 @@ class CompetitionApp:
                     warning = burst.get("phase", "warning") == "warning"
                     draw_cell_overlay(
                         burst.get("cells", []),
-                        "#c7a6df" if warning else "#6f36a8",
+                        TUNNEL_WARNING_COLOR if warning else TUNNEL_ACTIVE_COLOR,
                         "gray25" if warning else "gray50",
                     )
+                simulation_items.extend(draw_destruction_areas(canvas, simulator.destruction_areas, cell_size))
+                simulation_items.extend(draw_balemoon_warnings(canvas, simulator.balemoon_warnings, cell_size))
+                simulation_items.extend(draw_ash_projectiles(canvas, simulator.ash_projectiles, cell_size))
                 for trap in simulator.ramp_traps:
                     cx, cy = cell_center(trap["pos"])
                     radius = cell_size * 0.30
@@ -3701,6 +3735,8 @@ class CompetitionApp:
                         "FLASH": char.flash_charges,
                         "RECON": char.recon_charges,
                         "RAMP": char.ramp_charges,
+                        "DANCE": char.dance_charges,
+                        "ASH": char.ash_charges,
                     }.get(char.ability_name, 0)
                     row_id = f"{team}:{player_index}"
                     if resource_tree.exists(row_id):
@@ -3760,6 +3796,10 @@ class CompetitionApp:
 
                     if char.electric_remaining > 0:
                         draw_neon_bolt(row, col)
+                    if char.heal_sparkle_remaining > 0:
+                        simulation_items.extend(draw_heal_sparkle(canvas, row, col, cell_size, char.heal_sparkle_remaining))
+                    if char.life_contract_remaining > 0:
+                        simulation_items.extend(draw_contract_status(canvas, row, col, cell_size, char.life_contract_remaining))
 
                 # MONITOR ultimate drones are independent units on the map.
                 for drone in simulator.monitor_drones:
@@ -3788,6 +3828,8 @@ class CompetitionApp:
                         )
                     )
 
+                if simulator.serenade_flash_remaining > 0:
+                    simulation_items.extend(draw_serenade_flash(canvas, simulator.width, simulator.height, cell_size))
                 self.status_var.set(
                     f"実行中: {simulator.total_ticks}/{playback['max_ticks']} ticks  "
                     f"A:{team_counts['A']}人 D:{team_counts['D']}人"
@@ -3877,7 +3919,7 @@ class CompetitionApp:
                         ):
                             finish_simulation()
                         elif playback["playing"]:
-                            playback["after_id"] = sim_window.after(200, advance_tick)
+                            playback["after_id"] = sim_window.after(self.tick_time_ms, advance_tick)
                     except Exception as exc:
                         pause_simulation()
                         start_button.config(state="normal")
@@ -3895,7 +3937,7 @@ class CompetitionApp:
                     playback["playing"] = True
                     play_button.config(state="disabled")
                     pause_button.config(state="normal")
-                    playback["after_id"] = sim_window.after(200, advance_tick)
+                    playback["after_id"] = sim_window.after(self.tick_time_ms, advance_tick)
 
                 def execute_step():
                     if playback["finished"]:
@@ -3911,7 +3953,7 @@ class CompetitionApp:
                 pause_button.config(command=pause_simulation)
                 step_button.config(command=execute_step)
                 playback["render"] = render_simulation
-                playback["after_id"] = sim_window.after(200, advance_tick)
+                playback["after_id"] = sim_window.after(self.tick_time_ms, advance_tick)
             except Exception as e:
                 traceback.print_exc()
                 messagebox.showerror("エラー", f"シミュレーションエラー: {str(e)}")
@@ -5389,6 +5431,7 @@ class CompetitionApp:
         self,
     ) -> tuple[int, int, int, str, int | None, bool]:
         normal_need = validate_maps_to_win(self.maps_to_win_var.get())
+        self.tick_time_ms = validate_tick_time_ms(self.tick_time_var.get())
         lower_final_need = validate_maps_to_win(self.lower_final_maps_to_win_var.get())
         grand_final_need = validate_maps_to_win(self.grand_final_maps_to_win_var.get())
         seed_mode = validate_seed_mode(self.seed_mode_var.get())
@@ -5630,6 +5673,7 @@ class CompetitionApp:
                 request["series_maps_to_win"],
                 request["mental_fatigue_state"],
                 request.get("series_tactical_state"),
+                tick_time_ms=lambda: self.tick_time_ms,
             )
         except BaseException as exc:
             request["error"] = exc

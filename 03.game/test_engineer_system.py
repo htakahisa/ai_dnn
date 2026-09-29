@@ -226,6 +226,7 @@ class EngineerSystemTests(unittest.TestCase):
         self.game._orb_button_bounds = lambda: None
         self.game._ability_button_bounds = lambda ability: (0, 240, 100, 270)
         self.game._ultimate_button_bounds = lambda: (110, 240, 220, 270)
+        self.game._selected_ultimate_ready = lambda selected: RenderingUIMixin._selected_ultimate_ready(self.game, selected)
         self.game.draw = lambda: None
         self.game.map_offset_x = 0
         self.game.map_pixel_width = 400

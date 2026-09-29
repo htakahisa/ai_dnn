@@ -247,6 +247,16 @@ class FnaticUltimateTests(unittest.TestCase):
                 ctrl.positions.guard_grid[:, 10] = 1
             self.assertFalse(game.check_line_of_sight(char, enemy))
             self.assertTrue(game.check_line_of_sight(ally, enemy))
+            game.is_planted = True
+            game.planted_pos = (5, 30)
+            action = ctrl.ultimates.result(ctrl, char, self.state(game))
+            if side == 'D':
+                self.assertIsNone(action)
+            else:
+                self.assertEqual(action[1]['ultimate'], 'ESCAPE')
+                self.assertEqual(game.grid[tuple(action[1]['target'])], 4)
+            game.is_planted = False
+            game.planted_pos = None
             game.move_character(char)
             target = game.escape_portals[0]['pos']
             self.assertEqual(game.grid[target], 4 if side == 'A' else 3)
