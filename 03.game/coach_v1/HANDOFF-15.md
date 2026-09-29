@@ -166,3 +166,72 @@ touyama 0-13、omoko 1-13、simple 1-13、gc 1-13となり、teacher imitation l
 `training/opponent_pool_imitation.py`、上記2件を含むTask 15テスト、round 1候補checkpoint 4件、
 学習／評価report 3件、および本節である。既存core、正式checkpoint、他モデルのtrain／learning対応は
 変更していない。
+
+## 2026-09-30 中断後の確認とround勝敗学習
+
+上記のDAgger候補は昇格しなかった。その後、`training/opponent_pool_policy_gradient.py`と
+`train_task15_policy_gradient.py`で、実戦のラウンド勝敗を報酬とするactor更新を追加した。
+移動は学習時だけ確率的に選択し、facingとアビリティは従来のキャラクターモデルが担当する。
+学習sampleはactorのgrid、vector、hidden、合法移動mask、選択した移動だけで、敵実位置や
+critic truthを含めない。試合終了後、各ラウンドの勝敗をチーム名と陣営から対応付け、
+ラウンド長で正規化した重みで移動actorを更新する。推論時の戦術規則や経路探索、coreファイルは
+変更していない。
+
+正式Task 12／13 checkpointを別ディレクトリへコピーしてから、seed 1700--1702で
+omoko_v1、touyama_v2、gc_v1を各1試合学習した第1候補は、固定評価でGCの得点率を
+0.133から0.297へ上げたが、touyama_v2とsimple_randomが許容幅を超えて悪化した。
+その候補を`checkpoints/experiments/task15_pool_round_reward_round1/`に保存し、
+弱化したtouyama_v2とsimple_randomをseed 1710--1711で各1試合追加学習した。
+学習結果は`reports/task15_pool_round_reward_training.json`と
+`reports/task15_pool_round_reward_training_round2.json`、両候補の固定評価は
+`reports/task15_pool_round_reward_eval.json`と
+`reports/task15_pool_round_reward_round2_eval.json`に保存した。
+
+| 相手 | 旧正式版の得点率・勝利数 | 第2候補の得点率・勝利数 |
+|---|---:|---:|
+| omoko_v1 | 0.037、0/2 | 0.103、0/2 |
+| touyama_v2 | 0.071、0/2 | 0.037、0/2 |
+| gc_v1 | 0.133、0/2 | 0.161、0/2 |
+| simple_random | 0.511、1/2 | 0.591、2/2 |
+| 過去coach Task 11.6 | 1.000、2/2 | 1.000、2/2 |
+| 全体 | 0.361、3/10 | 0.389、4/10 |
+
+評価は両方ともseed 1500--1501、相手ごとに攻守開始を交互にした同一10試合で行った。
+第2候補は全体勝率と得点率が向上し、相手別低下幅も許容0.05以内だったため、
+`promotion.promoted=true`になった。昇格前の正式checkpointは
+`checkpoints/experiments/task15_pre_pool_incumbent/`へactorとtraining stateを対で退避した。
+昇格後の正式ファイルはattacker `checkpoints/coach/attacker/task12/latest.pt`と
+`training_latest.pt`、defender `checkpoints/coach/defender/task13/latest.pt`、`best.pt`、
+`training_latest.pt`、`training_best.pt`。actor SHA-256はattacker
+`b4c6a609b8364cec348fdea3587e446a8ae943de41099175bc0481bbd7a737de`、defender
+`4a3d216266d2b588f1e0f67165665df6d51a543452c8efa9dedb7296974ea792`で、評価レポートの
+候補SHAと一致する。退避版SHAは旧baselineレポートと一致する。正式loaderと両sideの
+`CoachTrainer.resume()`は成功し、actor／training stateのstepもattacker 1841、defender 1995で
+一致した。
+
+### 2026-09-30 最終検証と残課題
+
+- `python -X utf8 -m unittest discover -s coach_v1 -p 'test_coach_v1_task*.py' -q`:
+  **178件成功**。Task 15専用は10件成功。未視認敵の実位置を変えても、固定乱数下で
+  round報酬学習sampleの全5要素が同一であるテストを含む。
+- `python -X utf8 -m compileall -q coach_v1`、`git diff --check`: 成功。
+- 主要3相手との勝敗は依然0/6。今回の2試合／相手は昇格ゲートとしては有効だが、
+  十分な実力推定には少ない。次は未使用seedで相手ごとに試合数を増やし、特にtouyama_v2で
+  失う局面をTask 16の苦手地点収集へ渡すことを推奨する。
+- historical同士の学習試合が長期延長になる場合がある。Task 15の学習運用側に試合上限を
+  設ける余地があるが、今回coreの終了規則は変更していない。
+
+上にある「正式checkpointは不変」「主要3相手への改善は未達」はDAgger実験終了時点の記録であり、
+この節のround勝敗学習と正式昇格が最新状態である。
+
+### 未使用seedでの追加確認
+
+候補選択に使ったseed 1500--1501とは別に、seed 1510--1511で退避版と昇格版を各10試合
+評価した。保存先は`reports/task15_holdout_incumbent_1510.json`と
+`reports/task15_holdout_promoted_1510.json`。同じ相手順・開始陣営で比較すると、全体勝利数は
+2/10から3/10、得点率は0.305から0.346へ上がった。omoko_v1は両者0.037で同等、
+touyama_v2は0から0.037、gc_v1は0.037から0.133、simple_randomは0.409から0.469、
+過去coachは0.963から1.000。未使用seedでも`promotion.promoted=true`で、相手別の
+許容低下幅を超える退行はなかった。主要3相手への勝利はこのseedでも0/6のため、
+「勝てる状態」まで達したとは判断しない。さらに多くの未使用seedによる検証と、
+苦手局面を狙った学習が必要である。
