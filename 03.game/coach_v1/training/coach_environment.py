@@ -8,7 +8,7 @@ import random
 import numpy as np
 import torch
 
-from game_core import DEFUSE_REQUIRED_TICKS
+from game_core import DEFUSE_REQUIRED_TICKS, SPIKE_DETONATION_TICKS
 from map_data import NEW_MAZE_STR
 from map_data_defender_setup import DEFENDER_SETUP_TICKS
 from run_game import VisualFPSBattle, _build_team_ai
@@ -22,7 +22,9 @@ from coach_v1.learning_character_base import CharacterPolicy
 from coach_v1.learning_character_gongon import GongonPolicy
 from coach_v1.models.coach_model import CoachActionMask, legal_action_mask
 from coach_v1.observation.character_encoder import CoachInstruction
-from coach_v1.observation.coach_encoder import CoachObservation, CoachObservationEncoder
+from coach_v1.observation.coach_encoder import (
+    COACH_GRID_CHANNELS, CoachObservation, CoachObservationEncoder,
+)
 from coach_v1.perception.belief_memory import BeliefMemory
 from coach_v1.perception.team_perception import TeamPerceptionBuilder
 from coach_v1.training.scenario_generator import ScenarioGenerator
@@ -39,6 +41,15 @@ ATTACKER_STAGE_ELAPSED = {
     "rally": 20, "entry": 65, "utility_entry": 65,
     "multi_peek": 70, "escort": 45, "retrieve": 65,
     "plant": 85, "post_plant": 85, "full_round": 0,
+}
+DEFENDER_STAGES = (
+    "initial_setup", "hold_watch", "sighting_response", "rotate",
+    "group_up", "ability_retake", "defuse_escort", "full_round",
+)
+DEFENDER_STAGE_ELAPSED = {
+    "initial_setup": 0, "hold_watch": 35, "sighting_response": 55,
+    "rotate": 60, "group_up": 75, "ability_retake": 80,
+    "defuse_escort": 85, "full_round": 0,
 }
 CURRICULUM_ELAPSED_TICKS = 45
 _STAY = tuple(CoachInstruction(MovementAction.STAY, ObjectiveAction.NONE,
@@ -82,6 +93,7 @@ class CoachTrainingEnvironment:
                  observation_version: str = COACH_OBSERVATION_VERSION) -> None:
         if (not isinstance(side, Side) or stage not in CURRICULUM
                 and not (side is Side.ATTACKER and stage in ATTACKER_STAGES)
+                and not (side is Side.DEFENDER and stage in DEFENDER_STAGES)
                 or max_ticks <= 0
                 or not np.isfinite(collision_penalty) or collision_penalty < 0):
             raise ValueError("invalid coach curriculum configuration")
@@ -107,6 +119,7 @@ class CoachTrainingEnvironment:
         self.scenario = None  # training-only sampled truth and provenance
         self._pending_moves: tuple = ()
         self._ability_window = 0
+        self._retake_started = False
 
     def reset(self, *, episode: int = 0) -> CoachTrainingState:
         random.seed(self.seed + episode)
@@ -116,6 +129,7 @@ class CoachTrainingEnvironment:
         self.ticks = 0
         self._pending_moves = ()
         self._ability_window = 0
+        self._retake_started = False
         opponent = _build_team_ai("default")
         own = DualRoleTeamAI("coach_v1_training", lambda: self.controller,
                              lambda: self.controller)
@@ -129,8 +143,9 @@ class CoachTrainingEnvironment:
             defender_roster=roster if self.side is Side.DEFENDER else None,
             disable_side_swap=True,
         )
-        while self.game.defender_setup_phase.active:
-            self.game._run_defender_setup_tick()
+        if self.stage != "initial_setup":
+            while self.game.defender_setup_phase.active:
+                self.game._run_defender_setup_tick()
         # Live curriculum starts with a fresh belief on both sides. Setup
         # decisions may have populated the defender coordinator's memory.
         self.controller.reset_round()
@@ -144,14 +159,20 @@ class CoachTrainingEnvironment:
             character.is_alive = False
             character.hp = 0
         elapsed = (ATTACKER_STAGE_ELAPSED[self.stage] if self.stage in ATTACKER_STAGES
-                   else CURRICULUM_ELAPSED_TICKS)
+                   else DEFENDER_STAGE_ELAPSED[self.stage]
+                   if self.stage in DEFENDER_STAGES else CURRICULUM_ELAPSED_TICKS)
         if self.stage in ATTACKER_STAGES:
             self._set_attacker_situation(own, episode)
+        elif self.stage in DEFENDER_STAGES and self.stage != "initial_setup":
+            self._set_defender_situation(own, episode)
         # Full-round training starts at the real opening; other stages are
         # training-only plausible mid-round states.
         self.game.battle_tick = elapsed
         self.game.round_timer = max(1, self.game.round_timer - elapsed)
         snapshot = self.sensor.build(game=self.game, side=self.side)
+        if self.stage == "initial_setup":
+            self.state = self._observe()
+            return self.state
         situation = _situation(self.side, snapshot)
         # Episode-local scenario RNG makes episode N reproducible whether fit
         # runs continuously or resumes from a checkpoint before that episode.
@@ -166,6 +187,10 @@ class CoachTrainingEnvironment:
         for character, placement in zip(enemies[:enemy_count], scenario.enemies):
             character.pos = list(placement.position)
         self.scenario = scenario
+        if self.stage in {"sighting_response", "rotate"}:
+            self._make_first_enemy_visible(own, enemies[0])
+        if self.stage == "ability_retake":
+            self._seed_defender_retake_ability(own)
         self._prepare_tick()
         self.state = self._observe()
         return self.state
@@ -222,6 +247,98 @@ class CoachTrainingEnvironment:
             self.game.planted_pos = site
             self.game.detonate_timer = 35
 
+    def _set_defender_situation(self, allies: list, episode: int) -> None:
+        """Seed public defender curriculum state before sensing enemy truth."""
+        if self.stage == "full_round":
+            return
+        rows = NEW_MAZE_STR.strip().splitlines()
+        sites = [(r, c) for r, row in enumerate(rows)
+                 for c, tile in enumerate(row) if tile == "2"]
+        site = sites[(self.seed + episode) % len(sites)]
+        from coach_v1.training.scenario_generator import _distances
+        distances = _distances(rows, (site,))
+        config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
+        watch_cells = [point.position for point in config.for_side(Side.DEFENDER)]
+
+        if self.stage == "hold_watch":
+            # Five separated legal watch points are the primary hold distribution.
+            ordered = sorted(watch_cells, key=lambda cell: (distances.get(cell, 10_000), cell))
+            chosen = [ordered[index] for index in (0, len(ordered) // 4,
+                                                   len(ordered) // 2,
+                                                   3 * len(ordered) // 4, -1)]
+        else:
+            bands = {
+                "sighting_response": (5, 15), "rotate": (10, 24),
+                "group_up": (8, 35), "ability_retake": (5, 25),
+                "defuse_escort": (2, 7),
+            }
+            low, high = bands[self.stage]
+            candidates = sorted((cell for cell, distance in distances.items()
+                                 if low <= distance <= high),
+                                key=lambda cell: (distances[cell], cell))
+            if len(candidates) < len(allies):
+                raise RuntimeError("defender stage has too few reachable allied cells")
+            step = max(1, len(candidates) // len(allies))
+            chosen = [candidates[index * step] for index in range(len(allies))]
+        if len(set(chosen)) != len(allies):
+            raise RuntimeError("defender stage requires distinct allied cells")
+        for ally, position in zip(allies, chosen):
+            ally.pos = list(position)
+
+        if self.stage in {"group_up", "ability_retake", "defuse_escort"}:
+            self.game.is_planted = True
+            self.game.planted_pos = site
+            self.game.spike_pos = None
+            for character in self.game.chars:
+                character.has_spike = False
+            self.game.detonate_timer = {
+                "group_up": SPIKE_DETONATION_TICKS,
+                "ability_retake": max(DEFUSE_REQUIRED_TICKS + 12,
+                                      SPIKE_DETONATION_TICKS - 10),
+                "defuse_escort": max(DEFUSE_REQUIRED_TICKS + 8,
+                                     SPIKE_DETONATION_TICKS // 2),
+            }[self.stage]
+            if self.stage == "defuse_escort":
+                # One public, legal DEFUSE opportunity; the other four remain escorts.
+                adjacent = sorted(cell for cell, distance in distances.items()
+                                  if distance == 1 and cell not in chosen[1:])
+                allies[0].pos = list(adjacent[0] if adjacent else site)
+
+    def _make_first_enemy_visible(self, allies: list, enemy) -> None:
+        """Create a legal current sighting without exposing truth to an actor API."""
+        target = tuple(enemy.pos)
+        occupied = {tuple(character.pos) for character in self.game.chars
+                    if character is not allies[0] and character.is_alive}
+        facing_for_delta = {
+            (-1, 0): "N", (0, 1): "E", (1, 0): "S", (0, -1): "W",
+        }
+        for dr, dc in facing_for_delta:
+            position = target[0] - dr, target[1] - dc
+            row, column = position
+            if (0 <= row < MAP_ROWS and 0 <= column < MAP_COLUMNS
+                    and self.game.grid[position] != 1 and position not in occupied):
+                allies[0].pos = [row, column]
+                allies[0].facing = facing_for_delta[(dr, dc)]
+                return
+        raise RuntimeError("cannot create a legal defender sighting")
+
+    def _seed_defender_retake_ability(self, allies: list) -> None:
+        """Use a real frozen-character ability immediately before the retake."""
+        recon = allies[2]
+        planted = tuple(self.game.planted_pos)
+        from coach_v1.training.scenario_generator import _distances
+        distances = _distances(NEW_MAZE_STR.strip().splitlines(), (planted,))
+        origin = tuple(recon.pos)
+        candidates = [(distances.get((origin[0] + dr, origin[1] + dc), 10_000),
+                       (origin[0] + dr, origin[1] + dc))
+                      for dr, dc in ((-1, 0), (0, 1), (1, 0), (0, -1))
+                      if (origin[0] + dr, origin[1] + dc) in distances]
+        target = min(candidates)[1]
+        if not self.game.execute_ai_ability(
+                recon, {"ability": "RECON", "target": target}):
+            raise RuntimeError("training recon setup failed")
+        self._ability_window = 15
+
     def _prepare_tick(self) -> None:
         """Advance opponents preceding our first actor in the real move order."""
         ordered = tuple(self.game._move_order())
@@ -265,6 +382,8 @@ class CoachTrainingEnvironment:
             if (not self.state.mask.movement[slot, tuple(MovementAction).index(action.movement)]
                     or not self.state.mask.objective[slot, tuple(ObjectiveAction).index(action.objective)]):
                 raise ValueError("coach selected a masked action")
+        if self.game.defender_setup_phase.active:
+            return self._step_setup(actions)
         before = self.state
         self.queue.next_actions = actions
         previous_clear = np.count_nonzero(before.observation.grid[13] == 0)
@@ -272,6 +391,8 @@ class CoachTrainingEnvironment:
         round_allies = [c for c in self.game.chars if c.team == own_code]
         before_alive = sum(c.is_alive for c in round_allies)
         before_plant = bool(self.game.is_planted)
+        retake_opportunity = bool(before_plant and not self._retake_started)
+        self._retake_started = self._retake_started or before_plant
         before_drop = self.game.spike_pos is not None
         before_defuse = bool(self.game.is_defused)
         before_round = self.game.current_round
@@ -345,6 +466,25 @@ class CoachTrainingEnvironment:
         # Training metric only: use game truth to check two legal sight lines
         # to the same enemy from directions separated by at least 30 degrees.
         multi_angle = _has_multiple_enemy_angles(self.game, live_allies)
+        planted_position = tuple(self.game.planted_pos) if self.game.planted_pos else None
+        retake_nearby = ([ally for ally in live_allies
+                          if planted_position is not None
+                          and max(abs(ally.pos[0] - planted_position[0]),
+                                  abs(ally.pos[1] - planted_position[1])) <= 5]
+                         if before_plant else [])
+        active_defusers = [ally for ally in live_allies if ally.defuse_timer > 0]
+        guard_count = 0
+        if active_defusers:
+            defuser = active_defusers[0]
+            guard_count = sum(
+                ally is not defuser
+                and max(abs(ally.pos[0] - defuser.pos[0]),
+                        abs(ally.pos[1] - defuser.pos[1])) <= 5
+                for ally in live_allies
+            )
+        has_sighting = bool(np.any(before.observation.grid[
+            COACH_GRID_CHANNELS.index("current_enemy_sighting")
+        ] > 0))
         # Headless mode may replace the entire round inside process_battle.
         # Preserve the just-finished round's legal visibility before that.
         post_move_visible = self.sensor.build(game=self.game, side=self.side).currently_visible
@@ -410,6 +550,102 @@ class CoachTrainingEnvironment:
             "multi_angle_ticks": float(multi_angle),
             "ability_after_entry": float(ability_after_entry),
             "ability_preseeded": float(self.stage == "utility_entry" and self.ticks == 1),
+            "round_ended": float(round_ended),
+            "plant_prevention_win": float(
+                round_ended and self.side is Side.DEFENDER
+                and not before_plant and not planted_after_move and self.game.attacker_wins == 0
+            ),
+            "retake_success": float(defuse_completed),
+            "retake_opportunity": float(retake_opportunity),
+            "planted_ticks": float(before_plant),
+            "solo_retake_ticks": float(before_plant and len(retake_nearby) == 1),
+            "defuse_guard_count_sum": float(guard_count),
+            "defuse_guard_samples": float(bool(active_defusers)),
+            "group_up_ticks": float(before_plant and len(retake_nearby) >= 2),
+            "visible_sighting_ticks": float(has_sighting),
+            "overrotation_ticks": float(not has_sighting and move_commands >= 4),
+            "no_sighting_ticks": float(not has_sighting),
+            "unconfirmed_response_ticks": float(not has_sighting and new_clear > 0),
+            "defender_ability_preseeded": float(
+                self.stage == "ability_retake" and self.ticks == 1
+            ),
+        })
+
+    def _step_setup(self, actions: tuple[CoachInstruction, ...]) -> CoachTransition:
+        """Run one real defender-setup tick under the queued coach decision."""
+        if self.side is not Side.DEFENDER or self.stage != "initial_setup":
+            raise RuntimeError("unexpected setup phase in coach curriculum")
+        before = self.state
+        self.queue.next_actions = actions
+        before_logs = len(self.controller.action_log)
+        before_positions = [tuple(c.pos) for c in self.game.chars if c.team == "D"]
+        before_score = _public_watch_coverage(before.observation)
+        self.game._run_defender_setup_tick()
+        if self.queue.next_actions is not None:
+            raise RuntimeError("coach was not invoked during defender setup")
+        if (not np.array_equal(self.queue.last_observation.grid, before.observation.grid)
+                or not np.array_equal(self.queue.last_observation.vector,
+                                      before.observation.vector)):
+            raise RuntimeError("setup observation differs from actor observation")
+        logs = self.controller.action_log[before_logs:]
+        after_positions = [tuple(c.pos) for c in self.game.chars if c.team == "D"]
+        moved = sum(first != second for first, second in zip(before_positions,
+                                                             after_positions))
+        requested = sum(actions[log.slot].movement is not MovementAction.STAY
+                        for log in logs)
+        invalid = max(0, requested - moved)
+        self.ticks += 1
+        done = bool(not self.game.defender_setup_phase.active
+                    or self.ticks >= self.max_ticks)
+        next_state = None if done else self._observe()
+        after_observation = next_state.observation if next_state is not None else self._observe().observation
+        watch_coverage = _public_watch_coverage(after_observation)
+        reward_watch = max(0.0, watch_coverage - before_score) * 0.02
+        reward_invalid = -invalid * self.collision_penalty
+        self.state = next_state
+        return CoachTransition(next_state, reward_watch + reward_invalid, done, {
+            "new_clear_cells": 0.0,
+            "invalid_moves": float(invalid),
+            "round_win": 0.0,
+            "move_commands": float(requested),
+            "move_requests": float(requested),
+            "executed_moves": float(moved),
+            "blocked_ally": float(invalid),
+            "blocked_enemy": 0.0,
+            "blocked_other": 0.0,
+            "ability_actions": 0.0,
+            "reward_clear": 0.0,
+            "reward_invalid": float(reward_invalid),
+            "reward_death": 0.0,
+            "reward_objective": float(reward_watch),
+            "reward_win": 0.0,
+            "plant": 0.0,
+            "spike_recovered": 0.0,
+            "attacker_win": 0.0,
+            "ally_deaths": 0.0,
+            "site_entries": 0.0,
+            "solo_entries": 0.0,
+            "trade_distance_sum": 0.0,
+            "trade_distance_samples": 0.0,
+            "multi_angle_ticks": 0.0,
+            "ability_after_entry": 0.0,
+            "ability_preseeded": 0.0,
+            "round_ended": 0.0,
+            "plant_prevention_win": 0.0,
+            "retake_success": 0.0,
+            "retake_opportunity": 0.0,
+            "planted_ticks": 0.0,
+            "solo_retake_ticks": 0.0,
+            "defuse_guard_count_sum": 0.0,
+            "defuse_guard_samples": 0.0,
+            "group_up_ticks": 0.0,
+            "visible_sighting_ticks": 0.0,
+            "overrotation_ticks": float(requested >= 4),
+            "no_sighting_ticks": 1.0,
+            "unconfirmed_response_ticks": float(moved > 0),
+            "defender_ability_preseeded": 0.0,
+            "setup_complete": float(not self.game.defender_setup_phase.active),
+            "watch_coverage": float(watch_coverage),
         })
 
 
@@ -421,6 +657,16 @@ def _situation(side: Side, snapshot) -> str:
     if snapshot.spike.dropped_position is not None:
         return "retrieve"
     return "carry"
+
+
+def _public_watch_coverage(observation: CoachObservation) -> float:
+    """Score only public watch metadata under public allied positions."""
+    importance = observation.grid[COACH_GRID_CHANNELS.index("watch_importance")]
+    return float(sum(
+        np.max(importance * observation.grid[
+            COACH_GRID_CHANNELS.index(f"ally_slot_{slot}")
+        ]) for slot in range(5)
+    ))
 
 
 def _has_multiple_enemy_angles(game, allies: list) -> bool:
