@@ -45,6 +45,22 @@ class ActionLog:
     ability_target: tuple[int, int] | None
 
 
+@dataclass(frozen=True)
+class DecisionAudit:
+    """One record for each team-wide coach calculation.
+
+    The record deliberately contains only public clock data and the belief
+    clock.  It is used by full-match integration checks without retaining an
+    observation or a reference to the live game.
+    """
+
+    round_number: int
+    phase: str
+    tick: int
+    side: Side
+    memory_tick: int
+
+
 class TeamExecutionCoordinator:
     """Controller for one side of the fixed five-character roster.
 
@@ -76,6 +92,7 @@ class TeamExecutionCoordinator:
         self._belief = None
         self._instructions = None
         self.action_log: list[ActionLog] = []
+        self.decision_audit: list[DecisionAudit] = []
 
     def set_game(self, game) -> None:
         expected = np.array([[int(cell) for cell in line]
@@ -130,6 +147,13 @@ class TeamExecutionCoordinator:
             self._belief = belief
             self._instructions = instructions
             self._cache_key = key
+            self.decision_audit.append(DecisionAudit(
+                round_number=snapshot.tick.round_number,
+                phase=snapshot.tick.phase,
+                tick=snapshot.tick.tick,
+                side=self.side,
+                memory_tick=belief.memory_tick,
+            ))
 
         snapshot = self._snapshot
         ally = snapshot.allies[slot]
