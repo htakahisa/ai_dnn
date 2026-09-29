@@ -9,8 +9,9 @@ import numpy as np
 import torch
 
 from coach_v1.common.types import ObjectiveAction, Side
-from coach_v1.evaluate_task13 import rule_actions
+from coach_v1.evaluate_task13 import PhaseSplitDefenderPolicy, rule_actions
 from coach_v1.learning_coach_defender import load_defender_coach
+from coach_v1.train_coach_defender import train
 from coach_v1.training.coach_environment import DEFENDER_STAGES, CoachTrainingEnvironment
 from coach_v1.training.coach_trainer import CoachTrainer
 from coach_v1.training.defender_imitation import fit_imitation
@@ -19,6 +20,77 @@ from coach_v1.training.scenario_generator import ScenarioGenerator
 
 
 class Task13DefenderTest(unittest.TestCase):
+    def test_balanced_training_mixes_stages_and_saves_validation_best(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            target = root / "target"
+            initial = CoachTrainer(Side.DEFENDER, seed=5, directory=source)
+            initial.save()
+            before = {name: value.clone()
+                      for name, value in initial.actor.state_dict().items()}
+            history = train(
+                directory=target,
+                source=source,
+                episodes=(0,) * len(DEFENDER_STAGES),
+                imitation_episodes=(0,) * len(DEFENDER_STAGES),
+                balanced_cycles=1,
+                balanced_samples=2,
+                validation_seed=41,
+                validation_episodes=1,
+                validation_max_ticks=1,
+                seed=5,
+            )
+            record = history[-1]
+            self.assertEqual("balanced_imitation", record["stage"])
+            self.assertEqual(2 * len(record["bucket_counts"]),
+                             record["balanced_samples"])
+            self.assertIn("initial_setup", record["bucket_counts"])
+            self.assertIn("defuse_escort", record["bucket_counts"])
+            self.assertIn("full_round_preplant", record["bucket_counts"])
+            self.assertEqual([41], record["validation"]["seeds"])
+            self.assertTrue(record["validation_best"])
+            self.assertTrue((target / "best.pt").is_file())
+            self.assertTrue((target / "training_best.pt").is_file())
+            payload = torch.load(target / "best.pt", map_location="cpu",
+                                 weights_only=False)
+            self.assertNotIn("critic_state_dict", payload)
+            self.assertIsNone(payload["optimizer_state_dict"])
+            self.assertTrue(any(
+                not torch.equal(before[name], value)
+                for name, value in payload["model_state_dict"].items()
+            ))
+
+    def test_phase_split_evaluation_routes_only_on_public_plant_state(self):
+        class RecordingPolicy:
+            def __init__(self, encoder):
+                self.encoder = encoder
+                self.calls = 0
+                self.resets = 0
+
+            def reset_round(self):
+                self.resets += 1
+
+            def act(self, observation):
+                self.calls += 1
+                return observation
+
+        pre_environment = CoachTrainingEnvironment(
+            Side.DEFENDER, seed=13, stage="full_round", max_ticks=1,
+        )
+        pre_state = pre_environment.reset()
+        post_state = CoachTrainingEnvironment(
+            Side.DEFENDER, seed=13, stage="group_up", max_ticks=1,
+        ).reset()
+        pre = RecordingPolicy(pre_environment.encoder)
+        post = RecordingPolicy(pre.encoder)
+        policy = PhaseSplitDefenderPolicy(pre, post)
+        policy.reset_round()
+        self.assertIs(pre_state.observation, policy.act(pre_state.observation))
+        self.assertIs(post_state.observation, policy.act(post_state.observation))
+        self.assertEqual((1, 1), (pre.calls, post.calls))
+        self.assertEqual((1, 1), (pre.resets, post.resets))
+
     def test_all_stages_run_real_game_and_publish_only_public_objectives(self):
         for stage in DEFENDER_STAGES:
             with self.subTest(stage=stage):

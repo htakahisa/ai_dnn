@@ -22,6 +22,27 @@ from coach_v1.training.coach_environment import DEFENDER_STAGES, CoachTrainingEn
 _DELTAS = ((0, 0), (-1, 0), (0, 1), (1, 0), (0, -1))
 
 
+class PhaseSplitDefenderPolicy:
+    """Evaluation-only router using the actor-public planted flag."""
+
+    def __init__(self, preplant, postplant) -> None:
+        if tuple(preplant.encoder.vector_fields) != tuple(postplant.encoder.vector_fields):
+            raise ValueError("phase policies use different observation fields")
+        self.preplant = preplant
+        self.postplant = postplant
+        self.encoder = preplant.encoder
+        self._planted_index = tuple(self.encoder.vector_fields).index("spike_planted")
+
+    def reset_round(self) -> None:
+        self.preplant.reset_round()
+        self.postplant.reset_round()
+
+    def act(self, observation):
+        policy = (self.postplant if observation.vector[self._planted_index]
+                  else self.preplant)
+        return policy.act(observation)
+
+
 def rule_actions(observation, mask) -> tuple[CoachInstruction, ...]:
     """A simple actor-only baseline with no route search or hidden truth."""
     grid, slots = observation.grid, observation.vector[-70:].reshape(5, 14)
@@ -49,12 +70,19 @@ def rule_actions(observation, mask) -> tuple[CoachInstruction, ...]:
 
 
 def evaluate(*, checkpoint: Path = DEFAULT_DIRECTORY / "latest.pt",
+             postplant_checkpoint: Path | None = None,
              stages: tuple[str, ...] = DEFENDER_STAGES,
              seeds: range = range(200, 204)) -> dict:
     if not seeds or any(stage not in DEFENDER_STAGES for stage in stages):
         raise ValueError("nonempty seeds and valid defender stages required")
     checkpoint = Path(checkpoint)
     policy = load_defender_coach(checkpoint)
+    postplant_checkpoint = (Path(postplant_checkpoint)
+                            if postplant_checkpoint is not None else None)
+    if postplant_checkpoint is not None:
+        policy = PhaseSplitDefenderPolicy(
+            policy, load_defender_coach(postplant_checkpoint),
+        )
     report = {
         "checkpoint": str(checkpoint),
         "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
@@ -71,6 +99,10 @@ def evaluate(*, checkpoint: Path = DEFAULT_DIRECTORY / "latest.pt",
         },
         "stages": {},
     }
+    if postplant_checkpoint is not None:
+        report["postplant_checkpoint"] = str(postplant_checkpoint)
+        report["postplant_sha256"] = hashlib.sha256(
+            postplant_checkpoint.read_bytes()).hexdigest()
     for stage in stages:
         ticks = STAGE_TICKS[DEFENDER_STAGES.index(stage)]
         modes = {}
@@ -130,6 +162,8 @@ def evaluate(*, checkpoint: Path = DEFAULT_DIRECTORY / "latest.pt",
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_DIRECTORY / "latest.pt")
+    parser.add_argument("--postplant-checkpoint", type=Path,
+                        help="evaluation-only policy used after the public plant event")
     parser.add_argument("--stages", nargs="+", choices=DEFENDER_STAGES,
                         default=list(DEFENDER_STAGES))
     parser.add_argument("--seed", type=int, default=200)
@@ -139,7 +173,9 @@ def main() -> None:
     if args.episodes <= 0:
         parser.error("--episodes must be positive")
     torch.set_num_threads(1)
-    result = evaluate(checkpoint=args.checkpoint, stages=tuple(args.stages),
+    result = evaluate(checkpoint=args.checkpoint,
+                      postplant_checkpoint=args.postplant_checkpoint,
+                      stages=tuple(args.stages),
                       seeds=range(args.seed, args.seed + args.episodes))
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

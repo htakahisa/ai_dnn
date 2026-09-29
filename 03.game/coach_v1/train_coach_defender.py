@@ -13,7 +13,11 @@ from coach_v1.common.constants import COACH_CHECKPOINT_PATHS
 from coach_v1.common.types import Side
 from coach_v1.training.coach_environment import DEFENDER_STAGES
 from coach_v1.training.coach_trainer import CoachTrainer
-from coach_v1.training.defender_imitation import fit_imitation
+from coach_v1.training.defender_imitation import (
+    fit_balanced_imitation,
+    fit_imitation,
+    validate_defender_actor,
+)
 
 
 DEFAULT_DIRECTORY = COACH_CHECKPOINT_PATHS[Side.DEFENDER.value] / "task13"
@@ -27,13 +31,18 @@ def train(*, directory: Path = DEFAULT_DIRECTORY, source: Path = SOURCE_DIRECTOR
           episodes: tuple[int, ...] = DEFAULT_EPISODES,
           imitation_episodes: tuple[int, ...] = DEFAULT_IMITATION_EPISODES,
           aggregation_episodes: int = 0,
+          balanced_cycles: int = 0, balanced_samples: int = 24,
+          validation_seed: int = 1000, validation_episodes: int = 4,
+          validation_max_ticks: int = STAGE_TICKS[-1],
           seed: int = 11, save_rollouts: bool = False) -> list[dict]:
     if (len(episodes) != len(DEFENDER_STAGES)
             or len(imitation_episodes) != len(DEFENDER_STAGES)
             or any(value < 0 for value in episodes + imitation_episodes)
-            or aggregation_episodes < 0
+            or aggregation_episodes < 0 or balanced_cycles < 0
+            or balanced_samples <= 0 or validation_episodes <= 0
+            or validation_max_ticks <= 0
             or not any(episodes) and not any(imitation_episodes)
-            and aggregation_episodes == 0):
+            and aggregation_episodes == 0 and balanced_cycles == 0):
         raise ValueError("one nonnegative PPO and imitation target per defender stage is required")
     directory, source = Path(directory), Path(source)
     if not (directory / "latest.pt").exists():
@@ -68,6 +77,35 @@ def train(*, directory: Path = DEFAULT_DIRECTORY, source: Path = SOURCE_DIRECTOR
     if completed < aggregation_episodes:
         fit_imitation(trainer, episodes=aggregation_episodes - completed,
                       stage="full_round", max_ticks=STAGE_TICKS[-1], on_policy=True)
+    completed = sum(item.get("stage") == "balanced_imitation"
+                    for item in trainer.history)
+    for _ in range(max(0, balanced_cycles - completed)):
+        fit_balanced_imitation(
+            trainer, cycles=1,
+            stage_ticks=dict(zip(DEFENDER_STAGES, STAGE_TICKS)),
+            samples_per_bucket=balanced_samples,
+        )
+        validation = validate_defender_actor(
+            trainer,
+            seeds=tuple(range(validation_seed,
+                              validation_seed + validation_episodes)),
+            max_ticks=validation_max_ticks,
+        )
+        previous_scores = [
+            float(item["validation"]["selection_score"])
+            for item in trainer.history[:-1]
+            if item.get("stage") == "balanced_imitation" and "validation" in item
+        ]
+        trainer.history[-1]["validation"] = validation
+        trainer.history[-1]["validation_best"] = (
+            not previous_scores
+            or validation["selection_score"] > max(previous_scores)
+        )
+        trainer.save()
+        if trainer.history[-1]["validation_best"]:
+            shutil.copy2(directory / "latest.pt", directory / "best.pt")
+            shutil.copy2(directory / "training_latest.pt",
+                         directory / "training_best.pt")
     return trainer.history
 
 
@@ -83,6 +121,12 @@ def main() -> None:
                         metavar="STAGE=COUNT")
     parser.add_argument("--aggregation-episodes", type=int, default=0,
                         help="cumulative on-policy full-round demonstration target")
+    parser.add_argument("--balanced-cycles", type=int, default=0,
+                        help="cumulative mixed-stage imitation cycle target")
+    parser.add_argument("--balanced-samples", type=int, default=24,
+                        help="samples drawn per curriculum/phase bucket")
+    parser.add_argument("--validation-seed", type=int, default=1000)
+    parser.add_argument("--validation-episodes", type=int, default=4)
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--save-rollouts", action="store_true")
     args = parser.parse_args()
@@ -105,6 +149,10 @@ def main() -> None:
     history = train(directory=args.directory, source=args.source,
                     episodes=tuple(ppo), imitation_episodes=tuple(imitation),
                     aggregation_episodes=args.aggregation_episodes,
+                    balanced_cycles=args.balanced_cycles,
+                    balanced_samples=args.balanced_samples,
+                    validation_seed=args.validation_seed,
+                    validation_episodes=args.validation_episodes,
                     seed=args.seed, save_rollouts=args.save_rollouts)
     print(json.dumps({"directory": str(args.directory), "episodes": len(history),
                       "last": history[-1]}, ensure_ascii=False))
