@@ -163,7 +163,7 @@ class CoachV1Task01FoundationTest(unittest.TestCase):
         with self.assertRaisesRegex(
             CheckpointCompatibilityError, "observation version"
         ):
-            dataclasses.replace(expected, observation_version="coach-observation-v3")
+            dataclasses.replace(expected, observation_version="coach-observation-v4")
 
     def test_foundation_has_no_actor_observation_or_enemy_truth_reference(self):
         common_dir = ROOT / "common"

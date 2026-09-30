@@ -1,0 +1,84 @@
+{
+  "stage": "left_full_round",
+  "seed": 2300,
+  "incumbent": {
+    "checkpoint": "coach_v1\\checkpoints\\coach\\attacker\\task12\\latest.pt",
+    "sha256": "3ae623afda2a8a96e042d1b12560abea77c014ce68028a5d2ea2def0e25b0ab7",
+    "results": [
+      {
+        "seed": 2300,
+        "ticks": 41,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 1.0,
+        "carrier_progress": -10.0
+      },
+      {
+        "seed": 2301,
+        "ticks": 48,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 0.0,
+        "carrier_progress": -11.0
+      },
+      {
+        "seed": 2302,
+        "ticks": 45,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 0.0,
+        "carrier_progress": -13.0
+      },
+      {
+        "seed": 2303,
+        "ticks": 44,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 0.0,
+        "carrier_progress": -13.0
+      }
+    ],
+    "left_plants": 0.0,
+    "episodes": 4
+  },
+  "candidate": {
+    "checkpoint": "coach_v1\\checkpoints\\experiments\\left_site_attack_geometry\\latest.pt",
+    "sha256": "d6d13ac740c9cc01b57699a2dad4f49957416bbab0c9f297ecb8ada4554a398a",
+    "results": [
+      {
+        "seed": 2300,
+        "ticks": 100,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 38.0,
+        "carrier_progress": -22.0
+      },
+      {
+        "seed": 2301,
+        "ticks": 100,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 64.0,
+        "carrier_progress": -7.0
+      },
+      {
+        "seed": 2302,
+        "ticks": 100,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 64.0,
+        "carrier_progress": -22.0
+      },
+      {
+        "seed": 2303,
+        "ticks": 100,
+        "left_plant": 0.0,
+        "survivors": 0.0,
+        "invalid_moves": 64.0,
+        "carrier_progress": -22.0
+      }
+    ],
+    "left_plants": 0.0,
+    "episodes": 4
+  }
+}

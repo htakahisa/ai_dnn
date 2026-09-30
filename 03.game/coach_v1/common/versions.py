@@ -8,6 +8,7 @@ from .types import ModelFamily
 CHECKPOINT_SCHEMA_VERSION = "coach-checkpoint-v1"
 LEGACY_COACH_OBSERVATION_VERSION = "coach-observation-v1"
 COACH_OBSERVATION_VERSION = "coach-observation-v2"
+ORB_COACH_OBSERVATION_VERSION = "coach-observation-v3"
 COACH_ACTION_VERSION = "coach-action-v1"
 CHARACTER_OBSERVATION_VERSION = "character-observation-v1"
 CHARACTER_ACTION_VERSION = "character-action-v1"

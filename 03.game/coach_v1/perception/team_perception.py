@@ -55,6 +55,8 @@ class AllyPerception:
     hp: int
     normal_ability_charges: int
     has_spike: bool
+    ultimate_points: int = 0
+    ultimate_cost: int = 0
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,7 @@ class TeamPerceptionSnapshot:
     smoke_cells: Tuple[GridPosition, ...]
     spike: SpikeSharedInfo
     clock: PublicRoundClock = PublicRoundClock(0, 0)
+    available_orbs: Tuple[GridPosition, ...] = ()
 
     def sighting_for(self, enemy_id: str) -> Optional[EnemySighting]:
         return next(
@@ -250,6 +253,10 @@ class TeamPerceptionBuilder:
                 detonation_ticks_remaining=max(0, int(getattr(game, "detonate_timer", 0)))
                 if bool(getattr(game, "is_planted", False)) else 0,
             ),
+            available_orbs=tuple(sorted(
+                _bounded_position(cell, rows, columns, "available orb")
+                for cell in getattr(game, "available_orbs", ())
+            )),
         )
 
     def _visible_cells(
@@ -493,6 +500,16 @@ def _normal_ability_charges(character: Any, slot: int) -> int:
         raise PerceptionInputError(f"{attribute} must be an integer") from exc
 
 
+def _nonnegative_int(character: Any, attribute: str) -> int:
+    try:
+        value = int(getattr(character, attribute, 0))
+    except (TypeError, ValueError) as exc:
+        raise PerceptionInputError(f"{attribute} must be an integer") from exc
+    if value < 0:
+        raise PerceptionInputError(f"{attribute} must be nonnegative")
+    return value
+
+
 def _copy_ally(viewer: _Viewer, character: Any) -> AllyPerception:
     try:
         hp = max(0, int(getattr(character, "hp", 0)))
@@ -507,6 +524,8 @@ def _copy_ally(viewer: _Viewer, character: Any) -> AllyPerception:
         hp=hp,
         normal_ability_charges=_normal_ability_charges(character, viewer.slot),
         has_spike=bool(getattr(character, "has_spike", False)),
+        ultimate_points=_nonnegative_int(character, "ultimate_points"),
+        ultimate_cost=_nonnegative_int(character, "ultimate_cost"),
     )
 
 

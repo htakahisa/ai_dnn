@@ -22,6 +22,7 @@ from coach_v1.models.coach_model import (
 )
 from coach_v1.observation.character_encoder import CoachInstruction
 from coach_v1.observation.coach_encoder import CoachObservationEncoder
+from coach_v1.common.versions import COACH_OBSERVATION_VERSION
 from coach_v1.training.coach_environment import CoachTrainingEnvironment
 
 
@@ -47,7 +48,8 @@ class CoachTrainer:
     def __init__(self, side: Side, *, seed: int,
                  config: CoachModelConfig = CoachModelConfig(),
                  directory: Path | None = None, device: str = "cpu",
-                 learning_rate: float = 3e-4) -> None:
+                 learning_rate: float = 3e-4,
+                 observation_version: str = COACH_OBSERVATION_VERSION) -> None:
         if not isinstance(side, Side) or not isinstance(seed, int) or isinstance(seed, bool):
             raise ValueError("side and integer seed required")
         self.side, self.seed, self.config, self.device = side, seed, config, device
@@ -55,7 +57,10 @@ class CoachTrainer:
         # and explicitly promoted by the later round curriculum.
         self.directory = (Path(directory) if directory
                           else COACH_CHECKPOINT_PATHS[side.value] / "observation_v2")
-        self.encoder = CoachObservationEncoder()
+        self.encoder = CoachObservationEncoder(version=observation_version)
+        if (config.grid_channels != len(self.encoder.grid_channels)
+                or config.vector_features != len(self.encoder.vector_fields)):
+            raise ValueError("coach config and observation version disagree")
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -74,6 +79,7 @@ class CoachTrainer:
             watch_points_hash=self.encoder.watch_points_hash,
             model_config=self.config.to_dict(), training_seed=self.seed,
             training_step=self.training_step,
+            observation_version=self.encoder.version,
         )
 
     def collect(self, environment: CoachTrainingEnvironment, *, episode: int,
@@ -199,7 +205,8 @@ class CoachTrainer:
             raise ValueError("episodes must be positive")
         environment = CoachTrainingEnvironment(self.side, seed=self.seed,
                                                 stage=stage, max_ticks=max_ticks,
-                                                collision_penalty=collision_penalty)
+                                                collision_penalty=collision_penalty,
+                                                observation_version=self.encoder.version)
         self.directory.mkdir(parents=True, exist_ok=True)
         for _ in range(episodes):
             rollout_path = self.directory / "rollouts" / f"episode_{self.episode:06d}.pt" if save_rollouts else None

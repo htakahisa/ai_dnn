@@ -1,4 +1,4 @@
-"""Fixed-map, actor-only coach observation contracts (v1 and v2).
+"""Fixed-map, actor-only coach observation contracts (v1 through v3).
 
 The only dynamic inputs are copied team perception and belief DTOs. This
 module never accepts a game, Character, critic tensor, or hidden enemy state.
@@ -28,6 +28,7 @@ from coach_v1.common.hashing import map_sha256, normalize_map_text
 from coach_v1.common.types import Facing, ModelFamily, Side
 from coach_v1.common.versions import (
     COACH_OBSERVATION_VERSION, LEGACY_COACH_OBSERVATION_VERSION,
+    ORB_COACH_OBSERVATION_VERSION,
 )
 from coach_v1.common.watch_points import (
     ATTACKER_SITUATIONS,
@@ -51,6 +52,7 @@ COACH_GRID_CHANNELS = (
     "last_seen_age", "spike_dropped", "spike_planted",
     *(f"ally_slot_{slot}" for slot in range(ROSTER_SIZE)),
 )
+ORB_COACH_GRID_CHANNELS = COACH_GRID_CHANNELS + ("available_orb",)
 _GLOBAL_VECTOR_FIELDS = (
     "side_attacker", "side_defender",
     *(f"situation_{name}" for name in SITUATION_ORDER),
@@ -69,6 +71,11 @@ _SLOT_FIELDS = tuple(
 LEGACY_COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + _SLOT_FIELDS
 COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + (
     "round_time_remaining", "detonation_time_remaining",
+) + _SLOT_FIELDS
+ORB_COACH_VECTOR_FIELDS = _GLOBAL_VECTOR_FIELDS + (
+    "round_time_remaining", "detonation_time_remaining",
+    *(f"slot_{slot}_{field}" for slot in range(ROSTER_SIZE)
+      for field in ("ultimate_points", "ultimate_cost")),
 ) + _SLOT_FIELDS
 
 
@@ -90,12 +97,18 @@ class CoachObservationEncoder:
 
     def __init__(self, *, version: str = COACH_OBSERVATION_VERSION,
                  watch_points_path: Path | None = None) -> None:
-        if version not in {LEGACY_COACH_OBSERVATION_VERSION, COACH_OBSERVATION_VERSION}:
+        if version not in {LEGACY_COACH_OBSERVATION_VERSION, COACH_OBSERVATION_VERSION,
+                           ORB_COACH_OBSERVATION_VERSION}:
             raise CoachObservationInputError("unsupported coach observation version")
         self.version = version
         self.vector_fields = (LEGACY_COACH_VECTOR_FIELDS
                               if version == LEGACY_COACH_OBSERVATION_VERSION
+                              else ORB_COACH_VECTOR_FIELDS
+                              if version == ORB_COACH_OBSERVATION_VERSION
                               else COACH_VECTOR_FIELDS)
+        self.grid_channels = (ORB_COACH_GRID_CHANNELS
+                              if version == ORB_COACH_OBSERVATION_VERSION
+                              else COACH_GRID_CHANNELS)
         map_text = normalize_map_text(NEW_MAZE_STR)
         map_rows = tuple(map_text.split("\n"))
         if len(map_rows) != MAP_ROWS or any(len(row) != MAP_COLUMNS for row in map_rows):
@@ -140,9 +153,14 @@ class CoachObservationEncoder:
         if not isinstance(snapshot, TeamPerceptionSnapshot) or not isinstance(belief, BeliefSnapshot):
             raise TypeError("encode requires team perception and belief snapshots")
         _validate_inputs(snapshot, belief, situation, self._config)
-        grid = np.zeros((len(COACH_GRID_CHANNELS), MAP_ROWS, MAP_COLUMNS), dtype=np.float32)
+        grid = np.zeros((len(self.grid_channels), MAP_ROWS, MAP_COLUMNS), dtype=np.float32)
         grid[:6] = self._static
-        channels = {name: grid[index] for index, name in enumerate(COACH_GRID_CHANNELS)}
+        channels = {name: grid[index] for index, name in enumerate(self.grid_channels)}
+        if self.version == ORB_COACH_OBSERVATION_VERSION:
+            for position in snapshot.available_orbs:
+                if self._static[COACH_GRID_CHANNELS.index("orb")][position] != 1:
+                    raise CoachObservationInputError("available orb is not on an orb tile")
+                channels["available_orb"][position] = 1.0
 
         for point in self._config.for_side(snapshot.side):
             if not point.supports_situation(situation):
@@ -198,7 +216,7 @@ class CoachObservationEncoder:
         vector[fields["allies_alive"]] = sum(ally.is_alive for ally in snapshot.allies) / ROSTER_SIZE
         vector[fields["enemies_alive"]] = sum(enemy.is_alive for enemy in snapshot.enemies) / ROSTER_SIZE
         vector[fields["enemies_sighted"]] = len(snapshot.sightings) / ROSTER_SIZE
-        if self.version == COACH_OBSERVATION_VERSION:
+        if self.version in {COACH_OBSERVATION_VERSION, ORB_COACH_OBSERVATION_VERSION}:
             vector[fields["round_time_remaining"]] = min(
                 snapshot.clock.round_ticks_remaining, ROUND_DURATION_TICKS
             ) / ROUND_DURATION_TICKS
@@ -206,6 +224,11 @@ class CoachObservationEncoder:
                 snapshot.clock.detonation_ticks_remaining, SPIKE_DETONATION_TICKS
             ) / SPIKE_DETONATION_TICKS
         for ally in snapshot.allies:
+            if self.version == ORB_COACH_OBSERVATION_VERSION:
+                vector[fields[f"slot_{ally.slot}_ultimate_points"]] = (
+                    min(ally.ultimate_points, 10) / 10.0)
+                vector[fields[f"slot_{ally.slot}_ultimate_cost"]] = (
+                    min(ally.ultimate_cost, 10) / 10.0)
             if not ally.is_alive:
                 continue  # Dead slots retain their fixed offset and remain all zero.
             prefix = f"slot_{ally.slot}_"
@@ -303,6 +326,16 @@ def _validate_inputs(
             raise CoachObservationInputError("invalid ally HP")
         if not isinstance(ally.normal_ability_charges, int) or isinstance(ally.normal_ability_charges, bool) or ally.normal_ability_charges < 0:
             raise CoachObservationInputError("invalid ability charges")
+        if (not isinstance(ally.ultimate_points, int) or isinstance(ally.ultimate_points, bool)
+                or not isinstance(ally.ultimate_cost, int) or isinstance(ally.ultimate_cost, bool)
+                or ally.ultimate_points < 0 or ally.ultimate_cost < 0
+                or ally.ultimate_points > ally.ultimate_cost):
+            raise CoachObservationInputError("invalid ultimate points")
+    if len(set(snapshot.available_orbs)) != len(snapshot.available_orbs):
+        raise CoachObservationInputError("duplicate available orb")
+    for position in snapshot.available_orbs:
+        if not _in_bounds(position):
+            raise CoachObservationInputError("available orb outside fixed map")
     for position in snapshot.smoke_cells:
         if not _in_bounds(position):
             raise CoachObservationInputError("smoke position outside fixed map")

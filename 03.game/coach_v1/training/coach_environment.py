@@ -36,11 +36,14 @@ CURRICULUM = {"2v1": (2, 1), "2v2": (2, 2), "3v3": (3, 3), "5v5": (5, 5)}
 ATTACKER_STAGES = (
     "rally", "entry", "utility_entry", "multi_peek", "escort",
     "retrieve", "plant", "post_plant", "full_round",
+    "left_plant", "left_entry", "left_rally", "left_full_round",
 )
 ATTACKER_STAGE_ELAPSED = {
     "rally": 20, "entry": 65, "utility_entry": 65,
     "multi_peek": 70, "escort": 45, "retrieve": 65,
     "plant": 85, "post_plant": 85, "full_round": 0,
+    "left_plant": 85, "left_entry": 65, "left_rally": 20,
+    "left_full_round": 0,
 }
 DEFENDER_STAGES = (
     "initial_setup", "hold_watch", "sighting_response", "rotate",
@@ -130,6 +133,12 @@ class CoachTrainingEnvironment:
         self._pending_moves: tuple = ()
         self._ability_window = 0
         self._retake_started = False
+        from coach_v1.training.scenario_generator import _distances
+        rows = NEW_MAZE_STR.strip().splitlines()
+        self._left_distances = _distances(
+            rows, tuple((row, col) for row, line in enumerate(rows)
+                        for col, tile in enumerate(line)
+                        if tile == "2" and col < MAP_COLUMNS // 2))
 
     def reset(self, *, episode: int = 0) -> CoachTrainingState:
         random.seed(self.seed + episode)
@@ -212,17 +221,25 @@ class CoachTrainingEnvironment:
         rows = NEW_MAZE_STR.strip().splitlines()
         sites = [(r, c) for r, row in enumerate(rows)
                  for c, tile in enumerate(row) if tile == "2"]
-        site = _balanced_plant_cell(sites, self.seed + episode)
+        if self.stage.startswith("left_"):
+            left_sites = [cell for cell in sites if cell[1] < MAP_COLUMNS // 2]
+            site = left_sites[(self.seed + episode) % len(left_sites)]
+        else:
+            site = _balanced_plant_cell(sites, self.seed + episode)
         self.game.target_plant_pos = site
+        if self.stage == "left_full_round":
+            return
         # Fixed map, training-only breadth-first distances; no route or
         # tactical branch is available to the inference policy.
         from coach_v1.training.scenario_generator import _distances
         distances = _distances(rows, (site,))
         bands = {
             "rally": (20, 50), "entry": (7, 13),
+            "left_rally": (20, 50), "left_entry": (7, 13),
             "utility_entry": (7, 13), "multi_peek": (4, 10),
             "escort": (12, 20), "retrieve": (7, 14),
             "plant": (1, 5), "post_plant": (1, 7),
+            "left_plant": (1, 5),
         }
         low, high = bands[self.stage]
         candidates = sorted((position for position, distance in distances.items()
@@ -233,7 +250,7 @@ class CoachTrainingEnvironment:
         # Spread five slots across the band instead of stacking them on one tile.
         step = max(1, len(candidates) // len(allies))
         chosen = [candidates[i * step] for i in range(len(allies))]
-        if self.stage == "plant":
+        if self.stage in {"plant", "left_plant"}:
             carrier = next(ally for ally in allies if ally.has_spike)
             chosen[allies.index(carrier)] = site
         for ally, position in zip(allies, chosen):
@@ -399,6 +416,8 @@ class CoachTrainingEnvironment:
         previous_clear = np.count_nonzero(before.observation.grid[13] == 0)
         own_code = "A" if self.side is Side.ATTACKER else "D"
         round_allies = [c for c in self.game.chars if c.team == own_code]
+        carrier = next((ally for ally in round_allies if ally.has_spike and ally.is_alive), None)
+        carrier_start = tuple(carrier.pos) if carrier is not None else None
         before_alive = sum(c.is_alive for c in round_allies)
         before_plant = bool(self.game.is_planted)
         retake_opportunity = bool(before_plant and not self._retake_started)
@@ -502,6 +521,12 @@ class CoachTrainingEnvironment:
         self.ticks += 1
         round_ended = bool(self.game.round_over or self.game.current_round != before_round)
         done = bool(round_ended or self.ticks >= self.max_ticks)
+        left_training = self.stage.startswith("left_")
+        planted_cell = planted_position if planted_after_move else None
+        left_plant_completed = bool(left_training and not before_plant and planted_cell
+                                    and planted_cell[1] < MAP_COLUMNS // 2)
+        if left_training and not before_plant and planted_cell is not None:
+            done = True
         # A time-limit truncation still has a valid next observation. Count
         # the final tick's newly cleared cells before ending the episode.
         eliminated_before_turn = False
@@ -512,7 +537,7 @@ class CoachTrainingEnvironment:
             if not any(c.is_alive for c in round_allies):
                 eliminated_before_turn = True
                 done = True
-        next_state = None if round_ended or eliminated_before_turn else self._observe()
+        next_state = None if done or eliminated_before_turn else self._observe()
         if next_state is None:
             new_clear = sum(
                 visible and before.observation.grid[13, row, column] == 0
@@ -539,6 +564,18 @@ class CoachTrainingEnvironment:
             + (0.1 if not before_defuse and defuse_completed else 0)
         )
         reward = win + reward_clear + reward_invalid + reward_death + reward_objective
+        if left_training:
+            carrier_progress = 0.0
+            if carrier is not None and carrier.is_alive and carrier_start is not None:
+                carrier_progress = float(
+                    self._left_distances.get(carrier_start, 0)
+                    - self._left_distances.get(tuple(carrier.pos), 0))
+            reward = (reward_invalid - 0.08 * max(0, before_alive - after_alive)
+                      - 0.003 + 0.01 * carrier_progress)
+            if left_plant_completed:
+                reward += 1.0 + 0.5 * after_alive / 5.0
+            elif done:
+                reward -= 1.0
         self.state = None if done else next_state
         return CoachTransition(self.state, reward, done, {
             "new_clear_cells": float(new_clear), "invalid_moves": float(invalid_moves),
@@ -555,6 +592,9 @@ class CoachTrainingEnvironment:
             "reward_objective": float(reward_objective),
             "reward_win": win,
             "plant": float(not before_plant and planted_after_move),
+            "left_plant": float(left_plant_completed),
+            "left_plant_survivors": float(after_alive if left_plant_completed else 0),
+            "carrier_progress": carrier_progress if left_training else 0.0,
             "spike_recovered": float(before_drop and self.game.spike_pos is None
                                       and any(ally.has_spike for ally in round_allies)),
             "attacker_win": float(round_ended and self.game.attacker_wins > 0),

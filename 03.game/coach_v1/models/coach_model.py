@@ -11,10 +11,14 @@ from map_data_defender_setup import get_setup_mask
 
 from coach_v1.common.constants import MAP_COLUMNS, MAP_ROWS, MOVEMENT_DELTAS, ROSTER_SIZE
 from coach_v1.common.types import MovementAction, ObjectiveAction, TacticalIntent
-from coach_v1.common.versions import COACH_OBSERVATION_VERSION, LEGACY_COACH_OBSERVATION_VERSION
+from coach_v1.common.versions import (
+    COACH_OBSERVATION_VERSION, LEGACY_COACH_OBSERVATION_VERSION,
+    ORB_COACH_OBSERVATION_VERSION,
+)
 from coach_v1.observation.character_encoder import CoachInstruction
 from coach_v1.observation.coach_encoder import (
-    COACH_GRID_CHANNELS, COACH_VECTOR_FIELDS, LEGACY_COACH_VECTOR_FIELDS, CoachObservation,
+    COACH_GRID_CHANNELS, COACH_VECTOR_FIELDS, LEGACY_COACH_VECTOR_FIELDS,
+    ORB_COACH_GRID_CHANNELS, ORB_COACH_VECTOR_FIELDS, CoachObservation,
     CoachObservationEncoder, CoachObservationInputError,
 )
 
@@ -54,9 +58,11 @@ class CoachActorModel(nn.Module):
 
     def __init__(self, config: CoachModelConfig = CoachModelConfig()) -> None:
         super().__init__()
-        if (config.grid_channels != len(COACH_GRID_CHANNELS)
+        if (config.grid_channels not in (len(COACH_GRID_CHANNELS),
+                                         len(ORB_COACH_GRID_CHANNELS))
                 or config.vector_features not in (len(COACH_VECTOR_FIELDS),
-                                                  len(LEGACY_COACH_VECTOR_FIELDS))
+                                                  len(LEGACY_COACH_VECTOR_FIELDS),
+                                                  len(ORB_COACH_VECTOR_FIELDS))
                 or min(config.hidden_channels, config.hidden_features) <= 0):
             raise ValueError("invalid coach model configuration")
         self.config = config
@@ -213,8 +219,13 @@ def legal_action_mask(observation: CoachObservation) -> CoachActionMask:
     expected_fields = (LEGACY_COACH_VECTOR_FIELDS
                        if observation.version == LEGACY_COACH_OBSERVATION_VERSION
                        else COACH_VECTOR_FIELDS if observation.version == COACH_OBSERVATION_VERSION
+                       else ORB_COACH_VECTOR_FIELDS
+                       if observation.version == ORB_COACH_OBSERVATION_VERSION
                        else ())
-    if (not expected_fields or grid.shape != (len(COACH_GRID_CHANNELS), MAP_ROWS, MAP_COLUMNS)
+    expected_channels = (ORB_COACH_GRID_CHANNELS
+                         if observation.version == ORB_COACH_OBSERVATION_VERSION
+                         else COACH_GRID_CHANNELS)
+    if (not expected_fields or grid.shape != (len(expected_channels), MAP_ROWS, MAP_COLUMNS)
             or vector.shape != (len(expected_fields),)):
         raise CoachObservationInputError("coach observation shape mismatch")
     fields = {name: i for i, name in enumerate(expected_fields)}

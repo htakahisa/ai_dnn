@@ -23,6 +23,7 @@ from coach_v1.learning_character_kunta import KuntaPolicy
 from coach_v1.learning_character_kurimaru import KurimaruPolicy
 from coach_v1.learning_coach_attacker import load_attacker_coach
 from coach_v1.learning_coach_defender import load_defender_coach
+from coach_v1.left_site_attack import LeftSiteAttackPolicy
 
 
 _CHARACTER_POLICY_TYPES = (
@@ -67,6 +68,7 @@ def build_coach_v1_team(
     *,
     name: str = "coach_v1",
     attacker_checkpoint: Path | None = None,
+    left_site_attacker_checkpoint: Path | None = None,
     defender_checkpoint: Path | None = None,
     character_checkpoints: Mapping[str, Path] | None = None,
     gongon_defender_checkpoint: Path | None = None,
@@ -89,6 +91,14 @@ def build_coach_v1_team(
                          attacker_checkpoint, device=device,
                          **({"watch_points_path": watch_points_config_path}
                             if watch_points_config_path is not None else {})))
+            if left_site_attacker_checkpoint is not None:
+                if attacker_coach is not None:
+                    raise ValueError("left-site checkpoint cannot replace an injected attacker coach")
+                coach = LeftSiteAttackPolicy(
+                    load_attacker_coach(left_site_attacker_checkpoint, device=device,
+                                        watch_points_path=watch_points_config_path),
+                    coach,
+                )
         else:
             coach = (defender_coach if defender_coach is not None else
                      load_defender_coach(
