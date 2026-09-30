@@ -82,6 +82,15 @@ FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
 
+    if normalized in {"concon_v1", "concon_attacker_a1"}:
+        from concon_v1.co1_attacker_controller import ConconAttackerController
+        from concon_v1.co1_defender_controller import ConconDefenderController
+        return DualRoleTeamAI(
+            name="ConCon v1 A1",
+            attacker_factory=ConconAttackerController,
+            defender_factory=ConconDefenderController,
+        )
+
     if normalized in {"frc_v1", "frc_v1_baseline"}:
         from frc_v1.controller import FrcAttackerController, FrcDefenderController
         mode = "baseline" if normalized == "frc_v1_baseline" else "learned"

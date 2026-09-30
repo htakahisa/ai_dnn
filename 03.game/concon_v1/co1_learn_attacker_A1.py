@@ -11,14 +11,17 @@ from concon_v1.co1_train_attacker_A1 import (
     CARDINAL_MOVES,
     DEFAULT_SAVE_DIR,
     GRID,
+    GORIGONS,
     LEFT_PLANT_CELLS,
     OBS_DIM,
     ACTION_DIM,
     RouteProgress,
     SharedRouteDQN,
+    advance_team_routes,
     build_action_mask,
     build_observation,
     choose_split_assignment,
+    plant_stage_action_mask,
 )
 
 
@@ -36,15 +39,24 @@ class ConconAttackerA1Controller:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None):
         self.model_path = Path(model_path)
         self.rng = random.Random(seed)
+        if not self.model_path.is_file():
+            raise FileNotFoundError(
+                f"ConCon A1 model not found: {self.model_path}. "
+                "Train it with: python concon_v1/co1_train_attacker_A1.py"
+            )
         checkpoint = torch.load(self.model_path, map_location="cpu", weights_only=False)
         if checkpoint.get("obs_dim") != OBS_DIM or checkpoint.get("n_actions") != ACTION_DIM:
             raise ValueError("checkpoint observation/action dimensions do not match this controller")
+        if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
+                or checkpoint.get("spike_carrier") != GORIGONS.spike_holder):
+            raise ValueError("A1 model was not trained for Gorigons / ごんた; retrain co1_train_attacker_A1.py")
         self.model = SharedRouteDQN(OBS_DIM, ACTION_DIM)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
         self._routes = {}
         self._pattern_index = None
         self._groups = {}
+        self._a_completed_groups = set()
 
     def set_game(self, game):
         self.game = game
@@ -52,12 +64,15 @@ class ConconAttackerA1Controller:
     def reset_round(self):
         self._routes.clear()
         self._groups.clear()
+        self._a_completed_groups.clear()
         self._pattern_index = None
 
     def _prepare_round(self, chars):
         attackers = [char for char in chars if getattr(char, "team", None) == "A"]
         if len(attackers) != 5:
             raise ValueError(f"expected five attackers, got {len(attackers)}")
+        if tuple(str(char.name) for char in attackers) != GORIGONS.players:
+            raise ValueError("ConCon A1 requires the Gorigons attacker roster in preset order")
         self._pattern_index, groups = choose_split_assignment(self.rng, len(attackers))
         self._groups = {char.name: group for char, group in zip(attackers, groups)}
         self._routes = {
@@ -75,8 +90,15 @@ class ConconAttackerA1Controller:
 
         grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
         position = tuple(map(int, char.pos))
-        if route.advance_if_reached(position, grid):
-            pass
+        attackers = [other for other in chars if getattr(other, "team", None) == "A"]
+        alive = [bool(getattr(other, "is_alive", True)) for other in attackers]
+        carrier_index = next((i for i, other in enumerate(attackers)
+                              if alive[i] and getattr(other, "has_spike", False)), None)
+        advance_team_routes(
+            [self._routes[other.name] for other in attackers],
+            [tuple(map(int, other.pos)) for other in attackers],
+            alive, self._a_completed_groups, grid, carrier_index,
+        )
         allies = [
             other.pos for other in chars
             if other is not char and getattr(other, "team", None) == char.team
@@ -94,7 +116,16 @@ class ConconAttackerA1Controller:
         )
         mask = build_action_mask(
             grid, position, allies, is_carrier, route.at_plant_stage, route.goal,
+            route.distance_map,
+            route.stage == 0 and position == route.goal
+            and bool({self._groups[other.name] for other, is_alive in zip(attackers, alive)
+                      if is_alive} - self._a_completed_groups),
         )
+        if route.at_plant_stage and not is_carrier:
+            mask = plant_stage_action_mask(
+                grid, position, allies, attackers[carrier_index].pos if carrier_index is not None else None,
+                self._routes[attackers[carrier_index].name].goal if carrier_index is not None else None,
+            )
         with torch.no_grad():
             values = self.model(torch.as_tensor(observation).unsqueeze(0))[0]
             values[~torch.as_tensor(mask)] = -torch.inf

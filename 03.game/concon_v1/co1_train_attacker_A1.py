@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from map_data import NEW_MAZE_STR as GAME_MAZE_STR
+from party_presets import get_preset
 
 try:
     from .co1_map_attacker_A1 import MAZE_STR as STRATEGY_MAZE_STR
@@ -25,7 +26,10 @@ except ImportError:
 
 
 WAYPOINT_ORDER = "abcd"
+GORIGONS = get_preset("Gorigons")
+SPIKE_CARRIER_INDEX = GORIGONS.players.index(GORIGONS.spike_holder)
 SPLIT_PATTERNS = ((2, 3), (3, 2), (0, 5), (5, 0))
+MAX_CANDIDATE_BFS_DISTANCE = 12
 CARDINAL_MOVES = ((-1, 0), (1, 0), (0, -1), (0, 1))
 ACTION_WAIT = 4
 ACTION_PLANT = 5
@@ -33,8 +37,18 @@ ACTION_DIM = 6
 OBS_DIM = 28
 MAX_TICKS = 100
 PLANT_REQUIRED_TICKS = 4
-DEFAULT_EPISODES = 5000
+DEFAULT_EPISODES = 1500
 DEFAULT_SAVE_DIR = Path(__file__).resolve().parent / "data" / "attacker_A1_data"
+TARGET_UPDATE_INTERVAL = 1000
+EPSILON_START = 0.7
+EPSILON_END = 0.05
+EPSILON_DECAY_RATIO = 0.7
+
+
+def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
+    decay_episodes = max(1, int(total_episodes * EPSILON_DECAY_RATIO))
+    fraction = min(max(float(episode) / decay_episodes, 0.0), 1.0)
+    return EPSILON_START + (EPSILON_END - EPSILON_START) * fraction
 
 
 def _rows(map_text):
@@ -115,16 +129,21 @@ def bfs_distance_map(grid, goal):
     return distances
 
 
-def select_nearest_candidate(grid, start, candidates):
-    """Select the first reachable candidate with the shortest wall-aware BFS distance."""
+def select_nearest_candidate(
+    grid, start, candidates, max_distance=MAX_CANDIDATE_BFS_DISTANCE,
+):
+    """Select the nearest reachable candidate, optionally within a BFS limit."""
     candidates = [tuple(map(int, point)) for point in candidates]
     if not candidates:
         raise ValueError("at least one candidate is required")
     distances = bfs_distance_map(grid, start)
     reachable = [(int(distances[point]), index, point) for index, point in enumerate(candidates)
-                 if distances[point] >= 0]
+                 if 0 <= distances[point]
+                 and (max_distance is None or distances[point] <= max_distance)]
     if not reachable:
-        raise ValueError(f"no candidate is reachable from {tuple(start)}")
+        if max_distance is None:
+            raise ValueError(f"no candidate is reachable from {tuple(start)}")
+        raise ValueError(f"no candidate within {max_distance} BFS steps from {tuple(start)}")
     distance, index, point = min(reachable)
     return point, index, distance
 
@@ -167,23 +186,35 @@ class RouteProgress:
                 )
         else:
             self.goal, self.goal_index, _ = select_nearest_candidate(
-                grid, pos, LEFT_PLANT_CELLS
+                grid, pos, LEFT_PLANT_CELLS, max_distance=None
             )
+        self.distance_map = bfs_distance_map(grid, self.goal)
+
+    def set_stage(self, stage, pos, grid=GRID, goal=None, goal_index=None):
+        self.stage = int(stage)
+        if goal is None:
+            self._set_goal_for_stage(tuple(map(int, pos)), grid)
+            return
+        self.goal = tuple(map(int, goal))
+        self.goal_index = int(goal_index)
+        self.distance_map = bfs_distance_map(grid, self.goal)
 
     def advance_if_reached(self, pos, grid=GRID):
         if tuple(map(int, pos)) != self.goal or self.stage >= len(WAYPOINT_ORDER) + 1:
             return False
-        self.stage += 1
-        self._set_goal_for_stage(tuple(map(int, pos)), grid)
+        self.set_stage(self.stage + 1, pos, grid)
         return True
 
     @property
     def at_plant_stage(self):
-        return self.stage == len(WAYPOINT_ORDER)
+        return self.stage >= len(WAYPOINT_ORDER)
 
 
-def build_action_mask(grid, pos, occupied_allies, is_carrier, at_plant_stage, plant_goal):
-    """The actor sees only terrain and friendly occupancy, never hidden enemy positions."""
+def build_action_mask(
+    grid, pos, occupied_allies, is_carrier, at_plant_stage, plant_goal,
+    route_distance_map=None, wait_for_other_group=False,
+):
+    """Allow movement toward the current goal, or wait if progress is blocked."""
     row, col = map(int, pos)
     occupied = {tuple(map(int, point)) for point in occupied_allies}
     mask = np.zeros(ACTION_DIM, dtype=bool)
@@ -195,13 +226,105 @@ def build_action_mask(grid, pos, occupied_allies, is_carrier, at_plant_stage, pl
             and grid[next_pos] != 1
             and next_pos not in occupied
         )
+    if route_distance_map is not None:
+        current_distance = int(route_distance_map[row, col])
+        if current_distance >= 0:
+            for action, (row_delta, col_delta) in enumerate(CARDINAL_MOVES):
+                next_pos = (row + row_delta, col + col_delta)
+                if mask[action] and int(route_distance_map[next_pos]) != current_distance - 1:
+                    mask[action] = False
     mask[ACTION_WAIT] = True
+    if wait_for_other_group:
+        mask[:len(CARDINAL_MOVES)] = False
     mask[ACTION_PLANT] = bool(
         is_carrier and at_plant_stage and (row, col) == tuple(plant_goal)
         and 0 <= row < grid.shape[0] and 0 <= col < grid.shape[1]
         and grid[row, col] == 2
     )
     return mask
+
+
+def plant_stage_action_mask(grid, pos, occupied_allies, carrier_pos, carrier_goal):
+    """Park an escort, moving it aside only if it blocks the carrier's route."""
+    mask = np.zeros(ACTION_DIM, dtype=bool)
+    mask[ACTION_WAIT] = True
+    if carrier_pos is None or carrier_goal is None:
+        return mask
+    from_carrier = bfs_distance_map(grid, carrier_pos)
+    to_goal = bfs_distance_map(grid, carrier_goal)
+    total = int(from_carrier[carrier_goal])
+    pos = tuple(map(int, pos))
+    if total < 0 or int(from_carrier[pos]) + int(to_goal[pos]) != total:
+        return mask
+    occupied = {tuple(map(int, ally)) for ally in occupied_allies}
+    for action, (dr, dc) in enumerate(CARDINAL_MOVES):
+        next_pos = (pos[0] + dr, pos[1] + dc)
+        if (not (0 <= next_pos[0] < grid.shape[0]
+                 and 0 <= next_pos[1] < grid.shape[1])
+                or grid[next_pos] in (1, 2) or next_pos in occupied):
+            continue
+        if int(from_carrier[next_pos]) + int(to_goal[next_pos]) != total:
+            mask[ACTION_WAIT] = False
+            mask[action] = True
+            break
+    return mask
+
+
+def advance_team_routes(routes, positions, alive, completed_a_groups,
+                        grid=GRID, carrier_index=SPIKE_CARRIER_INDEX):
+    """Release a when each surviving split group has arrived, then share later goals."""
+    active = [i for i, is_alive in enumerate(alive) if is_alive]
+    if not active:
+        return
+    required_groups = {routes[i].group for i in active}
+    for i in active:
+        if routes[i].stage == 0 and tuple(positions[i]) == routes[i].goal:
+            completed_a_groups.add(routes[i].group)
+    if not required_groups.issubset(completed_a_groups):
+        return
+
+    if any(routes[i].stage == 0 for i in active):
+        arrived = next(
+            (i for i in active if routes[i].stage == 0
+             and tuple(positions[i]) == routes[i].goal), None
+        )
+        a_goal = (tuple(positions[arrived]) if arrived is not None else
+                  WAYPOINT_POINTS["a"][min(required_groups)])
+        goal, goal_index, _ = select_nearest_candidate(
+            grid, a_goal, WAYPOINT_POINTS["b"]
+        )
+        for i in active:
+            routes[i].set_stage(1, positions[i], grid, goal, goal_index)
+
+    for i in active:
+        route = routes[i]
+        if route.stage not in (1, 2, 3) or tuple(positions[i]) != route.goal:
+            continue
+        next_stage = route.stage + 1
+        if next_stage < len(WAYPOINT_ORDER):
+            goal, goal_index, _ = select_nearest_candidate(
+                grid, positions[i], WAYPOINT_POINTS[WAYPOINT_ORDER[next_stage]]
+            )
+            for j in active:
+                routes[j].set_stage(next_stage, positions[j], grid, goal, goal_index)
+        else:
+            for j in active:
+                if j == carrier_index:
+                    routes[j].set_stage(next_stage, positions[j], grid)
+                else:
+                    routes[j].set_stage(next_stage, positions[j], grid,
+                                        goal=positions[j], goal_index=0)
+        break
+
+    for j in active:
+        if routes[j].stage != len(WAYPOINT_ORDER):
+            continue
+        if j == carrier_index:
+            if routes[j].goal not in LEFT_PLANT_CELLS:
+                routes[j].set_stage(len(WAYPOINT_ORDER), positions[j], grid)
+        else:
+            routes[j].set_stage(len(WAYPOINT_ORDER), positions[j], grid,
+                                goal=positions[j], goal_index=0)
 
 
 def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, elapsed_ticks, grid=GRID):
@@ -211,10 +334,10 @@ def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, e
     observation[0:2] = (row / max(1, HEIGHT - 1), col / max(1, WIDTH - 1))
     observation[2 + route.group] = 1.0
     observation[4 + route.pattern_index] = 1.0
-    observation[8 + route.stage] = 1.0
+    observation[8 + min(route.stage, len(WAYPOINT_ORDER))] = 1.0
     observation[13 + route.goal_index] = 1.0
     observation[18:20] = (route.goal[0] / max(1, HEIGHT - 1), route.goal[1] / max(1, WIDTH - 1))
-    distance = bfs_distance_map(grid, route.goal)[row, col]
+    distance = route.distance_map[row, col]
     observation[20] = max(0, int(distance)) / (HEIGHT + WIDTH)
     observation[21] = float(is_carrier)
     occupied = {tuple(map(int, point)) for point in occupied_allies}
@@ -253,6 +376,8 @@ class RouteEnv:
         self.pattern_index, groups = choose_split_assignment(self.rng)
         self.positions = list(ATTACKER_SPAWNS)
         self.routes = [RouteProgress(group, self.pattern_index, pos) for group, pos in zip(groups, self.positions)]
+        self.alive = [True] * len(self.positions)
+        self._a_completed_groups = set()
         self.plant_progress = 0
         self.elapsed_ticks = 0
         self.done = False
@@ -265,19 +390,32 @@ class RouteEnv:
         for index, (position, route) in enumerate(zip(self.positions, self.routes)):
             allies = [other for other_index, other in enumerate(self.positions) if other_index != index]
             observations.append(build_observation(
-                route, position, index == 0, allies,
-                self.plant_progress if index == 0 else 0, self.elapsed_ticks,
+                route, position, index == SPIKE_CARRIER_INDEX, allies,
+                self.plant_progress if index == SPIKE_CARRIER_INDEX else 0, self.elapsed_ticks,
             ))
             masks.append(build_action_mask(
-                GRID, position, allies, index == 0, route.at_plant_stage, route.goal,
+                GRID, position, allies, index == SPIKE_CARRIER_INDEX,
+                route.at_plant_stage, route.goal,
+                route.distance_map,
+                route.stage == 0 and position == route.goal
+                and bool({self.routes[i].group for i, alive in enumerate(self.alive) if alive}
+                         - self._a_completed_groups),
             ))
+            if route.at_plant_stage and index != SPIKE_CARRIER_INDEX:
+                masks[-1] = plant_stage_action_mask(
+                    GRID, position, allies, self.positions[SPIKE_CARRIER_INDEX],
+                    self.routes[SPIKE_CARRIER_INDEX].goal,
+                )
         return observations, masks
+
+    def _advance_routes_if_reached(self):
+        advance_team_routes(self.routes, self.positions, self.alive, self._a_completed_groups)
 
     def step(self, actions):
         observations, masks = self._collect()
         previous_stages = [route.stage for route in self.routes]
         previous_distances = [
-            int(bfs_distance_map(GRID, route.goal)[position])
+            int(route.distance_map[position])
             for route, position in zip(self.routes, self.positions)
         ]
         rewards = [-0.005] * len(self.positions)
@@ -291,26 +429,25 @@ class RouteEnv:
                 destination = (row + row_delta, col + col_delta)
                 if destination not in self.positions:
                     self.positions[index] = destination
-                if index == 0 and self.positions[index] != (row, col):
+                if index == SPIKE_CARRIER_INDEX and self.positions[index] != (row, col):
                     self.plant_progress = 0
-            elif action == ACTION_PLANT and index == 0:
+            elif action == ACTION_PLANT and index == SPIKE_CARRIER_INDEX:
                 self.plant_progress += 1
                 rewards[index] += 0.05
                 if self.plant_progress >= PLANT_REQUIRED_TICKS:
                     self.done = True
                     self.success = True
-            elif index == 0:
+            elif index == SPIKE_CARRIER_INDEX:
                 self.plant_progress = 0
 
-        for route, position in zip(self.routes, self.positions):
-            route.advance_if_reached(position)
+        self._advance_routes_if_reached()
 
         self.elapsed_ticks += 1
         for index, (route, position) in enumerate(zip(self.routes, self.positions)):
             if route.stage != previous_stages[index]:
                 rewards[index] += 0.25
             elif previous_distances[index] >= 0:
-                distance = int(bfs_distance_map(GRID, route.goal)[position])
+                distance = int(route.distance_map[position])
                 if distance >= 0:
                     rewards[index] += 0.04 * (previous_distances[index] - distance)
 
@@ -370,13 +507,14 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
     optimizer = optim.Adam(model.parameters(), lr=3e-4)
     replay = deque(maxlen=100_000)
     env = RouteEnv(seed)
+    global_step = 0
     recent_success = deque(maxlen=100)
     best_rate = -1.0
     started = time.perf_counter()
 
     for episode in range(1, episodes + 1):
         observations, masks = env.reset()
-        epsilon = max(0.05, 1.0 - 0.95 * episode / max(1, episodes))
+        epsilon = epsilon_by_episode(episode, episodes)
         total_reward = 0.0
         while not env.done:
             actions = [
@@ -388,8 +526,9 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
                 replay.append((old_obs[index], action, rewards[index], next_obs[index], next_masks[index], float(done)))
                 total_reward += rewards[index]
             observations, masks = next_obs, next_masks
+            global_step += 1
             _optimize(model, target, optimizer, replay, 128, 0.99)
-            if len(replay) and len(replay) % 1000 == 0:
+            if global_step % TARGET_UPDATE_INTERVAL == 0:
                 target.load_state_dict(model.state_dict())
 
         recent_success.append(float(env.success))
@@ -412,11 +551,14 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
                 "split_patterns": SPLIT_PATTERNS,
                 "waypoint_points": WAYPOINT_POINTS,
                 "left_plant_cells": LEFT_PLANT_CELLS,
+                "training_roster": GORIGONS.players,
+                "spike_carrier": GORIGONS.spike_holder,
             }
             torch.save(checkpoint, save_dir / "co1_attacker_A1_latest.pt")
             if success_rate >= best_rate:
                 best_rate = success_rate
                 torch.save(checkpoint, save_dir / "co1_attacker_A1_best.pt")
+                print(f"Saved best model with success100={best_rate:.3f} at episode {episode}")
     return model
 
 
