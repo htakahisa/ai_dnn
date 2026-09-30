@@ -1,7 +1,8 @@
-"""Fnatic v3 runtime auto-aim and movement-facing regressions."""
+"""Fnatic v3 uses the game's existing shot-response facing rule."""
 
 import unittest
 from types import SimpleNamespace as NS
+from unittest.mock import patch
 
 from controllers import DefaultAttackerController, UserInputController
 from fnatic_v3.controller import FnaticV3AttackerController, FnaticV3DefenderController
@@ -17,7 +18,7 @@ class FnaticV3FacingTests(unittest.TestCase):
         game = UltimateTestGame()
         char = make_character('Boaster', side, (4, 4))
         char.facing = 'W'
-        ctrl = FnaticV3AttackerController() if side == 'A' else FnaticV3DefenderController()
+        ctrl = FnaticV3AttackerController() if side == 'A' else FnaticV3DefenderController(engineer_map='')
         wrapper = IQAwareController(ctrl)
         wrapper.set_game(game)
         if side == 'A':
@@ -28,21 +29,21 @@ class FnaticV3FacingTests(unittest.TestCase):
         game.chars = [char, enemy]
         return game, char, enemy
 
-    def test_attacker_and_defender_turn_to_clear_shot_enemy_behind_them(self):
+    def test_attacker_and_defender_do_not_turn_to_unseen_enemy_behind_them(self):
         for side in ('A', 'D'):
             with self.subTest(side=side):
                 game, char, _ = self.fixture(side)
-                game._force_ai_facing_visible_enemy()
-                self.assertEqual(char.facing, 'E')
+                game._resolve_all_shots()
+                self.assertEqual(char.facing, 'W')
 
-    def test_nearest_enemy_is_selected_and_dead_enemy_ignored(self):
+    def test_nearest_enemy_does_not_replace_rule_facing(self):
         game, char, _ = self.fixture()
         near = make_character('Leo', 'D', (2, 4))
         dead = make_character('Alfajer', 'D', (4, 3))
         dead.is_alive = False
         game.chars.extend([near, dead])
-        game._force_ai_facing_visible_enemy()
-        self.assertEqual(char.facing, 'N')
+        game._resolve_all_shots()
+        self.assertEqual(char.facing, 'W')
 
     def test_wall_smoke_and_player_blocked_enemy_does_not_turn_actor(self):
         for obstruction in ('wall', 'smoke', 'player'):
@@ -54,7 +55,7 @@ class FnaticV3FacingTests(unittest.TestCase):
                     game._smoke_cells = lambda: {(4, 5), (4, 6)}
                 else:
                     game.chars.append(make_character('Leo', 'A', (4, 5)))
-                game._force_ai_facing_visible_enemy()
+                game._resolve_all_shots()
                 self.assertEqual(char.facing, 'W')
 
     def test_blocked_near_enemy_is_skipped_for_clear_far_enemy(self):
@@ -62,18 +63,18 @@ class FnaticV3FacingTests(unittest.TestCase):
         near = make_character('Leo', 'D', (2, 4))
         game.chars.append(near)
         game.grid[3, 4] = 1
-        game._force_ai_facing_visible_enemy()
-        self.assertEqual(char.facing, 'E')
+        game._resolve_all_shots()
+        self.assertEqual(char.facing, 'W')
 
     def test_revealed_enemy_can_be_aimed_through_smoke_but_not_wall(self):
         game, char, enemy = self.fixture()
         enemy.reveal_remaining = 3
         game._smoke_cells = lambda: {(4, 5), (4, 6)}
-        game._force_ai_facing_visible_enemy()
-        self.assertEqual(char.facing, 'E')
+        game._resolve_all_shots()
+        self.assertEqual(char.facing, 'W')
         char.facing = 'W'
         game.grid[4, 5] = 1
-        game._force_ai_facing_visible_enemy()
+        game._resolve_all_shots()
         self.assertEqual(char.facing, 'W')
 
     def test_clear_shot_defuser_has_priority_over_nearer_enemy(self):
@@ -81,35 +82,64 @@ class FnaticV3FacingTests(unittest.TestCase):
         game.is_planted = True
         enemy.defuse_timer = 1
         game.chars.append(make_character('Leo', 'D', (2, 4)))
-        game._force_ai_facing_visible_enemy()
-        self.assertEqual(char.facing, 'E')
+        game._resolve_all_shots()
+        self.assertEqual(char.facing, 'W')
 
     def test_other_controllers_and_manual_input_are_unchanged(self):
         for controller in (DefaultAttackerController(), UserInputController()):
             with self.subTest(controller=type(controller).__name__):
                 game, char, _ = self.fixture()
                 game.attacker_controller = NS(inner=controller)
-                game._force_ai_facing_visible_enemy()
+                game._resolve_all_shots()
                 self.assertEqual(char.facing, 'W')
 
-    def test_gc_auto_aim_still_works(self):
+    def test_gc_also_does_not_turn_to_unseen_enemy(self):
         class GhostChampionsV1TestController:
             pass
         game, char, _ = self.fixture()
         game.attacker_controller = NS(inner=GhostChampionsV1TestController())
-        game._force_ai_facing_visible_enemy()
+        game._resolve_all_shots()
+        self.assertEqual(char.facing, 'W')
+
+    def test_rear_enemy_requires_actual_incoming_shot_before_rule_turn(self):
+        game, char, enemy = self.fixture()
+        # Isolate aiming from a faster enemy's random lethal first shot.
+        enemy.facing = 'W'
+        enemy.accuracy = 0
+        game.battle_tick = SHOOT_INTERVAL_TICKS
+        game._resolve_all_shots()
+        self.assertFalse(any(shot['shooter'] is char for shot in game.last_shots))
+        self.assertEqual(char.forced_facing_next_tick, 'E')
+        game.grid = parse_grid(NEW_MAZE_STR)
+        game.height, game.width = game.grid.shape
+        char.pos = [2, 37]
+        enemy.pos = [2, 40]
+        game.move_character(char)
         self.assertEqual(char.facing, 'E')
 
-    def test_runtime_auto_aim_allows_shooting_enemy_behind_actor(self):
-        game, char, enemy = self.fixture()
-        game.battle_tick = SHOOT_INTERVAL_TICKS
-        game._force_ai_facing_visible_enemy()
-        game._resolve_all_shots()
-        self.assertTrue(any(shot['shooter'] is char and shot['target'] is enemy
-                            for shot in game.last_shots))
+    def test_moving_target_reduces_headshot_chance(self):
+        for target_moved, expected_headshot in ((True, False), (False, True)):
+            with self.subTest(target_moved=target_moved):
+                game, shooter, target = self.fixture()
+                game.is_planted = True
+                game.battle_tick = SHOOT_INTERVAL_TICKS
+                shooter.facing = 'E'
+                shooter.accuracy = 1.0
+                shooter.hs_rate = 0.5
+                target.dodge_rate = 0.0
+                target.defuse_timer = 1
+                target.moved_this_tick = target_moved
+
+                with patch('battle_logic.random.random', side_effect=(0.0, 0.4)):
+                    game._resolve_all_shots()
+
+                self.assertEqual(len(game.last_shots), 1)
+                self.assertTrue(game.last_shots[0]['hit'])
+                self.assertEqual(game.last_shots[0]['headshot'], expected_headshot)
 
     def test_real_guard_wait_and_movement_face_the_spike_again(self):
         game, char, _ = self.fixture()
+        char.smoke_charges = 0  # Isolate guard facing from utility casts.
         game.grid = parse_grid(NEW_MAZE_STR)
         game.height, game.width = game.grid.shape
         game.chars = [char]
@@ -124,7 +154,6 @@ class FnaticV3FacingTests(unittest.TestCase):
         ctrl.guard_targets = {char.name: target}
         char.pos = list(target)
         game.move_character(char)
-        game._force_ai_facing_visible_enemy()
         self.assertEqual(char.facing, game._facing_towards(char.pos, anchor))
         char.pos = [2, 36]
         game.move_character(char)

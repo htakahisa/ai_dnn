@@ -14,6 +14,31 @@ class BaseController:
         raise NotImplementedError
 
     @staticmethod
+    def _decide_dance(char, game_state):
+        if getattr(char, "ability_name", None) != "DANCE" or getattr(char, "dance_charges", 0) <= 0:
+            return None
+        allies = [ally for ally in game_state.get("chars", [])
+                  if ally.name != char.name and ally.team == char.team
+                  and ally.is_alive and ally.hp < (
+                      min(100, ally.max_hp) if getattr(ally, "contract_max_hp_lost", 0) > 0 else 100)]
+        if not allies:
+            return None
+        target = min(allies, key=lambda ally: (ally.hp, ally.name))
+        return {"ability": "DANCE", "target_name": target.name}
+
+    def _decide_ash(self, char, game_state):
+        if getattr(char, "ability_name", None) != "ASH" or getattr(char, "ash_charges", 0) <= 0:
+            return None
+        targets = [enemy for enemy in game_state.get("chars", [])
+                   if enemy.is_alive and enemy.team != char.team
+                   and (enemy.pos[0]-char.pos[0])**2 + (enemy.pos[1]-char.pos[1])**2 <= 64
+                   and self.has_line_of_sight(char.pos, enemy.pos, game_state["grid"])]
+        if not targets:
+            return None
+        target = min(targets, key=lambda enemy: ((enemy.pos[0]-char.pos[0])**2 + (enemy.pos[1]-char.pos[1])**2, enemy.name))
+        return {"ability": "ASH", "target": tuple(target.pos)}
+
+    @staticmethod
     def has_line_of_sight(p1, p2, grid):
         """Bresenham法で壁による射線遮断を判定する。"""
         x0, y0, x1, y1 = int(p1[1]), int(p1[0]), int(p2[1]), int(p2[0])
@@ -405,7 +430,14 @@ class DefaultAttackerController(BaseController):
         戻り値:
         - None
         - {"ability": "SMOKE"|"FLASH"|"RECON", "target": (r, c)}
+        - {"ability": "DANCE", "target_name": name}
         """
+        dance = self._decide_dance(char, game_state)
+        if dance is not None:
+            return dance
+        ash = self._decide_ash(char, game_state)
+        if ash is not None:
+            return ash
         chars = game_state.get("chars", [])
         grid = game_state["grid"]
         target_plant_pos = game_state.get("target_plant_pos")
@@ -515,6 +547,12 @@ class DefaultDefenderController(BaseController):
 
     def _decide_ability(self, char, game_state):
         """ディフェンダー側のアビリティ使用判断。"""
+        dance = self._decide_dance(char, game_state)
+        if dance is not None:
+            return dance
+        ash = self._decide_ash(char, game_state)
+        if ash is not None:
+            return ash
         chars = game_state.get("chars", [])
         grid = game_state["grid"]
         is_planted = bool(game_state.get("is_planted", False))

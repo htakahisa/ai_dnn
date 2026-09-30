@@ -84,7 +84,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="FRC",
         players=("Furina", "Lisa", "Lohen", "Jean", "Arlecchino"),
         igl="Furina",
-        spike_holder="Lohen",
+        spike_holder="Furina",
         description="FurinaをIGL兼コンボ中核にした最もクラシックな編成",
     ),
     "Furina Tartaglia": TeamPreset(
@@ -92,7 +92,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="FRT",
         players=("Furina", "Lisa", "Lohen", "Tartaglia", "Arlecchino"),
         igl="Furina",
-        spike_holder="Lohen",
+        spike_holder="Furina",
         description="クラシックなフリーナパのジンをタルタリヤに変更したアレンジ",
     ),
     "Vision Strikers": TeamPreset(

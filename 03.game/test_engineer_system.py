@@ -7,6 +7,7 @@ from io import StringIO
 from types import SimpleNamespace
 
 from analytics.replay_viewer import ReplayViewer
+from game_core import COMBO_BANNER_HEIGHT
 from gc_v1.ultimate_tactics_gc import build_ultimate_action
 from rendering_ui import RenderingUIMixin
 from run_game import VisualFPSBattle
@@ -144,6 +145,20 @@ class EngineerSystemTests(unittest.TestCase):
         self.game._kill_character(second_owner, self.owner)
         self.assertEqual([trap["owner"] for trap in self.game.ramp_traps], [second_owner.name])
 
+    def test_escape_teleport_triggers_trap_without_extending_effect_duration(self):
+        self.plant()
+        self.owner.pos = [9, 19]
+        enemy = self.add_enemy("Demon1", (9, 1))
+        enemy.ultimate_points = enemy.ultimate_cost
+        self.assertTrue(self.game.execute_ai_ultimate(enemy, {"ultimate": "ESCAPE", "target": (1, 1)}))
+        self.game.escape_portals[0]["remaining_ticks"] = 0
+        self.game._advance_escape_portals()
+        self.assertEqual(enemy.pos, [1, 1])
+        self.assertEqual(enemy.electric_remaining, 5)
+        for expected in (4, 3, 2, 1, 0):
+            self.advance()
+            self.assertEqual(enemy.electric_remaining, expected)
+
     def test_neon_requires_valid_target_and_points(self):
         for payload in ({"ultimate": "NEON"}, {"ultimate": "NEON", "target": (-1, 2)}):
             self.assertFalse(self.game.execute_ai_ultimate(self.owner, payload))
@@ -203,6 +218,61 @@ class EngineerSystemTests(unittest.TestCase):
         self.game.get_viewer_team = lambda: "A"
         RenderingUIMixin._draw_engineer_effects(self.game)
         self.assertEqual(len(self.game.canvas.calls), 1)
+
+    def prepare_click_ui(self):
+        self.game._handle_team_panel_click = lambda x, y: False
+        self.game._selected_user_character = lambda: self.owner
+        self.game._plant_button_bounds = lambda: None
+        self.game._orb_button_bounds = lambda: None
+        self.game._ability_button_bounds = lambda ability: (0, 240, 100, 270)
+        self.game._ultimate_button_bounds = lambda: (110, 240, 220, 270)
+        self.game._selected_ultimate_ready = lambda selected: RenderingUIMixin._selected_ultimate_ready(self.game, selected)
+        self.game.draw = lambda: None
+        self.game.map_offset_x = 0
+        self.game.map_pixel_width = 400
+        self.game.cell_size = 20
+        self.game.ability_mode = self.game.ultimate_mode = None
+
+    def click(self, x, y):
+        RenderingUIMixin.on_canvas_click(self.game, SimpleNamespace(x=x, y=y+COMBO_BANNER_HEIGHT))
+
+    def test_neon_click_arms_cancels_and_casts_at_selected_cell(self):
+        self.prepare_click_ui()
+        self.click(120, 250)
+        self.assertEqual(self.game.ultimate_mode, ("NEON", "A", self.owner.name))
+        self.assertEqual(self.owner.ultimate_points, 9)
+        self.click(120, 250)
+        self.assertIsNone(self.game.ultimate_mode)
+        self.click(120, 250)
+        self.click(90, 90)
+        self.assertEqual(self.game.neon_bursts[0]["pos"], (4, 4))
+        self.assertEqual(self.owner.ultimate_points, 0)
+        self.assertIsNone(self.game.ultimate_mode)
+
+    def test_ramp_click_places_on_current_cell(self):
+        self.prepare_click_ui()
+        self.click(50, 250)
+        self.assertEqual(self.game.ramp_traps[0]["pos"], tuple(self.owner.pos))
+        self.assertEqual(self.owner.ramp_charges, 1)
+
+    def test_replay_hides_traps_in_enemy_view_and_draws_neon(self):
+        viewer = ReplayViewer.__new__(ReplayViewer)
+        viewer.canvas = RecordingCanvas()
+        viewer.frames = [{"ramp_traps": [{"pos": [1, 1], "team": "A"}],
+                          "neon_bursts": [{"phase": "active", "cells": [[4, 4]]}]}]
+        viewer.index = 0
+        viewer.grid = [[0]*6 for _ in range(6)]
+        viewer.cell = 20
+        viewer.status = SimpleNamespace(set=lambda text: None)
+        viewer.view_mode = SimpleNamespace(get=lambda: "D")
+        viewer.draw_frame()
+        traps = [call for call in viewer.canvas.calls if call[2].get("fill") == "#1773d1"]
+        self.assertEqual(traps, [])
+        self.assertTrue(any(call[0] == "create_line" for call in viewer.canvas.calls))
+        viewer.canvas.calls.clear()
+        viewer.view_mode = SimpleNamespace(get=lambda: "A")
+        viewer.draw_frame()
+        self.assertEqual(sum(call[2].get("fill") == "#1773d1" for call in viewer.canvas.calls), 1)
 
     def test_replay_contains_traps_electricity_inventory_and_neon(self):
         self.plant()

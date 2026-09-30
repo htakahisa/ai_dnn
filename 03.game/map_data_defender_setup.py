@@ -15,6 +15,8 @@
 通常の map_data.py の移動判定へ戻します。
 """
 
+from functools import lru_cache
+
 DEFENDER_SETUP_TICKS = 20
 
 # 0 = Setup中に進入可能
@@ -31,7 +33,7 @@ DEFENDER_SETUP_MASK_STR = """
 10000101010000110111100011111111111111000101
 11101101000000000001100011111000001111000101
 10001101000001110001111111111000001111000001
-10000000000001110011100011111100011111110111
+10000000000001110011100011111100011111111111
 10000000111001110001100001100000111111000111
 10001100111111110001111000001100111111110111
 11101111111111110000000000111110000000000111
@@ -83,14 +85,20 @@ def _rows(text):
     return rows
 
 
+@lru_cache(maxsize=8)
+def _setup_rows(text):
+    """Reuse validated immutable rows until the editable map text changes."""
+    return tuple(_rows(text))
+
+
 def get_setup_mask():
     """Setupマップを list[list[int]] で返す。"""
-    return [[int(value) for value in row] for row in _rows(DEFENDER_SETUP_MASK_STR)]
+    return [[int(value) for value in row] for row in _setup_rows(DEFENDER_SETUP_MASK_STR)]
 
 
 def is_setup_position_allowed(row, col):
     """Setup Phase中にそのマスへ進入できるか。"""
-    rows = _rows(DEFENDER_SETUP_MASK_STR)
+    rows = _setup_rows(DEFENDER_SETUP_MASK_STR)
 
     row = int(row)
     col = int(col)
@@ -103,7 +111,7 @@ def is_setup_position_allowed(row, col):
 
 def validate_against_map(base_maze_str):
     """通常マップとSetupマップの縦横サイズが一致するか確認する。"""
-    setup_rows = _rows(DEFENDER_SETUP_MASK_STR)
+    setup_rows = _setup_rows(DEFENDER_SETUP_MASK_STR)
     base_rows = _raw_rows(base_maze_str)
 
     errors = []
@@ -128,7 +136,7 @@ def get_setup_forbidden_floor_cells(base_maze_str):
     Setupマップでは1だが、通常マップでは壁(1)ではないセルだけを返す。
     そのため通常の壁まで黄色く塗られない。
     """
-    setup_rows = _rows(DEFENDER_SETUP_MASK_STR)
+    setup_rows = _setup_rows(DEFENDER_SETUP_MASK_STR)
     base_rows = _raw_rows(base_maze_str)
 
     if len(setup_rows) != len(base_rows) or len(setup_rows[0]) != len(base_rows[0]):

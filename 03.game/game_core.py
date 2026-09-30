@@ -11,6 +11,18 @@ from pathlib import Path
 # Gameplay configuration
 WINNING_ROUNDS = 13
 TICK_TIME = 100
+
+
+def validate_tick_time_ms(value):
+    try:
+        milliseconds = int(str(value).strip())
+    except (TypeError, ValueError):
+        raise ValueError("1tickの時間は1以上の整数（ミリ秒）で指定してください") from None
+    if milliseconds < 1:
+        raise ValueError("1tickの時間は1以上の整数（ミリ秒）で指定してください")
+    return milliseconds
+
+
 MAX_HP = 100
 BODY_DAMAGE = 40
 HEADSHOT_DAMAGE = 160
@@ -47,6 +59,8 @@ ULTIMATE_COSTS = {
     "シーカー": 6,
     "フラッシュ": 8,
     "エンジニア": 9,
+    "アイドル": 4,
+    "コントラクター": 5,
 }
 ULTIMATE_NAMES = {
     "タイガー": "RAID",
@@ -54,8 +68,11 @@ ULTIMATE_NAMES = {
     "シーカー": "MONITOR",
     "フラッシュ": "TUNNEL",
     "エンジニア": "NEON",
+    "アイドル": "SERENADE",
+    "コントラクター": "BALEMOON",
 }
 RAID_DISTANCE_CELLS = 6
+RAID_TRAIL_TICKS = 3
 ESCAPE_WARP_DELAY_TICKS = 10
 MONITOR_DRONE_HP = 200
 MONITOR_COLLISION_REVEAL_TICKS = 10
@@ -69,6 +86,14 @@ NEON_RADIUS_CELLS = 3
 NEON_WARNING_TICKS = 10
 NEON_ACTIVE_TICKS = 10
 NEON_DAMAGE_PER_TICK = 10
+DANCE_HEAL_HP = 50
+DANCE_MAX_HP = 100
+SERENADE_REVEAL_TICKS = 3
+DANCE_SPARKLE_TICKS = 5
+ASH_RANGE_CELLS = 8
+DESTRUCTION_AREA_TICKS = 10
+BALEMOON_WARNING_TICKS = 3
+CONTRACT_DAMAGE_PER_TICK = 10
 
 # 向き(facing)関連
 FACING_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
@@ -549,6 +574,8 @@ class Character:
             "シーカー": "RECON",
             "タイガー": "HUNT",
             "エンジニア": "RAMP",
+            "アイドル": "DANCE",
+            "コントラクター": "ASH",
         }.get(self.role, "FLASH")
         self.ultimate_name = ULTIMATE_NAMES.get(self.role, "TUNNEL")
         self.ultimate_cost = ULTIMATE_COSTS.get(self.role, 5)
@@ -558,6 +585,14 @@ class Character:
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
         self.recon_charges = 2 if self.ability_name == "RECON" else 0
         self.ramp_charges = 2 if self.ability_name == "RAMP" else 0
+        self.dance_charges = 3 if self.ability_name == "DANCE" else 0
+        self.ash_charges = 3 if self.ability_name == "ASH" else 0
+        self.heal_sparkle_remaining = 0
+        self.heal_sparkle_applied_tick = None
+        self.life_contract_remaining = 0
+        self.life_contract_owner = None
+        self.contract_max_hp_lost = 0
+        self.serenade_reveal_pending = 0
         self.electric_remaining = 0
         self.electric_applied_tick = None
         self.blind_remaining = 0.0

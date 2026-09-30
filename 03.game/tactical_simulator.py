@@ -41,6 +41,8 @@ def get_character_resource_profile(name: str) -> dict[str, Any]:
         "シーカー": ("RECON", 2),
         "タイガー": ("HUNT", 0),
         "エンジニア": ("RAMP", 2),
+        "アイドル": ("DANCE", 3),
+        "コントラクター": ("ASH", 3),
     }.get(role, ("FLASH", 1))
     return {
         "ability": ability,
@@ -148,6 +150,11 @@ class TacticalSimulator(VisualFPSBattle):
         self.tunnel_bursts = []
         self.ramp_traps = []
         self.neon_bursts = []
+        self.destruction_areas = []
+        self.ash_projectiles = []
+        self.balemoon_warnings = []
+        self.serenade_flash_remaining = 0
+        self.serenade_flash_applied_tick = None
         self.ultimate_trails = []
         self.available_orbs = []
         self.match_over = False
@@ -217,6 +224,8 @@ class TacticalSimulator(VisualFPSBattle):
                 "FLASH": "flash_charges",
                 "RECON": "recon_charges",
                 "RAMP": "ramp_charges",
+                "DANCE": "dance_charges",
+                "ASH": "ash_charges",
             }.get(char.ability_name)
             max_charges = getattr(char, charge_field) if charge_field else 0
             charges = int(data["ability_charges"])
@@ -262,34 +271,11 @@ class TacticalSimulator(VisualFPSBattle):
         self._final_frame_recorded = False
         self._record_replay_frame()
         self._apply_player_actions(action_handlers)
-        self.ultimate_trails = [
-            trail
-            for trail in getattr(self, "ultimate_trails", [])
-            if trail["remaining_ticks"] > 1
-        ]
-        for trail in self.ultimate_trails:
-            trail["remaining_ticks"] -= 1
         self._build_occupancy_counts()
         try:
             for char in self._move_order():
                 if char.is_alive:
-                    old_pos = tuple(char.pos)
-                    old_ultimate_points = char.ultimate_points
                     self.move_character(char)
-                    new_pos = tuple(char.pos)
-                    if (
-                        char.ultimate_name == "RAID"
-                        and char.ultimate_points < old_ultimate_points
-                        and new_pos != old_pos
-                    ):
-                        self.ultimate_trails.append(
-                            {
-                                "start": old_pos,
-                                "end": new_pos,
-                                "team": char.team,
-                                "remaining_ticks": 2,
-                            }
-                        )
         finally:
             self._clear_occupancy_counts()
 

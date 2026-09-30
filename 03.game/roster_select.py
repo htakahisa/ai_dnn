@@ -20,6 +20,8 @@ TEAM_AI_OPTIONS = {
     "Omoko Gaming v1": "omoko_gaming_v1",
     #"Omoko Gaming v1 R": "omoko_gaming_v1_r",
     "Fnatic v3": "fnatic_v3",
+    "FRC v1（学習モデル）": "frc_v1",
+    "FRC v1（基礎ルール）": "frc_v1_baseline",
     "Fnatic v2": "fnatic_v2",
     "Fnatic v1": "fnatic_v1",
     "Touyama Gaming v1": "touyama_gaming_v1",

@@ -1055,16 +1055,6 @@ class RetakeEnv:
             smoke["remaining_ticks"] -= 1
         self.smokes = [s for s in self.smokes if s["remaining_ticks"] > 0]
 
-        units = self.defenders() + self.attackers()
-        for unit in units:
-            facing = nearest_visible_enemy_facing(
-                unit,
-                units,
-                lambda actor, enemy: self.check_line_of_sight(actor, enemy),
-            )
-            if facing is not None:
-                unit.facing = facing
-
         current_los_revealed = set()
         alive = [c for c in self.chars if c.is_alive]
         for i, a in enumerate(alive):

@@ -1447,17 +1447,6 @@ class SearchEnv:
                 self.spike_ground_pos = tuple(dropped_holder.pos)
                 dropped_holder.has_spike = False
 
-        smoke_cells = self._smoke_cells()
-        for unit in self.defenders + self.attackers:
-            facing = nearest_visible_enemy_facing(
-                unit,
-                self.defenders + self.attackers,
-                lambda actor, enemy: has_los(
-                    tuple(actor.pos), tuple(enemy.pos), smoke_cells
-                ),
-            )
-            if facing is not None:
-                unit.facing = facing
         self._resolve_shots()
 
         for u in self.defenders + self.attackers:

@@ -8,8 +8,13 @@ from map_data_defender_setup import (
 """Tkinter input handling and all visual rendering."""
 
 import math
+from public_effects import displayed_projectile_path, displayed_area_cells
 from pathlib import Path
 import tkinter as tk
+from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
+                            draw_contract_status, draw_serenade_flash,
+                            draw_ash_projectiles, draw_balemoon_warnings,
+                            TUNNEL_WARNING_COLOR, TUNNEL_ACTIVE_COLOR)
 from party_presets import get_team_short_name
 
 from controllers import UserInputController
@@ -76,7 +81,8 @@ class RenderingUIMixin:
         character = next(
             (
                 ch for ch in self.chars
-                if ch.team == team and ch.name == character_name and ch.is_alive
+                if ch.team == team and ch.name == character_name
+                and (ch.is_alive or ch.ultimate_name == "SERENADE")
             ),
             None,
         )
@@ -92,6 +98,25 @@ class RenderingUIMixin:
     def _is_character_selected(self, character):
         ctrl = self._controller_for_team(character.team)
         return bool(ctrl and ctrl.selected_char == character.name)
+
+    def _try_dance_target(self, target):
+        if not self.ability_mode or self.ability_mode[0] != "DANCE":
+            return False
+        _, team, owner_name = self.ability_mode
+        owner = next((char for char in self.chars
+                      if char.name == owner_name and char.team == team and char.is_alive), None)
+        if owner is None:
+            self.ability_mode = None
+            self.draw()
+            return False
+        if owner and self.execute_ai_ability(owner, {"ability": "DANCE", "target_name": target.name}):
+            self.ability_mode = None
+        self.draw()
+        return True
+
+    def _selected_ultimate_ready(self, selected):
+        return selected.ultimate_points >= selected.ultimate_cost and (
+            not selected.is_alive if selected.ultimate_name == "SERENADE" else selected.is_alive)
     def _handle_team_panel_click(self, x, y):
         if x < SIDE_PANEL_WIDTH:
             team = "A"
@@ -117,6 +142,8 @@ class RenderingUIMixin:
             y1 = 48 + index * row_h
             y2 = y1 + card_h
             if y1 <= y <= y2:
+                if self._try_dance_target(character):
+                    return True
                 self._set_active_user_character(team, character.name)
                 self.draw()
                 return True
@@ -157,7 +184,7 @@ class RenderingUIMixin:
             return
 
         # 選択中キャラクターは、ロールに対応したアビリティ一つだけ使用できる。
-        if selected and selected.ability_name in ("SMOKE", "FLASH", "RECON", "RAMP"):
+        if selected and selected.is_alive and selected.ability_name in ("SMOKE", "FLASH", "RECON", "RAMP", "DANCE", "ASH"):
             ability_name = selected.ability_name
             panel = self._ability_button_bounds(ability_name)
             if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
@@ -175,6 +202,8 @@ class RenderingUIMixin:
                         "SMOKE": selected.smoke_charges,
                         "FLASH": selected.flash_charges,
                         "RECON": selected.recon_charges,
+                        "DANCE": getattr(selected, "dance_charges", 0),
+                        "ASH": getattr(selected, "ash_charges", 0),
                     }[ability_name]
                     if charges > 0:
                         self.ability_mode = (ability_name, selected.team, selected.name)
@@ -186,7 +215,7 @@ class RenderingUIMixin:
             ultimate_name = selected.ultimate_name
             panel = self._ultimate_button_bounds()
             if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
-                if selected.ultimate_points >= selected.ultimate_cost:
+                if self._selected_ultimate_ready(selected):
                     if ultimate_name in ("ESCAPE", "NEON"):
                         armed = self.ultimate_mode == (
                             ultimate_name, selected.team, selected.name
@@ -228,12 +257,20 @@ class RenderingUIMixin:
 
         if self.ability_mode:
             ability_name, team, owner_name = self.ability_mode
+            if ability_name == "DANCE":
+                target = next((char for char in self.chars if char.team == team
+                               and char.is_alive and tuple(char.pos) == (r, c)
+                               and char.name != owner_name), None)
+                if target is not None:
+                    self._try_dance_target(target)
+                return
             owner = next((ch for ch in self.chars if ch.name == owner_name and ch.is_alive), None)
             if owner and owner.team == team and owner.ability_name == ability_name and self.grid[r, c] != 1:
                 if ability_name == "SMOKE" and owner.smoke_charges > 0:
                     cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
                              if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
-                    self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS, "owner": owner.name})
+                    self.smokes.append({"cells": cells, "remaining_ticks": SMOKE_DURATION_TICKS,
+                                        "owner": owner.name, "team": owner.team, "center": (r, c)})
                     owner.smoke_charges -= 1
                 elif ability_name == "FLASH" and owner.flash_charges > 0:
                     path = self._projectile_path(tuple(owner.pos), (r, c))
@@ -250,6 +287,8 @@ class RenderingUIMixin:
                             "owner": owner.name, "team": owner.team, "path": path, "progress": 0
                         })
                         owner.recon_charges -= 1
+                elif ability_name == "ASH":
+                    self.execute_ai_ability(owner, {"ability": "ASH", "target": (r, c)})
             self.ability_mode = None
             self.draw()
             return
@@ -296,7 +335,7 @@ class RenderingUIMixin:
                     ch for ch in self.chars
                     if ch.name == ctrl.selected_char
                     and ch.team == active_team
-                    and ch.is_alive
+                    and (ch.is_alive or ch.ultimate_name == "SERENADE")
                 ),
                 None,
             )
@@ -310,7 +349,7 @@ class RenderingUIMixin:
                         ch for ch in self.chars
                         if ch.name == ctrl.selected_char
                         and ch.team == team
-                        and ch.is_alive
+                        and (ch.is_alive or ch.ultimate_name == "SERENADE")
                     ),
                     None,
                 )
@@ -387,7 +426,7 @@ class RenderingUIMixin:
 
     def _draw_compact_ability_icon(self, ability_name, cx, cy, available):
         """構えるUIと同じ意匠の小型アビリティアイコンを描く。"""
-        active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff"}[ability_name]
+        active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff", "DANCE": "#ff79c9", "ASH": "#dc2638"}[ability_name]
         fill = active_color if available else "#59616c"
         outline = "#f8c471" if available else "#7f8c8d"
         if ability_name == "SMOKE":
@@ -405,6 +444,11 @@ class RenderingUIMixin:
             self.canvas.create_oval(cx-7, cy-7, cx+7, cy+7, fill=fill, outline="#bdefff", width=2)
             self.canvas.create_line(cx-2, cy-5, cx+2, cy-1, cx-2, cy+1, cx+2, cy+5,
                                     fill="#ecfcff", width=2)
+        elif ability_name == "DANCE":
+            self.canvas.create_line(cx-6, cy, cx+6, cy, fill=fill, width=3)
+            self.canvas.create_line(cx, cy-6, cx, cy+6, fill=fill, width=3)
+        elif ability_name == "ASH":
+            self.canvas.create_polygon(cx, cy-8, cx+7, cy+6, cx-7, cy+6, fill=fill, outline=outline)
         else:  # HUNT
             self.canvas.create_text(cx, cy, text="H", fill=fill, font=("Arial", 10, "bold"))
 
@@ -428,7 +472,7 @@ class RenderingUIMixin:
                                     fill="#1773d1", outline="#7edcff", width=2)
         for burst in getattr(self, "neon_bursts", []):
             warning = burst["phase"] == "warning"
-            for row, col in burst["cells"]:
+            for row, col in displayed_area_cells(burst):
                 x, y = self._map_x(col*self.cell_size), row*self.cell_size
                 self.canvas.create_rectangle(x, y, x+self.cell_size, y+self.cell_size,
                     fill="#b5e5ff" if warning else "#167eff",
@@ -550,11 +594,13 @@ class RenderingUIMixin:
                 "FLASH": char.flash_charges,
                 "RECON": char.recon_charges,
                 "RAMP": getattr(char, "ramp_charges", 0),
+                "DANCE": getattr(char, "dance_charges", 0),
+                "ASH": getattr(char, "ash_charges", 0),
                 "HUNT": 1,
             }[ability]
             available = char.is_alive and (charges > 0 or ability == "HUNT")
             self._draw_compact_ability_icon(ability, x0 + 27, y + 91, available)
-            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP", "RAMP": "ランプ"}[ability]
+            label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP", "RAMP": "Lamp", "DANCE": "DANCE", "ASH": "ASH"}[ability]
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
             self.canvas.create_text(
                 x0 + 43, y + 91,
@@ -824,8 +870,10 @@ class RenderingUIMixin:
 
         # 飛翔中フラッシュ：投擲済み経路を点線、現在位置を小さな光点で表示。
         for projectile in self.flash_projectiles:
-            path = projectile["path"]
-            end_index = min(projectile["progress"], len(path) - 1)
+            path = displayed_projectile_path(projectile)
+            if not path:
+                continue
+            end_index = len(path) - 1
             if end_index > 0:
                 coords = []
                 for rr, cc in path[:end_index + 1]:
@@ -839,8 +887,10 @@ class RenderingUIMixin:
 
         # 飛翔中リコン。フラッシュ同様に点線で進行方向を示す。
         for projectile in self.recon_projectiles:
-            path = projectile["path"]
-            end_index = min(projectile["progress"], len(path) - 1)
+            path = displayed_projectile_path(projectile)
+            if not path:
+                continue
+            end_index = len(path) - 1
             if end_index > 0:
                 coords = []
                 for rr, cc in path[:end_index + 1]:
@@ -854,7 +904,7 @@ class RenderingUIMixin:
                                        fill="#9eeaf4", outline="#2aa9bd")
 
         for burst in self.recon_bursts:
-            for rr, cc in burst["cells"]:
+            for rr, cc in displayed_area_cells(burst):
                 x1 = self._map_x(cc * self.cell_size)
                 y1 = rr * self.cell_size
                 self.canvas.create_rectangle(x1, y1, x1+self.cell_size, y1+self.cell_size,
@@ -870,9 +920,9 @@ class RenderingUIMixin:
 
         for burst in getattr(self, "tunnel_bursts", []):
             warning = burst.get("phase", "warning") == "warning"
-            fill = "#c7a6df" if warning else "#4b0082"
+            fill = TUNNEL_WARNING_COLOR if warning else TUNNEL_ACTIVE_COLOR
             stipple = "gray25" if warning else "gray50"
-            for rr, cc in burst["cells"]:
+            for rr, cc in displayed_area_cells(burst):
                 x1 = self._map_x(cc * self.cell_size)
                 y1 = rr * self.cell_size
                 self.canvas.create_rectangle(
@@ -896,6 +946,11 @@ class RenderingUIMixin:
             )
 
         self._draw_engineer_effects()
+        draw_destruction_areas(self.canvas, getattr(self, "destruction_areas", []), self.cell_size, self.map_offset_x)
+        draw_balemoon_warnings(self.canvas, getattr(self, "balemoon_warnings", []), self.cell_size, self.map_offset_x)
+        draw_ash_projectiles(self.canvas, getattr(self, "ash_projectiles", []), self.cell_size, self.map_offset_x)
+        for trail in getattr(self, "ultimate_trails", []):
+            draw_raid_wind(self.canvas, trail, self.cell_size, self.map_offset_x)
 
         for drone in getattr(self, "monitor_drones", []):
             if not drone.is_alive:
@@ -956,6 +1011,10 @@ class RenderingUIMixin:
                 self.canvas.create_text(cx, cy+7, text="◇", fill="#b8f4fb", font=("Arial", 8, "bold"))
             if char.has_spike:
                 self.canvas.create_oval(x1+3, row*self.cell_size+3, x1+self.cell_size-3, (row+1)*self.cell_size-3, fill="black", outline="")
+            if getattr(char, "heal_sparkle_remaining", 0) > 0:
+                draw_heal_sparkle(self.canvas, row, col, self.cell_size, char.heal_sparkle_remaining, self.map_offset_x)
+            if getattr(char, "life_contract_remaining", 0) > 0:
+                draw_contract_status(self.canvas, row, col, self.cell_size, char.life_contract_remaining, self.map_offset_x)
 
             # キャラクター上部の名前・HPパネル
             panel_w = max(56, min(150, 16 + len(char.display_name) * 7))
@@ -978,9 +1037,12 @@ class RenderingUIMixin:
                 self.canvas.create_text(cx, py1+7, text=stars_text, fill="#ffd700", font=("Arial", 8, "bold"))
             name_color = "#d6d9de" if has_adjacent else ("yellow" if char.has_spike else "white")
             self.canvas.create_text(cx, py1+8+star_row_h, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
-            hp_ratio = char.hp / char.max_hp
+            hp_ratio = min(1, char.hp / char.max_hp) if char.max_hp > 0 else 0
             self.canvas.create_rectangle(px1+4, py2-7, px1+panel_w-4, py2-3, fill="#3a404a", outline="")
             self.canvas.create_rectangle(px1+4, py2-7, px1+4+(panel_w-8)*hp_ratio, py2-3, fill=char.bg_color, outline="")
+
+        if getattr(self, "serenade_flash_remaining", 0) > 0:
+            draw_serenade_flash(self.canvas, self.width, self.height, self.cell_size, self.map_offset_x)
 
         # アビリティ専用の下部領域。マップとは完全に分離する。
         bottom_y = self.map_pixel_height
@@ -1007,19 +1069,21 @@ class RenderingUIMixin:
             if bounds and selected:
                 ability_name = selected.ability_name
                 x1, y1, x2, y2 = bounds
-                accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff"}[ability_name]
+                accent = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff", "DANCE": "#ff79c9", "ASH": "#dc2638"}[ability_name]
                 charges = {
                     "SMOKE": selected.smoke_charges,
                     "FLASH": selected.flash_charges,
                     "RECON": selected.recon_charges,
                     "RAMP": getattr(selected, "ramp_charges", 0),
+                    "DANCE": getattr(selected, "dance_charges", 0),
+                    "ASH": getattr(selected, "ash_charges", 0),
                     "HUNT": 1,
                 }[ability_name]
                 armed = self.ability_mode == (ability_name, selected.team, selected.name)
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27",
                                             outline=accent if armed or ability_name == "HUNT" else "#536273", width=2)
                 icon_cx, icon_cy = x1 + 42, (y1 + y2) / 2
-                self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, charges > 0)
+                self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, selected.is_alive and charges > 0)
 
                 text_cx = (x1 + 70 + x2) / 2
                 if ability_name == "HUNT":
@@ -1028,11 +1092,16 @@ class RenderingUIMixin:
                 elif ability_name == "RAMP":
                     state = f"ランプ  残り {charges}"
                     help_text = "クリックして自分のマスに設置"
+                elif ability_name == "DANCE":
+                    state = "構え中：再クリックでキャンセル" if armed else f"Dance  残り {charges}"
+                    help_text = ("味方をマップかパネルで選択" if armed else "クリックして回復対象を選ぶ") if selected.is_alive else "死亡中は使用できません"
                 else:
-                    label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON"}[ability_name]
+                    label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "ASH": "Ash"}[ability_name]
                     state = "構え中：再クリックでキャンセル" if armed else f"{label}  残り {charges}"
                     help_text = ("方向を指定" if armed and ability_name in ("FLASH", "RECON")
                                 else ("マスを選択" if armed else f"クリックして{label}を構える"))
+                    if ability_name == "ASH":
+                        help_text = "半径8マス以内を選択" if armed else "クリックしてAshを構える"
                 self.canvas.create_text(text_cx, y1+22, text=state,
                                         fill=accent if charges else "#777", font=("Arial", 10, "bold"))
                 self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
@@ -1041,7 +1110,7 @@ class RenderingUIMixin:
                 if ultimate_bounds:
                     ux1, uy1, ux2, uy2 = ultimate_bounds
                     ultimate_name = selected.ultimate_name
-                    ready = selected.ultimate_points >= selected.ultimate_cost
+                    ready = self._selected_ultimate_ready(selected)
                     ultimate_armed = self.ultimate_mode == (
                         ultimate_name, selected.team, selected.name
                     )
@@ -1062,7 +1131,8 @@ class RenderingUIMixin:
                     ult_help = (
                         ("中心マスを選択（再クリックで解除）" if ultimate_name == "NEON" else "行き先を選択（再クリックで解除）")
                         if ultimate_armed
-                        else ("クリックして発動" if ready else "ポイント不足")
+                        else ("クリックして発動" if ready else
+                              "死亡後に発動可能" if ultimate_name == "SERENADE" and selected.is_alive else "ポイント不足")
                     )
                     self.canvas.create_text(
                         (ux1 + ux2) / 2, uy1 + 48,
