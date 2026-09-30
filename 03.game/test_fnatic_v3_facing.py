@@ -2,6 +2,7 @@
 
 import unittest
 from types import SimpleNamespace as NS
+from unittest.mock import patch
 
 from controllers import DefaultAttackerController, UserInputController
 from fnatic_v3.controller import FnaticV3AttackerController, FnaticV3DefenderController
@@ -115,6 +116,26 @@ class FnaticV3FacingTests(unittest.TestCase):
         enemy.pos = [2, 40]
         game.move_character(char)
         self.assertEqual(char.facing, 'E')
+
+    def test_moving_target_reduces_headshot_chance(self):
+        for target_moved, expected_headshot in ((True, False), (False, True)):
+            with self.subTest(target_moved=target_moved):
+                game, shooter, target = self.fixture()
+                game.is_planted = True
+                game.battle_tick = SHOOT_INTERVAL_TICKS
+                shooter.facing = 'E'
+                shooter.accuracy = 1.0
+                shooter.hs_rate = 0.5
+                target.dodge_rate = 0.0
+                target.defuse_timer = 1
+                target.moved_this_tick = target_moved
+
+                with patch('battle_logic.random.random', side_effect=(0.0, 0.4)):
+                    game._resolve_all_shots()
+
+                self.assertEqual(len(game.last_shots), 1)
+                self.assertTrue(game.last_shots[0]['hit'])
+                self.assertEqual(game.last_shots[0]['headshot'], expected_headshot)
 
     def test_real_guard_wait_and_movement_face_the_spike_again(self):
         game, char, _ = self.fixture()

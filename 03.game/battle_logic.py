@@ -1319,6 +1319,7 @@ class BattleLogicMixin:
             hit_chance = shooter_accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+                shooter_hs_rate *= MOVING_TARGET_HIT_MULTIPLIER
 
             # 距離補正（ユークリッド距離）。
             # 基準: 1マス=2.00倍 / 15マス=1.00倍 / 40マス=0.75倍。
