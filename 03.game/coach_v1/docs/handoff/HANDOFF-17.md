@@ -37,7 +37,7 @@ python -X utf8 -m coach_v1.evaluate_task17 --seed 1700 --matches-per-opponent 2 
 
 キャラクターモデルなしでは plant が 9→5、複数角度形成率が 0.761→0.064、移動衝突率が 0.010→0.110 に変化した。北向き固定・ability 無効という強い置換なので、モデルの寄与を定量的に推定した結果ではない。再帰状態なしでは plant が 9→6、retake が 2→0 に変化したが、学習済み再帰重みを使ったままの介入であり、ConvGRU なしで再学習した比較ではない。belief、警戒ポイント、戦術意図、共有視認を外した条件の round 勝利は基準より増えたものもあり、この小標本から有効性を説明できない。特に共有視認なしの改善は、slot 0 だけを coach 視点とする評価条件や相手 AI の行動変化を含むため、共有視認が有害という根拠にはならない。
 
-評価結果の全指標、相手別成績、各試合の分子・分母、モデルと設定の SHA-256 は `reports/task17_comparison.json` に保存した。使用した coach checkpoint は `checkpoints/experiments/task16_watch_added/coach/{attacker,defender}/latest.pt`。SHA-256 は attacker `3ae623afda2a8a96e042d1b12560abea77c014ce68028a5d2ea2def0e25b0ab7`、defender `a175cfdaf08a3c6c3c0bb01b06ef85ce8b225d8ef0adc783897e2aa896c70cdc`。キャラクターと警戒ポイント設定の hash はレポート参照。これが Task 16 で採用された再現可能な現候補であり、この評価では新しい best checkpoint へ昇格させていない。
+評価結果の全指標、相手別成績、各試合の分子・分母、モデルと設定の SHA-256 は `../../reports/task17_comparison.json` に保存した。使用した coach checkpoint は `../../checkpoints/experiments/task16_watch_added/coach/{attacker,defender}/latest.pt`。SHA-256 は attacker `3ae623afda2a8a96e042d1b12560abea77c014ce68028a5d2ea2def0e25b0ab7`、defender `a175cfdaf08a3c6c3c0bb01b06ef85ce8b225d8ef0adc783897e2aa896c70cdc`。キャラクターと警戒ポイント設定の hash はレポート参照。これが Task 16 で採用された再現可能な現候補であり、この評価では新しい best checkpoint へ昇格させていない。
 
 ### テスト
 

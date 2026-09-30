@@ -1,0 +1,3503 @@
+{
+  "summary": {
+    "seed": 1701,
+    "coach_started_as": "defender",
+    "coach_score": 7,
+    "opponent_score": 13,
+    "winner": "gc_v1",
+    "rounds": 20,
+    "overtime": false,
+    "replay_frames": 1753,
+    "round_reasons": {
+      "attacker_wipe": 5,
+      "defender_wipe": 5,
+      "defused": 9,
+      "time_expired": 1
+    },
+    "planted_rounds": 14,
+    "defused_rounds": 9,
+    "detonation_rounds": 0,
+    "elimination_rounds": 10,
+    "timeout_rounds": 1,
+    "setup_rounds": 20,
+    "live_rounds": 20,
+    "attacker_decisions": 394,
+    "defender_decisions": 1159,
+    "attacker_actions": 1509,
+    "defender_actions": 4693,
+    "memory_reset_ok": true,
+    "side_checkpoint_switch_ok": true,
+    "replay_ok": true
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "attacker_wipe",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 333,
+        "ABILITY": 4
+      },
+      "decision_count": 69,
+      "blocked_move_requests": 3,
+      "last_tick": 49
+    },
+    {
+      "round": 2,
+      "side": "defender",
+      "winner": "attacker",
+      "reason": "defender_wipe",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 64,
+      "actions": {
+        "MOVE": 500,
+        "ABILITY": 2,
+        "DEFUSE": 2
+      },
+      "decision_count": 113,
+      "blocked_move_requests": 1,
+      "last_tick": 93,
+      "postplant_actions": {
+        "MOVE": 89,
+        "ABILITY": 2,
+        "DEFUSE": 2
+      },
+      "defuse_attempts": 2,
+      "defuse_actions": [
+        {
+          "tick": 83,
+          "slot": 2,
+          "start": [
+            10,
+            3
+          ]
+        },
+        {
+          "tick": 84,
+          "slot": 2,
+          "start": [
+            10,
+            3
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 64,
+        "observed_spike": [
+          9,
+          3
+        ],
+        "instructions": [
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            10,
+            16
+          ],
+          "requested": [
+            9,
+            16
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 2,
+          "start": [
+            12,
+            16
+          ],
+          "requested": [
+            11,
+            16
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            6,
+            23
+          ],
+          "requested": [
+            6,
+            22
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            6,
+            25
+          ],
+          "requested": [
+            6,
+            24
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          11,
+          3
+        ],
+        [
+          7,
+          12
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          4
+        ]
+      ]
+    },
+    {
+      "round": 3,
+      "side": "defender",
+      "winner": "attacker",
+      "reason": "defender_wipe",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 40,
+      "actions": {
+        "MOVE": 297,
+        "ABILITY": 1
+      },
+      "decision_count": 68,
+      "blocked_move_requests": 0,
+      "last_tick": 48,
+      "postplant_actions": {
+        "MOVE": 13,
+        "ABILITY": 1
+      },
+      "defuse_attempts": 0,
+      "defuse_actions": [],
+      "first_postplant_decision": {
+        "tick": 40,
+        "observed_spike": [
+          9,
+          3
+        ],
+        "instructions": [
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 3,
+          "start": [
+            12,
+            27
+          ],
+          "requested": [
+            13,
+            27
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            12,
+            29
+          ],
+          "requested": [
+            12,
+            28
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          13,
+          17
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          14,
+          21
+        ],
+        [
+          13,
+          25
+        ]
+      ]
+    },
+    {
+      "round": 4,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        10,
+        40
+      ],
+      "first_plant_tick": 65,
+      "actions": {
+        "MOVE": 372,
+        "ABILITY": 4,
+        "DEFUSE": 6
+      },
+      "decision_count": 105,
+      "blocked_move_requests": 0,
+      "last_tick": 85,
+      "postplant_actions": {
+        "MOVE": 34,
+        "DEFUSE": 6
+      },
+      "defuse_attempts": 6,
+      "defuse_actions": [
+        {
+          "tick": 79,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 80,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 81,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 82,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 83,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 84,
+          "slot": 1,
+          "start": [
+            9,
+            40
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 65,
+        "observed_spike": [
+          10,
+          40
+        ],
+        "instructions": [
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            10,
+            30
+          ],
+          "requested": [
+            9,
+            30
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 1,
+          "start": [
+            10,
+            31
+          ],
+          "requested": [
+            9,
+            31
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          7,
+          40
+        ],
+        [
+          9,
+          40
+        ],
+        [
+          12,
+          30
+        ],
+        [
+          14,
+          31
+        ],
+        [
+          10,
+          32
+        ]
+      ]
+    },
+    {
+      "round": 5,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        10,
+        40
+      ],
+      "first_plant_tick": 39,
+      "actions": {
+        "MOVE": 368,
+        "ABILITY": 1,
+        "DEFUSE": 7
+      },
+      "decision_count": 92,
+      "blocked_move_requests": 0,
+      "last_tick": 72,
+      "postplant_actions": {
+        "MOVE": 78,
+        "ABILITY": 1,
+        "DEFUSE": 7
+      },
+      "defuse_attempts": 7,
+      "defuse_actions": [
+        {
+          "tick": 50,
+          "slot": 3,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 66,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 67,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 68,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 69,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 70,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 71,
+          "slot": 0,
+          "start": [
+            9,
+            40
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 39,
+        "observed_spike": [
+          10,
+          40
+        ],
+        "instructions": [
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            6,
+            17
+          ],
+          "requested": [
+            6,
+            18
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 2,
+          "start": [
+            7,
+            16
+          ],
+          "requested": [
+            7,
+            17
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            6,
+            32
+          ],
+          "requested": [
+            6,
+            33
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            6,
+            34
+          ],
+          "requested": [
+            7,
+            34
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          9,
+          40
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          7,
+          40
+        ],
+        [
+          9,
+          40
+        ],
+        [
+          8,
+          40
+        ]
+      ]
+    },
+    {
+      "round": 6,
+      "side": "defender",
+      "winner": "attacker",
+      "reason": "defender_wipe",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 66,
+      "actions": {
+        "MOVE": 461,
+        "ABILITY": 1
+      },
+      "decision_count": 105,
+      "blocked_move_requests": 0,
+      "last_tick": 85,
+      "postplant_actions": {
+        "MOVE": 42
+      },
+      "defuse_attempts": 0,
+      "defuse_actions": [],
+      "first_postplant_decision": {
+        "tick": 66,
+        "observed_spike": [
+          9,
+          3
+        ],
+        "instructions": [
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            9,
+            12
+          ],
+          "requested": [
+            10,
+            12
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            6,
+            21
+          ],
+          "requested": [
+            6,
+            20
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            6,
+            23
+          ],
+          "requested": [
+            6,
+            22
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          11,
+          8
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          4,
+          6
+        ]
+      ]
+    },
+    {
+      "round": 7,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        10,
+        40
+      ],
+      "first_plant_tick": 39,
+      "actions": {
+        "MOVE": 347,
+        "ABILITY": 3,
+        "DEFUSE": 6
+      },
+      "decision_count": 76,
+      "blocked_move_requests": 0,
+      "last_tick": 56,
+      "postplant_actions": {
+        "MOVE": 61,
+        "DEFUSE": 6,
+        "ABILITY": 1
+      },
+      "defuse_attempts": 6,
+      "defuse_actions": [
+        {
+          "tick": 50,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        },
+        {
+          "tick": 51,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        },
+        {
+          "tick": 52,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        },
+        {
+          "tick": 53,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        },
+        {
+          "tick": 54,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        },
+        {
+          "tick": 55,
+          "slot": 4,
+          "start": [
+            11,
+            40
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 39,
+        "observed_spike": [
+          10,
+          40
+        ],
+        "instructions": [
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            7,
+            23
+          ],
+          "requested": [
+            7,
+            24
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 1,
+          "start": [
+            6,
+            24
+          ],
+          "requested": [
+            6,
+            25
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            12,
+            31
+          ],
+          "requested": [
+            13,
+            31
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            14,
+            32
+          ],
+          "requested": [
+            14,
+            33
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          7,
+          39
+        ],
+        [
+          7,
+          38
+        ],
+        [
+          10,
+          23
+        ],
+        [
+          14,
+          40
+        ],
+        [
+          11,
+          40
+        ]
+      ]
+    },
+    {
+      "round": 8,
+      "side": "defender",
+      "winner": "attacker",
+      "reason": "defender_wipe",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 42,
+      "actions": {
+        "MOVE": 422,
+        "ABILITY": 5
+      },
+      "decision_count": 101,
+      "blocked_move_requests": 2,
+      "last_tick": 81,
+      "postplant_actions": {
+        "MOVE": 112,
+        "ABILITY": 5
+      },
+      "defuse_attempts": 0,
+      "defuse_actions": [],
+      "first_postplant_decision": {
+        "tick": 42,
+        "observed_spike": [
+          9,
+          3
+        ],
+        "instructions": [
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            3,
+            17
+          ],
+          "requested": [
+            4,
+            17
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 1,
+          "start": [
+            4,
+            11
+          ],
+          "requested": [
+            4,
+            10
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 2,
+          "start": [
+            6,
+            19
+          ],
+          "requested": [
+            6,
+            18
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            3,
+            31
+          ],
+          "requested": [
+            2,
+            31
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            6,
+            34
+          ],
+          "requested": [
+            6,
+            33
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          7,
+          6
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          8,
+          4
+        ]
+      ]
+    },
+    {
+      "round": 9,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "time_expired",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 308,
+        "ABILITY": 5
+      },
+      "decision_count": 120,
+      "blocked_move_requests": 0,
+      "last_tick": 100
+    },
+    {
+      "round": 10,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        7,
+        4
+      ],
+      "first_plant_tick": 44,
+      "actions": {
+        "MOVE": 366,
+        "ABILITY": 2,
+        "DEFUSE": 6
+      },
+      "decision_count": 102,
+      "blocked_move_requests": 2,
+      "last_tick": 82,
+      "postplant_actions": {
+        "ABILITY": 2,
+        "MOVE": 72,
+        "DEFUSE": 6
+      },
+      "defuse_attempts": 6,
+      "defuse_actions": [
+        {
+          "tick": 76,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        },
+        {
+          "tick": 77,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        },
+        {
+          "tick": 78,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        },
+        {
+          "tick": 79,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        },
+        {
+          "tick": 80,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        },
+        {
+          "tick": 81,
+          "slot": 3,
+          "start": [
+            7,
+            5
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 44,
+        "observed_spike": [
+          7,
+          4
+        ],
+        "instructions": [
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_S",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            9,
+            13
+          ],
+          "requested": [
+            9,
+            13
+          ],
+          "action": "ABILITY"
+        },
+        {
+          "slot": 3,
+          "start": [
+            14,
+            24
+          ],
+          "requested": [
+            14,
+            23
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            13,
+            25
+          ],
+          "requested": [
+            14,
+            25
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          11,
+          12
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          8,
+          6
+        ]
+      ]
+    },
+    {
+      "round": 11,
+      "side": "defender",
+      "winner": "attacker",
+      "reason": "defender_wipe",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 74,
+      "actions": {
+        "MOVE": 472,
+        "ABILITY": 3,
+        "DEFUSE": 4
+      },
+      "decision_count": 116,
+      "blocked_move_requests": 0,
+      "last_tick": 96,
+      "postplant_actions": {
+        "MOVE": 38,
+        "DEFUSE": 4
+      },
+      "defuse_attempts": 4,
+      "defuse_actions": [
+        {
+          "tick": 90,
+          "slot": 3,
+          "start": [
+            8,
+            4
+          ]
+        },
+        {
+          "tick": 91,
+          "slot": 3,
+          "start": [
+            8,
+            4
+          ]
+        },
+        {
+          "tick": 92,
+          "slot": 3,
+          "start": [
+            8,
+            4
+          ]
+        },
+        {
+          "tick": 93,
+          "slot": 3,
+          "start": [
+            8,
+            4
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 74,
+        "observed_spike": [
+          9,
+          3
+        ],
+        "instructions": [
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "STAY",
+            "NONE",
+            "HOLD"
+          ],
+          [
+            "MOVE_W",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_N",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 3,
+          "start": [
+            4,
+            16
+          ],
+          "requested": [
+            4,
+            15
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            5,
+            17
+          ],
+          "requested": [
+            4,
+            17
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          9,
+          12
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          4
+        ]
+      ]
+    },
+    {
+      "round": 12,
+      "side": "defender",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        10,
+        40
+      ],
+      "first_plant_tick": 39,
+      "actions": {
+        "MOVE": 377,
+        "ABILITY": 2,
+        "DEFUSE": 6
+      },
+      "decision_count": 92,
+      "blocked_move_requests": 0,
+      "last_tick": 72,
+      "postplant_actions": {
+        "MOVE": 82,
+        "ABILITY": 2,
+        "DEFUSE": 6
+      },
+      "defuse_attempts": 6,
+      "defuse_actions": [
+        {
+          "tick": 66,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 67,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 68,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 69,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 70,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        },
+        {
+          "tick": 71,
+          "slot": 2,
+          "start": [
+            9,
+            40
+          ]
+        }
+      ],
+      "first_postplant_decision": {
+        "tick": 39,
+        "observed_spike": [
+          10,
+          40
+        ],
+        "instructions": [
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ],
+          [
+            "MOVE_E",
+            "NONE",
+            "WAIT_TEAM"
+          ]
+        ]
+      },
+      "first_postplant_actions": [
+        {
+          "slot": 0,
+          "start": [
+            7,
+            16
+          ],
+          "requested": [
+            7,
+            17
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 1,
+          "start": [
+            9,
+            13
+          ],
+          "requested": [
+            9,
+            14
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 2,
+          "start": [
+            6,
+            17
+          ],
+          "requested": [
+            6,
+            18
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 3,
+          "start": [
+            7,
+            30
+          ],
+          "requested": [
+            7,
+            31
+          ],
+          "action": "MOVE"
+        },
+        {
+          "slot": 4,
+          "start": [
+            7,
+            32
+          ],
+          "requested": [
+            7,
+            33
+          ],
+          "action": "MOVE"
+        }
+      ],
+      "last_positions": [
+        [
+          7,
+          40
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          9,
+          40
+        ],
+        [
+          8,
+          40
+        ],
+        [
+          7,
+          40
+        ]
+      ]
+    },
+    {
+      "round": 13,
+      "side": "attacker",
+      "winner": "attacker",
+      "reason": "attacker_wipe",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 213,
+        "PLANT": 3
+      },
+      "decision_count": 49,
+      "blocked_move_requests": 1,
+      "last_tick": 49,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        48,
+        "くりまる",
+        [
+          9,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 32,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 0,
+      "carrier_nearest_site_distance": 0,
+      "carrier_reached_plantable": true,
+      "carrier_stalled_ticks": 10,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 32
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 20,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 21,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        },
+        {
+          "tick": 30,
+          "action": "MOVE",
+          "start": [
+            12,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 31,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            11,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 14,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "attacker_wipe",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 147,
+        "ABILITY": 1
+      },
+      "decision_count": 35,
+      "blocked_move_requests": 0,
+      "last_tick": 35,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        32,
+        "くんた",
+        [
+          12,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 29,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 3,
+      "carrier_nearest_site_distance": 3,
+      "carrier_reached_plantable": false,
+      "carrier_stalled_ticks": 3,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 30
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 18,
+          "action": "MOVE",
+          "start": [
+            18,
+            9
+          ],
+          "requested": [
+            17,
+            9
+          ]
+        },
+        {
+          "tick": 19,
+          "action": "MOVE",
+          "start": [
+            17,
+            9
+          ],
+          "requested": [
+            16,
+            9
+          ]
+        },
+        {
+          "tick": 20,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 21,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            15,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            13,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            11,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 15,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 49,
+      "actions": {
+        "MOVE": 188,
+        "ABILITY": 1,
+        "PLANT": 4
+      },
+      "decision_count": 58,
+      "blocked_move_requests": 14,
+      "last_tick": 65,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        48,
+        "くりまる",
+        [
+          9,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 32,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 0,
+      "carrier_nearest_site_distance": 0,
+      "carrier_reached_plantable": true,
+      "carrier_stalled_ticks": 8,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 39
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 30,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 31,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 32,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 33,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 34,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 35,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 36,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        },
+        {
+          "tick": 37,
+          "action": "MOVE",
+          "start": [
+            12,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 38,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            10,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            14,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            10,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            10,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 16,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "attacker_wipe",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 152,
+        "ABILITY": 1
+      },
+      "decision_count": 37,
+      "blocked_move_requests": 0,
+      "last_tick": 37,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        36,
+        "くりまる",
+        [
+          11,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 30,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 2,
+      "carrier_nearest_site_distance": 2,
+      "carrier_reached_plantable": false,
+      "carrier_stalled_ticks": 3,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 31
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 19,
+          "action": "MOVE",
+          "start": [
+            17,
+            9
+          ],
+          "requested": [
+            16,
+            9
+          ]
+        },
+        {
+          "tick": 20,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 21,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        },
+        {
+          "tick": 30,
+          "action": "MOVE",
+          "start": [
+            12,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            14,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            11,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            11,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            10,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 17,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 42,
+      "actions": {
+        "MOVE": 167,
+        "ABILITY": 1,
+        "PLANT": 4
+      },
+      "decision_count": 55,
+      "blocked_move_requests": 0,
+      "last_tick": 62,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        41,
+        "くりまる",
+        [
+          9,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 32,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 0,
+      "carrier_nearest_site_distance": 0,
+      "carrier_reached_plantable": true,
+      "carrier_stalled_ticks": 4,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 31
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 19,
+          "action": "MOVE",
+          "start": [
+            17,
+            9
+          ],
+          "requested": [
+            16,
+            9
+          ]
+        },
+        {
+          "tick": 20,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 21,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        },
+        {
+          "tick": 30,
+          "action": "MOVE",
+          "start": [
+            12,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            11,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            12,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 18,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "attacker_wipe",
+      "plant_position": null,
+      "first_plant_tick": null,
+      "actions": {
+        "MOVE": 135
+      },
+      "decision_count": 30,
+      "blocked_move_requests": 2,
+      "last_tick": 30,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        27,
+        "ごんた",
+        [
+          15,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 26,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 6,
+      "carrier_nearest_site_distance": 6,
+      "carrier_reached_plantable": false,
+      "carrier_stalled_ticks": 3,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 28
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 16,
+          "action": "MOVE",
+          "start": [
+            20,
+            9
+          ],
+          "requested": [
+            19,
+            9
+          ]
+        },
+        {
+          "tick": 17,
+          "action": "MOVE",
+          "start": [
+            19,
+            9
+          ],
+          "requested": [
+            18,
+            9
+          ]
+        },
+        {
+          "tick": 18,
+          "action": "MOVE",
+          "start": [
+            18,
+            9
+          ],
+          "requested": [
+            17,
+            9
+          ]
+        },
+        {
+          "tick": 19,
+          "action": "MOVE",
+          "start": [
+            17,
+            9
+          ],
+          "requested": [
+            16,
+            9
+          ]
+        },
+        {
+          "tick": 20,
+          "action": "MOVE",
+          "start": [
+            16,
+            9
+          ],
+          "requested": [
+            16,
+            8
+          ]
+        },
+        {
+          "tick": 21,
+          "action": "MOVE",
+          "start": [
+            16,
+            8
+          ],
+          "requested": [
+            16,
+            7
+          ]
+        },
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            15,
+            4
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            15,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            15,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            15,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            15,
+            4
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 19,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 40,
+      "actions": {
+        "MOVE": 186,
+        "PLANT": 5,
+        "ABILITY": 2
+      },
+      "decision_count": 52,
+      "blocked_move_requests": 0,
+      "last_tick": 52,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        39,
+        "くんた",
+        [
+          9,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 32,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 0,
+      "carrier_nearest_site_distance": 0,
+      "carrier_reached_plantable": true,
+      "carrier_stalled_ticks": 4,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 33,
+        "PLANT": 1
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 22,
+          "action": "MOVE",
+          "start": [
+            16,
+            7
+          ],
+          "requested": [
+            16,
+            6
+          ]
+        },
+        {
+          "tick": 23,
+          "action": "MOVE",
+          "start": [
+            16,
+            6
+          ],
+          "requested": [
+            15,
+            6
+          ]
+        },
+        {
+          "tick": 24,
+          "action": "MOVE",
+          "start": [
+            15,
+            6
+          ],
+          "requested": [
+            15,
+            5
+          ]
+        },
+        {
+          "tick": 25,
+          "action": "MOVE",
+          "start": [
+            15,
+            5
+          ],
+          "requested": [
+            15,
+            4
+          ]
+        },
+        {
+          "tick": 26,
+          "action": "MOVE",
+          "start": [
+            15,
+            4
+          ],
+          "requested": [
+            15,
+            3
+          ]
+        },
+        {
+          "tick": 27,
+          "action": "MOVE",
+          "start": [
+            15,
+            3
+          ],
+          "requested": [
+            14,
+            3
+          ]
+        },
+        {
+          "tick": 28,
+          "action": "MOVE",
+          "start": [
+            14,
+            3
+          ],
+          "requested": [
+            13,
+            3
+          ]
+        },
+        {
+          "tick": 29,
+          "action": "MOVE",
+          "start": [
+            13,
+            3
+          ],
+          "requested": [
+            12,
+            3
+          ]
+        },
+        {
+          "tick": 30,
+          "action": "MOVE",
+          "start": [
+            12,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 31,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            10,
+            3
+          ]
+        },
+        {
+          "tick": 32,
+          "action": "MOVE",
+          "start": [
+            10,
+            3
+          ],
+          "requested": [
+            9,
+            3
+          ]
+        },
+        {
+          "tick": 33,
+          "action": "PLANT",
+          "start": [
+            9,
+            3
+          ],
+          "requested": [
+            9,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            10,
+            3
+          ],
+          "alive": true,
+          "has_spike": false
+        }
+      ]
+    },
+    {
+      "round": 20,
+      "side": "attacker",
+      "winner": "defender",
+      "reason": "defused",
+      "plant_position": [
+        9,
+        3
+      ],
+      "first_plant_tick": 73,
+      "actions": {
+        "MOVE": 291,
+        "PLANT": 7,
+        "ABILITY": 1
+      },
+      "decision_count": 78,
+      "blocked_move_requests": 10,
+      "last_tick": 84,
+      "carrier_start": [
+        0,
+        "ごんた",
+        [
+          23,
+          20
+        ]
+      ],
+      "carrier_last": [
+        72,
+        "くりまる",
+        [
+          9,
+          3
+        ]
+      ],
+      "carrier_unique_positions": 32,
+      "carrier_start_site_distance": 31,
+      "carrier_last_site_distance": 0,
+      "carrier_nearest_site_distance": 0,
+      "carrier_reached_plantable": true,
+      "carrier_stalled_ticks": 23,
+      "carrier_two_cell_oscillation_tail_ticks": 0,
+      "carrier_action_counts": {
+        "MOVE": 55,
+        "PLANT": 1
+      },
+      "carrier_last_actions": [
+        {
+          "tick": 44,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 45,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 46,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 47,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 48,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 49,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 50,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 51,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 52,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            11,
+            3
+          ]
+        },
+        {
+          "tick": 53,
+          "action": "MOVE",
+          "start": [
+            11,
+            3
+          ],
+          "requested": [
+            10,
+            3
+          ]
+        },
+        {
+          "tick": 54,
+          "action": "MOVE",
+          "start": [
+            10,
+            3
+          ],
+          "requested": [
+            9,
+            3
+          ]
+        },
+        {
+          "tick": 55,
+          "action": "PLANT",
+          "start": [
+            9,
+            3
+          ],
+          "requested": [
+            9,
+            3
+          ]
+        }
+      ],
+      "last_positions": [
+        {
+          "name": "ごりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんごん",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "ごんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くんた",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        },
+        {
+          "name": "くりまる",
+          "pos": [
+            9,
+            3
+          ],
+          "alive": false,
+          "has_spike": false
+        }
+      ]
+    }
+  ],
+  "seed": 1701,
+  "opponent": "gc_v1",
+  "candidate": false,
+  "policy": "teacher",
+  "policy_sha256": {
+    "attacker_teacher": "171383658c96be121f822fbc10531a0422d1946a71f2c4c11e21a946fc2e6b2d",
+    "defender_teacher": "d5fe33d2fff9971000583472742c376c385db502f2f6af422c5bf7a397aad2bb"
+  }
+}

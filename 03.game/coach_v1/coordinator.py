@@ -61,6 +61,9 @@ class DecisionAudit:
     memory_tick: int
     watch_point_ages: tuple[tuple[str, tuple[int, int], int], ...] = ()
     sightings: tuple[tuple[str, tuple[int, int]], ...] = ()
+    spike_position: tuple[int, int] | None = None
+    carrier_slot: int | None = None
+    instructions: tuple[tuple[str, str, str], ...] = ()
 
 
 class TeamExecutionCoordinator:
@@ -170,6 +173,12 @@ class TeamExecutionCoordinator:
                     (sighting.enemy_id, sighting.reported_position)
                     for sighting in snapshot.sightings
                 ),
+                spike_position=(snapshot.spike.planted_position
+                                if snapshot.spike.is_planted else
+                                snapshot.spike.dropped_position),
+                carrier_slot=snapshot.spike.own_carrier_slot,
+                instructions=tuple((item.movement.value, item.objective.value,
+                                    item.intent.value) for item in instructions),
             ))
 
         snapshot = self._snapshot

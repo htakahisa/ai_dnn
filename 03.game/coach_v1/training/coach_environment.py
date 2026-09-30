@@ -56,6 +56,16 @@ _STAY = tuple(CoachInstruction(MovementAction.STAY, ObjectiveAction.NONE,
                                TacticalIntent.HOLD) for _ in range(5))
 
 
+def _balanced_plant_cell(sites: list[tuple[int, int]], index: int) -> tuple[int, int]:
+    """Sample each physical site equally despite unequal plantable tile counts."""
+    left = [cell for cell in sites if cell[1] < MAP_COLUMNS // 2]
+    right = [cell for cell in sites if cell[1] >= MAP_COLUMNS // 2]
+    if not left or not right:
+        raise ValueError("fixed map must have plant cells on both sides")
+    side_cells = (left, right)[index % 2]
+    return side_cells[(index // 2) % len(side_cells)]
+
+
 class _QueuedCoach:
     def __init__(self, encoder: CoachObservationEncoder) -> None:
         self.encoder = encoder
@@ -202,14 +212,14 @@ class CoachTrainingEnvironment:
         rows = NEW_MAZE_STR.strip().splitlines()
         sites = [(r, c) for r, row in enumerate(rows)
                  for c, tile in enumerate(row) if tile == "2"]
-        site = sites[(self.seed + episode) % len(sites)]
+        site = _balanced_plant_cell(sites, self.seed + episode)
         self.game.target_plant_pos = site
         # Fixed map, training-only breadth-first distances; no route or
         # tactical branch is available to the inference policy.
         from coach_v1.training.scenario_generator import _distances
         distances = _distances(rows, (site,))
         bands = {
-            "rally": (20, 30), "entry": (7, 13),
+            "rally": (20, 50), "entry": (7, 13),
             "utility_entry": (7, 13), "multi_peek": (4, 10),
             "escort": (12, 20), "retrieve": (7, 14),
             "plant": (1, 5), "post_plant": (1, 7),
@@ -254,7 +264,7 @@ class CoachTrainingEnvironment:
         rows = NEW_MAZE_STR.strip().splitlines()
         sites = [(r, c) for r, row in enumerate(rows)
                  for c, tile in enumerate(row) if tile == "2"]
-        site = sites[(self.seed + episode) % len(sites)]
+        site = _balanced_plant_cell(sites, self.seed + episode)
         from coach_v1.training.scenario_generator import _distances
         distances = _distances(rows, (site,))
         config = load_watch_points(WATCH_POINTS_CONFIG_PATH, NEW_MAZE_STR)
@@ -269,7 +279,7 @@ class CoachTrainingEnvironment:
         else:
             bands = {
                 "sighting_response": (5, 15), "rotate": (10, 24),
-                "group_up": (8, 35), "ability_retake": (5, 25),
+                "group_up": (8, 55), "ability_retake": (5, 45),
                 "defuse_escort": (2, 7),
             }
             low, high = bands[self.stage]
@@ -494,9 +504,15 @@ class CoachTrainingEnvironment:
         done = bool(round_ended or self.ticks >= self.max_ticks)
         # A time-limit truncation still has a valid next observation. Count
         # the final tick's newly cleared cells before ending the episode.
+        eliminated_before_turn = False
         if not round_ended and self.ticks < self.max_ticks:
             self._prepare_tick()
-        next_state = None if round_ended else self._observe()
+            # Earlier enemies can eliminate the last ally before the queued
+            # coach has a turn. There is no legal actor step to collect then.
+            if not any(c.is_alive for c in round_allies):
+                eliminated_before_turn = True
+                done = True
+        next_state = None if round_ended or eliminated_before_turn else self._observe()
         if next_state is None:
             new_clear = sum(
                 visible and before.observation.grid[13, row, column] == 0

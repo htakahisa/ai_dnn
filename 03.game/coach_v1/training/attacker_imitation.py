@@ -15,8 +15,10 @@ from coach_v1.training.coach_trainer import CoachTrainer
 
 
 def fit_imitation(trainer: CoachTrainer, *, episodes: int, max_ticks: int = 160,
-                  on_policy: bool = False, stage: str = "full_round") -> list[dict]:
-    if trainer.side is not Side.ATTACKER or episodes <= 0 or stage not in ATTACKER_STAGES:
+                  on_policy: bool = False, stage: str = "full_round",
+                  carrier_move_weight: float = 1.0) -> list[dict]:
+    if (trainer.side is not Side.ATTACKER or episodes <= 0
+            or stage not in ATTACKER_STAGES or carrier_move_weight < 1):
         raise ValueError("attacker trainer and positive episodes required")
     environment = CoachTrainingEnvironment(Side.ATTACKER, seed=trainer.seed,
                                             stage=stage, max_ticks=max_ticks)
@@ -79,7 +81,9 @@ def fit_imitation(trainer: CoachTrainer, *, episodes: int, max_ticks: int = 160,
                 ).reshape(-1, 5)
                 plant_weight = 1 + 19 * (objectives[indices] ==
                                          OBJECTIVES.index(ObjectiveAction.PLANT))
-                loss = ((move_loss + 0.5 * objective_loss * plant_weight)
+                carrier = vector[indices, -70:].reshape(-1, 5, 14)[:, :, 3]
+                move_weight = 1 + (carrier_move_weight - 1) * carrier
+                loss = ((move_loss * move_weight + 0.5 * objective_loss * plant_weight)
                         * alive[indices]).sum() / alive[indices].sum().clamp_min(1)
                 trainer.optimizer.zero_grad(set_to_none=True)
                 loss.backward()

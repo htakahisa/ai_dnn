@@ -12,13 +12,14 @@ from torch import nn
 from coach_v1.common.types import ObjectiveAction, Side
 from coach_v1.models.coach_model import CoachPolicy, INTENTS, MOVES, OBJECTIVES
 from coach_v1.observation.character_encoder import CoachInstruction
-from coach_v1.observation.coach_encoder import COACH_VECTOR_FIELDS
+from coach_v1.observation.coach_encoder import COACH_GRID_CHANNELS, COACH_VECTOR_FIELDS
 from coach_v1.training.coach_environment import DEFENDER_STAGES, CoachTrainingEnvironment
 from coach_v1.training.coach_trainer import CoachTrainer
 from coach_v1.training.defender_teacher import teacher_actions
 
 
 Sample = tuple[np.ndarray, ...]
+PAIRED_RETAKE_STAGES = frozenset({"group_up", "ability_retake", "defuse_escort"})
 
 
 def fit_imitation(trainer: CoachTrainer, *, episodes: int, max_ticks: int,
@@ -50,6 +51,8 @@ def fit_balanced_imitation(
     stage_ticks: Mapping[str, int],
     samples_per_bucket: int = 24,
     epochs: int = 3,
+    paired_sites: bool = False,
+    retake_move_weight: float = 1.0,
 ) -> list[dict]:
     """Mix every requested curriculum stage in each optimization batch.
 
@@ -58,7 +61,7 @@ def fit_balanced_imitation(
     stages remain teacher-driven so rare DEFUSE and setup labels are retained.
     """
     if (trainer.side is not Side.DEFENDER or cycles <= 0
-            or samples_per_bucket <= 0 or epochs <= 0
+            or samples_per_bucket <= 0 or epochs <= 0 or retake_move_weight < 1
             or not stage_ticks
             or any(stage not in DEFENDER_STAGES or ticks <= 0
                    for stage, ticks in stage_ticks.items())):
@@ -75,23 +78,33 @@ def fit_balanced_imitation(
         totals: dict[str, float] = {"reward": 0.0}
         ticks = 0
         for stage, environment in environments.items():
-            samples, metrics = _collect_demonstration(
-                trainer, environment, episode=trainer.episode,
-                on_policy=stage == "full_round",
-            )
-            trainer.episode += 1
-            ticks += len(samples)
-            for name, value in metrics.items():
-                totals[name] = totals.get(name, 0.0) + value
-            for sample in samples:
-                if stage == "full_round":
-                    phase = "postplant" if sample[1][planted_index] else "preplant"
-                    bucket = f"full_round_{phase}"
-                else:
-                    bucket = stage
-                buckets[bucket].append(sample)
+            pair_stage = paired_sites and stage in PAIRED_RETAKE_STAGES
+            count = 2 if pair_stage else 1
+            for _pair in range(count):
+                samples, metrics = _collect_demonstration(
+                    trainer, environment, episode=trainer.episode,
+                    on_policy=stage == "full_round",
+                )
+                trainer.episode += 1
+                ticks += len(samples)
+                for name, value in metrics.items():
+                    totals[name] = totals.get(name, 0.0) + value
+                site_side = ""
+                if pair_stage:
+                    planted = np.argwhere(samples[0][0][COACH_GRID_CHANNELS.index("spike_planted")] > 0)
+                    if len(planted) != 1:
+                        raise ValueError("paired retake stage needs one planted spike")
+                    site_side = "_left" if planted[0, 1] < 22 else "_right"
+                for sample in samples:
+                    if stage == "full_round":
+                        phase = "postplant" if sample[1][planted_index] else "preplant"
+                        bucket = f"full_round_{phase}"
+                    else:
+                        bucket = stage + site_side
+                    buckets[bucket].append(sample)
         selected = _balanced_samples(buckets, samples_per_bucket)
-        loss = _optimize_samples(trainer, selected, epochs=epochs)
+        loss = _optimize_samples(trainer, selected, epochs=epochs,
+                                 retake_move_weight=retake_move_weight)
         trainer.history.append({
             "episode": trainer.episode,
             "stage": "balanced_imitation",
@@ -221,8 +234,9 @@ def _balanced_samples(
 
 def _optimize_samples(
     trainer: CoachTrainer, samples: Sequence[Sample], *, epochs: int = 3,
+    retake_move_weight: float = 1.0,
 ) -> torch.Tensor:
-    if not samples or epochs <= 0:
+    if not samples or epochs <= 0 or retake_move_weight < 1:
         raise ValueError("nonempty samples and positive epochs required")
     tensors = [torch.as_tensor(np.stack([sample[index] for sample in samples]).copy(),
                                device=trainer.device)
@@ -250,7 +264,9 @@ def _optimize_samples(
             defuse_weight = 1 + 19 * (
                 objectives[indices] == OBJECTIVES.index(ObjectiveAction.DEFUSE)
             )
-            loss = ((move_loss + 0.25 * intent_loss
+            planted = vector[indices, tuple(COACH_VECTOR_FIELDS).index("spike_planted")]
+            move_weight = 1 + (retake_move_weight - 1) * planted[:, None]
+            loss = ((move_loss * move_weight + 0.25 * intent_loss
                      + 0.5 * objective_loss * defuse_weight)
                     * alive[indices]).sum() / alive[indices].sum().clamp_min(1)
             trainer.optimizer.zero_grad(set_to_none=True)

@@ -32,11 +32,20 @@ class CoachModelConfig:
     hidden_channels: int = 32
     hidden_features: int = 96
     action_feedback: bool = False
+    spatial_coordinates: bool = False
+    objective_geometry: bool = False
+    local_spatial: bool = False
 
     def to_dict(self) -> dict:
         result = asdict(self)
         if not self.action_feedback:
             result.pop("action_feedback")  # v1 checkpoint compatibility
+        if not self.spatial_coordinates:
+            result.pop("spatial_coordinates")  # existing checkpoint compatibility
+        if not self.objective_geometry:
+            result.pop("objective_geometry")
+        if not self.local_spatial:
+            result.pop("local_spatial")
         return result
 
 
@@ -58,7 +67,9 @@ class CoachActorModel(nn.Module):
         )
         self.input = nn.Sequential(nn.Linear(width + config.vector_features, features), nn.ReLU())
         self.memory = nn.GRUCell(features, features)
-        self.slot = nn.Sequential(nn.Linear(features + 14 + (7 if config.action_feedback else 0), features), nn.ReLU())
+        self.slot = nn.Sequential(nn.Linear(features + 14 + (7 if config.action_feedback else 0)
+                                            + (8 if config.objective_geometry else 0)
+                                            + (width if config.local_spatial else 0), features), nn.ReLU())
         self.movement = nn.Linear(features, len(MOVES))
         self.intent = nn.Linear(features, len(INTENTS))
         self.objective = nn.Linear(features, len(OBJECTIVES))
@@ -72,21 +83,67 @@ class CoachActorModel(nn.Module):
             raise ValueError("invalid coach vector shape")
         if hidden is not None and hidden.shape != (grid.shape[0], self.config.hidden_features):
             raise ValueError("invalid recurrent state shape")
-        spatial = self.spatial(grid).mean((2, 3))
+        spatial_map = self.spatial(grid)
+        if self.config.spatial_coordinates:
+            # Preserve the checkpoint's feature width while making site and
+            # dropped-spike locations observable after spatial pooling.
+            rows = torch.linspace(-1, 1, MAP_ROWS, device=grid.device,
+                                  dtype=grid.dtype).view(1, 1, MAP_ROWS, 1)
+            columns = torch.linspace(-1, 1, MAP_COLUMNS, device=grid.device,
+                                     dtype=grid.dtype).view(1, 1, 1, MAP_COLUMNS)
+            weights = torch.ones_like(spatial_map)
+            weights[:, 0::2] = weights[:, 0::2] * (1 + columns)
+            weights[:, 1::2] = weights[:, 1::2] * (1 + rows)
+            spatial = (spatial_map * weights).mean((2, 3))
+        else:
+            spatial = spatial_map.mean((2, 3))
         state = self.memory(self.input(torch.cat((spatial, vector), 1)), hidden)
         # The fixed encoder puts fourteen fields per slot at the end of vector.
         slots = vector[:, -ROSTER_SIZE * 14:].reshape(-1, ROSTER_SIZE, 14)
         shared = state[:, None, :].expand(-1, ROSTER_SIZE, -1)
+        if self.config.local_spatial:
+            coordinates = torch.stack((slots[:, :, 5] * 2 - 1,
+                                       slots[:, :, 4] * 2 - 1), -1).unsqueeze(2)
+            local = nn.functional.grid_sample(spatial_map, coordinates,
+                                              align_corners=True).squeeze(-1).transpose(1, 2)
+        else:
+            local = None
+        if self.config.objective_geometry:
+            row = slots[:, :, 4]
+            column = slots[:, :, 5]
+            site = grid[:, COACH_GRID_CHANNELS.index("plantable")]
+            columns = torch.linspace(0, 1, MAP_COLUMNS, device=grid.device,
+                                     dtype=grid.dtype).view(1, 1, MAP_COLUMNS)
+            left = site * (columns < 0.5)
+            right = site * (columns >= 0.5)
+
+            def relative(mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+                count = mask.sum((1, 2)).clamp_min(1)
+                rows = torch.linspace(0, 1, MAP_ROWS, device=grid.device,
+                                      dtype=grid.dtype).view(1, MAP_ROWS, 1)
+                mean_row = (mask * rows).sum((1, 2)) / count
+                mean_column = (mask * columns).sum((1, 2)) / count
+                present = (mask.sum((1, 2)) > 0)[:, None]
+                return ((mean_row[:, None] - row) * present,
+                        (mean_column[:, None] - column) * present)
+
+            geometry = torch.stack((*relative(left), *relative(right),
+                                    *relative(grid[:, COACH_GRID_CHANNELS.index("spike_planted")]),
+                                    *relative(grid[:, COACH_GRID_CHANNELS.index("spike_dropped")])), -1)
+        else:
+            geometry = None
         if self.config.action_feedback:
             if feedback is None:
                 feedback = vector.new_zeros((grid.shape[0], ROSTER_SIZE, 7))
             if feedback.shape != (grid.shape[0], ROSTER_SIZE, 7):
                 raise ValueError("invalid previous action feedback shape")
-            features = self.slot(torch.cat((shared, slots, feedback), -1))
+            inputs = (shared, slots, feedback) + ((geometry,) if geometry is not None else ()) + ((local,) if local is not None else ())
+            features = self.slot(torch.cat(inputs, -1))
         else:
             if feedback is not None:
                 raise ValueError("legacy coach model does not accept action feedback")
-            features = self.slot(torch.cat((shared, slots), -1))
+            inputs = (shared, slots) + ((geometry,) if geometry is not None else ()) + ((local,) if local is not None else ())
+            features = self.slot(torch.cat(inputs, -1))
         return self.movement(features), self.intent(features), self.objective(features), state
 
 
