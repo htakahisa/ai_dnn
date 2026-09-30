@@ -12,6 +12,7 @@ from analytics.combat_tracker import CombatTracker
 from controllers import UserInputController
 from game_core import (
     TICK_TIME,
+    validate_tick_time_ms,
     PLANT_REQUIRED_TICKS,
     DEFUSE_REQUIRED_TICKS,
     ROUND_TRANSITION_TICKS,
@@ -126,6 +127,10 @@ def _get_ace_sound(effect):
 
 
 class BattleLogicMixin:
+
+    def _tick_delay_ms(self):
+        value = getattr(self, "tick_time_ms", TICK_TIME)
+        return validate_tick_time_ms(value() if callable(value) else value)
 
     def _facing_from_delta(self, dr, dc, fallback):
         """移動delta(dr, dc)から4方向facingを判定する。斜め移動は存在しない前提。"""
@@ -380,6 +385,7 @@ class BattleLogicMixin:
 
     def _run_defender_setup_tick(self):
         """Setup Phaseを1Tick処理する。Defenderだけが移動する。"""
+        self._prepare_team_controllers_tick()
         self._build_occupancy_counts()
         try:
             for char in self.chars:
@@ -411,7 +417,7 @@ class BattleLogicMixin:
                 char.facing_forced_this_tick = True
 
     def _move_character_with_rule_facing(self, char, locked_facing):
-        self._trigger_ramp_traps(char)
+        self._trigger_cell_effects(char)
         r, c = char.pos
         old_pos = tuple(char.pos)
 
@@ -818,7 +824,7 @@ class BattleLogicMixin:
                     (nr, nc),
                 )
                 char.pos = [nr, nc]
-                self._trigger_ramp_traps(char)
+                self._trigger_cell_effects(char)
 
                 # 覚醒等でmove_steps_per_tickが2以上のキャラは、
                 # コントローラーが選んだ1手の方向へそのまま延長して進む。
@@ -841,7 +847,7 @@ class BattleLogicMixin:
                         break
                     self._update_occupancy_after_move(prev, (cand_r, cand_c))
                     char.pos = [cand_r, cand_c]
-                    self._trigger_ramp_traps(char)
+                    self._trigger_cell_effects(char)
 
         char.moved_this_tick = tuple(char.pos) != old_pos
         self._finalize_movement_transition_state(char)
@@ -944,6 +950,10 @@ class BattleLogicMixin:
         tracker = getattr(self, "analytics_tracker", None)
         if tracker is not None:
             tracker.end_round(self.chars)
+        # Rollout callers need the terminal state before a headless transition
+        # replaces characters and clears round_over. Normal matches continue.
+        if getattr(self, "stop_after_round", False):
+            return
         self.current_round += 1
         if not self.headless:
             banner_ticks = CLUTCH_ACE_BANNER_TICKS if self.special_round_banner else 0
@@ -956,7 +966,7 @@ class BattleLogicMixin:
                         duration_ms = 0
                     banner_ticks = max(
                         banner_ticks,
-                        math.ceil(duration_ms / max(1, TICK_TIME)),
+                        math.ceil(duration_ms / self._tick_delay_ms()),
                     )
             explosion_ticks = EXPLOSION_DURATION_TICKS if self.explosion_effect else 0
             extra_ticks = max(banner_ticks, explosion_ticks)
@@ -982,11 +992,11 @@ class BattleLogicMixin:
         banner = self.special_round_banner
         if banner is not None and isinstance(banner.get("effect"), dict):
             banner["animation_elapsed_ms"] = (
-                banner.get("animation_elapsed_ms", 0) + TICK_TIME
+                banner.get("animation_elapsed_ms", 0) + self._tick_delay_ms()
             )
         self.round_transition_ticks_left -= 1
         self.draw()
-        self.root.after(TICK_TIME, self._advance_round_transition)
+        self.root.after(self._tick_delay_ms(), self._advance_round_transition)
 
     def _ensure_round_tracking_state(self):
         """ラウンドが切り替わったら clutch/ace/爆発 用の状態をリセットする。"""
@@ -1070,22 +1080,30 @@ class BattleLogicMixin:
                     "name": survivor.display_name,
                 }
 
-    def _kill_character(self, shooter, target):
+    def _activate_ai_death_ultimates(self, *, during_battle=True):
+        """AI Idols cast their death ultimate when enough points remain."""
+        for char in self.chars:
+            if char.is_alive or getattr(char, "ultimate_name", None) != "SERENADE" or char.ultimate_points < char.ultimate_cost:
+                continue
+            controller = self.attacker_controller if char.team == "A" else self.defender_controller
+            if isinstance(controller, UserInputController):
+                continue
+            self.execute_ai_ultimate(char, {"ultimate": "SERENADE"}, during_battle=during_battle)
+
+    def _kill_character(self, shooter, target, *, credit_kill=True, during_battle=True):
         target.hp = 0
         target.is_alive = False
         self._remove_dead_ramp_traps()
         target.just_died = True
         target.deaths += 1
-        shooter.kills += 1
-        shooter.round_kills += 1
-        awakening_handler = getattr(self, "_handle_awakening_kill", None)
-        if awakening_handler is not None:
-            awakening_handler(shooter)
-        shooter.ultimate_points = min(
-            shooter.ultimate_cost,
-            shooter.ultimate_points + 1,
-        )
-        self._play_kill_sound(shooter)
+        if credit_kill:
+            shooter.kills += 1
+            shooter.round_kills += 1
+            awakening_handler = getattr(self, "_handle_awakening_kill", None)
+            if awakening_handler is not None:
+                awakening_handler(shooter)
+            shooter.ultimate_points = min(shooter.ultimate_cost, shooter.ultimate_points + 1)
+            self._play_kill_sound(shooter)
 
         tracker = getattr(self, "analytics_tracker", None)
         if tracker is not None:
@@ -1093,7 +1111,7 @@ class BattleLogicMixin:
 
         # タイガー「ハンター」：敵を倒した瞬間にHPを50回復。
         # 最大HPを超えて回復しない。
-        if (
+        if credit_kill and (
             getattr(shooter, "role", None) == "タイガー"
             or getattr(shooter, "ability_name", None) == "HUNT"
         ):
@@ -1101,7 +1119,7 @@ class BattleLogicMixin:
             max_hp = min(100.0, float(getattr(shooter, "max_hp", 100)))
             shooter.hp = min(max_hp, float(shooter.hp) + 50.0)
         # Carnal Lust Syndicateのコンボ効果：キル時にHPを30回復
-        if getattr(shooter, "carnal_lust_syndicate_active", False):
+        if credit_kill and getattr(shooter, "carnal_lust_syndicate_active", False):
             max_hp = min(100.0, float(getattr(shooter, "max_hp", 100)))
             shooter.hp = min(max_hp, float(shooter.hp) + 30.0)
 
@@ -1112,8 +1130,9 @@ class BattleLogicMixin:
             "kills"
         ] = shooter.kills
         self._save_ultimate_points(shooter)
-        if tracker is not None:
+        if tracker is not None and credit_kill:
             tracker.record_kill(shooter, target, self.battle_tick)
+        self._activate_ai_death_ultimates(during_battle=during_battle)
         target.is_planting = False
         target.plant_timer = 0
         target.is_collecting_orb = False
@@ -1126,7 +1145,7 @@ class BattleLogicMixin:
             self.spike_pos = tuple(target.pos)
             target.has_spike = False
 
-        if hasattr(self, "_maybe_trigger_leap_awakening"):
+        if credit_kill and hasattr(self, "_maybe_trigger_leap_awakening"):
             self._maybe_trigger_leap_awakening(shooter, target)
 
         # 1人生存になった瞬間を記録しておき、ラウンド終了時にクラッチ判定へ使う。
@@ -1415,9 +1434,13 @@ class BattleLogicMixin:
         # すべての持続効果をTick数で管理する。
         for char in self.chars:
             char.blind_remaining = max(0, char.blind_remaining - 1)
-            char.reveal_remaining = max(0, char.reveal_remaining - 1)
+            char.reveal_remaining = max(0, char.reveal_remaining - 1,
+                                        getattr(char, "serenade_reveal_pending", 0))
+            char.serenade_reveal_pending = 0
+        self._activate_ai_death_ultimates()
         self._advance_engineer_effects()
         self._advance_raid_trails()
+        self._advance_visual_effects()
         self._advance_timed_awakenings()
         for burst in self.flash_bursts:
             burst["remaining_ticks"] -= 1
@@ -1431,9 +1454,12 @@ class BattleLogicMixin:
         ]
         self._advance_tunnel_bursts()
         self._advance_flash_projectiles()
+        self._advance_ash_projectiles()
         self._advance_recon_projectiles()
         self._advance_monitor_drones()
         self._advance_escape_portals()
+        self._advance_balemoon_warnings()
+        self._advance_destruction_areas()
         for smoke in self.smokes:
             smoke["remaining_ticks"] -= 1
         self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
@@ -1625,6 +1651,22 @@ class BattleLogicMixin:
                     fg="black",
                 )
 
+    def _prepare_team_controllers_tick(self):
+        """Freeze opt-in team decisions before either side moves or casts."""
+        controllers = [controller for controller in
+            (getattr(self, "attacker_controller", None), getattr(self, "defender_controller", None))
+            if getattr(controller, "handles_team_perception", False)
+            and callable(getattr(controller, "prepare_team_tick", None))]
+        if not controllers:
+            return
+        for char in self.chars:
+            facing = getattr(char, "forced_facing_next_tick", None)
+            char.facing_forced_this_tick = facing in FACING_VECTORS
+            if char.facing_forced_this_tick:
+                char.facing = facing
+        for controller in controllers:
+            controller.prepare_team_tick()
+
     def _move_order(self):
         """スパイク保持者(carry)を最優先で処理する。
         先に動いた者勝ちの衝突判定のため、carryの移動先を先に確定させることで
@@ -1645,6 +1687,7 @@ class BattleLogicMixin:
                         if c.hp <= 0:
                             c.is_alive = False
                             c.just_died = True
+                self._prepare_team_controllers_tick()
                 self._build_occupancy_counts()
                 try:
                     for c in self._move_order():
@@ -1657,7 +1700,7 @@ class BattleLogicMixin:
 
             self._record_replay_frame()
             self.draw()
-            self.root.after(TICK_TIME, self.loop)
+            self.root.after(self._tick_delay_ms(), self.loop)
 
     def run_headless_loop(self):
         """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
@@ -1675,6 +1718,7 @@ class BattleLogicMixin:
                             if c.hp <= 0:
                                 c.is_alive = False
                                 c.just_died = True
+                    self._prepare_team_controllers_tick()
                     self._build_occupancy_counts()
                     try:
                         for c in self._move_order():

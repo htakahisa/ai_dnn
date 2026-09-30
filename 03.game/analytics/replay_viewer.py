@@ -14,7 +14,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_data import NEW_MAZE_STR
-from ability_effects import draw_raid_wind
+from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
+                            draw_contract_status, draw_serenade_flash,
+                            draw_ash_projectiles, draw_balemoon_warnings,
+                            TUNNEL_WARNING_COLOR, TUNNEL_ACTIVE_COLOR)
 
 
 class ReplayViewer(tk.Toplevel):
@@ -388,6 +391,15 @@ class ReplayViewer(tk.Toplevel):
                 fill="#f8fdff",
                 outline="#bae6fd",
             )
+        for burst in frame.get("tunnel_bursts", []):
+            warning = burst.get("phase") == "warning"
+            for row, col in burst.get("cells", []):
+                self.canvas.create_rectangle(col*self.cell, row*self.cell, (col+1)*self.cell, (row+1)*self.cell,
+                    fill=TUNNEL_WARNING_COLOR if warning else TUNNEL_ACTIVE_COLOR,
+                    outline="", stipple="gray25" if warning else "gray50")
+        draw_destruction_areas(self.canvas, frame.get("destruction_areas", []), self.cell)
+        draw_balemoon_warnings(self.canvas, frame.get("balemoon_warnings", []), self.cell)
+        draw_ash_projectiles(self.canvas, frame.get("ash_projectiles", []), self.cell)
         for trail in frame.get("ultimate_trails", []):
             draw_raid_wind(self.canvas, trail, self.cell)
         for trap in frame.get("ramp_traps", []):
@@ -438,6 +450,10 @@ class ReplayViewer(tk.Toplevel):
                 )
             if char.get("electric", 0) > 0:
                 self._draw_neon_bolt(r, c)
+            if char.get("heal_sparkle", 0) > 0:
+                draw_heal_sparkle(self.canvas, r, c, self.cell, char["heal_sparkle"])
+            if char.get("life_contract", 0) > 0:
+                draw_contract_status(self.canvas, r, c, self.cell, char["life_contract"])
             self.canvas.create_text(
                 (c + 0.5) * self.cell,
                 r * self.cell - 2,
@@ -446,6 +462,8 @@ class ReplayViewer(tk.Toplevel):
                 fill="#111827",
                 font=("Arial", 7),
             )
+        if frame.get("serenade_flash", 0) > 0:
+            draw_serenade_flash(self.canvas, len(self.grid[0]), len(self.grid), self.cell)
         self.status.set(
             f"Frame {self.index + 1}/{len(self.frames)}  "
             f"R{frame.get('round', '-')}/T{frame.get('tick', '-')}  "

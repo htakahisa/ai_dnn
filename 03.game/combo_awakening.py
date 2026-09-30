@@ -42,12 +42,20 @@ _AWAKENING_SNAPSHOT_KEYS = (
 
 
 def _snapshot_character_awakening_state(char):
-    return {key: getattr(char, key, None) for key in _AWAKENING_SNAPSHOT_KEYS}
+    snapshot = {key: getattr(char, key, None) for key in _AWAKENING_SNAPSHOT_KEYS}
+    snapshot["_contract_max_hp_lost"] = getattr(char, "contract_max_hp_lost", 0)
+    return snapshot
 
 
 def _restore_character_awakening_state(char, snapshot):
     for key, value in snapshot.items():
+        if key == "_contract_max_hp_lost":
+            continue
         setattr(char, key, value)
+    lost_since_snapshot = max(0, getattr(char, "contract_max_hp_lost", 0) - snapshot.get("_contract_max_hp_lost", 0))
+    if lost_since_snapshot:
+        char.max_hp = max(0, char.max_hp - lost_since_snapshot)
+        char.hp = min(char.hp, char.max_hp)
 
 
 class ComboAwakeningMixin:

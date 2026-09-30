@@ -16,7 +16,9 @@ FACING_STEPS = {
 
 def ultimate_ready(char):
     return (getattr(char, "ultimate_cost", 0) > 0
-            and getattr(char, "ultimate_points", 0) >= char.ultimate_cost)
+            and getattr(char, "ultimate_points", 0) >= char.ultimate_cost
+            and (not getattr(char, "is_alive", True) if getattr(char, "ultimate_name", None) == "SERENADE"
+                 else getattr(char, "is_alive", True)))
 
 
 def ultimate_context_features(char, engaged=False, objective_window=False, urgent=False):
@@ -87,6 +89,10 @@ def tactical_ultimate_window(char, context):
         return False
     engaged, objective, urgent = (bool(context[1]), bool(context[2]), bool(context[3]))
     name = str(getattr(char, "ultimate_name", "")).upper()
+    if name == "SERENADE":
+        return True
+    if name == "BALEMOON":
+        return engaged or objective or urgent
     if name == "RAID":
         return engaged or objective
     if name == "ESCAPE":
@@ -140,6 +146,8 @@ def build_ultimate_action(grid, char, chars, destination=None):
     if not ultimate_ready(char):
         return None
     name = str(getattr(char, "ultimate_name", "")).upper()
+    if name in {"SERENADE", "BALEMOON"}:
+        return {"ultimate": name}
     if name == "NEON":
         target = destination
         if target is None:

@@ -138,7 +138,8 @@ class FnaticUltimates:
             if legal:
                 target = min(legal, key=lambda p: (-distance(p, pos(char)), p))
                 return self._action(char, kind, target=target)
-        if any(observer != char.name for _, observers in reports.values() for observer in observers):
+        if ((char.team != 'D' or not planted)
+                and any(observer != char.name for _, observers in reports.values() for observer in observers)):
             marker = 4 if char.team == 'A' else 3
             spawns = [tuple(map(int, p)) for p in zip(*np.where(grid == marker))]
             legal = [p for p in spawns if self._landing_free(char, p, owner, allies, seen)]

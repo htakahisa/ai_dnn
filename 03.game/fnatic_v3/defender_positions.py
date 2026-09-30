@@ -1,5 +1,6 @@
 """Fnatic's editable pre-plant defensive positions, shared across setup/live."""
 
+from collections import Counter
 import random
 
 import numpy as np
@@ -36,6 +37,35 @@ class FnaticDefenderPositions:
         self.region_limits = None
         self.engineer_region = None
         self.preferred_engineer_region = None
+        self.main_region = None
+        self.main_report_tick = None
+
+    def observe_main_attack(self, ctrl, char, state):
+        if state.get('is_planted') or state.get('defender_setup_active'):
+            return False
+        owner = getattr(ctrl.game, 'real_game', ctrl.game)
+        tick = int(getattr(owner, 'battle_tick', 0))
+        if self.main_report_tick == tick:
+            return False
+        self.main_report_tick = tick
+        grid = state['grid']
+        allies = [c for c in getattr(owner, 'chars', state.get('chars', ()))
+                  if c.team == char.team and c.is_alive]
+        reports = ctrl.ultimates._team_reports(ctrl, char, state, allies, grid, owner)
+        counts = Counter(region(cell, grid) for cell, _ in reports.values())
+        sites = [site for site in ('A', 'B') if counts[site] >= 3]
+        if not sites:
+            return False
+        largest = max(counts[site] for site in sites)
+        sites = [site for site in sites if counts[site] == largest]
+        selected = self.main_region if self.main_region in sites else random.choice(sites)
+        if selected == self.main_region:
+            return False
+        # Keep the read after sight is lost; a fresh three-player report on
+        # the other site can change it. Old sightings never add to the count.
+        self.main_region = selected
+        self.coverage_context = None
+        return True
 
     def cover_traps(self, traps, allies, grid):
         live = {c.name for c in allies if c.is_alive}
@@ -49,7 +79,7 @@ class FnaticDefenderPositions:
             self.engineer_region = None
 
     def _coverage(self, actual, legal, grid, setup):
-        if not self.trap_regions or self.drop_region is not None:
+        if not self.trap_regions or self.drop_region is not None or self.main_region is not None:
             self.region_limits = None
             self.coverage_context = None
             return
@@ -127,11 +157,12 @@ class FnaticDefenderPositions:
                         key=lambda c: c.name)
         all_cells = {p for cells in self.candidates.values() for p in cells}
         all_cells -= self.reserved
-        if self.drop_region is not None:
-            all_cells = {p for p in all_cells if region(p, grid) == self.drop_region}
+        focused_region = self.drop_region or self.main_region
+        if focused_region is not None:
+            all_cells = {p for p in all_cells if region(p, grid) == focused_region}
         legal = {c.name: (all_cells & distances(pos(c), grid, blocked).keys()) - set(blocked)
                  for c in actual}
-        if self.preferred_engineer_region is not None and self.drop_region is None and 'Alfajer' in legal:
+        if self.preferred_engineer_region is not None and focused_region is None and 'Alfajer' in legal:
             preferred = {p for p in legal['Alfajer'] if region(p, grid) == self.preferred_engineer_region}
             if preferred:
                 legal['Alfajer'] = preferred

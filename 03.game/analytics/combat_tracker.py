@@ -193,9 +193,10 @@ class CombatTracker:
         )
 
     def record_death(self, victim, killer, tick):
-        if victim is None or killer is None or victim.team == killer.team:
+        if victim is None or killer is None:
             return
-        self._pending_cover.append((str(killer.name), str(victim.name), int(tick)))
+        if victim.team != killer.team:
+            self._pending_cover.append((str(killer.name), str(victim.name), int(tick)))
         side = "attacker" if victim.team == "A" else "defender"
         self.stats[str(victim.name)]["deaths"] += 1
         self.side_stats[side]["players"][str(victim.name)]["deaths"] += 1

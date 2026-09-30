@@ -632,6 +632,13 @@ class FnaticV3DefenderController(FnaticV3FacingMixin, FnaticV1DefenderController
                         self.defender_positions.reserved.add(nxt)
         if not state.get('is_planted'):
             self.retake.reset_round()
+        main_changed = self.defender_positions.observe_main_attack(self, char, state)
+        if self.defender_positions.main_region is not None and not state.get('is_planted'):
+            # Reinforcing the confirmed attack takes priority over lamp chores.
+            self.defender_positions.reserved.clear()
+        if main_changed:
+            allies = [c for c in state.get('chars', ()) if c.team == char.team and c.is_alive]
+            self.defender_positions.goal(char, allies, grid)
         if state.get('defender_setup_active'):
             self.navigation.begin(char, state)
             allies = [c for c in state.get('chars', ()) if c.team == char.team and c.is_alive]
@@ -658,6 +665,10 @@ class FnaticV3DefenderController(FnaticV3FacingMixin, FnaticV1DefenderController
                 return self.retake.push(self, char, planted, grid, allies, visible)
         if planted is not None or visible:
             return super()._defend(char, state, grid, allies, blocked, plants, planted, visible, risks)
+        if self.defender_positions.main_region is not None:
+            result = self._mapped_position(char, allies, grid, visible)
+            if result is not None:
+                return result
         result = self._engineer_position(char, state, grid, allies, visible)
         if result is not None:
             return result

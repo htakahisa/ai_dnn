@@ -82,6 +82,15 @@ FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
 
+    if normalized in {"frc_v1", "frc_v1_baseline"}:
+        from frc_v1.controller import FrcAttackerController, FrcDefenderController
+        mode = "baseline" if normalized == "frc_v1_baseline" else "learned"
+        return DualRoleTeamAI(
+            name="FRC v1" + (" (baseline)" if mode == "baseline" else ""),
+            attacker_factory=lambda: FrcAttackerController(mode=mode),
+            defender_factory=lambda: FrcDefenderController(mode=mode),
+        )
+
     if normalized in {"fnatic_v3", "fnatic v3"}:
         return DualRoleTeamAI(
             name="Fnatic v3",
@@ -253,9 +262,12 @@ class VisualFPSBattle(
         defender_team_name=None,
         disable_side_swap=False,
         series_context=None,
+        tick_time_ms=TICK_TIME,
     ):
         self.maze_str = maze_str
         self.headless = headless
+        self.tick_time_ms = tick_time_ms
+        self._tick_delay_ms()
         self.disable_side_swap = disable_side_swap
         self.series_context = dict(series_context or {})
         saved_mental_fatigue = self.series_context.get("mental_fatigue", {})
@@ -380,6 +392,9 @@ class VisualFPSBattle(
                     "team": str(char.team),
                     "pos": pos(char.pos),
                     "hp": float(getattr(char, "hp", 0)),
+                    "max_hp": float(getattr(char, "max_hp", 100)),
+                    "heal_sparkle": int(getattr(char, "heal_sparkle_remaining", 0)),
+                    "life_contract": int(getattr(char, "life_contract_remaining", 0)),
                     "alive": bool(getattr(char, "is_alive", False)),
                     "facing": str(getattr(char, "facing", "")),
                     "has_spike": bool(getattr(char, "has_spike", False)),
@@ -398,6 +413,8 @@ class VisualFPSBattle(
                         + getattr(char, "flash_charges", 0)
                         + getattr(char, "recon_charges", 0)
                         + getattr(char, "ramp_charges", 0)
+                        + getattr(char, "dance_charges", 0)
+                        + getattr(char, "ash_charges", 0)
                     ),
                     "orb_collect_timer": int(getattr(char, "orb_collect_timer", 0)),
                     # Per-team visibility is stored for fog-of-war replay views.
@@ -510,6 +527,19 @@ class VisualFPSBattle(
                         "remaining_ticks": int(item["remaining_ticks"]),
                     }
                     for item in getattr(self, "neon_bursts", [])
+                ],
+                "serenade_flash": int(getattr(self, "serenade_flash_remaining", 0)),
+                "ash_projectiles": [projectile(item) for item in getattr(self, "ash_projectiles", [])],
+                "balemoon_warnings": [
+                    {"pos": pos(item["pos"]), "cells": [pos(cell) for cell in sorted(item["cells"])],
+                     "remaining_ticks": item["remaining_ticks"], "owner": item["owner"], "team": item["team"]}
+                    for item in getattr(self, "balemoon_warnings", [])
+                ],
+                "destruction_areas": [
+                    {"pos": pos(item["pos"]), "cells": [pos(cell) for cell in sorted(item["cells"])],
+                     "level": item["level"], "remaining_ticks": item["remaining_ticks"],
+                     "team": item["team"], "owner": item["owner"]}
+                    for item in getattr(self, "destruction_areas", [])
                 ],
                 "tunnel_bursts": [
                     {
@@ -926,6 +956,11 @@ class VisualFPSBattle(
         self.ultimate_trails = []
         self.ramp_traps = []
         self.neon_bursts = []
+        self.destruction_areas = []
+        self.ash_projectiles = []
+        self.balemoon_warnings = []
+        self.serenade_flash_remaining = 0
+        self.serenade_flash_applied_tick = None
         self.available_orbs = set(zip(*np.where(self.grid == 5)))
         self.ability_mode = None
         self.ultimate_mode = None
@@ -959,7 +994,7 @@ class VisualFPSBattle(
             self.run_headless_loop()
         else:
             self.draw()
-            self.root.after(TICK_TIME, self.loop)
+            self.root.after(self._tick_delay_ms(), self.loop)
             self.root.mainloop()
 
 

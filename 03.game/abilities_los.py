@@ -28,6 +28,14 @@ from game_core import (
     NEON_WARNING_TICKS,
     NEON_ACTIVE_TICKS,
     NEON_DAMAGE_PER_TICK,
+    DANCE_HEAL_HP,
+    DANCE_MAX_HP,
+    SERENADE_REVEAL_TICKS,
+    DANCE_SPARKLE_TICKS,
+    ASH_RANGE_CELLS,
+    DESTRUCTION_AREA_TICKS,
+    BALEMOON_WARNING_TICKS,
+    CONTRACT_DAMAGE_PER_TICK,
 )
 
 ULTIMATE_FACING_STEPS = {
@@ -76,14 +84,14 @@ class AbilityLosMixin:
         owner.ultimate_points = 0
         self._save_ultimate_points(owner)
 
-    def execute_ai_ultimate(self, owner, ultimate_action):
+    def execute_ai_ultimate(self, owner, ultimate_action, *, during_battle=False):
         """Execute an ultimate requested by a controller.
 
-        Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL|NEON", ...}``.
+        Controllers use ``{"ultimate": "RAID|ESCAPE|MONITOR|TUNNEL|NEON|SERENADE", ...}``.
         ESCAPE and NEON additionally require a cell in ``target``.
         RAID and TUNNEL can set ``facing`` for the direction of the cast.
         """
-        if not owner.is_alive or not isinstance(ultimate_action, dict):
+        if not isinstance(ultimate_action, dict):
             return False
 
         ultimate_name = str(ultimate_action.get("ultimate", "")).upper()
@@ -91,6 +99,35 @@ class AbilityLosMixin:
             return False
         if owner.ultimate_points < owner.ultimate_cost:
             return False
+        if ultimate_name == "SERENADE":
+            if owner.is_alive or getattr(self, "round_over", False) or getattr(self, "match_over", False):
+                return False
+            self.serenade_flash_remaining = 1
+            self.serenade_flash_applied_tick = self.battle_tick + (0 if during_battle else 1)
+            for enemy in self.chars:
+                if enemy.is_alive and enemy.team != owner.team:
+                    enemy.reveal_remaining = max(enemy.reveal_remaining, SERENADE_REVEAL_TICKS)
+                    if not during_battle:
+                        enemy.serenade_reveal_pending = max(
+                            getattr(enemy, "serenade_reveal_pending", 0), SERENADE_REVEAL_TICKS)
+                    tracker = getattr(self, "analytics_tracker", None)
+                    if tracker is not None:
+                        tracker.record_contribution(owner, enemy, self.battle_tick, "serenade")
+            self._spend_ultimate(owner)
+            return True
+        if not owner.is_alive:
+            return False
+        if ultimate_name == "BALEMOON":
+            if not hasattr(self, "balemoon_warnings"):
+                self.balemoon_warnings = []
+            center = tuple(owner.pos)
+            self.balemoon_warnings.append({
+                "pos": center, "cells": self._destruction_area_cells(center, radius=2),
+                "remaining_ticks": BALEMOON_WARNING_TICKS,
+                "owner": owner.name, "team": owner.team,
+            })
+            self._spend_ultimate(owner)
+            return True
         if ultimate_name in ("RAID", "ESCAPE") and self._ramp_blocks_movement(owner):
             return False
 
@@ -153,7 +190,7 @@ class AbilityLosMixin:
                 owner.pos = list(destination)
                 self._update_occupancy_after_move(previous, destination)
                 traversed.append(destination)
-                self._trigger_ramp_traps(owner)
+                self._trigger_cell_effects(owner)
                 if self._ramp_blocks_movement(owner):
                     break
             if not hasattr(self, "ultimate_trails"):
@@ -247,6 +284,84 @@ class AbilityLosMixin:
             return True
 
         return False
+
+    def _destruction_area_cells(self, center, *, radius):
+        row, col = center
+        return {(rr, cc)
+                 for rr in range(max(0, row-radius), min(self.height, row+radius+1))
+                 for cc in range(max(0, col-radius), min(self.width, col+radius+1))
+                 if self.grid[rr, cc] != 1}
+
+    def _create_destruction_area(self, owner, center, *, radius, level):
+        cells = self._destruction_area_cells(center, radius=radius)
+        if not hasattr(self, "destruction_areas"):
+            self.destruction_areas = []
+        self.destruction_areas.append({"cells": cells, "pos": center, "level": level,
+                                       "remaining_ticks": DESTRUCTION_AREA_TICKS,
+                                       "owner": owner.name, "team": owner.team})
+
+    def _advance_balemoon_warnings(self):
+        warnings = []
+        owners = {char.name: char for char in self.chars}
+        for warning in getattr(self, "balemoon_warnings", []):
+            if warning["remaining_ticks"] > 0:
+                warning["remaining_ticks"] -= 1
+                warnings.append(warning)
+                continue
+            owner = owners.get(warning["owner"])
+            if owner is None:
+                continue
+            self._create_destruction_area(owner, warning["pos"], radius=2, level=10)
+            if owner.is_alive:
+                owner.hp = owner.max_hp
+            for idol in list(self.chars):
+                if idol.is_alive and getattr(idol, "role", None) == "アイドル":
+                    self._kill_character(owner, idol, credit_kill=idol.team != owner.team)
+        self.balemoon_warnings = warnings
+
+    def _trigger_destruction_areas(self, char):
+        if not char.is_alive or getattr(char, "life_contract_remaining", 0) > 0:
+            return
+        areas = [area for area in getattr(self, "destruction_areas", [])
+                 if area["remaining_ticks"] > 0 and area["team"] != char.team
+                 and tuple(char.pos) in area["cells"]]
+        if areas:
+            area = max(areas, key=lambda item: item["level"])
+            char.life_contract_remaining = area["level"]
+            char.life_contract_owner = area["owner"]
+
+    def _trigger_cell_effects(self, char, *, during_battle=False):
+        self._trigger_destruction_areas(char)
+        self._trigger_ramp_traps(char, during_battle=during_battle)
+
+    def _advance_destruction_areas(self):
+        self.destruction_areas = [area for area in getattr(self, "destruction_areas", [])
+                                  if area["remaining_ticks"] > 0]
+        owners = {char.name: char for char in self.chars}
+        for char in self.chars:
+            self._trigger_destruction_areas(char)
+            if not char.is_alive or getattr(char, "life_contract_remaining", 0) <= 0:
+                continue
+            old_max = char.max_hp
+            char.max_hp = max(0, old_max - CONTRACT_DAMAGE_PER_TICK)
+            char.contract_max_hp_lost = getattr(char, "contract_max_hp_lost", 0) + old_max - char.max_hp
+            char.hp = max(0, min(char.max_hp, char.hp - CONTRACT_DAMAGE_PER_TICK))
+            char.life_contract_remaining -= 1
+            owner = owners.get(char.life_contract_owner)
+            tracker = getattr(self, "analytics_tracker", None)
+            if tracker is not None and owner is not None:
+                tracker.record_contribution(owner, char, self.battle_tick, "damage")
+            if char.hp <= 0:
+                self._kill_character(owner or char, char, credit_kill=owner is not None)
+        for area in self.destruction_areas:
+            area["remaining_ticks"] -= 1
+
+    def _advance_visual_effects(self):
+        for char in self.chars:
+            if getattr(char, "heal_sparkle_applied_tick", None) != self.battle_tick:
+                char.heal_sparkle_remaining = max(0, getattr(char, "heal_sparkle_remaining", 0) - 1)
+        if getattr(self, "serenade_flash_applied_tick", None) != self.battle_tick:
+            self.serenade_flash_remaining = max(0, getattr(self, "serenade_flash_remaining", 0) - 1)
 
     def _advance_raid_trails(self):
         trails = []
@@ -436,7 +551,7 @@ class AbilityLosMixin:
                 old_pos in smoke_cells and destination not in smoke_cells
             )
             owner.stopped_after_move_this_tick = False
-            self._trigger_ramp_traps(owner, during_battle=True)
+            self._trigger_cell_effects(owner, during_battle=True)
 
         self.escape_portals = remaining_portals
 
@@ -539,6 +654,26 @@ class AbilityLosMixin:
             return False
 
         ability_name = str(ability_action.get("ability", "")).upper()
+        if ability_name == "DANCE":
+            if owner.ability_name != "DANCE" or getattr(owner, "dance_charges", 0) <= 0:
+                return False
+            target_name = ability_action.get("target_name")
+            target_cell = ability_action.get("target")
+            if target_name is None and isinstance(target_cell, str):
+                target_name = target_cell
+            target = next((ally for ally in self.chars
+                           if ally is not owner and ally.team == owner.team and ally.is_alive
+                           and ((target_name is not None and ally.name == target_name)
+                                or (target_name is None and isinstance(target_cell, (list, tuple))
+                                    and len(target_cell) == 2 and tuple(ally.pos) == tuple(target_cell)))), None)
+            heal_cap = min(DANCE_MAX_HP, target.max_hp) if target is not None and getattr(target, "contract_max_hp_lost", 0) > 0 else DANCE_MAX_HP
+            if target is None or target.hp >= heal_cap:
+                return False
+            target.hp = min(heal_cap, target.hp + DANCE_HEAL_HP)
+            target.heal_sparkle_remaining = DANCE_SPARKLE_TICKS
+            target.heal_sparkle_applied_tick = self.battle_tick + 1
+            owner.dance_charges -= 1
+            return True
         if ability_name == "RAMP":
             if owner.ability_name != "RAMP" or owner.ramp_charges <= 0:
                 return False
@@ -560,6 +695,22 @@ class AbilityLosMixin:
             return False
         if owner.ability_name != ability_name:
             return False
+
+        if ability_name == "ASH" and owner.ash_charges > 0:
+            dr, dc = r-owner.pos[0], c-owner.pos[1]
+            if dr*dr + dc*dc > ASH_RANGE_CELLS*ASH_RANGE_CELLS:
+                return False
+            path = [tuple(owner.pos)]
+            for cell in self._line_cells(tuple(owner.pos), (r, c))[1:]:
+                if self.grid[cell[0], cell[1]] == 1:
+                    break
+                path.append(cell)
+            if not hasattr(self, "ash_projectiles"):
+                self.ash_projectiles = []
+            self.ash_projectiles.append({"owner": owner.name, "team": owner.team,
+                                         "path": path, "progress": 0})
+            owner.ash_charges -= 1
+            return True
 
         if ability_name == "SMOKE" and owner.smoke_charges > 0:
             cells = {
@@ -880,6 +1031,20 @@ class AbilityLosMixin:
                         None,
                     )
                     tracker.record_contribution(owner, char, self.battle_tick, "recon")
+
+    def _advance_ash_projectiles(self):
+        remaining = []
+        owners = {char.name: char for char in self.chars}
+        for projectile in getattr(self, "ash_projectiles", []):
+            projectile["progress"] = min(projectile["progress"] + FLASH_SPEED_CELLS_PER_TICK,
+                                          len(projectile["path"]) - 1)
+            if projectile["progress"] == len(projectile["path"]) - 1:
+                owner = owners.get(projectile["owner"])
+                if owner is not None:
+                    self._create_destruction_area(owner, projectile["path"][-1], radius=1, level=5)
+            else:
+                remaining.append(projectile)
+        self.ash_projectiles = remaining
 
     def _advance_flash_projectiles(self):
         remaining = []

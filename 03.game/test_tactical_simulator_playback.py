@@ -23,7 +23,7 @@ class TacticalSimulatorPlaybackTest(unittest.TestCase):
             self.assertEqual(profile["ultimate_cost"], char.ultimate_cost, name)
             self.assertEqual(
                 profile["max_charges"],
-                char.smoke_charges + char.flash_charges + char.recon_charges + char.ramp_charges,
+                char.smoke_charges + char.flash_charges + char.recon_charges + char.ramp_charges + char.dance_charges + char.ash_charges,
                 name,
             )
 

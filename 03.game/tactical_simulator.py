@@ -41,6 +41,8 @@ def get_character_resource_profile(name: str) -> dict[str, Any]:
         "シーカー": ("RECON", 2),
         "タイガー": ("HUNT", 0),
         "エンジニア": ("RAMP", 2),
+        "アイドル": ("DANCE", 3),
+        "コントラクター": ("ASH", 3),
     }.get(role, ("FLASH", 1))
     return {
         "ability": ability,
@@ -148,6 +150,11 @@ class TacticalSimulator(VisualFPSBattle):
         self.tunnel_bursts = []
         self.ramp_traps = []
         self.neon_bursts = []
+        self.destruction_areas = []
+        self.ash_projectiles = []
+        self.balemoon_warnings = []
+        self.serenade_flash_remaining = 0
+        self.serenade_flash_applied_tick = None
         self.ultimate_trails = []
         self.available_orbs = []
         self.match_over = False
@@ -217,6 +224,8 @@ class TacticalSimulator(VisualFPSBattle):
                 "FLASH": "flash_charges",
                 "RECON": "recon_charges",
                 "RAMP": "ramp_charges",
+                "DANCE": "dance_charges",
+                "ASH": "ash_charges",
             }.get(char.ability_name)
             max_charges = getattr(char, charge_field) if charge_field else 0
             charges = int(data["ability_charges"])
