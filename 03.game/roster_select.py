@@ -5,6 +5,7 @@
 """
 
 import tkinter as tk
+from tkinter import messagebox
 
 from character_stats import all_names, get_by_name
 from game_core import calculate_combat_power
@@ -14,6 +15,7 @@ MAX_ROSTER = 5
 
 TEAM_AI_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
+    "Coach v1": "coach_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     #"Omoko Gaming v1 R": "omoko_gaming_v1_r",
@@ -871,6 +873,18 @@ class RosterSelectScreen:
     def confirm(self):
         attacker_ctrl_key = TEAM_AI_OPTIONS[self.attacker_ctrl_var.get()]
         defender_ctrl_key = TEAM_AI_OPTIONS[self.defender_ctrl_var.get()]
+
+        if "coach_v1" in {attacker_ctrl_key, defender_ctrl_key}:
+            from coach_v1.game_controller import validate_coach_roster
+
+            try:
+                if attacker_ctrl_key == "coach_v1":
+                    validate_coach_roster(self.attacker_roster)
+                if defender_ctrl_key == "coach_v1":
+                    validate_coach_roster(self.defender_roster)
+            except ValueError as exc:
+                messagebox.showerror("Coach v1", str(exc), parent=self.root)
+                return
 
         args = (
             list(self.attacker_roster),

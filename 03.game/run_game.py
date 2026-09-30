@@ -99,6 +99,11 @@ FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
 
+    if normalized == "coach_v1":
+        from coach_v1.game_controller import build_game_team
+
+        return build_game_team()
+
     if normalized in {"fnatic_v3", "fnatic v3"}:
         return DualRoleTeamAI(
             name="Fnatic v3",
@@ -982,6 +987,13 @@ if __name__ == "__main__":
         attacker_team_name=None,
         defender_team_name=None,
     ):
+        if "coach_v1" in {initial_attacker_team_ai_key, initial_defender_team_ai_key}:
+            from coach_v1.game_controller import validate_coach_roster
+
+            if initial_attacker_team_ai_key == "coach_v1":
+                validate_coach_roster(attacker_roster)
+            if initial_defender_team_ai_key == "coach_v1":
+                validate_coach_roster(defender_roster)
         initial_attacker_team_ai = _build_team_ai(initial_attacker_team_ai_key)
         initial_defender_team_ai = _build_team_ai(initial_defender_team_ai_key)
 

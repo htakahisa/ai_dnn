@@ -34,6 +34,7 @@ from tactical_simulator import (
 
 CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
+    "Coach v1": "coach_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
@@ -711,6 +712,14 @@ def play_map(
 
     team1_controller_key = str(team1_controller_key or "fnatic_v1")
     team2_controller_key = str(team2_controller_key or "fnatic_v1")
+
+    if "coach_v1" in {team1_controller_key, team2_controller_key}:
+        from coach_v1.game_controller import validate_coach_roster
+
+        if team1_controller_key == "coach_v1":
+            validate_coach_roster(team1.players)
+        if team2_controller_key == "coach_v1":
+            validate_coach_roster(team2.players)
 
     if "user" in {team1_controller_key, team2_controller_key} and not render:
         raise ValueError("ユーザー操作を使う試合は描画が必要です")
