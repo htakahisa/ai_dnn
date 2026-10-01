@@ -9,6 +9,7 @@ from concon_v1.co1_train_attacker_A1 import (
     ACTION_DIM, ACTION_PLANT, ATTACKER_SPAWNS, GORIGONS, GRID,
     LEFT_PLANT_CELLS, SPIKE_CARRIER_INDEX, RouteEnv, RouteProgress,
     WAYPOINT_POINTS, bfs_distance_map, build_action_mask,
+    choose_team_fire_target, facing_for_fire_target,
     plant_stage_action_mask, select_nearest_candidate,
 )
 
@@ -128,6 +129,36 @@ class ASynchronizationTests(unittest.TestCase):
         mask = plant_stage_action_mask(grid, (0, 2), [(0, 3)], (0, 3), (0, 0))
         self.assertTrue(mask[1])
         self.assertFalse(mask[4])
+
+    def test_visible_enemy_stops_route_and_faces_for_automatic_fire(self):
+        shooter = self.chars[0]
+        enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
+                                is_alive=True, hp=100)
+        self.state["chars"].append(enemy)
+        result = self.controller.decide_move(shooter, self.state)
+        self.assertEqual(result[0], list(shooter.pos))
+        self.assertEqual(result[1], {"facing": "N"})
+
+    def test_team_prefers_enemy_with_two_firing_lines(self):
+        grid = np.zeros((7, 7), dtype=np.int32)
+        shooter = SimpleNamespace(name="A0", team="A", pos=(2, 2), is_alive=True)
+        ally = SimpleNamespace(name="A1", team="A", pos=(4, 2), is_alive=True)
+        solo = SimpleNamespace(name="D0", team="D", pos=(1, 2), is_alive=True, hp=100)
+        shared = SimpleNamespace(name="D1", team="D", pos=(2, 4), is_alive=True, hp=100)
+        chars = [shooter, ally, solo, shared]
+        self.assertIs(choose_team_fire_target(shooter, chars, grid), shared)
+        self.assertIs(choose_team_fire_target(ally, chars, grid), shared)
+        self.assertEqual(facing_for_fire_target(shooter, shared, chars, grid), "SE")
+
+    def test_enemy_behind_wall_does_not_interrupt_route(self):
+        grid = np.zeros((3, 3), dtype=np.int32)
+        grid[1, 1] = 1
+        shooter = SimpleNamespace(name="A0", team="A", pos=(1, 0), is_alive=True)
+        enemy = SimpleNamespace(name="D0", team="D", pos=(1, 2), is_alive=True)
+        self.assertIsNone(choose_team_fire_target(shooter, [shooter, enemy], grid))
+        self.assertEqual(
+            facing_for_fire_target(shooter, enemy, [shooter, enemy], grid), "N"
+        )
 
 
 if __name__ == "__main__":

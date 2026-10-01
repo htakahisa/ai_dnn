@@ -1,6 +1,7 @@
-"""Train a shared DQN policy to route attackers through concon_v1 and plant left."""
+"""Train ConCon A1 routes in real 5v5 rounds (or the legacy route-only simulator)."""
 
 import argparse
+import math
 import random
 import sys
 import time
@@ -18,6 +19,8 @@ if str(ROOT) not in sys.path:
 
 from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 from party_presets import get_preset
+from controllers import BaseController
+from game_core import FACING_VECTORS, SHOOTING_SITE_DIGREE
 
 try:
     from .co1_map_attacker_A1 import MAZE_STR as STRATEGY_MAZE_STR
@@ -37,10 +40,12 @@ ACTION_DIM = 6
 OBS_DIM = 28
 MAX_TICKS = 100
 PLANT_REQUIRED_TICKS = 4
-DEFAULT_EPISODES = 1500
 DEFAULT_SAVE_DIR = Path(__file__).resolve().parent / "data" / "attacker_A1_data"
 TARGET_UPDATE_INTERVAL = 1000
-EPSILON_START = 0.7
+
+DEFAULT_EPISODES = 1500
+CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
+EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
 
@@ -348,6 +353,107 @@ def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, e
     return observation
 
 
+def _shot_visible(shooter, target, chars, grid, smoke_cells=(), game=None):
+    """Use the game's firing line when available, including smoke and body blocking."""
+    if game is not None and hasattr(game, "check_shot_line_of_sight"):
+        if not game.check_shot_line_of_sight(shooter, target):
+            return False
+        if hasattr(game, "check_line_of_sight"):
+            return (game.check_line_of_sight(shooter, target)
+                    or bool(getattr(shooter, "sees_through_smoke", False))
+                    or getattr(target, "reveal_remaining", 0) > 0)
+        return True
+    if not BaseController.has_line_of_sight(shooter.pos, target.pos, grid):
+        return False
+    # The fallback is used by the route tests, where no Game instance exists.
+    row, col = map(int, shooter.pos)
+    end_row, end_col = map(int, target.pos)
+    dr, dc = abs(end_row - row), abs(end_col - col)
+    step_r = 1 if row < end_row else -1
+    step_c = 1 if col < end_col else -1
+    error = dc - dr
+    cells = []
+    while True:
+        cells.append((row, col))
+        if (row, col) == (end_row, end_col):
+            break
+        doubled = 2 * error
+        if doubled > -dr:
+            error -= dr
+            col += step_c
+        if doubled < dc:
+            error += dc
+            row += step_r
+    if len(cells) > 2 and any(cell in smoke_cells for cell in cells):
+        return False
+    occupied = {tuple(map(int, other.pos)) for other in chars
+                if other is not shooter and other is not target
+                and getattr(other, "is_alive", True)}
+    return not occupied.intersection(cells[1:-1])
+
+
+def choose_team_fire_target(shooter, chars, grid, smoke_cells=(), game=None):
+    """Prefer a visible enemy that the most living allies can also shoot."""
+    allies = [char for char in chars if getattr(char, "is_alive", True)
+              and getattr(char, "team", None) == shooter.team]
+    enemies = [char for char in chars if getattr(char, "is_alive", True)
+               and getattr(char, "team", None) != shooter.team]
+    visible = [enemy for enemy in enemies
+               if _shot_visible(shooter, enemy, chars, grid, smoke_cells, game)]
+    if not visible:
+        return None
+    return min(visible, key=lambda enemy: (
+        -sum(_shot_visible(ally, enemy, chars, grid, smoke_cells, game)
+             for ally in allies),
+        max(abs(int(enemy.pos[0]) - int(shooter.pos[0])),
+            abs(int(enemy.pos[1]) - int(shooter.pos[1]))),
+        getattr(enemy, "hp", 100), str(enemy.name),
+    ))
+
+
+def facing_for_fire_target(shooter, target, chars, grid, smoke_cells=(), game=None):
+    """Pick an aim direction that makes the game's automatic shot select target."""
+    visible = [enemy for enemy in chars if getattr(enemy, "is_alive", True)
+               and getattr(enemy, "team", None) != shooter.team
+               and _shot_visible(shooter, enemy, chars, grid, smoke_cells, game)]
+    if not visible:
+        return getattr(shooter, "facing", "N")
+    if target not in visible:
+        # The selected enemy may move, die, or become blocked during this tick.
+        target = min(visible, key=lambda enemy: (
+            max(abs(enemy.pos[0] - shooter.pos[0]),
+                abs(enemy.pos[1] - shooter.pos[1])),
+            getattr(enemy, "hp", 100), enemy.name,
+        ))
+
+    def angle(direction, enemy):
+        dc = float(enemy.pos[1] - shooter.pos[1])
+        dr = float(enemy.pos[0] - shooter.pos[0])
+        distance = math.hypot(dc, dr)
+        if not distance:
+            return 0.0
+        fx, fy = FACING_VECTORS[direction]
+        return math.degrees(math.acos(max(-1.0, min(1.0,
+            (fx * dc + fy * dr) / distance))))
+
+    candidates = []
+    for direction in FACING_VECTORS:
+        target_angle = angle(direction, target)
+        if target_angle > SHOOTING_SITE_DIGREE:
+            continue
+        in_cone = [enemy for enemy in visible
+                   if angle(direction, enemy) <= SHOOTING_SITE_DIGREE]
+        if not in_cone:
+            continue
+        auto_target = min(in_cone, key=lambda enemy: (
+            max(abs(enemy.pos[0] - shooter.pos[0]),
+                abs(enemy.pos[1] - shooter.pos[1])),
+            getattr(enemy, "hp", 100), enemy.name,
+        ))
+        candidates.append((auto_target is not target, target_angle, direction))
+    return min(candidates)[2] if candidates else getattr(shooter, "facing", "N")
+
+
 class SharedRouteDQN(nn.Module):
     def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
@@ -496,7 +602,8 @@ def _optimize(model, target, optimizer, replay, batch_size, gamma):
     optimizer.step()
 
 
-def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
+def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
+          mode="battle", opponents=None):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -506,7 +613,13 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
     target.load_state_dict(model.state_dict())
     optimizer = optim.Adam(model.parameters(), lr=3e-4)
     replay = deque(maxlen=100_000)
-    env = RouteEnv(seed)
+    if mode == "battle":
+        from concon_v1.co1_battle_training import BattleRouteEnv
+        env = BattleRouteEnv(seed, opponents)
+    elif mode == "route":
+        env = RouteEnv(seed)
+    else:
+        raise ValueError("mode must be 'battle' or 'route'")
     global_step = 0
     recent_success = deque(maxlen=100)
     best_rate = -1.0
@@ -517,12 +630,15 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
         epsilon = epsilon_by_episode(episode, episodes)
         total_reward = 0.0
         while not env.done:
+            active_before = list(env.alive)
             actions = [
                 _choose_action(model, observations[index], masks[index], epsilon, rng)
                 for index in range(len(observations))
             ]
             old_obs, old_masks, rewards, next_obs, next_masks, done = env.step(actions)
             for index, action in enumerate(actions):
+                if not active_before[index]:
+                    continue
                 replay.append((old_obs[index], action, rewards[index], next_obs[index], next_masks[index], float(done)))
                 total_reward += rewards[index]
             observations, masks = next_obs, next_masks
@@ -539,7 +655,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
                 f"reward={total_reward:.2f} ticks={env.elapsed_ticks} epsilon={epsilon:.3f} "
                 f"elapsed={time.perf_counter() - started:.1f}s"
             )
-        if episode % 100 == 0 or episode == episodes:
+        if episode % CHECKPOINT_INTERVAL == 0 or episode == episodes:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
             checkpoint = {
@@ -553,6 +669,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0):
                 "left_plant_cells": LEFT_PLANT_CELLS,
                 "training_roster": GORIGONS.players,
                 "spike_carrier": GORIGONS.spike_holder,
+                "training_mode": mode,
+                "opponents": env.opponents if mode == "battle" else (),
             }
             torch.save(checkpoint, save_dir / "co1_attacker_A1_latest.pt")
             if success_rate >= best_rate:
@@ -567,8 +685,12 @@ def main():
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--save-dir", type=Path, default=DEFAULT_SAVE_DIR)
+    parser.add_argument("--mode", choices=("battle", "route"), default="battle")
+    parser.add_argument("--opponents", nargs="+", choices=(
+        "omoko_v1", "touyama_v2", "fnatic_v3", "gc_v1", "toru_ai_v3.1",
+    ))
     args = parser.parse_args()
-    train(args.episodes, args.save_dir, args.seed)
+    train(args.episodes, args.save_dir, args.seed, args.mode, args.opponents)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_train_attacker_A1 import (
     ACTION_PLANT,
     CARDINAL_MOVES,
@@ -21,6 +22,8 @@ from concon_v1.co1_train_attacker_A1 import (
     build_action_mask,
     build_observation,
     choose_split_assignment,
+    choose_team_fire_target,
+    facing_for_fire_target,
     plant_stage_action_mask,
 )
 
@@ -99,12 +102,25 @@ class ConconAttackerA1Controller:
             [tuple(map(int, other.pos)) for other in attackers],
             alive, self._a_completed_groups, grid, carrier_index,
         )
+        is_carrier = bool(getattr(char, "has_spike", False))
+        if not (is_carrier and route.at_plant_stage and position == route.goal):
+            ability = choose_ability(char, getattr(self, "game", None),
+                                     route_goal=route.goal)
+            if ability is not None:
+                return list(char.pos), ability
+        # Planting is time critical once the carrier has reached the selected site.
+        if not (is_carrier and route.at_plant_stage and position == route.goal):
+            smoke_cells = game_state.get("smoke_cells", ())
+            game = getattr(self, "game", None)
+            target = choose_team_fire_target(char, chars, grid, smoke_cells, game)
+            if target is not None:
+                facing = facing_for_fire_target(char, target, chars, grid, smoke_cells, game)
+                return list(char.pos), {"facing": facing}
         allies = [
             other.pos for other in chars
             if other is not char and getattr(other, "team", None) == char.team
             and getattr(other, "is_alive", True)
         ]
-        is_carrier = bool(getattr(char, "has_spike", False))
         observation = build_observation(
             route,
             position,
