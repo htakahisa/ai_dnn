@@ -1,10 +1,13 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import torch
 import numpy as np
 
-from concon_v1.co1_learn_attacker_A1 import ConconAttackerA1Controller
+from concon_v1.co1_learn_attacker_A1 import (
+    ConconAttackerA1Controller,
+)
 from concon_v1.co1_train_attacker_A1 import (
     ACTION_DIM, ACTION_PLANT, ATTACKER_SPAWNS, GORIGONS, GRID,
     LEFT_PLANT_CELLS, SPIKE_CARRIER_INDEX, RouteEnv, RouteProgress,
@@ -35,6 +38,8 @@ class ASynchronizationTests(unittest.TestCase):
             for c, group in zip(self.chars, self.groups)
         }
         self.controller._a_completed_groups = set()
+        self.controller._last_enemy_seen_tick = {}
+        self.controller._enemy_was_visible = {}
         self.controller.model = ZeroModel()
         self.state = {"chars": self.chars, "grid": GRID, "battle_tick": 1}
 
@@ -130,6 +135,7 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertTrue(mask[1])
         self.assertFalse(mask[4])
 
+    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
     def test_visible_enemy_stops_route_and_faces_for_automatic_fire(self):
         shooter = self.chars[0]
         enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
@@ -138,6 +144,73 @@ class ASynchronizationTests(unittest.TestCase):
         result = self.controller.decide_move(shooter, self.state)
         self.assertEqual(result[0], list(shooter.pos))
         self.assertEqual(result[1], {"facing": "N"})
+
+    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
+    def test_visual_sighting_stops_three_ticks_even_without_a_firing_line(self):
+        shooter = self.chars[0]
+        enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
+                                is_alive=True, hp=100)
+        self.state["chars"].append(enemy)
+        sight = {"visible": True}
+        game = SimpleNamespace(
+            check_shot_line_of_sight=lambda *_: False,
+            check_line_of_sight=lambda *_: sight["visible"],
+        )
+        self.controller.set_game(game)
+        with patch("concon_v1.co1_learn_attacker_A1.choose_ability", return_value=None):
+            with patch.object(self.controller.model, "forward",
+                              wraps=self.controller.model.forward) as forward:
+                for tick in (10, 11, 12):
+                    self.state["battle_tick"] = tick
+                    self.assertEqual(self.controller.decide_move(shooter, self.state),
+                                     list(shooter.pos))
+                    sight["visible"] = False
+                self.assertEqual(forward.call_count, 0)
+                self.state["battle_tick"] = 13
+                self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 1)
+        self.controller.reset_round()
+        self.assertEqual(self.controller._last_enemy_seen_tick, {})
+        self.assertEqual(self.controller._enemy_was_visible, {})
+
+    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
+    def test_continuous_sighting_does_not_extend_three_tick_stop(self):
+        shooter = self.chars[0]
+        enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
+                                is_alive=True, hp=100)
+        self.state["chars"].append(enemy)
+        sight = {"visible": True}
+        game = SimpleNamespace(
+            check_shot_line_of_sight=lambda *_: False,
+            check_line_of_sight=lambda *_: sight["visible"],
+        )
+        self.controller.set_game(game)
+        with patch("concon_v1.co1_learn_attacker_A1.choose_ability", return_value=None):
+            with patch.object(self.controller.model, "forward",
+                              wraps=self.controller.model.forward) as forward:
+                for tick in (10, 11, 12):
+                    self.state["battle_tick"] = tick
+                    self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 0)
+
+                for tick in (13, 14):
+                    self.state["battle_tick"] = tick
+                    self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 2)
+
+                sight["visible"] = False
+                self.state["battle_tick"] = 15
+                self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 3)
+
+                sight["visible"] = True
+                for tick in (16, 17, 18):
+                    self.state["battle_tick"] = tick
+                    self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 3)
+                self.state["battle_tick"] = 19
+                self.controller.decide_move(shooter, self.state)
+                self.assertEqual(forward.call_count, 4)
 
     def test_team_prefers_enemy_with_two_firing_lines(self):
         grid = np.zeros((7, 7), dtype=np.int32)

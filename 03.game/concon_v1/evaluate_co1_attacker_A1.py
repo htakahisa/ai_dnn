@@ -1,7 +1,8 @@
-"""Evaluate the ConCon A1 attacker against real defender controllers."""
+"""Evaluate ConCon A1 in fresh, single-round games against real defenders."""
 
 import argparse
 import contextlib
+import hashlib
 import io
 import json
 import random
@@ -10,6 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -18,10 +20,12 @@ if str(ROOT) not in sys.path:
 from map_data import NEW_MAZE_STR
 from party_presets import get_preset
 from run_game import VisualFPSBattle, _build_team_ai
+from concon_v1.co1_attacker_controller import ConconAttackerController
 from concon_v1.co1_battle_training import _run_from_project_root
+from concon_v1.co1_learn_attacker_A1 import DEFAULT_MODEL_PATH
 
 
-DEFAULT_ROUNDS = 12
+DEFAULT_ROUNDS = 36
 
 OPPONENTS = {
     "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
@@ -53,23 +57,43 @@ class LimitedRoundBattle(VisualFPSBattle):
             self.plant_tick = self.battle_tick
         return result
 
-    def _kill_character(self, shooter, target, *, credit_kill=True, during_battle=True):
-        if (target.team == "A" and target.has_spike and not self.is_planted
-                and getattr(self, "spike_drop_tick", None) is None):
+    def _record_spike_drop(self, carrier):
+        self.spike_drop_count = getattr(self, "spike_drop_count", 0) + 1
+        if getattr(self, "spike_drop_tick", None) is None:
             self.spike_drop_tick = self.battle_tick
-            self.spike_drop_pos = [int(value) for value in target.pos]
-            route = self.attacker_controller.route_controller._routes.get(target.name)
+            self.spike_drop_pos = [int(value) for value in carrier.pos]
+            route = self.attacker_controller.route_controller._routes.get(carrier.name)
             self.spike_drop_goal = (
                 [int(value) for value in route.goal] if route is not None else None
             )
+
+    def _kill_character(self, shooter, target, *, credit_kill=True, during_battle=True):
+        if target.team == "A" and target.has_spike and not self.is_planted:
+            self._record_spike_drop(target)
         return super()._kill_character(
             shooter, target, credit_kill=credit_kill, during_battle=during_battle
         )
 
+    def process_battle(self):
+        # Some status effects mark the carrier dead without calling _kill_character.
+        # The base battle process drops that carrier's spike later in this tick.
+        if not self.is_planted:
+            for carrier in self.chars:
+                if carrier.team == "A" and not carrier.is_alive and carrier.has_spike:
+                    self._record_spike_drop(carrier)
+        return super().process_battle()
+
     def check_match_winner(self):
         previous_attacker_wins = self.previous_attacker_wins
-        self.stop_after_round = True
-        super().check_match_winner()
+        # Each evaluation game contains one round. The normal match handler
+        # would otherwise continue until a team reaches its win threshold.
+        for controller in (self.attacker_controller, self.defender_controller):
+            record = getattr(controller, "record_opponent_round_end", None)
+            if record is not None:
+                record()
+        recorder = getattr(self, "_record_replay_frame", None)
+        if recorder is not None:
+            recorder()
         attacker_alive = sum(c.is_alive for c in self.chars if c.team == "A")
         defender_alive = sum(c.is_alive for c in self.chars if c.team == "D")
         if self.is_defused:
@@ -90,6 +114,7 @@ class LimitedRoundBattle(VisualFPSBattle):
             "first_site_tick": getattr(self, "first_site_tick", None),
             "max_plant_progress": getattr(self, "max_plant_progress", 0),
             "spike_drop_tick": getattr(self, "spike_drop_tick", None),
+            "spike_drop_count": getattr(self, "spike_drop_count", 0),
             "spike_drop_pos": getattr(self, "spike_drop_pos", None),
             "spike_drop_goal": getattr(self, "spike_drop_goal", None),
             "planted_pos": (
@@ -112,6 +137,7 @@ class LimitedRoundBattle(VisualFPSBattle):
         self.first_site_tick = None
         self.max_plant_progress = 0
         self.spike_drop_tick = None
+        self.spike_drop_count = 0
         self.spike_drop_pos = None
         self.spike_drop_goal = None
         self.previous_attacker_wins = self.attacker_wins
@@ -122,50 +148,94 @@ class LimitedRoundBattle(VisualFPSBattle):
             self.init_round()
 
 
+def summarize_spike_drops(round_results):
+    """Count drop events across all rounds, independently of plant outcomes."""
+    drop_counts = [int(record.get("spike_drop_count", 0)) for record in round_results]
+    return {
+        "spike_drop_events": sum(drop_counts),
+        "spike_drop_rounds": sum(count > 0 for count in drop_counts),
+        "plants_after_drop": sum(
+            count > 0 and bool(record["planted"])
+            for count, record in zip(drop_counts, round_results)
+        ),
+        "no_plant_after_drop": sum(
+            count > 0 and not record["planted"]
+            for count, record in zip(drop_counts, round_results)
+        ),
+    }
+
+
 @_run_from_project_root
-def evaluate(opponent, rounds=3, seed=0):
+def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
+             frozen_checkpoint=None):
     if opponent not in OPPONENTS:
         raise ValueError(f"unknown opponent: {opponent}")
+    if rounds < 1:
+        raise ValueError("rounds must be positive")
+    # Every trial creates a controller. Keep its weights fixed even if a
+    # concurrent training process replaces the checkpoint between trials.
+    checkpoint_bytes = (
+        bytes(frozen_checkpoint) if frozen_checkpoint is not None
+        else Path(model_path).read_bytes()
+    )
+    checkpoint = torch.load(io.BytesIO(checkpoint_bytes), map_location="cpu",
+                            weights_only=False)
+    model_sha256 = hashlib.sha256(checkpoint_bytes).hexdigest()
     ai_key, preset_name = OPPONENTS[opponent]
     attackers = get_preset("Gorigons")
     defenders = get_preset(preset_name)
     random.seed(seed)
     np.random.seed(seed)
-    try:
-        import torch
-        torch.manual_seed(seed)
-    except ImportError:
-        pass
-    with contextlib.redirect_stdout(io.StringIO()):
-        game = LimitedRoundBattle(
-            NEW_MAZE_STR,
-            _build_team_ai("concon_v1"),
-            _build_team_ai(ai_key),
-            headless=True,
-            attacker_roster=list(attackers.players),
-            defender_roster=list(defenders.players),
-            spike_holder_name=attackers.spike_holder,
-            defender_spike_holder_name=defenders.spike_holder,
-            attacker_igl_name=attackers.igl,
-            defender_igl_name=defenders.igl,
-            attacker_team_name=attackers.name,
-            defender_team_name=defenders.name,
-            disable_side_swap=True,
-        )
-        game.round_limit = rounds
-        game.round_results = []
-        game.previous_attacker_wins = 0
-        game.attacker_controller.route_controller.rng.seed(seed)
-        game.run()
-    results = game.round_results
+    torch.manual_seed(seed)
+    route_rng = random.Random(seed)
+    results = []
+    for trial in range(1, rounds + 1):
+        # Match training's one-new-game-per-episode structure. Keep the RNG
+        # streams advancing so the trials do not repeat the same setup.
+        with contextlib.redirect_stdout(io.StringIO()):
+            attacker_ai = _build_team_ai("concon_v1")
+            attacker_ai.attacker_factory = lambda: ConconAttackerController(
+                checkpoint_bytes=checkpoint_bytes
+            )
+            game = LimitedRoundBattle(
+                NEW_MAZE_STR,
+                attacker_ai,
+                _build_team_ai(ai_key),
+                headless=True,
+                attacker_roster=list(attackers.players),
+                defender_roster=list(defenders.players),
+                spike_holder_name=attackers.spike_holder,
+                defender_spike_holder_name=defenders.spike_holder,
+                attacker_igl_name=attackers.igl,
+                defender_igl_name=defenders.igl,
+                attacker_team_name=attackers.name,
+                defender_team_name=defenders.name,
+                disable_side_swap=True,
+            )
+            game.round_limit = 1
+            game.round_results = []
+            game.previous_attacker_wins = 0
+            game.analytics_tracker = None
+            controller_rng = game.attacker_controller.route_controller.rng
+            controller_rng.setstate(route_rng.getstate())
+            game.run()
+            route_rng.setstate(controller_rng.getstate())
+        if len(game.round_results) != 1:
+            raise RuntimeError("evaluation game did not finish exactly one round")
+        results.append({**game.round_results[0], "trial": trial})
     plant_count = sum(r["planted"] for r in results)
     plant_results = [r for r in results if r["attacker_alive_at_plant"] is not None]
     no_plant_results = [r for r in results if not r["planted"]]
+    drop_summary = summarize_spike_drops(results)
     end_reasons = dict(Counter(r["end_reason"] for r in results))
     no_plant_reasons = dict(Counter(r["end_reason"] for r in no_plant_results))
     return {
         "opponent": opponent,
         "roster": preset_name,
+        "model_episode": checkpoint.get("episode"),
+        "model_success100_at_save": checkpoint.get("success_rate"),
+        "model_attacker_perception": checkpoint.get("attacker_perception", "legacy_unknown"),
+        "model_sha256": model_sha256,
         "rounds": len(results),
         "attacker_wins": sum(r["winner"] == "A" for r in results),
         "plants": plant_count,
@@ -182,7 +252,7 @@ def evaluate(opponent, rounds=3, seed=0):
         "defender_kills": sum(r["defender_kills"] for r in results),
         "end_reasons": end_reasons,
         "no_plant_reasons": no_plant_reasons,
-        "no_plant_carrier_drops": sum(r["spike_drop_tick"] is not None for r in no_plant_results),
+        **drop_summary,
         "no_plant_site_reached": sum(r["first_site_tick"] is not None for r in no_plant_results),
         "no_plant_started": sum(r["max_plant_progress"] > 0 for r in no_plant_results),
         "details": results,
@@ -191,18 +261,27 @@ def evaluate(opponent, rounds=3, seed=0):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS)
+    parser.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS,
+                        help="number of independent single-round games per opponent")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH,
+                        help="checkpoint to freeze for every opponent and trial")
     parser.add_argument("--opponents", nargs="+", choices=OPPONENTS,
                         default=list(OPPONENTS))
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
+    frozen_checkpoint = args.model.read_bytes()
     results = []
     for opponent in args.opponents:
-        result = evaluate(opponent, args.rounds, args.seed)
+        result = evaluate(opponent, args.rounds, args.seed,
+                          frozen_checkpoint=frozen_checkpoint)
         results.append(result)
+        print(f"model episode={result['model_episode']} "
+              f"success100_at_save={result['model_success100_at_save']} "
+              f"attacker_perception={result['model_attacker_perception']} "
+              f"sha256={result['model_sha256'][:12]}", flush=True)
         plant_alive = (
             f"{result['avg_attacker_alive_at_plant']:.2f}:"
             f"{result['avg_defender_alive_at_plant']:.2f}"
@@ -212,8 +291,12 @@ def main():
               f"({result['plant_success_rate']:.1%}), "
               f"avg alive at plant A:D {plant_alive}",
               flush=True)
+        print(f"  spike drop events: {result['spike_drop_events']}, "
+              f"rounds with drop: {result['spike_drop_rounds']}; "
+              f"planted after drop: {result['plants_after_drop']}, "
+              f"no plant after drop: {result['no_plant_after_drop']}",
+              flush=True)
         print(f"  no plant: {len(result['details']) - result['plants']} rounds, "
-              f"carrier dropped {result['no_plant_carrier_drops']}, "
               f"site reached {result['no_plant_site_reached']}, "
               f"plant started {result['no_plant_started']}; "
               f"end reasons {result['no_plant_reasons']}",

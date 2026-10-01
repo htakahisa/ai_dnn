@@ -7,12 +7,13 @@ import os
 import random
 from pathlib import Path
 
-from concon_v1.co1_attacker_abilities import choose_ability
+from concon_v1.co1_attacker_retrieve import ConconAttackerRetrieveController
+from concon_v1.co1_attacker_sighting import TeamEnemySightings
+from concon_v1.co1_learn_attacker_A1 import preplant_contact_action
 from concon_v1.co1_train_attacker_A1 import (
     ACTION_PLANT, ACTION_WAIT, CARDINAL_MOVES, GRID, GORIGONS,
     MAX_TICKS, RouteProgress, advance_team_routes, build_action_mask,
-    build_observation, choose_split_assignment, choose_team_fire_target,
-    facing_for_fire_target, plant_stage_action_mask,
+    build_observation, choose_split_assignment, plant_stage_action_mask,
 )
 
 
@@ -47,39 +48,47 @@ def plant_advantage_reward(attackers_alive, defenders_alive, planted=False):
 
 
 class TrainingAttackerController:
-    handles_team_perception = True
-
     def __init__(self, env):
         self.env = env
+        self._last_enemy_seen_tick = {}
+        self._enemy_was_visible = {}
 
     def set_game(self, game):
         self.game = game
 
     def reset_round(self):
-        pass
+        self._last_enemy_seen_tick.clear()
+        self._enemy_was_visible.clear()
 
     def decide_move(self, char, game_state):
+        tick = int(game_state.get("battle_tick", 0))
+        sightings = self.env.enemy_sightings
+        sightings.observe(char, game_state.get("chars", []), self.game,
+                          game_state["grid"], tick)
+        if game_state.get("spike_pos") is not None and not game_state.get("is_planted"):
+            self.env.retrieve_controller.set_game(self.game)
+            result = self.env.retrieve_controller.decide_move(char, game_state)
+            return sightings.guard_move(result, char.pos, tick)
         index = self.env.attacker_indices[char.name]
         route = self.env.routes[index]
         planting = char.has_spike and route.at_plant_stage and tuple(char.pos) == route.goal
         if not planting:
-            ability = choose_ability(char, self.env.game, route_goal=route.goal)
-            if ability is not None:
-                return list(char.pos), ability
-        target = self.env.targets.get(char.name)
-        if target is not None:
-            facing = facing_for_fire_target(
-                char, target, self.env.game.chars, self.env.game.grid,
-                self.env.game._smoke_cells(), self.env.game,
+            contact = preplant_contact_action(
+                char, game_state, self.game, route.goal,
+                self._last_enemy_seen_tick, self._enemy_was_visible,
             )
-            return list(char.pos), {"facing": facing}
+            if contact is not None:
+                return sightings.guard_move(contact, char.pos, tick)
+        self.env.policy_action_applied[index] = True
         action = self.env.actions[index]
         if action == ACTION_PLANT:
             return list(char.pos), "PLANT"
         if action < len(CARDINAL_MOVES):
             dr, dc = CARDINAL_MOVES[action]
-            return [int(char.pos[0]) + dr, int(char.pos[1]) + dc]
-        return list(char.pos)
+            result = [int(char.pos[0]) + dr, int(char.pos[1]) + dc]
+        else:
+            result = list(char.pos)
+        return sightings.guard_move(result, char.pos, tick)
 
 
 class BattleRouteEnv:
@@ -107,7 +116,7 @@ class BattleRouteEnv:
             "ConCon A1 training",
             attacker_factory=lambda: TrainingAttackerController(self),
             defender_factory=DefaultDefenderController,
-            use_iq_perception=False,
+            use_iq_perception=True,
         )
         with contextlib.redirect_stdout(io.StringIO()):
             from run_game import VisualFPSBattle, _build_team_ai
@@ -126,6 +135,9 @@ class BattleRouteEnv:
                 self.game._run_defender_setup_tick()
         self.game.stop_after_round = True
         self.game.analytics_tracker = None
+        self.retrieve_controller = ConconAttackerRetrieveController()
+        self.retrieve_controller.set_game(self.game)
+        self.enemy_sightings = TeamEnemySightings()
         self.attackers = [char for char in self.game.chars if char.team == "A"]
         if tuple(char.name for char in self.attackers) != GORIGONS.players:
             raise ValueError("the training attacker roster must be Gorigons in preset order")
@@ -135,10 +147,13 @@ class BattleRouteEnv:
                        for group, char in zip(groups, self.attackers)]
         self._a_completed_groups = set()
         self.actions = [ACTION_WAIT] * len(self.attackers)
-        self.targets = {}
+        self.policy_action_applied = [False] * len(self.attackers)
         self.elapsed_ticks = 0
         self.done = False
         self.success = False
+        self.retrieve_active = False
+        self.had_spike_drop = False
+        self.spike_recovered = False
         self._sync()
         return self._collect()
 
@@ -150,57 +165,51 @@ class BattleRouteEnv:
 
     def _collect(self):
         self._sync()
+        self.retrieve_active = bool(self.game.spike_pos is not None and not self.game.is_planted)
         carrier_index = next((i for i, char in enumerate(self.attackers)
                               if char.is_alive and char.has_spike), None)
         advance_team_routes(self.routes, self.positions, self.alive,
                             self._a_completed_groups, GRID, carrier_index)
         observations, masks = [], []
-        self.targets = {}
-        smoke = self.game._smoke_cells()
+        perception = self.game.current_attacker_team_ai.perception_engine
         for index, (char, route) in enumerate(zip(self.attackers, self.routes)):
-            allies = [other.pos for other in self.attackers
-                      if other is not char and other.is_alive]
-            is_carrier = bool(char.has_spike and char.is_alive)
+            view = perception.build_game_view(viewer=char, game=self.game)
+            actor = view.perceived_character_for(char)
+            allies = [other.pos for other in view.chars
+                      if other is not actor and other.team == "A" and other.is_alive]
+            is_carrier = bool(actor.has_spike and actor.is_alive)
             observations.append(build_observation(
-                route, char.pos, is_carrier, allies,
-                getattr(char, "plant_timer", 0), self.elapsed_ticks, GRID,
+                route, actor.pos, is_carrier, allies,
+                getattr(actor, "plant_timer", 0), self.game.battle_tick, view.grid,
             ))
             mask = build_action_mask(
-                GRID, char.pos, allies, is_carrier, route.at_plant_stage,
+                view.grid, actor.pos, allies, is_carrier, route.at_plant_stage,
                 route.goal, route.distance_map,
-                route.stage == 0 and tuple(char.pos) == route.goal
+                route.stage == 0 and tuple(actor.pos) == route.goal
                 and bool({self.routes[i].group for i, alive in enumerate(self.alive)
                           if alive} - self._a_completed_groups),
             )
             if route.at_plant_stage and not is_carrier:
                 mask = plant_stage_action_mask(
-                    GRID, char.pos, allies,
-                    self.attackers[carrier_index].pos if carrier_index is not None else None,
+                    view.grid, actor.pos, allies,
+                    view.perceived_character_for(self.attackers[carrier_index]).pos
+                    if carrier_index is not None else None,
                     self.routes[carrier_index].goal if carrier_index is not None else None,
                 )
-            if not char.is_alive:
+            if not char.is_alive or self.retrieve_active:
                 mask[:] = False
                 mask[ACTION_WAIT] = True
-            elif not (is_carrier and route.at_plant_stage
-                      and tuple(char.pos) == route.goal):
-                target = choose_team_fire_target(
-                    char, self.game.chars, GRID, smoke, self.game,
-                )
-                if target is not None:
-                    self.targets[char.name] = target
-                    # The route model otherwise cannot distinguish a forced
-                    # combat wait from an ordinary optional route wait.
-                    observations[-1][-1] = -1.0
-                    mask[:] = False
-                    mask[ACTION_WAIT] = True
             masks.append(mask)
         return observations, masks
 
     @_run_from_project_root
-    def step(self, actions):
-        observations, masks = self._collect()
+    def step(self, actions, *, current=None):
+        observations, masks = current if current is not None else self._collect()
+        route_active_before = not self.retrieve_active
+        was_retrieving = self.retrieve_active
         self.actions = [int(action) if masks[i][int(action)] else ACTION_WAIT
                         for i, action in enumerate(actions)]
+        self.policy_action_applied = [False] * len(self.attackers)
         previous_stages = [route.stage for route in self.routes]
         previous_distances = [int(route.distance_map[pos])
                               for route, pos in zip(self.routes, self.positions)]
@@ -217,6 +226,12 @@ class BattleRouteEnv:
             self.game._clear_occupancy_counts()
         self.elapsed_ticks += 1
         next_observations, next_masks = self._collect()
+        self.route_active_before_step = route_active_before
+        self.had_spike_drop |= was_retrieving or self.retrieve_active
+        self.spike_recovered |= bool(
+            was_retrieving and not self.retrieve_active
+            and any(char.is_alive and char.has_spike for char in self.attackers)
+        )
         after_attackers = sum(self.alive)
         after_defenders = sum(c.is_alive for c in self.game.chars if c.team == "D")
         planted = bool(self.game.is_planted)
@@ -231,11 +246,14 @@ class BattleRouteEnv:
                 distance = int(route.distance_map[pos])
                 if distance >= 0:
                     rewards[index] += 0.04 * (previous_distances[index] - distance)
+        if route_active_before and self.retrieve_active:
+            # Preserve the carrier-loss signal while keeping the round alive.
+            rewards = [reward - 3.0 for reward in rewards]
         self.success = planted
         won_by_elimination = bool(self.game.round_over and self.game.attacker_wins)
-        has_carrier = any(c.is_alive and c.has_spike for c in self.attackers)
-        self.done = (self.success or self.game.round_over or not has_carrier
-                     or self.elapsed_ticks >= MAX_TICKS)
+        # The game ends pre-plant rounds on timeout or either team's wipe.
+        # A dropped spike is an intermediate retrieve phase, not a loss.
+        self.done = self.success or self.game.round_over
         if self.success or won_by_elimination:
             rewards = [reward + 10.0 for reward in rewards]
         elif self.done:

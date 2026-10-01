@@ -1,11 +1,13 @@
 """Inference controller matching co1_train_attacker_A1's observation and actions."""
 
+import io
 import random
 from pathlib import Path
 
 import numpy as np
 import torch
 
+from controllers import BaseController
 from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_train_attacker_A1 import (
     ACTION_PLANT,
@@ -29,6 +31,47 @@ from concon_v1.co1_train_attacker_A1 import (
 
 
 DEFAULT_MODEL_PATH = DEFAULT_SAVE_DIR / "co1_attacker_A1_best.pt"
+ENEMY_SIGHT_STOP_TICKS = 2  # 敵を視認したときに停止するtick
+
+
+def _sees_enemy(char, chars, grid, game):
+    """Visual sight is broader than an unobstructed firing line."""
+    for enemy in chars:
+        if (not getattr(enemy, "is_alive", True)
+                or getattr(enemy, "team", None) == char.team):
+            continue
+        if game is not None and hasattr(game, "check_line_of_sight"):
+            if game.check_line_of_sight(char, enemy):
+                return True
+        elif BaseController.has_line_of_sight(char.pos, enemy.pos, grid):
+            return True
+    return False
+
+
+def preplant_contact_action(char, game_state, game, route_goal,
+                            last_enemy_seen_tick, enemy_was_visible):
+    """Use the same perceived contact behavior in training and inference."""
+    chars = game_state.get("chars", [])
+    grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
+    smoke_cells = game_state.get("smoke_cells", ())
+    target = choose_team_fire_target(char, chars, grid, smoke_cells, game)
+    tick = int(game_state.get("battle_tick", 0))
+    visible = target is not None or _sees_enemy(char, chars, grid, game)
+    was_visible = enemy_was_visible.get(char.name, False)
+    if visible and not was_visible:
+        last_enemy_seen_tick[char.name] = tick
+    enemy_was_visible[char.name] = visible
+    first_seen = last_enemy_seen_tick.get(char.name)
+    if first_seen is not None and 0 <= tick - first_seen < ENEMY_SIGHT_STOP_TICKS:
+        if target is not None:
+            facing = facing_for_fire_target(char, target, chars, grid, smoke_cells, game)
+            return list(char.pos), {"facing": facing}
+        return list(char.pos)
+    last_enemy_seen_tick.pop(char.name, None)
+    ability = choose_ability(char, game, route_goal=route_goal)
+    if ability is not None:
+        return list(char.pos), ability
+    return None
 
 
 class ConconAttackerA1Controller:
@@ -39,15 +82,16 @@ class ConconAttackerA1Controller:
     distance features/rewards shared with the training environment.
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None):
         self.model_path = Path(model_path)
         self.rng = random.Random(seed)
-        if not self.model_path.is_file():
+        if checkpoint_bytes is None and not self.model_path.is_file():
             raise FileNotFoundError(
                 f"ConCon A1 model not found: {self.model_path}. "
                 "Train it with: python concon_v1/co1_train_attacker_A1.py"
             )
-        checkpoint = torch.load(self.model_path, map_location="cpu", weights_only=False)
+        source = io.BytesIO(checkpoint_bytes) if checkpoint_bytes is not None else self.model_path
+        checkpoint = torch.load(source, map_location="cpu", weights_only=False)
         if checkpoint.get("obs_dim") != OBS_DIM or checkpoint.get("n_actions") != ACTION_DIM:
             raise ValueError("checkpoint observation/action dimensions do not match this controller")
         if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
@@ -60,6 +104,8 @@ class ConconAttackerA1Controller:
         self._pattern_index = None
         self._groups = {}
         self._a_completed_groups = set()
+        self._last_enemy_seen_tick = {}
+        self._enemy_was_visible = {}
 
     def set_game(self, game):
         self.game = game
@@ -68,6 +114,8 @@ class ConconAttackerA1Controller:
         self._routes.clear()
         self._groups.clear()
         self._a_completed_groups.clear()
+        self._last_enemy_seen_tick.clear()
+        self._enemy_was_visible.clear()
         self._pattern_index = None
 
     def _prepare_round(self, chars):
@@ -103,19 +151,14 @@ class ConconAttackerA1Controller:
             alive, self._a_completed_groups, grid, carrier_index,
         )
         is_carrier = bool(getattr(char, "has_spike", False))
-        if not (is_carrier and route.at_plant_stage and position == route.goal):
-            ability = choose_ability(char, getattr(self, "game", None),
-                                     route_goal=route.goal)
-            if ability is not None:
-                return list(char.pos), ability
-        # Planting is time critical once the carrier has reached the selected site.
-        if not (is_carrier and route.at_plant_stage and position == route.goal):
-            smoke_cells = game_state.get("smoke_cells", ())
-            game = getattr(self, "game", None)
-            target = choose_team_fire_target(char, chars, grid, smoke_cells, game)
-            if target is not None:
-                facing = facing_for_fire_target(char, target, chars, grid, smoke_cells, game)
-                return list(char.pos), {"facing": facing}
+        planting = is_carrier and route.at_plant_stage and position == route.goal
+        if not planting:
+            contact = preplant_contact_action(
+                char, game_state, getattr(self, "game", None), route.goal,
+                self._last_enemy_seen_tick, self._enemy_was_visible,
+            )
+            if contact is not None:
+                return contact
         allies = [
             other.pos for other in chars
             if other is not char and getattr(other, "team", None) == char.team

@@ -55,6 +55,14 @@ def choose_ability(char, game, *, route_goal=None):
             return {"ability": "SMOKE", "target": tuple(enemy.pos)}
 
     if char.ability_name == "RECON" and char.recon_charges:
+        if not any(projectile.get("team") == char.team
+                   for projectile in game.recon_projectiles):
+            for enemy in visible:
+                if enemy.reveal_remaining > 0:
+                    continue
+                aim = _impact_aim(game, char, tuple(enemy.pos), radius=4)
+                if aim is not None:
+                    return {"ability": "RECON", "target": aim}
         allied_smokes = [smoke for smoke in game.smokes
                          if smoke.get("team") == char.team and smoke.get("remaining_ticks", 0) > 0]
         for smoke in allied_smokes:

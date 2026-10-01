@@ -28,7 +28,13 @@ from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction
                             TUNNEL_WARNING_COLOR, TUNNEL_ACTIVE_COLOR)
 from party_presets import all_preset_names, canonical_preset_name, get_preset
 from run_game import VisualFPSBattle, _build_team_ai
-from game_core import PLAYER_COMBOS, get_character_combat_stats, TICK_TIME, validate_tick_time_ms
+from game_core import (
+    PLAYER_COMBOS,
+    get_character_combat_stats,
+    reload_game_data,
+    TICK_TIME,
+    validate_tick_time_ms,
+)
 from tactical_simulator import (
     TacticalSimulator,
     RetakeScenario,
@@ -4469,9 +4475,12 @@ class CompetitionApp:
             width=34,
         )
         self.power_team_box.grid(row=0, column=1, padx=(8, 12), sticky="w")
-        tk.Button(top, text="戦闘力指数を計算", command=self._refresh_power_index).grid(
-            row=0, column=2, padx=4
+        self.power_refresh_button = tk.Button(
+            top,
+            text="戦闘力指数を計算",
+            command=self._reload_and_refresh_power_index,
         )
+        self.power_refresh_button.grid(row=0, column=2, padx=4)
 
         tk.Label(
             top,
@@ -4590,6 +4599,18 @@ class CompetitionApp:
             + (" / ".join(combos) if combos else "なし")
             + "  ※ IGL補正・覚醒・メンタル/コンディション等は含めません"
         )
+
+    def _reload_and_refresh_power_index(self) -> None:
+        try:
+            reload_game_data()
+        except Exception as exc:
+            self.power_summary_var.set(f"データ再読み込みエラー: {exc}")
+            self.power_combo_var.set("発動コンボ: -")
+            if self.power_tree is not None:
+                for item in self.power_tree.get_children():
+                    self.power_tree.delete(item)
+            return
+        self._refresh_power_index()
 
     def _build_results(self) -> None:
         status_bar = tk.Frame(self.root)
@@ -5462,6 +5483,7 @@ class CompetitionApp:
         self.render_check.config(state="normal")
         self.rating_enabled_check.config(state=state)
         self.start_button.config(state=state)
+        self.power_refresh_button.config(state=state)
         self.rating_button.config(state="normal")
         self.team1_box.config(state="readonly" if enabled else "disabled")
         self.team2_box.config(state="readonly" if enabled else "disabled")

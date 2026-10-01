@@ -177,6 +177,39 @@ if not isinstance(PLAYER_COMBOS, list):
     print("[LOAD ERROR] player_combos.py の COMBOS がlistではありません")
     PLAYER_COMBOS = []
 
+
+def reload_game_data() -> None:
+    """Reload character stats and combos without invalidating imported combo lists."""
+    global _character_stats, _combo_module
+
+    character_stats = _load_local_module(
+        "game_character_stats",
+        (
+            "character_stats.py",
+            "character_stats_dynamic.py",
+            "character_stats_v3.py",
+            "character_stats(1).py",
+        ),
+    )
+    combo_module = _load_local_module(
+        "game_player_combos",
+        (
+            "player_combos.py",
+            "player_combos_v3.py",
+            "player_combos(1).py",
+            "player_combos_v2.py",
+        ),
+    )
+    combos = getattr(combo_module, "COMBOS", None) if combo_module else None
+    if character_stats is None:
+        raise RuntimeError("キャラクターステータスを再読み込みできません")
+    if not isinstance(combos, list):
+        raise RuntimeError("player_combos.py の COMBOS がlistではありません")
+
+    _character_stats = character_stats
+    _combo_module = combo_module
+    PLAYER_COMBOS[:] = combos
+
 _awakening_module = _load_local_module(
     "game_awakening_events",
     ("awakening_events.py",),

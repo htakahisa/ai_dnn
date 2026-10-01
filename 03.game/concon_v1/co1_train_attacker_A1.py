@@ -43,7 +43,7 @@ PLANT_REQUIRED_TICKS = 4
 DEFAULT_SAVE_DIR = Path(__file__).resolve().parent / "data" / "attacker_A1_data"
 TARGET_UPDATE_INTERVAL = 1000
 
-DEFAULT_EPISODES = 1500
+DEFAULT_EPISODES = 1000
 CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
 EPSILON_START = 1.0
 EPSILON_END = 0.05
@@ -602,6 +602,27 @@ def _optimize(model, target, optimizer, replay, batch_size, gamma):
     optimizer.step()
 
 
+def summarize_team_plants(opponents, results):
+    """Count plants and played episodes for each sampled opponent."""
+    summary = {name: {"plants": 0, "episodes": 0} for name in dict.fromkeys(opponents)}
+    for name, planted in results:
+        summary[name]["episodes"] += 1
+        summary[name]["plants"] += int(planted)
+    for counts in summary.values():
+        games = counts["episodes"]
+        counts["plant_rate"] = counts["plants"] / games if games else None
+    return summary
+
+
+def format_team_plants(summary):
+    parts = []
+    for name, counts in summary.items():
+        rate = counts["plant_rate"]
+        rate_text = f"{rate:.3f}" if rate is not None else "-"
+        parts.append(f"{name}={counts['plants']}/{counts['episodes']}({rate_text})")
+    return " ".join(parts)
+
+
 def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
           mode="battle", opponents=None):
     random.seed(seed)
@@ -622,6 +643,11 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
         raise ValueError("mode must be 'battle' or 'route'")
     global_step = 0
     recent_success = deque(maxlen=100)
+    recent_drops = deque(maxlen=100)
+    recent_recoveries = deque(maxlen=100)
+    total_plants = 0
+    team_results = []
+    recent_team_results = deque(maxlen=100)
     best_rate = -1.0
     started = time.perf_counter()
 
@@ -635,26 +661,56 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
                 _choose_action(model, observations[index], masks[index], epsilon, rng)
                 for index in range(len(observations))
             ]
-            old_obs, old_masks, rewards, next_obs, next_masks, done = env.step(actions)
+            if mode == "battle":
+                transition = env.step(actions, current=(observations, masks))
+            else:
+                transition = env.step(actions)
+            old_obs, old_masks, rewards, next_obs, next_masks, done = transition
+            route_active = mode != "battle" or env.route_active_before_step
+            route_interrupted = mode == "battle" and env.retrieve_active
             for index, action in enumerate(actions):
-                if not active_before[index]:
+                if (not active_before[index] or not route_active
+                        or (mode == "battle" and not env.policy_action_applied[index])):
                     continue
-                replay.append((old_obs[index], action, rewards[index], next_obs[index], next_masks[index], float(done)))
+                # Retrieval is controlled by its own phase. A dropped spike
+                # ends this route transition, but the real round continues.
+                applied_action = env.actions[index] if mode == "battle" else action
+                replay.append((old_obs[index], applied_action, rewards[index], next_obs[index],
+                               next_masks[index], float(done or route_interrupted)))
                 total_reward += rewards[index]
             observations, masks = next_obs, next_masks
-            global_step += 1
-            _optimize(model, target, optimizer, replay, 128, 0.99)
-            if global_step % TARGET_UPDATE_INTERVAL == 0:
-                target.load_state_dict(model.state_dict())
+            if route_active:
+                global_step += 1
+                _optimize(model, target, optimizer, replay, 128, 0.99)
+                if global_step % TARGET_UPDATE_INTERVAL == 0:
+                    target.load_state_dict(model.state_dict())
 
-        recent_success.append(float(env.success))
+        planted = bool(env.success)
+        total_plants += int(planted)
+        recent_success.append(float(planted))
+        if mode == "battle":
+            result = (env.opponent, planted)
+            team_results.append(result)
+            recent_team_results.append(result)
+            recent_drops.append(int(env.had_spike_drop))
+            recent_recoveries.append(int(env.spike_recovered))
         success_rate = sum(recent_success) / len(recent_success)
+        plant_rate_total = total_plants / episode
         if episode % 20 == 0:
+            recovery = (f" recovered100={sum(recent_recoveries)}/{sum(recent_drops)}"
+                        if mode == "battle" else "")
             print(
-                f"episode={episode}/{episodes} success100={success_rate:.3f} "
-                f"reward={total_reward:.2f} ticks={env.elapsed_ticks} epsilon={epsilon:.3f} "
-                f"elapsed={time.perf_counter() - started:.1f}s"
+                f"episode={episode}/{episodes} success100={success_rate:.3f}"
+                f" plant_total={total_plants}/{episode}"
+                f" plant_rate_total={plant_rate_total:.3f}"
+                f"{recovery} reward={total_reward:.2f} ticks={env.elapsed_ticks} "
+                f"epsilon={epsilon:.3f} elapsed={time.perf_counter() - started:.1f}s"
             )
+            if mode == "battle":
+                print("  team_total " + format_team_plants(
+                    summarize_team_plants(env.opponents, team_results)))
+                print("  team100 " + format_team_plants(
+                    summarize_team_plants(env.opponents, recent_team_results)))
         if episode % CHECKPOINT_INTERVAL == 0 or episode == episodes:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
@@ -664,19 +720,37 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
                 "n_actions": ACTION_DIM,
                 "episode": episode,
                 "success_rate": success_rate,
+                "plant_count_total": total_plants,
+                "plant_rate_total": plant_rate_total,
                 "split_patterns": SPLIT_PATTERNS,
                 "waypoint_points": WAYPOINT_POINTS,
                 "left_plant_cells": LEFT_PLANT_CELLS,
                 "training_roster": GORIGONS.players,
                 "spike_carrier": GORIGONS.spike_holder,
                 "training_mode": mode,
+                "attacker_perception": "iq" if mode == "battle" else "route_simulator",
                 "opponents": env.opponents if mode == "battle" else (),
+                "team_plant_total": (
+                    summarize_team_plants(env.opponents, team_results)
+                    if mode == "battle" else {}
+                ),
+                "team_plant100": (
+                    summarize_team_plants(env.opponents, recent_team_results)
+                    if mode == "battle" else {}
+                ),
             }
             torch.save(checkpoint, save_dir / "co1_attacker_A1_latest.pt")
             if success_rate >= best_rate:
                 best_rate = success_rate
                 torch.save(checkpoint, save_dir / "co1_attacker_A1_best.pt")
-                print(f"Saved best model with success100={best_rate:.3f} at episode {episode}")
+                print(
+                    f"Saved best model with success100={best_rate:.3f} "
+                    f"plant_total={total_plants}/{episode} "
+                    f"plant_rate_total={plant_rate_total:.3f} at episode {episode}"
+                )
+                if mode == "battle" and episode % 20 != 0:
+                    print("  team_total " + format_team_plants(checkpoint["team_plant_total"]))
+                    print("  team100 " + format_team_plants(checkpoint["team_plant100"]))
     return model
 
 

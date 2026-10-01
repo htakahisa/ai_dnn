@@ -29,11 +29,11 @@ from concon_v1.co1_train_attacker_A1 import (
 
 class ConconAttackerA1Tests(unittest.TestCase):
     def test_epsilon_decays_from_configured_start_to_floor(self):
-        self.assertEqual(EPSILON_START, 0.7)
+        self.assertEqual(EPSILON_START, 1.0)
         self.assertEqual(EPSILON_END, 0.05)
         self.assertEqual(EPSILON_DECAY_RATIO, 0.7)
-        self.assertAlmostEqual(epsilon_by_episode(0, 5000), 0.7)
-        self.assertAlmostEqual(epsilon_by_episode(1750, 5000), 0.375)
+        self.assertAlmostEqual(epsilon_by_episode(0, 5000), 1.0)
+        self.assertAlmostEqual(epsilon_by_episode(1750, 5000), 0.525)
         self.assertAlmostEqual(epsilon_by_episode(3500, 5000), 0.05)
         self.assertAlmostEqual(epsilon_by_episode(5000, 5000), 0.05)
 
