@@ -1,0 +1,90 @@
+{
+  "baseline_commit": "a242c51f5aabc8134a09b65f745255fead89b96d",
+  "battle_logic_sha256": "6928c3facf700d7a750532cac95101c712c21b40fb97a0f2917d4890b232b4c6",
+  "boundary_comparisons": 17,
+  "headless_terminal_exit": true,
+  "private_gc_opening_rng_seeded": true,
+  "scope": "Only battle_logic loop methods differ; other files held constant",
+  "matches": [
+    {
+      "attacker": "default",
+      "defender": "default",
+      "seed": 0,
+      "frames_compared": 2228,
+      "score": [
+        8,
+        13
+      ],
+      "round": 21,
+      "sides_swapped": true,
+      "overtime": false,
+      "identical": true
+    },
+    {
+      "attacker": "default",
+      "defender": "default",
+      "seed": 7,
+      "frames_compared": 2309,
+      "score": [
+        13,
+        11
+      ],
+      "round": 24,
+      "sides_swapped": true,
+      "overtime": false,
+      "identical": true
+    },
+    {
+      "attacker": "fnatic_v3",
+      "defender": "omoko_gaming_v1",
+      "seed": 0,
+      "frames_compared": 2061,
+      "score": [
+        13,
+        7
+      ],
+      "round": 20,
+      "sides_swapped": true,
+      "overtime": false,
+      "identical": true
+    },
+    {
+      "attacker": "gc_v1",
+      "defender": "touyama_gaming_v2",
+      "seed": 0,
+      "frames_compared": 4392,
+      "score": [
+        18,
+        20
+      ],
+      "round": 38,
+      "sides_swapped": true,
+      "overtime": true,
+      "identical": true
+    },
+    {
+      "attacker": "toru_ai_v3.1",
+      "defender": "fnatic_v3",
+      "seed": 0,
+      "frames_compared": 1733,
+      "score": [
+        13,
+        3
+      ],
+      "round": 16,
+      "sides_swapped": true,
+      "overtime": false,
+      "identical": true
+    }
+  ],
+  "date": "2026-10-02",
+  "timezone": "Asia/Tokyo",
+  "total_frames_compared": 12723,
+  "initial_unseeded_gc_comparison": {
+    "frame_counts": [
+      3032,
+      4392
+    ],
+    "cause": "GC defender opening has a private random.Random(None) not controlled by the global seed. The seeded comparison below isolates loop changes."
+  }
+}

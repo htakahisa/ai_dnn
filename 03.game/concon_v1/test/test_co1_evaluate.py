@@ -24,6 +24,7 @@ class EvaluationDropTests(unittest.TestCase):
         battle.current_round = 1
         battle.attacker_wins = 0
         battle.defender_wins = 0
+        battle.overtime = False
         battle.previous_attacker_wins = 0
         battle.match_over = False
         battle.is_defused = False
@@ -117,6 +118,8 @@ class EvaluationDropTests(unittest.TestCase):
         battle.current_round = 1
         battle.attacker_wins = 0
         battle.previous_attacker_wins = 0
+        battle.defender_wins = 1
+        battle.overtime = False
         battle.match_over = False
         battle.is_planted = True
         battle.is_defused = True

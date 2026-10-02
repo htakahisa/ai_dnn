@@ -711,7 +711,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
     replay = deque(maxlen=100_000)
     if mode == "battle":
         from concon_v1.co1_battle_training import BattleRouteEnv
-        env = BattleRouteEnv(seed, opponents)
+        env = BattleRouteEnv(seed, opponents, model=model)
     elif mode == "route":
         env = RouteEnv(seed)
     else:
@@ -733,17 +733,18 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
         total_reward = 0.0
         while not env.done:
             active_before = list(env.alive)
-            actions = [
-                _choose_action(model, observations[index], masks[index], epsilon, rng)
-                for index in range(len(observations))
-            ]
             if mode == "battle":
-                transition = env.step(actions, current=(observations, masks))
+                transition = env.step(epsilon=epsilon, action_rng=rng)
+                actions = env.actions
             else:
+                actions = [
+                    _choose_action(model, observations[index], masks[index], epsilon, rng)
+                    for index in range(len(observations))
+                ]
                 transition = env.step(actions)
             old_obs, old_masks, rewards, next_obs, next_masks, done = transition
             route_active = mode != "battle" or env.route_active_before_step
-            route_interrupted = mode == "battle" and env.retrieve_active
+            route_interrupted = mode == "battle" and (env.retrieve_active or env.success)
             for index, action in enumerate(actions):
                 if (not active_before[index] or not route_active
                         or (mode == "battle" and not env.policy_action_applied[index])):
@@ -752,7 +753,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
                 # ends this route transition, but the real round continues.
                 applied_action = env.actions[index] if mode == "battle" else action
                 replay.append((old_obs[index], applied_action, rewards[index], next_obs[index],
-                               next_masks[index], float(done or route_interrupted)))
+                               next_masks[index], float(done or route_interrupted
+                                                        or not env.alive[index])))
                 total_reward += rewards[index]
             observations, masks = next_obs, next_masks
             if route_active:

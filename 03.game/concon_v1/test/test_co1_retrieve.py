@@ -83,6 +83,8 @@ class RetrieveTests(unittest.TestCase):
         site = LEFT_PLANT_CELLS[0]
         carrier.pos = list(site)
         carrier.plant_timer = PLANT_REQUIRED_TICKS - 1
+        if not env.route_controller._routes:
+            env.route_controller._prepare_round(env.attackers)
         for char, route in zip(env.attackers, env.routes):
             goal = site if char is carrier else tuple(char.pos)
             route.set_stage(4, char.pos, goal=goal, goal_index=0)
@@ -95,9 +97,15 @@ class RetrieveTests(unittest.TestCase):
             env.step(actions)
         self.assertTrue(env.game.is_planted)
         self.assertTrue(env.success)
-        self.assertTrue(env.done)
+        self.assertFalse(env.done)  # The real round continues after a plant.
+        self.assertFalse(env.game.round_over)
         self.assertTrue(env.had_spike_drop)
         self.assertTrue(env.spike_recovered)
+        with patch.object(env.game, "process_battle",
+                          side_effect=lambda: setattr(env.game, "round_over", True)):
+            env.step([ACTION_WAIT] * 5)
+        self.assertTrue(env.done)
+        self.assertFalse(any(env.policy_action_applied))
 
     def test_recon_targets_team_sighting_without_prior_smoke(self):
         env = BattleRouteEnv(seed=2, opponents=["omoko_v1"])

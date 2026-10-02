@@ -13,9 +13,10 @@ from concon_v1.co1_attacker_sighting import TeamEnemySightings
 class ConconAttackerController(BaseController):
     """Use the learned route before planting and default behavior otherwise."""
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None,
+                 route_controller=None):
         super().__init__()
-        self.route_controller = ConconAttackerA1Controller(
+        self.route_controller = route_controller if route_controller is not None else ConconAttackerA1Controller(
             model_path=model_path, seed=seed, checkpoint_bytes=checkpoint_bytes
         )
         self.retrieve_controller = ConconAttackerRetrieveController()

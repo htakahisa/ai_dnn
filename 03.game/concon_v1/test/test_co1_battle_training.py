@@ -60,7 +60,7 @@ class BattleTrainingTests(unittest.TestCase):
             seen_views.append((char, game_state, game))
             return list(char.pos)
 
-        with patch("concon_v1.co1_battle_training.preplant_contact_action",
+        with patch("concon_v1.co1_learn_attacker_A1.preplant_contact_action",
                    side_effect=capture_contact):
             env.step([ACTION_WAIT] * len(env.attackers))
         self.assertTrue(seen_views)

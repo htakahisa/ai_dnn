@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-02",
+  "timezone": "Asia/Tokyo",
+  "baseline_commit": "a242c51f5aabc8134a09b65f745255fead89b96d",
+  "battle_logic_sha256": "6928c3facf700d7a750532cac95101c712c21b40fb97a0f2917d4890b232b4c6",
+  "scope": "Baseline restores only loop/run_headless_loop; all other source files are held constant.",
+  "baseline_root_tests": {
+    "run": 821,
+    "passed": 812,
+    "failures": 1,
+    "errors": 7,
+    "skipped": 1
+  },
+  "current_root_tests": {
+    "run": 821,
+    "passed": 812,
+    "failures": 1,
+    "errors": 7,
+    "skipped": 1
+  },
+  "failure_tracebacks_identical": true,
+  "failure_details": [
+    {
+      "kind": "ERROR",
+      "test": "test_bool_and_enum_are_mapped_to_fixed_output (test_analytics_ai_analysis.AiAnalysisTests)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_page_passes_each_team_to_ai_and_uses_relative_match_link (test_analytics_ai_analysis.MatchPageTests)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_analytics_map_scope (unittest.loader._FailedTest)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_checkpoint_evaluator_accepts_escort_support_observations (test_gc_real_curriculum.RealCurriculumTests)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_checkpoint_evaluator_builds_current_phase_architectures (test_gc_real_curriculum.RealCurriculumTests)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_expanded_models_preserve_source_when_new_features_are_zero (test_gc_real_curriculum.RealCurriculumTests)"
+    },
+    {
+      "kind": "ERROR",
+      "test": "test_v17_updates_only_coordination_inputs_and_ultimate_output (test_gc_real_curriculum.RealCurriculumTests)"
+    },
+    {
+      "kind": "FAIL",
+      "test": "test_post_plant_and_retake_use_all_planted_rounds (test_analytics_match_calculation.MatchCalculationTests)"
+    }
+  ],
+  "concon_tests": {
+    "run": 65,
+    "passed": 65
+  },
+  "concon_parity_opponents": [
+    "omoko_v1",
+    "touyama_v2",
+    "fnatic_v3",
+    "gc_v1",
+    "toru_ai_v3.1"
+  ],
+  "python": "3.10.6",
+  "numpy": "2.2.6",
+  "torch": "2.7.1+cu118"
+}

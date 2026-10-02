@@ -1675,66 +1675,51 @@ class BattleLogicMixin:
         others = [c for c in self.chars if c.is_alive and not c.has_spike]
         return carriers + others
 
-    def loop(self):
-        if not self.round_over and not self.match_over:
-            if self.defender_setup_phase.active:
-                self._run_defender_setup_tick()
-            else:
-                # Carnal Lust Syndicateのコンボ効果：セットアップフェーズ終了後、毎tick1HP減少
-                for c in self.chars:
-                    if c.is_alive and getattr(c, "carnal_lust_syndicate_active", False):
-                        c.hp = max(0, c.hp - 1)
-                        if c.hp <= 0:
-                            c.is_alive = False
-                            c.just_died = True
-                self._prepare_team_controllers_tick()
-                self._build_occupancy_counts()
-                try:
-                    for c in self._move_order():
-                        if c.is_alive:
-                            self.move_character(c)
-                finally:
-                    self._clear_occupancy_counts()
-                self.process_battle()
-                self._advance_combo_announcement()
+    def step_tick(self):
+        """Advance one normal game tick for GUI, headless, and rollout callers."""
+        if self.round_over or self.match_over:
+            return False
+        if self.defender_setup_phase.active:
+            self._run_defender_setup_tick()
+        else:
+            # Carnal Lust Syndicate loses 1 HP per live tick after setup.
+            for char in self.chars:
+                if char.is_alive and getattr(char, "carnal_lust_syndicate_active", False):
+                    char.hp = max(0, char.hp - 1)
+                    if char.hp <= 0:
+                        char.is_alive = False
+                        char.just_died = True
+            self._prepare_team_controllers_tick()
+            self._build_occupancy_counts()
+            try:
+                for char in self._move_order():
+                    if char.is_alive:
+                        self.move_character(char)
+            finally:
+                self._clear_occupancy_counts()
+            if self.headless:
+                self._analytics_post_setup_ticks = (
+                    int(getattr(self, "_analytics_post_setup_ticks", 0)) + 1
+                )
+                if self._analytics_post_setup_ticks == 10:
+                    self._analytics_initial_defender_positions = [
+                        tuple(char.pos) for char in self.chars
+                        if char.team == "D" and char.is_alive
+                    ]
+            self.process_battle()
+            self._advance_combo_announcement()
+        self._record_replay_frame()
+        return True
 
-            self._record_replay_frame()
+    def loop(self):
+        if self.step_tick():
             self.draw()
             self.root.after(self._tick_delay_ms(), self.loop)
 
     def run_headless_loop(self):
-        """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
+        """Run normal game ticks without drawing."""
         while not self.match_over:
-            if not self.round_over:
-                if self.defender_setup_phase.active:
-                    self._run_defender_setup_tick()
-                else:
-                    # Carnal Lust Syndicateのコンボ効果：セットアップフェーズ終了後、毎tick1HP減少
-                    for c in self.chars:
-                        if c.is_alive and getattr(
-                            c, "carnal_lust_syndicate_active", False
-                        ):
-                            c.hp = max(0, c.hp - 1)
-                            if c.hp <= 0:
-                                c.is_alive = False
-                                c.just_died = True
-                    self._prepare_team_controllers_tick()
-                    self._build_occupancy_counts()
-                    try:
-                        for c in self._move_order():
-                            if c.is_alive:
-                                self.move_character(c)
-                    finally:
-                        self._clear_occupancy_counts()
-                    self._analytics_post_setup_ticks = (
-                        int(getattr(self, "_analytics_post_setup_ticks", 0)) + 1
-                    )
-                    if self._analytics_post_setup_ticks == 10:
-                        self._analytics_initial_defender_positions = [
-                            tuple(c.pos)
-                            for c in self.chars
-                            if c.team == "D" and c.is_alive
-                        ]
-                    self.process_battle()
-                    self._advance_combo_announcement()
-                self._record_replay_frame()
+            if not self.step_tick():
+                break
+            if self.round_over and getattr(self, "stop_after_round", False):
+                break

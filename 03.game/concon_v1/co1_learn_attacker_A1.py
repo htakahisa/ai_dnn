@@ -82,24 +82,27 @@ class ConconAttackerA1Controller:
     distance features/rewards shared with the training environment.
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None,
+                 model=None):
         self.model_path = Path(model_path)
         self.rng = random.Random(seed)
-        if checkpoint_bytes is None and not self.model_path.is_file():
+        if model is None and checkpoint_bytes is None and not self.model_path.is_file():
             raise FileNotFoundError(
                 f"ConCon A1 model not found: {self.model_path}. "
                 "Train it with: python concon_v1/co1_train_attacker_A1.py"
             )
-        source = io.BytesIO(checkpoint_bytes) if checkpoint_bytes is not None else self.model_path
-        checkpoint = torch.load(source, map_location="cpu", weights_only=False)
-        if checkpoint.get("obs_dim") != OBS_DIM or checkpoint.get("n_actions") != ACTION_DIM:
-            raise ValueError("checkpoint observation/action dimensions do not match this controller")
-        if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
-                or checkpoint.get("spike_carrier") != GORIGONS.spike_holder):
-            raise ValueError("A1 model was not trained for Gorigons / ごんた; retrain co1_train_attacker_A1.py")
-        self.model = SharedRouteDQN(OBS_DIM, ACTION_DIM)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.model.eval()
+        if model is None:
+            source = io.BytesIO(checkpoint_bytes) if checkpoint_bytes is not None else self.model_path
+            checkpoint = torch.load(source, map_location="cpu", weights_only=False)
+            if checkpoint.get("obs_dim") != OBS_DIM or checkpoint.get("n_actions") != ACTION_DIM:
+                raise ValueError("checkpoint observation/action dimensions do not match this controller")
+            if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
+                    or checkpoint.get("spike_carrier") != GORIGONS.spike_holder):
+                raise ValueError("A1 model was not trained for Gorigons / ごんた; retrain co1_train_attacker_A1.py")
+            model = SharedRouteDQN(OBS_DIM, ACTION_DIM)
+            model.load_state_dict(checkpoint["model_state_dict"])
+            model.eval()
+        self.model = model
         self._routes = {}
         self._pattern_index = None
         self._groups = {}
@@ -131,7 +134,7 @@ class ConconAttackerA1Controller:
             for char, group in zip(attackers, groups)
         }
 
-    def decide_move(self, char, game_state):
+    def _prepare_route(self, char, game_state):
         chars = game_state.get("chars", [])
         if self._pattern_index is None:
             self._prepare_round(chars)
@@ -150,15 +153,19 @@ class ConconAttackerA1Controller:
             [tuple(map(int, other.pos)) for other in attackers],
             alive, self._a_completed_groups, grid, carrier_index,
         )
+        return route
+
+    def policy_inputs(self, char, game_state):
+        """Build the policy input from the same perceived state in every mode."""
+        chars = game_state.get("chars", [])
+        route = self._routes[char.name]
+        grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
+        position = tuple(map(int, char.pos))
+        attackers = [other for other in chars if getattr(other, "team", None) == "A"]
+        alive = [bool(getattr(other, "is_alive", True)) for other in attackers]
+        carrier_index = next((i for i, other in enumerate(attackers)
+                              if alive[i] and getattr(other, "has_spike", False)), None)
         is_carrier = bool(getattr(char, "has_spike", False))
-        planting = is_carrier and route.at_plant_stage and position == route.goal
-        if not planting:
-            contact = preplant_contact_action(
-                char, game_state, getattr(self, "game", None), route.goal,
-                self._last_enemy_seen_tick, self._enemy_was_visible,
-            )
-            if contact is not None:
-                return contact
         allies = [
             other.pos for other in chars
             if other is not char and getattr(other, "team", None) == char.team
@@ -185,10 +192,27 @@ class ConconAttackerA1Controller:
                 grid, position, allies, attackers[carrier_index].pos if carrier_index is not None else None,
                 self._routes[attackers[carrier_index].name].goal if carrier_index is not None else None,
             )
+        return observation, mask
+
+    def _choose_policy_action(self, char, observation, mask):
         with torch.no_grad():
             values = self.model(torch.as_tensor(observation).unsqueeze(0))[0]
             values[~torch.as_tensor(mask)] = -torch.inf
-            action = int(values.argmax().item())
+            return int(values.argmax().item())
+
+    def decide_move(self, char, game_state):
+        route = self._prepare_route(char, game_state)
+        position = tuple(map(int, char.pos))
+        planting = char.has_spike and route.at_plant_stage and position == route.goal
+        if not planting:
+            contact = preplant_contact_action(
+                char, game_state, getattr(self, "game", None), route.goal,
+                self._last_enemy_seen_tick, self._enemy_was_visible,
+            )
+            if contact is not None:
+                return contact
+        observation, mask = self.policy_inputs(char, game_state)
+        action = self._choose_policy_action(char, observation, mask)
 
         if action == ACTION_PLANT:
             return list(char.pos), "PLANT"

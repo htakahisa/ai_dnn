@@ -87,13 +87,6 @@ class LimitedRoundBattle(VisualFPSBattle):
         previous_attacker_wins = self.previous_attacker_wins
         # Each evaluation game contains one round. The normal match handler
         # would otherwise continue until a team reaches its win threshold.
-        for controller in (self.attacker_controller, self.defender_controller):
-            record = getattr(controller, "record_opponent_round_end", None)
-            if record is not None:
-                record()
-        recorder = getattr(self, "_record_replay_frame", None)
-        if recorder is not None:
-            recorder()
         attacker_alive = sum(c.is_alive for c in self.chars if c.team == "A")
         defender_alive = sum(c.is_alive for c in self.chars if c.team == "D")
         if self.is_defused:
@@ -132,6 +125,10 @@ class LimitedRoundBattle(VisualFPSBattle):
                 self.plant_alive_counts["D"] if getattr(self, "plant_alive_counts", None) else None
             ),
         })
+        # Preserve normal round-end bookkeeping, but keep this first-round game
+        # from transitioning to a second round before its result is recorded.
+        self.stop_after_round = True
+        super().check_match_winner()
         self.plant_alive_counts = None
         self.plant_tick = None
         self.first_site_tick = None
