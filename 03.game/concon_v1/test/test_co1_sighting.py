@@ -7,7 +7,7 @@ from concon_v1.co1_attacker_controller import ConconAttackerController
 from concon_v1.co1_attacker_sighting import (
     SIGHTING_MEMORY_TICKS, TeamEnemySightings,
 )
-from concon_v1.co1_train_attacker_A1 import GRID
+from concon_v1.co1_train_attacker import GRID
 
 
 class SightingTests(unittest.TestCase):

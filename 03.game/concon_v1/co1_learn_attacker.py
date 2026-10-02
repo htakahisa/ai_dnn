@@ -1,4 +1,4 @@
-"""Inference controller matching co1_train_attacker_A1's observation and actions."""
+"""Inference controller matching the shared route model's observation and actions."""
 
 import io
 import random
@@ -9,13 +9,11 @@ import torch
 
 from controllers import BaseController
 from concon_v1.co1_attacker_abilities import choose_ability
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_attacker_common import (
     ACTION_PLANT,
     CARDINAL_MOVES,
-    DEFAULT_SAVE_DIR,
     GRID,
     GORIGONS,
-    LEFT_PLANT_CELLS,
     OBS_DIM,
     ACTION_DIM,
     RouteProgress,
@@ -29,8 +27,10 @@ from concon_v1.co1_train_attacker_A1 import (
     plant_stage_action_mask,
 )
 
+from concon_v1.co1_attacker_scenarios import get_scenario, validate_checkpoint_scenario
 
-DEFAULT_MODEL_PATH = DEFAULT_SAVE_DIR / "co1_attacker_A1_best.pt"
+
+DEFAULT_MODEL_PATH = get_scenario("A1").model_path
 ENEMY_SIGHT_STOP_TICKS = 2  # 敵を視認したときに停止するtick
 
 
@@ -74,7 +74,7 @@ def preplant_contact_action(char, game_state, game, route_goal,
     return None
 
 
-class ConconAttackerA1Controller:
+class ConconAttackerRouteController:
     """DQN route follower for one five-character attacking team.
 
     reset_round() samples a fresh 2:3, 3:2, 0:5, or 5:0 assignment. The model
@@ -82,24 +82,26 @@ class ConconAttackerA1Controller:
     distance features/rewards shared with the training environment.
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None,
-                 model=None):
-        self.model_path = Path(model_path)
+    def __init__(self, model_path=None, seed=None, checkpoint_bytes=None,
+                 model=None, map_name="A1"):
+        self.scenario = get_scenario(map_name)
+        self.model_path = Path(model_path) if model_path is not None else self.scenario.model_path
         self.rng = random.Random(seed)
         if model is None and checkpoint_bytes is None and not self.model_path.is_file():
             raise FileNotFoundError(
-                f"ConCon A1 model not found: {self.model_path}. "
-                "Train it with: python concon_v1/co1_train_attacker_A1.py"
+                f"ConCon {self.scenario.map_name} model not found: {self.model_path}. "
+                f"Train it with: python co1_train_attacker.py -map {self.scenario.map_name}"
             )
         if model is None:
             source = io.BytesIO(checkpoint_bytes) if checkpoint_bytes is not None else self.model_path
             checkpoint = torch.load(source, map_location="cpu", weights_only=False)
-            if checkpoint.get("obs_dim") != OBS_DIM or checkpoint.get("n_actions") != ACTION_DIM:
+            validate_checkpoint_scenario(checkpoint, self.scenario)
+            if checkpoint.get("obs_dim") != self.scenario.obs_dim or checkpoint.get("n_actions") != ACTION_DIM:
                 raise ValueError("checkpoint observation/action dimensions do not match this controller")
             if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
                     or checkpoint.get("spike_carrier") != GORIGONS.spike_holder):
-                raise ValueError("A1 model was not trained for Gorigons / ごんた; retrain co1_train_attacker_A1.py")
-            model = SharedRouteDQN(OBS_DIM, ACTION_DIM)
+                raise ValueError("model was not trained for Gorigons / ごんた; retrain co1_train_attacker.py")
+            model = SharedRouteDQN(self.scenario.obs_dim, ACTION_DIM)
             model.load_state_dict(checkpoint["model_state_dict"])
             model.eval()
         self.model = model
@@ -126,11 +128,12 @@ class ConconAttackerA1Controller:
         if len(attackers) != 5:
             raise ValueError(f"expected five attackers, got {len(attackers)}")
         if tuple(str(char.name) for char in attackers) != GORIGONS.players:
-            raise ValueError("ConCon A1 requires the Gorigons attacker roster in preset order")
+            raise ValueError("ConCon requires the Gorigons attacker roster in preset order")
         self._pattern_index, groups = choose_split_assignment(self.rng, len(attackers))
         self._groups = {char.name: group for char, group in zip(attackers, groups)}
         self._routes = {
-            char.name: RouteProgress(group, self._pattern_index, char.pos, GRID)
+            char.name: RouteProgress(group, self._pattern_index, char.pos,
+                                     scenario=self.scenario)
             for char, group in zip(attackers, groups)
         }
 
@@ -142,7 +145,7 @@ class ConconAttackerA1Controller:
         if route is None:
             raise ValueError(f"attacker {char.name!r} was not assigned a route")
 
-        grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
+        grid = np.asarray(game_state.get("grid", route.scenario.grid), dtype=np.int32)
         position = tuple(map(int, char.pos))
         attackers = [other for other in chars if getattr(other, "team", None) == "A"]
         alive = [bool(getattr(other, "is_alive", True)) for other in attackers]
@@ -159,7 +162,7 @@ class ConconAttackerA1Controller:
         """Build the policy input from the same perceived state in every mode."""
         chars = game_state.get("chars", [])
         route = self._routes[char.name]
-        grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
+        grid = np.asarray(game_state.get("grid", route.scenario.grid), dtype=np.int32)
         position = tuple(map(int, char.pos))
         attackers = [other for other in chars if getattr(other, "team", None) == "A"]
         alive = [bool(getattr(other, "is_alive", True)) for other in attackers]

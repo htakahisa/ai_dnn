@@ -12,10 +12,10 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from concon_v1 import co1_train_attacker_A1 as training
+from concon_v1 import co1_train_attacker as training
 
 with contextlib.redirect_stdout(io.StringIO()):
-    from concon_v1 import evaluate_co1_attacker_A1 as evaluation_module
+    from concon_v1 import evaluate_co1_attacker as evaluation_module
     from concon_v1 import co1_battle_training as battle_module
 
 
@@ -68,7 +68,8 @@ class BestSelectionTests(unittest.TestCase):
         states = random.getstate(), np.random.get_state(), torch.get_rng_state()
         blobs = []
 
-        def fake_evaluate(opponent, rounds, seed, *, frozen_checkpoint):
+        def fake_evaluate(opponent, rounds, seed, *, frozen_checkpoint, map_name):
+            self.assertEqual(map_name, "A1")
             self.assertEqual((rounds, seed), (20, 31))
             blobs.append(frozen_checkpoint)
             frozen = torch.load(io.BytesIO(frozen_checkpoint), weights_only=False)

@@ -3,7 +3,7 @@
 from controllers import BaseController
 
 from concon_v1.co1_attacker_abilities import choose_ability
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_attacker_common import (
     choose_team_fire_target,
     facing_for_fire_target,
 )

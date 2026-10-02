@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 with contextlib.redirect_stdout(io.StringIO()):
-    from concon_v1.evaluate_co1_attacker_A1 import (
+    from concon_v1.evaluate_co1_attacker import (
         LimitedRoundBattle,
         evaluate,
         summarize_spike_drops,
@@ -76,13 +76,13 @@ class EvaluationDropTests(unittest.TestCase):
             games.append(game)
             return game
 
-        with (patch("concon_v1.evaluate_co1_attacker_A1.LimitedRoundBattle",
+        with (patch("concon_v1.evaluate_co1_attacker.LimitedRoundBattle",
                     side_effect=make_game),
-              patch("concon_v1.evaluate_co1_attacker_A1._build_team_ai",
+              patch("concon_v1.evaluate_co1_attacker._build_team_ai",
                     side_effect=lambda key: SimpleNamespace()),
-              patch("concon_v1.evaluate_co1_attacker_A1.ConconAttackerController",
-                    side_effect=lambda checkpoint_bytes: loaded_checkpoints.append(checkpoint_bytes)),
-              patch("concon_v1.evaluate_co1_attacker_A1.torch.load",
+              patch("concon_v1.evaluate_co1_attacker.ConconAttackerController",
+                    side_effect=lambda checkpoint_bytes, map_name: loaded_checkpoints.append(checkpoint_bytes)),
+              patch("concon_v1.evaluate_co1_attacker.torch.load",
                     return_value={"episode": 1450, "success_rate": 0.91})):
             result = evaluate("gc_v1", rounds=3, seed=4,
                               frozen_checkpoint=b"fixed-model")

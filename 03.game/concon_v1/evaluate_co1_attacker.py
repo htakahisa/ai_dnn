@@ -1,4 +1,4 @@
-"""Evaluate ConCon A1 in fresh, single-round games against real defenders."""
+"""Evaluate ConCon attacker routes in fresh, single-round games against real defenders."""
 
 import argparse
 import contextlib
@@ -17,12 +17,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from map_data import NEW_MAZE_STR
 from party_presets import get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from concon_v1.co1_attacker_controller import ConconAttackerController
 from concon_v1.co1_battle_training import _run_from_project_root
-from concon_v1.co1_learn_attacker_A1 import DEFAULT_MODEL_PATH
+from concon_v1.co1_learn_attacker import DEFAULT_MODEL_PATH
+
+from concon_v1.co1_attacker_scenarios import SCENARIOS, get_scenario, validate_checkpoint_scenario
 
 
 DEFAULT_ROUNDS = 36
@@ -163,8 +164,10 @@ def summarize_spike_drops(round_results):
 
 
 @_run_from_project_root
-def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
-             frozen_checkpoint=None):
+def evaluate(opponent, rounds=3, seed=0, model_path=None,
+             frozen_checkpoint=None, map_name="A1"):
+    scenario = get_scenario(map_name)
+    model_path = scenario.model_path if model_path is None else Path(model_path)
     if opponent not in OPPONENTS:
         raise ValueError(f"unknown opponent: {opponent}")
     if rounds < 1:
@@ -177,6 +180,7 @@ def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
     )
     checkpoint = torch.load(io.BytesIO(checkpoint_bytes), map_location="cpu",
                             weights_only=False)
+    validate_checkpoint_scenario(checkpoint, scenario)
     model_sha256 = hashlib.sha256(checkpoint_bytes).hexdigest()
     ai_key, preset_name = OPPONENTS[opponent]
     attackers = get_preset("Gorigons")
@@ -192,10 +196,10 @@ def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
         with contextlib.redirect_stdout(io.StringIO()):
             attacker_ai = _build_team_ai("concon_v1")
             attacker_ai.attacker_factory = lambda: ConconAttackerController(
-                checkpoint_bytes=checkpoint_bytes
+                checkpoint_bytes=checkpoint_bytes, map_name=scenario
             )
             game = LimitedRoundBattle(
-                NEW_MAZE_STR,
+                scenario.game_map,
                 attacker_ai,
                 _build_team_ai(ai_key),
                 headless=True,
@@ -227,6 +231,7 @@ def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
     end_reasons = dict(Counter(r["end_reason"] for r in results))
     no_plant_reasons = dict(Counter(r["end_reason"] for r in no_plant_results))
     return {
+        "map_name": scenario.map_name,
         "opponent": opponent,
         "roster": preset_name,
         "model_episode": checkpoint.get("episode"),
@@ -258,10 +263,11 @@ def evaluate(opponent, rounds=3, seed=0, model_path=DEFAULT_MODEL_PATH,
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default="A1")
     parser.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS,
                         help="number of independent single-round games per opponent")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH,
+    parser.add_argument("--model", type=Path,
                         help="checkpoint to freeze for every opponent and trial")
     parser.add_argument("--opponents", nargs="+", choices=OPPONENTS,
                         default=list(OPPONENTS))
@@ -269,13 +275,15 @@ def main():
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
-    frozen_checkpoint = args.model.read_bytes()
+    scenario = get_scenario(args.map_name)
+    model_path = args.model if args.model is not None else scenario.model_path
+    frozen_checkpoint = model_path.read_bytes()
     results = []
     for opponent in args.opponents:
         result = evaluate(opponent, args.rounds, args.seed,
-                          frozen_checkpoint=frozen_checkpoint)
+                          frozen_checkpoint=frozen_checkpoint, map_name=scenario)
         results.append(result)
-        print(f"model episode={result['model_episode']} "
+        print(f"map={result['map_name']} model episode={result['model_episode']} "
               f"success100_at_save={result['model_success100_at_save']} "
               f"attacker_perception={result['model_attacker_perception']} "
               f"sha256={result['model_sha256'][:12]}", flush=True)

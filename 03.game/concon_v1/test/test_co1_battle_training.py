@@ -7,7 +7,7 @@ from iq_controller_adapter import IQAwareController
 from iq_perception import PerceivedCharacter, PerceivedGameView
 from concon_v1.co1_battle_training import OPPONENTS, BattleRouteEnv, plant_advantage_reward
 from concon_v1.co1_attacker_abilities import choose_ability
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_train_attacker import (
     ACTION_WAIT, MAX_TICKS, format_team_plants, summarize_team_plants,
 )
 
@@ -60,7 +60,7 @@ class BattleTrainingTests(unittest.TestCase):
             seen_views.append((char, game_state, game))
             return list(char.pos)
 
-        with patch("concon_v1.co1_learn_attacker_A1.preplant_contact_action",
+        with patch("concon_v1.co1_learn_attacker.preplant_contact_action",
                    side_effect=capture_contact):
             env.step([ACTION_WAIT] * len(env.attackers))
         self.assertTrue(seen_views)

@@ -5,10 +5,10 @@ from unittest.mock import patch
 import torch
 import numpy as np
 
-from concon_v1.co1_learn_attacker_A1 import (
-    ConconAttackerA1Controller,
+from concon_v1.co1_learn_attacker import (
+    ConconAttackerRouteController,
 )
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_train_attacker import (
     ACTION_DIM, ACTION_PLANT, ATTACKER_SPAWNS, GORIGONS, GRID,
     LEFT_PLANT_CELLS, SPIKE_CARRIER_INDEX, RouteEnv, RouteProgress,
     WAYPOINT_POINTS, bfs_distance_map, build_action_mask,
@@ -30,7 +30,7 @@ class ASynchronizationTests(unittest.TestCase):
             for i, pos in enumerate(ATTACKER_SPAWNS)
         ]
         self.groups = [0, 0, 1, 1, 1]
-        self.controller = ConconAttackerA1Controller.__new__(ConconAttackerA1Controller)
+        self.controller = ConconAttackerRouteController.__new__(ConconAttackerRouteController)
         self.controller._pattern_index = 0
         self.controller._groups = {c.name: group for c, group in zip(self.chars, self.groups)}
         self.controller._routes = {
@@ -135,7 +135,7 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertTrue(mask[1])
         self.assertFalse(mask[4])
 
-    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
+    @patch("concon_v1.co1_learn_attacker.ENEMY_SIGHT_STOP_TICKS", 3)
     def test_visible_enemy_stops_route_and_faces_for_automatic_fire(self):
         shooter = self.chars[0]
         enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
@@ -145,7 +145,7 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertEqual(result[0], list(shooter.pos))
         self.assertEqual(result[1], {"facing": "N"})
 
-    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
+    @patch("concon_v1.co1_learn_attacker.ENEMY_SIGHT_STOP_TICKS", 3)
     def test_visual_sighting_stops_three_ticks_even_without_a_firing_line(self):
         shooter = self.chars[0]
         enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
@@ -157,7 +157,7 @@ class ASynchronizationTests(unittest.TestCase):
             check_line_of_sight=lambda *_: sight["visible"],
         )
         self.controller.set_game(game)
-        with patch("concon_v1.co1_learn_attacker_A1.choose_ability", return_value=None):
+        with patch("concon_v1.co1_learn_attacker.choose_ability", return_value=None):
             with patch.object(self.controller.model, "forward",
                               wraps=self.controller.model.forward) as forward:
                 for tick in (10, 11, 12):
@@ -173,7 +173,7 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertEqual(self.controller._last_enemy_seen_tick, {})
         self.assertEqual(self.controller._enemy_was_visible, {})
 
-    @patch("concon_v1.co1_learn_attacker_A1.ENEMY_SIGHT_STOP_TICKS", 3)
+    @patch("concon_v1.co1_learn_attacker.ENEMY_SIGHT_STOP_TICKS", 3)
     def test_continuous_sighting_does_not_extend_three_tick_stop(self):
         shooter = self.chars[0]
         enemy = SimpleNamespace(name="D0", team="D", pos=(22, 18),
@@ -185,7 +185,7 @@ class ASynchronizationTests(unittest.TestCase):
             check_line_of_sight=lambda *_: sight["visible"],
         )
         self.controller.set_game(game)
-        with patch("concon_v1.co1_learn_attacker_A1.choose_ability", return_value=None):
+        with patch("concon_v1.co1_learn_attacker.choose_ability", return_value=None):
             with patch.object(self.controller.model, "forward",
                               wraps=self.controller.model.forward) as forward:
                 for tick in (10, 11, 12):

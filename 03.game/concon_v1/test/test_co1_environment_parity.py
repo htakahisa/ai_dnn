@@ -2,6 +2,7 @@
 
 import contextlib
 import io
+from itertools import product
 import random
 import unittest
 from types import SimpleNamespace
@@ -13,8 +14,8 @@ import torch
 with contextlib.redirect_stdout(io.StringIO()):
     from battle_logic import BattleLogicMixin
     from concon_v1.co1_battle_training import BattleRouteEnv, OPPONENTS
-    from concon_v1 import evaluate_co1_attacker_A1 as evaluation
-    from concon_v1.co1_train_attacker_A1 import (
+    from concon_v1 import evaluate_co1_attacker as evaluation
+    from concon_v1.co1_train_attacker import (
         ACTION_DIM, ACTION_PLANT, ACTION_WAIT, GORIGONS, OBS_DIM, SharedRouteDQN,
     )
 
@@ -49,15 +50,16 @@ class EnvironmentParityTests(unittest.TestCase):
             "n_actions": ACTION_DIM, "training_roster": GORIGONS.players,
             "spike_carrier": GORIGONS.spike_holder,
         }
-        buffer = io.BytesIO()
-        torch.save(checkpoint, buffer)
-        frozen = buffer.getvalue()
-        for opponent in OPPONENTS:
-            with self.subTest(opponent=opponent), contextlib.redirect_stdout(io.StringIO()):
+        for map_name, opponent in product(("A1", "A2"), OPPONENTS):
+            checkpoint["map_name"] = map_name
+            buffer = io.BytesIO()
+            torch.save(checkpoint, buffer)
+            frozen = buffer.getvalue()
+            with self.subTest(map_name=map_name, opponent=opponent), contextlib.redirect_stdout(io.StringIO()):
                 random.seed(0)
                 np.random.seed(0)
                 torch.manual_seed(0)
-                env = BattleRouteEnv(seed=0, opponents=[opponent], model=model)
+                env = BattleRouteEnv(seed=0, opponents=[opponent], model=model, map_name=map_name)
                 training_frames = []
                 for _ in range(250):
                     if env.done:
@@ -77,7 +79,7 @@ class EnvironmentParityTests(unittest.TestCase):
 
                 with patch.object(evaluation, "LimitedRoundBattle", TracedBattle):
                     result = evaluation.evaluate(opponent, rounds=1, seed=0,
-                                                 frozen_checkpoint=frozen)
+                                                 frozen_checkpoint=frozen, map_name=map_name)
                 self.assertEqual(len(training_frames), len(evaluation_frames))
                 for tick, (training_frame, evaluation_frame) in enumerate(
                         zip(training_frames, evaluation_frames), 1):

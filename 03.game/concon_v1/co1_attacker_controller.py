@@ -1,10 +1,10 @@
-"""Runtime adapter for the concon_v1 A1 route-learning controller."""
+"""Runtime adapter for the concon_v1 route-learning controller."""
 
 from controllers import BaseController, DefaultAttackerController
 
-from concon_v1.co1_learn_attacker_A1 import (
+from concon_v1.co1_learn_attacker import (
     DEFAULT_MODEL_PATH,
-    ConconAttackerA1Controller,
+    ConconAttackerRouteController,
 )
 from concon_v1.co1_attacker_retrieve import ConconAttackerRetrieveController
 from concon_v1.co1_attacker_sighting import TeamEnemySightings
@@ -13,11 +13,11 @@ from concon_v1.co1_attacker_sighting import TeamEnemySightings
 class ConconAttackerController(BaseController):
     """Use the learned route before planting and default behavior otherwise."""
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, seed=None, checkpoint_bytes=None,
-                 route_controller=None):
+    def __init__(self, model_path=None, seed=None, checkpoint_bytes=None,
+                 route_controller=None, map_name="A1"):
         super().__init__()
-        self.route_controller = route_controller if route_controller is not None else ConconAttackerA1Controller(
-            model_path=model_path, seed=seed, checkpoint_bytes=checkpoint_bytes
+        self.route_controller = route_controller if route_controller is not None else ConconAttackerRouteController(
+            model_path=model_path, seed=seed, checkpoint_bytes=checkpoint_bytes, map_name=map_name
         )
         self.retrieve_controller = ConconAttackerRetrieveController()
         self.default_controller = DefaultAttackerController()

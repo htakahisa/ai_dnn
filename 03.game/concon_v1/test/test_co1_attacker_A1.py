@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_train_attacker import (
     GRID,
     ACTION_PLANT,
     ACTION_WAIT,
@@ -80,7 +80,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
                 self.assertEqual(route.goal, WAYPOINT_POINTS["a"][group])
 
     def test_route_waypoints_advance_for_the_group_or_team_on_one_arrival(self):
-        from concon_v1.co1_train_attacker_A1 import RouteEnv
+        from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=7)
         env.pattern_index = 0
@@ -115,7 +115,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
         self.assertEqual(len({route.goal for route in env.routes}), 1)
 
     def test_single_a_group_can_advance_without_waiting_for_absent_group(self):
-        from concon_v1.co1_train_attacker_A1 import RouteEnv
+        from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=11)
         env._a_completed_groups.clear()

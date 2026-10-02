@@ -8,7 +8,7 @@ import numpy as np
 from concon_v1.co1_attacker_retrieve import ConconAttackerRetrieveController
 from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_battle_training import BattleRouteEnv
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_train_attacker import (
     ACTION_PLANT, ACTION_WAIT, GRID, LEFT_PLANT_CELLS, PLANT_REQUIRED_TICKS,
 )
 

@@ -1,4 +1,4 @@
-"""Real 5v5 pre-plant training environment for the ConCon A1 route policy."""
+"""Real 5v5 pre-plant training environment for the ConCon route policy."""
 
 import contextlib
 import copy
@@ -11,10 +11,12 @@ from pathlib import Path
 import numpy as np
 
 from concon_v1.co1_attacker_controller import ConconAttackerController
-from concon_v1.co1_learn_attacker_A1 import ConconAttackerA1Controller
-from concon_v1.co1_train_attacker_A1 import (
+from concon_v1.co1_learn_attacker import ConconAttackerRouteController
+from concon_v1.co1_attacker_common import (
     ACTION_WAIT, GORIGONS, OBS_DIM, ACTION_DIM, SharedRouteDQN, _choose_action,
 )
+
+from concon_v1.co1_attacker_scenarios import get_scenario
 
 OPPONENTS = {
     "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
@@ -46,11 +48,11 @@ def plant_advantage_reward(attackers_alive, defenders_alive, planted=False):
     return 0.5 * (int(attackers_alive) - int(defenders_alive))
 
 
-class TrainingRouteController(ConconAttackerA1Controller):
+class TrainingRouteController(ConconAttackerRouteController):
     """Production route controller with exploration and decision recording."""
 
     def __init__(self, env):
-        super().__init__(model=env.model)
+        super().__init__(model=env.model, map_name=env.scenario)
         self.env = env
         self.rng = env.route_rng
 
@@ -76,11 +78,12 @@ class TrainingRouteController(ConconAttackerA1Controller):
 class BattleRouteEnv:
     """Fresh first-round games using production ticks and production controllers."""
 
-    def __init__(self, seed=0, opponents=None, model=None):
+    def __init__(self, seed=0, opponents=None, model=None, map_name="A1"):
+        self.scenario = get_scenario(map_name)
         self.rng = random.Random(seed)
         self.route_rng = random.Random(seed)
         self.action_rng = random.Random(seed)
-        self.model = model if model is not None else SharedRouteDQN()
+        self.model = model if model is not None else SharedRouteDQN(obs_dim=self.scenario.obs_dim)
         self.opponents = tuple(opponents or OPPONENTS)
         if not self.opponents or any(name not in OPPONENTS for name in self.opponents):
             raise ValueError("at least one known opponent is required")
@@ -89,7 +92,6 @@ class BattleRouteEnv:
 
     @_run_from_project_root
     def reset(self):
-        from map_data import NEW_MAZE_STR
         from party_presets import get_preset
         from run_game import VisualFPSBattle, _build_team_ai
 
@@ -102,7 +104,7 @@ class BattleRouteEnv:
         )
         with contextlib.redirect_stdout(io.StringIO()):
             self.game = VisualFPSBattle(
-                NEW_MAZE_STR, attacker_ai, _build_team_ai(ai_key), headless=True,
+                self.scenario.game_map, attacker_ai, _build_team_ai(ai_key), headless=True,
                 attacker_roster=list(GORIGONS.players),
                 defender_roster=list(defenders.players),
                 spike_holder_name=GORIGONS.spike_holder,
@@ -191,7 +193,7 @@ class BattleRouteEnv:
         self._decision_routes = {}
         # Only actual policy decisions will enter replay. Others are placeholders.
         self._tick_observations, self._tick_masks = current if current is not None else (
-            [np.zeros(OBS_DIM, dtype=np.float32) for _ in self.attackers],
+            [np.zeros(self.scenario.obs_dim, dtype=np.float32) for _ in self.attackers],
             [np.eye(ACTION_DIM, dtype=bool)[ACTION_WAIT].copy() for _ in self.attackers],
         )
         with contextlib.redirect_stdout(io.StringIO()):
