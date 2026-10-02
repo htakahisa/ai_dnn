@@ -1,6 +1,7 @@
 """Train ConCon A1 routes in real 5v5 rounds (or the legacy route-only simulator)."""
 
 import argparse
+import io
 import math
 import random
 import sys
@@ -43,8 +44,9 @@ PLANT_REQUIRED_TICKS = 4
 DEFAULT_SAVE_DIR = Path(__file__).resolve().parent / "data" / "attacker_A1_data"
 TARGET_UPDATE_INTERVAL = 1000
 
-DEFAULT_EPISODES = 1000
+DEFAULT_EPISODES = 2000
 CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
+DEFAULT_EVAL_ROUNDS = 20  # 探索なし評価の各相手teamとの試合数
 EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
@@ -53,6 +55,8 @@ EPSILON_DECAY_RATIO = 0.7
 def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
     decay_episodes = max(1, int(total_episodes * EPSILON_DECAY_RATIO))
     fraction = min(max(float(episode) / decay_episodes, 0.0), 1.0)
+    if fraction >= 1.0:
+        return EPSILON_END
     return EPSILON_START + (EPSILON_END - EPSILON_START) * fraction
 
 
@@ -623,8 +627,79 @@ def format_team_plants(summary):
     return " ".join(parts)
 
 
+def evaluate_checkpoint(checkpoint, rounds=DEFAULT_EVAL_ROUNDS, seed=0):
+    """Evaluate frozen weights greedily without changing training RNG streams."""
+    if rounds < 1:
+        raise ValueError("evaluation rounds must be positive")
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    try:
+        if checkpoint["training_mode"] == "battle":
+            from concon_v1.evaluate_co1_attacker_A1 import evaluate
+
+            buffer = io.BytesIO()
+            torch.save(checkpoint, buffer)
+            frozen_checkpoint = buffer.getvalue()
+            summary = {}
+            for opponent in dict.fromkeys(checkpoint["opponents"]):
+                result = evaluate(opponent, rounds, seed,
+                                  frozen_checkpoint=frozen_checkpoint)
+                summary[opponent] = {
+                    "plants": result["plants"],
+                    "episodes": result["rounds"],
+                    "plant_rate": result["plant_success_rate"],
+                }
+                print("  eval_team " + format_team_plants({opponent: summary[opponent]}),
+                      flush=True)
+            rates = [counts["plant_rate"] for counts in summary.values()]
+            success_rate = sum(rates) / len(rates)
+            minimum_rate = min(rates)
+        else:
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            model = SharedRouteDQN()
+            model.load_state_dict(checkpoint["model_state_dict"])
+            model.eval()
+            env = RouteEnv(seed)
+            rng = random.Random(seed)
+            plants = 0
+            for _ in range(rounds):
+                observations, masks = env.reset()
+                while not env.done:
+                    actions = [_choose_action(model, obs, mask, 0.0, rng)
+                               for obs, mask in zip(observations, masks)]
+                    _, _, _, observations, masks, _ = env.step(actions)
+                plants += int(env.success)
+            summary = {}
+            success_rate = minimum_rate = plants / rounds
+        return {
+            "success_rate": success_rate,
+            "min_team_plant_rate": minimum_rate,
+            "team_plants": summary,
+            "rounds_per_opponent": rounds,
+            "seed": seed,
+            "epsilon": 0.0,
+        }
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+
+
+def qualifies_as_best(evaluation, best_evaluation):
+    """Keep both the mean and the weakest opponent rate from regressing."""
+    return best_evaluation is None or (
+        evaluation["success_rate"] >= best_evaluation["success_rate"]
+        and evaluation["min_team_plant_rate"] >= best_evaluation["min_team_plant_rate"]
+    )
+
+
 def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
-          mode="battle", opponents=None):
+          mode="battle", opponents=None, eval_rounds=DEFAULT_EVAL_ROUNDS):
+    if eval_rounds < 1:
+        raise ValueError("evaluation rounds must be positive")
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -648,7 +723,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
     total_plants = 0
     team_results = []
     recent_team_results = deque(maxlen=100)
-    best_rate = -1.0
+    best_evaluation = None
+    checked_existing_best = False
     started = time.perf_counter()
 
     for episode in range(1, episodes + 1):
@@ -720,6 +796,10 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
                 "n_actions": ACTION_DIM,
                 "episode": episode,
                 "success_rate": success_rate,
+                "epsilon": epsilon,
+                "epsilon_end": EPSILON_END,
+                "best_selection": "greedy_mean_and_min_team",
+                "evaluation": None,
                 "plant_count_total": total_plants,
                 "plant_rate_total": plant_rate_total,
                 "split_patterns": SPLIT_PATTERNS,
@@ -739,18 +819,42 @@ def train(episodes=DEFAULT_EPISODES, save_dir=DEFAULT_SAVE_DIR, seed=0,
                     if mode == "battle" else {}
                 ),
             }
+            if epsilon <= EPSILON_END:
+                best_path = save_dir / "co1_attacker_A1_best.pt"
+                if not checked_existing_best:
+                    if best_path.is_file():
+                        print("Evaluating existing best with the current opponents, "
+                              f"rounds={eval_rounds}/team seed={seed}", flush=True)
+                        previous = torch.load(best_path, map_location="cpu", weights_only=False)
+                        # Older best files only contain training success100. Re-evaluate
+                        # their weights under the same conditions as the candidate.
+                        previous["training_mode"] = mode
+                        previous["opponents"] = checkpoint["opponents"]
+                        best_evaluation = evaluate_checkpoint(previous, eval_rounds, seed)
+                    checked_existing_best = True
+                print(f"Evaluating episode {episode} with epsilon=0 "
+                      f"rounds={eval_rounds}/team seed={seed}", flush=True)
+                checkpoint["evaluation"] = evaluate_checkpoint(checkpoint, eval_rounds, seed)
             torch.save(checkpoint, save_dir / "co1_attacker_A1_latest.pt")
-            if success_rate >= best_rate:
-                best_rate = success_rate
+            evaluation = checkpoint["evaluation"]
+            if evaluation is not None and qualifies_as_best(evaluation, best_evaluation):
+                best_evaluation = evaluation
                 torch.save(checkpoint, save_dir / "co1_attacker_A1_best.pt")
                 print(
-                    f"Saved best model with success100={best_rate:.3f} "
-                    f"plant_total={total_plants}/{episode} "
-                    f"plant_rate_total={plant_rate_total:.3f} at episode {episode}"
+                    f"Saved best model with eval_mean={evaluation['success_rate']:.3f} "
+                    f"eval_min_team={evaluation['min_team_plant_rate']:.3f} "
+                    f"at episode {episode}", flush=True,
                 )
-                if mode == "battle" and episode % 20 != 0:
-                    print("  team_total " + format_team_plants(checkpoint["team_plant_total"]))
-                    print("  team100 " + format_team_plants(checkpoint["team_plant100"]))
+            elif evaluation is not None:
+                print(
+                    f"Kept best: eval_mean={evaluation['success_rate']:.3f} "
+                    f"(best={best_evaluation['success_rate']:.3f}) "
+                    f"eval_min_team={evaluation['min_team_plant_rate']:.3f} "
+                    f"(best={best_evaluation['min_team_plant_rate']:.3f})", flush=True,
+                )
+            else:
+                print(f"Saved latest at episode {episode}; best evaluation starts "
+                      f"when epsilon reaches {EPSILON_END:g} (current={epsilon:.3f})")
     return model
 
 
@@ -758,13 +862,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--eval-rounds", type=int, default=DEFAULT_EVAL_ROUNDS,
+                        help="greedy evaluation games per opponent after epsilon reaches its floor")
     parser.add_argument("--save-dir", type=Path, default=DEFAULT_SAVE_DIR)
     parser.add_argument("--mode", choices=("battle", "route"), default="battle")
     parser.add_argument("--opponents", nargs="+", choices=(
         "omoko_v1", "touyama_v2", "fnatic_v3", "gc_v1", "toru_ai_v3.1",
     ))
     args = parser.parse_args()
-    train(args.episodes, args.save_dir, args.seed, args.mode, args.opponents)
+    if args.eval_rounds < 1:
+        parser.error("--eval-rounds must be positive")
+    train(args.episodes, args.save_dir, args.seed, args.mode, args.opponents, args.eval_rounds)
 
 
 if __name__ == "__main__":
