@@ -27,7 +27,11 @@ SCENARIOS = {
         map_module="co1_map_attacker_A1", plant_side="left", waypoint_order="abcd",
     ),
     "A2": ScenarioSettings(
-        map_module="co1_map_attacker_A2", plant_side="right", waypoint_order="abcd",
+        map_module="co1_map_attacker_A2", plant_side="right", waypoint_order="abcde",
+        max_candidate_bfs_distance=16,
+    ),
+    "A3": ScenarioSettings(
+        map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcdef",
         max_candidate_bfs_distance=16,
     ),
 }
@@ -105,8 +109,8 @@ def build_scenario(map_name, strategy_map, plant_side, game_map=GAME_MAZE_STR,
         raise ValueError("strategy map dimensions must match the game terrain map")
     if any(grid[row, col] == 1 for cells in points.values() for row, col in cells):
         raise ValueError("a strategy waypoint overlays a wall in the game terrain map")
-    if len(points["a"]) != 2:
-        raise ValueError("route splitting requires exactly two a points")
+    if len(points["a"]) not in (1, 2):
+        raise ValueError("the first waypoint a must have one or two points")
     if any(len(cells) > 5 for cells in points.values()):
         raise ValueError("the observation supports at most five points per marker")
     if plant_side not in ("left", "right"):

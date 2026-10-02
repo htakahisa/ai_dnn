@@ -129,7 +129,9 @@ class ConconAttackerRouteController:
             raise ValueError(f"expected five attackers, got {len(attackers)}")
         if tuple(str(char.name) for char in attackers) != GORIGONS.players:
             raise ValueError("ConCon requires the Gorigons attacker roster in preset order")
-        self._pattern_index, groups = choose_split_assignment(self.rng, len(attackers))
+        self._pattern_index, groups = choose_split_assignment(
+            self.rng, len(attackers), a_point_count=len(self.scenario.waypoint_points["a"]),
+        )
         self._groups = {char.name: group for char, group in zip(attackers, groups)}
         self._routes = {
             char.name: RouteProgress(group, self._pattern_index, char.pos,

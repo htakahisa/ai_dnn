@@ -60,10 +60,10 @@ def bfs_distance_map(grid, goal):
     return distances
 
 
-def select_nearest_candidate(
+def _reachable_candidates(
     grid, start, candidates, max_distance=MAX_CANDIDATE_BFS_DISTANCE,
 ):
-    """Select the nearest reachable candidate, optionally within a BFS limit."""
+    """Return reachable candidates with their BFS distances and original indices."""
     candidates = [tuple(map(int, point)) for point in candidates]
     if not candidates:
         raise ValueError("at least one candidate is required")
@@ -75,14 +75,25 @@ def select_nearest_candidate(
         if max_distance is None:
             raise ValueError(f"no candidate is reachable from {tuple(start)}")
         raise ValueError(f"no candidate within {max_distance} BFS steps from {tuple(start)}")
-    distance, index, point = min(reachable)
+    return sorted(reachable)
+
+
+def select_nearest_candidate(
+    grid, start, candidates, max_distance=MAX_CANDIDATE_BFS_DISTANCE,
+):
+    """Select the nearest reachable candidate, optionally within a BFS limit."""
+    distance, index, point = _reachable_candidates(grid, start, candidates, max_distance)[0]
     return point, index, distance
 
 
-def choose_split_assignment(rng, player_count=5, pattern_index=None):
-    """Choose a round split and assign exactly its requested number to each a-point."""
+def choose_split_assignment(rng, player_count=5, pattern_index=None, *, a_point_count=2):
+    """Send everyone to a single a-point, or sample the existing two-point split."""
     if player_count != 5:
         raise ValueError("concon_v1 route scenarios require five attackers")
+    if a_point_count == 1:
+        return SPLIT_PATTERNS.index((5, 0)), [0] * player_count
+    if a_point_count != 2:
+        raise ValueError("the first waypoint a must have one or two points")
     if pattern_index is None:
         pattern_index = rng.randrange(len(SPLIT_PATTERNS))
     if not 0 <= pattern_index < len(SPLIT_PATTERNS):
@@ -109,7 +120,7 @@ class RouteProgress:
     def __init__(self, group, pattern_index, start_pos, grid=None, scenario="A1"):
         self.scenario = get_scenario(scenario)
         grid = self.scenario.grid if grid is None else grid
-        self.group = int(group)
+        self.group = 0 if len(self.scenario.waypoint_points["a"]) == 1 else int(group)
         self.pattern_index = int(pattern_index)
         self.stage = 0
         self.goal_index = self.group
@@ -215,9 +226,43 @@ def plant_stage_action_mask(grid, pos, occupied_allies, carrier_pos, carrier_goa
     return mask
 
 
+def _assign_next_waypoint(routes, positions, active, grid, stage, source):
+    """Assign destinations without changing when the team advances or waits."""
+    scenario = routes[active[0]].scenario
+    next_marker = scenario.waypoint_order[stage + 1]
+    single_source = len(scenario.waypoint_points[scenario.waypoint_order[stage]]) == 1
+    split_sources = stage > 0 and len({routes[i].goal for i in active}) > 1
+    if single_source:
+        candidates = _reachable_candidates(
+            grid, source, scenario.waypoint_points[next_marker],
+            max_distance=scenario.max_candidate_bfs_distance,
+        )
+        assignments = [(point, index) for _, index, point in candidates]
+        goals = [assignments[offset % len(assignments)] for offset in range(len(active))]
+    elif split_sources:
+        choices = {}
+        for i in active:
+            origin = routes[i].goal
+            if origin not in choices:
+                goal, index, _ = select_nearest_candidate(
+                    grid, origin, scenario.waypoint_points[next_marker],
+                    max_distance=scenario.max_candidate_bfs_distance,
+                )
+                choices[origin] = goal, index
+        goals = [choices[routes[i].goal] for i in active]
+    else:
+        goal, index, _ = select_nearest_candidate(
+            grid, source, scenario.waypoint_points[next_marker],
+            max_distance=scenario.max_candidate_bfs_distance,
+        )
+        goals = [(goal, index)] * len(active)
+    for i, (goal, index) in zip(active, goals):
+        routes[i].set_stage(stage + 1, positions[i], grid, goal, index)
+
+
 def advance_team_routes(routes, positions, alive, completed_a_groups,
                         grid=None, carrier_index=SPIKE_CARRIER_INDEX):
-    """Release a when each surviving split group has arrived, then share later goals."""
+    """Assign next goals using the existing team arrival and initial a wait conditions."""
     active = [i for i, is_alive in enumerate(alive) if is_alive]
     if not active:
         return
@@ -239,12 +284,7 @@ def advance_team_routes(routes, positions, alive, completed_a_groups,
         a_goal = (tuple(positions[arrived]) if arrived is not None else
                   scenario.waypoint_points["a"][min(required_groups)])
         if len(waypoint_order) > 1:
-            goal, goal_index, _ = select_nearest_candidate(
-                grid, a_goal, scenario.waypoint_points[waypoint_order[1]],
-                max_distance=scenario.max_candidate_bfs_distance,
-            )
-            for i in active:
-                routes[i].set_stage(1, positions[i], grid, goal, goal_index)
+            _assign_next_waypoint(routes, positions, active, grid, 0, a_goal)
         else:
             for i in active:
                 if i == carrier_index:
@@ -259,12 +299,7 @@ def advance_team_routes(routes, positions, alive, completed_a_groups,
             continue
         next_stage = route.stage + 1
         if next_stage < len(waypoint_order):
-            goal, goal_index, _ = select_nearest_candidate(
-                grid, positions[i], scenario.waypoint_points[waypoint_order[next_stage]],
-                max_distance=scenario.max_candidate_bfs_distance,
-            )
-            for j in active:
-                routes[j].set_stage(next_stage, positions[j], grid, goal, goal_index)
+            _assign_next_waypoint(routes, positions, active, grid, route.stage, positions[i])
         else:
             for j in active:
                 if j == carrier_index:

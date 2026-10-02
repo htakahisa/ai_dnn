@@ -55,8 +55,8 @@ class MapSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown map"):
             get_scenario("A99")
         scenario = get_scenario("A1")
-        with self.assertRaisesRegex(ValueError, "exactly two a"):
-            build_scenario("A3", scenario.strategy_map.replace("a", "0", 1), "left")
+        with self.assertRaisesRegex(ValueError, "one or two points"):
+            build_scenario("TEST", scenario.strategy_map.replace("33333", "a3333"), "left")
 
     def test_a3_can_be_registered_without_changing_shared_behavior(self):
         with patch.dict(SCENARIOS, {"A3": ScenarioSettings(

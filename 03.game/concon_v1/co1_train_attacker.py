@@ -57,7 +57,9 @@ class RouteEnv:
         self.reset()
 
     def reset(self):
-        self.pattern_index, groups = choose_split_assignment(self.rng)
+        self.pattern_index, groups = choose_split_assignment(
+            self.rng, a_point_count=len(self.scenario.waypoint_points["a"]),
+        )
         self.positions = list(self.scenario.attacker_spawns)
         self.routes = [
             RouteProgress(group, self.pattern_index, pos, scenario=self.scenario)
