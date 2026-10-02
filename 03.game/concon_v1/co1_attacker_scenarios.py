@@ -31,7 +31,7 @@ SCENARIOS = {
         max_candidate_bfs_distance=16,
     ),
     "A3": ScenarioSettings(
-        map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcdef",
+        map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcde",
         max_candidate_bfs_distance=16,
     ),
 }

@@ -8,7 +8,7 @@ from iq_perception import PerceivedCharacter, PerceivedGameView
 from concon_v1.co1_battle_training import OPPONENTS, BattleRouteEnv, plant_advantage_reward
 from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_train_attacker import (
-    ACTION_WAIT, MAX_TICKS, format_team_plants, summarize_team_plants,
+    ACTION_WAIT, MAX_TICKS, PLANT_REQUIRED_TICKS, format_team_plants, summarize_team_plants,
 )
 
 
@@ -123,6 +123,44 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertTrue(env.done)
         self.assertFalse(env.game.is_planted)
         self.assertFalse(env.success)
+
+    def test_completed_plant_ends_episode_before_round_result_and_reset_starts_next(self):
+        env = BattleRouteEnv(seed=7, opponents=["omoko_v1"])
+        carrier = next(char for char in env.attackers if char.has_spike)
+        carrier.pos = list(env.scenario.plant_cells[0])
+        move_character = env.game.move_character
+
+        # Exercise real planting while keeping the other characters in place.
+        with (patch.object(env.game.attacker_controller, "decide_move",
+                           return_value=(carrier.pos, "PLANT")),
+              patch.object(env.game, "move_character",
+                           side_effect=lambda char: move_character(char) if char is carrier else None)):
+            for _ in range(PLANT_REQUIRED_TICKS - 1):
+                *_, done = env.step([ACTION_WAIT] * len(env.attackers))
+                self.assertFalse(done)
+                self.assertFalse(env.success)
+            _, _, rewards, _, _, done = env.step([ACTION_WAIT] * len(env.attackers))
+
+        self.assertTrue(done)
+        self.assertTrue(env.success)
+        self.assertTrue(env.game.is_planted)
+        self.assertFalse(env.game.round_over)
+        self.assertEqual(env.elapsed_ticks, PLANT_REQUIRED_TICKS)
+        advantage = plant_advantage_reward(
+            sum(env.alive), sum(char.is_alive for char in env.game.chars if char.team == "D"),
+            planted=True,
+        )
+        np.testing.assert_allclose(rewards, [10.0 - 0.005 + advantage] * len(env.attackers))
+        with self.assertRaisesRegex(RuntimeError, "reset"):
+            env.step([ACTION_WAIT] * len(env.attackers))
+
+        previous_game = env.game
+        env.reset()
+        self.assertIsNot(env.game, previous_game)
+        self.assertFalse(env.done)
+        self.assertFalse(env.success)
+        self.assertFalse(env.game.is_planted)
+        self.assertEqual(env.elapsed_ticks, 0)
 
     def test_each_opponent_can_start_training_round(self):
         for opponent in OPPONENTS:

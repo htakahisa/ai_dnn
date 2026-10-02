@@ -21,6 +21,7 @@ from concon_v1.co1_attacker_common import (
     advance_team_routes,
     build_action_mask,
     build_observation,
+    build_team_route_action_mask,
     choose_split_assignment,
     choose_team_fire_target,
     facing_for_fire_target,
@@ -185,18 +186,12 @@ class ConconAttackerRouteController:
             game_state.get("battle_tick", 0),
             grid,
         )
-        mask = build_action_mask(
-            grid, position, allies, is_carrier, route.at_plant_stage, route.goal,
-            route.distance_map,
-            route.stage == 0 and position == route.goal
-            and bool({self._groups[other.name] for other, is_alive in zip(attackers, alive)
-                      if is_alive} - self._a_completed_groups),
+        index = next(i for i, other in enumerate(attackers) if other.name == char.name)
+        mask = build_team_route_action_mask(
+            [self._routes[other.name] for other in attackers],
+            [tuple(map(int, other.pos)) for other in attackers], alive, index, grid,
+            carrier_index, self._a_completed_groups,
         )
-        if route.at_plant_stage and not is_carrier:
-            mask = plant_stage_action_mask(
-                grid, position, allies, attackers[carrier_index].pos if carrier_index is not None else None,
-                self._routes[attackers[carrier_index].name].goal if carrier_index is not None else None,
-            )
         return observation, mask
 
     def _choose_policy_action(self, char, observation, mask):

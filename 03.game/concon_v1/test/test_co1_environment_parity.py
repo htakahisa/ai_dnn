@@ -14,9 +14,10 @@ import torch
 with contextlib.redirect_stdout(io.StringIO()):
     from battle_logic import BattleLogicMixin
     from concon_v1.co1_battle_training import BattleRouteEnv, OPPONENTS
+    from concon_v1.co1_attacker_scenarios import get_scenario
     from concon_v1 import evaluate_co1_attacker as evaluation
     from concon_v1.co1_train_attacker import (
-        ACTION_DIM, ACTION_PLANT, ACTION_WAIT, GORIGONS, OBS_DIM, SharedRouteDQN,
+        ACTION_DIM, ACTION_PLANT, ACTION_WAIT, GORIGONS, SharedRouteDQN,
     )
 
 
@@ -36,22 +37,24 @@ def game_frame(game):
 
 
 class EnvironmentParityTests(unittest.TestCase):
-    def test_training_and_evaluation_match_every_tick_for_all_opponents(self):
-        model = SharedRouteDQN()
+    def test_training_and_evaluation_match_until_plant_or_round_end_for_all_opponents(self):
         # Prefer planting when legal, then a BFS-progress move, then waiting.
         # This creates a reproducible policy without relying on a trained artifact.
-        with torch.no_grad():
-            for parameter in model.parameters():
-                parameter.zero_()
-            model.advantage[-1].bias[:4] = 1.0
-            model.advantage[-1].bias[ACTION_PLANT] = 2.0
-        checkpoint = {
-            "model_state_dict": model.state_dict(), "obs_dim": OBS_DIM,
-            "n_actions": ACTION_DIM, "training_roster": GORIGONS.players,
-            "spike_carrier": GORIGONS.spike_holder,
-        }
         for map_name, opponent in product(("A1", "A2"), OPPONENTS):
-            checkpoint["map_name"] = map_name
+            scenario = get_scenario(map_name)
+            model = SharedRouteDQN(obs_dim=scenario.obs_dim)
+            with torch.no_grad():
+                for parameter in model.parameters():
+                    parameter.zero_()
+                model.advantage[-1].bias[:4] = 1.0
+                model.advantage[-1].bias[ACTION_PLANT] = 2.0
+            checkpoint = {
+                "model_state_dict": model.state_dict(), "obs_dim": scenario.obs_dim,
+                "n_actions": ACTION_DIM, "training_roster": GORIGONS.players,
+                "spike_carrier": GORIGONS.spike_holder, "map_name": map_name,
+                "waypoint_order": scenario.waypoint_order,
+                "scenario_signature": scenario.signature,
+            }
             buffer = io.BytesIO()
             torch.save(checkpoint, buffer)
             frozen = buffer.getvalue()
@@ -80,13 +83,20 @@ class EnvironmentParityTests(unittest.TestCase):
                 with patch.object(evaluation, "LimitedRoundBattle", TracedBattle):
                     result = evaluation.evaluate(opponent, rounds=1, seed=0,
                                                  frozen_checkpoint=frozen, map_name=map_name)
-                self.assertEqual(len(training_frames), len(evaluation_frames))
+                # Evaluation plays the full round; training stops at the plant.
+                if env.success:
+                    self.assertGreaterEqual(len(evaluation_frames), len(training_frames))
+                    self.assertTrue(training_frames[-1][3])  # Plant completed on the last tick.
+                    self.assertFalse(any(frame[3] for frame in training_frames[:-1]))
+                else:
+                    self.assertEqual(len(training_frames), len(evaluation_frames))
                 for tick, (training_frame, evaluation_frame) in enumerate(
                         zip(training_frames, evaluation_frames), 1):
                     self.assertEqual(training_frame, evaluation_frame,
                                      f"{opponent}: different state at tick {tick}")
                 self.assertEqual(result["plants"], int(env.success))
-                self.assertEqual(result["attacker_wins"], env.game.attacker_wins)
+                if not env.success:
+                    self.assertEqual(result["attacker_wins"], env.game.attacker_wins)
 
     def test_bootstrap_collection_does_not_mutate_live_policy_or_perception(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -103,6 +113,9 @@ class EnvironmentParityTests(unittest.TestCase):
         env.step(epsilon=0.0)
         routes = {name: (route.stage, route.goal)
                   for name, route in env.route_controller._routes.items()}
+        live_maps = {name: route.distance_map
+                     for name, route in env.route_controller._routes.items()}
+        saved_maps = {name: distances.copy() for name, distances in live_maps.items()}
         cache = dict(perception._cache)
         rng_state = env.route_rng.getstate()
         env._collect()
@@ -110,6 +123,11 @@ class EnvironmentParityTests(unittest.TestCase):
                           for name, route in env.route_controller._routes.items()}, routes)
         self.assertEqual(env.route_rng.getstate(), rng_state)
         self.assertEqual(perception._cache, cache)
+        for name, live_route in env.route_controller._routes.items():
+            self.assertIs(live_route.distance_map, live_maps[name])
+            np.testing.assert_array_equal(live_route.distance_map, saved_maps[name])
+            self.assertIsNot(env._preview_routes[name], live_route)
+            self.assertIs(env._preview_routes[name].scenario, live_route.scenario)
 
     def test_policy_replay_uses_inputs_at_the_actual_decision(self):
         with contextlib.redirect_stdout(io.StringIO()):

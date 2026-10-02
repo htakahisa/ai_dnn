@@ -25,9 +25,30 @@ from concon_v1.co1_train_attacker import (
     parse_strategy_points,
     select_nearest_candidate,
 )
+from concon_v1.co1_attacker_common import _cached_bfs_distance_map
 
 
 class ConconAttackerA1Tests(unittest.TestCase):
+    def test_bfs_reuses_wall_layout_but_returns_independent_arrays(self):
+        _cached_bfs_distance_map.cache_clear()
+        grid = np.zeros((1, 3), dtype=np.int32)
+        first = bfs_distance_map(grid, (0, 0))
+        np.testing.assert_array_equal(first, [[0, 1, 2]])
+        first[0, 1] = 99
+        grid[0, 2] = 2  # Site labels do not change walkability.
+        np.testing.assert_array_equal(bfs_distance_map(grid, (0, 0)), [[0, 1, 2]])
+        self.assertEqual(_cached_bfs_distance_map.cache_info().hits, 1)
+
+    def test_bfs_cache_handles_wall_changes_goals_and_shapes(self):
+        grid = np.zeros((1, 3), dtype=np.int32)
+        np.testing.assert_array_equal(bfs_distance_map(grid, (0, 0)), [[0, 1, 2]])
+        grid[0, 1] = 1
+        np.testing.assert_array_equal(bfs_distance_map(grid, (0, 0)), [[0, -1, -1]])
+        np.testing.assert_array_equal(bfs_distance_map(grid, (0, 2)), [[-1, -1, 0]])
+        np.testing.assert_array_equal(bfs_distance_map(grid, (0, 1)), [[-1, -1, -1]])
+        np.testing.assert_array_equal(bfs_distance_map(grid, (-1, 0)), [[-1, -1, -1]])
+        np.testing.assert_array_equal(bfs_distance_map(grid.T, (0, 0)), [[0], [-1], [-1]])
+
     def test_epsilon_decays_from_configured_start_to_floor(self):
         self.assertEqual(EPSILON_START, 1.0)
         self.assertEqual(EPSILON_END, 0.05)
@@ -79,7 +100,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
             for group, route in zip(groups, routes):
                 self.assertEqual(route.goal, WAYPOINT_POINTS["a"][group])
 
-    def test_route_waypoints_advance_for_the_group_or_team_on_one_arrival(self):
+    def test_route_waypoints_advance_only_after_all_points_are_visited(self):
         from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=7)
@@ -111,10 +132,12 @@ class ConconAttackerA1Tests(unittest.TestCase):
         shared_waypoint = env.routes[0].goal
         env.positions[0] = shared_waypoint
         env._advance_routes_if_reached()
+        self.assertTrue(all(route.stage == 1 for route in env.routes))
+        env.positions[0] = next(point for point in WAYPOINT_POINTS["b"] if point != shared_waypoint)
+        env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 2 for route in env.routes))
-        self.assertEqual(len({route.goal for route in env.routes}), 1)
 
-    def test_single_a_group_can_advance_without_waiting_for_absent_group(self):
+    def test_single_a_group_still_visits_both_a_points(self):
         from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=11)
@@ -126,7 +149,9 @@ class ConconAttackerA1Tests(unittest.TestCase):
         env.positions[0] = env.routes[0].goal
 
         env._advance_routes_if_reached()
-
+        self.assertTrue(all(route.stage == 0 for route in env.routes))
+        env.positions[0] = WAYPOINT_POINTS["a"][1]
+        env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 1 for route in env.routes))
 
     def test_observation_encodes_split_group_and_target(self):
@@ -160,7 +185,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
         observation = build_observation(route, plant_goal, True, [], 0, 0)
         self.assertEqual(observation[12], 1.0)
 
-    def test_waits_when_all_bfs_progress_cells_are_blocked_by_allies(self):
+    def test_can_step_aside_when_progress_is_blocked_by_allies(self):
         grid = np.zeros((3, 3), dtype=np.int32)
         goal = (0, 1)
         distances = bfs_distance_map(grid, goal)
@@ -168,7 +193,10 @@ class ConconAttackerA1Tests(unittest.TestCase):
             grid, (1, 1), [(0, 1)], False, False, goal, distances,
         )
         self.assertTrue(mask[ACTION_WAIT])
-        self.assertFalse(mask[:4].any())
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[1])
+        self.assertTrue(mask[2])
+        self.assertTrue(mask[3])
 
     def test_keeps_open_bfs_progress_move_available(self):
         grid = np.zeros((3, 3), dtype=np.int32)

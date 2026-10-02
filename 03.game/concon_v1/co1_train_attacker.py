@@ -1,4 +1,4 @@
-"""Train ConCon attacker routes in real 5v5 rounds (or the legacy route-only simulator)."""
+"""Train ConCon attacker routes until planting or round end (or in the legacy simulator)."""
 
 import argparse
 import io
@@ -23,7 +23,7 @@ from concon_v1.co1_attacker_common import (
     MAX_CANDIDATE_BFS_DISTANCE, MAX_TICKS, OBS_DIM, PLANT_REQUIRED_TICKS,
     SPIKE_CARRIER_INDEX, SPLIT_PATTERNS, STRATEGY_MAZE_STR, WAYPOINT_ORDER,
     WAYPOINT_POINTS, WIDTH, RouteProgress, SharedRouteDQN, advance_team_routes,
-    bfs_distance_map, build_action_mask, build_observation, choose_split_assignment,
+    bfs_distance_map, build_action_mask, build_observation, build_team_route_action_mask, choose_split_assignment,
     choose_team_fire_target, facing_for_fire_target, parse_game_grid,
     parse_strategy_points, plant_stage_action_mask, select_nearest_candidate, _choose_action,
 )
@@ -82,19 +82,10 @@ class RouteEnv:
                 route, position, index == SPIKE_CARRIER_INDEX, allies,
                 self.plant_progress if index == SPIKE_CARRIER_INDEX else 0, self.elapsed_ticks,
             ))
-            masks.append(build_action_mask(
-                self.scenario.grid, position, allies, index == SPIKE_CARRIER_INDEX,
-                route.at_plant_stage, route.goal,
-                route.distance_map,
-                route.stage == 0 and position == route.goal
-                and bool({self.routes[i].group for i, alive in enumerate(self.alive) if alive}
-                         - self._a_completed_groups),
+            masks.append(build_team_route_action_mask(
+                self.routes, self.positions, self.alive, index, self.scenario.grid,
+                SPIKE_CARRIER_INDEX, self._a_completed_groups,
             ))
-            if route.at_plant_stage and index != SPIKE_CARRIER_INDEX:
-                masks[-1] = plant_stage_action_mask(
-                    self.scenario.grid, position, allies, self.positions[SPIKE_CARRIER_INDEX],
-                    self.routes[SPIKE_CARRIER_INDEX].goal,
-                )
         return observations, masks
 
     def _advance_routes_if_reached(self):

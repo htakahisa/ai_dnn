@@ -97,15 +97,12 @@ class RetrieveTests(unittest.TestCase):
             env.step(actions)
         self.assertTrue(env.game.is_planted)
         self.assertTrue(env.success)
-        self.assertFalse(env.done)  # The real round continues after a plant.
+        self.assertTrue(env.done)  # Training ends as soon as the recovered spike is planted.
         self.assertFalse(env.game.round_over)
         self.assertTrue(env.had_spike_drop)
         self.assertTrue(env.spike_recovered)
-        with patch.object(env.game, "process_battle",
-                          side_effect=lambda: setattr(env.game, "round_over", True)):
+        with self.assertRaisesRegex(RuntimeError, "reset"):
             env.step([ACTION_WAIT] * 5)
-        self.assertTrue(env.done)
-        self.assertFalse(any(env.policy_action_applied))
 
     def test_recon_targets_team_sighting_without_prior_smoke(self):
         env = BattleRouteEnv(seed=2, opponents=["omoko_v1"])

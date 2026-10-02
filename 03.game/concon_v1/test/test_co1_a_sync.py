@@ -53,21 +53,27 @@ class ASynchronizationTests(unittest.TestCase):
         self.controller.decide_move(second, self.state)
         self.assertTrue(all(route.stage == 1 for route in self.controller._routes.values()))
 
-    def test_arrival_continues_when_other_group_is_eliminated(self):
+    def test_survivors_must_visit_the_other_a_even_if_its_group_is_eliminated(self):
         first = self.chars[0]
         first.pos = WAYPOINT_POINTS["a"][0]
         for char in self.chars[2:]:
             char.is_alive = False
         self.controller.decide_move(first, self.state)
+        self.assertTrue(all(self.controller._routes[c.name].stage == 0 for c in self.chars[:2]))
+        first.pos = WAYPOINT_POINTS["a"][1]
+        self.controller.decide_move(first, self.state)
         self.assertTrue(all(self.controller._routes[c.name].stage == 1
                             for c in self.chars[:2]))
 
-    def test_training_route_releases_when_other_group_is_eliminated(self):
+    def test_training_survivors_visit_the_other_a_when_its_group_is_eliminated(self):
         env = RouteEnv(seed=1)
         env.routes = [RouteProgress(group, 0, pos)
                       for group, pos in zip(self.groups, env.positions)]
         env.alive = [True, True, False, False, False]
         env.positions[0] = WAYPOINT_POINTS["a"][0]
+        env._advance_routes_if_reached()
+        self.assertTrue(all(env.routes[i].stage == 0 for i in (0, 1)))
+        env.positions[0] = WAYPOINT_POINTS["a"][1]
         env._advance_routes_if_reached()
         self.assertTrue(all(env.routes[i].stage == 1 for i in (0, 1)))
 
@@ -106,14 +112,14 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertFalse(any(mask[ACTION_PLANT] for i, mask in enumerate(masks)
                              if i != SPIKE_CARRIER_INDEX))
 
-    def test_route_mask_rejects_moves_away_from_current_goal(self):
+    def test_route_mask_allows_retreat_and_detours(self):
         grid = np.zeros((3, 3), dtype=np.int32)
         distances = bfs_distance_map(grid, (0, 0))
         mask = build_action_mask(grid, (1, 1), [], False, False, (0, 0), distances)
         self.assertTrue(mask[0])
         self.assertTrue(mask[2])
-        self.assertFalse(mask[1])
-        self.assertFalse(mask[3])
+        self.assertTrue(mask[1])
+        self.assertTrue(mask[3])
 
     def test_only_carrier_heads_to_plant_after_d(self):
         env = RouteEnv(seed=1)
@@ -121,6 +127,9 @@ class ASynchronizationTests(unittest.TestCase):
             route.set_stage(3, env.positions[i], goal=WAYPOINT_POINTS["d"][1], goal_index=1)
         env.positions[0] = WAYPOINT_POINTS["d"][1]
         env._a_completed_groups = {0, 1}
+        env._advance_routes_if_reached()
+        self.assertTrue(all(route.stage == 3 for route in env.routes))
+        env.positions[0] = WAYPOINT_POINTS["d"][0]
         env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 4 for route in env.routes))
         self.assertIn(env.routes[SPIKE_CARRIER_INDEX].goal, LEFT_PLANT_CELLS)

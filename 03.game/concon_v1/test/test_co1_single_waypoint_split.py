@@ -36,6 +36,56 @@ def arrive(env, index=0):
 
 
 class SingleWaypointSplitTests(unittest.TestCase):
+    def _make_two_to_one_merge(self):
+        scenario = make_scenario({
+            "a": [(1, 4), (5, 4)], "b": [(1, 6), (5, 6)],
+            "c": [(3, 9)], "d": [(1, 11), (5, 11)],
+        })
+        env = RouteEnv(7, map_name=scenario)
+        groups = [0, 0, 1, 1, 1]
+        env.routes = [RouteProgress(group, 0, pos, scenario=scenario)
+                      for group, pos in zip(groups, env.positions)]
+        env._a_completed_groups = {0, 1}
+        for index, route in enumerate(env.routes):
+            route.set_stage(1, env.positions[index], goal=scenario.waypoint_points["b"][groups[index]],
+                            goal_index=groups[index])
+        # Both b points must be visited. Once they are, c is a single team goal.
+        arrive(env, 0)
+        self.assertTrue(all(route.stage == 1 for route in env.routes))
+        arrive(env, 2)
+        self.assertTrue(all(route.stage == 2 and route.goal == (3, 9) for route in env.routes))
+        return env
+
+    def test_any_of_five_players_completes_two_to_one_merge_in_route_training(self):
+        for arriving_index in range(5):
+            with self.subTest(arriving_index=arriving_index):
+                env = self._make_two_to_one_merge()
+                other_positions = [pos for i, pos in enumerate(env.positions) if i != arriving_index]
+                arrive(env, arriving_index)
+                self.assertTrue(all(route.stage == 3 for route in env.routes))
+                self.assertEqual([pos for i, pos in enumerate(env.positions) if i != arriving_index],
+                                 other_positions)
+                self.assertEqual(sum(pos == (3, 9) for pos in env.positions), 1)
+
+    def test_any_of_five_players_completes_two_to_one_merge_in_production(self):
+        for arriving_index in range(5):
+            with self.subTest(arriving_index=arriving_index):
+                env = self._make_two_to_one_merge()
+                controller = ConconAttackerRouteController(
+                    model=SharedRouteDQN(env.scenario.obs_dim), map_name=env.scenario,
+                )
+                chars = [SimpleNamespace(name=name, team="A", pos=list(pos), is_alive=True,
+                                         has_spike=name == GORIGONS.spike_holder)
+                         for name, pos in zip(GORIGONS.players, env.positions)]
+                controller._pattern_index = 0
+                controller._groups = {char.name: route.group for char, route in zip(chars, env.routes)}
+                controller._routes = dict(zip(GORIGONS.players, env.routes))
+                controller._a_completed_groups = {0, 1}
+                chars[arriving_index].pos = [3, 9]
+                controller._prepare_route(chars[arriving_index], {"chars": chars, "grid": env.scenario.grid})
+                self.assertTrue(all(route.stage == 3 for route in controller._routes.values()))
+                self.assertEqual(sum(char.pos == [3, 9] for char in chars), 1)
+
     def test_single_a_always_assigns_everyone_to_its_only_point(self):
         scenario = make_scenario({"a": [(3, 4)], "b": [(3, 6)]})
         for seed in range(8):
@@ -84,6 +134,8 @@ class SingleWaypointSplitTests(unittest.TestCase):
         arrive(env)
         previous = [route.goal for route in env.routes]
         arrive(env)
+        self.assertTrue(all(route.stage == 1 for route in env.routes))
+        arrive(env, next(i for i, goal in enumerate(previous) if goal != previous[0]))
         for source, route in zip(previous, env.routes):
             self.assertEqual(route.goal, (source[0], 9))
         self.assertTrue(all(route.stage == 2 for route in env.routes))

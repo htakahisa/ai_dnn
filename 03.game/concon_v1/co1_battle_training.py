@@ -76,7 +76,7 @@ class TrainingRouteController(ConconAttackerRouteController):
 
 
 class BattleRouteEnv:
-    """Fresh first-round games using production ticks and production controllers."""
+    """Production first-round games ending at plant completion or round end."""
 
     def __init__(self, seed=0, opponents=None, model=None, map_name="A1"):
         self.scenario = get_scenario(map_name)
@@ -160,7 +160,12 @@ class BattleRouteEnv:
             view = perception.build_game_view(viewer=char, game=self.game)
             actor = view.perceived_character_for(char)
             preview = copy.copy(self.route_controller)
-            preview._routes = copy.deepcopy(self.route_controller._routes)
+            # Route progress changes by assigning fields/new distance maps.
+            # Share the read-only terrain and existing maps, but keep each
+            # viewer's progress separate from the live controller and others.
+            preview._routes = {
+                name: copy.copy(route) for name, route in self.route_controller._routes.items()
+            }
             preview._a_completed_groups = set(self.route_controller._a_completed_groups)
             preview.rng = random.Random()
             preview.rng.setstate(self.route_rng.getstate())
@@ -224,7 +229,7 @@ class BattleRouteEnv:
             rewards = [reward - 3.0 for reward in rewards]
         self.success = planted
         won_by_elimination = bool(self.game.round_over and self.game.attacker_wins and not planted)
-        self.done = bool(self.game.round_over)
+        self.done = bool(planted or self.game.round_over)
         if newly_planted or won_by_elimination:
             rewards = [reward + 10.0 for reward in rewards]
         elif self.done and not planted:
