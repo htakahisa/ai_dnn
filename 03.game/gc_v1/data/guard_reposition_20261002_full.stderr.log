@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "D:\git\ai_dnn\03.game\gc_v1\train_guard_reposition_gc.py", line 506, in <module>
+    main()
+    ~~~~^^
+  File "D:\git\ai_dnn\03.game\gc_v1\train_guard_reposition_gc.py", line 502, in main
+    train(args)
+    ~~~~~^^^^^^
+  File "D:\git\ai_dnn\03.game\gc_v1\train_guard_reposition_gc.py", line 431, in train
+    save("latest", episode, {"status": "evaluation_pending"})
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\git\ai_dnn\03.game\gc_v1\train_guard_reposition_gc.py", line 385, in save
+    check_frozen()
+    ~~~~~~~~~~~~^^
+  File "D:\git\ai_dnn\03.game\gc_v1\train_guard_reposition_gc.py", line 382, in check_frozen
+    raise RuntimeError("Runtime stats/combo/awakening files changed during this run")
+RuntimeError: Runtime stats/combo/awakening files changed during this run

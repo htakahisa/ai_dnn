@@ -142,7 +142,8 @@ class CoordinatorTest(unittest.TestCase):
         np.testing.assert_array_equal(actors_a[0].calls[0][1], actors_b[0].calls[0][1])
 
     def test_legal_sighting_is_shared_and_memory_ages(self):
-        game, allies, _ = make_game(enemy_pos=(22, 22))
+        game, allies, enemy = make_game(enemy_pos=(22, 22))
+        enemy.los_revealed = True
         controller, coach, actors = make_coordinator(game)
         controller.decide_move(allies[0], {})
         self.assertEqual(1, len(controller._snapshot.sightings))
@@ -156,6 +157,7 @@ class CoordinatorTest(unittest.TestCase):
         )
         for ally in allies:
             ally.blind_remaining = 1
+        enemy.los_revealed = False
         game.battle_tick += 1
         controller.decide_move(allies[0], {})
         self.assertFalse(controller._snapshot.sightings)

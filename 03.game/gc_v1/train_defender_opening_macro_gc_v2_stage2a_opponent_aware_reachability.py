@@ -4,7 +4,7 @@ Flow per episode:
   learned Setup -> 24 live Opening ticks -> stop
 
 No Search/Retake/full-round reward is used.
-Attackers come from real party presets and use the normal Toru attacker AI.
+Attackers rotate FRC, TYG, OMG, FNC v3 and SUPES with their dedicated AIs.
 
 Stage 2A:
 - Selection only is learned.
@@ -577,28 +577,17 @@ class DefenderOpeningController:
 
 
 def opponent_names():
-    out=[]
-    for n in all_preset_names():
-        if n==GC_PRESET:continue
-        p=get_preset(n)
-        if p is not None and len(tuple(p.players))==5:out.append(n)
-    if not out:raise RuntimeError("No opponent presets")
-    return out
-
-
-def attacker_ai_key():
-    for key in ("toru_ai_v3.1","toru_ai_v3"):
-        try:_build_team_ai(key);return key
-        except Exception:pass
-    raise RuntimeError("No Toru attacker AI key")
-
-
-ATTACKER_AI=attacker_ai_key()
+    from gc_v1.training_opponent_pool_gc import real_team_names
+    return real_team_names()
 
 
 def build_game(ctrl,rng):
-    name=rng.choice(opponent_names()); p=get_preset(name)
-    attacker=_build_team_ai(ATTACKER_AI)
+    from gc_v1.training_opponent_pool_gc import opponent_for_episode
+    index=getattr(rng,"_gc_opponent_index",0)
+    rng._gc_opponent_index=index+1
+    opponent=opponent_for_episode(index)
+    name=opponent.name; p=get_preset(name)
+    attacker=opponent.build_loaded_team_ai("A")
     defender=DualRoleTeamAI("GC-Opening-v2-D",attacker_factory=lambda:DefaultAttackerController(),defender_factory=lambda:ctrl,use_iq_perception=False)
     kw:dict[str,Any]={"headless":True,"attacker_roster":list(p.players),"defender_roster":list(GC_ROSTER)}
     sig=inspect.signature(VisualFPSBattle.__init__)
@@ -746,7 +735,8 @@ def train(args):
     print(f"selection action dims={ACTION_DIMS}")
     print(f"opening horizon={OPENING_TICKS} Tick")
     print(f"Flash/Recon selectable only when Origin BFS<={MAX_ORIGIN_BFS_DISTANCE}")
-    print(f"opponent pool={len(opponent_names())} real teams / ai={ATTACKER_AI}")
+    from gc_v1.training_opponent_pool_gc import describe_pool
+    print(describe_pool())
     print("mode=OPENING_STAGE2A_OPPONENT_AWARE (Setup -> opponent-aware selection -> auto execute -> stop)")
     print("Execution DQN/Search/Retake/final-round reward are disabled")
 

@@ -1,0 +1,88 @@
+{
+  "revision": "guard_reposition_v1",
+  "code_sha256": {
+    "train_guard_reposition_gc.py": "4ec83440b552fc66851ef928985fe2b9c86c42fc4fc4e2f9fdb6ff907a74ac35",
+    "train_attacker_gc_real_curriculum.py": "23b8a3c64565a27132db02ede9b67412f3b7dade9ea9a1f209a4f2099f219f24",
+    "training_opponent_pool_gc.py": "2e80e03dc8392ac56c95acda6e23b9e44db449b4d356852400f6709f3b4d1d92",
+    "train_attacker_carry_gc_real.py": "1373f413b37f1c1b00fa31187ae957b79709888111ee37c2650026bc9141b0fc"
+  },
+  "sources": {
+    "carry": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "sha256": "653a4ef2792eb3a18a0e4658c0e65d7b6198c2a755ad08f1b3e704445be47b30"
+    },
+    "escort": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "sha256": "ea1618ae97ea5f803ff16fc7f80933f55bc19e275eeaa227760d658414368a92"
+    },
+    "guard": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "sha256": "eecf13599aededcd79bb2cfdc15bb916eed9ec0124f5c816640f496d2c3bc1a3"
+    }
+  },
+  "opponents": [
+    [
+      "Furina Classic",
+      "frc_v1"
+    ],
+    [
+      "Touyama Gaming",
+      "touyama_gaming_v2"
+    ],
+    [
+      "Omoko Gaming",
+      "omoko_gaming_v1"
+    ],
+    [
+      "Fnatic2023",
+      "fnatic_v3"
+    ],
+    [
+      "SUPES",
+      "toru_ai_v3.1"
+    ]
+  ],
+  "runtime_data_fingerprint": {
+    "character_stats.py": "6df6e0b462d2a36346f0fb3cb55e18b8c1d7afdaa42c72d12535beec6fe87d95",
+    "player_combos.py": "410b9bd12f111d99c05980ef2736cd8a7376d6bc719f0254ffdbfca5c89bb437",
+    "awakening_events.py": "90a56f633834d811f3b9c7212604d7cc468269cced44f16867dd3b708215a58e"
+  },
+  "parameters": {
+    "init_carry": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+    "init_escort": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+    "init_guard": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+    "output_dir": "gc_v1\\data\\guard_reposition_20261002_combo_update",
+    "episodes": 325,
+    "episode_offset": 675,
+    "warm_start_guard": "gc_v1\\data\\guard_reposition_20261002_full\\dqn_attacker_guard_gc_latest.pt",
+    "seed_guard_candidate": "gc_v1\\data\\guard_reposition_20261002_full\\dqn_attacker_guard_gc_best_by_eval.pt",
+    "eval_interval": 100,
+    "eval_episodes": 50,
+    "eval_seeds": [
+      3126100200,
+      5126100200,
+      7126100200
+    ],
+    "holdout_seeds": [
+      9226100200,
+      11226100200
+    ],
+    "seed": 2026100200,
+    "bootstrap_episodes": 0,
+    "lr": 5e-05,
+    "gamma": 0.99,
+    "updates": 16,
+    "demo_weight": 1.0,
+    "regression_tolerance": 0.05
+  },
+  "continuation_models": {
+    "warm_start": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\guard_reposition_20261002_full\\dqn_attacker_guard_gc_latest.pt",
+      "sha256": "e65840e8709107e95970ad7f3a0cd9a4c0f895cd934b8b02c6f303a0c74764dd"
+    },
+    "previous_winner": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\guard_reposition_20261002_full\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "sha256": "8a2fafabc8b67b49cbc1e362a5e52e1c3ed8128fed65232ef8403b956761f83a"
+    }
+  }
+}

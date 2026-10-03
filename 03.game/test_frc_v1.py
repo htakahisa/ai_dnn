@@ -46,6 +46,15 @@ class RecordingActor:
 
 
 class FrcInformationTests(unittest.TestCase):
+    def test_known_ally_occupancy_blocks_moves(self):
+        game = make_game()
+        snapshot, _, observation = observe(game)
+        self.assertFalse(observation.masks.kind[3, 2])  # Jean cannot move east into Arlecchino.
+        self.assertFalse(observation.masks.kind[4, 4])  # Arlecchino cannot move west into Jean.
+        self.assertTrue(observation.masks.kind[4, 2])
+        with self.assertRaises(ValueError):
+            validate_action(snapshot, observation.masks, 3, FrcAction("E", "S"))
+
     def test_hidden_enemy_state_and_occupancy_do_not_change_actor_or_masks(self):
         game = make_game()
         for ally in game.chars[:5]:
@@ -90,12 +99,14 @@ class FrcInformationTests(unittest.TestCase):
         active = observe(game)[2]
         self.assertFalse(np.array_equal(before.grid, active.grid))
 
-    def test_reveal_bypasses_blind_walls_and_facing_but_los_flag_does_not(self):
+    def test_only_engine_reveal_state_discloses_enemy_position(self):
         game = make_game()
         for c in game.chars[:5]:
             c.blind_remaining = 10
-        game.chars[-1].los_revealed = True
         self.assertFalse(observe(game)[0].sightings)
+        game.chars[-1].los_revealed = True
+        self.assertEqual("normal", observe(game)[0].sightings[0].source)
+        game.chars[-1].los_revealed = False
         game.chars[-1].reveal_remaining = 3
         self.assertEqual("reveal", observe(game)[0].sightings[0].source)
 

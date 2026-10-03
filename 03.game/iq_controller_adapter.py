@@ -2,14 +2,16 @@ from __future__ import annotations
 from typing import Any
 import numpy as np
 
-from iq_perception import IQPerceptionEngine
+from iq_perception import IQPerceptionEngine, build_team_position_view
 
 
 class IQAwareController:
-    def __init__(self, inner_controller: Any, perception_engine: IQPerceptionEngine | None = None):
+    def __init__(self, inner_controller: Any, perception_engine: IQPerceptionEngine | None = None,
+                 viewer_team: str | None = None):
         self.inner = inner_controller
         self.perception_engine = perception_engine or IQPerceptionEngine()
         self.real_game = None
+        self.viewer_team = viewer_team
 
     @property
     def inner_controller(self):
@@ -20,8 +22,8 @@ class IQAwareController:
 
     def set_game(self, game):
         self.real_game = game
-        if hasattr(self.inner, "set_game"):
-            self.inner.set_game(game)
+        if self.viewer_team is not None and hasattr(self.inner, "set_game"):
+            self.inner.set_game(build_team_position_view(game, self.viewer_team))
 
     def reset_round(self):
         self.perception_engine.clear_cache()

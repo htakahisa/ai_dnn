@@ -277,6 +277,10 @@ class TeamPerceptionBuilder:
     ) -> Optional[EnemySighting]:
         if not _is_alive(enemy):
             return None
+        recon_revealed = _is_recon_revealed(enemy)
+        los_revealed = bool(getattr(enemy, "los_revealed", False))
+        if not (recon_revealed or los_revealed):
+            return None
         rows, columns = _grid_shape(getattr(game, "grid", None))
         enemy_position = _bounded_position(
             getattr(enemy, "pos", None),
@@ -297,7 +301,7 @@ class TeamPerceptionBuilder:
             ):
                 candidates.append((viewer, SightingSource.NORMAL))
 
-        if _is_recon_revealed(enemy):
+        if recon_revealed:
             recon_viewer = next(
                 (
                     viewer
@@ -314,7 +318,10 @@ class TeamPerceptionBuilder:
                 candidates.append((recon_viewer, SightingSource.RECON))
 
         if not candidates:
-            return None
+            # Reveal is already a team-shared engine state even if the
+            # original viewer can no longer see the target this tick.
+            selected = max(viewers, key=lambda viewer: viewer.effective_iq)
+            candidates.append((selected, SightingSource.RECON if recon_revealed else SightingSource.NORMAL))
 
         selected, source = min(
             candidates,

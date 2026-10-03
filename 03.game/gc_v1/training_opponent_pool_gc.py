@@ -1,33 +1,25 @@
-"""Shared real-team opponent pool for Ghost Champions training.
+"""Actual rosters and dedicated AIs used by GC real-engine training.
 
-Every training match can draw one actual team preset from party_presets.py.
-Ghost Champions itself is excluded.
-
-The opponent keeps:
-- its exact 5-player roster
-- its IGL
-- its attacker spike holder
-- all normal player-combo / awakening behavior supplied by the game
-
-AI:
-- Prefer the current competition key "toru_ai_v3.1" when run_game supports it.
-- Fall back to "toru_ai_v3" for run_game versions where v3.1 is only a
-  Competition Manager display alias.
-
-This module is intentionally independent of any GC training phase so Setup,
-Opening, Search and Retake can all share the same opponent distribution.
+Use opponent_for_episode for an even, reproducible five-team rotation. Toru
+v3's engine key is v3.1 (the GUI name); Fnatic v3 is its dedicated rule AI.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass
+import contextlib
+import io
 import random
 
-from party_presets import all_preset_names, get_preset
-from run_game import _build_team_ai
-
+from party_presets import get_preset
 
 GC_PRESET_NAME = "Ghost Champions"
+OPPONENT_SPECS = (
+    ("Furina Classic", "frc_v1"),
+    ("Touyama Gaming", "touyama_gaming_v2"),
+    ("Omoko Gaming", "omoko_gaming_v1"),
+    ("Fnatic2023", "fnatic_v3"),
+    ("SUPES", "toru_ai_v3.1"),
+)
 
 
 @dataclass(frozen=True)
@@ -39,79 +31,90 @@ class TrainingOpponent:
     ai_key: str
 
     def build_team_ai(self):
+        from run_game import _build_team_ai
         return _build_team_ai(self.ai_key)
 
+    def build_loaded_team_ai(self, side):
+        """Legacy loaders print and swallow errors; never train against that fallback."""
+        team = self.build_team_ai()
+        log = io.StringIO()
+        with contextlib.redirect_stdout(log):
+            if side == "A":
+                team.get_attacker_controller()
+            else:
+                team.get_defender_controller()
+        errors = [line for line in log.getvalue().splitlines()
+                  if "LOAD ERROR" in line or "load failed" in line or "model missing" in line]
+        if errors:
+            raise RuntimeError(f"Dedicated opponent failed to load ({self.name}): " + " | ".join(errors))
+        return team
 
-def _resolve_toru_team_ai_key() -> str:
-    """Return the strongest/current Toru team-AI key supported by this run_game."""
-    errors = []
-    for key in ("toru_ai_v3.1", "toru_ai_v3"):
-        try:
-            # Probe only. The returned object is discarded.
-            _build_team_ai(key)
-            return key
-        except Exception as exc:
-            errors.append(f"{key}: {type(exc).__name__}: {exc}")
 
-    raise RuntimeError(
-        "No supported Toru AI team key was found in run_game._build_team_ai. "
-        + " | ".join(errors)
-    )
+def rotation_opponents() -> tuple[TrainingOpponent, ...]:
+    opponents = []
+    for name, key in OPPONENT_SPECS:
+        preset = get_preset(name)
+        if (preset is None or len(preset.players) != 5
+                or preset.igl not in preset.players
+                or preset.spike_holder not in preset.players):
+            raise RuntimeError(f"Invalid training opponent preset: {name}")
+        opponents.append(TrainingOpponent(
+            preset.name, tuple(preset.players), preset.igl, preset.spike_holder, key))
+    return tuple(opponents)
+
+
+def opponent_for_episode(index: int) -> TrainingOpponent:
+    opponents = rotation_opponents()
+    return opponents[index % len(opponents)]
 
 
 def real_team_names(*, exclude_gc: bool = True) -> list[str]:
-    names = []
-    for name in all_preset_names():
-        if exclude_gc and name == GC_PRESET_NAME:
-            continue
-
-        preset = get_preset(name)
-        if preset is None:
-            continue
-        if len(tuple(preset.players)) != 5:
-            continue
-        if preset.igl not in preset.players:
-            continue
-        if preset.spike_holder is None or preset.spike_holder not in preset.players:
-            continue
-
-        names.append(name)
-
-    if not names:
-        raise RuntimeError(
-            "No usable real-team presets were found in party_presets.py"
-        )
-
-    return names
+    names = [opponent.name for opponent in rotation_opponents()]
+    return names if exclude_gc else names + [GC_PRESET_NAME]
 
 
-def choose_real_team_opponent(
-    rng: random.Random,
-    *,
-    ai_key: str | None = None,
-) -> TrainingOpponent:
-    names = real_team_names(exclude_gc=True)
-    name = rng.choice(names)
-    preset = get_preset(name)
-
-    if preset is None:
-        raise RuntimeError(f"Preset disappeared after selection: {name}")
-
-    resolved_ai = ai_key or _resolve_toru_team_ai_key()
-
-    return TrainingOpponent(
-        name=preset.name,
-        players=tuple(preset.players),
-        igl=preset.igl,
-        spike_holder=preset.spike_holder,
-        ai_key=resolved_ai,
-    )
+def choose_real_team_opponent(rng: random.Random, *, ai_key: str | None = None,
+                              episode_index: int | None = None) -> TrainingOpponent:
+    opponent = (opponent_for_episode(episode_index) if episode_index is not None
+                else rng.choice(rotation_opponents()))
+    if ai_key is None:
+        return opponent
+    return TrainingOpponent(opponent.name, opponent.players, opponent.igl,
+                            opponent.spike_holder, ai_key)
 
 
 def describe_pool() -> str:
-    names = real_team_names(exclude_gc=True)
-    ai_key = _resolve_toru_team_ai_key()
-    return (
-        f"real teams={len(names)} / ai={ai_key} / "
-        + ", ".join(names)
-    )
+    return "rotation: " + " -> ".join(
+        f"{o.name} ({o.ai_key})" for o in rotation_opponents())
+
+
+class OpponentRotation:
+    """Reuse loaded controllers, but reset their episode memory and IQ cache."""
+
+    def __init__(self):
+        self.teams = {}
+        self.current = None
+
+    def bind(self, game, episode_index: int, *, side="D"):
+        from run_competition_manager import TeamPlayerKey
+        opponent = opponent_for_episode(episode_index)
+        if opponent.ai_key not in self.teams:
+            self.teams[opponent.ai_key] = opponent.build_loaded_team_ai(side)
+        team = self.teams[opponent.ai_key]
+        prefix = "defender" if side == "D" else "attacker"
+        setattr(game, prefix + "_roster", [
+            TeamPlayerKey(name, "opponent:" + opponent.name) for name in opponent.players])
+        setattr(game, prefix + "_igl_name", opponent.igl)
+        setattr(game, prefix + "_team_name", opponent.name)
+        if side == "D":
+            game.defender_spike_holder_name = opponent.spike_holder
+            game.initial_defender_team_ai = team
+            game.current_defender_team_ai = team
+        else:
+            game.spike_holder_name = opponent.spike_holder
+            game.initial_attacker_team_ai = team
+            game.current_attacker_team_ai = team
+        game._refresh_active_controllers()
+        team.reset_round()
+        self.current = opponent
+        return opponent

@@ -179,15 +179,17 @@ class ContractorSystemTests(unittest.TestCase):
         canvas = RecordingCanvas()
         draw_heal_sparkle(canvas, 2, 3, 20, 5)
         first = canvas.calls[0][1]
+        self.assertTrue(all(call[2]["fill"] == "#ffd6e7" for call in canvas.calls))
+        self.assertEqual(canvas.calls[0][2]["outline"], "#ffd6e7")
         canvas.calls.clear()
         draw_heal_sparkle(canvas, 2, 3, 20, 4)
         self.assertNotEqual(first, canvas.calls[0][1])
         canvas.calls.clear()
         draw_serenade_flash(canvas, 20, 12, 20, 260)
         self.assertEqual(canvas.calls[0][1], (260, 0, 660, 240))
-        self.assertEqual(canvas.calls[0][2]["fill"], "white")
+        self.assertEqual(canvas.calls[0][2]["fill"], "#ffd6e7")
 
-    def test_serenade_white_flash_lasts_one_battle_tick(self):
+    def test_serenade_flash_lasts_one_battle_tick(self):
         self.idol.is_alive, self.idol.ultimate_points = False, 4
         self.assertTrue(self.game.execute_ai_ultimate(self.idol, {"ultimate": "SERENADE"}))
         self.assertEqual(self.game.serenade_flash_remaining, 1)

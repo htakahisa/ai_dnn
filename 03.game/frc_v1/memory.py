@@ -59,10 +59,14 @@ class FrcMemory:
             if previous is None or previous[3] != effect.phase:
                 affiliation = "unknown"
                 for kind, origin, target, tick in self._own_casts:
-                    if kind == effect.kind and tick <= time <= tick + 1 and (
+                    direct_cast = (kind == effect.kind and tick <= time <= tick + 1 and (
                         effect.trail and effect.trail[0] == origin or
                         effect.kind == "BALEMOON" and effect.position == origin or
-                        target is not None and effect.position == target):
+                        target is not None and effect.position == target))
+                    ash_impact = (kind == "ASH" and effect.kind == "DESTRUCTION" and
+                                  target is not None and effect.position == target and
+                                  tick <= time <= tick + 5)
+                    if direct_cast or ash_impact:
                         affiliation = "own"
                         break
                 # A newly visible cast has already advanced once in the
@@ -75,7 +79,7 @@ class FrcMemory:
                 known and effect.phase == "warning" and effect.kind in durations) else None
             history.append(EffectHistory(effect.handle, max(0, time - start), known, remaining, affiliation))
         self._effects = {key: value for key, value in self._effects.items() if key in present}
-        self._own_casts = [cast for cast in self._own_casts if time - cast[3] <= 2]
+        self._own_casts = [cast for cast in self._own_casts if time - cast[3] <= 5]
         self._last_key = snapshot.key
         self._result = FrcBelief(snapshot.key,
             tuple(sorted((cell, max(0, time - seen)) for cell, seen in self._clear.items())),

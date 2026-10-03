@@ -116,7 +116,8 @@ class RenderingUIMixin:
 
     def _selected_ultimate_ready(self, selected):
         return selected.ultimate_points >= selected.ultimate_cost and (
-            not selected.is_alive if selected.ultimate_name == "SERENADE" else selected.is_alive)
+            (not selected.is_alive and self._serenade_has_living_teams(selected))
+            if selected.ultimate_name == "SERENADE" else selected.is_alive)
     def _handle_team_panel_click(self, x, y):
         if x < SIDE_PANEL_WIDTH:
             team = "A"
@@ -808,7 +809,7 @@ class RenderingUIMixin:
                 self.map_offset_x + 119,
                 25,
                 text=(
-                    "DEFENDER SETUP  "
+                    "SETUP  "
                     f"{getattr(self, 'defender_setup_ticks_remaining', 0)}"
                 ),
                 fill="#5e4a00",

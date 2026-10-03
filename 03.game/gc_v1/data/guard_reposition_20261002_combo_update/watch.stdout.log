@@ -1,0 +1,665 @@
+[LOAD] game_character_stats: character_stats.py
+[LOAD] game_player_combos: player_combos.py
+[LOAD] game_awakening_events: awakening_events.py
+[DATA] characters=125 / combos=86 / awakenings=27
+[touyama_v2] 固定チーム(Defender/search) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] 固定監視方向: {'夢の街': 'E', 'いぐるん': 'NW', 'ろびぃな': 'S', 'Tortlilyan': 'SW', 'えんぺん': 'SW'}
+[touyama_v2][DIAG] 配置 夢の街, いぐるん, ろびぃな, Tortlilyan, えんぺん
+[touyama_v2][DIAG] 夢の街 spawn=(1, 18) nearest_defense_dist=22 
+[touyama_v2][DIAG] いぐるん spawn=(1, 19) nearest_defense_dist=21 
+[touyama_v2][DIAG] ろびぃな spawn=(1, 20) nearest_defense_dist=20 
+[touyama_v2][DIAG] Tortlilyan spawn=(1, 21) nearest_defense_dist=19 
+[touyama_v2][DIAG] えんぺん spawn=(1, 22) nearest_defense_dist=18 
+[touyama_v2] 固定チーム(Attacker/escort) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] 固定チーム(Attacker/guard) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] サイト別プラント地点・ガードポジション:
+  site0: plant=(7, 40) guard_positions=[(8, 40), (9, 38), (9, 39), (9, 40), (10, 38)]
+  site1: plant=(8, 3) guard_positions=[(10, 2), (10, 3), (11, 1), (11, 2), (12, 1)]
+[omoko_v1] 固定チーム(Attacker/escort) 確定ステータス:
+  ねこさん: acc=0.87 hs=0.42 dodge=0.42 reaction=142 ability=SMOKE
+  とりさん: acc=0.70 hs=0.35 dodge=0.55 reaction=150 ability=RECON
+  おもこ: acc=0.92 hs=0.67 dodge=0.72 reaction=67 ability=FLASH
+  いぬさん: acc=0.95 hs=0.33 dodge=0.28 reaction=135 ability=FLASH
+  ひつじさん: acc=0.93 hs=0.45 dodge=0.25 reaction=135 ability=SMOKE
+[omoko_v1] 固定チーム(Attacker/guard) 確定ステータス:
+  ねこさん: acc=0.87 hs=0.42 dodge=0.42 reaction=142 ability=SMOKE
+  とりさん: acc=0.70 hs=0.35 dodge=0.55 reaction=150 ability=RECON
+  おもこ: acc=0.92 hs=0.67 dodge=0.72 reaction=67 ability=FLASH
+  いぬさん: acc=0.95 hs=0.33 dodge=0.28 reaction=135 ability=FLASH
+  ひつじさん: acc=0.93 hs=0.45 dodge=0.25 reaction=135 ability=SMOKE
+[omoko_v1] サイト別プラント地点・ガードポジション:
+  site0: plant=(7, 40) guard_positions=[(3, 40), (10, 39), (2, 40), (10, 38), (3, 38)]
+  site1: plant=(8, 3) guard_positions=[(8, 1), (7, 1), (10, 2), (13, 3), (13, 7)]
+[omoko_v1] 固定チーム(Defender/search) 確定ステータス:
+  ねこさん: acc=0.65 hs=0.20 dodge=0.20 reaction=120 ability=SMOKE
+  とりさん: acc=0.55 hs=0.25 dodge=0.25 reaction=125 ability=RECON
+  おもこ: acc=0.67 hs=0.67 dodge=0.67 reaction=67 ability=FLASH
+  いぬさん: acc=0.70 hs=0.18 dodge=0.18 reaction=115 ability=FLASH
+  ひつじさん: acc=0.68 hs=0.30 dodge=0.15 reaction=110 ability=SMOKE
+[omoko_v1] 固定監視方向: {'ねこさん': 'SW', 'とりさん': 'S', 'おもこ': 'S', 'いぬさん': 'S', 'ひつじさん': 'W'}
+[omoko_v1][DIAG] 配置 ねこさん, とりさん, おもこ, いぬさん, ひつじさん
+[omoko_v1][DIAG] ねこさん spawn=(1, 18) nearest_defense_dist=12 
+[omoko_v1][DIAG] とりさん spawn=(1, 19) nearest_defense_dist=13 
+[omoko_v1][DIAG] おもこ spawn=(1, 20) nearest_defense_dist=12 
+[omoko_v1][DIAG] いぬさん spawn=(1, 21) nearest_defense_dist=11 
+[omoko_v1][DIAG] ひつじさん spawn=(1, 22) nearest_defense_dist=10 
+[WATCH] checkpoint=D:\git\ai_dnn\03.game\gc_v1\data\guard_reposition_20261002_combo_update\dqn_attacker_guard_gc_best_by_eval.pt mode=candidate EP300
+[GC v1] loaded LearningAttackerCarryGCController: D:\git\ai_dnn\03.game\gc_v1\data\attacker_carry_gc_data\dqn_attacker_carry_gc_best_by_eval.pt (positioning_version=13, episode=2750)
+[GC v1] loaded LearningAttackerEscortGCController: D:\git\ai_dnn\03.game\gc_v1\data\attacker_escort_gc_data\dqn_attacker_escort_gc_best_by_eval.pt
+[GC v1] loaded LearningAttackerRetrieveGCController: D:\git\ai_dnn\03.game\gc_v1\data\attacker_retrieve_gc_data\dqn_attacker_retrieve_gc_best_by_eval.pt
+[LearningAttackerGuardGCController] loaded: D:\git\ai_dnn\03.game\gc_v1\data\guard_reposition_20261002_combo_update\dqn_attacker_guard_gc_best_by_eval.pt
+[GC v1] loaded LearningAttackerGuardGCController: D:\git\ai_dnn\03.game\gc_v1\data\guard_reposition_20261002_combo_update\dqn_attacker_guard_gc_best_by_eval.pt
+[GC v1][A] carry=True escort=True retrieve=True guard=True
+[GC Macro Runtime] loaded dqn_attacker_macro_gc_final.pt (episode=20000, obs=68, actions=12)
+[WATCH] round=1 opponent=Furina Classic ai=frc_v1 guard=candidate EP300
+[WATCH] WINDOW_READY
+[GC Macro] tick=9 REHIT_A -> A_SPLIT
+[WATCH] round=2 opponent=Touyama Gaming ai=touyama_gaming_v2 guard=candidate EP300
+[GC Macro] tick=18 ROTATE_B_TO_A -> A_SPLIT
+[GC GUARD] planted=(9, 3) pattern=5 assignments={'Absol': (10, 2), 'SugarZ3ro': (15, 3), 'SyouTa': (10, 6), 'Xdll': (6, 3), 'eKo': (6, 6)}
+[ATTACKER GUARD GC] Xdll pos=(11, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(11, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 3) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 3) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(9, 3) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 3) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(11, 3) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 3) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 7) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 3) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(11, 4) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(11, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 7) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(9, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(8, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(7, 3) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 7) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 6) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 6) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(6, 3) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(10, 6) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 2) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 5) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(15, 3) action=0 move=(0, 0) ability=False
+[WATCH] round=3 opponent=Omoko Gaming ai=omoko_gaming_v1 guard=candidate EP300
+[WATCH] round=4 opponent=Fnatic2023 ai=fnatic_v3 guard=candidate EP300
+[GC GUARD] planted=(10, 40) pattern=8 assignments={'Absol': (10, 38), 'SugarZ3ro': (14, 40), 'Xdll': (13, 40), 'eKo': (10, 42)}
+[ATTACKER GUARD GC] Xdll pos=(14, 20) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] eKo pos=(22, 38) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 19) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 21) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 40) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(22, 39) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 20) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 22) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 39) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(22, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 21) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 23) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(21, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 22) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 23) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(20, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 23) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 24) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(19, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 23) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 25) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(18, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 24) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 26) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(17, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 25) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 27) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(16, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 26) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 27) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(15, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 27) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 28) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(14, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 27) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 29) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(13, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 28) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 29) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(12, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 27) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 29) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(11, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 28) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 29) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 40) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 27) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 30) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 41) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 28) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 30) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 29) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 31) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 30) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 31) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 30) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 32) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 31) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 33) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 31) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 34) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 32) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 35) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 33) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 36) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 34) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 37) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 35) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 38) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 36) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 39) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 37) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(14, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 38) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 39) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 40) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 40) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 37) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 39) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 40) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 36) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 41) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 37) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 38) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 39) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(14, 40) action=0 move=(0, 0) ability=False
+[WATCH] round=5 opponent=SUPES ai=toru_ai_v3.1 guard=candidate EP300
+[GC GUARD] planted=(10, 40) pattern=8 assignments={'Absol': (10, 38), 'SugarZ3ro': (13, 40), 'SyouTa': (14, 40), 'Xdll': (10, 42), 'eKo': (9, 42)}
+[ATTACKER GUARD GC] Xdll pos=(13, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(15, 24) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(15, 25) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 39) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(12, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(14, 24) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 40) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(14, 25) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 38) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(11, 40) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(13, 24) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 39) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] eKo pos=(13, 25) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 39) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 40) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(12, 24) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(13, 25) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(12, 40) action=4 move=(1, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 41) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(13, 24) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(13, 26) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(13, 25) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] eKo pos=(13, 27) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(13, 26) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(13, 27) action=2 move=(-1, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SyouTa pos=(12, 27) action=8 move=(0, 1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] SugarZ3ro pos=(13, 40) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=0 move=(0, 0) ability=False
+[ATTACKER GUARD GC] Xdll pos=(10, 42) action=6 move=(0, -1) ability=False
+[ATTACKER GUARD GC] Absol pos=(10, 38) action=8 move=(0, 1) ability=False

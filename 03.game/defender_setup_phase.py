@@ -134,11 +134,10 @@ class DefenderSetupPhase:
         if not self.active:
             return True
 
-        # Setup中はDefenderのみ移動可能。
-        return str(team).upper() == "D"
+        return str(team).upper() in {"A", "D"}
 
     def attacker_is_frozen(self) -> bool:
-        return self.active
+        return False
 
     def defender_can_move_to(self, row: int, col: int) -> bool:
         """Defenderの移動先がSetup中に許可されているか。"""
@@ -154,10 +153,7 @@ class DefenderSetupPhase:
 
         team = str(team).upper()
 
-        if team == "A":
-            return False
-
-        if team != "D":
+        if team not in {"A", "D"}:
             return False
 
         return self.defender_can_move_to(row, col)
@@ -198,7 +194,7 @@ class DefenderSetupPhase:
         if not self.active:
             return "LIVE"
 
-        return f"DEFENDER SETUP {self.ticks_remaining}"
+        return f"SETUP {self.ticks_remaining}"
 
     def snapshot(self) -> dict:
         """UI / debug / logging用の状態辞書。"""

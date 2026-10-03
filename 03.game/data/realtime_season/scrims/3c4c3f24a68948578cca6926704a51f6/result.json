@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "gorigons",
+  "opponent_team": "Fnatic",
+  "own_score": 3,
+  "opponent_score": 13,
+  "winner": "Fnatic",
+  "seed": 1750469587,
+  "player_stats": {
+    "ごりまる": {
+      "kills": 5,
+      "deaths": 13
+    },
+    "ごんごん": {
+      "kills": 1,
+      "deaths": 12
+    },
+    "ごんた": {
+      "kills": 6,
+      "deaths": 13
+    },
+    "くんた": {
+      "kills": 8,
+      "deaths": 11
+    },
+    "くりまる": {
+      "kills": 19,
+      "deaths": 13
+    },
+    "Boaster": {
+      "kills": 9,
+      "deaths": 13
+    },
+    "Derke": {
+      "kills": 21,
+      "deaths": 7
+    },
+    "Alfajer": {
+      "kills": 9,
+      "deaths": 7
+    },
+    "Chronicle": {
+      "kills": 9,
+      "deaths": 8
+    },
+    "Leo": {
+      "kills": 14,
+      "deaths": 4
+    }
+  }
+}

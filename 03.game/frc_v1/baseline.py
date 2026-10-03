@@ -35,18 +35,21 @@ def facing_to(origin, target):
                       math.hypot(*FACING_STEPS[i]))]
 
 
-def route_step(grid, start, goals, blocked=()):
+def route_step(grid, start, goals, blocked=(), first_step_blocked=()):
     goals = set(goals)
     if start in goals:
         return "STAY", 0
     blocked = set(blocked) - goals
+    first_step_blocked = set(first_step_blocked)
     queue = deque([(start, "STAY", 0)])
     visited = {start}
     while queue:
         (r, c), first, distance = queue.popleft()
         for kind, (dr, dc) in MOVE_STEPS.items():
             pos = r + dr, c + dc
-            if not (0 <= pos[0] < len(grid) and 0 <= pos[1] < len(grid[0])) or grid[pos[0]][pos[1]] == 1 or pos in blocked or pos in visited:
+            if (not (0 <= pos[0] < len(grid) and 0 <= pos[1] < len(grid[0]))
+                    or grid[pos[0]][pos[1]] == 1 or pos in blocked or pos in visited
+                    or distance == 0 and pos in first_step_blocked):
                 continue
             move = kind if distance == 0 else first
             if pos in goals:
@@ -100,7 +103,7 @@ class FrcBaseline:
                 safe = [(r, c) for r, row in enumerate(snapshot.grid) for c, value in enumerate(row)
                         if value != 1 and (r, c) not in danger and
                         (snapshot.phase != "setup" or (r, c) in snapshot.setup_cells)]
-                kind, _ = route_step(snapshot.grid, a.position, safe, reserved - {a.position})
+                kind, _ = route_step(snapshot.grid, a.position, safe, first_step_blocked=reserved - {a.position})
                 action = FrcAction(kind, facing)
             elif a.slot == 0 and masks.kind[0, 8]:
                 targets = [ally for ally in snapshot.allies if masks.target[0, 0, ally.slot]]
@@ -138,7 +141,8 @@ class FrcBaseline:
                 elif snapshot.is_planted and snapshot.side == "A":
                     own_goals = tuple((r, c) for r, row in enumerate(snapshot.grid) for c, value in enumerate(row)
                                      if value != 1 and 2 <= max(abs(r - goals[0][0]), abs(c - goals[0][1])) <= 4)
-                kind, _ = route_step(snapshot.grid, a.position, own_goals, danger | (reserved - {a.position}))
+                kind, _ = route_step(snapshot.grid, a.position, own_goals, danger,
+                                     first_step_blocked=reserved - {a.position})
                 if kind != "STAY" and masks.kind[a.slot, KINDS.index(kind)]:
                     action = FrcAction(kind, facing)
             if not masks.kind[a.slot, KINDS.index(action.kind)]:

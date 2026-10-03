@@ -315,7 +315,7 @@ COMBOS = [
         "name": "花と剣",
         "players": ("Furina", "Lohen"),
         "player_bonuses": {
-            "Lohen": {"hs_rate": 0.2, "accuracy": 0.4, "dodge_rate": -0.1}
+            "Lohen": {"dodge_rate": 0.2, "accuracy": 0.2, "hs_rate": -0.1}
         },
         "renames": {},
     },
@@ -328,22 +328,22 @@ COMBOS = [
     {
         "name": "意外な関係値",
         "players": ("Furina", "Jean"),
-        "player_bonuses": {"Furina": {"dodge_rate": 0.2}, "Jean": {"hs_rate": 0.2}},
+        "player_bonuses": {"Furina": {"dodge_rate": 0.15}, "Jean": {"hs_rate": 0.15}},
         "renames": {},
     },
     {
         "name": "紫と黄色",
         "players": ("Lisa", "Jean"),
-        "bonuses": {"hs_rate": 0.15},
+        "bonuses": {"hs_rate": 0.1},
         "renames": {},
     },
     {
         "name": "寒色の三角関係",
         "players": ("Lisa", "Lohen", "Furina"),
         "player_bonuses": {
-            "Furina": {"hs_rate": 0.05},
-            "Lisa": {"dodge_rate": 0.4},
-            "Lohen": {"hs_rate": 0.4},
+            "Furina": {"dodge_rate": 0.05},
+            "Lisa": {"dodge_rate": 0.25},
+            "Lohen": {"accuracy": 0.25},
         },
         "renames": {},
     },
@@ -357,20 +357,28 @@ COMBOS = [
         "name": "生殺与奪の水と炎",
         "players": ("Arlecchino", "Furina"),
         "player_bonuses": {
-            "Arlecchino": {"accuracy": 0.15, "hs_rate": 0.45, "dodge_rate": -0.1}
+            "Arlecchino": {"reaction": 20, "hs_rate": 0.2, "dodge_rate": -0.1}
         },
         "renames": {},
     },
     {
         "name": "花と鯨",
         "players": ("Furina", "Tartaglia"),
-        "player_bonuses": {"Furina": {"dodge_rate": 0.4, "iq": 10}},
+        "player_bonuses": {"Furina": {"dodge_rate": 0.45, "iq": 10}},
         "renames": {},
     },
     {
         "name": "剣と鯨",
         "players": ("Lohen", "Tartaglia"),
-        "player_bonuses": {"Lohen": {"hs_rate": 0.3, "reaction": 30}},
+        "player_bonuses": {"Lohen": {"accuracy": 0.3, "reaction": 30, "hs_rate": -0.3}},
+        "renames": {},
+    },
+    {
+        "name": "剣と鯨",
+        "players": ("Arlecchino", "Tartaglia"),
+        "player_bonuses": {
+            "Arlecchino": {"hs_rate": 0.3, "reaction": 30, "accuracy": -0.3}
+        },
         "renames": {},
     },
     {

@@ -1,0 +1,2021 @@
+{
+  "version": 10,
+  "updated_at": "2026-10-03T04:07:27.514601+00:00",
+  "team_name": "gorigons",
+  "owned_players": [
+    {
+      "name": "まーやまくん",
+      "hs_pct": 0.75,
+      "dodge_pct": 0.21,
+      "iq": 90,
+      "hit_pct": 0.8,
+      "reaction": 140,
+      "role": "シーカー",
+      "influence": 50,
+      "form_variance": 1,
+      "mental": 7,
+      "monthly_salary": 2500000,
+      "loyalty": 6
+    },
+    {
+      "name": "primmie",
+      "hs_pct": 0.47,
+      "dodge_pct": 0.24,
+      "iq": 59,
+      "hit_pct": 0.79,
+      "reaction": 98,
+      "role": "タイガー",
+      "influence": 90,
+      "form_variance": 5,
+      "mental": 2,
+      "monthly_salary": 2000000,
+      "loyalty": 4
+    },
+    {
+      "name": "valyn",
+      "hs_pct": 0.26,
+      "dodge_pct": 0.13,
+      "iq": 140,
+      "hit_pct": 0.64,
+      "reaction": 95,
+      "role": "スモーカー",
+      "influence": 40,
+      "form_variance": 5,
+      "mental": 5,
+      "monthly_salary": 1000000,
+      "loyalty": 7
+    },
+    {
+      "name": "Less",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.22,
+      "iq": 86,
+      "hit_pct": 0.74,
+      "reaction": 104,
+      "role": "タイガー",
+      "influence": 80,
+      "form_variance": 3,
+      "mental": 6,
+      "monthly_salary": 2000000,
+      "loyalty": 5
+    },
+    {
+      "name": "Brawk",
+      "hs_pct": 0.32,
+      "dodge_pct": 0.15,
+      "iq": 90,
+      "hit_pct": 0.69,
+      "reaction": 95,
+      "role": "シーカー",
+      "influence": 90,
+      "form_variance": 6,
+      "mental": 8,
+      "monthly_salary": 1500000,
+      "loyalty": 6
+    },
+    {
+      "name": "ごりまる",
+      "hs_pct": 0.4,
+      "dodge_pct": 0.15,
+      "iq": 121,
+      "hit_pct": 0.6,
+      "reaction": 110,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 1,
+      "mental": 9,
+      "monthly_salary": 800000,
+      "loyalty": 5
+    },
+    {
+      "name": "ごんごん",
+      "hs_pct": 0.3,
+      "dodge_pct": 0.2,
+      "iq": 121,
+      "hit_pct": 0.7,
+      "reaction": 125,
+      "role": "タイガー",
+      "influence": 50,
+      "form_variance": 8,
+      "mental": 8,
+      "monthly_salary": 800000,
+      "loyalty": 5
+    },
+    {
+      "name": "ごんた",
+      "hs_pct": 0.25,
+      "dodge_pct": 0.25,
+      "iq": 121,
+      "hit_pct": 0.75,
+      "reaction": 125,
+      "role": "シーカー",
+      "influence": 50,
+      "form_variance": 5,
+      "mental": 7,
+      "monthly_salary": 800000,
+      "loyalty": 5
+    },
+    {
+      "name": "くんた",
+      "hs_pct": 0.25,
+      "dodge_pct": 0.2,
+      "iq": 121,
+      "hit_pct": 0.65,
+      "reaction": 130,
+      "role": "フラッシュ",
+      "influence": 50,
+      "form_variance": 3,
+      "mental": 6,
+      "monthly_salary": 800000,
+      "loyalty": 5
+    },
+    {
+      "name": "くりまる",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.3,
+      "iq": 150,
+      "hit_pct": 0.7,
+      "reaction": 115,
+      "role": "フラッシュ",
+      "influence": 50,
+      "form_variance": 3,
+      "mental": 7,
+      "monthly_salary": 800000,
+      "loyalty": 5
+    }
+  ],
+  "roster": [
+    "ごりまる",
+    "ごんごん",
+    "ごんた",
+    "くんた",
+    "くりまる"
+  ],
+  "teams": [
+    {
+      "id": "29d42926ed414f2db46768c470222e21",
+      "name": "マイチーム",
+      "roster": [
+        "まーやまくん",
+        "primmie",
+        "valyn",
+        "Less",
+        "Brawk"
+      ]
+    },
+    {
+      "id": "4468a9817c2844b992d89e2c6bebfc8c",
+      "name": "gorigons",
+      "roster": [
+        "ごりまる",
+        "ごんごん",
+        "ごんた",
+        "くんた",
+        "くりまる"
+      ]
+    }
+  ],
+  "editing_team_id": "4468a9817c2844b992d89e2c6bebfc8c",
+  "selected_team_id": "4468a9817c2844b992d89e2c6bebfc8c",
+  "opponent_teams": [
+    {
+      "id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+      "name": "Fnatic",
+      "players": [
+        {
+          "name": "Boaster",
+          "hs_pct": 0.2,
+          "dodge_pct": 0.12,
+          "iq": 175,
+          "hit_pct": 0.62,
+          "reaction": 96,
+          "role": "スモーカー",
+          "influence": 50,
+          "form_variance": 5,
+          "mental": 10,
+          "monthly_salary": 1300000,
+          "loyalty": 7
+        },
+        {
+          "name": "Derke",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.24,
+          "iq": 90,
+          "hit_pct": 0.75,
+          "reaction": 115,
+          "role": "タイガー",
+          "influence": 90,
+          "form_variance": 8,
+          "mental": 8,
+          "monthly_salary": 1500000,
+          "loyalty": 5
+        },
+        {
+          "name": "Alfajer",
+          "hs_pct": 0.45,
+          "dodge_pct": 0.13,
+          "iq": 60,
+          "hit_pct": 0.91,
+          "reaction": 145,
+          "role": "エンジニア",
+          "influence": 60,
+          "form_variance": 4,
+          "mental": 7,
+          "monthly_salary": 1500000,
+          "loyalty": 8
+        },
+        {
+          "name": "Chronicle",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.23,
+          "iq": 105,
+          "hit_pct": 0.78,
+          "reaction": 135,
+          "role": "フラッシュ",
+          "influence": 80,
+          "form_variance": 3,
+          "mental": 9,
+          "monthly_salary": 2500000,
+          "loyalty": 7
+        },
+        {
+          "name": "Leo",
+          "hs_pct": 0.27,
+          "dodge_pct": 0.22,
+          "iq": 150,
+          "hit_pct": 0.83,
+          "reaction": 135,
+          "role": "シーカー",
+          "influence": 65,
+          "form_variance": 1,
+          "mental": 10,
+          "monthly_salary": 3000000,
+          "loyalty": 9
+        }
+      ],
+      "igl": "Boaster",
+      "carrier": "Leo",
+      "ai": "fnatic_v3",
+      "transfer_multiplier": 15.0,
+      "preferred_roles": [
+        "スモーカー",
+        "タイガー",
+        "エンジニア",
+        "フラッシュ",
+        "シーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Boaster",
+          "kind": "year1",
+          "monthly_salary": 1300000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Derke",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Alfajer",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Chronicle",
+          "kind": "year1",
+          "monthly_salary": 2500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Leo",
+          "kind": "year1",
+          "monthly_salary": 3000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+      "name": "Evil Geniuses",
+      "players": [
+        {
+          "name": "Boostio",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.15,
+          "iq": 128,
+          "hit_pct": 0.68,
+          "reaction": 85,
+          "role": "エンジニア",
+          "influence": 70,
+          "form_variance": 6,
+          "mental": 9,
+          "monthly_salary": 1000000,
+          "loyalty": 9
+        },
+        {
+          "name": "Ethan",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.18,
+          "iq": 150,
+          "hit_pct": 0.8,
+          "reaction": 90,
+          "role": "シーカー",
+          "influence": 55,
+          "form_variance": 4,
+          "mental": 10,
+          "monthly_salary": 2500000,
+          "loyalty": 5
+        },
+        {
+          "name": "jawgemo",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.31,
+          "iq": 93,
+          "hit_pct": 0.67,
+          "reaction": 135,
+          "role": "タイガー",
+          "influence": 75,
+          "form_variance": 8,
+          "mental": 9,
+          "monthly_salary": 1000000,
+          "loyalty": 8
+        },
+        {
+          "name": "C0M",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.16,
+          "iq": 120,
+          "hit_pct": 0.69,
+          "reaction": 95,
+          "role": "シーカー",
+          "influence": 60,
+          "form_variance": 9,
+          "mental": 7,
+          "monthly_salary": 1300000,
+          "loyalty": 10
+        },
+        {
+          "name": "Demon1",
+          "hs_pct": 0.5,
+          "dodge_pct": 0.13,
+          "iq": 78,
+          "hit_pct": 0.85,
+          "reaction": 145,
+          "role": "スモーカー",
+          "influence": 150,
+          "form_variance": 4,
+          "mental": 7,
+          "monthly_salary": 2000000,
+          "loyalty": 6
+        }
+      ],
+      "igl": "Boostio",
+      "carrier": "Ethan",
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 15.0,
+      "preferred_roles": [
+        "エンジニア",
+        "シーカー",
+        "タイガー",
+        "シーカー",
+        "スモーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Boostio",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Ethan",
+          "kind": "year1",
+          "monthly_salary": 2500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "jawgemo",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "C0M",
+          "kind": "year1",
+          "monthly_salary": 1300000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Demon1",
+          "kind": "year1",
+          "monthly_salary": 2000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+      "name": "Furina Party",
+      "players": [
+        {
+          "name": "Furina",
+          "hs_pct": 0.29,
+          "dodge_pct": 0.09,
+          "iq": 149,
+          "hit_pct": 0.69,
+          "reaction": 129,
+          "role": "アイドル",
+          "influence": 20,
+          "form_variance": 1,
+          "mental": 0,
+          "monthly_salary": 600000,
+          "loyalty": 10
+        },
+        {
+          "name": "Lohen",
+          "hs_pct": 0.4,
+          "dodge_pct": 0.31,
+          "iq": 70,
+          "hit_pct": 0.75,
+          "reaction": 130,
+          "role": "タイガー",
+          "influence": 100,
+          "form_variance": 10,
+          "mental": 10,
+          "monthly_salary": 1900000,
+          "loyalty": 9
+        },
+        {
+          "name": "Arlecchino",
+          "hs_pct": 0.47,
+          "dodge_pct": 0.19,
+          "iq": 135,
+          "hit_pct": 0.6,
+          "reaction": 125,
+          "role": "コントラクター",
+          "influence": 100,
+          "form_variance": 1,
+          "mental": 8,
+          "monthly_salary": 3000000,
+          "loyalty": 8
+        },
+        {
+          "name": "Lisa",
+          "hs_pct": 0.36,
+          "dodge_pct": 0.25,
+          "iq": 120,
+          "hit_pct": 0.78,
+          "reaction": 99,
+          "role": "スモーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 7,
+          "monthly_salary": 1000000,
+          "loyalty": 4
+        },
+        {
+          "name": "Jean",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.2,
+          "iq": 115,
+          "hit_pct": 0.75,
+          "reaction": 135,
+          "role": "シーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 7,
+          "monthly_salary": 1500000,
+          "loyalty": 10
+        },
+        {
+          "name": "Tartaglia",
+          "hs_pct": 0.55,
+          "dodge_pct": 0.15,
+          "iq": 75,
+          "hit_pct": 0.72,
+          "reaction": 150,
+          "role": "フラッシュ",
+          "influence": 80,
+          "form_variance": 7,
+          "mental": 5,
+          "monthly_salary": 1500000,
+          "loyalty": 8
+        },
+        {
+          "name": "Kachina",
+          "hs_pct": 0.5,
+          "dodge_pct": 0.2,
+          "iq": 70,
+          "hit_pct": 0.9,
+          "reaction": 100,
+          "role": "タイガー",
+          "influence": 40,
+          "form_variance": 3,
+          "mental": 3,
+          "monthly_salary": 900000,
+          "loyalty": 8
+        }
+      ],
+      "igl": "Furina",
+      "carrier": "Furina",
+      "ai": "frc_v1",
+      "transfer_multiplier": 35.0,
+      "preferred_roles": [
+        "アイドル",
+        "タイガー",
+        "コントラクター",
+        "スモーカー",
+        "シーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Furina",
+          "kind": "year1",
+          "monthly_salary": 600000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Lohen",
+          "kind": "year1",
+          "monthly_salary": 1900000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Arlecchino",
+          "kind": "year1",
+          "monthly_salary": 3000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Lisa",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Jean",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Tartaglia",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Kachina",
+          "kind": "year1",
+          "monthly_salary": 900000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+      "name": "BBL",
+      "players": [
+        {
+          "name": "Rosé",
+          "hs_pct": 0.24,
+          "dodge_pct": 0.19,
+          "iq": 130,
+          "hit_pct": 0.76,
+          "reaction": 89,
+          "role": "シーカー",
+          "influence": 45,
+          "form_variance": 3,
+          "mental": 7,
+          "monthly_salary": 1500000,
+          "loyalty": 6
+        },
+        {
+          "name": "Lar0k",
+          "hs_pct": 0.34,
+          "dodge_pct": 0.18,
+          "iq": 85,
+          "hit_pct": 0.73,
+          "reaction": 123,
+          "role": "タイガー",
+          "influence": 50,
+          "form_variance": 4,
+          "mental": 5,
+          "monthly_salary": 1800000,
+          "loyalty": 4
+        },
+        {
+          "name": "Loita",
+          "hs_pct": 0.26,
+          "dodge_pct": 0.22,
+          "iq": 100,
+          "hit_pct": 0.76,
+          "reaction": 95,
+          "role": "スモーカー",
+          "influence": 77,
+          "form_variance": 6,
+          "mental": 6,
+          "monthly_salary": 1500000,
+          "loyalty": 8
+        },
+        {
+          "name": "Crewn",
+          "hs_pct": 0.24,
+          "dodge_pct": 0.25,
+          "iq": 95,
+          "hit_pct": 0.74,
+          "reaction": 88,
+          "role": "スモーカー",
+          "influence": 65,
+          "form_variance": 5,
+          "mental": 6,
+          "monthly_salary": 1500000,
+          "loyalty": 7
+        },
+        {
+          "name": "lovers rock",
+          "hs_pct": 0.29,
+          "dodge_pct": 0.2,
+          "iq": 95,
+          "hit_pct": 0.77,
+          "reaction": 90,
+          "role": "タイガー",
+          "influence": 55,
+          "form_variance": 6,
+          "mental": 6,
+          "monthly_salary": 1500000,
+          "loyalty": 6
+        }
+      ],
+      "igl": "Rosé",
+      "carrier": "Loita",
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 25.0,
+      "preferred_roles": [
+        "シーカー",
+        "タイガー",
+        "スモーカー",
+        "スモーカー",
+        "タイガー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Rosé",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Lar0k",
+          "kind": "year1",
+          "monthly_salary": 1800000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Loita",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Crewn",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "lovers rock",
+          "kind": "year1",
+          "monthly_salary": 1500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-819dc24a828657f48dfff35f19834e50",
+      "name": "Dragon Moon",
+      "players": [
+        {
+          "name": "Nanasaki",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.2,
+          "iq": 120,
+          "hit_pct": 0.65,
+          "reaction": 80,
+          "role": "アイドル",
+          "influence": 70,
+          "form_variance": 8,
+          "mental": 3,
+          "monthly_salary": 2000000,
+          "loyalty": 5
+        },
+        {
+          "name": "Canezerra",
+          "hs_pct": 0.45,
+          "dodge_pct": 0.17,
+          "iq": 85,
+          "hit_pct": 0.8,
+          "reaction": 147,
+          "role": "タイガー",
+          "influence": 90,
+          "form_variance": 7,
+          "mental": 6,
+          "monthly_salary": 850000,
+          "loyalty": 2
+        },
+        {
+          "name": "WoohyuN",
+          "hs_pct": 0.46,
+          "dodge_pct": 0.2,
+          "iq": 85,
+          "hit_pct": 0.71,
+          "reaction": 150,
+          "role": "コントラクター",
+          "influence": 55,
+          "form_variance": 8,
+          "mental": 4,
+          "monthly_salary": 1000000,
+          "loyalty": 8
+        },
+        {
+          "name": "Zest",
+          "hs_pct": 0.42,
+          "dodge_pct": 0.25,
+          "iq": 75,
+          "hit_pct": 0.77,
+          "reaction": 121,
+          "role": "シーカー",
+          "influence": 100,
+          "form_variance": 9,
+          "mental": 5,
+          "monthly_salary": 900000,
+          "loyalty": 4
+        },
+        {
+          "name": "Meteor",
+          "hs_pct": 0.37,
+          "dodge_pct": 0.29,
+          "iq": 73,
+          "hit_pct": 0.78,
+          "reaction": 95,
+          "role": "フラッシュ",
+          "influence": 75,
+          "form_variance": 8,
+          "mental": 9,
+          "monthly_salary": 2000000,
+          "loyalty": 5
+        }
+      ],
+      "igl": "Nanasaki",
+      "carrier": "Nanasaki",
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 50.0,
+      "preferred_roles": [
+        "アイドル",
+        "タイガー",
+        "コントラクター",
+        "シーカー",
+        "フラッシュ"
+      ],
+      "contracts": [
+        {
+          "player_name": "Nanasaki",
+          "kind": "year1",
+          "monthly_salary": 2000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Canezerra",
+          "kind": "year1",
+          "monthly_salary": 850000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "WoohyuN",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Zest",
+          "kind": "year1",
+          "monthly_salary": 900000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Meteor",
+          "kind": "year1",
+          "monthly_salary": 2000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-0a8f9696d20b5ef39105dcaf03c726ae",
+      "name": "Touyama Gaming",
+      "players": [
+        {
+          "name": "Tortlilyan",
+          "hs_pct": 0.23,
+          "dodge_pct": 0.39,
+          "iq": 123,
+          "hit_pct": 0.9,
+          "reaction": 156,
+          "role": "タイガー",
+          "influence": 50,
+          "form_variance": 10,
+          "mental": 4,
+          "monthly_salary": 2500000,
+          "loyalty": 3
+        },
+        {
+          "name": "ろびぃな",
+          "hs_pct": 0.25,
+          "dodge_pct": 0.55,
+          "iq": 80,
+          "hit_pct": 0.65,
+          "reaction": 122,
+          "role": "スモーカー",
+          "influence": 50,
+          "form_variance": 5,
+          "mental": 8,
+          "monthly_salary": 500000,
+          "loyalty": 5
+        },
+        {
+          "name": "いぐるん",
+          "hs_pct": 0.33,
+          "dodge_pct": 0.22,
+          "iq": 75,
+          "hit_pct": 0.77,
+          "reaction": 131,
+          "role": "シーカー",
+          "influence": 55,
+          "form_variance": 4,
+          "mental": 8,
+          "monthly_salary": 500000,
+          "loyalty": 5
+        },
+        {
+          "name": "えんぺん",
+          "hs_pct": 0.5,
+          "dodge_pct": 0.17,
+          "iq": 185,
+          "hit_pct": 0.75,
+          "reaction": 125,
+          "role": "フラッシュ",
+          "influence": 65,
+          "form_variance": 1,
+          "mental": 8,
+          "monthly_salary": 500000,
+          "loyalty": 5
+        },
+        {
+          "name": "夢の街",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.23,
+          "iq": 80,
+          "hit_pct": 0.76,
+          "reaction": 115,
+          "role": "フラッシュ",
+          "influence": 50,
+          "form_variance": 3,
+          "mental": 8,
+          "monthly_salary": 500000,
+          "loyalty": 5
+        }
+      ],
+      "igl": "えんぺん",
+      "carrier": "ろびぃな",
+      "ai": "touyama_gaming_v2",
+      "transfer_multiplier": 10.0,
+      "preferred_roles": [
+        "タイガー",
+        "スモーカー",
+        "シーカー",
+        "フラッシュ",
+        "フラッシュ"
+      ],
+      "contracts": [
+        {
+          "player_name": "Tortlilyan",
+          "kind": "year1",
+          "monthly_salary": 2500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "ろびぃな",
+          "kind": "year1",
+          "monthly_salary": 500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "いぐるん",
+          "kind": "year1",
+          "monthly_salary": 500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "えんぺん",
+          "kind": "year1",
+          "monthly_salary": 500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "夢の街",
+          "kind": "year1",
+          "monthly_salary": 500000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-5f8d32c6ccbc57f698ae83369087c813",
+      "name": "Omoko Gaming",
+      "players": [
+        {
+          "name": "ねこさん",
+          "hs_pct": 0.2,
+          "dodge_pct": 0.2,
+          "iq": 80,
+          "hit_pct": 0.65,
+          "reaction": 120,
+          "role": "スモーカー",
+          "influence": 50,
+          "form_variance": 9,
+          "mental": 5,
+          "monthly_salary": 222222,
+          "loyalty": 5
+        },
+        {
+          "name": "とりさん",
+          "hs_pct": 0.25,
+          "dodge_pct": 0.25,
+          "iq": 50,
+          "hit_pct": 0.55,
+          "reaction": 125,
+          "role": "シーカー",
+          "influence": 50,
+          "form_variance": 7,
+          "mental": 5,
+          "monthly_salary": 444444,
+          "loyalty": 6
+        },
+        {
+          "name": "おもこ",
+          "hs_pct": 0.67,
+          "dodge_pct": 0.67,
+          "iq": 67,
+          "hit_pct": 0.67,
+          "reaction": 67,
+          "role": "フラッシュ",
+          "influence": 67,
+          "form_variance": 0,
+          "mental": 8,
+          "monthly_salary": 670000,
+          "loyalty": 1
+        },
+        {
+          "name": "いぬさん",
+          "hs_pct": 0.18,
+          "dodge_pct": 0.18,
+          "iq": 80,
+          "hit_pct": 0.7,
+          "reaction": 115,
+          "role": "フラッシュ",
+          "influence": 50,
+          "form_variance": 4,
+          "mental": 5,
+          "monthly_salary": 111111,
+          "loyalty": 7
+        },
+        {
+          "name": "ひつじさん",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.15,
+          "iq": 135,
+          "hit_pct": 0.68,
+          "reaction": 110,
+          "role": "スモーカー",
+          "influence": 50,
+          "form_variance": 5,
+          "mental": 5,
+          "monthly_salary": 333333,
+          "loyalty": 7
+        }
+      ],
+      "igl": "ひつじさん",
+      "carrier": "おもこ",
+      "ai": "omoko_gaming_v1",
+      "transfer_multiplier": 10.0,
+      "preferred_roles": [
+        "スモーカー",
+        "シーカー",
+        "フラッシュ",
+        "フラッシュ",
+        "スモーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "ねこさん",
+          "kind": "year1",
+          "monthly_salary": 222222,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "とりさん",
+          "kind": "year1",
+          "monthly_salary": 444444,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "おもこ",
+          "kind": "year1",
+          "monthly_salary": 670000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "いぬさん",
+          "kind": "year1",
+          "monthly_salary": 111111,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "ひつじさん",
+          "kind": "year1",
+          "monthly_salary": 333333,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    },
+    {
+      "id": "world-78bd86bbdf2650a0bd6d8c38443558aa",
+      "name": "Ghost Champions",
+      "players": [
+        {
+          "name": "Xdll",
+          "hs_pct": 0.23,
+          "dodge_pct": 0.24,
+          "iq": 125,
+          "hit_pct": 0.78,
+          "reaction": 140,
+          "role": "シーカー",
+          "influence": 45,
+          "form_variance": 7,
+          "mental": 4,
+          "monthly_salary": 950000,
+          "loyalty": 6
+        },
+        {
+          "name": "SyouTa",
+          "hs_pct": 0.45,
+          "dodge_pct": 0.2,
+          "iq": 90,
+          "hit_pct": 0.75,
+          "reaction": 140,
+          "role": "スモーカー",
+          "influence": 95,
+          "form_variance": 8,
+          "mental": 9,
+          "monthly_salary": 1000000,
+          "loyalty": 7
+        },
+        {
+          "name": "Absol",
+          "hs_pct": 0.15,
+          "dodge_pct": 0.31,
+          "iq": 130,
+          "hit_pct": 0.87,
+          "reaction": 155,
+          "role": "フラッシュ",
+          "influence": 50,
+          "form_variance": 10,
+          "mental": 3,
+          "monthly_salary": 900000,
+          "loyalty": 6
+        },
+        {
+          "name": "eKo",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.21,
+          "iq": 85,
+          "hit_pct": 0.76,
+          "reaction": 110,
+          "role": "シーカー",
+          "influence": 60,
+          "form_variance": 5,
+          "mental": 8,
+          "monthly_salary": 900000,
+          "loyalty": 4
+        },
+        {
+          "name": "SugarZ3ro",
+          "hs_pct": 0.29,
+          "dodge_pct": 0.18,
+          "iq": 120,
+          "hit_pct": 0.67,
+          "reaction": 93,
+          "role": "スモーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 5,
+          "monthly_salary": 1000000,
+          "loyalty": 9
+        }
+      ],
+      "igl": "SugarZ3ro",
+      "carrier": "Absol",
+      "ai": "ghost_champions_v1",
+      "transfer_multiplier": 20.0,
+      "preferred_roles": [
+        "シーカー",
+        "スモーカー",
+        "フラッシュ",
+        "シーカー",
+        "スモーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Xdll",
+          "kind": "year1",
+          "monthly_salary": 950000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "SyouTa",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "Absol",
+          "kind": "year1",
+          "monthly_salary": 900000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "eKo",
+          "kind": "year1",
+          "monthly_salary": 900000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        },
+        {
+          "player_name": "SugarZ3ro",
+          "kind": "year1",
+          "monthly_salary": 1000000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 50.0,
+          "end_reason": null
+        }
+      ]
+    }
+  ],
+  "money": 10500000,
+  "game_month": 0,
+  "contracts": [
+    {
+      "player_name": "まーやまくん",
+      "kind": "year1",
+      "monthly_salary": 2500000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "primmie",
+      "kind": "year1",
+      "monthly_salary": 2000000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "valyn",
+      "kind": "year1",
+      "monthly_salary": 1000000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "Less",
+      "kind": "year1",
+      "monthly_salary": 2000000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "Brawk",
+      "kind": "year1",
+      "monthly_salary": 1500000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "ごりまる",
+      "kind": "year1",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "ごんごん",
+      "kind": "year1",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "ごんた",
+      "kind": "year1",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "くんた",
+      "kind": "year1",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    },
+    {
+      "player_name": "くりまる",
+      "kind": "year1",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 50.0,
+      "end_reason": null
+    }
+  ],
+  "start_date": "2026-01-01",
+  "game_date": "2026-01-20",
+  "in_season_periods": [
+    [
+      "03-01",
+      "11-30"
+    ]
+  ],
+  "tournament_definitions": [
+    {
+      "id": "kachina_2026",
+      "name": "カチーナ杯 2026",
+      "start_date": "2026-01-15",
+      "end_date": "2026-01-29",
+      "team_count": 4,
+      "prizes": {
+        "1": 1000000,
+        "2": 700000,
+        "3": 600000,
+        "4": 500000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 2,
+      "grand_final_maps_to_win": 2,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-01-01"
+    }
+  ],
+  "tournaments": [
+    {
+      "tournament_id": "kachina_2026",
+      "own_team_id": "29d42926ed414f2db46768c470222e21",
+      "entrants": [
+        {
+          "id": "29d42926ed414f2db46768c470222e21",
+          "name": "マイチーム",
+          "players": [
+            {
+              "name": "まーやまくん",
+              "hs_pct": 0.75,
+              "dodge_pct": 0.21,
+              "iq": 90,
+              "hit_pct": 0.8,
+              "reaction": 140,
+              "role": "シーカー",
+              "influence": 50,
+              "form_variance": 1,
+              "mental": 7,
+              "monthly_salary": 2500000,
+              "loyalty": 6
+            },
+            {
+              "name": "primmie",
+              "hs_pct": 0.47,
+              "dodge_pct": 0.24,
+              "iq": 59,
+              "hit_pct": 0.79,
+              "reaction": 98,
+              "role": "タイガー",
+              "influence": 90,
+              "form_variance": 5,
+              "mental": 2,
+              "monthly_salary": 2000000,
+              "loyalty": 4
+            },
+            {
+              "name": "valyn",
+              "hs_pct": 0.26,
+              "dodge_pct": 0.13,
+              "iq": 140,
+              "hit_pct": 0.64,
+              "reaction": 95,
+              "role": "スモーカー",
+              "influence": 40,
+              "form_variance": 5,
+              "mental": 5,
+              "monthly_salary": 1000000,
+              "loyalty": 7
+            },
+            {
+              "name": "Less",
+              "hs_pct": 0.35,
+              "dodge_pct": 0.22,
+              "iq": 86,
+              "hit_pct": 0.74,
+              "reaction": 104,
+              "role": "タイガー",
+              "influence": 80,
+              "form_variance": 3,
+              "mental": 6,
+              "monthly_salary": 2000000,
+              "loyalty": 5
+            },
+            {
+              "name": "Brawk",
+              "hs_pct": 0.32,
+              "dodge_pct": 0.15,
+              "iq": 90,
+              "hit_pct": 0.69,
+              "reaction": 95,
+              "role": "シーカー",
+              "influence": 90,
+              "form_variance": 6,
+              "mental": 8,
+              "monthly_salary": 1500000,
+              "loyalty": 6
+            }
+          ],
+          "ai": "default",
+          "igl": "valyn",
+          "carrier": "まーやまくん"
+        },
+        {
+          "id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+          "name": "Fnatic",
+          "players": [
+            {
+              "name": "Boaster",
+              "hs_pct": 0.2,
+              "dodge_pct": 0.12,
+              "iq": 175,
+              "hit_pct": 0.62,
+              "reaction": 96,
+              "role": "スモーカー",
+              "influence": 50,
+              "form_variance": 5,
+              "mental": 10,
+              "monthly_salary": 1300000,
+              "loyalty": 7
+            },
+            {
+              "name": "Derke",
+              "hs_pct": 0.35,
+              "dodge_pct": 0.24,
+              "iq": 90,
+              "hit_pct": 0.75,
+              "reaction": 115,
+              "role": "タイガー",
+              "influence": 90,
+              "form_variance": 8,
+              "mental": 8,
+              "monthly_salary": 1500000,
+              "loyalty": 5
+            },
+            {
+              "name": "Alfajer",
+              "hs_pct": 0.45,
+              "dodge_pct": 0.13,
+              "iq": 60,
+              "hit_pct": 0.91,
+              "reaction": 145,
+              "role": "エンジニア",
+              "influence": 60,
+              "form_variance": 4,
+              "mental": 7,
+              "monthly_salary": 1500000,
+              "loyalty": 8
+            },
+            {
+              "name": "Chronicle",
+              "hs_pct": 0.35,
+              "dodge_pct": 0.23,
+              "iq": 105,
+              "hit_pct": 0.78,
+              "reaction": 135,
+              "role": "フラッシュ",
+              "influence": 80,
+              "form_variance": 3,
+              "mental": 9,
+              "monthly_salary": 2500000,
+              "loyalty": 7
+            },
+            {
+              "name": "Leo",
+              "hs_pct": 0.27,
+              "dodge_pct": 0.22,
+              "iq": 150,
+              "hit_pct": 0.83,
+              "reaction": 135,
+              "role": "シーカー",
+              "influence": 65,
+              "form_variance": 1,
+              "mental": 10,
+              "monthly_salary": 3000000,
+              "loyalty": 9
+            }
+          ],
+          "ai": "fnatic_v3",
+          "igl": "Boaster",
+          "carrier": "Leo"
+        },
+        {
+          "id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "name": "Evil Geniuses",
+          "players": [
+            {
+              "name": "Boostio",
+              "hs_pct": 0.28,
+              "dodge_pct": 0.15,
+              "iq": 128,
+              "hit_pct": 0.68,
+              "reaction": 85,
+              "role": "エンジニア",
+              "influence": 70,
+              "form_variance": 6,
+              "mental": 9,
+              "monthly_salary": 1000000,
+              "loyalty": 9
+            },
+            {
+              "name": "Ethan",
+              "hs_pct": 0.3,
+              "dodge_pct": 0.18,
+              "iq": 150,
+              "hit_pct": 0.8,
+              "reaction": 90,
+              "role": "シーカー",
+              "influence": 55,
+              "form_variance": 4,
+              "mental": 10,
+              "monthly_salary": 2500000,
+              "loyalty": 5
+            },
+            {
+              "name": "jawgemo",
+              "hs_pct": 0.28,
+              "dodge_pct": 0.31,
+              "iq": 93,
+              "hit_pct": 0.67,
+              "reaction": 135,
+              "role": "タイガー",
+              "influence": 75,
+              "form_variance": 8,
+              "mental": 9,
+              "monthly_salary": 1000000,
+              "loyalty": 8
+            },
+            {
+              "name": "C0M",
+              "hs_pct": 0.28,
+              "dodge_pct": 0.16,
+              "iq": 120,
+              "hit_pct": 0.69,
+              "reaction": 95,
+              "role": "シーカー",
+              "influence": 60,
+              "form_variance": 9,
+              "mental": 7,
+              "monthly_salary": 1300000,
+              "loyalty": 10
+            },
+            {
+              "name": "Demon1",
+              "hs_pct": 0.5,
+              "dodge_pct": 0.13,
+              "iq": 78,
+              "hit_pct": 0.85,
+              "reaction": 145,
+              "role": "スモーカー",
+              "influence": 150,
+              "form_variance": 4,
+              "mental": 7,
+              "monthly_salary": 2000000,
+              "loyalty": 6
+            }
+          ],
+          "ai": "toru_ai_v3.1",
+          "igl": "Boostio",
+          "carrier": "Ethan"
+        },
+        {
+          "id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+          "name": "Furina Party",
+          "players": [
+            {
+              "name": "Furina",
+              "hs_pct": 0.29,
+              "dodge_pct": 0.09,
+              "iq": 149,
+              "hit_pct": 0.69,
+              "reaction": 129,
+              "role": "アイドル",
+              "influence": 20,
+              "form_variance": 1,
+              "mental": 0,
+              "monthly_salary": 600000,
+              "loyalty": 10
+            },
+            {
+              "name": "Lohen",
+              "hs_pct": 0.4,
+              "dodge_pct": 0.31,
+              "iq": 70,
+              "hit_pct": 0.75,
+              "reaction": 130,
+              "role": "タイガー",
+              "influence": 100,
+              "form_variance": 10,
+              "mental": 10,
+              "monthly_salary": 1900000,
+              "loyalty": 9
+            },
+            {
+              "name": "Arlecchino",
+              "hs_pct": 0.47,
+              "dodge_pct": 0.19,
+              "iq": 135,
+              "hit_pct": 0.6,
+              "reaction": 125,
+              "role": "コントラクター",
+              "influence": 100,
+              "form_variance": 1,
+              "mental": 8,
+              "monthly_salary": 3000000,
+              "loyalty": 8
+            },
+            {
+              "name": "Lisa",
+              "hs_pct": 0.36,
+              "dodge_pct": 0.25,
+              "iq": 120,
+              "hit_pct": 0.78,
+              "reaction": 99,
+              "role": "スモーカー",
+              "influence": 40,
+              "form_variance": 5,
+              "mental": 7,
+              "monthly_salary": 1000000,
+              "loyalty": 4
+            },
+            {
+              "name": "Jean",
+              "hs_pct": 0.35,
+              "dodge_pct": 0.2,
+              "iq": 115,
+              "hit_pct": 0.75,
+              "reaction": 135,
+              "role": "シーカー",
+              "influence": 40,
+              "form_variance": 5,
+              "mental": 7,
+              "monthly_salary": 1500000,
+              "loyalty": 10
+            }
+          ],
+          "ai": "frc_v1",
+          "igl": "Furina",
+          "carrier": "Furina"
+        }
+      ],
+      "results": [
+        {
+          "match_id": "W1M1",
+          "left_id": "29d42926ed414f2db46768c470222e21",
+          "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+          "left_wins": 0,
+          "right_wins": 1
+        },
+        {
+          "match_id": "W1M2",
+          "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "left_wins": 0,
+          "right_wins": 1
+        },
+        {
+          "match_id": "L1M1",
+          "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+          "right_id": "29d42926ed414f2db46768c470222e21",
+          "left_wins": 1,
+          "right_wins": 0
+        },
+        {
+          "match_id": "W2M1",
+          "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "left_wins": 1,
+          "right_wins": 0
+        },
+        {
+          "match_id": "LOWER_FINAL",
+          "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "left_wins": 1,
+          "right_wins": 2
+        },
+        {
+          "match_id": "GRAND_FINAL",
+          "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "left_wins": 2,
+          "right_wins": 1
+        }
+      ],
+      "ranking": [
+        "world-03e5e1f7fcc659a6b2190986b9f24560",
+        "world-fa19f77f8e62593aa71b5f5ded63be9a",
+        "world-1fc938eccae45bf997dd13b6e6d7af28",
+        "29d42926ed414f2db46768c470222e21"
+      ],
+      "completed": true,
+      "declined": false,
+      "prize_paid": 500000,
+      "seed": 1065732293,
+      "last_match_date": "2026-01-20",
+      "completed_date": "2026-01-20"
+    }
+  ],
+  "starter_candidates": [
+    {
+      "name": "Less",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.22,
+      "iq": 86,
+      "hit_pct": 0.74,
+      "reaction": 104,
+      "role": "タイガー",
+      "influence": 80,
+      "form_variance": 3,
+      "mental": 6,
+      "monthly_salary": 2000000,
+      "loyalty": 5
+    },
+    {
+      "name": "F0rsakeN",
+      "hs_pct": 0.27,
+      "dodge_pct": 0.14,
+      "iq": 125,
+      "hit_pct": 0.69,
+      "reaction": 95,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 3,
+      "mental": 6,
+      "monthly_salary": 2000000,
+      "loyalty": 7
+    },
+    {
+      "name": "Jinggg",
+      "hs_pct": 0.3,
+      "dodge_pct": 0.26,
+      "iq": 68,
+      "hit_pct": 0.71,
+      "reaction": 90,
+      "role": "タイガー",
+      "influence": 50,
+      "form_variance": 4,
+      "mental": 3,
+      "monthly_salary": 2000000,
+      "loyalty": 7
+    },
+    {
+      "name": "d4v41",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.17,
+      "iq": 70,
+      "hit_pct": 0.71,
+      "reaction": 105,
+      "role": "シーカー",
+      "influence": 40,
+      "form_variance": 5,
+      "mental": 3,
+      "monthly_salary": 2000000,
+      "loyalty": 7
+    },
+    {
+      "name": "Sato",
+      "hs_pct": 0.4,
+      "dodge_pct": 0.19,
+      "iq": 67,
+      "hit_pct": 0.73,
+      "reaction": 105,
+      "role": "タイガー",
+      "influence": 60,
+      "form_variance": 6,
+      "mental": 7,
+      "monthly_salary": 1500000,
+      "loyalty": 5
+    },
+    {
+      "name": "valyn",
+      "hs_pct": 0.26,
+      "dodge_pct": 0.13,
+      "iq": 140,
+      "hit_pct": 0.64,
+      "reaction": 95,
+      "role": "スモーカー",
+      "influence": 40,
+      "form_variance": 5,
+      "mental": 5,
+      "monthly_salary": 1000000,
+      "loyalty": 7
+    },
+    {
+      "name": "kaajak",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.2,
+      "iq": 115,
+      "hit_pct": 0.76,
+      "reaction": 100,
+      "role": "フラッシュ",
+      "influence": 70,
+      "form_variance": 7,
+      "mental": 6,
+      "monthly_salary": 1600000,
+      "loyalty": 6
+    },
+    {
+      "name": "primmie",
+      "hs_pct": 0.47,
+      "dodge_pct": 0.24,
+      "iq": 59,
+      "hit_pct": 0.79,
+      "reaction": 98,
+      "role": "タイガー",
+      "influence": 90,
+      "form_variance": 5,
+      "mental": 2,
+      "monthly_salary": 2000000,
+      "loyalty": 4
+    },
+    {
+      "name": "まーやまくん",
+      "hs_pct": 0.75,
+      "dodge_pct": 0.21,
+      "iq": 90,
+      "hit_pct": 0.8,
+      "reaction": 140,
+      "role": "シーカー",
+      "influence": 50,
+      "form_variance": 1,
+      "mental": 7,
+      "monthly_salary": 2500000,
+      "loyalty": 6
+    },
+    {
+      "name": "Brawk",
+      "hs_pct": 0.32,
+      "dodge_pct": 0.15,
+      "iq": 90,
+      "hit_pct": 0.69,
+      "reaction": 95,
+      "role": "シーカー",
+      "influence": 90,
+      "form_variance": 6,
+      "mental": 8,
+      "monthly_salary": 1500000,
+      "loyalty": 6
+    }
+  ],
+  "starter_selection": [
+    "まーやまくん",
+    "primmie",
+    "valyn",
+    "Less",
+    "Brawk"
+  ],
+  "starter_selection_pending": false,
+  "ratings": [
+    {
+      "team_id": "29d42926ed414f2db46768c470222e21",
+      "team_name": "マイチーム",
+      "value": 1436.0
+    },
+    {
+      "team_id": "4468a9817c2844b992d89e2c6bebfc8c",
+      "team_name": "gorigons",
+      "value": 1465.7930275374829
+    },
+    {
+      "team_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+      "team_name": "Furina Party",
+      "value": 1585.24904157941
+    },
+    {
+      "team_id": "world-0a8f9696d20b5ef39105dcaf03c726ae",
+      "team_name": "Touyama Gaming",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+      "team_name": "Fnatic",
+      "value": 1510.2069724625171
+    },
+    {
+      "team_id": "world-5f8d32c6ccbc57f698ae83369087c813",
+      "team_name": "Omoko Gaming",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-78bd86bbdf2650a0bd6d8c38443558aa",
+      "team_name": "Ghost Champions",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-819dc24a828657f48dfff35f19834e50",
+      "team_name": "Dragon Moon",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+      "team_name": "BBL",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+      "team_name": "Evil Geniuses",
+      "value": 1502.75095842059
+    }
+  ],
+  "rated_results": [
+    "tournament:kachina_2026:W1M1",
+    "tournament:kachina_2026:W1M2",
+    "tournament:kachina_2026:L1M1",
+    "tournament:kachina_2026:W2M1",
+    "tournament:kachina_2026:LOWER_FINAL",
+    "tournament:kachina_2026:GRAND_FINAL",
+    "scrim:3c4c3f24a68948578cca6926704a51f6"
+  ],
+  "sponsor_active": true,
+  "transferred_players": [],
+  "monthly_events": [],
+  "monthly_events_through": 0
+}
