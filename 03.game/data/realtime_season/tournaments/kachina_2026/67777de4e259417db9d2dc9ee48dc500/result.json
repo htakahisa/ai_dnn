@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M2",
+  "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "Evil Geniuses",
+      "own_score": 11,
+      "opponent_score": 13,
+      "winner": "Evil Geniuses",
+      "seed": 1065733293,
+      "player_stats": {
+        "Boaster": {
+          "kills": 9,
+          "deaths": 18
+        },
+        "Derke": {
+          "kills": 12,
+          "deaths": 17
+        },
+        "Alfajer": {
+          "kills": 12,
+          "deaths": 15
+        },
+        "Chronicle": {
+          "kills": 20,
+          "deaths": 14
+        },
+        "Leo": {
+          "kills": 15,
+          "deaths": 12
+        },
+        "Boostio": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "Ethan": {
+          "kills": 2,
+          "deaths": 15
+        },
+        "jawgemo": {
+          "kills": 28,
+          "deaths": 15
+        },
+        "C0M": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "Demon1": {
+          "kills": 16,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

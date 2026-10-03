@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import copy
 from typing import Any
 import numpy as np
 
@@ -16,6 +17,29 @@ TARGET_PLANT_MAX_ERROR = 1
 SPOTTED_POSITION_MAX_ERROR = 3
 ENEMY_OMISSION_MAX_RATE = 0.30
 SPOTTED_OMISSION_MAX_RATE = 0.20
+
+# A coordinate outside the board keeps legacy two-element position consumers
+# working without giving them an enemy's actual (or IQ-blurred) location.
+UNKNOWN_ENEMY_POS = (-1, -1)
+
+
+def enemy_position_known(game, viewer_team, enemy):
+    """Disclose an enemy position only after the engine marks it Revealed."""
+    if getattr(enemy, "team", None) == viewer_team:
+        return True
+    return bool(
+        getattr(enemy, "reveal_remaining", 0) > 0
+        or getattr(enemy, "los_revealed", False)
+    )
+
+
+def enemy_perception_source(real, *, position_known):
+    """Detach hidden enemies so the proxy cannot expose their live position."""
+    if position_known:
+        return real
+    detached = copy.copy(real)
+    detached.pos = list(UNKNOWN_ENEMY_POS)
+    return detached
 
 
 def _alive(c: Any) -> bool:
@@ -94,7 +118,9 @@ class PerceivedGameView:
 
     @property
     def real_game(self):
-        return object.__getattribute__(self, "_real")
+        # Legacy consumers use this as an owner alias. Returning the filtered
+        # view prevents that alias from handing live enemy objects to a model.
+        return self
 
     def perceived_character_for(self, real_char: Any):
         return object.__getattribute__(self, "_map")[id(real_char)]
@@ -103,6 +129,13 @@ class PerceivedGameView:
         overrides = object.__getattribute__(self, "_overrides")
         if name in overrides:
             return overrides[name]
+        if name == "replay_frames":
+            # Replays intentionally contain omniscient positions for playback.
+            return ()
+        if name == "last_engagements":
+            mapping = object.__getattribute__(self, "_map")
+            engagements = getattr(object.__getattribute__(self, "_real"), name)
+            return tuple(tuple(mapping.get(id(c), c) for c in pair) for pair in engagements)
         return getattr(object.__getattribute__(self, "_real"), name)
 
     def __setattr__(self, name, value):
@@ -254,6 +287,14 @@ class IQPerceptionEngine:
         if tick != self._last_tick:
             self._cache.clear()
             self._last_tick = tick
+        # Other characters can move between decisions in one tick. A cached
+        # view must not keep a sighting after line of sight has been lost.
+        sightings = tuple(
+            (id(real), known, tuple(real.pos) if known else None)
+            for real in game.chars
+            if real.team != viewer.team
+            for known in (enemy_position_known(game, viewer.team, real),)
+        )
         key = (
             id(game),
             tick,
@@ -261,12 +302,14 @@ class IQPerceptionEngine:
             getattr(viewer, "name", ""),
             round(_effective_iq(viewer), 3),
             started_defuse,
+            sightings,
         )
         if key in self._cache:
             return self._cache[key]
 
         proxies, mapping = [], {}
         for real in game.chars:
+            position_known = enemy_position_known(game, viewer.team, real)
             if real is viewer:
                 pos, hp, alive = list(real.pos), int(real.hp), _alive(real)
             elif real.team == viewer.team:
@@ -275,9 +318,9 @@ class IQPerceptionEngine:
                 )
                 hp, alive = int(real.hp), _alive(real)
             else:
-                pos = self._blur_pos(
+                pos = (self._blur_pos(
                     game, viewer, real.pos, ENEMY_POSITION_MAX_ERROR, "enemy", real.name
-                )
+                ) if position_known else list(UNKNOWN_ENEMY_POS))
                 hp, alive = self._enemy_hp(game, viewer, real), _alive(real)
             # Spike ownership is team-private information. Keep it on the
             # real character for game resolution, but never expose enemy
@@ -286,11 +329,15 @@ class IQPerceptionEngine:
                 "pos": pos,
                 "hp": hp,
                 "is_alive": alive,
+                "position_known": position_known,
             }
             if real.team != viewer.team:
                 proxy_overrides["has_spike"] = False
-            proxy = PerceivedCharacter(real, **proxy_overrides)
-            if real.team != viewer.team and self._omit_enemy(game, viewer, real):
+            proxy = PerceivedCharacter(
+                enemy_perception_source(real, position_known=position_known),
+                **proxy_overrides,
+            )
+            if real.team != viewer.team and position_known and self._omit_enemy(game, viewer, real):
                 proxy.is_alive = False
             proxies.append(proxy)
             mapping[id(real)] = proxy
@@ -392,3 +439,22 @@ class IQPerceptionEngine:
                 spotted = {"spotted": 0.0, "site_r": 0.0, "site_c": 0.0}
             state["spotted_info"] = spotted
         return state
+
+
+def build_team_position_view(game, viewer_team):
+    """Position-safe view for controllers that opt out of IQ distortion."""
+    proxies, mapping = [], {}
+    for real in getattr(game, "chars", ()):
+        if real.team == viewer_team:
+            proxy = real
+        else:
+            known = enemy_position_known(game, viewer_team, real)
+            proxy = PerceivedCharacter(
+                enemy_perception_source(real, position_known=known),
+                has_spike=False,
+                pos=list(real.pos) if known else list(UNKNOWN_ENEMY_POS),
+                position_known=known,
+            )
+        proxies.append(proxy)
+        mapping[id(real)] = proxy
+    return PerceivedGameView(game, {"chars": proxies}, mapping)

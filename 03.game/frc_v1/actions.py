@@ -54,13 +54,14 @@ def build_masks(snapshot):
         if a.forced_facing or not a.alive:
             facings[a.slot] = False
             facings[a.slot, FACING.index(a.facing)] = True
-        if not a.alive or a.movement_disabled > 0 or a.warping or (snapshot.phase == "setup" and snapshot.side == "A"):
+        if not a.alive or a.movement_disabled > 0 or a.warping:
             continue
         r, c = a.position
         for kind, (dr, dc) in MOVE_STEPS.items():
             pos = r + dr, c + dc
             kinds[a.slot, KINDS.index(kind)] = (0 <= pos[0] < rows and 0 <= pos[1] < columns
-                and grid[pos] != 1 and not a.ramp_blocked and (snapshot.phase != "setup" or pos in setup_cells))
+                and grid[pos] != 1 and pos not in occupied_allies and not a.ramp_blocked
+                and (snapshot.phase != "setup" or pos in setup_cells))
         if snapshot.phase == "setup":
             continue
         kinds[a.slot, 5] = snapshot.side == "A" and a.has_spike and not snapshot.is_planted and grid[r, c] == 2

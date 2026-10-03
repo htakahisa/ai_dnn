@@ -398,6 +398,8 @@ class RealCarrySession:
         # available to reward the final action before resetting the episode.
         self.game.check_match_winner = lambda: None
         self.game.analytics_tracker = None
+        from training_opponent_pool_gc import OpponentRotation
+        self.opponent_rotation = OpponentRotation()
 
     def choose_action(self, obs, mask):
         holder = next(
@@ -428,6 +430,15 @@ class RealCarrySession:
         random.seed(seed)
         np.random.seed(seed & 0xFFFFFFFF)
         game = self.game
+        # Consecutive episode seeds give each dedicated opponent one turn;
+        # evaluation uses the same deterministic schedule without teacher actions.
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.opponent_rotation.bind(game, seed)
+        # Loading a new controller can consume randomness. Episode scenarios
+        # must match even when the opponent's controller was already cached.
+        random.seed(seed)
+        np.random.seed(seed & 0xFFFFFFFF)
+        game.current_attacker_team_ai.perception_engine.clear_cache()
         game.current_round = random.randint(1, 24) if augment else 1
         game.attacker_wins = random.randint(0, 5) if augment else 0
         game.defender_wins = random.randint(0, 12) if augment else 0

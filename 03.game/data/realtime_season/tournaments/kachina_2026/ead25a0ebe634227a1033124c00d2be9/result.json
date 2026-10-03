@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+  "left_wins": 1,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "Evil Geniuses",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "Furina Party",
+      "seed": 1065735293,
+      "player_stats": {
+        "Furina": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "Lohen": {
+          "kills": 9,
+          "deaths": 8
+        },
+        "Arlecchino": {
+          "kills": 7,
+          "deaths": 8
+        },
+        "Lisa": {
+          "kills": 20,
+          "deaths": 12
+        },
+        "Jean": {
+          "kills": 22,
+          "deaths": 14
+        },
+        "Boostio": {
+          "kills": 10,
+          "deaths": 17
+        },
+        "Ethan": {
+          "kills": 14,
+          "deaths": 12
+        },
+        "jawgemo": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "C0M": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "Demon1": {
+          "kills": 8,
+          "deaths": 15
+        }
+      }
+    }
+  ]
+}

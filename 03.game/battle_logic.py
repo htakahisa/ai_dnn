@@ -1,6 +1,7 @@
 """Round progression, movement, shooting, spike flow, and win conditions."""
 
 import math
+import inspect
 import random
 import json
 from pathlib import Path
@@ -10,6 +11,7 @@ import json
 from analytics.combat_tracker import CombatTracker
 
 from controllers import UserInputController
+from iq_perception import build_team_position_view
 from game_core import (
     TICK_TIME,
     validate_tick_time_ms,
@@ -126,7 +128,10 @@ def _get_ace_sound(effect):
     return sound
 
 
-class BattleLogicMixin:
+from match_playback import MatchPlaybackMixin
+
+
+class BattleLogicMixin(MatchPlaybackMixin):
 
     def _tick_delay_ms(self):
         value = getattr(self, "tick_time_ms", TICK_TIME)
@@ -290,7 +295,7 @@ class BattleLogicMixin:
         コントローラーから移動先だけを受け取り、Ability / Plant / Defuseは
         一切実行しない。Setupマップで禁止されているセルにも入れない。
         """
-        if char.team != "D" or not char.is_alive:
+        if char.team not in {"A", "D"} or not char.is_alive:
             return
 
         old_pos = tuple(char.pos)
@@ -325,10 +330,12 @@ class BattleLogicMixin:
         #
         # Setup中だけ inner_controller を直接呼び、
         # LIVE後は通常の self.defender_controller 経由へ戻す。
-        setup_controller = self.defender_controller
+        setup_controller = (
+            self.attacker_controller if char.team == "A" else self.defender_controller
+        )
         seen_controller_ids = set()
 
-        while hasattr(setup_controller, "inner_controller"):
+        while inspect.getattr_static(setup_controller, "inner_controller", None) is not None:
             controller_id = id(setup_controller)
             if controller_id in seen_controller_ids:
                 break
@@ -341,8 +348,10 @@ class BattleLogicMixin:
 
         # IQ wrapper が通常時に inner.set_game(perceived_view) を呼ぶため、
         # Setup判断の直前に実ゲームへ戻しておく。
+        setup_view = build_team_position_view(self, char.team)
+        game_state["chars"] = setup_view.chars
         if hasattr(setup_controller, "set_game"):
-            setup_controller.set_game(self)
+            setup_controller.set_game(setup_view)
 
         result = setup_controller.decide_move(char, game_state)
         next_pos = result
@@ -361,7 +370,7 @@ class BattleLogicMixin:
             occupied = self._is_position_occupied(char, target_pos, old_pos)
             is_wall = in_bounds and self.grid[nr, nc] == 1
             setup_allowed = (
-                in_bounds and self.defender_setup_phase.defender_can_move_to(nr, nc)
+                in_bounds and self.defender_setup_phase.can_move_to(char.team, nr, nc)
             )
 
             if in_bounds and not is_wall and not occupied and setup_allowed:
@@ -389,7 +398,7 @@ class BattleLogicMixin:
         self._build_occupancy_counts()
         try:
             for char in self.chars:
-                if char.is_alive and char.team == "D":
+                if char.is_alive and char.team in {"A", "D"}:
                     self._move_character_during_defender_setup(char)
         finally:
             self._clear_occupancy_counts()
@@ -976,6 +985,9 @@ class BattleLogicMixin:
             self.init_round()
 
     def _advance_round_transition(self):
+        self._begin_match_callback()
+        if getattr(self, "paused", False):
+            return
         if self.match_over:
             return
         if self.round_transition_ticks_left <= 0:
@@ -996,7 +1008,7 @@ class BattleLogicMixin:
             )
         self.round_transition_ticks_left -= 1
         self.draw()
-        self.root.after(self._tick_delay_ms(), self._advance_round_transition)
+        self._schedule_match_callback(self._advance_round_transition)
 
     def _ensure_round_tracking_state(self):
         """ラウンドが切り替わったら clutch/ace/爆発 用の状態をリセットする。"""
@@ -1675,7 +1687,7 @@ class BattleLogicMixin:
         others = [c for c in self.chars if c.is_alive and not c.has_spike]
         return carriers + others
 
-    def loop(self):
+    def _simulate_tick(self):
         if not self.round_over and not self.match_over:
             if self.defender_setup_phase.active:
                 self._run_defender_setup_tick()
@@ -1695,46 +1707,26 @@ class BattleLogicMixin:
                             self.move_character(c)
                 finally:
                     self._clear_occupancy_counts()
+                self._analytics_post_setup_ticks = int(getattr(self, "_analytics_post_setup_ticks", 0)) + 1
+                if self._analytics_post_setup_ticks == 10:
+                    self._analytics_initial_defender_positions = [tuple(c.pos) for c in self.chars if c.team == "D" and c.is_alive]
                 self.process_battle()
                 self._advance_combo_announcement()
 
             self._record_replay_frame()
+
+    def loop(self):
+        self._begin_match_callback()
+        if getattr(self, "paused", False):
+            return
+        if not self.round_over and not self.match_over:
+            self._simulate_tick()
             self.draw()
-            self.root.after(self._tick_delay_ms(), self.loop)
+            self._update_playback_controls()
+            if not self.round_over and not self.match_over:
+                self._schedule_match_callback(self.loop)
 
     def run_headless_loop(self):
         """【AI学習用】画面を描画せず、限界速度でシミュレーションを回す"""
         while not self.match_over:
-            if not self.round_over:
-                if self.defender_setup_phase.active:
-                    self._run_defender_setup_tick()
-                else:
-                    # Carnal Lust Syndicateのコンボ効果：セットアップフェーズ終了後、毎tick1HP減少
-                    for c in self.chars:
-                        if c.is_alive and getattr(
-                            c, "carnal_lust_syndicate_active", False
-                        ):
-                            c.hp = max(0, c.hp - 1)
-                            if c.hp <= 0:
-                                c.is_alive = False
-                                c.just_died = True
-                    self._prepare_team_controllers_tick()
-                    self._build_occupancy_counts()
-                    try:
-                        for c in self._move_order():
-                            if c.is_alive:
-                                self.move_character(c)
-                    finally:
-                        self._clear_occupancy_counts()
-                    self._analytics_post_setup_ticks = (
-                        int(getattr(self, "_analytics_post_setup_ticks", 0)) + 1
-                    )
-                    if self._analytics_post_setup_ticks == 10:
-                        self._analytics_initial_defender_positions = [
-                            tuple(c.pos)
-                            for c in self.chars
-                            if c.team == "D" and c.is_alive
-                        ]
-                    self.process_battle()
-                    self._advance_combo_announcement()
-                self._record_replay_frame()
+            self._simulate_tick()

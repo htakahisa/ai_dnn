@@ -84,6 +84,10 @@ class AbilityLosMixin:
         owner.ultimate_points = 0
         self._save_ultimate_points(owner)
 
+    def _serenade_has_living_teams(self, owner):
+        return (any(char.is_alive and char.team == owner.team for char in self.chars)
+                and any(char.is_alive and char.team != owner.team for char in self.chars))
+
     def execute_ai_ultimate(self, owner, ultimate_action, *, during_battle=False):
         """Execute an ultimate requested by a controller.
 
@@ -100,7 +104,9 @@ class AbilityLosMixin:
         if owner.ultimate_points < owner.ultimate_cost:
             return False
         if ultimate_name == "SERENADE":
-            if owner.is_alive or getattr(self, "round_over", False) or getattr(self, "match_over", False):
+            if (owner.is_alive or getattr(self, "round_over", False) or
+                    getattr(self, "match_over", False) or
+                    not self._serenade_has_living_teams(owner)):
                 return False
             self.serenade_flash_remaining = 1
             self.serenade_flash_applied_tick = self.battle_tick + (0 if during_battle else 1)
@@ -886,14 +892,21 @@ class AbilityLosMixin:
     def is_visible_to_team(self, target, viewer_team):
         if viewer_team is None or target.team == viewer_team:
             return True
-        if target.reveal_remaining > 0:
-            return True
-        return any(
-            ally.is_alive
-            and ally.team == viewer_team
-            and self.check_line_of_sight(ally, target)
-            for ally in self.chars
-        )
+        return self._is_revealed(target)
+
+    def _can_reveal_by_sight(self, viewer, target):
+        if not viewer.is_alive or not target.is_alive or viewer.team == target.team:
+            return False
+        if getattr(viewer, "blind_remaining", 0) > 0:
+            return False
+        facing = FACING_VECTORS.get(getattr(viewer, "facing", None))
+        if facing is None:
+            return False
+        dc = target.pos[1] - viewer.pos[1]
+        dr = target.pos[0] - viewer.pos[0]
+        if facing[0] * dc + facing[1] * dr < 0:
+            return False
+        return self.check_line_of_sight(viewer, target)
 
     def _update_los_reveal(self):
         """敵同士の射線が通っている間、双方をリビール状態として扱う。"""
@@ -902,11 +915,10 @@ class AbilityLosMixin:
         alive = [char for char in self.chars if char.is_alive]
         for i, first in enumerate(alive):
             for second in alive[i + 1 :]:
-                if first.team != second.team and self.check_line_of_sight(
-                    first, second
-                ):
-                    first.los_revealed = True
+                if self._can_reveal_by_sight(first, second):
                     second.los_revealed = True
+                if self._can_reveal_by_sight(second, first):
+                    first.los_revealed = True
 
     def _is_revealed(self, char):
         return char.reveal_remaining > 0 or char.los_revealed
@@ -917,11 +929,10 @@ class AbilityLosMixin:
         alive = [char for char in self.chars if char.is_alive]
         for i, first in enumerate(alive):
             for second in alive[i + 1 :]:
-                if first.team != second.team and self.check_line_of_sight(
-                    first, second
-                ):
-                    revealed.add(first.name)
+                if self._can_reveal_by_sight(first, second):
                     revealed.add(second.name)
+                if self._can_reveal_by_sight(second, first):
+                    revealed.add(first.name)
         return revealed
 
     def _is_revealed_for_shot(self, char, current_los_revealed_names):

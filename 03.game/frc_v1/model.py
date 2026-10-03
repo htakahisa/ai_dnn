@@ -114,6 +114,23 @@ class FrcPolicy:
         self.deterministic = deterministic
         self.effects_mode = effects_mode
         self.last_sample = None
+        self.reset()
+
+    def reset(self):
+        self._navigation_round = None
+        self._navigation_phase = None
+        self._navigation_tick = -1
+        self._navigation_site = None
+        self._navigation_waypoint = None
+        self._navigation_attack_episode = 0
+        self._navigation_defense_episode = 0
+        self._defense_assignments = None
+        self._defense_anchors = None
+        self._postplant_plan = None
+        self._postplant_recon_tick = -100
+        self._last_tactical_utility = {}
+        self._tactical_cast_history = {4: []}
+        self._attack_setup_anchors = None
 
     def sample(self, observation, *, critic=None):
         with torch.no_grad():
@@ -131,10 +148,86 @@ class FrcPolicy:
         t = record["team"]
         return TeamDecision(tuple(actions), int(t[0]), PHASES[t[1]], int(t[2]), int(t[3]), int(t[4]), tuple(map(int, t[5:])))
 
-    def act(self, observation, snapshot, belief):
+    def act(self, observation, snapshot, belief, *, critic=None, navigate=True):
         if snapshot.side != self.side or snapshot.grid != self.grid:
             raise ValueError("FRC policy side/map changed")
-        return self.sample(observation)
+        decision = self.sample(observation, critic=critic)
+        if navigate:
+            from frc_v1.navigation import (EAST_LONG_WAYPOINT, attack_setup_positions,
+                                           defense_anchor_positions, defense_site_assignments,
+                                           guard_attack_navigation, guard_defense_navigation,
+                                           guard_tactical_utility)
+            same_round = snapshot.round_number == self._navigation_round
+            new_episode = (not same_round or
+                self._navigation_phase == "live" and snapshot.phase == "setup" or
+                self._navigation_phase == snapshot.phase == "live" and snapshot.tick < self._navigation_tick)
+            if new_episode:
+                self._postplant_plan = None
+                self._postplant_recon_tick = -100
+                self._last_tactical_utility = {}
+                self._tactical_cast_history = {4: []}
+                self._attack_setup_anchors = None
+                if self.side == "A":
+                    if same_round:
+                        self._navigation_attack_episode += 1
+                    else:
+                        self._navigation_attack_episode = snapshot.round_number - 1
+                    attack_plan = self._navigation_attack_episode % 5
+                    self._navigation_site = (1, 0, 1, 0, 1)[attack_plan]
+                    self._navigation_waypoint = EAST_LONG_WAYPOINT if attack_plan == 3 else None
+                else:
+                    if same_round:
+                        self._navigation_defense_episode += 1
+                    else:
+                        self._navigation_defense_episode = snapshot.round_number
+                    self._defense_assignments = defense_site_assignments(
+                        snapshot, variation=self._navigation_defense_episode)
+                    self._defense_anchors = defense_anchor_positions(
+                        snapshot, self._defense_assignments,
+                        variation=self._navigation_defense_episode)
+            elif (self.side == "D" and self._navigation_phase == "setup" and
+                  snapshot.phase == "live"):
+                self._defense_anchors = defense_anchor_positions(
+                    snapshot, self._defense_assignments,
+                    variation=self._navigation_defense_episode)
+            if self.side == "A":
+                if snapshot.is_planted and snapshot.spike_planted is not None:
+                    from frc_v1.postplant import guard_attack_postplant, postplant_positions
+                    if self._postplant_plan is None:
+                        self._postplant_plan = postplant_positions(snapshot)
+                    decision = guard_attack_postplant(decision, snapshot, observation.masks,
+                                                       plan=self._postplant_plan,
+                                                       last_recon_tick=self._postplant_recon_tick)
+                    recon = decision.actions[3]
+                    if (recon.kind == "ABILITY" and recon.target is not None and
+                            max(abs(recon.target[0] - snapshot.spike_planted[0]),
+                                abs(recon.target[1] - snapshot.spike_planted[1])) <= 2):
+                        self._postplant_recon_tick = snapshot.tick
+                else:
+                    if snapshot.phase == "setup" and self._attack_setup_anchors is None:
+                        self._attack_setup_anchors = attack_setup_positions(
+                            snapshot, self._navigation_site, route_waypoint=self._navigation_waypoint)
+                    decision = guard_attack_navigation(decision, snapshot, observation.masks,
+                                                       site_index=self._navigation_site,
+                                                       setup_positions=self._attack_setup_anchors,
+                                                       route_waypoint=self._navigation_waypoint,
+                                                       belief=belief)
+            else:
+                decision = guard_defense_navigation(decision, snapshot, observation.masks,
+                                                    site_assignments=self._defense_assignments,
+                                                    anchor_positions=self._defense_anchors)
+            decision = guard_tactical_utility(decision, snapshot, observation.masks,
+                                              last_cast=self._last_tactical_utility,
+                                              cast_history=self._tactical_cast_history)
+            for slot in (1, 4):
+                if decision.actions[slot].kind == "ABILITY":
+                    self._last_tactical_utility[slot] = snapshot.tick
+                    if slot == 4 and decision.actions[slot].target is not None:
+                        self._tactical_cast_history[4].append(decision.actions[slot].target)
+            self._navigation_round = snapshot.round_number
+            self._navigation_phase = snapshot.phase
+            self._navigation_tick = snapshot.tick
+        return decision
 
     def save(self, path, *, training=None):
         path = Path(path)

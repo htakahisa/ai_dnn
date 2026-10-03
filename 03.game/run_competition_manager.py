@@ -19,7 +19,7 @@ from series_data_validation import series_export_skip_reason
 
 import numpy as np
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from map_data import NEW_MAZE_STR
 from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
@@ -1141,6 +1141,21 @@ def build_seeded_bracket_slots(
     if len(set(team_names)) != len(team_names):
         raise ValueError("同じチームを複数設定できません")
 
+    method = str(seed_method).strip().lower()
+    if method == "qualifier":
+        if seed_count != len(team_names):
+            raise ValueError("予選順位シードでは全参加チームをシードに設定してください")
+        # Slot順が予選順位。1位と2位は反対側の山へ配置し、
+        # 各ラウンドで上位同士が早く当たらない標準シード配置にする。
+        bracket_size = _next_power_of_two(len(team_names))
+        positions = [1]
+        while len(positions) < bracket_size:
+            size = len(positions) * 2
+            positions = [rank for pos in positions for rank in (pos, size + 1 - pos)]
+        slots = [team_names[rank - 1] if rank <= len(team_names) else None
+                 for rank in positions]
+        return slots, list(team_names)
+
     allowed_counts = {0, 2, 4, 8}
     if seed_count not in allowed_counts:
         raise ValueError("シード数は0・2・4・8から選んでください")
@@ -1149,9 +1164,8 @@ def build_seeded_bracket_slots(
             f"シード数{seed_count}は参加チーム数{len(team_names)}を超えています"
         )
 
-    method = str(seed_method).strip().lower()
     if method not in {"rating", "manual", "random"}:
-        raise ValueError("シード決定方法はrating・manual・randomのいずれかです")
+        raise ValueError("シード決定方法はrating・manual・random・qualifierのいずれかです")
 
     if seed_count == 0:
         seeded_teams: list[str] = []
@@ -1234,6 +1248,45 @@ def build_seeded_bracket_slots(
         slots[index] = team
 
     return list(slots), seeded_teams
+
+
+def prepare_round_robin_qualifiers(
+    data: Any,
+    team_count: int,
+    available_names: list[str],
+) -> tuple[list[str], dict[str, str]]:
+    """総当たり結果の確定順位から通過チームとControllerを検証して取り出す。"""
+    if not isinstance(data, dict) or data.get("mode") != "round_robin":
+        raise ValueError("総当たりリーグの結果JSON（mode: round_robin）を選んでください")
+    if not 4 <= team_count <= MAX_TEAM_SLOTS:
+        raise ValueError(f"通過チーム数は4～{MAX_TEAM_SLOTS}で指定してください")
+    ranking = data.get("ranking")
+    if not isinstance(ranking, list) or not ranking:
+        raise ValueError("予選ファイルに確定順位（ranking）がありません")
+    if any(not isinstance(name, str) or not name.strip() for name in ranking):
+        raise ValueError("予選順位のチーム名が不正です")
+    ranked_names = [canonical_preset_name(name) for name in ranking]
+    if len(set(ranked_names)) != len(ranked_names):
+        raise ValueError("予選順位に同じチームが重複しています")
+    if team_count > len(ranked_names):
+        raise ValueError(f"通過チーム数{team_count}が予選のチーム数{len(ranked_names)}を超えています")
+    participants = ranked_names[:team_count]
+    missing = [name for name in participants if name not in available_names]
+    if missing:
+        raise ValueError("未登録の予選通過チームがあります: " + ", ".join(missing))
+    source_controllers = data.get("team_controllers", {})
+    if not isinstance(source_controllers, dict):
+        raise ValueError("予選ファイルのteam_controllersが不正です")
+    normalized_controllers = {
+        canonical_preset_name(name): key for name, key in source_controllers.items()
+    }
+    controllers = {}
+    for name in participants:
+        key = normalized_controllers.get(name, CONTROLLER_OPTIONS[DEFAULT_CONTROLLER_DISPLAY])
+        if not isinstance(key, str) or key not in CONTROLLER_KEY_TO_DISPLAY:
+            raise ValueError(f"{name}のControllerが未対応です: {key}")
+        controllers[name] = key
+    return participants, controllers
 
 
 def build_double_elimination_ranking(
@@ -1540,9 +1593,12 @@ def run_double_elimination(
                 reduced: list[dict[str, Any]] = []
                 working = list(lower_survivors)
 
-                # 奇数なら先頭をこの予備ラウンドのBYEとして残す。
-                if len(working) % 2 == 1:
-                    reduced.append(working.pop(0))
+                # 合流人数より少なくなるまで半減させない。
+                # 必要な試合数だけ行い、先頭の余剰チームはBYEで残す。
+                match_count = min(len(working) // 2, len(working) - len(incoming))
+                carry_count = len(working) - match_count * 2
+                reduced.extend(working[:carry_count])
+                working = working[carry_count:]
 
                 for match_number, pair in enumerate(_pair_nodes(working), 1):
                     winner_node, _ = play_match(
@@ -1563,11 +1619,12 @@ def run_double_elimination(
                 reduced_incoming: list[dict[str, Any]] = []
                 working = list(incoming)
 
-                # シードBYEによる人数差では、流入側にもBYEが必要になる。
-                # 末尾ではなく先頭を残し、毎回同じ側だけが有利に
-                # なりにくいよう、current_losersは事前にreverse済み。
-                if len(working) % 2 == 1:
-                    reduced_incoming.append(working.pop(0))
+                # 流入側も合流人数までの試合数に抑える。
+                # current_losersは事前にreverse済みで、BYEは先頭へ配分。
+                match_count = min(len(working) // 2, len(working) - len(lower_survivors))
+                carry_count = len(working) - match_count * 2
+                reduced_incoming.extend(working[:carry_count])
+                working = working[carry_count:]
 
                 for match_number, pair in enumerate(_pair_nodes(working), 1):
                     winner_node, _ = play_match(
@@ -2175,6 +2232,15 @@ class TeamSlotEditor(tk.LabelFrame):
             var.get() for var in self.slot_vars if var.get() and var.get() != UNUSED
         ]
 
+    def set_teams(self, teams: list[str], controllers: dict[str, str]) -> None:
+        self.count_var.set(len(teams))
+        self.rebuild()
+        for team_var, controller_var, name in zip(
+            self.slot_vars, self.controller_vars, teams
+        ):
+            team_var.set(name)
+            controller_var.set(CONTROLLER_KEY_TO_DISPLAY[controllers[name]])
+
     def selected_team_controllers(self) -> dict[str, str]:
         result: dict[str, str] = {}
         for team_var, controller_var in zip(
@@ -2244,6 +2310,7 @@ class TournamentSeedEditor(tk.LabelFrame):
             ("レート順", "rating"),
             ("手動", "manual"),
             ("ランダム", "random"),
+            ("予選順位（Slot順）", "qualifier"),
         ]
         for label, value in methods:
             tk.Radiobutton(
@@ -2309,10 +2376,20 @@ class TournamentSeedEditor(tk.LabelFrame):
             return 0
 
     def _refresh(self) -> None:
-        count = self._seed_count()
         method = self.seed_method_var.get()
+        if method == "qualifier":
+            self.seed_count_var.set("全参加")
+        elif self.seed_count_var.get() == "全参加":
+            self.seed_count_var.set("4")
+        count = self._seed_count()
+        self.count_box.config(state="disabled" if method == "qualifier" else "readonly")
 
         rating_names = [name for name, _ in self.rating_store.ranking()][:count]
+        if method == "qualifier":
+            preview = "全参加チームをSlot順にSeed 1・2・3…へ設定。上位からBYEを割り当てます。"
+            self.manual_frame.pack_forget()
+        else:
+            self.manual_frame.pack(fill="x")
         if method == "rating":
             preview = "自動シード: " + (
                 " / ".join(
@@ -2325,7 +2402,7 @@ class TournamentSeedEditor(tk.LabelFrame):
             preview = (
                 f"Seed 1～{count}を下の欄で指定してください" if count else "シードなし"
             )
-        else:
+        elif method == "random":
             preview = (
                 f"参加チームから{count}チームを大会開始時に抽選"
                 if count
@@ -2344,6 +2421,10 @@ class TournamentSeedEditor(tk.LabelFrame):
             )
         self.fill_button.config(state="normal" if count > 0 else "disabled")
 
+    def use_qualifier_ranking(self) -> None:
+        self.seed_method_var.set("qualifier")
+        self._refresh()
+
     def fill_manual_from_rating(self) -> None:
         count = self._seed_count()
         names = [name for name, _ in self.rating_store.ranking()][:count]
@@ -2356,14 +2437,14 @@ class TournamentSeedEditor(tk.LabelFrame):
         self,
         participants: list[str],
     ) -> dict[str, Any]:
-        count = self._seed_count()
-        if count not in {0, 2, 4, 8}:
+        method = self.seed_method_var.get()
+        count = len(participants) if method == "qualifier" else self._seed_count()
+        if method != "qualifier" and count not in {0, 2, 4, 8}:
             raise ValueError("シード数は0・2・4・8から選んでください")
         if count > len(participants):
             raise ValueError("シード数が参加チーム数を超えています")
 
-        method = self.seed_method_var.get()
-        manual = [var.get() for var in self.manual_vars[:count]]
+        manual = [var.get() for var in self.manual_vars[:count]] if method == "manual" else []
         rating_snapshot = {team: self.rating_store.get(team) for team in participants}
 
         # 12チームの16枠大会ならBYEは4つ。
@@ -2659,6 +2740,7 @@ class CompetitionApp:
 
         # 右側の図表示に使う進行状態。
         self.visual_mode = "series"
+        self.visual_window: tk.Toplevel | None = None
         self.visual_series_maps: list[MResult] = []
         self.visual_swiss_rounds: list[dict[str, Any]] = []
         self.visual_swiss_records: dict[str, dict[str, int]] = {}
@@ -4410,11 +4492,33 @@ class CompetitionApp:
 
         swiss_note = tk.Label(
             self.swiss_tab,
-            text="Slot順で初戦を固定し、Winners敗者はLosersへ移動します。Lower FinalとGrand Finalは上部で個別設定できます。",
+            text="シード設定に従って初戦を配置し、Winners敗者はLosersへ移動します。Lower FinalとGrand Finalは上部で個別設定できます。",
             anchor="w",
             fg="#444",
         )
         swiss_note.pack(fill="x", padx=10, pady=(8, 0))
+
+        qualifier_box = tk.LabelFrame(
+            self.swiss_tab, text="総当たり予選から設定", padx=8, pady=6
+        )
+        qualifier_box.pack(fill="x", padx=8, pady=(8, 0))
+        tk.Label(qualifier_box, text="通過チーム数").pack(side="left")
+        self.qualifier_count_var = tk.StringVar(value="12")
+        self.qualifier_count_spin = tk.Spinbox(
+            qualifier_box, from_=4, to=MAX_TEAM_SLOTS,
+            textvariable=self.qualifier_count_var, width=5,
+        )
+        self.qualifier_count_spin.pack(side="left", padx=8)
+        self.qualifier_import_button = tk.Button(
+            qualifier_box, text="予選結果JSONを読み込んで設定",
+            command=self.import_round_robin_qualifiers,
+        )
+        self.qualifier_import_button.pack(side="left")
+        self.qualifier_status_var = tk.StringVar(value="上位チーム・AI設定・順位シードを反映")
+        tk.Label(
+            qualifier_box, textvariable=self.qualifier_status_var,
+            anchor="w", fg="#334155",
+        ).pack(side="left", padx=12)
 
         self.tournament_seed_editor = TournamentSeedEditor(
             self.swiss_tab,
@@ -4430,7 +4534,7 @@ class CompetitionApp:
         self.swiss_slots = TeamSlotEditor(
             self.swiss_tab,
             self.names,
-            "参加チーム（Slot順はノンシード配置順として使用）",
+            "参加チーム（予選順位シードではSlot順＝予選順位）",
             12,
         )
         self.swiss_slots.pack(
@@ -4453,6 +4557,36 @@ class CompetitionApp:
         self.league_slots.pack(fill="both", expand=True, padx=8, pady=8)
 
         self._build_power_index_tab()
+
+    def import_round_robin_qualifiers(self) -> None:
+        if self.worker is not None and self.worker.is_alive():
+            return
+        try:
+            count = int(self.qualifier_count_var.get())
+            if not 4 <= count <= MAX_TEAM_SLOTS:
+                raise ValueError(f"通過チーム数は4～{MAX_TEAM_SLOTS}で指定してください")
+        except (ValueError, tk.TclError):
+            messagebox.showerror("予選読込エラー", f"通過チーム数は4～{MAX_TEAM_SLOTS}の整数で指定してください")
+            return
+        path = filedialog.askopenfilename(
+            parent=self.root, title="総当たり予選の結果JSONを選択",
+            initialdir=str(RESULT_DIR.resolve()),
+            filetypes=[("大会結果JSON", "*.json"), ("すべてのファイル", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            with Path(path).open("r", encoding="utf-8-sig") as handle:
+                data = json.load(handle)
+            teams, controllers = prepare_round_robin_qualifiers(data, count, self.names)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("予選読込エラー", str(exc))
+            return
+        self.swiss_slots.set_teams(teams, controllers)
+        self.tournament_seed_editor.use_qualifier_ranking()
+        self.notebook.select(self.swiss_tab)
+        self.qualifier_status_var.set(f"{Path(path).name} / 上位{count}チームを設定済み")
+        self.status_var.set(f"予選上位{count}チームを順位順のシードで設定しました")
 
     def _build_power_index_tab(self) -> None:
         top = tk.LabelFrame(
@@ -4615,11 +4749,24 @@ class CompetitionApp:
         )
         frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
+        toolbar = tk.Frame(frame)
+        toolbar.pack(fill="x", pady=(0, 4))
+        tk.Label(
+            toolbar, text="中央の仕切りをドラッグして図の幅を変更できます。",
+            anchor="w",
+        ).pack(side="left")
+        self.visual_window_button = tk.Button(
+            toolbar, text="図を別ウィンドウで開く", command=self.toggle_visual_window,
+        )
+        self.visual_window_button.pack(side="right")
+
         pane = tk.PanedWindow(
             frame,
             orient="horizontal",
             sashrelief="raised",
-            sashwidth=6,
+            sashwidth=10,
+            showhandle=True,
+            opaqueresize=True,
         )
         pane.pack(fill="both", expand=True)
 
@@ -4637,9 +4784,15 @@ class CompetitionApp:
         self.text.configure(yscrollcommand=text_scroll.set)
         self.text.pack(side="left", fill="both", expand=True)
         text_scroll.pack(side="right", fill="y")
-        pane.add(text_frame, minsize=430, stretch="always")
+        pane.add(text_frame, minsize=160, stretch="always")
 
-        visual_frame = tk.Frame(pane, bg="#111827")
+        self.visual_frame = tk.Frame(pane, bg="#111827")
+        pane.add(self.visual_frame, minsize=160, stretch="always")
+        self._build_visual_canvas(self.visual_frame)
+
+    def _build_visual_canvas(self, parent: tk.Misc) -> None:
+        visual_frame = tk.Frame(parent, bg="#111827")
+        visual_frame.pack(fill="both", expand=True)
         self.visual_canvas = tk.Canvas(
             visual_frame,
             bg="#111827",
@@ -4664,13 +4817,43 @@ class CompetitionApp:
         visual_scroll_x.grid(row=1, column=0, sticky="ew")
         visual_frame.grid_rowconfigure(0, weight=1)
         visual_frame.grid_columnconfigure(0, weight=1)
-        pane.add(visual_frame, minsize=430, stretch="always")
-
+        self._visual_canvas_dead = False
         self.visual_canvas.bind(
             "<Configure>",
             lambda _event: self.redraw_visual(),
         )
         self.redraw_visual()
+
+    def toggle_visual_window(self) -> None:
+        if self.visual_window is not None:
+            self._close_visual_window()
+            return
+
+        window = tk.Toplevel(self.root)
+        window.title("Competition Manager - 図の進行・結果")
+        window.geometry("1000x640")
+        window.minsize(360, 240)
+        window.resizable(True, True)
+        window.protocol("WM_DELETE_WINDOW", self._close_visual_window)
+        self.visual_window = window
+        for child in self.visual_frame.winfo_children():
+            child.destroy()
+        tk.Label(
+            self.visual_frame, text="図は別ウィンドウに表示中です。",
+            bg="#111827", fg="#cbd5e1",
+        ).pack(expand=True)
+        self.visual_window_button.configure(text="図を元の表示に戻す")
+        self._build_visual_canvas(window)
+
+    def _close_visual_window(self) -> None:
+        if self.visual_window is None:
+            return
+        self.visual_window.destroy()
+        self.visual_window = None
+        for child in self.visual_frame.winfo_children():
+            child.destroy()
+        self.visual_window_button.configure(text="図を別ウィンドウで開く")
+        self._build_visual_canvas(self.visual_frame)
 
     def _canvas_text(
         self,
@@ -5469,6 +5652,8 @@ class CompetitionApp:
         self.team2_controller_box.config(state="readonly" if enabled else "disabled")
         self.swiss_slots.set_enabled(enabled)
         self.tournament_seed_editor.set_enabled(enabled)
+        self.qualifier_count_spin.config(state=state)
+        self.qualifier_import_button.config(state=state)
         self.league_slots.set_enabled(enabled)
 
     def start_current_mode(self) -> None:

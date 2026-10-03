@@ -86,6 +86,20 @@ class IdolSystemTests(unittest.TestCase):
         self.assertEqual(self.owner.ultimate_points, 0)
         self.assertFalse(self.game.execute_ai_ultimate(self.owner, {"ultimate": "SERENADE"}))
 
+    def test_serenade_cannot_activate_after_either_team_is_wiped(self):
+        self.owner.is_alive = False
+        for ally_alive, enemy_alive in ((False, True), (True, False)):
+            with self.subTest(ally_alive=ally_alive, enemy_alive=enemy_alive):
+                self.ally.is_alive = ally_alive
+                self.enemy.is_alive = enemy_alive
+                self.owner.ultimate_points = 4
+                self.enemy.reveal_remaining = 0
+                self.assertFalse(self.game._selected_ultimate_ready(self.owner))
+                self.assertFalse(self.game.execute_ai_ultimate(
+                    self.owner, {"ultimate": "SERENADE"}))
+                self.game._activate_ai_death_ultimates()
+                self.assertEqual((self.owner.ultimate_points, self.enemy.reveal_remaining), (4, 0))
+
     def test_serenade_reveals_every_live_enemy_across_walls_and_preserves_longer_reveals(self):
         far = make_character("Derke", "D", (1, 10))
         dead = make_character("something", "D", (1, 8))

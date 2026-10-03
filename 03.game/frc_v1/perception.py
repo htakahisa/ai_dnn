@@ -139,19 +139,17 @@ class FrcPerceptionBuilder:
             enemies.append(EnemyState(index, str(getattr(enemy, "base_name", enemy.name)), str(enemy.role), bool(enemy.is_alive)))
             if not enemy.is_alive:
                 continue
-            # reveal_remaining is the engine's shared reveal on this enemy;
-            # los_revealed by itself is NOT a legal wall/facing bypass.
-            revealed = int(getattr(enemy, "reveal_remaining", 0)) > 0
-            if revealed or any(in_front(v.position, enemy.pos, v.facing) and
-                              game.check_cell_line_of_sight(v.position, tuple(enemy.pos), block_smoke=True)
-                              for v in active_viewers):
-                sightings.append(Sighting(index, _pos(enemy.pos), "reveal" if revealed else "normal"))
+            # The engine applies LOS reveal after resolving shots. Geometry
+            # alone must not expose the enemy on that first contact tick.
+            recon_revealed = int(getattr(enemy, "reveal_remaining", 0)) > 0
+            if recon_revealed or bool(getattr(enemy, "los_revealed", False)):
+                sightings.append(Sighting(index, _pos(enemy.pos), "reveal" if recon_revealed else "normal"))
         setup = getattr(game, "defender_setup_phase", None)
         during_setup = bool(getattr(setup, "active", False))
         allowed = ()
-        if during_setup and self.side == "D":
+        if during_setup:
             allowed = tuple((r, c) for r, row in enumerate(grid) for c, value in enumerate(row)
-                            if value != 1 and setup.defender_can_move_to(r, c))
+                            if value != 1 and setup.can_move_to(self.side, r, c))
         return FrcTeamSnapshot(self.side, int(getattr(game, "current_round", 1)),
             "setup" if during_setup else "live", int(setup.ticks_remaining) if during_setup else int(game.battle_tick),
             grid, tuple(allies), tuple(enemies), tuple(sightings), tuple(sorted(visible)), self.effects.read(game),

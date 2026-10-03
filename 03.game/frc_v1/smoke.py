@@ -9,11 +9,14 @@ import random
 
 import numpy as np
 
+from frc_v1.evaluate import OPPONENTS
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("baseline", "learned"), default="baseline")
     parser.add_argument("--checkpoints", default="frc_v1/checkpoints")
+    parser.add_argument("--opponent", choices=tuple(OPPONENTS), default="Fnatic2023")
     parser.add_argument("--seed", type=int, default=100001)
     parser.add_argument("--output", default="frc_v1/evaluation/full_match.json")
     args = parser.parse_args()
@@ -35,9 +38,9 @@ def main():
         own_ai = DualRoleTeamAI("FRC v1",
             lambda: FrcAttackerController(actor=FrcPolicy.load(path / "A_policy.pt", side="A")),
             lambda: FrcDefenderController(actor=FrcPolicy.load(path / "D_policy.pt", side="D")))
-    own, other = get_preset("Furina Classic"), get_preset("Fnatic2023")
+    own, other = get_preset("Furina Classic"), get_preset(args.opponent)
     with contextlib.redirect_stdout(io.StringIO()):
-        game = VisualFPSBattle(NEW_MAZE_STR, own_ai, _build_team_ai("fnatic_v3"), headless=True,
+        game = VisualFPSBattle(NEW_MAZE_STR, own_ai, _build_team_ai(OPPONENTS[args.opponent]), headless=True,
             attacker_roster=list(own.players), defender_roster=list(other.players),
             spike_holder_name=own.spike_holder, defender_spike_holder_name=other.spike_holder,
             attacker_igl_name=own.igl, defender_igl_name=other.igl,
@@ -46,7 +49,8 @@ def main():
     frc_is_attacker = game.attacker_team_name == own.name
     own_score, other_score = ((game.attacker_wins, game.defender_wins) if frc_is_attacker else
                               (game.defender_wins, game.attacker_wins))
-    result = {"mode": args.mode, "seed": args.seed, "frc_score": own_score, "opponent_score": other_score,
+    result = {"mode": args.mode, "opponent": other.name, "seed": args.seed,
+              "frc_score": own_score, "opponent_score": other_score,
               "match_over": game.match_over, "sides_swapped": game.sides_swapped,
               "rounds": game.current_round, "winner": own.name if own_score > other_score else other.name}
     output = Path(args.output)

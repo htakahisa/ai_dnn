@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "L1M1",
+  "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "right_id": "29d42926ed414f2db46768c470222e21",
+  "left_wins": 1,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "マイチーム",
+      "own_score": 13,
+      "opponent_score": 1,
+      "winner": "Fnatic",
+      "seed": 1065734293,
+      "player_stats": {
+        "Boaster": {
+          "kills": 5,
+          "deaths": 6
+        },
+        "Derke": {
+          "kills": 9,
+          "deaths": 4
+        },
+        "Alfajer": {
+          "kills": 11,
+          "deaths": 5
+        },
+        "Chronicle": {
+          "kills": 17,
+          "deaths": 2
+        },
+        "Leo": {
+          "kills": 25,
+          "deaths": 2
+        },
+        "まーやまくん": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "primmie": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "valyn": {
+          "kills": 3,
+          "deaths": 12
+        },
+        "Less": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Brawk": {
+          "kills": 1,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

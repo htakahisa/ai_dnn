@@ -6,6 +6,7 @@ from public_effects import displayed_projectile_path, displayed_area_cells
 TUNNEL_WARNING_COLOR = "#fff6a0"
 TUNNEL_ACTIVE_COLOR = "#ffd21a"
 BALEMOON_WARNING_COLOR = "#ffc2c8"
+IDOL_EFFECT_COLOR = "#ffd6e7"
 
 
 def draw_balemoon_warnings(canvas, warnings, cell_size, offset_x=0):
@@ -40,12 +41,12 @@ def draw_heal_sparkle(canvas, row, col, cell_size, remaining, offset_x=0):
     cx, cy = offset_x + (col+.5)*cell_size, (row+.5)*cell_size
     radius = cell_size*(.48 if remaining % 2 else .60)
     items = [canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
-                               fill="white", outline="white", width=2, stipple="gray25")]
+                               fill=IDOL_EFFECT_COLOR, outline=IDOL_EFFECT_COLOR, width=2, stipple="gray25")]
     for dx, dy in ((-.48, -.30), (.48, .30), (.25, -.55), (-.25, .55)):
         x, y = cx+dx*cell_size, cy+dy*cell_size
         reach = cell_size*(.12 if remaining % 2 else .20)
-        items.append(canvas.create_line(x-reach, y, x+reach, y, fill="white", width=2))
-        items.append(canvas.create_line(x, y-reach, x, y+reach, fill="white", width=2))
+        items.append(canvas.create_line(x-reach, y, x+reach, y, fill=IDOL_EFFECT_COLOR, width=2))
+        items.append(canvas.create_line(x, y-reach, x, y+reach, fill=IDOL_EFFECT_COLOR, width=2))
     return items
 
 
@@ -72,7 +73,7 @@ def draw_contract_status(canvas, row, col, cell_size, remaining, offset_x=0):
 
 def draw_serenade_flash(canvas, width, height, cell_size, offset_x=0):
     return [canvas.create_rectangle(offset_x, 0, offset_x+width*cell_size, height*cell_size,
-                                    fill="white", outline="", stipple="gray50")]
+                                    fill=IDOL_EFFECT_COLOR, outline="", stipple="gray50")]
 
 
 def draw_raid_wind(canvas, trail, cell_size, offset_x=0):

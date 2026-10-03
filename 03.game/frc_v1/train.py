@@ -40,6 +40,8 @@ def gae(rewards, values, dones, bootstrap, gamma=0.99, lam=0.95):
 def train(args):
     if args.steps < 1 or args.rollout < 1 or args.batch_size < 1 or args.epochs < 1:
         raise ValueError("training sizes must be positive")
+    if args.imitation_weight < 0:
+        raise ValueError("imitation weight must be non-negative")
     if args.stage == "defense" and args.side != "D":
         raise ValueError("defense stage requires side D")
     random.seed(args.seed)
@@ -81,11 +83,25 @@ def train(args):
 
     while completed < args.steps:
         observations, critics, records, rewards, values, old_logs, dones = [], [], [], [], [], [], []
+        teacher_records = []
         outcomes = []
+        navigation_overrides = 0
+        navigation_enabled = (args.side == "A" and args.stage in ("attack", "match") or
+                              args.side == "D" and args.stage in ("defense", "match"))
         for _ in range(min(args.rollout, args.steps - completed)):
             full_state = env.critic_state()
-            decision = policy.sample(observation, critic=full_state)
+            if args.imitation_weight:
+                teacher_decision = teacher.act(observation, env.controller.snapshot, env.controller.belief)
+                teacher_records.append(action_record(teacher_decision, len(env.game.grid[0])))
+            # PPO records the sampled action. The same deterministic route
+            # wrapper used in matches maps it to the action executed by the
+            # environment, so its sampled log-probability remains valid.
+            decision = policy.act(observation, env.controller.snapshot, env.controller.belief,
+                                  critic=full_state, navigate=navigation_enabled)
             record, log_prob, value = policy.last_sample
+            if navigation_enabled:
+                navigation_overrides += sum(a.kind != KINDS[int(record["kind"][slot])]
+                                            for slot, a in enumerate(decision.actions))
             observations.append(observation)
             critics.append(full_state)
             records.append(record)
@@ -109,6 +125,7 @@ def train(args):
                 bootstrap = float(policy.model.critic(torch.cat((feature, full_state), dim=1))[0, 0])
         advantages, returns = gae(rewards, values, dones, bootstrap)
         advantages = (advantages - advantages.mean()) / max(1e-6, advantages.std()) if len(advantages) > 1 else advantages
+        imitation_loss_value = None
         for _ in range(args.epochs):
             order = np.random.permutation(len(observations))
             for offset in range(0, len(order), args.batch_size):
@@ -123,6 +140,13 @@ def train(args):
                 actor_loss = -torch.min(ratio * advantage, ratio.clamp(0.8, 1.2) * advantage).mean()
                 value_loss = (predicted_value - target).square().mean()
                 loss = actor_loss + 0.5 * value_loss - 0.002 * entropy.mean()
+                if args.imitation_weight:
+                    _, teacher_log_prob, _, _ = policy.model.distribution(
+                        [observations[i] for i in indices],
+                        records=[teacher_records[i] for i in indices])
+                    imitation_loss = -teacher_log_prob.mean()
+                    imitation_loss_value = float(imitation_loss.detach())
+                    loss = loss + args.imitation_weight * imitation_loss
                 if not torch.isfinite(loss):
                     raise RuntimeError("non-finite FRC training loss")
                 optimizer.zero_grad()
@@ -131,6 +155,8 @@ def train(args):
                 optimizer.step()
         record = {"steps": completed, "rounds": rounds, "stage": args.stage, "side": args.side,
             "effects": args.effects, "seed": args.seed, "teacher_steps": args.teacher_steps,
+            "imitation_weight": args.imitation_weight, "imitation_loss": imitation_loss_value,
+            "navigation_enabled": navigation_enabled, "navigation_overrides": navigation_overrides,
             "loss": float(loss.detach()), "mean_reward": float(np.mean(rewards)),
             "elapsed_seconds": round(time.monotonic() - start, 2), "outcomes": outcomes}
         with logfile.open("a", encoding="utf-8") as stream:
@@ -147,6 +173,8 @@ def main():
     parser.add_argument("--stage", choices=STAGES, default="match")
     parser.add_argument("--steps", type=int, default=10000)
     parser.add_argument("--teacher-steps", type=int, default=0)
+    parser.add_argument("--imitation-weight", type=float, default=0.0,
+                        help="keep matching the rule teacher on states visited by the policy during PPO")
     parser.add_argument("--rollout", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=4)

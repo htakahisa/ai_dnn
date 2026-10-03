@@ -560,6 +560,10 @@ def observable_teacher_action(
                     return min(improving)[1]
     if orb_only:
         return None
+    if phase == "guard" and hasattr(controller, "training_navigation_teacher"):
+        # Installed only by the focused Guard trainer. Its defuse/engagement
+        # priority must run before generic combat-hold labels.
+        return controller.training_navigation_teacher(char, state, mask)
     ultimate_action = {
         "carry": runtime.ULTIMATE_ACTION_INDEX,
         "escort": escort_runtime.ACTION_ULTIMATE,
@@ -1838,7 +1842,7 @@ class CurriculumSession(RealCarrySession):
             else:
                 char.ultimate_points = random.randrange(max(1, char.ultimate_cost))
         for char in game.chars:
-            if char.team == "D":
+            if char.team == "D" and not getattr(self, "preserve_opponent_stats", False):
                 char.accuracy, char.hs_rate, char.dodge_rate = (
                     x / 100.0 for x in stats
                 )
@@ -2160,6 +2164,8 @@ class CurriculumSession(RealCarrySession):
                 (c for c in game.chars if c.team == "A" and c.is_alive and c.has_spike),
                 None,
             )
+            guard_tick_rewards = (self.guard_tick_rewards()
+                                  if hasattr(self, "guard_tick_rewards") else {})
             for key in list(self.pending):
                 phase, name = key
                 char = chars[name]
@@ -2181,6 +2187,8 @@ class CurriculumSession(RealCarrySession):
                 action = self.pending[key].action
                 fighting = engaged.get(name, False)
                 reward += combat_reward(phase, action, fighting)
+                if phase == "guard":
+                    reward += guard_tick_rewards.get(name, 0.0)
                 if (
                     orb_assignment is not None
                     and orb_assignment[0].name == name
@@ -2541,7 +2549,8 @@ class CurriculumSession(RealCarrySession):
                 elif phase == "guard" and name in goals:
                     goal = goals[name]
                     distance = self.distances(goal)
-                    if distance[pos] >= 0 and distance[tuple(char.pos)] >= 0:
+                    if (distance[pos] >= 0 and distance[tuple(char.pos)] >= 0
+                            and not getattr(self, "custom_guard_position_rewards", False)):
                         reward += self.progress.step(
                             name,
                             goal,
@@ -2610,6 +2619,7 @@ class CurriculumSession(RealCarrySession):
                 )
         no_entry = entry_tick is None and not game.is_planted
         team_wiped = not any(c.team == "A" and c.is_alive for c in game.chars)
+        opponent = getattr(getattr(self, "opponent_rotation", None), "current", None)
         return {
             "attacker_win": won,
             "planted": bool(game.is_planted),
@@ -2620,6 +2630,8 @@ class CurriculumSession(RealCarrySession):
             "guard_ticks": guard_ticks,
             "guard_position_ticks": guard_arrivals,
             "opponent_stats": list(stats),
+            "opponent_name": getattr(opponent, "name", None),
+            "opponent_ai": getattr(opponent, "ai_key", None),
             "combat_ticks": combat_ticks,
             "combat_stop_ticks": combat_stops,
             "combat_start_events": combat_start_events,

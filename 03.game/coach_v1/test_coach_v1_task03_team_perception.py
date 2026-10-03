@@ -27,6 +27,7 @@ class FakeCharacter:
         iq=200,
         blind=0,
         reveal=0,
+        los_revealed=False,
         has_spike=False,
     ):
         self.name = name
@@ -38,6 +39,7 @@ class FakeCharacter:
         self.effective_iq = iq
         self.blind_remaining = blind
         self.reveal_remaining = reveal
+        self.los_revealed = los_revealed
         self.has_spike = has_spike
         self.smoke_charges = 1
         self.recon_charges = 1
@@ -135,7 +137,7 @@ class CoachV1Task03TeamPerceptionTest(unittest.TestCase):
         allies = fixed_team(all_alive=True)
         allies[0].effective_iq = 100
         allies[1].effective_iq = 200
-        enemy = FakeCharacter("shared_enemy", "D", (3, 3), facing="W")
+        enemy = FakeCharacter("shared_enemy", "D", (3, 3), facing="W", los_revealed=True)
         snapshot = self.builder.build(
             game=FakeGame(floor_grid(), allies + [enemy]), side="attacker"
         )
@@ -145,11 +147,18 @@ class CoachV1Task03TeamPerceptionTest(unittest.TestCase):
         self.assertEqual(1, snapshot.sightings[0].viewer_slot)
         self.assertEqual(SightingSource.NORMAL, snapshot.sightings[0].source)
 
+    def test_line_of_sight_before_reveal_does_not_disclose_enemy(self):
+        enemy = FakeCharacter("first_contact", "D", (3, 3), facing="W")
+        game = FakeGame(floor_grid(), fixed_team() + [enemy])
+        self.assertIsNone(self.builder.build(game=game, side="attacker").sighting_for(enemy.name))
+        enemy.los_revealed = True
+        self.assertIsNotNone(self.builder.build(game=game, side="attacker").sighting_for(enemy.name))
+
     def test_equal_iq_sighting_uses_lower_roster_slot(self):
         allies = fixed_team(all_alive=True)
         allies[0].effective_iq = 200
         allies[1].effective_iq = 200
-        enemy = FakeCharacter("tie_enemy", "D", (3, 3), facing="W")
+        enemy = FakeCharacter("tie_enemy", "D", (3, 3), facing="W", los_revealed=True)
         snapshot = self.builder.build(
             game=FakeGame(floor_grid(), allies + [enemy]), side="attacker"
         )

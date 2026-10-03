@@ -1,0 +1,208 @@
+[LOAD] game_character_stats: character_stats.py
+[LOAD] game_player_combos: player_combos.py
+[LOAD] game_awakening_events: awakening_events.py
+[DATA] characters=125 / combos=86 / awakenings=27
+[touyama_v2] 固定チーム(Defender/search) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] 固定監視方向: {'夢の街': 'E', 'いぐるん': 'NW', 'ろびぃな': 'S', 'Tortlilyan': 'SW', 'えんぺん': 'SW'}
+[touyama_v2][DIAG] 配置 夢の街, いぐるん, ろびぃな, Tortlilyan, えんぺん
+[touyama_v2][DIAG] 夢の街 spawn=(1, 18) nearest_defense_dist=22 
+[touyama_v2][DIAG] いぐるん spawn=(1, 19) nearest_defense_dist=21 
+[touyama_v2][DIAG] ろびぃな spawn=(1, 20) nearest_defense_dist=20 
+[touyama_v2][DIAG] Tortlilyan spawn=(1, 21) nearest_defense_dist=19 
+[touyama_v2][DIAG] えんぺん spawn=(1, 22) nearest_defense_dist=18 
+[touyama_v2] 固定チーム(Attacker/escort) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] 固定チーム(Attacker/guard) 確定ステータス:
+  夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
+  いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
+  ろびぃな: acc=0.80 hs=0.35 dodge=0.75 reaction=152 ability=SMOKE
+  Tortlilyan: acc=1.00 hs=0.28 dodge=0.39 reaction=156 ability=HUNT
+  えんぺん: acc=0.90 hs=0.60 dodge=0.37 reaction=155 ability=FLASH
+[touyama_v2] サイト別プラント地点・ガードポジション:
+  site0: plant=(7, 40) guard_positions=[(8, 40), (9, 38), (9, 39), (9, 40), (10, 38)]
+  site1: plant=(8, 3) guard_positions=[(10, 2), (10, 3), (11, 1), (11, 2), (12, 1)]
+[omoko_v1] 固定チーム(Attacker/escort) 確定ステータス:
+  ねこさん: acc=0.87 hs=0.42 dodge=0.42 reaction=142 ability=SMOKE
+  とりさん: acc=0.70 hs=0.35 dodge=0.55 reaction=150 ability=RECON
+  おもこ: acc=0.92 hs=0.67 dodge=0.72 reaction=67 ability=FLASH
+  いぬさん: acc=0.95 hs=0.33 dodge=0.28 reaction=135 ability=FLASH
+  ひつじさん: acc=0.93 hs=0.45 dodge=0.25 reaction=135 ability=SMOKE
+[omoko_v1] 固定チーム(Attacker/guard) 確定ステータス:
+  ねこさん: acc=0.87 hs=0.42 dodge=0.42 reaction=142 ability=SMOKE
+  とりさん: acc=0.70 hs=0.35 dodge=0.55 reaction=150 ability=RECON
+  おもこ: acc=0.92 hs=0.67 dodge=0.72 reaction=67 ability=FLASH
+  いぬさん: acc=0.95 hs=0.33 dodge=0.28 reaction=135 ability=FLASH
+  ひつじさん: acc=0.93 hs=0.45 dodge=0.25 reaction=135 ability=SMOKE
+[omoko_v1] サイト別プラント地点・ガードポジション:
+  site0: plant=(7, 40) guard_positions=[(3, 40), (10, 39), (2, 40), (10, 38), (3, 38)]
+  site1: plant=(8, 3) guard_positions=[(8, 1), (7, 1), (10, 2), (13, 3), (13, 7)]
+[omoko_v1] 固定チーム(Defender/search) 確定ステータス:
+  ねこさん: acc=0.65 hs=0.20 dodge=0.20 reaction=120 ability=SMOKE
+  とりさん: acc=0.55 hs=0.25 dodge=0.25 reaction=125 ability=RECON
+  おもこ: acc=0.67 hs=0.67 dodge=0.67 reaction=67 ability=FLASH
+  いぬさん: acc=0.70 hs=0.18 dodge=0.18 reaction=115 ability=FLASH
+  ひつじさん: acc=0.68 hs=0.30 dodge=0.15 reaction=110 ability=SMOKE
+[omoko_v1] 固定監視方向: {'ねこさん': 'SW', 'とりさん': 'S', 'おもこ': 'S', 'いぬさん': 'S', 'ひつじさん': 'W'}
+[omoko_v1][DIAG] 配置 ねこさん, とりさん, おもこ, いぬさん, ひつじさん
+[omoko_v1][DIAG] ねこさん spawn=(1, 18) nearest_defense_dist=12 
+[omoko_v1][DIAG] とりさん spawn=(1, 19) nearest_defense_dist=13 
+[omoko_v1][DIAG] おもこ spawn=(1, 20) nearest_defense_dist=12 
+[omoko_v1][DIAG] いぬさん spawn=(1, 21) nearest_defense_dist=11 
+[omoko_v1][DIAG] ひつじさん spawn=(1, 22) nearest_defense_dist=10 
+rotation: Furina Classic (frc_v1) -> Touyama Gaming (touyama_gaming_v2) -> Omoko Gaming (omoko_gaming_v1) -> Fnatic2023 (fnatic_v3) -> SUPES (toru_ai_v3.1)
+Guard only; source episode=2750; output=gc_v1\data\guard_reposition_20261002_full
+[EP 5] opponent=SUPES mode=far far=0/2 demo=153 td=4.707225799560547 demo_loss=0.297601580619812 seconds=10
+[EP 10] opponent=SUPES mode=mid far=1/2 demo=145 td=4.449449062347412 demo_loss=0.2569257915019989 seconds=19
+[EP 15] opponent=SUPES mode=transition far=0/0 demo=172 td=2.109008550643921 demo_loss=0.15532812476158142 seconds=29
+[EP 20] opponent=SUPES mode=hold far=0/0 demo=145 td=4.4759392738342285 demo_loss=0.08729662001132965 seconds=37
+[EP 25] opponent=SUPES mode=natural far=0/3 demo=173 td=3.104278326034546 demo_loss=0.056364625692367554 seconds=56
+[EP 30] opponent=SUPES mode=far far=1/3 demo=132 td=3.4692745208740234 demo_loss=0.16511951386928558 seconds=64
+[EP 35] opponent=SUPES mode=mid far=2/3 demo=152 td=2.8333189487457275 demo_loss=0.06949246674776077 seconds=72
+[EP 40] opponent=SUPES mode=transition far=1/1 demo=153 td=3.0973918437957764 demo_loss=0.18625515699386597 seconds=83
+[EP 45] opponent=SUPES mode=hold far=0/0 demo=150 td=2.7061095237731934 demo_loss=0.16514720022678375 seconds=91
+[EP 50] opponent=SUPES mode=natural far=0/0 demo=0 td=2.435978889465332 demo_loss=0.10799513757228851 seconds=110
+[EP 55] opponent=SUPES mode=far far=1/3 demo=107 td=2.459838628768921 demo_loss=0.11378893256187439 seconds=118
+[EP 60] opponent=SUPES mode=mid far=2/3 demo=178 td=2.1028780937194824 demo_loss=0.10819225013256073 seconds=128
+[EP 65] opponent=SUPES mode=transition far=0/0 demo=177 td=2.2974371910095215 demo_loss=0.044981133192777634 seconds=138
+[EP 70] opponent=SUPES mode=hold far=0/0 demo=137 td=4.256965637207031 demo_loss=0.052840739488601685 seconds=147
+[EP 75] opponent=SUPES mode=natural far=1/3 demo=111 td=2.907184362411499 demo_loss=0.06539320945739746 seconds=166
+[EP 80] opponent=SUPES mode=far far=0/3 demo=85 td=3.524827241897583 demo_loss=0.11852792650461197 seconds=174
+[EP 85] opponent=SUPES mode=mid far=1/3 demo=146 td=2.3799023628234863 demo_loss=0.15346300601959229 seconds=183
+[EP 90] opponent=SUPES mode=transition far=0/0 demo=178 td=1.6504054069519043 demo_loss=0.14133891463279724 seconds=192
+[EP 95] opponent=SUPES mode=hold far=0/0 demo=237 td=3.596217155456543 demo_loss=0.02786773443222046 seconds=201
+[EP 100] opponent=SUPES mode=natural far=0/0 demo=0 td=2.4029557704925537 demo_loss=0.1396760642528534 seconds=219
+[EVAL 100] far=0.249 stall=0.028 postplant_win=0.545 safe=True best=100
+[EP 105] opponent=SUPES mode=far far=1/2 demo=186 td=3.5868163108825684 demo_loss=0.07134062051773071 seconds=444
+[EP 110] opponent=SUPES mode=mid far=0/3 demo=90 td=2.268752336502075 demo_loss=0.014845728874206543 seconds=454
+[EP 115] opponent=SUPES mode=transition far=0/0 demo=201 td=3.4476523399353027 demo_loss=0.049251750111579895 seconds=464
+[EP 120] opponent=SUPES mode=hold far=0/0 demo=230 td=1.9201600551605225 demo_loss=0.041182950139045715 seconds=473
+[EP 125] opponent=SUPES mode=natural far=0/2 demo=23 td=2.003164529800415 demo_loss=0.11583825945854187 seconds=490
+[EP 130] opponent=SUPES mode=far far=1/2 demo=215 td=3.086770534515381 demo_loss=0.14256006479263306 seconds=499
+[EP 135] opponent=SUPES mode=mid far=0/3 demo=84 td=3.6382358074188232 demo_loss=0.06912197172641754 seconds=508
+[EP 140] opponent=SUPES mode=transition far=0/0 demo=149 td=3.50274920463562 demo_loss=0.10229675471782684 seconds=516
+[EP 145] opponent=SUPES mode=hold far=0/0 demo=189 td=1.857553243637085 demo_loss=0.01888890564441681 seconds=525
+[EP 150] opponent=SUPES mode=natural far=0/2 demo=72 td=2.0159199237823486 demo_loss=0.11789743602275848 seconds=543
+[EP 155] opponent=SUPES mode=far far=0/2 demo=116 td=2.7064664363861084 demo_loss=0.08522455394268036 seconds=552
+[EP 160] opponent=SUPES mode=mid far=0/3 demo=78 td=2.8608572483062744 demo_loss=0.1091117411851883 seconds=560
+[EP 165] opponent=SUPES mode=transition far=0/0 demo=138 td=1.826828956604004 demo_loss=0.11317021399736404 seconds=568
+[EP 170] opponent=SUPES mode=hold far=0/0 demo=188 td=3.1316940784454346 demo_loss=0.10129247605800629 seconds=575
+[EP 175] opponent=SUPES mode=natural far=0/1 demo=137 td=2.393897294998169 demo_loss=0.09232932329177856 seconds=593
+[EP 180] opponent=SUPES mode=far far=0/3 demo=68 td=3.3702425956726074 demo_loss=0.06006878614425659 seconds=601
+[EP 185] opponent=SUPES mode=mid far=0/3 demo=92 td=3.472501277923584 demo_loss=0.06408742070198059 seconds=609
+[EP 190] opponent=SUPES mode=transition far=0/0 demo=169 td=4.250905513763428 demo_loss=0.08590462803840637 seconds=619
+[EP 195] opponent=SUPES mode=hold far=0/0 demo=256 td=2.767362594604492 demo_loss=0.08631793409585953 seconds=629
+[EP 200] opponent=SUPES mode=natural far=0/0 demo=97 td=3.165745496749878 demo_loss=0.06869050860404968 seconds=651
+[EVAL 200] far=0.254 stall=0.024 postplant_win=0.538 safe=True best=200
+[EP 205] opponent=SUPES mode=far far=0/2 demo=103 td=4.196741580963135 demo_loss=0.08396230638027191 seconds=891
+[EP 210] opponent=SUPES mode=mid far=0/3 demo=30 td=3.466231107711792 demo_loss=0.09066656231880188 seconds=900
+[EP 215] opponent=SUPES mode=transition far=0/0 demo=158 td=2.28049898147583 demo_loss=0.09199006855487823 seconds=911
+[EP 220] opponent=SUPES mode=hold far=0/0 demo=204 td=3.497344493865967 demo_loss=0.09642085433006287 seconds=921
+[EP 225] opponent=SUPES mode=natural far=1/2 demo=153 td=2.436565637588501 demo_loss=0.10837313532829285 seconds=943
+[EP 230] opponent=SUPES mode=far far=1/3 demo=151 td=4.128854274749756 demo_loss=0.15534691512584686 seconds=954
+[EP 235] opponent=SUPES mode=mid far=1/3 demo=88 td=3.2193620204925537 demo_loss=0.05534321069717407 seconds=966
+[EP 240] opponent=SUPES mode=transition far=1/1 demo=138 td=2.39593505859375 demo_loss=0.0778455138206482 seconds=977
+[EP 245] opponent=SUPES mode=hold far=0/0 demo=178 td=4.59994649887085 demo_loss=0.1278167963027954 seconds=987
+[EP 250] opponent=SUPES mode=natural far=0/3 demo=121 td=2.7346458435058594 demo_loss=0.09136107563972473 seconds=1007
+[EP 255] opponent=SUPES mode=far far=1/3 demo=218 td=2.520371437072754 demo_loss=0.04685838520526886 seconds=1016
+[EP 260] opponent=SUPES mode=mid far=1/3 demo=105 td=2.176833152770996 demo_loss=0.09145447611808777 seconds=1026
+[EP 265] opponent=SUPES mode=transition far=0/0 demo=94 td=1.7736676931381226 demo_loss=0.059376489371061325 seconds=1036
+[EP 270] opponent=SUPES mode=hold far=0/0 demo=72 td=3.8131744861602783 demo_loss=0.02274547517299652 seconds=1045
+[EP 275] opponent=SUPES mode=natural far=0/1 demo=103 td=3.384493112564087 demo_loss=0.07376278936862946 seconds=1066
+[EP 280] opponent=SUPES mode=far far=1/3 demo=105 td=2.3599984645843506 demo_loss=0.05369773507118225 seconds=1073
+[EP 285] opponent=SUPES mode=mid far=0/3 demo=128 td=2.3664867877960205 demo_loss=0.23663529753684998 seconds=1083
+[EP 290] opponent=SUPES mode=transition far=0/0 demo=213 td=2.3055319786071777 demo_loss=0.09423844516277313 seconds=1090
+[EP 295] opponent=SUPES mode=hold far=0/0 demo=108 td=2.400991678237915 demo_loss=0.0655958354473114 seconds=1099
+[EP 300] opponent=SUPES mode=natural far=0/4 demo=46 td=1.7581381797790527 demo_loss=0.09037056565284729 seconds=1116
+[EVAL 300] far=0.263 stall=0.008 postplant_win=0.538 safe=True best=300
+[EP 305] opponent=SUPES mode=far far=0/2 demo=104 td=2.29762864112854 demo_loss=0.04059973359107971 seconds=1368
+[EP 310] opponent=SUPES mode=mid far=1/3 demo=141 td=2.9820590019226074 demo_loss=0.0888381153345108 seconds=1378
+[EP 315] opponent=SUPES mode=transition far=0/0 demo=158 td=2.6880829334259033 demo_loss=0.005333110690116882 seconds=1386
+[EP 320] opponent=SUPES mode=hold far=0/0 demo=205 td=4.041384696960449 demo_loss=0.11980368196964264 seconds=1397
+[EP 325] opponent=SUPES mode=natural far=0/4 demo=52 td=2.6879963874816895 demo_loss=0.2110687494277954 seconds=1415
+[EP 330] opponent=SUPES mode=far far=1/3 demo=162 td=2.2216334342956543 demo_loss=0.11405356973409653 seconds=1425
+[EP 335] opponent=SUPES mode=mid far=0/3 demo=82 td=2.8532779216766357 demo_loss=0.06451258808374405 seconds=1435
+[EP 340] opponent=SUPES mode=transition far=0/0 demo=99 td=3.057999610900879 demo_loss=0.10941708832979202 seconds=1444
+[EP 345] opponent=SUPES mode=hold far=0/0 demo=151 td=3.85202956199646 demo_loss=0.15187308192253113 seconds=1454
+[EP 350] opponent=SUPES mode=natural far=0/0 demo=190 td=2.3732645511627197 demo_loss=0.03254435956478119 seconds=1473
+[EP 355] opponent=SUPES mode=far far=0/3 demo=36 td=2.72039532661438 demo_loss=0.08501483500003815 seconds=1482
+[EP 360] opponent=SUPES mode=mid far=0/3 demo=47 td=4.215468883514404 demo_loss=0.06936395168304443 seconds=1491
+[EP 365] opponent=SUPES mode=transition far=0/0 demo=85 td=0.9150897860527039 demo_loss=0.09055443108081818 seconds=1500
+[EP 370] opponent=SUPES mode=hold far=0/0 demo=84 td=2.658827304840088 demo_loss=0.0932045429944992 seconds=1508
+[EP 375] opponent=SUPES mode=natural far=0/2 demo=109 td=3.021167039871216 demo_loss=0.06811194121837616 seconds=1527
+[EP 380] opponent=SUPES mode=far far=0/3 demo=98 td=4.37857723236084 demo_loss=0.00835464894771576 seconds=1535
+[EP 385] opponent=SUPES mode=mid far=0/3 demo=144 td=2.670943260192871 demo_loss=0.06123436987400055 seconds=1544
+[EP 390] opponent=SUPES mode=transition far=0/0 demo=165 td=2.87446665763855 demo_loss=0.16311144828796387 seconds=1554
+[EP 395] opponent=SUPES mode=hold far=0/0 demo=110 td=1.6870170831680298 demo_loss=0.2192240059375763 seconds=1565
+[EP 400] opponent=SUPES mode=natural far=0/1 demo=226 td=2.3348281383514404 demo_loss=0.05815878510475159 seconds=1586
+[EVAL 400] far=0.263 stall=0.007 postplant_win=0.538 safe=False best=300
+[EP 405] opponent=SUPES mode=far far=0/3 demo=79 td=1.7548108100891113 demo_loss=0.020621612668037415 seconds=1845
+[EP 410] opponent=SUPES mode=mid far=1/3 demo=139 td=2.8010871410369873 demo_loss=0.07963979244232178 seconds=1854
+[EP 415] opponent=SUPES mode=transition far=0/0 demo=219 td=3.3120436668395996 demo_loss=0.06665339320898056 seconds=1864
+[EP 420] opponent=SUPES mode=hold far=0/0 demo=244 td=2.927611827850342 demo_loss=0.12907366454601288 seconds=1874
+[EP 425] opponent=SUPES mode=natural far=1/3 demo=100 td=2.4106156826019287 demo_loss=0.03059333562850952 seconds=1897
+[EP 430] opponent=SUPES mode=far far=0/3 demo=58 td=3.7474424839019775 demo_loss=0.10801836848258972 seconds=1906
+[EP 435] opponent=SUPES mode=mid far=2/3 demo=209 td=2.4595391750335693 demo_loss=0.10023900866508484 seconds=1916
+[EP 440] opponent=SUPES mode=transition far=0/0 demo=103 td=3.161144256591797 demo_loss=0.15061701834201813 seconds=1925
+[EP 445] opponent=SUPES mode=hold far=0/0 demo=125 td=3.492353916168213 demo_loss=0.07184366881847382 seconds=1935
+[EP 450] opponent=SUPES mode=natural far=0/0 demo=0 td=5.138132572174072 demo_loss=0.1576157808303833 seconds=1954
+[EP 455] opponent=SUPES mode=far far=0/3 demo=59 td=2.8147735595703125 demo_loss=0.1286654770374298 seconds=1964
+[EP 460] opponent=SUPES mode=mid far=0/3 demo=38 td=2.458986282348633 demo_loss=0.147970050573349 seconds=1972
+[EP 465] opponent=SUPES mode=transition far=0/0 demo=129 td=2.6920387744903564 demo_loss=0.03510884940624237 seconds=1983
+[EP 470] opponent=SUPES mode=hold far=0/0 demo=145 td=2.7905726432800293 demo_loss=0.06332209706306458 seconds=1992
+[EP 475] opponent=SUPES mode=natural far=3/3 demo=220 td=2.706725835800171 demo_loss=0.1457042098045349 seconds=2013
+[EP 480] opponent=SUPES mode=far far=0/3 demo=114 td=3.5021793842315674 demo_loss=0.22882604598999023 seconds=2022
+[EP 485] opponent=SUPES mode=mid far=1/3 demo=126 td=4.014730930328369 demo_loss=0.09490752220153809 seconds=2033
+[EP 490] opponent=SUPES mode=transition far=0/0 demo=75 td=2.6002726554870605 demo_loss=0.22249247133731842 seconds=2043
+[EP 495] opponent=SUPES mode=hold far=0/0 demo=217 td=2.643141269683838 demo_loss=0.0842382162809372 seconds=2054
+[EP 500] opponent=SUPES mode=natural far=0/0 demo=0 td=3.246574640274048 demo_loss=0.113025963306427 seconds=2072
+[EVAL 500] far=0.259 stall=0.009 postplant_win=0.559 safe=True best=300
+[EP 505] opponent=SUPES mode=far far=0/3 demo=132 td=2.707871198654175 demo_loss=0.09822513163089752 seconds=2340
+[EP 510] opponent=SUPES mode=mid far=0/3 demo=108 td=2.410233974456787 demo_loss=0.10200175642967224 seconds=2351
+[EP 515] opponent=SUPES mode=transition far=0/0 demo=200 td=3.2956161499023438 demo_loss=0.15157747268676758 seconds=2361
+[EP 520] opponent=SUPES mode=hold far=0/0 demo=203 td=1.9145236015319824 demo_loss=0.07252295315265656 seconds=2372
+[EP 525] opponent=SUPES mode=natural far=0/0 demo=0 td=2.5830371379852295 demo_loss=0.07777567952871323 seconds=2391
+[EP 530] opponent=SUPES mode=far far=0/3 demo=57 td=1.3767544031143188 demo_loss=0.04860632121562958 seconds=2402
+[EP 535] opponent=SUPES mode=mid far=0/3 demo=82 td=3.4306492805480957 demo_loss=0.1586126685142517 seconds=2410
+[EP 540] opponent=SUPES mode=transition far=0/0 demo=141 td=3.0891120433807373 demo_loss=0.06942538917064667 seconds=2420
+[EP 545] opponent=SUPES mode=hold far=0/0 demo=159 td=2.655494213104248 demo_loss=0.0727769285440445 seconds=2430
+[EP 550] opponent=SUPES mode=natural far=0/0 demo=69 td=2.6434273719787598 demo_loss=0.08013561367988586 seconds=2458
+[EP 555] opponent=SUPES mode=far far=1/3 demo=162 td=0.9938904643058777 demo_loss=0.05722928047180176 seconds=2469
+[EP 560] opponent=SUPES mode=mid far=0/3 demo=38 td=3.1131746768951416 demo_loss=0.163587749004364 seconds=2479
+[EP 565] opponent=SUPES mode=transition far=0/0 demo=144 td=2.5740742683410645 demo_loss=0.14196886122226715 seconds=2491
+[EP 570] opponent=SUPES mode=hold far=0/0 demo=119 td=2.386092185974121 demo_loss=0.14186634123325348 seconds=2501
+[EP 575] opponent=SUPES mode=natural far=0/0 demo=85 td=3.639808416366577 demo_loss=0.06951388716697693 seconds=2523
+[EP 580] opponent=SUPES mode=far far=0/3 demo=94 td=2.9749674797058105 demo_loss=0.04723241925239563 seconds=2533
+[EP 585] opponent=SUPES mode=mid far=0/3 demo=174 td=3.0997862815856934 demo_loss=0.08612716197967529 seconds=2542
+[EP 590] opponent=SUPES mode=transition far=0/0 demo=206 td=2.648200511932373 demo_loss=0.09486283361911774 seconds=2553
+[EP 595] opponent=SUPES mode=hold far=0/0 demo=184 td=3.382291555404663 demo_loss=0.1442933976650238 seconds=2565
+[EP 600] opponent=SUPES mode=natural far=0/3 demo=101 td=2.2820820808410645 demo_loss=0.124163419008255 seconds=2586
+[EVAL 600] far=0.268 stall=0.009 postplant_win=0.545 safe=False best=300
+[EP 605] opponent=SUPES mode=far far=2/3 demo=254 td=3.304910659790039 demo_loss=0.15489962697029114 seconds=2879
+[EP 610] opponent=SUPES mode=mid far=1/3 demo=141 td=2.8439273834228516 demo_loss=0.023929938673973083 seconds=2892
+[EP 615] opponent=SUPES mode=transition far=0/0 demo=163 td=2.493525981903076 demo_loss=0.08395711332559586 seconds=2904
+[EP 620] opponent=SUPES mode=hold far=0/0 demo=194 td=3.154998779296875 demo_loss=0.08384743332862854 seconds=2917
+[EP 625] opponent=SUPES mode=natural far=1/3 demo=105 td=2.162384271621704 demo_loss=0.12023988366127014 seconds=2941
+[EP 630] opponent=SUPES mode=far far=0/3 demo=76 td=3.8914756774902344 demo_loss=0.1415853053331375 seconds=2953
+[EP 635] opponent=SUPES mode=mid far=0/3 demo=113 td=3.932643413543701 demo_loss=0.17345412075519562 seconds=2965
+[EP 640] opponent=SUPES mode=transition far=0/0 demo=117 td=3.2992825508117676 demo_loss=0.09984582662582397 seconds=2975
+[EP 645] opponent=SUPES mode=hold far=0/0 demo=199 td=1.6093705892562866 demo_loss=0.09457269310951233 seconds=2986
+[EP 650] opponent=SUPES mode=natural far=0/0 demo=30 td=3.0897419452667236 demo_loss=0.08222632110118866 seconds=3009
+[EP 655] opponent=SUPES mode=far far=0/3 demo=83 td=3.9603724479675293 demo_loss=0.14422287046909332 seconds=3020
+[EP 660] opponent=SUPES mode=mid far=0/3 demo=52 td=4.435824394226074 demo_loss=0.062122493982315063 seconds=3029
+[EP 665] opponent=SUPES mode=transition far=0/0 demo=100 td=3.6160385608673096 demo_loss=0.075288325548172 seconds=3038
+[EP 670] opponent=SUPES mode=hold far=0/0 demo=105 td=4.051844120025635 demo_loss=0.08444662392139435 seconds=3048
+[EP 675] opponent=SUPES mode=natural far=0/2 demo=117 td=4.497257232666016 demo_loss=0.20776134729385376 seconds=3068
+[EP 680] opponent=SUPES mode=far far=0/2 demo=87 td=3.8347201347351074 demo_loss=0.11396975815296173 seconds=3080
+[EP 685] opponent=SUPES mode=mid far=1/3 demo=170 td=2.3819987773895264 demo_loss=0.148225799202919 seconds=3089
+[EP 690] opponent=SUPES mode=transition far=0/0 demo=176 td=3.172922372817993 demo_loss=0.08712171018123627 seconds=3101
+[EP 695] opponent=SUPES mode=hold far=0/0 demo=221 td=3.5113954544067383 demo_loss=0.1257907599210739 seconds=3114
+[EP 700] opponent=SUPES mode=natural far=0/3 demo=134 td=2.544585704803467 demo_loss=0.15328086912631989 seconds=3139

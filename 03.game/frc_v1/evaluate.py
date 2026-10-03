@@ -29,12 +29,14 @@ def evaluate(args):
         raise ValueError("evaluation rounds must be positive")
     torch.set_num_threads(args.threads)
     sides = ("A", "D") if args.side == "both" else (args.side,)
+    if args.checkpoint and (args.mode != "learned" or args.side == "both"):
+        raise ValueError("--checkpoint requires --mode learned and one --side")
     report = {"seed": args.seed, "policy_mode": args.mode, "effect_override": args.effects,
-              "evaluation_type": "single_round", "results": []}
+              "evaluation_type": "single_round", "checkpoint_override": args.checkpoint, "results": []}
     for roster in args.opponents:
         for side in sides:
             actor = FrcBaseline() if args.mode == "baseline" else FrcPolicy.load(
-                Path(args.checkpoints) / f"{side}_policy.pt", side=side)
+                args.checkpoint or Path(args.checkpoints) / f"{side}_policy.pt", side=side)
             effect_mode = args.effects or getattr(actor, "effects_mode", "all")
             env = FrcRoundEnvironment(side, seed=args.seed, opponent=OPPONENTS[roster], opponent_roster=roster,
                                       effects_mode=effect_mode)
@@ -71,6 +73,7 @@ def main():
     parser.add_argument("--opponents", choices=tuple(OPPONENTS), nargs="+", default=["Fnatic2023"])
     parser.add_argument("--effects", choices=("all", "none", "flight", "warning"))
     parser.add_argument("--checkpoints", default="frc_v1/checkpoints")
+    parser.add_argument("--checkpoint", help="evaluate one side's candidate checkpoint without replacing the live model")
     parser.add_argument("--output", default="frc_v1/evaluation/report.json")
     parser.add_argument("--threads", type=int, default=1)
     evaluate(parser.parse_args())

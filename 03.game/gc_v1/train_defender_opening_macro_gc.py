@@ -810,6 +810,10 @@ def optimize_execution(net, target, optimizer, replay, device):
 
 def _build_training_attacker(opponent_key):
     key = str(opponent_key or "default").strip().lower()
+    from gc_v1.training_opponent_pool_gc import rotation_opponents
+    dedicated = next((o for o in rotation_opponents() if o.ai_key == key), None)
+    if dedicated is not None:
+        return dedicated.build_loaded_team_ai("A").get_attacker_controller()
 
     if key == "default":
         return DefaultAttackerController()
@@ -832,8 +836,16 @@ def _build_training_attacker(opponent_key):
     raise ValueError(f"Unknown training opponent: {opponent_key}")
 
 
-def _resolve_opponent(opponent_mode, rng):
+def _resolve_opponent(opponent_mode, rng, episode_index=None):
     mode = str(opponent_mode or "default").strip().lower()
+    from gc_v1.training_opponent_pool_gc import opponent_for_episode, OPPONENT_SPECS
+    if mode == "rotation":
+        if episode_index is None:
+            episode_index = getattr(rng, "_gc_opponent_index", 0)
+            rng._gc_opponent_index = episode_index + 1
+        return opponent_for_episode(episode_index).ai_key
+    if mode in {key for _name, key in OPPONENT_SPECS}:
+        return mode
 
     if mode in {"default", "toru_ai_v3", "touyama_gaming_v2"}:
         return mode
@@ -845,7 +857,7 @@ def _resolve_opponent(opponent_mode, rng):
 
     raise ValueError(
         "--opponent must be one of: default, toru_ai_v3, "
-        "touyama_gaming_v2, mixed"
+        "touyama_gaming_v2, mixed, rotation, or a dedicated opponent AI key"
     )
 
 
@@ -873,8 +885,11 @@ def _touyama_gaming_roster():
 
 
 def make_game(defender_controller, opponent_key="default"):
-    if str(opponent_key).strip().lower() == "touyama_gaming_v2":
-        attacker_roster, attacker_preset = _touyama_gaming_roster()
+    from gc_v1.training_opponent_pool_gc import rotation_opponents
+    dedicated = next((o for o in rotation_opponents() if o.ai_key == str(opponent_key).strip().lower()), None)
+    if dedicated is not None:
+        attacker_preset = get_preset(dedicated.name)
+        attacker_roster = list(attacker_preset.players)
     else:
         attacker_roster, _unused_defender_roster = build_two_balanced_rosters()
         attacker_preset = None
@@ -1019,7 +1034,7 @@ def run_match(
     epsilon,
     training,
     seed,
-    opponent_mode="default",
+    opponent_mode="rotation",
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -1036,7 +1051,7 @@ def run_match(
     )
     defender = OpeningWrappedDefender(macro)
     opponent_rng = random.Random(seed + 12345)
-    opponent_key = _resolve_opponent(opponent_mode, opponent_rng)
+    opponent_key = _resolve_opponent(opponent_mode, opponent_rng, episode_index=seed)
     game = make_game(defender, opponent_key=opponent_key)
 
     _run_opening_only(game)
@@ -1061,7 +1076,7 @@ def run_match(
 # Evaluation
 # ============================================================================
 
-def evaluate(selection, execution, device, matches=EVAL_MATCHES, seed=100000, opponent_mode="default"):
+def evaluate(selection, execution, device, matches=EVAL_MATCHES, seed=100000, opponent_mode="rotation"):
     selection.eval()
     execution.eval()
 
@@ -1406,11 +1421,11 @@ def main():
     p.add_argument("--save-every", type=int, default=20)
     p.add_argument(
         "--opponent",
-        choices=("default", "toru_ai_v3", "touyama_gaming_v2", "mixed"),
-        default="touyama_gaming_v2",
+        choices=("default", "toru_ai_v3", "touyama_gaming_v2", "mixed", "rotation",
+                 "frc_v1", "omoko_gaming_v1", "fnatic_v3", "toru_ai_v3.1"),
+        default="rotation",
         help=(
-            "Training/evaluation opponent. Touyama Gaming v2 uses the "
-            "Touyama Gaming preset roster."
+            "Default: rotate FRC, TYG, OMG, FNC v3 and SUPES with each dedicated AI and roster."
         ),
     )
     args = p.parse_args()

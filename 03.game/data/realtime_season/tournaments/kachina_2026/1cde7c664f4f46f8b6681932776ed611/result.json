@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+  "left_wins": 2,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "Evil Geniuses",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "Furina Party",
+      "seed": 1065737293,
+      "player_stats": {
+        "Furina": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "Lohen": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "Arlecchino": {
+          "kills": 17,
+          "deaths": 7
+        },
+        "Lisa": {
+          "kills": 17,
+          "deaths": 11
+        },
+        "Jean": {
+          "kills": 13,
+          "deaths": 11
+        },
+        "Boostio": {
+          "kills": 3,
+          "deaths": 11
+        },
+        "Ethan": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "jawgemo": {
+          "kills": 17,
+          "deaths": 12
+        },
+        "C0M": {
+          "kills": 14,
+          "deaths": 13
+        },
+        "Demon1": {
+          "kills": 7,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "Evil Geniuses",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "Evil Geniuses",
+      "seed": 1065737294,
+      "player_stats": {
+        "Boostio": {
+          "kills": 14,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 4,
+          "deaths": 18
+        },
+        "jawgemo": {
+          "kills": 15,
+          "deaths": 18
+        },
+        "C0M": {
+          "kills": 24,
+          "deaths": 9
+        },
+        "Demon1": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "Furina": {
+          "kills": 10,
+          "deaths": 15
+        },
+        "Lohen": {
+          "kills": 9,
+          "deaths": 13
+        },
+        "Arlecchino": {
+          "kills": 20,
+          "deaths": 11
+        },
+        "Lisa": {
+          "kills": 21,
+          "deaths": 18
+        },
+        "Jean": {
+          "kills": 14,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "Evil Geniuses",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "Furina Party",
+      "seed": 1065737295,
+      "player_stats": {
+        "Furina": {
+          "kills": 4,
+          "deaths": 13
+        },
+        "Lohen": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "Arlecchino": {
+          "kills": 19,
+          "deaths": 9
+        },
+        "Lisa": {
+          "kills": 28,
+          "deaths": 14
+        },
+        "Jean": {
+          "kills": 20,
+          "deaths": 11
+        },
+        "Boostio": {
+          "kills": 10,
+          "deaths": 17
+        },
+        "Ethan": {
+          "kills": 3,
+          "deaths": 19
+        },
+        "jawgemo": {
+          "kills": 14,
+          "deaths": 11
+        },
+        "C0M": {
+          "kills": 16,
+          "deaths": 16
+        },
+        "Demon1": {
+          "kills": 12,
+          "deaths": 18
+        }
+      }
+    }
+  ]
+}

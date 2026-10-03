@@ -3,6 +3,7 @@
 import contextlib
 import io
 import random
+from collections import deque
 from dataclasses import dataclass
 import numpy as np
 
@@ -12,6 +13,25 @@ from frc_v1.controller import FrcController
 from frc_v1.model import CRITIC_SIZE
 
 STAGES = ("threats", "support", "entry", "attack", "defense", "balemoon", "match")
+
+
+def plant_distances(grid):
+    """Shortest walkable distance to either plant site, ignoring current actors."""
+    rows, columns = len(grid), len(grid[0])
+    distances = np.full((rows, columns), -1, dtype=np.int16)
+    pending = deque()
+    for r in range(rows):
+        for c in range(columns):
+            if grid[r][c] == 2:
+                distances[r, c] = 0
+                pending.append((r, c))
+    while pending:
+        r, c = pending.popleft()
+        for nr, nc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
+            if 0 <= nr < rows and 0 <= nc < columns and grid[nr][nc] != 1 and distances[nr, nc] < 0:
+                distances[nr, nc] = distances[r, c] + 1
+                pending.append((nr, nc))
+    return distances
 
 
 class ExternalActor:
@@ -77,6 +97,7 @@ class FrcRoundEnvironment:
                 attacker_igl_name=attacker.igl, defender_igl_name=defender.igl,
                 attacker_team_name=attacker.name, defender_team_name=defender.name, disable_side_swap=True)
         self.game.stop_after_round = True
+        self._plant_distances = plant_distances(self.game.grid)
         if self.stage != "match":
             self._configure_curriculum(random.Random(seed))
         self.steps = 0
@@ -85,6 +106,7 @@ class FrcRoundEnvironment:
             "ash_casts": 0, "balemoon_casts": 0, "balemoon_furina_deaths": 0,
             "lohen_first_contact": False, "first_contact_slot": None,
             "warning_exposures": 0, "contract_applications": 0, "overflow": 0}
+        self.metrics.update(entry_progress=0.0, spike_progress=0.0, defense_progress=0.0)
         self._first_contact_recorded = False
         self._finished = False
         self.game._prepare_team_controllers_tick()
@@ -210,6 +232,30 @@ class FrcRoundEnvironment:
         game._prepare_team_controllers_tick()
         after = controller.snapshot
         reward = 0.0 if in_setup else -0.001
+        if self.side == "A" and self.stage in ("attack", "match") and not in_setup and not before.is_planted:
+            entry_before, entry_after = before.allies[2], after.allies[2]
+            if entry_before.alive and entry_after.alive:
+                delta = int(self._plant_distances[entry_before.position]) - int(
+                    self._plant_distances[entry_after.position])
+                self.metrics["entry_progress"] += delta
+                reward += 0.01 * delta
+            for old, new in zip(before.allies, after.allies):
+                if old.has_spike and old.alive and new.alive and new.has_spike:
+                    delta = int(self._plant_distances[old.position]) - int(
+                        self._plant_distances[new.position])
+                    self.metrics["spike_progress"] += delta
+                    reward += 0.01 * delta
+                    break
+        if self.side == "D" and self.stage in ("defense", "match") and not in_setup and not before.is_planted:
+            # Reward leaving spawn for a defendable site, then let the round
+            # outcome and combat determine the final positions.
+            for old, new in zip(before.allies, after.allies):
+                if old.alive and new.alive:
+                    old_distance = int(self._plant_distances[old.position])
+                    new_distance = int(self._plant_distances[new.position])
+                    delta = max(0, old_distance - 3) - max(0, new_distance - 3)
+                    self.metrics["defense_progress"] += delta
+                    reward += 0.003 * delta
         if not before.is_planted and after.is_planted:
             self.metrics["plants"] += 1
             reward += 0.2 if self.side == "A" else -0.2

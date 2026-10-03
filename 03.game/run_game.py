@@ -6,6 +6,7 @@ five focused modules beside it.
 
 import random
 import tkinter as tk
+from pathlib import Path
 import numpy as np
 
 
@@ -78,6 +79,10 @@ FNATIC_V2_ATTACKER_MODEL_PATH = (
 )
 FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
+# FRC policies selected by the GUI and competition manager.
+FRC_V1_ATTACKER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs" / "selfplay_01" / "A_policy.pt"
+FRC_V1_DEFENDER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs" / "tactics_finetune_20260930" / "D_policy.pt"
+
 
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
@@ -87,8 +92,10 @@ def _build_team_ai(key):
         mode = "baseline" if normalized == "frc_v1_baseline" else "learned"
         return DualRoleTeamAI(
             name="FRC v1" + (" (baseline)" if mode == "baseline" else ""),
-            attacker_factory=lambda: FrcAttackerController(mode=mode),
-            defender_factory=lambda: FrcDefenderController(mode=mode),
+            attacker_factory=lambda: FrcAttackerController(
+                mode=mode, checkpoint=FRC_V1_ATTACKER_CHECKPOINT if mode == "learned" else None),
+            defender_factory=lambda: FrcDefenderController(
+                mode=mode, checkpoint=FRC_V1_DEFENDER_CHECKPOINT if mode == "learned" else None),
         )
 
     if normalized in {"fnatic_v3", "fnatic v3"}:
@@ -268,6 +275,7 @@ class VisualFPSBattle(
         self.headless = headless
         self.tick_time_ms = tick_time_ms
         self._tick_delay_ms()
+        self._init_playback()
         self.disable_side_swap = disable_side_swap
         self.series_context = dict(series_context or {})
         saved_mental_fatigue = self.series_context.get("mental_fatigue", {})
@@ -343,6 +351,8 @@ class VisualFPSBattle(
             self.canvas.bind("<Button-1>", self.on_canvas_click)
             self.label = tk.Label(self.root, text="Round 1 Start", font=("Arial", 10))
             self.label.pack()
+            self._build_playback_controls()
+            self.root.protocol("WM_DELETE_WINDOW", self._close_match_window)
 
         self.match_over = False
         # Store actual states so replay is exact and does not depend on
@@ -371,6 +381,8 @@ class VisualFPSBattle(
 
     def _record_replay_frame(self):
         """Append a JSON-safe snapshot of the current match state."""
+        if not getattr(self, "record_replay", True):
+            return
 
         def pos(value):
             return list(map(int, value)) if value is not None else None
@@ -599,6 +611,7 @@ class VisualFPSBattle(
 
     def _swap_sides(self):
         """編成・IGL・スパイク担当・スコアをチームごと攻守交換する。"""
+        self._side_swap_count = getattr(self, "_side_swap_count", 0) + 1
         self.attacker_roster, self.defender_roster = (
             self.defender_roster,
             self.attacker_roster,
@@ -994,8 +1007,12 @@ class VisualFPSBattle(
             self.run_headless_loop()
         else:
             self.draw()
-            self.root.after(self._tick_delay_ms(), self.loop)
+            self._schedule_match_callback(self.loop)
             self.root.mainloop()
+
+    def _close_match_window(self):
+        self.stop_playback()
+        self.root.destroy()
 
 
 if __name__ == "__main__":

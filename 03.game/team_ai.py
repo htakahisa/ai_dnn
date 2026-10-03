@@ -4,32 +4,31 @@ from typing import Any, Callable
 from iq_controller_adapter import IQAwareController
 from iq_perception import (
     IQPerceptionEngine,
-    PerceivedCharacter,
-    PerceivedGameView,
+    build_team_position_view,
 )
 from controllers import UserInputController
 
 
 class PrivateInfoController:
-    """Hide enemy spike ownership without adding IQ position noise.
+    """Hide private enemy information without adding IQ position noise.
 
     Some training/evaluation team definitions intentionally disable IQ
-    perception. They must still follow the same game-information rule as the
-    normal runtime: own-team spike ownership is visible, enemy ownership is
-    not. Dropped and planted spike positions remain available.
+    perception. They still receive only Revealed enemy positions and own-team
+    spike ownership. Dropped and planted spike positions remain available.
     """
 
-    def __init__(self, inner):
+    def __init__(self, inner, viewer_team=None):
         self.inner = inner
         self.real_game = None
+        self.viewer_team = viewer_team
 
     def __getattr__(self, name):
         return getattr(self.inner, name)
 
     def set_game(self, game):
         self.real_game = game
-        if hasattr(self.inner, "set_game"):
-            self.inner.set_game(game)
+        if self.viewer_team is not None and hasattr(self.inner, "set_game"):
+            self.inner.set_game(build_team_position_view(game, self.viewer_team))
 
     def reset_round(self):
         if hasattr(self.inner, "reset_round"):
@@ -39,23 +38,9 @@ class PrivateInfoController:
         if self.real_game is None:
             raise RuntimeError("PrivateInfoController.set_game() was not called")
 
-        proxies = []
-        mapping = {}
-        for real in self.real_game.chars:
-            if getattr(real, "team", None) == getattr(char, "team", None):
-                proxy = real
-            else:
-                proxy = PerceivedCharacter(real, has_spike=False)
-            proxies.append(proxy)
-            mapping[id(real)] = proxy
-
-        private_game = PerceivedGameView(
-            self.real_game,
-            {"chars": proxies},
-            mapping,
-        )
+        private_game = build_team_position_view(self.real_game, char.team)
         state = dict(game_state)
-        state["chars"] = proxies
+        state["chars"] = private_game.chars
         if not bool(getattr(self.real_game, "is_planted", False)):
             state["spotted_info"] = {
                 "spotted": 0.0,
@@ -86,7 +71,7 @@ class DualRoleTeamAI:
         self._defender_controller = None
         self.game = None
 
-    def _wrap(self, controller):
+    def _wrap(self, controller, side):
         if getattr(controller, "handles_team_perception", False):
             return controller
         if isinstance(controller, IQAwareController):
@@ -94,15 +79,15 @@ class DualRoleTeamAI:
         if isinstance(controller, UserInputController):
             return controller
         if not self.use_iq_perception:
-            return PrivateInfoController(controller)
-        return IQAwareController(controller, self.perception_engine)
+            return PrivateInfoController(controller, viewer_team=side)
+        return IQAwareController(controller, self.perception_engine, viewer_team=side)
 
     def get_attacker_controller(self):
         if self._attacker_controller is None:
             raw = self.attacker_factory()
             if raw is None:
                 raise RuntimeError(f"{self.name}: attacker_factoryがNoneを返しました")
-            self._attacker_controller = self._wrap(raw)
+            self._attacker_controller = self._wrap(raw, "A")
             self._bind_controller(self._attacker_controller)
         return self._attacker_controller
 
@@ -111,7 +96,7 @@ class DualRoleTeamAI:
             raw = self.defender_factory()
             if raw is None:
                 raise RuntimeError(f"{self.name}: defender_factoryがNoneを返しました")
-            self._defender_controller = self._wrap(raw)
+            self._defender_controller = self._wrap(raw, "D")
             self._bind_controller(self._defender_controller)
         return self._defender_controller
 

@@ -46,9 +46,13 @@ class FrcController:
         self.reset_round()
 
     def set_game(self, game):
-        if self.game is not game:
+        # Setup supplies a fresh position-safe view for each character. FRC
+        # builds its own public snapshot once per team tick, so those wrappers
+        # must not reset the cached decision or replace its live game owner.
+        owner = getattr(game, "_real", game)
+        if self.game is not owner:
             self.reset_round()
-        self.game = game
+        self.game = owner
 
     def reset_round(self):
         self.sensor.reset()

@@ -1,0 +1,66 @@
+{
+  "revision": "guard_reposition_v1",
+  "sources": {
+    "carry": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+      "sha256": "653a4ef2792eb3a18a0e4658c0e65d7b6198c2a755ad08f1b3e704445be47b30"
+    },
+    "escort": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+      "sha256": "ea1618ae97ea5f803ff16fc7f80933f55bc19e275eeaa227760d658414368a92"
+    },
+    "guard": {
+      "path": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+      "sha256": "eecf13599aededcd79bb2cfdc15bb916eed9ec0124f5c816640f496d2c3bc1a3"
+    }
+  },
+  "opponents": [
+    [
+      "Furina Classic",
+      "frc_v1"
+    ],
+    [
+      "Touyama Gaming",
+      "touyama_gaming_v2"
+    ],
+    [
+      "Omoko Gaming",
+      "omoko_gaming_v1"
+    ],
+    [
+      "Fnatic2023",
+      "fnatic_v3"
+    ],
+    [
+      "SUPES",
+      "toru_ai_v3.1"
+    ]
+  ],
+  "runtime_data_fingerprint": {
+    "character_stats.py": "6df6e0b462d2a36346f0fb3cb55e18b8c1d7afdaa42c72d12535beec6fe87d95",
+    "player_combos.py": "39109a20f2c1ea478ecfc9cd3f3fb858f06cb5ea0b49b8f799cb132b6abe7d3d",
+    "awakening_events.py": "90a56f633834d811f3b9c7212604d7cc468269cced44f16867dd3b708215a58e"
+  },
+  "parameters": {
+    "init_carry": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_carry_gc_data\\dqn_attacker_carry_gc_best_by_eval.pt",
+    "init_escort": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_escort_gc_data\\dqn_attacker_escort_gc_best_by_eval.pt",
+    "init_guard": "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\attacker_guard_gc_data\\dqn_attacker_guard_gc_best_by_eval.pt",
+    "output_dir": "gc_v1\\data\\guard_reposition_pilot_20261002",
+    "episodes": 25,
+    "eval_interval": 25,
+    "eval_episodes": 25,
+    "eval_seeds": [
+      3126100200
+    ],
+    "holdout_seeds": [
+      9226100200
+    ],
+    "seed": 2026100200,
+    "bootstrap_episodes": 300,
+    "lr": 5e-05,
+    "gamma": 0.99,
+    "updates": 16,
+    "demo_weight": 1.0,
+    "regression_tolerance": 0.05
+  }
+}
