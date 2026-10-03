@@ -100,7 +100,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
             for group, route in zip(groups, routes):
                 self.assertEqual(route.goal, WAYPOINT_POINTS["a"][group])
 
-    def test_route_waypoints_advance_only_after_all_points_are_visited(self):
+    def test_route_waypoints_advance_after_assigned_goal_arrival(self):
         from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=7)
@@ -127,17 +127,14 @@ class ConconAttackerA1Tests(unittest.TestCase):
         env.positions[second_index] = env.routes[second_index].goal
         env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 1 for route in env.routes))
-        self.assertEqual(len({route.goal for route in env.routes}), 1)
+        self.assertTrue({route.goal for route in env.routes}.issubset(set(WAYPOINT_POINTS["b"])))
 
         shared_waypoint = env.routes[0].goal
         env.positions[0] = shared_waypoint
         env._advance_routes_if_reached()
-        self.assertTrue(all(route.stage == 1 for route in env.routes))
-        env.positions[0] = next(point for point in WAYPOINT_POINTS["b"] if point != shared_waypoint)
-        env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 2 for route in env.routes))
 
-    def test_single_a_group_still_visits_both_a_points(self):
+    def test_single_a_group_advances_after_its_assigned_a(self):
         from concon_v1.co1_train_attacker import RouteEnv
 
         env = RouteEnv(seed=11)
@@ -148,9 +145,6 @@ class ConconAttackerA1Tests(unittest.TestCase):
         ]
         env.positions[0] = env.routes[0].goal
 
-        env._advance_routes_if_reached()
-        self.assertTrue(all(route.stage == 0 for route in env.routes))
-        env.positions[0] = WAYPOINT_POINTS["a"][1]
         env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 1 for route in env.routes))
 
@@ -185,7 +179,7 @@ class ConconAttackerA1Tests(unittest.TestCase):
         observation = build_observation(route, plant_goal, True, [], 0, 0)
         self.assertEqual(observation[12], 1.0)
 
-    def test_can_step_aside_when_progress_is_blocked_by_allies(self):
+    def test_ordinary_movement_waits_when_progress_is_blocked_by_allies(self):
         grid = np.zeros((3, 3), dtype=np.int32)
         goal = (0, 1)
         distances = bfs_distance_map(grid, goal)
@@ -194,9 +188,9 @@ class ConconAttackerA1Tests(unittest.TestCase):
         )
         self.assertTrue(mask[ACTION_WAIT])
         self.assertFalse(mask[0])
-        self.assertTrue(mask[1])
-        self.assertTrue(mask[2])
-        self.assertTrue(mask[3])
+        self.assertFalse(mask[1])
+        self.assertFalse(mask[2])
+        self.assertFalse(mask[3])
 
     def test_keeps_open_bfs_progress_move_available(self):
         grid = np.zeros((3, 3), dtype=np.int32)

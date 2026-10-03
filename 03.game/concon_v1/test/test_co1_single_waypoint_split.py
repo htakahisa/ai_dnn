@@ -6,6 +6,7 @@ import io
 import random
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from concon_v1.co1_attacker_common import (
     GORIGONS, RouteProgress, SharedRouteDQN, SPLIT_PATTERNS, choose_split_assignment,
@@ -30,12 +31,118 @@ def make_scenario(points, limit=12, walls=()):
                           waypoint_order="".join(points), max_candidate_bfs_distance=limit)
 
 
-def arrive(env, index=0):
+def arrive(env, index=0, *, randomize=False):
     env.positions[index] = env.routes[index].goal
-    env._advance_routes_if_reached()
+    if randomize:
+        env._advance_routes_if_reached()
+    else:
+        # Topology tests use a fixed 3:2 assignment; randomness is tested below.
+        with patch.object(env.rng, "randrange", return_value=1), \
+                patch.object(env.rng, "shuffle", return_value=None):
+            env._advance_routes_if_reached()
 
 
 class SingleWaypointSplitTests(unittest.TestCase):
+    def test_two_candidates_use_all_four_random_splits_at_b_and_later_stages(self):
+        for points in (
+            {"a": [(3, 2)], "b": [(1, 6), (5, 6)]},
+            {"a": [(3, 2)], "b": [(3, 4)], "c": [(1, 6), (5, 6)]},
+        ):
+            for pattern_index, expected in enumerate(SPLIT_PATTERNS):
+                with self.subTest(stage=list(points)[-1], pattern=expected):
+                    env = RouteEnv(0, map_name=make_scenario(points))
+                    if "c" in points:
+                        arrive(env)
+                    with patch.object(env.rng, "randrange", return_value=pattern_index) as sample:
+                        arrive(env, randomize=True)
+                    goals = points[list(points)[-1]]
+                    counts = Counter(route.goal for route in env.routes)
+                    self.assertEqual(tuple(counts[goal] for goal in goals), expected)
+                    sample.assert_called_once_with(4)
+                    assigned = [route.goal for route in env.routes]
+                    rng_state = env.rng.getstate()
+                    env._advance_routes_if_reached()
+                    self.assertEqual([route.goal for route in env.routes], assigned)
+                    self.assertEqual(env.rng.getstate(), rng_state)
+
+    def test_seeded_two_candidate_assignment_matches_production(self):
+        scenario = make_scenario({"a": [(3, 2)], "b": [(1, 6), (5, 6)]})
+        patterns = set()
+        for seed in range(20):
+            env = RouteEnv(seed, map_name=scenario)
+            controller = ConconAttackerRouteController(
+                model=SharedRouteDQN(scenario.obs_dim), seed=seed, map_name=scenario)
+            chars = [SimpleNamespace(name=name, team="A", pos=list(pos), is_alive=True,
+                                     has_spike=name == GORIGONS.spike_holder)
+                     for name, pos in zip(GORIGONS.players, env.positions)]
+            controller._prepare_round(chars)
+            chars[0].pos = list(scenario.waypoint_points["a"][0])
+            controller._prepare_route(chars[0], {"chars": chars, "grid": scenario.grid})
+            arrive(env, randomize=True)
+            self.assertEqual([route.goal for route in env.routes],
+                             [controller._routes[char.name].goal for char in chars])
+            counts = Counter(route.goal for route in env.routes)
+            patterns.add(tuple(counts[goal] for goal in scenario.waypoint_points["b"]))
+        self.assertEqual(patterns, set(SPLIT_PATTERNS))
+
+    def test_multiple_origins_choose_the_nearest_candidate_independently(self):
+        scenario = make_scenario({"a": [(1, 4), (5, 4)], "b": [(1, 6), (5, 6)]})
+        env = RouteEnv(0, map_name=scenario)
+        groups = [0, 0, 1, 1, 1]
+        env.routes = [RouteProgress(group, 0, pos, scenario=scenario)
+                      for group, pos in zip(groups, env.positions)]
+        env.positions[0] = scenario.waypoint_points["a"][0]
+        env.positions[2] = scenario.waypoint_points["a"][1]
+        with patch.object(env.rng, "randrange") as sample:
+            env._advance_routes_if_reached()
+        sample.assert_not_called()
+        self.assertEqual([route.goal for route in env.routes],
+                         [(1, 6), (1, 6), (5, 6), (5, 6), (5, 6)])
+
+    def test_multiple_origins_can_choose_the_same_nearest_candidate(self):
+        scenario = make_scenario({"a": [(1, 4), (5, 4)], "b": [(3, 6), (3, 14)]})
+        env = RouteEnv(0, map_name=scenario)
+        groups = [0, 0, 1, 1, 1]
+        env.routes = [RouteProgress(group, 0, pos, scenario=scenario)
+                      for group, pos in zip(groups, env.positions)]
+        env.positions[0], env.positions[2] = scenario.waypoint_points["a"]
+        env._advance_routes_if_reached()
+        self.assertEqual([route.goal for route in env.routes], [(3, 6)] * 5)
+
+    def test_multiple_origins_exclude_out_of_range_candidates(self):
+        scenario = make_scenario({"a": [(1, 4), (5, 4)], "b": [(1, 6), (5, 6)]}, limit=3)
+        env = RouteEnv(0, map_name=scenario)
+        groups = [0, 0, 1, 1, 1]
+        env.routes = [RouteProgress(group, 0, pos, scenario=scenario)
+                      for group, pos in zip(groups, env.positions)]
+        env.positions[0], env.positions[2] = scenario.waypoint_points["a"]
+        env._advance_routes_if_reached()
+        self.assertEqual([route.goal for route in env.routes],
+                         [(1, 6), (1, 6), (5, 6), (5, 6), (5, 6)])
+
+    def test_multiple_origin_selection_matches_production(self):
+        scenario = make_scenario({"a": [(1, 4), (5, 4)], "b": [(1, 6), (5, 6)]})
+        env = RouteEnv(0, map_name=scenario)
+        groups = [0, 0, 1, 1, 1]
+        env.routes = [RouteProgress(group, 0, pos, scenario=scenario)
+                      for group, pos in zip(groups, env.positions)]
+        env.positions[0], env.positions[2] = scenario.waypoint_points["a"]
+        controller = ConconAttackerRouteController(
+            model=SharedRouteDQN(scenario.obs_dim), seed=0, map_name=scenario)
+        chars = [SimpleNamespace(name=name, team="A", pos=list(pos), is_alive=True,
+                                 has_spike=name == GORIGONS.spike_holder)
+                 for name, pos in zip(GORIGONS.players, env.positions)]
+        controller._pattern_index = 0
+        controller._groups = dict(zip(GORIGONS.players, groups))
+        controller._routes = {
+            char.name: RouteProgress(group, 0, char.pos, scenario=scenario)
+            for char, group in zip(chars, groups)
+        }
+        controller._prepare_route(chars[0], {"chars": chars, "grid": scenario.grid})
+        env._advance_routes_if_reached()
+        self.assertEqual([route.goal for route in env.routes],
+                         [controller._routes[char.name].goal for char in chars])
+
     def _make_two_to_one_merge(self):
         scenario = make_scenario({
             "a": [(1, 4), (5, 4)], "b": [(1, 6), (5, 6)],
@@ -49,10 +156,8 @@ class SingleWaypointSplitTests(unittest.TestCase):
         for index, route in enumerate(env.routes):
             route.set_stage(1, env.positions[index], goal=scenario.waypoint_points["b"][groups[index]],
                             goal_index=groups[index])
-        # Both b points must be visited. Once they are, c is a single team goal.
+        # One arrival advances the team; c is a single team goal.
         arrive(env, 0)
-        self.assertTrue(all(route.stage == 1 for route in env.routes))
-        arrive(env, 2)
         self.assertTrue(all(route.stage == 2 and route.goal == (3, 9) for route in env.routes))
         return env
 
@@ -130,12 +235,10 @@ class SingleWaypointSplitTests(unittest.TestCase):
     def test_split_origins_choose_next_candidates_from_their_own_waypoint(self):
         env = RouteEnv(7, map_name=make_scenario({
             "a": [(3, 4)], "b": [(1, 6), (5, 6)], "c": [(1, 9), (5, 9)],
-        }))
+        }, limit=5))
         arrive(env)
         previous = [route.goal for route in env.routes]
         arrive(env)
-        self.assertTrue(all(route.stage == 1 for route in env.routes))
-        arrive(env, next(i for i, goal in enumerate(previous) if goal != previous[0]))
         for source, route in zip(previous, env.routes):
             self.assertEqual(route.goal, (source[0], 9))
         self.assertTrue(all(route.stage == 2 for route in env.routes))
@@ -180,7 +283,7 @@ class SingleWaypointSplitTests(unittest.TestCase):
         self.assertEqual(set(controller._groups.values()), {0})
         chars[0].pos = [3, 4]
         controller._prepare_route(chars[0], {"chars": chars, "grid": scenario.grid})
-        arrive(env)
+        arrive(env, randomize=True)
         self.assertEqual([route.goal for route in env.routes],
                          [controller._routes[char.name].goal for char in chars])
         self.assertEqual(sorted(Counter(r.goal for r in env.routes).values()), [1, 2, 2])

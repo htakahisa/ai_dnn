@@ -34,7 +34,9 @@ class StuckDiagnosticsTests(unittest.TestCase):
         self.assertEqual(trial.call_args.args[1].policy, "move-first")
         self.assertIn("TIMEOUT", output.getvalue())
         self.assertIn("stage=a", output.getvalue())
-        self.assertIn("remaining=", output.getvalue())
+        self.assertIn("assigned_goals=", output.getvalue())
+        self.assertIn("arrived=", output.getvalue())
+        self.assertNotIn("remaining=", output.getvalue())
         self.assertIn("carrier=True", output.getvalue())
 
     def test_chokepoint_describes_blocker_and_available_yield(self):
@@ -47,8 +49,8 @@ class StuckDiagnosticsTests(unittest.TestCase):
         _, masks = env._collect()
         actors = snapshot(env, masks, "route", [4] * 5)
         carrier = actors[SPIKE_CARRIER_INDEX]
-        self.assertEqual(carrier["constraint"], "policy_wait")
-        self.assertIn("LEFT", carrier["allowed"])
+        self.assertEqual(carrier["constraint"], "ally_blocked")
+        self.assertEqual(carrier["allowed"], ["WAIT"])
         self.assertEqual(carrier["blockers"], [actors[3]["name"]])
         self.assertEqual(actors[3]["constraint"], "escort_holding")
         self.assertEqual(actors[3]["allowed"], ["UP"])
@@ -63,6 +65,17 @@ class StuckDiagnosticsTests(unittest.TestCase):
         tracker.update(32, snapshot(env, masks, "route", [4] * 5))
         self.assertTrue(tracker.events[0]["resolved"])
 
+    def test_snapshot_reports_assigned_goal_without_obsolete_visit_requirements(self):
+        env = training.RouteEnv(0, map_name="A1")
+        env.positions[0] = env.routes[0].goal
+        _, masks = env._collect()
+        actors = snapshot(env, masks, "route", [4] * 5)
+        self.assertTrue(actors[0]["goal_reached"])
+        for actor in actors:
+            self.assertEqual(actor["goal_reached"], actor["pos"] == actor["goal"])
+            self.assertNotIn("required_points", actor)
+            self.assertNotIn("visited_points", actor)
+
     def test_stage_change_is_reported_without_claiming_the_actor_moved(self):
         tracker = StopTracker(2)
         actor = dict(name="carrier", constraint="policy_wait", pos=[0, 0], stage="d",
@@ -73,7 +86,7 @@ class StuckDiagnosticsTests(unittest.TestCase):
         self.assertFalse(tracker.events[0]["resolved"])
         self.assertEqual(tracker.events[0]["ended_by"], "stage_changed")
 
-    def test_available_plant_is_waiting_but_plant_progress_is_not_a_stop(self):
+    def test_available_plant_is_mandatory_and_progress_is_not_a_stop(self):
         env = training.RouteEnv(0, map_name="A3")
         env.positions[SPIKE_CARRIER_INDEX] = (6, 40)
         env.routes[SPIKE_CARRIER_INDEX].set_stage(5, (6, 40), goal=(6, 40), goal_index=0)
@@ -81,7 +94,7 @@ class StuckDiagnosticsTests(unittest.TestCase):
         actors = snapshot(env, masks, "route", [4] * 5)
         carrier = actors[SPIKE_CARRIER_INDEX]
         self.assertEqual(carrier["constraint"], "policy_wait")
-        self.assertIn("PLANT", carrier["allowed"])
+        self.assertEqual(carrier["allowed"], ["PLANT"])
         tracker = StopTracker(3)
         for tick in range(1, 6):
             tracker.update(tick, [carrier])

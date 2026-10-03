@@ -1,6 +1,7 @@
 """Route observations, actions, progress, and network shared by all attacker maps."""
 
 import math
+import random
 from collections import deque
 from functools import lru_cache
 
@@ -99,7 +100,8 @@ def select_nearest_candidate(
     return point, index, distance
 
 
-def choose_split_assignment(rng, player_count=5, pattern_index=None, *, a_point_count=2):
+def choose_split_assignment(rng, player_count=5, pattern_index=None, *, a_point_count=2,
+                            balanced_only=False):
     """Send everyone to a single a-point, or sample the existing two-point split."""
     if player_count != 5:
         raise ValueError("concon_v1 route scenarios require five attackers")
@@ -108,18 +110,39 @@ def choose_split_assignment(rng, player_count=5, pattern_index=None, *, a_point_
     if a_point_count != 2:
         raise ValueError("the first waypoint a must have one or two points")
     if pattern_index is None:
-        pattern_index = rng.randrange(len(SPLIT_PATTERNS))
+        pattern_index = rng.randrange(2 if balanced_only else len(SPLIT_PATTERNS))
     if not 0 <= pattern_index < len(SPLIT_PATTERNS):
         raise ValueError("invalid split pattern index")
+    if balanced_only and pattern_index >= 2:
+        raise ValueError("uppercase waypoints require a 2:3 or 3:2 split")
     group_counts = SPLIT_PATTERNS[pattern_index]
     groups = [0] * group_counts[0] + [1] * group_counts[1]
     rng.shuffle(groups)
     return pattern_index, groups
 
 
-def _choose_action(model, observation, mask, epsilon, rng):
+def _choose_action(model, observation, mask, epsilon, rng, *, route=None, position=None):
     valid_actions = np.flatnonzero(mask)
     if rng.random() < epsilon:
+        # Unrestricted random walks rarely finish the longer A2/A3 routes
+        # within a round. Explore among the best available route moves while
+        # leaving the policy's full mask (including detours) unchanged.
+        if route is not None and position is not None and not mask[ACTION_PLANT]:
+            row, col = map(int, position)
+            if int(route.distance_map[row, col]) == 0 and mask[ACTION_WAIT]:
+                return ACTION_WAIT
+            moves = [int(action) for action in valid_actions if action < len(CARDINAL_MOVES)]
+            if moves:
+                distances = {
+                    action: int(route.distance_map[row + CARDINAL_MOVES[action][0],
+                                                  col + CARDINAL_MOVES[action][1]])
+                    for action in moves
+                }
+                reachable = [action for action in moves if distances[action] >= 0]
+                if reachable:
+                    nearest = min(distances[action] for action in reachable)
+                    valid_actions = np.asarray([action for action in reachable
+                                                if distances[action] == nearest])
         return int(rng.choice(valid_actions.tolist()))
     with torch.no_grad():
         values = model(torch.as_tensor(observation, dtype=torch.float32).unsqueeze(0))[0]
@@ -194,7 +217,7 @@ def build_action_mask(
     grid, pos, occupied_allies, is_carrier, at_plant_stage, plant_goal,
     route_distance_map=None, wait_for_other_group=False,
 ):
-    """Allow every free neighboring cell, including retreat and detours."""
+    """Allow free moves that reduce the distance to the assigned goal."""
     row, col = map(int, pos)
     occupied = {tuple(map(int, point)) for point in occupied_allies}
     mask = np.zeros(ACTION_DIM, dtype=bool)
@@ -206,6 +229,13 @@ def build_action_mask(
             and grid[next_pos] != 1
             and next_pos not in occupied
         )
+    if route_distance_map is not None:
+        current_distance = int(route_distance_map[row, col])
+        if current_distance >= 0:
+            for action, (dr, dc) in enumerate(CARDINAL_MOVES):
+                next_pos = (row + dr, col + dc)
+                if mask[action] and int(route_distance_map[next_pos]) != current_distance - 1:
+                    mask[action] = False
     mask[ACTION_WAIT] = True
     if wait_for_other_group:
         mask[:len(CARDINAL_MOVES)] = False
@@ -216,6 +246,7 @@ def build_action_mask(
     )
     if mask[ACTION_PLANT]:
         mask[:len(CARDINAL_MOVES)] = False
+        mask[ACTION_WAIT] = False
     return mask
 
 
@@ -263,6 +294,12 @@ def build_team_route_action_mask(routes, positions, alive, index, grid,
     route, pos = routes[index], tuple(positions[index])
     active = [i for i, living in enumerate(alive) if living]
     allies = [positions[i] for i in active if i != index]
+    # Planting has priority over stale retreats and waypoint yielding.
+    if index == carrier_index and route.at_plant_stage and pos == route.goal:
+        planting = build_action_mask(grid, pos, allies, True, True, route.goal)
+        if planting[ACTION_PLANT]:
+            route.yield_for = route.yield_origin = route.yield_priority_goal = None
+            return planting
     if route.at_plant_stage and index != carrier_index:
         return plant_stage_action_mask(
             grid, pos, allies, positions[carrier_index] if carrier_index is not None else None,
@@ -278,9 +315,8 @@ def build_team_route_action_mask(routes, positions, alive, index, grid,
             return _yield_path_mask(grid, pos, allies, positions[priority], routes[priority].goal)
         route.yield_for = route.yield_origin = route.yield_priority_goal = None
     waiting_at_waypoint = (
-        not route.at_plant_stage and pos == route.goal
-        and not frozenset(route.scenario.waypoint_points[route.scenario.waypoint_order[route.stage]])
-        .issubset(route.completed_goals)
+        route.stage == 0 and pos == route.goal
+        and not {routes[i].group for i in active}.issubset(completed_a_groups)
     )
     mask = build_action_mask(
         grid, pos, allies, index == carrier_index, route.at_plant_stage, route.goal,
@@ -318,36 +354,45 @@ def build_team_route_action_mask(routes, positions, alive, index, grid,
     return mask
 
 
-def _assign_next_waypoint(routes, positions, active, grid, stage, source):
-    """Assign destinations after every selected point in the current stage is visited."""
+def _random_candidate_assignments(candidates, count, rng, *, balanced_only=False):
+    """Uppercase pairs use balanced splits; lowercase pairs also allow all-in."""
+    assignments = [(point, index) for _, index, point in candidates]
+    if len(assignments) == 2:
+        left, _ = SPLIT_PATTERNS[rng.randrange(2 if balanced_only else len(SPLIT_PATTERNS))]
+        left_count = (left * count + 2) // 5
+        goals = [assignments[0]] * left_count + [assignments[1]] * (count - left_count)
+    else:
+        rng.shuffle(assignments)
+        goals = [assignments[offset % len(assignments)] for offset in range(count)]
+    rng.shuffle(goals)
+    return goals
+
+
+def _assign_next_waypoint(routes, positions, active, grid, stage, source, rng):
+    """Split from a single map point; otherwise choose the nearest goal per origin."""
     scenario = routes[active[0]].scenario
     next_marker = scenario.waypoint_order[stage + 1]
+    balanced_only = next_marker in scenario.uppercase_markers
     single_source = len(scenario.waypoint_points[scenario.waypoint_order[stage]]) == 1
-    split_sources = stage > 0 and len({routes[i].goal for i in active}) > 1
     if single_source:
         candidates = _reachable_candidates(
             grid, source, scenario.waypoint_points[next_marker],
             max_distance=scenario.max_candidate_bfs_distance,
         )
-        assignments = [(point, index) for _, index, point in candidates]
-        goals = [assignments[offset % len(assignments)] for offset in range(len(active))]
-    elif split_sources:
-        choices = {}
-        for i in active:
-            origin = routes[i].goal
-            if origin not in choices:
-                goal, index, _ = select_nearest_candidate(
-                    grid, origin, scenario.waypoint_points[next_marker],
-                    max_distance=scenario.max_candidate_bfs_distance,
-                )
-                choices[origin] = goal, index
-        goals = [choices[routes[i].goal] for i in active]
+        goals = _random_candidate_assignments(candidates, len(active), rng,
+                                              balanced_only=balanced_only)
     else:
-        goal, index, _ = select_nearest_candidate(
-            grid, source, scenario.waypoint_points[next_marker],
-            max_distance=scenario.max_candidate_bfs_distance,
-        )
-        goals = [(goal, index)] * len(active)
+        origins = {}
+        for i in active:
+            origins.setdefault(routes[i].goal, []).append(i)
+        choices = {}
+        for origin, members in origins.items():
+            goal, goal_index, _ = select_nearest_candidate(
+                grid, origin, scenario.waypoint_points[next_marker],
+                max_distance=scenario.max_candidate_bfs_distance,
+            )
+            choices.update((i, (goal, goal_index)) for i in members)
+        goals = [choices[i] for i in active]
     for i, (goal, index) in zip(active, goals):
         routes[i].set_stage(stage + 1, positions[i], grid, goal, index)
     required_goals = frozenset(goal for goal, _ in goals)
@@ -356,53 +401,46 @@ def _assign_next_waypoint(routes, positions, active, grid, stage, source):
 
 
 def advance_team_routes(routes, positions, alive, completed_a_groups,
-                        grid=None, carrier_index=SPIKE_CARRIER_INDEX):
-    """Advance after one living player has visited every map point in the stage."""
+                        grid=None, carrier_index=SPIKE_CARRIER_INDEX, rng=None):
+    """Assign next goals using team arrival and the initial a group wait."""
     active = [i for i, is_alive in enumerate(alive) if is_alive]
     if not active:
         return
+    rng = random if rng is None else rng
     scenario = routes[active[0]].scenario
     waypoint_order = scenario.waypoint_order
     grid = scenario.grid if grid is None else grid
-    stage = routes[active[0]].stage
-    if 0 <= stage < len(waypoint_order):
-        required = frozenset(scenario.waypoint_points[waypoint_order[stage]])
-        completed = frozenset().union(*(routes[i].completed_goals for i in active))
-        if stage == 0:
-            completed |= frozenset(scenario.waypoint_points["a"][group]
-                                   for group in completed_a_groups)
-        # Membership in the old split does not matter: any living actor can
-        # visit any point, and stepping aside never erases a previous visit.
-        completed |= frozenset(tuple(positions[i]) for i in active) & required
-        if stage == 0:
-            completed_a_groups.update(index for index, goal in enumerate(scenario.waypoint_points["a"])
-                                      if goal in completed)
-        for i in active:
-            routes[i].completed_goals = completed
-            routes[i].required_goals = required
-        if not required.issubset(completed):
-            # A branch may lose all its members. A surviving actor must still
-            # visit that branch rather than silently dropping its requirement.
-            uncovered = required - completed - {routes[i].goal for i in active}
-            available = [i for i in active if routes[i].goal in completed]
-            for goal in sorted(uncovered):
-                candidates = available
-                if not candidates:
-                    break
-                distances = bfs_distance_map(grid, goal)
-                reachable = [i for i in candidates if distances[tuple(positions[i])] >= 0]
-                if not reachable:
-                    continue
-                chosen = min(reachable, key=lambda i: int(distances[tuple(positions[i])]))
-                available.remove(chosen)
-                routes[chosen].set_stage(stage, positions[chosen], grid, goal,
-                                         scenario.waypoint_points[waypoint_order[stage]].index(goal))
-            return
-        source = next((tuple(positions[i]) for i in active if tuple(positions[i]) in required),
-                      sorted(required)[0])
-        next_stage = stage + 1
+    required_groups = {routes[i].group for i in active}
+    for i in active:
+        if routes[i].stage == 0 and tuple(positions[i]) == routes[i].goal:
+            completed_a_groups.add(routes[i].group)
+    if not required_groups.issubset(completed_a_groups):
+        return
+
+    if any(routes[i].stage == 0 for i in active):
+        arrived = next(
+            (i for i in active if routes[i].stage == 0
+             and tuple(positions[i]) == routes[i].goal), None
+        )
+        a_goal = (tuple(positions[arrived]) if arrived is not None else
+                  scenario.waypoint_points["a"][min(required_groups)])
+        if len(waypoint_order) > 1:
+            _assign_next_waypoint(routes, positions, active, grid, 0, a_goal, rng)
+        else:
+            for i in active:
+                if i == carrier_index:
+                    routes[i].set_stage(1, positions[i], grid)
+                else:
+                    routes[i].set_stage(1, positions[i], grid,
+                                        goal=positions[i], goal_index=0)
+
+    for i in active:
+        route = routes[i]
+        if not 1 <= route.stage < len(waypoint_order) or tuple(positions[i]) != route.goal:
+            continue
+        next_stage = route.stage + 1
         if next_stage < len(waypoint_order):
-            _assign_next_waypoint(routes, positions, active, grid, stage, source)
+            _assign_next_waypoint(routes, positions, active, grid, route.stage, positions[i], rng)
         else:
             for j in active:
                 if j == carrier_index:
@@ -410,6 +448,7 @@ def advance_team_routes(routes, positions, alive, completed_a_groups,
                 else:
                     routes[j].set_stage(next_stage, positions[j], grid,
                                         goal=positions[j], goal_index=0)
+        break
 
     for j in active:
         if routes[j].stage != len(waypoint_order):

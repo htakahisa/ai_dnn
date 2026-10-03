@@ -9,7 +9,7 @@ def _visible_enemies(game, allies):
             and any(game.check_line_of_sight(ally, enemy) for ally in allies)]
 
 
-def _impact_aim(game, caster, center, *, radius=0, require_flash_hit=None):
+def _impact_aim(game, caster, center, *, radius=0, require_flash_hit=None, flash=False):
     """Find an aim whose actual projectile endpoint reaches the desired area."""
     start = tuple(caster.pos)
     best = None
@@ -22,7 +22,7 @@ def _impact_aim(game, caster, center, *, radius=0, require_flash_hit=None):
                 continue
             impact = path[min(len(path) - 1,
                               FLASH_MAX_FLIGHT_TICKS * FLASH_SPEED_CELLS_PER_TICK)] \
-                if require_flash_hit is not None else path[-1]
+                if flash or require_flash_hit is not None else path[-1]
             distance = max(abs(impact[0] - center[0]), abs(impact[1] - center[1]))
             if distance > radius:
                 continue
@@ -35,7 +35,78 @@ def _impact_aim(game, caster, center, *, radius=0, require_flash_hit=None):
     return best[1] if best else None
 
 
-def choose_ability(char, game, *, route_goal=None):
+class FixedSmokePlan:
+    """Spend real smoke charges at each marked point at most once per round."""
+
+    def __init__(self, scenario):
+        self.scenario = scenario
+        self.reset_round()
+
+    def reset_round(self):
+        self.used_points = set()
+
+    def choose(self, char, game):
+        if (not self.scenario.smoke_points or game is None or not char.is_alive
+                or char.ability_name != "SMOKE" or not char.smoke_charges):
+            return None
+        # Confirm actual casts; rejected requests do not consume a point.
+        self.used_points.update(tuple(smoke["center"]) for smoke in game.smokes
+                                if smoke.get("team") == char.team)
+        from concon_v1.co1_attacker_common import bfs_distance_map
+
+        allies = [ally for ally in game.chars if ally.is_alive and ally.team == char.team]
+        for point in self.scenario.smoke_points:
+            if point in self.used_points:
+                continue
+            distances = bfs_distance_map(game.grid, point)
+            if any(0 <= distances[tuple(ally.pos)] <= self.scenario.smoke_trigger_bfs_distance
+                   for ally in allies):
+                return {"ability": "SMOKE", "target": point}
+        return None
+
+
+class FixedFlashPlan:
+    """Trigger a real flash only when its projectile can reach the marked cell."""
+
+    def __init__(self, scenario):
+        self.scenario = scenario
+        self.reset_round()
+
+    def reset_round(self):
+        self.used_points = set()
+        self.pending = {}
+
+    def choose(self, char, game):
+        if not self.scenario.flash_points or game is None:
+            return None
+        # Charge consumption confirms casts even after their projectiles disappear.
+        by_name = {ally.name: ally for ally in game.chars if ally.team == char.team}
+        for point, (name, charges) in list(self.pending.items()):
+            owner = by_name.get(name)
+            if owner is not None and owner.flash_charges < charges:
+                self.used_points.add(point)
+                del self.pending[point]
+        if not char.is_alive or char.ability_name != "FLASH" or not char.flash_charges:
+            return None
+        from concon_v1.co1_attacker_common import bfs_distance_map
+
+        allies = [ally for ally in game.chars if ally.is_alive and ally.team == char.team]
+        for point in self.scenario.flash_points:
+            if point in self.used_points:
+                continue
+            distances = bfs_distance_map(game.grid, point)
+            if not any(0 <= distances[tuple(ally.pos)] <= self.scenario.flash_trigger_bfs_distance
+                       for ally in allies):
+                continue
+            aim = _impact_aim(game, char, point, flash=True)
+            if aim is None:
+                continue
+            self.pending[point] = (char.name, char.flash_charges)
+            return {"ability": "FLASH", "target": aim}
+        return None
+
+
+def choose_ability(char, game, *, route_goal=None, allow_smoke=True, allow_flash=True):
     """Return a supported ability payload, using only team sight and smoke history."""
     if game is None or not char.is_alive:
         return None
@@ -49,7 +120,7 @@ def choose_ability(char, game, *, route_goal=None):
     ))
     smoke_cells = game._smoke_cells()
 
-    if char.ability_name == "SMOKE" and char.smoke_charges and visible:
+    if allow_smoke and char.ability_name == "SMOKE" and char.smoke_charges and visible:
         enemy = next((enemy for enemy in visible if tuple(enemy.pos) not in smoke_cells), None)
         if enemy is not None:
             return {"ability": "SMOKE", "target": tuple(enemy.pos)}
@@ -80,7 +151,7 @@ def choose_ability(char, game, *, route_goal=None):
             if aim is not None:
                 return {"ability": "RECON", "target": aim}
 
-    if char.ability_name == "FLASH" and char.flash_charges:
+    if allow_flash and char.ability_name == "FLASH" and char.flash_charges:
         for ally in allies:
             if ally is char:
                 continue

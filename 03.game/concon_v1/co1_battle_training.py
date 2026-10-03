@@ -60,7 +60,8 @@ class TrainingRouteController(ConconAttackerRouteController):
         index = self.env.attacker_indices[char.name]
         if self.env.forced_actions is None:
             action = _choose_action(self.model, observation, mask,
-                                    self.env.epsilon, self.env.action_rng)
+                                    self.env.epsilon, self.env.action_rng,
+                                    route=self._routes[char.name], position=char.pos)
         else:
             requested = int(self.env.forced_actions[index])
             action = requested if mask[requested] else ACTION_WAIT

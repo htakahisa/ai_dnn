@@ -1,4 +1,4 @@
-"""All waypoint branches are visited, and occupied corridors allow yielding."""
+"""Assigned waypoint arrivals advance stages, and blocked corridors allow yielding."""
 
 import unittest
 
@@ -20,28 +20,22 @@ class RouteArrivalAndYieldTests(unittest.TestCase):
         arrive(env)
         return env
 
-    def test_both_points_are_required_even_when_next_stage_has_only_one(self):
+    def test_one_assigned_arrival_advances_to_a_single_next_point(self):
         env = self.make_env()
         arrive(env, 0)
-        self.assertTrue(all(route.stage == 1 for route in env.routes))
-        self.assertEqual(env.routes[0].completed_goals, frozenset({(1, 6)}))
-        arrive(env, 1)
         self.assertTrue(all(route.stage == 2 and route.goal == (3, 9) for route in env.routes))
 
-    def test_unassigned_point_is_not_skipped_when_initial_candidate_was_out_of_range(self):
+    def test_unassigned_out_of_range_point_is_not_reassigned_within_stage(self):
         env = RouteEnv(0, map_name=make_scenario({
             "a": [(3, 4)], "b": [(3, 6), (3, 18)], "c": [(3, 12)],
         }, limit=7))
         arrive(env)
         self.assertTrue(all(route.goal == (3, 6) for route in env.routes))
         arrive(env)
-        self.assertTrue(all(route.stage == 1 for route in env.routes))
-        self.assertTrue(any(route.goal == (3, 18) for route in env.routes))
-        env.positions[0] = (3, 18)
-        env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 2 for route in env.routes))
+        self.assertTrue(all(route.goal == (3, 12) for route in env.routes))
 
-    def test_any_actor_can_visit_either_point_and_departure_preserves_arrival(self):
+    def test_opposite_unassigned_point_does_not_count_as_goal_arrival(self):
         env = self.make_env()
         # Visit the opposite branch, with neither assigned member arriving.
         env.positions[0] = (5, 6)
@@ -49,35 +43,28 @@ class RouteArrivalAndYieldTests(unittest.TestCase):
         self.assertTrue(all(route.stage == 1 for route in env.routes))
         env.positions[0] = (3, 7)
         env._advance_routes_if_reached()
-        self.assertEqual(env.routes[0].completed_goals, frozenset({(5, 6)}))
+        self.assertTrue(all(route.stage == 1 for route in env.routes))
+        self.assertEqual(env.routes[0].goal, (1, 6))
         env.positions[1] = (1, 6)
         env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 2 for route in env.routes))
 
-    def test_both_d_and_both_e_are_required_before_planting(self):
+    def test_each_marker_stage_is_visited_in_order_before_planting(self):
         env = self.make_env()
         arrive(env, 0)
-        arrive(env, 1)
         arrive(env, 4)  # One actor visits the single c point.
         self.assertTrue(all(route.stage == 3 for route in env.routes))
         arrive(env, 0)
-        self.assertTrue(all(route.stage == 3 for route in env.routes))
-        arrive(env, 1)
         self.assertTrue(all(route.stage == 4 for route in env.routes))
         arrive(env, 0)
-        self.assertFalse(any(route.at_plant_stage for route in env.routes))
-        arrive(env, 1)
         self.assertTrue(all(route.at_plant_stage for route in env.routes))
 
-    def test_remaining_actor_visits_branch_whose_members_died(self):
+    def test_remaining_actor_advances_without_revisiting_eliminated_branch(self):
         env = self.make_env()
         env.alive = [True, False, False, False, False]
         arrive(env, 0)
-        self.assertEqual(env.routes[0].stage, 1)
-        self.assertEqual(env.routes[0].goal, (5, 6))
-        self.assertEqual(env.routes[0].required_goals, frozenset({(1, 6), (5, 6)}))
-        arrive(env, 0)
         self.assertEqual(env.routes[0].stage, 2)
+        self.assertEqual(env.routes[0].goal, (3, 9))
 
     def test_pasted_head_on_block_has_an_actual_yield_move(self):
         env = RouteEnv(0, map_name="A3")

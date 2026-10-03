@@ -136,6 +136,33 @@ class BestSelectionTests(unittest.TestCase):
             self.assertEqual(best["evaluation"], candidates[-1])
             self.assertEqual(best["success_rate"], 1.0)  # Training score is separate.
 
+    def test_force_save_keeps_numbered_models_at_every_checkpoint_interval(self):
+        for enabled in (False, True):
+            with (self.subTest(force_save=enabled),
+                  tempfile.TemporaryDirectory() as directory,
+                  patch.object(battle_module, "BattleRouteEnv", return_value=finished_training_env()),
+                  patch.object(training, "CHECKPOINT_INTERVAL", 3),
+                  patch.object(training, "evaluate_checkpoint", return_value=metrics(0.7, 0.6)) as evaluate,
+                  contextlib.redirect_stdout(io.StringIO())):
+                training.train(episodes=10, save_dir=directory, force_save=enabled)
+                debug_paths = sorted(Path(directory).glob("co1_attacker_A1_episode_*.pt"))
+                self.assertEqual(len(debug_paths), 4 if enabled else 0)
+                for episode in (3, 6, 9, 10) if enabled else ():
+                    debug = torch.load(
+                        Path(directory) / f"co1_attacker_A1_episode_{episode}.pt",
+                        weights_only=False)
+                    self.assertEqual(debug["episode"], episode)
+                    if episode < 7:
+                        self.assertGreater(debug["epsilon"], training.EPSILON_END)
+                    self.assertIsNone(debug["evaluation"])
+                    self.assertIn("model_state_dict", debug)
+                # Debug saving does not add greedy evaluations or replace latest/best.
+                self.assertEqual(evaluate.call_count, 2)
+                for kind in ("latest", "best"):
+                    checkpoint = torch.load(
+                        Path(directory) / f"co1_attacker_A1_{kind}.pt", weights_only=False)
+                    self.assertEqual(checkpoint["episode"], 10)
+
     def test_existing_best_is_re_evaluated_once_and_kept_if_candidates_are_weaker(self):
         with tempfile.TemporaryDirectory() as directory:
             best_path = Path(directory) / "co1_attacker_A1_best.pt"

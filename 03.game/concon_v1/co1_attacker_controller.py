@@ -8,6 +8,8 @@ from concon_v1.co1_learn_attacker import (
 )
 from concon_v1.co1_attacker_retrieve import ConconAttackerRetrieveController
 from concon_v1.co1_attacker_sighting import TeamEnemySightings
+from concon_v1.co1_attacker_abilities import FixedSmokePlan, FixedFlashPlan
+from concon_v1.co1_attacker_scenarios import get_scenario
 
 
 class ConconAttackerController(BaseController):
@@ -22,6 +24,11 @@ class ConconAttackerController(BaseController):
         self.retrieve_controller = ConconAttackerRetrieveController()
         self.default_controller = DefaultAttackerController()
         self.enemy_sightings = TeamEnemySightings()
+        scenario = getattr(self.route_controller, "scenario", get_scenario(map_name))
+        self.fixed_smokes = FixedSmokePlan(scenario)
+        self.fixed_flashes = FixedFlashPlan(scenario)
+        self.retrieve_controller.allow_smoke = not scenario.smoke_points
+        self.retrieve_controller.allow_flash = not scenario.flash_points
 
     def set_game(self, game):
         self.game = game
@@ -33,8 +40,17 @@ class ConconAttackerController(BaseController):
         self.retrieve_controller.reset_round()
         self.default_controller.reset_round()
         self.enemy_sightings.reset_round()
+        self.fixed_smokes.reset_round()
+        self.fixed_flashes.reset_round()
 
     def decide_move(self, char, game_state):
+        if not game_state.get("is_planted"):
+            smoke = self.fixed_smokes.choose(char, getattr(self, "game", None))
+            if smoke is not None:
+                return list(char.pos), smoke
+            flash = self.fixed_flashes.choose(char, getattr(self, "game", None))
+            if flash is not None:
+                return list(char.pos), flash
         chars = game_state.get("chars", [])
         tick = int(game_state.get("battle_tick", 0))
         self.enemy_sightings.observe(

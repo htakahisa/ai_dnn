@@ -47,7 +47,9 @@ class ConconAttackerRetrieveController(BaseController):
             return list(char.pos), {"facing": facing}
 
         # Reuse the carry phase's team-sighting and projectile targeting rules.
-        ability = choose_ability(char, game, route_goal=tuple(spike_pos))
+        ability = choose_ability(char, game, route_goal=tuple(spike_pos),
+                                 allow_smoke=getattr(self, "allow_smoke", True),
+                                 allow_flash=getattr(self, "allow_flash", True))
         if ability is not None:
             return list(char.pos), ability
 

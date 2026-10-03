@@ -78,6 +78,10 @@ FNATIC_V2_ATTACKER_MODEL_PATH = (
 )
 FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 
+# ConCon attacker: change this to "A1", "A2", or "A3".
+# Use the selected map's best checkpoint, or latest if best is unavailable.
+CONCON_ATTACKER_MAP = "A1"
+
 
 def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
@@ -85,9 +89,16 @@ def _build_team_ai(key):
     if normalized in {"concon_v1", "concon_attacker_a1"}:
         from concon_v1.co1_attacker_controller import ConconAttackerController
         from concon_v1.co1_defender_controller import ConconDefenderController
+        from concon_v1.co1_attacker_scenarios import get_scenario
+        scenario = get_scenario(CONCON_ATTACKER_MAP)
+        model_path = scenario.model_path
+        if not model_path.is_file():
+            model_path = scenario.save_dir / scenario.checkpoint_filename("latest")
         return DualRoleTeamAI(
-            name="ConCon v1 A1",
-            attacker_factory=ConconAttackerController,
+            name=f"ConCon v1 {scenario.map_name}",
+            attacker_factory=lambda: ConconAttackerController(
+                map_name=scenario.map_name, model_path=model_path,
+            ),
             defender_factory=ConconDefenderController,
         )
 

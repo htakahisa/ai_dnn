@@ -34,12 +34,13 @@ from concon_v1.co1_attacker_scenarios import (
 
 TARGET_UPDATE_INTERVAL = 1000
 
-DEFAULT_EPISODES = 2000
+DEFAULT_EPISODES = 1000
 CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
 DEFAULT_EVAL_ROUNDS = 20  # 探索なし評価の各相手teamとの試合数
 EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
+FORCE_SAVE = True  # Keep numbered debug models at every checkpoint interval.
 
 
 def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
@@ -59,6 +60,7 @@ class RouteEnv:
     def reset(self):
         self.pattern_index, groups = choose_split_assignment(
             self.rng, a_point_count=len(self.scenario.waypoint_points["a"]),
+            balanced_only="a" in self.scenario.uppercase_markers,
         )
         self.positions = list(self.scenario.attacker_spawns)
         self.routes = [
@@ -89,7 +91,8 @@ class RouteEnv:
         return observations, masks
 
     def _advance_routes_if_reached(self):
-        advance_team_routes(self.routes, self.positions, self.alive, self._a_completed_groups)
+        advance_team_routes(self.routes, self.positions, self.alive, self._a_completed_groups,
+                            rng=self.rng)
 
     def step(self, actions):
         observations, masks = self._collect()
@@ -187,6 +190,34 @@ def format_team_plants(summary):
     return " ".join(parts)
 
 
+def summarize_team_rounds(opponents, results):
+    """Aggregate elapsed ticks and actual timeouts separately for each opponent."""
+    summary = {name: {"episodes": 0, "ticks": 0, "timeouts": 0}
+               for name in dict.fromkeys(opponents)}
+    for name, ticks, timed_out in results:
+        counts = summary[name]
+        counts["episodes"] += 1
+        counts["ticks"] += ticks
+        counts["timeouts"] += int(timed_out)
+    for counts in summary.values():
+        counts["avg_ticks"] = (counts["ticks"] / counts["episodes"]
+                               if counts["episodes"] else None)
+    return summary
+
+
+def format_team_round_metric(summary, recent_summary, metric):
+    def format_value(value):
+        if value is None:
+            return "-"
+        return f"{value:.2f}" if metric == "avg_ticks" else str(value)
+
+    return " ".join(
+        f"{name}={format_value(counts[metric])}"
+        f"(recent100={format_value(recent_summary[name][metric])})"
+        for name, counts in summary.items()
+    )
+
+
 def evaluate_checkpoint(checkpoint, rounds=DEFAULT_EVAL_ROUNDS, seed=0):
     """Evaluate frozen weights greedily without changing training RNG streams."""
     if rounds < 1:
@@ -259,7 +290,8 @@ def qualifies_as_best(evaluation, best_evaluation):
 
 
 def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
-          mode="battle", opponents=None, eval_rounds=DEFAULT_EVAL_ROUNDS, map_name="A1"):
+          mode="battle", opponents=None, eval_rounds=DEFAULT_EVAL_ROUNDS, map_name="A1",
+          force_save=FORCE_SAVE):
     if eval_rounds < 1:
         raise ValueError("evaluation rounds must be positive")
     scenario = get_scenario(map_name)
@@ -282,11 +314,17 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
         raise ValueError("mode must be 'battle' or 'route'")
     global_step = 0
     recent_success = deque(maxlen=100)
+    recent_ticks = deque(maxlen=100)
+    recent_timeouts = deque(maxlen=100)
     recent_drops = deque(maxlen=100)
     recent_recoveries = deque(maxlen=100)
     total_plants = 0
+    total_ticks = 0
+    total_timeouts = 0
     team_results = []
     recent_team_results = deque(maxlen=100)
+    team_round_results = []
+    recent_team_round_results = deque(maxlen=100)
     best_evaluation = None
     checked_existing_best = False
     started = time.perf_counter()
@@ -302,7 +340,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 actions = env.actions
             else:
                 actions = [
-                    _choose_action(model, observations[index], masks[index], epsilon, rng)
+                    _choose_action(model, observations[index], masks[index], epsilon, rng,
+                                   route=env.routes[index], position=env.positions[index])
                     for index in range(len(observations))
                 ]
                 transition = env.step(actions)
@@ -330,10 +369,21 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
         planted = bool(env.success)
         total_plants += int(planted)
         recent_success.append(float(planted))
+        total_ticks += env.elapsed_ticks
+        recent_ticks.append(env.elapsed_ticks)
+        timed_out = not planted and (
+            env.game.round_over and env.game.round_timer <= 0
+            if mode == "battle" else env.elapsed_ticks >= MAX_TICKS
+        )
+        total_timeouts += int(timed_out)
+        recent_timeouts.append(int(timed_out))
         if mode == "battle":
             result = (env.opponent, planted)
             team_results.append(result)
             recent_team_results.append(result)
+            round_result = (env.opponent, env.elapsed_ticks, timed_out)
+            team_round_results.append(round_result)
+            recent_team_round_results.append(round_result)
             recent_drops.append(int(env.had_spike_drop))
             recent_recoveries.append(int(env.spike_recovered))
         success_rate = sum(recent_success) / len(recent_success)
@@ -353,6 +403,17 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                     summarize_team_plants(env.opponents, team_results)))
                 print("  team100 " + format_team_plants(
                     summarize_team_plants(env.opponents, recent_team_results)))
+                round_summary = summarize_team_rounds(env.opponents, team_round_results)
+                recent_round_summary = summarize_team_rounds(env.opponents, recent_team_round_results)
+                print("  team_avg_ticks " + format_team_round_metric(
+                    round_summary, recent_round_summary, "avg_ticks"))
+                print("  team_timeouts " + format_team_round_metric(
+                    round_summary, recent_round_summary, "timeouts"))
+            else:
+                print(f"  avg_ticks_total={total_ticks / episode:.2f}"
+                      f" avg_ticks100={sum(recent_ticks) / len(recent_ticks):.2f}")
+                print(f"  timeout_total={total_timeouts}"
+                      f" timeout100={sum(recent_timeouts)}")
         if episode % CHECKPOINT_INTERVAL == 0 or episode == episodes:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
@@ -389,9 +450,22 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                     summarize_team_plants(env.opponents, recent_team_results)
                     if mode == "battle" else {}
                 ),
+                "team_round_total": (
+                    summarize_team_rounds(env.opponents, team_round_results)
+                    if mode == "battle" else {}
+                ),
+                "team_round100": (
+                    summarize_team_rounds(env.opponents, recent_team_round_results)
+                    if mode == "battle" else {}
+                ),
             }
             if scenario.map_name == "A1":
                 checkpoint["left_plant_cells"] = scenario.plant_cells
+            if force_save:
+                debug_path = save_dir / f"co1_attacker_{scenario.map_name}_episode_{episode}.pt"
+                torch.save(checkpoint, debug_path)
+                print(f"Force-saved debug model at episode {episode} "
+                      f"epsilon={epsilon:.3f}: {debug_path}", flush=True)
             if epsilon <= EPSILON_END:
                 best_path = save_dir / scenario.checkpoint_filename("best")
                 if not checked_existing_best:
@@ -440,6 +514,8 @@ def main():
     parser.add_argument("--eval-rounds", type=int, default=DEFAULT_EVAL_ROUNDS,
                         help="greedy evaluation games per opponent after epsilon reaches its floor")
     parser.add_argument("--save-dir", type=Path, help="override the selected map's model directory")
+    parser.add_argument("--force-save", action="store_true", default=FORCE_SAVE,
+                        help="keep numbered debug models at every checkpoint interval regardless of epsilon")
     parser.add_argument("--mode", choices=("battle", "route"), default="battle")
     parser.add_argument("--opponents", nargs="+", choices=(
         "omoko_v1", "touyama_v2", "fnatic_v3", "gc_v1", "toru_ai_v3.1",
@@ -448,7 +524,7 @@ def main():
     if args.eval_rounds < 1:
         parser.error("--eval-rounds must be positive")
     train(args.episodes, args.save_dir, args.seed, args.mode, args.opponents, args.eval_rounds,
-          map_name=args.map_name)
+          map_name=args.map_name, force_save=args.force_save)
 
 
 if __name__ == "__main__":

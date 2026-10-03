@@ -1,4 +1,5 @@
 import unittest
+import random
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -31,6 +32,7 @@ class ASynchronizationTests(unittest.TestCase):
         ]
         self.groups = [0, 0, 1, 1, 1]
         self.controller = ConconAttackerRouteController.__new__(ConconAttackerRouteController)
+        self.controller.rng = random.Random(0)
         self.controller._pattern_index = 0
         self.controller._groups = {c.name: group for c, group in zip(self.chars, self.groups)}
         self.controller._routes = {
@@ -53,27 +55,21 @@ class ASynchronizationTests(unittest.TestCase):
         self.controller.decide_move(second, self.state)
         self.assertTrue(all(route.stage == 1 for route in self.controller._routes.values()))
 
-    def test_survivors_must_visit_the_other_a_even_if_its_group_is_eliminated(self):
+    def test_survivors_advance_without_visiting_eliminated_groups_a(self):
         first = self.chars[0]
         first.pos = WAYPOINT_POINTS["a"][0]
         for char in self.chars[2:]:
             char.is_alive = False
         self.controller.decide_move(first, self.state)
-        self.assertTrue(all(self.controller._routes[c.name].stage == 0 for c in self.chars[:2]))
-        first.pos = WAYPOINT_POINTS["a"][1]
-        self.controller.decide_move(first, self.state)
         self.assertTrue(all(self.controller._routes[c.name].stage == 1
                             for c in self.chars[:2]))
 
-    def test_training_survivors_visit_the_other_a_when_its_group_is_eliminated(self):
+    def test_training_survivors_advance_without_visiting_eliminated_groups_a(self):
         env = RouteEnv(seed=1)
         env.routes = [RouteProgress(group, 0, pos)
                       for group, pos in zip(self.groups, env.positions)]
         env.alive = [True, True, False, False, False]
         env.positions[0] = WAYPOINT_POINTS["a"][0]
-        env._advance_routes_if_reached()
-        self.assertTrue(all(env.routes[i].stage == 0 for i in (0, 1)))
-        env.positions[0] = WAYPOINT_POINTS["a"][1]
         env._advance_routes_if_reached()
         self.assertTrue(all(env.routes[i].stage == 1 for i in (0, 1)))
 
@@ -112,14 +108,14 @@ class ASynchronizationTests(unittest.TestCase):
         self.assertFalse(any(mask[ACTION_PLANT] for i, mask in enumerate(masks)
                              if i != SPIKE_CARRIER_INDEX))
 
-    def test_route_mask_allows_retreat_and_detours(self):
+    def test_route_mask_only_allows_progress_toward_goal(self):
         grid = np.zeros((3, 3), dtype=np.int32)
         distances = bfs_distance_map(grid, (0, 0))
         mask = build_action_mask(grid, (1, 1), [], False, False, (0, 0), distances)
         self.assertTrue(mask[0])
         self.assertTrue(mask[2])
-        self.assertTrue(mask[1])
-        self.assertTrue(mask[3])
+        self.assertFalse(mask[1])
+        self.assertFalse(mask[3])
 
     def test_only_carrier_heads_to_plant_after_d(self):
         env = RouteEnv(seed=1)
@@ -127,9 +123,6 @@ class ASynchronizationTests(unittest.TestCase):
             route.set_stage(3, env.positions[i], goal=WAYPOINT_POINTS["d"][1], goal_index=1)
         env.positions[0] = WAYPOINT_POINTS["d"][1]
         env._a_completed_groups = {0, 1}
-        env._advance_routes_if_reached()
-        self.assertTrue(all(route.stage == 3 for route in env.routes))
-        env.positions[0] = WAYPOINT_POINTS["d"][0]
         env._advance_routes_if_reached()
         self.assertTrue(all(route.stage == 4 for route in env.routes))
         self.assertIn(env.routes[SPIKE_CARRIER_INDEX].goal, LEFT_PLANT_CELLS)
@@ -143,6 +136,30 @@ class ASynchronizationTests(unittest.TestCase):
         mask = plant_stage_action_mask(grid, (0, 2), [(0, 3)], (0, 3), (0, 0))
         self.assertTrue(mask[1])
         self.assertFalse(mask[4])
+
+    def test_default_contact_stop_ends_after_two_ticks_with_enemy_still_visible(self):
+        from concon_v1.co1_learn_attacker import ENEMY_SIGHT_STOP_TICKS
+        self.assertEqual(ENEMY_SIGHT_STOP_TICKS, 2)
+        shooter = self.chars[0]
+        self.state["chars"].append(SimpleNamespace(
+            name="D0", team="D", pos=(22, 18), is_alive=True, hp=100))
+        self.controller.set_game(SimpleNamespace(
+            check_shot_line_of_sight=lambda *_: True,
+            check_line_of_sight=lambda *_: True,
+        ))
+        # Isolate the enemy-sighting timer from ability activation.
+        with patch("concon_v1.co1_learn_attacker.choose_ability", return_value=None), \
+                patch.object(self.controller, "_choose_policy_action", return_value=4) as policy:
+            for tick in (10, 11):
+                self.state["battle_tick"] = tick
+                result = self.controller.decide_move(shooter, self.state)
+                self.assertEqual(result[0], list(shooter.pos))
+                self.assertIn("facing", result[1])
+                policy.assert_not_called()
+            for tick in (12, 13, 14):
+                self.state["battle_tick"] = tick
+                self.controller.decide_move(shooter, self.state)
+                self.assertEqual(policy.call_count, tick - 11)
 
     @patch("concon_v1.co1_learn_attacker.ENEMY_SIGHT_STOP_TICKS", 3)
     def test_visible_enemy_stops_route_and_faces_for_automatic_fire(self):

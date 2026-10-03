@@ -70,7 +70,7 @@ class VariableWaypointTests(unittest.TestCase):
         self.assertEqual(tuple(parse_strategy_points("abc\n000", "abc")), tuple("abc"))
         self.assertEqual(tuple(parse_strategy_points("abcde", "abcde")), tuple("abcde"))
         for text, order in (("abcd", "abc"), ("abcd", "abcde"), ("abc", "aac"),
-                            ("abc", "bca"), ("abc", "aBc"), ("abc", "")):
+                            ("abc", "bca"), ("abc", "aAbc"), ("abc", "")):
             with self.subTest(text=text, order=order), self.assertRaises(ValueError):
                 parse_strategy_points(text, order)
 

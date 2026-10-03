@@ -9,10 +9,29 @@ from concon_v1.co1_battle_training import OPPONENTS, BattleRouteEnv, plant_advan
 from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_train_attacker import (
     ACTION_WAIT, MAX_TICKS, PLANT_REQUIRED_TICKS, format_team_plants, summarize_team_plants,
+    format_team_round_metric, summarize_team_rounds,
 )
 
 
 class BattleTrainingTests(unittest.TestCase):
+    def test_team_round_metrics_use_each_opponents_round_count(self):
+        opponents = ("omoko_v1", "gc_v1", "fnatic_v3")
+        results = [("omoko_v1", 40, False), ("gc_v1", 100, True),
+                   ("omoko_v1", 80, False)]
+        summary = summarize_team_rounds(opponents, results)
+        recent = summarize_team_rounds(opponents, results[-2:])
+        self.assertEqual(summary["omoko_v1"]["avg_ticks"], 60)
+        self.assertEqual(summary["omoko_v1"]["timeouts"], 0)
+        self.assertEqual(summary["gc_v1"]["avg_ticks"], 100)
+        self.assertEqual(summary["gc_v1"]["timeouts"], 1)
+        self.assertIsNone(summary["fnatic_v3"]["avg_ticks"])
+        self.assertIn("omoko_v1=60.00(recent100=80.00)",
+                      format_team_round_metric(summary, recent, "avg_ticks"))
+        self.assertIn("fnatic_v3=-(recent100=-)",
+                      format_team_round_metric(summary, recent, "avg_ticks"))
+        self.assertIn("gc_v1=1(recent100=1)",
+                      format_team_round_metric(summary, recent, "timeouts"))
+
     def test_team_plant_rates_use_each_opponents_played_episode_count(self):
         summary = summarize_team_plants(
             ("omoko_v1", "gc_v1", "fnatic_v3"),

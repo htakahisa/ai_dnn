@@ -50,7 +50,8 @@ def _sees_enemy(char, chars, grid, game):
 
 
 def preplant_contact_action(char, game_state, game, route_goal,
-                            last_enemy_seen_tick, enemy_was_visible):
+                            last_enemy_seen_tick, enemy_was_visible, *, allow_smoke=True,
+                            allow_flash=True):
     """Use the same perceived contact behavior in training and inference."""
     chars = game_state.get("chars", [])
     grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
@@ -69,7 +70,8 @@ def preplant_contact_action(char, game_state, game, route_goal,
             return list(char.pos), {"facing": facing}
         return list(char.pos)
     last_enemy_seen_tick.pop(char.name, None)
-    ability = choose_ability(char, game, route_goal=route_goal)
+    ability = choose_ability(char, game, route_goal=route_goal, allow_smoke=allow_smoke,
+                             allow_flash=allow_flash)
     if ability is not None:
         return list(char.pos), ability
     return None
@@ -132,6 +134,7 @@ class ConconAttackerRouteController:
             raise ValueError("ConCon requires the Gorigons attacker roster in preset order")
         self._pattern_index, groups = choose_split_assignment(
             self.rng, len(attackers), a_point_count=len(self.scenario.waypoint_points["a"]),
+            balanced_only="a" in self.scenario.uppercase_markers,
         )
         self._groups = {char.name: group for char, group in zip(attackers, groups)}
         self._routes = {
@@ -157,7 +160,7 @@ class ConconAttackerRouteController:
         advance_team_routes(
             [self._routes[other.name] for other in attackers],
             [tuple(map(int, other.pos)) for other in attackers],
-            alive, self._a_completed_groups, grid, carrier_index,
+            alive, self._a_completed_groups, grid, carrier_index, rng=self.rng,
         )
         return route
 
@@ -205,9 +208,13 @@ class ConconAttackerRouteController:
         position = tuple(map(int, char.pos))
         planting = char.has_spike and route.at_plant_stage and position == route.goal
         if not planting:
+            contact_options = {"allow_smoke": False} if self.scenario.smoke_points else {}
+            if self.scenario.flash_points:
+                contact_options["allow_flash"] = False
             contact = preplant_contact_action(
                 char, game_state, getattr(self, "game", None), route.goal,
                 self._last_enemy_seen_tick, self._enemy_was_visible,
+                **contact_options,
             )
             if contact is not None:
                 return contact

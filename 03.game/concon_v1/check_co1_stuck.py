@@ -95,8 +95,7 @@ def snapshot(env, masks, mode, actions):
                        "carrier": index in carriers, "pos": list(pos), "stage": marker,
                        "goal": list(route.goal), "distance": distance, "allowed": allowed,
                        "constraint": constraint, "blockers": blockers, "neighbors": neighbors,
-                       "required_points": [list(point) for point in sorted(route.required_goals)],
-                       "visited_points": [list(point) for point in sorted(route.completed_goals)],
+                       "goal_reached": distance == 0,
                        "plant_progress": int(env.attackers[index].plant_timer) if mode == "battle"
                        else env.plant_progress if index in carriers else 0})
     return actors
@@ -182,8 +181,9 @@ def run_trial(scenario, args, seed, model, opponent=None):
             if args.mode == "battle" and args.policy == "model":
                 actions = None  # Production decide_move draws the actions once.
             elif args.policy == "model":
-                actions = [_choose_action(model, obs, mask, args.epsilon, rng)
-                           for obs, mask in zip(observations, masks)]
+                actions = [_choose_action(model, obs, mask, args.epsilon, rng,
+                                          route=route, position=pos)
+                           for obs, mask, route, pos in zip(observations, masks, env.routes, env.positions)]
             elif args.policy == "move-first":
                 actions = []
                 for pos, route, mask in zip(env.positions, env.routes, masks):
@@ -244,8 +244,6 @@ def print_event(event):
     print(f"    {actor['name']} carrier={actor['carrier']} pos={actor['pos']} "
           f"stage={actor['stage']} goal={actor['goal']} distance={actor['distance']} "
           f"allowed={','.join(actor['allowed'])} blockers={actor['blockers']}")
-    if actor["required_points"]:
-        print(f"    visited={actor['visited_points']} required={actor['required_points']}")
     for blocker in actor["blockers"]:
         ally = next(a for a in event["actors"] if a["name"] == blocker)
         print(f"    blocker {ally['name']} pos={ally['pos']} stage={ally['stage']} "
@@ -258,9 +256,9 @@ def print_timeout(result):
     actors = [actor for actor in result["final"] if actor["alive"]]
     for stage in dict.fromkeys(actor["stage"] for actor in actors):
         stage_actors = [actor for actor in actors if actor["stage"] == stage]
-        required = {tuple(point) for actor in stage_actors for point in actor["required_points"]}
-        visited = {tuple(point) for actor in stage_actors for point in actor["visited_points"]}
-        print(f"    stage={stage} visited={sorted(visited)} remaining={sorted(required - visited)}")
+        goals = {tuple(actor["goal"]) for actor in stage_actors}
+        arrived = [actor["name"] for actor in stage_actors if actor["goal_reached"]]
+        print(f"    stage={stage} assigned_goals={sorted(goals)} arrived={arrived}")
     for actor in actors:
         print(f"    {actor['name']} carrier={actor['carrier']} pos={actor['pos']} "
               f"stage={actor['stage']} goal={actor['goal']} distance={actor['distance']} "
@@ -302,7 +300,8 @@ def main():
         print(f"map={map_name} mode={args.mode} policy={args.policy} "
               f"rounds={args.rounds} max_ticks={args.max_ticks} stuck_ticks={args.stuck_ticks}", flush=True)
         if args.policy == "random":
-            print("  INFO random includes retreat and detours; timeouts alone do not establish blocking.")
+            print("  INFO random samples allowed moves and WAIT; ordinary moves reduce goal distance, "
+                  "with separate yielding moves. Timeouts alone do not establish blocking.")
         if metadata:
             print(f"  model={metadata['path']} episode={metadata['episode']} epsilon={args.epsilon}")
         for check in checks:
