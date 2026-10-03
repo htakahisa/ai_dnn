@@ -1,6 +1,7 @@
 """Fnatic-owned plant patterns and corresponding post-plant positions."""
 
 from collections import deque
+from functools import lru_cache
 
 import numpy as np
 
@@ -26,6 +27,20 @@ def parse_grid(text):
 
 def distances(start, grid, blocked=()):
     """Walking distances with optional occupied-cell exclusions."""
+    walls = (grid == 1).tobytes()
+    blocked = frozenset(blocked) - {start}
+    # Return a fresh dictionary so a caller cannot alter a later AI decision.
+    return _cached_distances(start, grid.shape, walls, blocked).copy()
+
+
+@lru_cache(maxsize=1024)
+def _cached_distances(start, shape, walls, blocked):
+    grid = np.frombuffer(walls, dtype=np.bool_).reshape(shape)
+    return _walking_distances(start, grid, blocked)
+
+
+def _walking_distances(start, grid, blocked=()):
+    """Uncached BFS, also used when comparing optimized and original matches."""
     result = {start: 0}
     blocked = set(blocked) - {start}
     queue = deque([start])

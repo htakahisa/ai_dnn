@@ -7,6 +7,7 @@ five focused modules beside it.
 import random
 import tkinter as tk
 from pathlib import Path
+from simulation_runtime import match_inference_device
 import numpy as np
 
 
@@ -93,9 +94,9 @@ def _build_team_ai(key):
         return DualRoleTeamAI(
             name="FRC v1" + (" (baseline)" if mode == "baseline" else ""),
             attacker_factory=lambda: FrcAttackerController(
-                mode=mode, checkpoint=FRC_V1_ATTACKER_CHECKPOINT if mode == "learned" else None),
+                mode=mode, checkpoint=FRC_V1_ATTACKER_CHECKPOINT if mode == "learned" else None, inference_only=True),
             defender_factory=lambda: FrcDefenderController(
-                mode=mode, checkpoint=FRC_V1_DEFENDER_CHECKPOINT if mode == "learned" else None),
+                mode=mode, checkpoint=FRC_V1_DEFENDER_CHECKPOINT if mode == "learned" else None, inference_only=True),
         )
 
     if normalized in {"fnatic_v3", "fnatic v3"}:
@@ -146,8 +147,8 @@ def _build_team_ai(key):
     if normalized == "toru_ai_v3.1":
         return DualRoleTeamAI(
             name="Toru AI v3.1",
-            attacker_factory=lambda: MultiRoleAttackerController(),
-            defender_factory=lambda: MultiRoleDefenderController(),
+            attacker_factory=lambda: MultiRoleAttackerController(device=match_inference_device()),
+            defender_factory=lambda: MultiRoleDefenderController(device=match_inference_device()),
         )
 
     if normalized == "touyama_gaming_v1":

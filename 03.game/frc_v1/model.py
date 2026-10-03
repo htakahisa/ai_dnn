@@ -30,18 +30,21 @@ class FrcActorCritic(nn.Module):
             nn.Linear(128, len(KINDS) + 8 + 2 * self.cells)) for _ in range(5))
         self.critic = nn.Sequential(nn.Linear(128 + CRITIC_SIZE, 128), nn.ReLU(), nn.Linear(128, 1))
 
-    def features(self, observations):
+    def features(self, observations, *, runtime=False):
         device = next(self.parameters()).device
         def tensor(values, dtype=torch.float32):
             return torch.as_tensor(np.stack(values), dtype=dtype, device=device)
         grid = tensor([o.grid for o in observations])
         vector = tensor([o.vector for o in observations])
-        tokens = self.token_encoder(tensor([o.tokens for o in observations]))
-        presence = tensor([o.token_mask for o in observations]).unsqueeze(-1)
-        tokens = (tokens * presence).sum(1) / presence.sum(1).clamp(min=1)
+        if runtime and not any(o.token_mask.any() for o in observations):
+            tokens = torch.zeros((len(observations), 48), dtype=grid.dtype, device=device)
+        else:
+            tokens = self.token_encoder(tensor([o.tokens for o in observations]))
+            presence = tensor([o.token_mask for o in observations]).unsqueeze(-1)
+            tokens = (tokens * presence).sum(1) / presence.sum(1).clamp(min=1)
         return self.encoder(torch.cat((self.grid_encoder(grid), vector, tokens), dim=1))
 
-    def distribution(self, observations, *, records=None, deterministic=False, critic=None):
+    def distribution(self, observations, *, records=None, deterministic=False, critic=None, collect_statistics=True):
         feature = self.features(observations)
         device, batch = feature.device, len(observations)
         log_prob = torch.zeros(batch, device=device)
@@ -49,14 +52,23 @@ class FrcActorCritic(nn.Module):
 
         def draw(logits, mask, fixed=None):
             nonlocal log_prob, entropy
+            if deterministic and not collect_statistics and device.type == "cpu":
+                legal = np.asarray(mask, dtype=bool)
+                if not legal.any(axis=1).all():
+                    raise ValueError("empty FRC action mask")
+                chosen = (np.asarray(fixed, dtype=np.int64) if fixed is not None else
+                          np.where(legal, logits.detach().numpy(), -1e9).argmax(axis=1))
+                return torch.from_numpy(chosen)
             mask = torch.as_tensor(mask, dtype=torch.bool, device=device)
             if not mask.any(dim=1).all():
                 raise ValueError("empty FRC action mask")
-            dist = Categorical(logits=logits.masked_fill(~mask, -1e9))
+            masked = logits.masked_fill(~mask, -1e9)
+            dist = Categorical(logits=masked) if collect_statistics or not deterministic else None
             chosen = (torch.as_tensor(fixed, dtype=torch.long, device=device) if fixed is not None else
-                      logits.masked_fill(~mask, -1e9).argmax(1) if deterministic else dist.sample())
-            log_prob = log_prob + dist.log_prob(chosen)
-            entropy = entropy + dist.entropy()
+                      masked.argmax(1) if deterministic else dist.sample())
+            if collect_statistics:
+                log_prob = log_prob + dist.log_prob(chosen)
+                entropy = entropy + dist.entropy()
             return chosen
 
         team_logits = self.team_head(feature).split(TEAM_SIZES, dim=1)
@@ -97,10 +109,55 @@ class FrcActorCritic(nn.Module):
             targets.append(torch.where(torch.as_tensor(needs_target, device=device), target, -1))
         full_state = torch.zeros((batch, CRITIC_SIZE), device=device) if critic is None else torch.as_tensor(
             np.stack(critic), device=device, dtype=torch.float32)
-        value = self.critic(torch.cat((feature, full_state), dim=1)).squeeze(-1)
+        value = self.critic(torch.cat((feature, full_state), dim=1)).squeeze(-1) if collect_statistics else torch.zeros(batch, device=device)
         packed = {"team": torch.stack(team, dim=1), "kind": torch.stack(kinds, dim=1),
                   "facing": torch.stack(facings, dim=1), "target": torch.stack(targets, dim=1)}
         return packed, log_prob, entropy, value
+
+    def greedy_record(self, observation):
+        """Decode one CPU inference without training tensors or sentinel draws."""
+        feature = self.features([observation], runtime=True)
+        def choose(logits, legal):
+            if not legal.any():
+                raise ValueError("empty FRC action mask")
+            return int(np.where(legal, logits, -1e9).argmax())
+
+        alive = observation.vector[len(GLOBAL_FIELDS)::len(ALLY_FIELDS)] > 0
+        if not alive.any():
+            alive = alive.copy()
+            alive[0] = True
+        team = np.empty(len(TEAM_SIZES), np.int64)
+        communication = np.zeros(sum(TEAM_SIZES), np.float32)
+        offset = 0
+        team_logits = np.split(self.team_head(feature)[0].detach().numpy(), np.cumsum(TEAM_SIZES)[:-1])
+        for i, (size, logits) in enumerate(zip(TEAM_SIZES, team_logits)):
+            team[i] = choose(logits, alive) if i in (2, 3, 4) else int(logits.argmax())
+            communication[offset + team[i]] = 1
+            offset += size
+        context = torch.cat((feature, torch.from_numpy(communication).unsqueeze(0)), dim=1)
+        kinds = np.empty(5, np.int64)
+        facings = np.empty(5, np.int64)
+        targets = np.full(5, -1, np.int64)
+        for slot, head in enumerate(self.role_heads):
+            if (observation.masks.kind[slot, 0] and np.count_nonzero(observation.masks.kind[slot]) == 1
+                    and np.count_nonzero(observation.masks.facing[slot]) == 1):
+                kinds[slot] = 0
+                facings[slot] = int(observation.masks.facing[slot].argmax())
+                continue
+            hidden = head[1](head[0](context))
+            output = head[2]
+            action_size = len(KINDS) + 8
+            logits = torch.nn.functional.linear(hidden, output.weight[:action_size],
+                                                  output.bias[:action_size])[0].detach().numpy()
+            kind = kinds[slot] = choose(logits[:len(KINDS)], observation.masks.kind[slot])
+            facings[slot] = choose(logits[len(KINDS):len(KINDS) + 8],
+                observation.masks.ultimate_facing[slot] if kind == 9 else observation.masks.facing[slot])
+            if kind == 8 or kind == 9 and slot == 1:
+                offset = len(KINDS) + 8 + int(kind == 9) * self.cells
+                target_logits = torch.nn.functional.linear(hidden, output.weight[offset:offset + self.cells],
+                    output.bias[offset:offset + self.cells])[0].detach().numpy()
+                targets[slot] = choose(target_logits, observation.masks.target[slot, int(kind == 9)])
+        return {"team": team, "kind": kinds, "facing": facings, "target": targets}
 
 
 class FrcPolicy:
@@ -112,6 +169,7 @@ class FrcPolicy:
             raise ValueError("FRC policy requires the fixed two-site map")
         self.model = FrcActorCritic((len(grid), len(grid[0]))).to(device)
         self.deterministic = deterministic
+        self.collect_statistics = True
         self.effects_mode = effects_mode
         self.last_sample = None
         self.reset()
@@ -134,10 +192,14 @@ class FrcPolicy:
 
     def sample(self, observation, *, critic=None):
         with torch.no_grad():
-            packed, log_prob, _, value = self.model.distribution([observation], deterministic=self.deterministic,
-                critic=None if critic is None else [critic])
-        record = {key: array[0].cpu().numpy().copy() for key, array in packed.items()}
-        self.last_sample = (record, float(log_prob[0]), float(value[0]))
+            if not self.collect_statistics and self.deterministic and next(self.model.parameters()).device.type == "cpu":
+                record = self.model.greedy_record(observation)
+                self.last_sample = None
+            else:
+                packed, log_prob, _, value = self.model.distribution([observation], deterministic=self.deterministic,
+                    critic=None if critic is None else [critic], collect_statistics=self.collect_statistics)
+                record = {key: array[0].cpu().numpy().copy() for key, array in packed.items()}
+                self.last_sample = (record, float(log_prob[0]), float(value[0])) if self.collect_statistics else None
         actions = []
         for slot in range(5):
             kind = KINDS[record["kind"][slot]]

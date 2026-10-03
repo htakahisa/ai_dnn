@@ -35,6 +35,9 @@ from tactical_simulator import (
     create_sample_retake_scenario,
     create_sample_action_handlers,
 )
+from competition_bracket import double_elimination_bracket, project_bracket
+from tournament_bracket_ui import BracketRenderer, bind_bracket_scroll
+from simulation_runtime import cpu_inference
 
 CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
@@ -457,6 +460,8 @@ def save_json(prefix: str, data: dict[str, Any]) -> Path:
     # 大きくなる。ファイルへ直接書き出してピークを抑える。
     with path.open("w", encoding="utf-8") as stream:
         json.dump(data, stream, ensure_ascii=False, indent=2)
+    from season_salary import invalidate_salary_cache
+    invalidate_salary_cache()
     return path
 
 
@@ -776,7 +781,7 @@ def play_map(
         if render
         else contextlib.redirect_stdout(io.StringIO())
     )
-    with output_context:
+    with output_context, cpu_inference(enabled=not render):
         game = VisualFPSBattle(
             NEW_MAZE_STR,
             attacker_ai,
@@ -1463,6 +1468,9 @@ def run_double_elimination(
                 "special": special,
                 "source1": left.get("source"),
                 "source2": right.get("source"),
+                "source1_outcome": left.get("outcome"),
+                "source2_outcome": right.get("outcome"),
+                "maps_to_win": maps_to_win,
             }
             emit_match(result)
             return (
@@ -1495,6 +1503,9 @@ def run_double_elimination(
             "special": special,
             "source1": left.get("source"),
             "source2": right.get("source"),
+            "source1_outcome": left.get("outcome"),
+            "source2_outcome": right.get("outcome"),
+            "maps_to_win": maps_to_win,
         }
         emit(("bracket_match", dict(pending)))
 
@@ -1537,183 +1548,20 @@ def run_double_elimination(
             {"team": series.loser, "source": match_id},
         )
 
-    winners_nodes = [
-        {"team": team, "source": f"SLOT-{index + 1}"}
-        for index, team in enumerate(slots)
-    ]
-    winners_round = 1
-    lower_round = 0
-    lower_survivors: list[dict[str, Any]] = []
+    emit(("bracket_start", {"slots": slots, "normal_maps_to_win": normal_need,
+                            "lower_final_maps_to_win": lower_final_need, "grand_final_maps_to_win": grand_final_need}))
+    traversal = double_elimination_bracket(slots, normal_need, lower_final_need, grand_final_need)
+    try:
+        match = next(traversal)
+        while True:
+            left = {"team": match["team1"], "source": match["source1"], "outcome": match["source1_outcome"]}
+            right = {"team": match["team2"], "source": match["source2"], "outcome": match["source2_outcome"]}
+            winner, _ = play_match(match["id"], match["bracket"], match["round"], match["match"],
+                                   left, right, match["maps_to_win"], match["special"])
+            match = traversal.send(winner["team"])
+    except StopIteration as finished:
+        champion, runner_up = finished.value
 
-    while len(winners_nodes) > 1:
-        next_winners: list[dict[str, Any]] = []
-        current_losers: list[dict[str, Any]] = []
-
-        for match_number, (left, right) in enumerate(_pair_nodes(winners_nodes), 1):
-            winner_node, loser_node = play_match(
-                f"W{winners_round}M{match_number}",
-                "W",
-                winners_round,
-                match_number,
-                left,
-                right,
-                normal_need,
-            )
-            next_winners.append(winner_node)
-            if loser_node.get("team") is not None:
-                current_losers.append(loser_node)
-
-        if winners_round == 1:
-            lower_round = 1
-            working = list(reversed(current_losers))
-            if len(working) % 2 == 1:
-                lower_survivors.append(working.pop(0))
-            for match_number, pair in enumerate(_pair_nodes(working), 1):
-                winner_node, _ = play_match(
-                    f"L{lower_round}M{match_number}",
-                    "L",
-                    lower_round,
-                    match_number,
-                    pair[0],
-                    pair[1],
-                    normal_need,
-                )
-                lower_survivors.append(winner_node)
-        else:
-            incoming = list(reversed(current_losers))
-
-            # BYEを含む12チーム大会などでは、Winners側から落ちる人数と
-            # Losers側の生存者数が一致しない場合がある。
-            #
-            # 既存Losers側が多い場合はLosers内で予備ラウンドを行い、
-            # Winners流入側が多い場合は流入チーム同士で予備ラウンドを
-            # 行ってから、両グループを同数にして合流させる。
-            while len(lower_survivors) > len(incoming):
-                lower_round += 1
-                reduced: list[dict[str, Any]] = []
-                working = list(lower_survivors)
-
-                # 合流人数より少なくなるまで半減させない。
-                # 必要な試合数だけ行い、先頭の余剰チームはBYEで残す。
-                match_count = min(len(working) // 2, len(working) - len(incoming))
-                carry_count = len(working) - match_count * 2
-                reduced.extend(working[:carry_count])
-                working = working[carry_count:]
-
-                for match_number, pair in enumerate(_pair_nodes(working), 1):
-                    winner_node, _ = play_match(
-                        f"L{lower_round}M{match_number}",
-                        "L",
-                        lower_round,
-                        match_number,
-                        pair[0],
-                        pair[1],
-                        normal_need,
-                    )
-                    reduced.append(winner_node)
-
-                lower_survivors = reduced
-
-            while len(incoming) > len(lower_survivors):
-                lower_round += 1
-                reduced_incoming: list[dict[str, Any]] = []
-                working = list(incoming)
-
-                # 流入側も合流人数までの試合数に抑える。
-                # current_losersは事前にreverse済みで、BYEは先頭へ配分。
-                match_count = min(len(working) // 2, len(working) - len(lower_survivors))
-                carry_count = len(working) - match_count * 2
-                reduced_incoming.extend(working[:carry_count])
-                working = working[carry_count:]
-
-                for match_number, pair in enumerate(_pair_nodes(working), 1):
-                    winner_node, _ = play_match(
-                        f"L{lower_round}M{match_number}",
-                        "L",
-                        lower_round,
-                        match_number,
-                        pair[0],
-                        pair[1],
-                        normal_need,
-                    )
-                    reduced_incoming.append(winner_node)
-
-                incoming = reduced_incoming
-
-            if len(lower_survivors) != len(incoming):
-                raise RuntimeError(
-                    "Losersブラケットの人数調整に失敗しました: "
-                    f"survivors={len(lower_survivors)} "
-                    f"incoming={len(incoming)}"
-                )
-
-            lower_round += 1
-            merged: list[dict[str, Any]] = []
-
-            for match_number, (survivor, dropped) in enumerate(
-                zip(lower_survivors, incoming), 1
-            ):
-                is_lower_final = len(next_winners) == 1 and len(lower_survivors) == 1
-                match_id = (
-                    "LOWER_FINAL"
-                    if is_lower_final
-                    else f"L{lower_round}M{match_number}"
-                )
-                winner_node, _ = play_match(
-                    match_id,
-                    "L",
-                    lower_round,
-                    match_number,
-                    survivor,
-                    dropped,
-                    lower_final_need if is_lower_final else normal_need,
-                    "lower_final" if is_lower_final else "",
-                )
-                merged.append(winner_node)
-
-            lower_survivors = merged
-
-        winners_nodes = next_winners
-        winners_round += 1
-
-    winners_champion = winners_nodes[0]
-
-    while len(lower_survivors) > 1:
-        lower_round += 1
-        next_lower: list[dict[str, Any]] = []
-        pairs = _pair_nodes(lower_survivors)
-        for match_number, pair in enumerate(pairs, 1):
-            is_last = len(pairs) == 1
-            match_id = "LOWER_FINAL" if is_last else f"L{lower_round}M{match_number}"
-            winner_node, _ = play_match(
-                match_id,
-                "L",
-                lower_round,
-                match_number,
-                pair[0],
-                pair[1],
-                lower_final_need if is_last else normal_need,
-                "lower_final" if is_last else "",
-            )
-            next_lower.append(winner_node)
-        lower_survivors = next_lower
-
-    if not lower_survivors:
-        raise RuntimeError("Losersブラケット勝者を決定できません")
-
-    grand_winner, grand_loser = play_match(
-        "GRAND_FINAL",
-        "G",
-        1,
-        1,
-        winners_champion,
-        lower_survivors[0],
-        grand_final_need,
-        "grand_final",
-    )
-
-    champion = grand_winner["team"]
-    runner_up = grand_loser["team"]
     ranking = build_double_elimination_ranking(
         team_names,
         bracket_matches,
@@ -2748,6 +2596,8 @@ class CompetitionApp:
         self.visual_current_pairings: list[tuple[str, str]] = []
         self.visual_bye: str | None = None
         self.visual_bracket_matches: dict[str, dict[str, Any]] = {}
+        self.visual_bracket_setup: dict[str, Any] | None = None
+        self.visual_bracket_cards: dict[str, dict[str, Any]] = {}
 
         self._build_common_settings()
         self._build_notebook()
@@ -4818,6 +4668,8 @@ class CompetitionApp:
         visual_frame.grid_rowconfigure(0, weight=1)
         visual_frame.grid_columnconfigure(0, weight=1)
         self._visual_canvas_dead = False
+        self.bracket_renderer = BracketRenderer(self.visual_canvas)
+        bind_bracket_scroll(self.visual_canvas)
         self.visual_canvas.bind(
             "<Configure>",
             lambda _event: self.redraw_visual(),
@@ -4916,7 +4768,7 @@ class CompetitionApp:
 
     def _show_bracket_match_details(self, match_id: str) -> None:
         """クリックされたブラケット試合のマップ詳細を別窓で表示する。"""
-        match = self.visual_bracket_matches.get(match_id)
+        match = self.visual_bracket_matches.get(match_id) or self.visual_bracket_cards.get(match_id)
         if not match:
             return
 
@@ -4925,16 +4777,29 @@ class CompetitionApp:
         window.geometry("640x480")
         window.minsize(520, 360)
 
-        team1 = match.get("team1") or "BYE / TBD"
-        team2 = match.get("team2") or "BYE / TBD"
+        def team_label(row):
+            team = match.get(f"team{row}")
+            if team is not None:
+                return team
+            if match.get(f"empty{row}", False) or match.get("status") == "bye":
+                return "BYE"
+            source = match.get(f"source{row}")
+            if source and not source.startswith("SLOT-"):
+                outcome = match.get(f"source{row}_outcome")
+                return f"{source} {'敗者' if outcome == 'loser' else '勝者'}"
+            return "未確定"
+
+        team1, team2 = team_label(1), team_label(2)
         winner = match.get("winner") or "未確定"
+        scored = match.get("status") in ("finished", "playing")
+        score1 = match.get("team1_wins", 0) if scored else "—"
+        score2 = match.get("team2_wins", 0) if scored else "—"
 
         header = tk.Label(
             window,
             text=(
                 f"{match_id}\n"
-                f"{team1} {match.get('team1_wins', 0)} - "
-                f"{match.get('team2_wins', 0)} {team2}\n"
+                f"{team1} {score1} - {score2} {team2}\n"
                 f"WINNER: {winner}"
             ),
             font=("Arial", 12, "bold"),
@@ -5084,328 +4949,14 @@ class CompetitionApp:
             y += 66
 
     def _draw_double_elimination_visual(self) -> None:
-        """VCT風のダブルエリミネーション表を描画する。
-
-        1試合を1枚の大きな箱として扱いつつ、箱の内部はチームごとに
-        独立した2行へ分割する。勝者行は緑、敗者行は灰色で表示し、
-        前試合の該当チーム行から次試合の該当チーム行へ線を接続する。
-        """
-        self._canvas_text(
-            20,
-            14,
-            "DOUBLE ELIMINATION BRACKET",
-            font=("Arial", 15, "bold"),
-            fill="#f8fafc",
-        )
-
-        matches = list(self.visual_bracket_matches.values())
-        if not matches:
-            self._canvas_text(
-                20,
-                52,
-                "開始すると、VCT形式のWinners / Losersブラケットを表示します。",
-                fill="#94a3b8",
-                width=520,
-            )
-            return
-
-        winners = sorted(
-            [m for m in matches if m.get("bracket") == "W"],
-            key=lambda m: (int(m.get("round", 0)), int(m.get("match", 0))),
-        )
-        losers = sorted(
-            [m for m in matches if m.get("bracket") == "L"],
-            key=lambda m: (int(m.get("round", 0)), int(m.get("match", 0))),
-        )
-        grands = sorted(
-            [m for m in matches if m.get("bracket") == "G"],
-            key=lambda m: (int(m.get("round", 0)), int(m.get("match", 0))),
-        )
-
-        card_w = 250
-        row_h = 34
-        header_h = 22
-        card_h = header_h + row_h * 2
-        col_gap = 105
-        row_gap = 34
-
-        # match_id -> 描画情報。チーム行の中央座標も保存する。
-        drawn: dict[str, dict[str, Any]] = {}
-
-        def stage_label(match: dict[str, Any]) -> str:
-            special = str(match.get("special", ""))
-            if special == "lower_final":
-                return "LOWER FINAL"
-            if special == "grand_final":
-                return "GRAND FINAL"
-            side = "UPPER" if match.get("bracket") == "W" else "LOWER"
-            return f"{side} ROUND {int(match.get('round', 0))}"
-
-        def row_style(
-            match: dict[str, Any],
-            team: str | None,
-        ) -> tuple[str, str, str]:
-            status = str(match.get("status", ""))
-            winner = match.get("winner")
-            loser = match.get("loser")
-
-            if team is None:
-                return "#202938", "#64748b", "#94a3b8"
-            if status == "playing":
-                return "#172554", "#3b82f6", "#f8fafc"
-            if status == "bye":
-                return "#1f2937", "#64748b", "#cbd5e1"
-            if team == winner:
-                return "#14532d", "#22c55e", "#f0fdf4"
-            if team == loser:
-                return "#343a46", "#6b7280", "#9ca3af"
-            return "#1f2937", "#64748b", "#e5e7eb"
-
-        def draw_match(
-            match: dict[str, Any],
-            x: float,
-            y: float,
-        ) -> None:
-            match_id = str(match.get("id", "?"))
-            tag = f"bracket_match_{match_id}"
-
-            # 見出し
-            self.visual_canvas.create_rectangle(
-                x,
-                y,
-                x + card_w,
-                y + header_h,
-                fill="#111827",
-                outline="#64748b",
-                width=1,
-                tags=(tag,),
-            )
-            self.visual_canvas.create_text(
-                x + 7,
-                y + header_h / 2,
-                anchor="w",
-                text=stage_label(match),
-                font=("Arial", 8, "bold"),
-                fill="#cbd5e1",
-                tags=(tag,),
-            )
-
-            team_rows: dict[str, tuple[float, float]] = {}
-            teams = [match.get("team1"), match.get("team2")]
-            scores = [
-                int(match.get("team1_wins", 0)),
-                int(match.get("team2_wins", 0)),
-            ]
-
-            for index, (team, score) in enumerate(zip(teams, scores)):
-                row_y = y + header_h + index * row_h
-                fill, outline, text_fill = row_style(match, team)
-                self.visual_canvas.create_rectangle(
-                    x,
-                    row_y,
-                    x + card_w,
-                    row_y + row_h,
-                    fill=fill,
-                    outline=outline,
-                    width=2 if team == match.get("winner") else 1,
-                    tags=(tag,),
-                )
-                display_team = str(team) if team else "BYE / TBD"
-                self.visual_canvas.create_text(
-                    x + 9,
-                    row_y + row_h / 2,
-                    anchor="w",
-                    text=display_team,
-                    font=(
-                        "Arial",
-                        9,
-                        "bold" if team == match.get("winner") else "normal",
-                    ),
-                    fill=text_fill,
-                    width=card_w - 54,
-                    tags=(tag,),
-                )
-                self.visual_canvas.create_text(
-                    x + card_w - 13,
-                    row_y + row_h / 2,
-                    anchor="e",
-                    text=str(score),
-                    font=("Arial", 11, "bold"),
-                    fill=text_fill,
-                    tags=(tag,),
-                )
-                if team:
-                    team_rows[str(team)] = (
-                        x,
-                        row_y + row_h / 2,
-                    )
-
-            self.visual_canvas.tag_bind(
-                tag,
-                "<Button-1>",
-                lambda _event, match_id=match_id: (
-                    self._show_bracket_match_details(match_id)
-                ),
-            )
-            self.visual_canvas.tag_bind(
-                tag,
-                "<Enter>",
-                lambda _event: self.visual_canvas.config(cursor="hand2"),
-            )
-            self.visual_canvas.tag_bind(
-                tag,
-                "<Leave>",
-                lambda _event: self.visual_canvas.config(cursor=""),
-            )
-
-            drawn[match_id] = {
-                "x": x,
-                "y": y,
-                "right": x + card_w,
-                "center_y": y + card_h / 2,
-                "team_rows": team_rows,
-                "match": match,
-            }
-
-        def layout_group(
-            title: str,
-            group: list[dict[str, Any]],
-            top: float,
-            accent: str,
-        ) -> float:
-            self._canvas_text(
-                20,
-                top,
-                title,
-                font=("Arial", 12, "bold"),
-                fill=accent,
-            )
-            if not group:
-                return top + 48
-
-            rounds = sorted({int(m.get("round", 0)) for m in group})
-            by_round = {
-                round_no: sorted(
-                    [m for m in group if int(m.get("round", 0)) == round_no],
-                    key=lambda m: int(m.get("match", 0)),
-                )
-                for round_no in rounds
-            }
-            max_matches = max(len(items) for items in by_round.values())
-            section_h = max_matches * (card_h + row_gap)
-
-            for col, round_no in enumerate(rounds):
-                x = 20 + col * (card_w + col_gap)
-                round_matches = by_round[round_no]
-                spacing = section_h / max(1, len(round_matches))
-                for row, match in enumerate(round_matches):
-                    y = top + 35 + row * spacing
-                    draw_match(match, x, y)
-
-            return top + 45 + section_h
-
-        bottom = layout_group(
-            "UPPER BRACKET",
-            winners,
-            48,
-            "#4ade80",
-        )
-        bottom = layout_group(
-            "LOWER BRACKET",
-            losers,
-            bottom + 24,
-            "#fbbf24",
-        )
-
-        # Grand FinalはUpper/Lowerの最終試合より右へ置く。
-        if grands:
-            grand = grands[-1]
-            max_round = max([int(m.get("round", 0)) for m in winners] + [0])
-            grand_x = 20 + max_round * (card_w + col_gap)
-            grand_y = max(70.0, bottom - card_h - 25)
-            draw_match(grand, grand_x, grand_y)
-
-        def source_point(
-            source_id: str,
-            destination_team: str | None,
-        ) -> tuple[float, float] | None:
-            source = drawn.get(source_id)
-            if source is None:
-                return None
-            rows = source["team_rows"]
-            if destination_team and destination_team in rows:
-                _, row_y = rows[destination_team]
-                return source["right"], row_y
-
-            source_match = source["match"]
-            # BYEや未確定時のフォールバック。
-            for candidate in (
-                source_match.get("winner"),
-                source_match.get("loser"),
-                source_match.get("team1"),
-                source_match.get("team2"),
-            ):
-                if candidate and str(candidate) in rows:
-                    _, row_y = rows[str(candidate)]
-                    return source["right"], row_y
-            return source["right"], source["center_y"]
-
-        def target_point(
-            match_id: str,
-            team: str | None,
-        ) -> tuple[float, float] | None:
-            target = drawn.get(match_id)
-            if target is None:
-                return None
-            rows = target["team_rows"]
-            if team and str(team) in rows:
-                row_x, row_y = rows[str(team)]
-                return row_x, row_y
-            return target["x"], target["center_y"]
-
-        # 試合ブロックを描き終えたあと、該当するチーム行同士を線で結ぶ。
-        for match_id, target in drawn.items():
-            match = target["match"]
-            for source_key, team_key in (
-                ("source1", "team1"),
-                ("source2", "team2"),
-            ):
-                source_id = match.get(source_key)
-                destination_team = match.get(team_key)
-                if not source_id or str(source_id).startswith("SLOT-"):
-                    continue
-                start = source_point(str(source_id), destination_team)
-                end = target_point(match_id, destination_team)
-                if start is None or end is None:
-                    continue
-                sx, sy = start
-                ex, ey = end
-                middle_x = sx + max(28, (ex - sx) * 0.52)
-                line_fill = (
-                    "#22c55e" if destination_team == match.get("winner") else "#6b7280"
-                )
-                self.visual_canvas.create_line(
-                    sx,
-                    sy,
-                    middle_x,
-                    sy,
-                    middle_x,
-                    ey,
-                    ex,
-                    ey,
-                    fill=line_fill,
-                    width=2,
-                    smooth=False,
-                    arrow="last",
-                )
-
-        self._canvas_text(
-            20,
-            bottom + 18,
-            "緑＝勝者 / 灰＝敗者　試合ブロックをクリックするとマップ詳細を表示",
-            font=("Arial", 9),
-            fill="#94a3b8",
-        )
+        """Use the same complete bracket cards and connectors as season mode."""
+        setup = getattr(self, "visual_bracket_setup", None)
+        if setup is not None:
+            matches = project_bracket(setup, self.visual_bracket_matches)
+        else:
+            matches = list(self.visual_bracket_matches.values())
+        self.visual_bracket_cards = {match["id"]: match for match in matches}
+        self.bracket_renderer.draw(matches, self._show_bracket_match_details)
 
     def _draw_swiss_visual(self) -> None:
         self._canvas_text(
@@ -5739,6 +5290,8 @@ class CompetitionApp:
         self.visual_current_pairings = []
         self.visual_bye = None
         self.visual_bracket_matches = {}
+        self.visual_bracket_setup = None
+        self.visual_bracket_cards = {}
         self.redraw_visual()
 
         self.set_enabled(False)
@@ -6087,6 +5640,10 @@ class CompetitionApp:
                     self.series_score_var.set(
                         f"{prefix}{team1} {wins1} - {wins2} {team2}"
                     )
+                    for match in self.visual_bracket_matches.values():
+                        if match.get("status") == "playing" and (match["team1"], match["team2"]) == (team1, team2):
+                            match.update(team1_wins=wins1, team2_wins=wins2)
+                            self.redraw_visual()
                 elif kind == "series_done":
                     series: SeriesResult = event[1]
                     context = event[2]
@@ -6124,6 +5681,9 @@ class CompetitionApp:
                         self.refresh_rating_window()
                     else:
                         self.append("RATING: OFF（レート変動なし）\n\n")
+                elif kind == "bracket_start":
+                    self.visual_bracket_setup = dict(event[1])
+                    self.redraw_visual()
                 elif kind == "bracket_match":
                     match = event[1]
                     self.visual_bracket_matches[match["id"]] = dict(match)

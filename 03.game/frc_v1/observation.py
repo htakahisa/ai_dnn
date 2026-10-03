@@ -74,6 +74,13 @@ class FrcObservationEncoder:
             fields[name][:] = board == value
         fields["walkable"][:] = board != 1
         def mark(name, cells, value=1.0):
+            cells = tuple(cells)
+            if len(cells) > 8:
+                positions = np.asarray(cells)
+                rr, cc = positions[:, 0], positions[:, 1]
+                valid = (rr >= 0) & (rr < rows) & (cc >= 0) & (cc < columns)
+                fields[name][rr[valid], cc[valid]] = value
+                return
             for r, c in cells:
                 if 0 <= r < rows and 0 <= c < columns:
                     fields[name][r, c] = value
@@ -81,9 +88,13 @@ class FrcObservationEncoder:
         mark("visible", snapshot.visible_cells)
         mark("setup_allowed", snapshot.setup_cells)
         mark("smoke", snapshot.smoke_cells)  # smoke remains part of the baseline sensor.
-        for pos, age in belief.clear:
-            mark("clear_known", (pos,))
-            mark("clear_age", (pos,), min(1.0, age / 256))
+        if belief.clear:
+            positions = np.asarray([pos for pos, _ in belief.clear])
+            rr, cc = positions[:, 0], positions[:, 1]
+            valid = (rr >= 0) & (rr < rows) & (cc >= 0) & (cc < columns)
+            fields["clear_known"][rr[valid], cc[valid]] = 1
+            ages = np.minimum(1.0, np.asarray([age for _, age in belief.clear]) / 256)
+            fields["clear_age"][rr[valid], cc[valid]] = ages[valid]
         mark("current_enemy", (s.position for s in snapshot.sightings))
         for _, pos, age in belief.last_seen:
             mark("last_seen_known", (pos,))

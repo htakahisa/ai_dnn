@@ -1,6 +1,7 @@
 """Ability and ultimate effects, projectiles, smoke, and line of sight."""
 
 from collections import deque
+from grid_lines import line_cells
 
 from game_core import (
     FLASH_SPEED_CELLS_PER_TICK,
@@ -781,23 +782,7 @@ class AbilityLosMixin:
 
     def _line_cells(self, start, end):
         """2マス間を結ぶBresenham線上のセルを順番に返す。"""
-        y0, x0 = int(start[0]), int(start[1])
-        y1, x1 = int(end[0]), int(end[1])
-        dx, dy = abs(x1 - x0), -abs(y1 - y0)
-        sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
-        err = dx + dy
-        cells = []
-        while True:
-            cells.append((y0, x0))
-            if x0 == x1 and y0 == y1:
-                return cells
-            e2 = 2 * err
-            if e2 >= dy:
-                err += dy
-                x0 += sx
-            if e2 <= dx:
-                err += dx
-                y0 += sy
+        return line_cells(start, end)
 
     def _smoke_allows_line(self, line_cells, smoke_cells):
         if not line_cells:

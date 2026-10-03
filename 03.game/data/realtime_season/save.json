@@ -1,8 +1,1430 @@
 {
-  "version": 10,
-  "updated_at": "2026-10-03T04:07:27.514601+00:00",
-  "team_name": "gorigons",
+  "version": 14,
+  "updated_at": "2026-10-03T11:49:25.421870+00:00",
+  "team_name": "マイチーム",
+  "preset_name": "編成1",
+  "preset_igl": null,
+  "preset_carrier": "まーやまくん",
+  "preset_ai": "toru_ai_v3.1",
+  "club_id": "player_club",
+  "salary_mode": "KD_DYNAMIC",
+  "salary_settings": {
+    "results_directory": "D:\\git\\ai_dnn\\03.game\\competition_results",
+    "a": 30,
+    "min_games": 10,
+    "max_change": 0.2,
+    "fixed_salaries": [],
+    "excluded_files": [
+      "series_Fnatic2023_vs_Omoko_Gaming_2-0_20260927_143901.json"
+    ]
+  },
+  "salary_records": [
+    {
+      "name": "A-Train",
+      "static_salary": 5000000,
+      "monthly_salary": 3410000,
+      "kills": 732,
+      "deaths": 405,
+      "games": 60,
+      "kd": 1.7517241379310344,
+      "percentile": 0.9186046511627907,
+      "fixed": false
+    },
+    {
+      "name": "Absol",
+      "static_salary": 900000,
+      "monthly_salary": 2970000,
+      "kills": 2915,
+      "deaths": 2173,
+      "games": 223,
+      "kd": 1.336813436223332,
+      "percentile": 0.8488372093023255,
+      "fixed": false
+    },
+    {
+      "name": "Alfajer",
+      "static_salary": 1500000,
+      "monthly_salary": 980000,
+      "kills": 1384,
+      "deaths": 1623,
+      "games": 166,
+      "kd": 0.8554143980641258,
+      "percentile": 0.4186046511627907,
+      "fixed": false
+    },
+    {
+      "name": "Arlecchino",
+      "static_salary": 3000000,
+      "monthly_salary": 1760000,
+      "kills": 2252,
+      "deaths": 2305,
+      "games": 172,
+      "kd": 0.9773019271948609,
+      "percentile": 0.5813953488372093,
+      "fixed": false
+    },
+    {
+      "name": "Aspas",
+      "static_salary": 4000000,
+      "monthly_salary": 370000,
+      "kills": 1149,
+      "deaths": 1601,
+      "games": 110,
+      "kd": 0.7228694052728387,
+      "percentile": 0.23255813953488372,
+      "fixed": false
+    },
+    {
+      "name": "Asuna",
+      "static_salary": 2000000,
+      "monthly_salary": 680000,
+      "kills": 523,
+      "deaths": 655,
+      "games": 47,
+      "kd": 0.8072992700729927,
+      "percentile": 0.3488372093023256,
+      "fixed": false
+    },
+    {
+      "name": "BABYBAY",
+      "static_salary": 900000,
+      "monthly_salary": 900000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Blacknoir",
+      "static_salary": 5000000,
+      "monthly_salary": 3910000,
+      "kills": 892,
+      "deaths": 369,
+      "games": 60,
+      "kd": 2.31077694235589,
+      "percentile": 0.9883720930232558,
+      "fixed": false
+    },
+    {
+      "name": "Boaster",
+      "static_salary": 1300000,
+      "monthly_salary": 160000,
+      "kills": 806,
+      "deaths": 1647,
+      "games": 166,
+      "kd": 0.49850924269528923,
+      "percentile": 0.06976744186046512,
+      "fixed": false
+    },
+    {
+      "name": "Boostio",
+      "static_salary": 1000000,
+      "monthly_salary": 420000,
+      "kills": 466,
+      "deaths": 651,
+      "games": 52,
+      "kd": 0.7283406754772394,
+      "percentile": 0.2558139534883721,
+      "fixed": false
+    },
+    {
+      "name": "Brawk",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Buzz",
+      "static_salary": 2000000,
+      "monthly_salary": 500000,
+      "kills": 510,
+      "deaths": 706,
+      "games": 52,
+      "kd": 0.7336956521739131,
+      "percentile": 0.29069767441860467,
+      "fixed": false
+    },
+    {
+      "name": "C0M",
+      "static_salary": 1300000,
+      "monthly_salary": 2840000,
+      "kills": 817,
+      "deaths": 612,
+      "games": 52,
+      "kd": 1.3193146417445483,
+      "percentile": 0.8255813953488372,
+      "fixed": false
+    },
+    {
+      "name": "CHICHOO",
+      "static_salary": 900000,
+      "monthly_salary": 180000,
+      "kills": 320,
+      "deaths": 629,
+      "games": 51,
+      "kd": 0.5311077389984825,
+      "percentile": 0.09302325581395349,
+      "fixed": false
+    },
+    {
+      "name": "Canezerra",
+      "static_salary": 850000,
+      "monthly_salary": 600000,
+      "kills": 629,
+      "deaths": 792,
+      "games": 52,
+      "kd": 0.8017031630170316,
+      "percentile": 0.32558139534883723,
+      "fixed": false
+    },
+    {
+      "name": "Chronicle",
+      "static_salary": 2500000,
+      "monthly_salary": 3040000,
+      "kills": 2616,
+      "deaths": 1946,
+      "games": 222,
+      "kd": 1.3390688259109311,
+      "percentile": 0.8604651162790697,
+      "fixed": false
+    },
+    {
+      "name": "Crewn",
+      "static_salary": 1500000,
+      "monthly_salary": 110000,
+      "kills": 300,
+      "deaths": 816,
+      "games": 49,
+      "kd": 0.3900709219858156,
+      "percentile": 0.0,
+      "fixed": false
+    },
+    {
+      "name": "Cryocells",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Deep",
+      "static_salary": 5000000,
+      "monthly_salary": 3740000,
+      "kills": 663,
+      "deaths": 324,
+      "games": 60,
+      "kd": 1.9576271186440677,
+      "percentile": 0.9651162790697675,
+      "fixed": false
+    },
+    {
+      "name": "Demon1",
+      "static_salary": 2000000,
+      "monthly_salary": 2020000,
+      "kills": 2409,
+      "deaths": 2209,
+      "games": 162,
+      "kd": 1.0893255917820455,
+      "percentile": 0.6511627906976745,
+      "fixed": false
+    },
+    {
+      "name": "Dep",
+      "static_salary": 1300000,
+      "monthly_salary": 2260000,
+      "kills": 1036,
+      "deaths": 880,
+      "games": 59,
+      "kd": 1.1714285714285715,
+      "percentile": 0.7093023255813954,
+      "fixed": false
+    },
+    {
+      "name": "Derke",
+      "static_salary": 1500000,
+      "monthly_salary": 1410000,
+      "kills": 2799,
+      "deaths": 3090,
+      "games": 278,
+      "kd": 0.9067307692307692,
+      "percentile": 0.4883720930232558,
+      "fixed": false
+    },
+    {
+      "name": "Ethan",
+      "static_salary": 2500000,
+      "monthly_salary": 770000,
+      "kills": 1705,
+      "deaths": 2096,
+      "games": 155,
+      "kd": 0.8160865475070554,
+      "percentile": 0.37209302325581395,
+      "fixed": false
+    },
+    {
+      "name": "F0rsakeN",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "FNS",
+      "static_salary": 1500000,
+      "monthly_salary": 530000,
+      "kills": 470,
+      "deaths": 632,
+      "games": 53,
+      "kd": 0.7552870090634441,
+      "percentile": 0.3023255813953488,
+      "fixed": false
+    },
+    {
+      "name": "Flashback",
+      "static_salary": 600000,
+      "monthly_salary": 1840000,
+      "kills": 722,
+      "deaths": 731,
+      "games": 58,
+      "kd": 0.988173455978975,
+      "percentile": 0.6046511627906976,
+      "fixed": false
+    },
+    {
+      "name": "Foxy9",
+      "static_salary": 1000000,
+      "monthly_salary": 1000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Furina",
+      "static_salary": 600000,
+      "monthly_salary": 210000,
+      "kills": 1335,
+      "deaths": 2331,
+      "games": 172,
+      "kd": 0.5781448538754765,
+      "percentile": 0.12790697674418605,
+      "fixed": false
+    },
+    {
+      "name": "HYUNMIN",
+      "static_salary": 1600000,
+      "monthly_salary": 1600000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Homelander",
+      "static_salary": 10000000,
+      "monthly_salary": 4000000,
+      "kills": 1286,
+      "deaths": 433,
+      "games": 60,
+      "kd": 2.8423326133909286,
+      "percentile": 1.0,
+      "fixed": false
+    },
+    {
+      "name": "IbarakiNinja",
+      "static_salary": 750000,
+      "monthly_salary": 230000,
+      "kills": 526,
+      "deaths": 927,
+      "games": 59,
+      "kd": 0.58098223615465,
+      "percentile": 0.13953488372093023,
+      "fixed": false
+    },
+    {
+      "name": "Jamppi",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Jean",
+      "static_salary": 1500000,
+      "monthly_salary": 1880000,
+      "kills": 1129,
+      "deaths": 1128,
+      "games": 112,
+      "kd": 1.0008635578583764,
+      "percentile": 0.6162790697674418,
+      "fixed": false
+    },
+    {
+      "name": "Jinggg",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Kachina",
+      "static_salary": 900000,
+      "monthly_salary": 900000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Katarina",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Kr1stal",
+      "static_salary": 1000000,
+      "monthly_salary": 1000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Lar0k",
+      "static_salary": 1800000,
+      "monthly_salary": 2590000,
+      "kills": 2785,
+      "deaths": 2216,
+      "games": 165,
+      "kd": 1.2533392698130008,
+      "percentile": 0.7790697674418605,
+      "fixed": false
+    },
+    {
+      "name": "Laz",
+      "static_salary": 1500000,
+      "monthly_salary": 2710000,
+      "kills": 1072,
+      "deaths": 838,
+      "games": 59,
+      "kd": 1.2695852534562213,
+      "percentile": 0.8023255813953488,
+      "fixed": false
+    },
+    {
+      "name": "Leo",
+      "static_salary": 3000000,
+      "monthly_salary": 3110000,
+      "kills": 2809,
+      "deaths": 2078,
+      "games": 224,
+      "kd": 1.346774193548387,
+      "percentile": 0.872093023255814,
+      "fixed": false
+    },
+    {
+      "name": "Less",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Lisa",
+      "static_salary": 1000000,
+      "monthly_salary": 330000,
+      "kills": 1491,
+      "deaths": 2080,
+      "games": 172,
+      "kd": 0.7208530805687203,
+      "percentile": 0.20930232558139536,
+      "fixed": false
+    },
+    {
+      "name": "Lohen",
+      "static_salary": 1900000,
+      "monthly_salary": 3570000,
+      "kills": 3536,
+      "deaths": 1901,
+      "games": 172,
+      "kd": 1.8467115484205074,
+      "percentile": 0.9418604651162791,
+      "fixed": false
+    },
+    {
+      "name": "Loita",
+      "static_salary": 1500000,
+      "monthly_salary": 140000,
+      "kills": 317,
+      "deaths": 700,
+      "games": 49,
+      "kd": 0.47534246575342465,
+      "percentile": 0.046511627906976744,
+      "fixed": false
+    },
+    {
+      "name": "Lysoar",
+      "static_salary": 800000,
+      "monthly_salary": 800000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Mako",
+      "static_salary": 1000000,
+      "monthly_salary": 350000,
+      "kills": 495,
+      "deaths": 698,
+      "games": 52,
+      "kd": 0.7211538461538461,
+      "percentile": 0.22093023255813954,
+      "fixed": false
+    },
+    {
+      "name": "Mazino",
+      "static_salary": 1400000,
+      "monthly_salary": 1400000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Meiy",
+      "static_salary": 1700000,
+      "monthly_salary": 190000,
+      "kills": 445,
+      "deaths": 807,
+      "games": 59,
+      "kd": 0.5675029868578255,
+      "percentile": 0.10465116279069768,
+      "fixed": false
+    },
+    {
+      "name": "Meteor",
+      "static_salary": 2000000,
+      "monthly_salary": 1040000,
+      "kills": 524,
+      "deaths": 616,
+      "games": 51,
+      "kd": 0.8575851393188855,
+      "percentile": 0.43023255813953487,
+      "fixed": false
+    },
+    {
+      "name": "Munchkin",
+      "static_salary": 1200000,
+      "monthly_salary": 1200000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Nanasaki",
+      "static_salary": 2000000,
+      "monthly_salary": 2210000,
+      "kills": 1573,
+      "deaths": 1368,
+      "games": 103,
+      "kd": 1.1466380543633763,
+      "percentile": 0.6976744186046512,
+      "fixed": false
+    },
+    {
+      "name": "PatMen",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Rarga",
+      "static_salary": 900000,
+      "monthly_salary": 900000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Rb",
+      "static_salary": 1900000,
+      "monthly_salary": 290000,
+      "kills": 525,
+      "deaths": 764,
+      "games": 52,
+      "kd": 0.698992443324937,
+      "percentile": 0.18604651162790697,
+      "fixed": false
+    },
+    {
+      "name": "Retloff",
+      "static_salary": 1000000,
+      "monthly_salary": 1000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "RieNs",
+      "static_salary": 1300000,
+      "monthly_salary": 1300000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Rossy",
+      "static_salary": 900000,
+      "monthly_salary": 1720000,
+      "kills": 580,
+      "deaths": 597,
+      "games": 51,
+      "kd": 0.9728867623604466,
+      "percentile": 0.5697674418604651,
+      "fixed": false
+    },
+    {
+      "name": "Rosé",
+      "static_salary": 1500000,
+      "monthly_salary": 200000,
+      "kills": 397,
+      "deaths": 715,
+      "games": 49,
+      "kd": 0.5731543624161074,
+      "percentile": 0.11627906976744186,
+      "fixed": false
+    },
+    {
+      "name": "S1Mon",
+      "static_salary": 900000,
+      "monthly_salary": 900000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Sato",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Sayonara",
+      "static_salary": 1500000,
+      "monthly_salary": 820000,
+      "kills": 1188,
+      "deaths": 1437,
+      "games": 116,
+      "kd": 0.8302658486707567,
+      "percentile": 0.38372093023255816,
+      "fixed": false
+    },
+    {
+      "name": "SereNa",
+      "static_salary": 2000000,
+      "monthly_salary": 2910000,
+      "kills": 821,
+      "deaths": 611,
+      "games": 51,
+      "kd": 1.327613104524181,
+      "percentile": 0.8372093023255814,
+      "fixed": false
+    },
+    {
+      "name": "SiuFatBB",
+      "static_salary": 900000,
+      "monthly_salary": 310000,
+      "kills": 414,
+      "deaths": 592,
+      "games": 47,
+      "kd": 0.7138263665594855,
+      "percentile": 0.19767441860465115,
+      "fixed": false
+    },
+    {
+      "name": "Smoggy",
+      "static_salary": 800000,
+      "monthly_salary": 1180000,
+      "kills": 555,
+      "deaths": 629,
+      "games": 51,
+      "kd": 0.8877086494688923,
+      "percentile": 0.45348837209302323,
+      "fixed": false
+    },
+    {
+      "name": "Stormfront",
+      "static_salary": 5000000,
+      "monthly_salary": 3820000,
+      "kills": 892,
+      "deaths": 393,
+      "games": 60,
+      "kd": 2.1796690307328603,
+      "percentile": 0.9767441860465116,
+      "fixed": false
+    },
+    {
+      "name": "SugarZ3ro",
+      "static_salary": 1000000,
+      "monthly_salary": 170000,
+      "kills": 1777,
+      "deaths": 3438,
+      "games": 282,
+      "kd": 0.5210495963091119,
+      "percentile": 0.08139534883720931,
+      "fixed": false
+    },
+    {
+      "name": "SyouTa",
+      "static_salary": 1000000,
+      "monthly_salary": 1970000,
+      "kills": 2203,
+      "deaths": 2031,
+      "games": 223,
+      "kd": 1.0834546336729742,
+      "percentile": 0.6395348837209303,
+      "fixed": false
+    },
+    {
+      "name": "Tartaglia",
+      "static_salary": 1500000,
+      "monthly_salary": 1330000,
+      "kills": 709,
+      "deaths": 786,
+      "games": 60,
+      "kd": 0.9056372549019608,
+      "percentile": 0.47674418604651164,
+      "fixed": false
+    },
+    {
+      "name": "TenZ",
+      "static_salary": 3000000,
+      "monthly_salary": 3000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Tortlilyan",
+      "static_salary": 2500000,
+      "monthly_salary": 3330000,
+      "kills": 2300,
+      "deaths": 1497,
+      "games": 210,
+      "kd": 1.5258677144728225,
+      "percentile": 0.9069767441860465,
+      "fixed": false
+    },
+    {
+      "name": "Verno",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Wo0t",
+      "static_salary": 2000000,
+      "monthly_salary": 120000,
+      "kills": 273,
+      "deaths": 740,
+      "games": 51,
+      "kd": 0.3935064935064935,
+      "percentile": 0.011627906976744186,
+      "fixed": false
+    },
+    {
+      "name": "WoohyuN",
+      "static_salary": 1000000,
+      "monthly_salary": 1570000,
+      "kills": 705,
+      "deaths": 764,
+      "games": 51,
+      "kd": 0.9256926952141058,
+      "percentile": 0.5232558139534884,
+      "fixed": false
+    },
+    {
+      "name": "WsLeo",
+      "static_salary": 900000,
+      "monthly_salary": 900000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Xdll",
+      "static_salary": 950000,
+      "monthly_salary": 2060000,
+      "kills": 2152,
+      "deaths": 1951,
+      "games": 223,
+      "kd": 1.1014639071176173,
+      "percentile": 0.6627906976744186,
+      "fixed": false
+    },
+    {
+      "name": "ZMJKK",
+      "static_salary": 1000000,
+      "monthly_salary": 1000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "Zekken",
+      "static_salary": 1500000,
+      "monthly_salary": 270000,
+      "kills": 455,
+      "deaths": 670,
+      "games": 47,
+      "kd": 0.6928571428571428,
+      "percentile": 0.1744186046511628,
+      "fixed": false
+    },
+    {
+      "name": "Zest",
+      "static_salary": 900000,
+      "monthly_salary": 2530000,
+      "kills": 1590,
+      "deaths": 1271,
+      "games": 103,
+      "kd": 1.2451960030745581,
+      "percentile": 0.7674418604651163,
+      "fixed": false
+    },
+    {
+      "name": "alecks",
+      "static_salary": 1000000,
+      "monthly_salary": 570000,
+      "kills": 522,
+      "deaths": 685,
+      "games": 51,
+      "kd": 0.772027972027972,
+      "percentile": 0.313953488372093,
+      "fixed": false
+    },
+    {
+      "name": "benjyfishy",
+      "static_salary": 1700000,
+      "monthly_salary": 1700000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "cNed",
+      "static_salary": 1000000,
+      "monthly_salary": 2160000,
+      "kills": 800,
+      "deaths": 698,
+      "games": 53,
+      "kd": 1.14010989010989,
+      "percentile": 0.686046511627907,
+      "fixed": false
+    },
+    {
+      "name": "crashies",
+      "static_salary": 1200000,
+      "monthly_salary": 470000,
+      "kills": 426,
+      "deaths": 592,
+      "games": 53,
+      "kd": 0.7331189710610932,
+      "percentile": 0.27906976744186046,
+      "fixed": false
+    },
+    {
+      "name": "d4v41",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "eKo",
+      "static_salary": 900000,
+      "monthly_salary": 1640000,
+      "kills": 2090,
+      "deaths": 2235,
+      "games": 223,
+      "kd": 0.9359823399558499,
+      "percentile": 0.5465116279069767,
+      "fixed": false
+    },
+    {
+      "name": "eeiu",
+      "static_salary": 1500000,
+      "monthly_salary": 1500000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "eggsterr",
+      "static_salary": 700000,
+      "monthly_salary": 260000,
+      "kills": 497,
+      "deaths": 760,
+      "games": 50,
+      "kd": 0.6670886075949367,
+      "percentile": 0.16279069767441862,
+      "fixed": false
+    },
+    {
+      "name": "icy",
+      "static_salary": 800000,
+      "monthly_salary": 240000,
+      "kills": 375,
+      "deaths": 594,
+      "games": 47,
+      "kd": 0.6490384615384616,
+      "percentile": 0.1511627906976744,
+      "fixed": false
+    },
+    {
+      "name": "jawgemo",
+      "static_salary": 1000000,
+      "monthly_salary": 1250000,
+      "kills": 1228,
+      "deaths": 1385,
+      "games": 110,
+      "kd": 0.8890459363957597,
+      "percentile": 0.46511627906976744,
+      "fixed": false
+    },
+    {
+      "name": "kaajak",
+      "static_salary": 1600000,
+      "monthly_salary": 1600000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "keiko",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "koldamenta",
+      "static_salary": 800000,
+      "monthly_salary": 130000,
+      "kills": 258,
+      "deaths": 621,
+      "games": 51,
+      "kd": 0.4423963133640553,
+      "percentile": 0.03488372093023256,
+      "fixed": false
+    },
+    {
+      "name": "leaf",
+      "static_salary": 2000000,
+      "monthly_salary": 1800000,
+      "kills": 625,
+      "deaths": 634,
+      "games": 56,
+      "kd": 0.9864457831325302,
+      "percentile": 0.5930232558139535,
+      "fixed": false
+    },
+    {
+      "name": "lovers rock",
+      "static_salary": 1500000,
+      "monthly_salary": 120000,
+      "kills": 315,
+      "deaths": 759,
+      "games": 49,
+      "kd": 0.4372623574144487,
+      "percentile": 0.023255813953488372,
+      "fixed": false
+    },
+    {
+      "name": "mada",
+      "static_salary": 1600000,
+      "monthly_salary": 1600000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "marteen",
+      "static_salary": 2000000,
+      "monthly_salary": 870000,
+      "kills": 732,
+      "deaths": 886,
+      "games": 60,
+      "kd": 0.8318777292576419,
+      "percentile": 0.3953488372093023,
+      "fixed": false
+    },
+    {
+      "name": "mindfreak",
+      "static_salary": 1000000,
+      "monthly_salary": 150000,
+      "kills": 302,
+      "deaths": 660,
+      "games": 51,
+      "kd": 0.4811594202898551,
+      "percentile": 0.05813953488372093,
+      "fixed": false
+    },
+    {
+      "name": "nAts",
+      "static_salary": 2200000,
+      "monthly_salary": 640000,
+      "kills": 534,
+      "deaths": 669,
+      "games": 56,
+      "kd": 0.8068669527896996,
+      "percentile": 0.3372093023255814,
+      "fixed": false
+    },
+    {
+      "name": "primmie",
+      "static_salary": 2000000,
+      "monthly_salary": 2000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "s0m",
+      "static_salary": 1300000,
+      "monthly_salary": 1300000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "skuba",
+      "static_salary": 1200000,
+      "monthly_salary": 1200000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "something",
+      "static_salary": 2500000,
+      "monthly_salary": 3180000,
+      "kills": 2352,
+      "deaths": 1629,
+      "games": 111,
+      "kd": 1.4358047016274864,
+      "percentile": 0.8837209302325582,
+      "fixed": false
+    },
+    {
+      "name": "soulcas",
+      "static_salary": 1000000,
+      "monthly_salary": 3490000,
+      "kills": 972,
+      "deaths": 529,
+      "games": 53,
+      "kd": 1.7924865831842576,
+      "percentile": 0.9302325581395349,
+      "fixed": false
+    },
+    {
+      "name": "stax",
+      "static_salary": 1700000,
+      "monthly_salary": 1680000,
+      "kills": 674,
+      "deaths": 722,
+      "games": 52,
+      "kd": 0.9361702127659575,
+      "percentile": 0.5581395348837209,
+      "fixed": false
+    },
+    {
+      "name": "t3xture",
+      "static_salary": 1500000,
+      "monthly_salary": 1110000,
+      "kills": 592,
+      "deaths": 673,
+      "games": 47,
+      "kd": 0.8847795163584637,
+      "percentile": 0.4418604651162791,
+      "fixed": false
+    },
+    {
+      "name": "tex",
+      "static_salary": 1400000,
+      "monthly_salary": 1400000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "trent",
+      "static_salary": 2300000,
+      "monthly_salary": 2300000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "trexx",
+      "static_salary": 2000000,
+      "monthly_salary": 1610000,
+      "kills": 655,
+      "deaths": 708,
+      "games": 53,
+      "kd": 0.9281842818428184,
+      "percentile": 0.5348837209302325,
+      "fixed": false
+    },
+    {
+      "name": "valyn",
+      "static_salary": 1000000,
+      "monthly_salary": 1000000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "vo0kashu",
+      "static_salary": 900000,
+      "monthly_salary": 390000,
+      "kills": 548,
+      "deaths": 766,
+      "games": 52,
+      "kd": 0.7261306532663316,
+      "percentile": 0.2441860465116279,
+      "fixed": false
+    },
+    {
+      "name": "yay",
+      "static_salary": 100000,
+      "monthly_salary": 100000,
+      "kills": 0,
+      "deaths": 0,
+      "games": 0,
+      "kd": 1.0,
+      "percentile": null,
+      "fixed": false
+    },
+    {
+      "name": "いぐるん",
+      "static_salary": 500000,
+      "monthly_salary": 2370000,
+      "kills": 1509,
+      "deaths": 1258,
+      "games": 158,
+      "kd": 1.1948757763975155,
+      "percentile": 0.7325581395348837,
+      "fixed": false
+    },
+    {
+      "name": "いぬさん",
+      "static_salary": 111111,
+      "monthly_salary": 2650000,
+      "kills": 1978,
+      "deaths": 1567,
+      "games": 160,
+      "kd": 1.2573575453976205,
+      "percentile": 0.7906976744186046,
+      "fixed": false
+    },
+    {
+      "name": "えんぺん",
+      "static_salary": 500000,
+      "monthly_salary": 3650000,
+      "kills": 1864,
+      "deaths": 980,
+      "games": 158,
+      "kd": 1.8752475247524751,
+      "percentile": 0.9534883720930233,
+      "fixed": false
+    },
+    {
+      "name": "おもこ",
+      "static_salary": 670000,
+      "monthly_salary": 3260000,
+      "kills": 3128,
+      "deaths": 2135,
+      "games": 212,
+      "kd": 1.458660508083141,
+      "percentile": 0.8953488372093024,
+      "fixed": false
+    },
+    {
+      "name": "くりまる",
+      "static_salary": 800000,
+      "monthly_salary": 2420000,
+      "kills": 700,
+      "deaths": 580,
+      "games": 48,
+      "kd": 1.1967213114754098,
+      "percentile": 0.7441860465116279,
+      "fixed": false
+    },
+    {
+      "name": "くんた",
+      "static_salary": 800000,
+      "monthly_salary": 1930000,
+      "kills": 634,
+      "deaths": 590,
+      "games": 48,
+      "kd": 1.070967741935484,
+      "percentile": 0.627906976744186,
+      "fixed": false
+    },
+    {
+      "name": "ごりまる",
+      "static_salary": 800000,
+      "monthly_salary": 440000,
+      "kills": 409,
+      "deaths": 569,
+      "games": 48,
+      "kd": 0.7328881469115192,
+      "percentile": 0.26744186046511625,
+      "fixed": false
+    },
+    {
+      "name": "ごんごん",
+      "static_salary": 800000,
+      "monthly_salary": 1530000,
+      "kills": 527,
+      "deaths": 576,
+      "games": 48,
+      "kd": 0.9191419141914191,
+      "percentile": 0.5116279069767442,
+      "fixed": false
+    },
+    {
+      "name": "ごんた",
+      "static_salary": 800000,
+      "monthly_salary": 2110000,
+      "kills": 674,
+      "deaths": 594,
+      "games": 48,
+      "kd": 1.1282051282051282,
+      "percentile": 0.6744186046511628,
+      "fixed": false
+    },
+    {
+      "name": "とりさん",
+      "static_salary": 444444,
+      "monthly_salary": 720000,
+      "kills": 1208,
+      "deaths": 1493,
+      "games": 160,
+      "kd": 0.8128693368351937,
+      "percentile": 0.36046511627906974,
+      "fixed": false
+    },
+    {
+      "name": "ねこさん",
+      "static_salary": 222222,
+      "monthly_salary": 1500000,
+      "kills": 1365,
+      "deaths": 1508,
+      "games": 160,
+      "kd": 0.9070221066319896,
+      "percentile": 0.5,
+      "fixed": false
+    },
+    {
+      "name": "ひつじさん",
+      "static_salary": 333333,
+      "monthly_salary": 2480000,
+      "kills": 2010,
+      "deaths": 1622,
+      "games": 160,
+      "kd": 1.234866828087167,
+      "percentile": 0.7558139534883721,
+      "fixed": false
+    },
+    {
+      "name": "まーやまくん",
+      "static_salary": 2500000,
+      "monthly_salary": 2780000,
+      "kills": 738,
+      "deaths": 554,
+      "games": 52,
+      "kd": 1.3150684931506849,
+      "percentile": 0.813953488372093,
+      "fixed": false
+    },
+    {
+      "name": "ろびぃな",
+      "static_salary": 500000,
+      "monthly_salary": 2310000,
+      "kills": 1387,
+      "deaths": 1178,
+      "games": 158,
+      "kd": 1.1730132450331126,
+      "percentile": 0.7209302325581395,
+      "fixed": false
+    },
+    {
+      "name": "夢の街",
+      "static_salary": 500000,
+      "monthly_salary": 920000,
+      "kills": 1104,
+      "deaths": 1308,
+      "games": 158,
+      "kd": 0.8475336322869955,
+      "percentile": 0.4069767441860465,
+      "fixed": false
+    }
+  ],
+  "salary_updated_month": 0,
   "owned_players": [
+    {
+      "name": "Smoggy",
+      "hs_pct": 0.38,
+      "dodge_pct": 0.19,
+      "iq": 75,
+      "hit_pct": 0.73,
+      "reaction": 120,
+      "role": "タイガー",
+      "influence": 50,
+      "form_variance": 8,
+      "mental": 6,
+      "monthly_salary": 1180000,
+      "loyalty": 8
+    },
+    {
+      "name": "Lysoar",
+      "hs_pct": 0.33,
+      "dodge_pct": 0.17,
+      "iq": 105,
+      "hit_pct": 0.71,
+      "reaction": 100,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 7,
+      "mental": 2,
+      "monthly_salary": 800000,
+      "loyalty": 6
+    },
     {
       "name": "まーやまくん",
       "hs_pct": 0.75,
@@ -14,169 +1436,63 @@
       "influence": 50,
       "form_variance": 1,
       "mental": 7,
-      "monthly_salary": 2500000,
+      "monthly_salary": 2780000,
       "loyalty": 6
     },
     {
-      "name": "primmie",
-      "hs_pct": 0.47,
-      "dodge_pct": 0.24,
-      "iq": 59,
-      "hit_pct": 0.79,
-      "reaction": 98,
-      "role": "タイガー",
-      "influence": 90,
-      "form_variance": 5,
-      "mental": 2,
-      "monthly_salary": 2000000,
-      "loyalty": 4
-    },
-    {
-      "name": "valyn",
-      "hs_pct": 0.26,
-      "dodge_pct": 0.13,
-      "iq": 140,
-      "hit_pct": 0.64,
-      "reaction": 95,
-      "role": "スモーカー",
-      "influence": 40,
-      "form_variance": 5,
-      "mental": 5,
-      "monthly_salary": 1000000,
-      "loyalty": 7
-    },
-    {
-      "name": "Less",
-      "hs_pct": 0.35,
-      "dodge_pct": 0.22,
-      "iq": 86,
-      "hit_pct": 0.74,
-      "reaction": 104,
-      "role": "タイガー",
-      "influence": 80,
-      "form_variance": 3,
-      "mental": 6,
-      "monthly_salary": 2000000,
-      "loyalty": 5
-    },
-    {
-      "name": "Brawk",
-      "hs_pct": 0.32,
-      "dodge_pct": 0.15,
-      "iq": 90,
-      "hit_pct": 0.69,
-      "reaction": 95,
-      "role": "シーカー",
-      "influence": 90,
-      "form_variance": 6,
-      "mental": 8,
-      "monthly_salary": 1500000,
-      "loyalty": 6
-    },
-    {
-      "name": "ごりまる",
-      "hs_pct": 0.4,
-      "dodge_pct": 0.15,
-      "iq": 121,
-      "hit_pct": 0.6,
-      "reaction": 110,
-      "role": "スモーカー",
-      "influence": 50,
-      "form_variance": 1,
-      "mental": 9,
-      "monthly_salary": 800000,
-      "loyalty": 5
-    },
-    {
-      "name": "ごんごん",
-      "hs_pct": 0.3,
-      "dodge_pct": 0.2,
-      "iq": 121,
-      "hit_pct": 0.7,
-      "reaction": 125,
-      "role": "タイガー",
-      "influence": 50,
-      "form_variance": 8,
-      "mental": 8,
-      "monthly_salary": 800000,
-      "loyalty": 5
-    },
-    {
-      "name": "ごんた",
-      "hs_pct": 0.25,
-      "dodge_pct": 0.25,
-      "iq": 121,
+      "name": "Asuna",
+      "hs_pct": 0.29,
+      "dodge_pct": 0.17,
+      "iq": 85,
       "hit_pct": 0.75,
       "reaction": 125,
-      "role": "シーカー",
-      "influence": 50,
-      "form_variance": 5,
-      "mental": 7,
-      "monthly_salary": 800000,
-      "loyalty": 5
-    },
-    {
-      "name": "くんた",
-      "hs_pct": 0.25,
-      "dodge_pct": 0.2,
-      "iq": 121,
-      "hit_pct": 0.65,
-      "reaction": 130,
       "role": "フラッシュ",
-      "influence": 50,
-      "form_variance": 3,
-      "mental": 6,
-      "monthly_salary": 800000,
-      "loyalty": 5
+      "influence": 65,
+      "form_variance": 7,
+      "mental": 8,
+      "monthly_salary": 680000,
+      "loyalty": 10
     },
     {
-      "name": "くりまる",
+      "name": "Zekken",
       "hs_pct": 0.35,
-      "dodge_pct": 0.3,
-      "iq": 150,
+      "dodge_pct": 0.25,
+      "iq": 85,
       "hit_pct": 0.7,
-      "reaction": 115,
+      "reaction": 105,
       "role": "フラッシュ",
-      "influence": 50,
-      "form_variance": 3,
-      "mental": 7,
-      "monthly_salary": 800000,
-      "loyalty": 5
+      "influence": 100,
+      "form_variance": 8,
+      "mental": 8,
+      "monthly_salary": 270000,
+      "loyalty": 8
     }
   ],
   "roster": [
-    "ごりまる",
-    "ごんごん",
-    "ごんた",
-    "くんた",
-    "くりまる"
+    "Smoggy",
+    "Lysoar",
+    "まーやまくん",
+    "Asuna",
+    "Zekken"
   ],
   "teams": [
     {
-      "id": "29d42926ed414f2db46768c470222e21",
-      "name": "マイチーム",
+      "id": "cff85c491e4c4fc5baa226a986f6ff36",
+      "name": "編成1",
       "roster": [
+        "Smoggy",
+        "Lysoar",
         "まーやまくん",
-        "primmie",
-        "valyn",
-        "Less",
-        "Brawk"
-      ]
-    },
-    {
-      "id": "4468a9817c2844b992d89e2c6bebfc8c",
-      "name": "gorigons",
-      "roster": [
-        "ごりまる",
-        "ごんごん",
-        "ごんた",
-        "くんた",
-        "くりまる"
-      ]
+        "Asuna",
+        "Zekken"
+      ],
+      "igl": null,
+      "carrier": "まーやまくん",
+      "ai": "toru_ai_v3.1"
     }
   ],
-  "editing_team_id": "4468a9817c2844b992d89e2c6bebfc8c",
-  "selected_team_id": "4468a9817c2844b992d89e2c6bebfc8c",
+  "editing_team_id": "cff85c491e4c4fc5baa226a986f6ff36",
+  "selected_team_id": null,
   "opponent_teams": [
     {
       "id": "world-1fc938eccae45bf997dd13b6e6d7af28",
@@ -193,7 +1509,7 @@
           "influence": 50,
           "form_variance": 5,
           "mental": 10,
-          "monthly_salary": 1300000,
+          "monthly_salary": 160000,
           "loyalty": 7
         },
         {
@@ -207,7 +1523,7 @@
           "influence": 90,
           "form_variance": 8,
           "mental": 8,
-          "monthly_salary": 1500000,
+          "monthly_salary": 1410000,
           "loyalty": 5
         },
         {
@@ -221,7 +1537,7 @@
           "influence": 60,
           "form_variance": 4,
           "mental": 7,
-          "monthly_salary": 1500000,
+          "monthly_salary": 980000,
           "loyalty": 8
         },
         {
@@ -235,7 +1551,7 @@
           "influence": 80,
           "form_variance": 3,
           "mental": 9,
-          "monthly_salary": 2500000,
+          "monthly_salary": 3040000,
           "loyalty": 7
         },
         {
@@ -249,7 +1565,7 @@
           "influence": 65,
           "form_variance": 1,
           "mental": 10,
-          "monthly_salary": 3000000,
+          "monthly_salary": 3110000,
           "loyalty": 9
         }
       ],
@@ -268,16 +1584,16 @@
         {
           "player_name": "Boaster",
           "kind": "year1",
-          "monthly_salary": 1300000,
+          "monthly_salary": 160000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 50.4,
           "end_reason": null
         },
         {
           "player_name": "Derke",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 1410000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -286,28 +1602,28 @@
         {
           "player_name": "Alfajer",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 980000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 50.6,
           "end_reason": null
         },
         {
           "player_name": "Chronicle",
           "kind": "year1",
-          "monthly_salary": 2500000,
+          "monthly_salary": 3040000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 50.4,
           "end_reason": null
         },
         {
           "player_name": "Leo",
           "kind": "year1",
-          "monthly_salary": 3000000,
+          "monthly_salary": 3110000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 50.8,
           "end_reason": null
         }
       ]
@@ -327,7 +1643,7 @@
           "influence": 70,
           "form_variance": 6,
           "mental": 9,
-          "monthly_salary": 1000000,
+          "monthly_salary": 420000,
           "loyalty": 9
         },
         {
@@ -341,7 +1657,7 @@
           "influence": 55,
           "form_variance": 4,
           "mental": 10,
-          "monthly_salary": 2500000,
+          "monthly_salary": 770000,
           "loyalty": 5
         },
         {
@@ -355,7 +1671,7 @@
           "influence": 75,
           "form_variance": 8,
           "mental": 9,
-          "monthly_salary": 1000000,
+          "monthly_salary": 1250000,
           "loyalty": 8
         },
         {
@@ -369,7 +1685,7 @@
           "influence": 60,
           "form_variance": 9,
           "mental": 7,
-          "monthly_salary": 1300000,
+          "monthly_salary": 2840000,
           "loyalty": 10
         },
         {
@@ -383,7 +1699,7 @@
           "influence": 150,
           "form_variance": 4,
           "mental": 7,
-          "monthly_salary": 2000000,
+          "monthly_salary": 2020000,
           "loyalty": 6
         }
       ],
@@ -402,46 +1718,46 @@
         {
           "player_name": "Boostio",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 420000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.9,
           "end_reason": null
         },
         {
           "player_name": "Ethan",
           "kind": "year1",
-          "monthly_salary": 2500000,
+          "monthly_salary": 770000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.5,
           "end_reason": null
         },
         {
           "player_name": "jawgemo",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 1250000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.8,
           "end_reason": null
         },
         {
           "player_name": "C0M",
           "kind": "year1",
-          "monthly_salary": 1300000,
+          "monthly_salary": 2840000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 53.0,
           "end_reason": null
         },
         {
           "player_name": "Demon1",
           "kind": "year1",
-          "monthly_salary": 2000000,
+          "monthly_salary": 2020000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.6,
           "end_reason": null
         }
       ]
@@ -461,7 +1777,7 @@
           "influence": 20,
           "form_variance": 1,
           "mental": 0,
-          "monthly_salary": 600000,
+          "monthly_salary": 210000,
           "loyalty": 10
         },
         {
@@ -475,7 +1791,7 @@
           "influence": 100,
           "form_variance": 10,
           "mental": 10,
-          "monthly_salary": 1900000,
+          "monthly_salary": 3570000,
           "loyalty": 9
         },
         {
@@ -489,7 +1805,7 @@
           "influence": 100,
           "form_variance": 1,
           "mental": 8,
-          "monthly_salary": 3000000,
+          "monthly_salary": 1760000,
           "loyalty": 8
         },
         {
@@ -503,7 +1819,7 @@
           "influence": 40,
           "form_variance": 5,
           "mental": 7,
-          "monthly_salary": 1000000,
+          "monthly_salary": 330000,
           "loyalty": 4
         },
         {
@@ -517,7 +1833,7 @@
           "influence": 40,
           "form_variance": 5,
           "mental": 7,
-          "monthly_salary": 1500000,
+          "monthly_salary": 1880000,
           "loyalty": 10
         },
         {
@@ -531,7 +1847,7 @@
           "influence": 80,
           "form_variance": 7,
           "mental": 5,
-          "monthly_salary": 1500000,
+          "monthly_salary": 1330000,
           "loyalty": 8
         },
         {
@@ -564,55 +1880,55 @@
         {
           "player_name": "Furina",
           "kind": "year1",
-          "monthly_salary": 600000,
+          "monthly_salary": 210000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.0,
           "end_reason": null
         },
         {
           "player_name": "Lohen",
           "kind": "year1",
-          "monthly_salary": 1900000,
+          "monthly_salary": 3570000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 51.9,
           "end_reason": null
         },
         {
           "player_name": "Arlecchino",
           "kind": "year1",
-          "monthly_salary": 3000000,
+          "monthly_salary": 1760000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 51.8,
           "end_reason": null
         },
         {
           "player_name": "Lisa",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 330000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 51.4,
           "end_reason": null
         },
         {
           "player_name": "Jean",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 1880000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 52.0,
           "end_reason": null
         },
         {
           "player_name": "Tartaglia",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 1330000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 51.8,
           "end_reason": null
         },
         {
@@ -621,7 +1937,7 @@
           "monthly_salary": 900000,
           "start_month": 0,
           "duration_months": 12,
-          "team_loyalty": 50.0,
+          "team_loyalty": 51.8,
           "end_reason": null
         }
       ]
@@ -641,7 +1957,7 @@
           "influence": 45,
           "form_variance": 3,
           "mental": 7,
-          "monthly_salary": 1500000,
+          "monthly_salary": 200000,
           "loyalty": 6
         },
         {
@@ -655,7 +1971,7 @@
           "influence": 50,
           "form_variance": 4,
           "mental": 5,
-          "monthly_salary": 1800000,
+          "monthly_salary": 2590000,
           "loyalty": 4
         },
         {
@@ -669,7 +1985,7 @@
           "influence": 77,
           "form_variance": 6,
           "mental": 6,
-          "monthly_salary": 1500000,
+          "monthly_salary": 140000,
           "loyalty": 8
         },
         {
@@ -683,7 +1999,7 @@
           "influence": 65,
           "form_variance": 5,
           "mental": 6,
-          "monthly_salary": 1500000,
+          "monthly_salary": 110000,
           "loyalty": 7
         },
         {
@@ -697,7 +2013,7 @@
           "influence": 55,
           "form_variance": 6,
           "mental": 6,
-          "monthly_salary": 1500000,
+          "monthly_salary": 120000,
           "loyalty": 6
         }
       ],
@@ -716,7 +2032,7 @@
         {
           "player_name": "Rosé",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 200000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -725,7 +2041,7 @@
         {
           "player_name": "Lar0k",
           "kind": "year1",
-          "monthly_salary": 1800000,
+          "monthly_salary": 2590000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -734,7 +2050,7 @@
         {
           "player_name": "Loita",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 140000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -743,7 +2059,7 @@
         {
           "player_name": "Crewn",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 110000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -752,7 +2068,7 @@
         {
           "player_name": "lovers rock",
           "kind": "year1",
-          "monthly_salary": 1500000,
+          "monthly_salary": 120000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -775,7 +2091,7 @@
           "influence": 70,
           "form_variance": 8,
           "mental": 3,
-          "monthly_salary": 2000000,
+          "monthly_salary": 2210000,
           "loyalty": 5
         },
         {
@@ -789,7 +2105,7 @@
           "influence": 90,
           "form_variance": 7,
           "mental": 6,
-          "monthly_salary": 850000,
+          "monthly_salary": 600000,
           "loyalty": 2
         },
         {
@@ -803,7 +2119,7 @@
           "influence": 55,
           "form_variance": 8,
           "mental": 4,
-          "monthly_salary": 1000000,
+          "monthly_salary": 1570000,
           "loyalty": 8
         },
         {
@@ -817,7 +2133,7 @@
           "influence": 100,
           "form_variance": 9,
           "mental": 5,
-          "monthly_salary": 900000,
+          "monthly_salary": 2530000,
           "loyalty": 4
         },
         {
@@ -831,7 +2147,7 @@
           "influence": 75,
           "form_variance": 8,
           "mental": 9,
-          "monthly_salary": 2000000,
+          "monthly_salary": 1040000,
           "loyalty": 5
         }
       ],
@@ -850,7 +2166,7 @@
         {
           "player_name": "Nanasaki",
           "kind": "year1",
-          "monthly_salary": 2000000,
+          "monthly_salary": 2210000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -859,7 +2175,7 @@
         {
           "player_name": "Canezerra",
           "kind": "year1",
-          "monthly_salary": 850000,
+          "monthly_salary": 600000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -868,7 +2184,7 @@
         {
           "player_name": "WoohyuN",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 1570000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -877,7 +2193,7 @@
         {
           "player_name": "Zest",
           "kind": "year1",
-          "monthly_salary": 900000,
+          "monthly_salary": 2530000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -886,7 +2202,7 @@
         {
           "player_name": "Meteor",
           "kind": "year1",
-          "monthly_salary": 2000000,
+          "monthly_salary": 1040000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -909,7 +2225,7 @@
           "influence": 50,
           "form_variance": 10,
           "mental": 4,
-          "monthly_salary": 2500000,
+          "monthly_salary": 3330000,
           "loyalty": 3
         },
         {
@@ -923,7 +2239,7 @@
           "influence": 50,
           "form_variance": 5,
           "mental": 8,
-          "monthly_salary": 500000,
+          "monthly_salary": 2310000,
           "loyalty": 5
         },
         {
@@ -937,7 +2253,7 @@
           "influence": 55,
           "form_variance": 4,
           "mental": 8,
-          "monthly_salary": 500000,
+          "monthly_salary": 2370000,
           "loyalty": 5
         },
         {
@@ -951,7 +2267,7 @@
           "influence": 65,
           "form_variance": 1,
           "mental": 8,
-          "monthly_salary": 500000,
+          "monthly_salary": 3650000,
           "loyalty": 5
         },
         {
@@ -965,7 +2281,7 @@
           "influence": 50,
           "form_variance": 3,
           "mental": 8,
-          "monthly_salary": 500000,
+          "monthly_salary": 920000,
           "loyalty": 5
         }
       ],
@@ -984,7 +2300,7 @@
         {
           "player_name": "Tortlilyan",
           "kind": "year1",
-          "monthly_salary": 2500000,
+          "monthly_salary": 3330000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -993,7 +2309,7 @@
         {
           "player_name": "ろびぃな",
           "kind": "year1",
-          "monthly_salary": 500000,
+          "monthly_salary": 2310000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1002,7 +2318,7 @@
         {
           "player_name": "いぐるん",
           "kind": "year1",
-          "monthly_salary": 500000,
+          "monthly_salary": 2370000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1011,7 +2327,7 @@
         {
           "player_name": "えんぺん",
           "kind": "year1",
-          "monthly_salary": 500000,
+          "monthly_salary": 3650000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1020,7 +2336,7 @@
         {
           "player_name": "夢の街",
           "kind": "year1",
-          "monthly_salary": 500000,
+          "monthly_salary": 920000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1043,7 +2359,7 @@
           "influence": 50,
           "form_variance": 9,
           "mental": 5,
-          "monthly_salary": 222222,
+          "monthly_salary": 1500000,
           "loyalty": 5
         },
         {
@@ -1057,7 +2373,7 @@
           "influence": 50,
           "form_variance": 7,
           "mental": 5,
-          "monthly_salary": 444444,
+          "monthly_salary": 720000,
           "loyalty": 6
         },
         {
@@ -1071,7 +2387,7 @@
           "influence": 67,
           "form_variance": 0,
           "mental": 8,
-          "monthly_salary": 670000,
+          "monthly_salary": 3260000,
           "loyalty": 1
         },
         {
@@ -1085,7 +2401,7 @@
           "influence": 50,
           "form_variance": 4,
           "mental": 5,
-          "monthly_salary": 111111,
+          "monthly_salary": 2650000,
           "loyalty": 7
         },
         {
@@ -1099,7 +2415,7 @@
           "influence": 50,
           "form_variance": 5,
           "mental": 5,
-          "monthly_salary": 333333,
+          "monthly_salary": 2480000,
           "loyalty": 7
         }
       ],
@@ -1118,7 +2434,7 @@
         {
           "player_name": "ねこさん",
           "kind": "year1",
-          "monthly_salary": 222222,
+          "monthly_salary": 1500000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1127,7 +2443,7 @@
         {
           "player_name": "とりさん",
           "kind": "year1",
-          "monthly_salary": 444444,
+          "monthly_salary": 720000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1136,7 +2452,7 @@
         {
           "player_name": "おもこ",
           "kind": "year1",
-          "monthly_salary": 670000,
+          "monthly_salary": 3260000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1145,7 +2461,7 @@
         {
           "player_name": "いぬさん",
           "kind": "year1",
-          "monthly_salary": 111111,
+          "monthly_salary": 2650000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1154,7 +2470,7 @@
         {
           "player_name": "ひつじさん",
           "kind": "year1",
-          "monthly_salary": 333333,
+          "monthly_salary": 2480000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1177,7 +2493,7 @@
           "influence": 45,
           "form_variance": 7,
           "mental": 4,
-          "monthly_salary": 950000,
+          "monthly_salary": 2060000,
           "loyalty": 6
         },
         {
@@ -1191,7 +2507,7 @@
           "influence": 95,
           "form_variance": 8,
           "mental": 9,
-          "monthly_salary": 1000000,
+          "monthly_salary": 1970000,
           "loyalty": 7
         },
         {
@@ -1205,7 +2521,7 @@
           "influence": 50,
           "form_variance": 10,
           "mental": 3,
-          "monthly_salary": 900000,
+          "monthly_salary": 2970000,
           "loyalty": 6
         },
         {
@@ -1219,7 +2535,7 @@
           "influence": 60,
           "form_variance": 5,
           "mental": 8,
-          "monthly_salary": 900000,
+          "monthly_salary": 1640000,
           "loyalty": 4
         },
         {
@@ -1233,7 +2549,7 @@
           "influence": 40,
           "form_variance": 5,
           "mental": 5,
-          "monthly_salary": 1000000,
+          "monthly_salary": 170000,
           "loyalty": 9
         }
       ],
@@ -1252,7 +2568,7 @@
         {
           "player_name": "Xdll",
           "kind": "year1",
-          "monthly_salary": 950000,
+          "monthly_salary": 2060000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1261,7 +2577,7 @@
         {
           "player_name": "SyouTa",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 1970000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1270,7 +2586,7 @@
         {
           "player_name": "Absol",
           "kind": "year1",
-          "monthly_salary": 900000,
+          "monthly_salary": 2970000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1279,7 +2595,7 @@
         {
           "player_name": "eKo",
           "kind": "year1",
-          "monthly_salary": 900000,
+          "monthly_salary": 1640000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1288,7 +2604,7 @@
         {
           "player_name": "SugarZ3ro",
           "kind": "year1",
-          "monthly_salary": 1000000,
+          "monthly_salary": 170000,
           "start_month": 0,
           "duration_months": 12,
           "team_loyalty": 50.0,
@@ -1301,98 +2617,53 @@
   "game_month": 0,
   "contracts": [
     {
+      "player_name": "Smoggy",
+      "kind": "short",
+      "monthly_salary": 1180000,
+      "start_month": 0,
+      "duration_months": 6,
+      "team_loyalty": 49.6,
+      "end_reason": null
+    },
+    {
+      "player_name": "Lysoar",
+      "kind": "short",
+      "monthly_salary": 800000,
+      "start_month": 0,
+      "duration_months": 6,
+      "team_loyalty": 49.2,
+      "end_reason": null
+    },
+    {
       "player_name": "まーやまくん",
-      "kind": "year1",
-      "monthly_salary": 2500000,
+      "kind": "short",
+      "monthly_salary": 2780000,
       "start_month": 0,
-      "duration_months": 12,
+      "duration_months": 6,
+      "team_loyalty": 49.2,
+      "end_reason": null
+    },
+    {
+      "player_name": "Asuna",
+      "kind": "short",
+      "monthly_salary": 680000,
+      "start_month": 0,
+      "duration_months": 6,
       "team_loyalty": 50.0,
       "end_reason": null
     },
     {
-      "player_name": "primmie",
-      "kind": "year1",
-      "monthly_salary": 2000000,
+      "player_name": "Zekken",
+      "kind": "short",
+      "monthly_salary": 270000,
       "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "valyn",
-      "kind": "year1",
-      "monthly_salary": 1000000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "Less",
-      "kind": "year1",
-      "monthly_salary": 2000000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "Brawk",
-      "kind": "year1",
-      "monthly_salary": 1500000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "ごりまる",
-      "kind": "year1",
-      "monthly_salary": 800000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "ごんごん",
-      "kind": "year1",
-      "monthly_salary": 800000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "ごんた",
-      "kind": "year1",
-      "monthly_salary": 800000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "くんた",
-      "kind": "year1",
-      "monthly_salary": 800000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
-      "end_reason": null
-    },
-    {
-      "player_name": "くりまる",
-      "kind": "year1",
-      "monthly_salary": 800000,
-      "start_month": 0,
-      "duration_months": 12,
-      "team_loyalty": 50.0,
+      "duration_months": 6,
+      "team_loyalty": 49.6,
       "end_reason": null
     }
   ],
   "start_date": "2026-01-01",
-  "game_date": "2026-01-20",
+  "game_date": "2026-01-17",
   "in_season_periods": [
     [
       "03-01",
@@ -1404,13 +2675,106 @@
       "id": "kachina_2026",
       "name": "カチーナ杯 2026",
       "start_date": "2026-01-15",
-      "end_date": "2026-01-29",
       "team_count": 4,
       "prizes": {
         "1": 1000000,
         "2": 700000,
         "3": 600000,
         "4": 500000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 1,
+      "grand_final_maps_to_win": 1,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-01-01"
+    },
+    {
+      "id": "lisa_2026",
+      "name": "リサ杯 2026",
+      "start_date": "2026-03-10",
+      "team_count": 4,
+      "prizes": {
+        "1": 5000000,
+        "2": 3000000,
+        "3": 2000000,
+        "4": 1000000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 1,
+      "grand_final_maps_to_win": 1,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-02-01"
+    },
+    {
+      "id": "jean_2026",
+      "name": "ジン杯 2026",
+      "start_date": "2026-04-20",
+      "team_count": 6,
+      "prizes": {
+        "1": 8000000,
+        "2": 6000000,
+        "3": 5000000,
+        "4": 3000000,
+        "5": 2000000,
+        "6": 1500000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 1,
+      "grand_final_maps_to_win": 1,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-04-01"
+    },
+    {
+      "id": "lohen_2026",
+      "name": "ローエン杯 2026",
+      "start_date": "2026-06-30",
+      "team_count": 8,
+      "prizes": {
+        "1": 10000000,
+        "2": 8000000,
+        "3": 6000000,
+        "4": 5000000,
+        "5": 4000000,
+        "6": 3000000,
+        "7": 2000000,
+        "8": 1000000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 1,
+      "grand_final_maps_to_win": 1,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-06-01"
+    },
+    {
+      "id": "furina_2026",
+      "name": "フリーナ杯 2026",
+      "start_date": "2026-09-30",
+      "team_count": 8,
+      "prizes": {
+        "1": 100000000,
+        "2": 80000000,
+        "3": 60000000,
+        "4": 50000000,
+        "5": 40000000,
+        "6": 30000000,
+        "7": 20000000,
+        "8": 10000000
       },
       "normal_maps_to_win": 1,
       "lower_final_maps_to_win": 2,
@@ -1420,18 +2784,46 @@
       "participation_optional": true,
       "allow_player_entry": true,
       "opponent_teams": [],
-      "visible_from": "2026-01-01"
+      "visible_from": "2026-08-01"
     }
   ],
   "tournaments": [
     {
       "tournament_id": "kachina_2026",
-      "own_team_id": "29d42926ed414f2db46768c470222e21",
+      "own_team_id": "player_club",
       "entrants": [
         {
-          "id": "29d42926ed414f2db46768c470222e21",
+          "id": "player_club",
           "name": "マイチーム",
           "players": [
+            {
+              "name": "Smoggy",
+              "hs_pct": 0.38,
+              "dodge_pct": 0.19,
+              "iq": 75,
+              "hit_pct": 0.73,
+              "reaction": 120,
+              "role": "タイガー",
+              "influence": 50,
+              "form_variance": 8,
+              "mental": 6,
+              "monthly_salary": 1180000,
+              "loyalty": 8
+            },
+            {
+              "name": "Lysoar",
+              "hs_pct": 0.33,
+              "dodge_pct": 0.17,
+              "iq": 105,
+              "hit_pct": 0.71,
+              "reaction": 100,
+              "role": "スモーカー",
+              "influence": 50,
+              "form_variance": 7,
+              "mental": 2,
+              "monthly_salary": 800000,
+              "loyalty": 6
+            },
             {
               "name": "まーやまくん",
               "hs_pct": 0.75,
@@ -1443,68 +2835,40 @@
               "influence": 50,
               "form_variance": 1,
               "mental": 7,
-              "monthly_salary": 2500000,
+              "monthly_salary": 2780000,
               "loyalty": 6
             },
             {
-              "name": "primmie",
-              "hs_pct": 0.47,
-              "dodge_pct": 0.24,
-              "iq": 59,
-              "hit_pct": 0.79,
-              "reaction": 98,
-              "role": "タイガー",
-              "influence": 90,
-              "form_variance": 5,
-              "mental": 2,
-              "monthly_salary": 2000000,
-              "loyalty": 4
-            },
-            {
-              "name": "valyn",
-              "hs_pct": 0.26,
-              "dodge_pct": 0.13,
-              "iq": 140,
-              "hit_pct": 0.64,
-              "reaction": 95,
-              "role": "スモーカー",
-              "influence": 40,
-              "form_variance": 5,
-              "mental": 5,
-              "monthly_salary": 1000000,
-              "loyalty": 7
-            },
-            {
-              "name": "Less",
-              "hs_pct": 0.35,
-              "dodge_pct": 0.22,
-              "iq": 86,
-              "hit_pct": 0.74,
-              "reaction": 104,
-              "role": "タイガー",
-              "influence": 80,
-              "form_variance": 3,
-              "mental": 6,
-              "monthly_salary": 2000000,
-              "loyalty": 5
-            },
-            {
-              "name": "Brawk",
-              "hs_pct": 0.32,
-              "dodge_pct": 0.15,
-              "iq": 90,
-              "hit_pct": 0.69,
-              "reaction": 95,
-              "role": "シーカー",
-              "influence": 90,
-              "form_variance": 6,
+              "name": "Asuna",
+              "hs_pct": 0.29,
+              "dodge_pct": 0.17,
+              "iq": 85,
+              "hit_pct": 0.75,
+              "reaction": 125,
+              "role": "フラッシュ",
+              "influence": 65,
+              "form_variance": 7,
               "mental": 8,
-              "monthly_salary": 1500000,
-              "loyalty": 6
+              "monthly_salary": 680000,
+              "loyalty": 10
+            },
+            {
+              "name": "Zekken",
+              "hs_pct": 0.35,
+              "dodge_pct": 0.25,
+              "iq": 85,
+              "hit_pct": 0.7,
+              "reaction": 105,
+              "role": "フラッシュ",
+              "influence": 100,
+              "form_variance": 8,
+              "mental": 8,
+              "monthly_salary": 270000,
+              "loyalty": 8
             }
           ],
-          "ai": "default",
-          "igl": "valyn",
+          "ai": "toru_ai_v3.1",
+          "igl": "Lysoar",
           "carrier": "まーやまくん"
         },
         {
@@ -1522,7 +2886,7 @@
               "influence": 50,
               "form_variance": 5,
               "mental": 10,
-              "monthly_salary": 1300000,
+              "monthly_salary": 160000,
               "loyalty": 7
             },
             {
@@ -1536,7 +2900,7 @@
               "influence": 90,
               "form_variance": 8,
               "mental": 8,
-              "monthly_salary": 1500000,
+              "monthly_salary": 1410000,
               "loyalty": 5
             },
             {
@@ -1550,7 +2914,7 @@
               "influence": 60,
               "form_variance": 4,
               "mental": 7,
-              "monthly_salary": 1500000,
+              "monthly_salary": 980000,
               "loyalty": 8
             },
             {
@@ -1564,7 +2928,7 @@
               "influence": 80,
               "form_variance": 3,
               "mental": 9,
-              "monthly_salary": 2500000,
+              "monthly_salary": 3040000,
               "loyalty": 7
             },
             {
@@ -1578,7 +2942,7 @@
               "influence": 65,
               "form_variance": 1,
               "mental": 10,
-              "monthly_salary": 3000000,
+              "monthly_salary": 3110000,
               "loyalty": 9
             }
           ],
@@ -1601,7 +2965,7 @@
               "influence": 70,
               "form_variance": 6,
               "mental": 9,
-              "monthly_salary": 1000000,
+              "monthly_salary": 420000,
               "loyalty": 9
             },
             {
@@ -1615,7 +2979,7 @@
               "influence": 55,
               "form_variance": 4,
               "mental": 10,
-              "monthly_salary": 2500000,
+              "monthly_salary": 770000,
               "loyalty": 5
             },
             {
@@ -1629,7 +2993,7 @@
               "influence": 75,
               "form_variance": 8,
               "mental": 9,
-              "monthly_salary": 1000000,
+              "monthly_salary": 1250000,
               "loyalty": 8
             },
             {
@@ -1643,7 +3007,7 @@
               "influence": 60,
               "form_variance": 9,
               "mental": 7,
-              "monthly_salary": 1300000,
+              "monthly_salary": 2840000,
               "loyalty": 10
             },
             {
@@ -1657,7 +3021,7 @@
               "influence": 150,
               "form_variance": 4,
               "mental": 7,
-              "monthly_salary": 2000000,
+              "monthly_salary": 2020000,
               "loyalty": 6
             }
           ],
@@ -1680,7 +3044,7 @@
               "influence": 20,
               "form_variance": 1,
               "mental": 0,
-              "monthly_salary": 600000,
+              "monthly_salary": 210000,
               "loyalty": 10
             },
             {
@@ -1694,7 +3058,7 @@
               "influence": 100,
               "form_variance": 10,
               "mental": 10,
-              "monthly_salary": 1900000,
+              "monthly_salary": 3570000,
               "loyalty": 9
             },
             {
@@ -1708,7 +3072,7 @@
               "influence": 100,
               "form_variance": 1,
               "mental": 8,
-              "monthly_salary": 3000000,
+              "monthly_salary": 1760000,
               "loyalty": 8
             },
             {
@@ -1722,7 +3086,7 @@
               "influence": 40,
               "form_variance": 5,
               "mental": 7,
-              "monthly_salary": 1000000,
+              "monthly_salary": 330000,
               "loyalty": 4
             },
             {
@@ -1736,7 +3100,7 @@
               "influence": 40,
               "form_variance": 5,
               "mental": 7,
-              "monthly_salary": 1500000,
+              "monthly_salary": 1880000,
               "loyalty": 10
             }
           ],
@@ -1748,59 +3112,66 @@
       "results": [
         {
           "match_id": "W1M1",
-          "left_id": "29d42926ed414f2db46768c470222e21",
+          "left_id": "player_club",
           "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
           "left_wins": 0,
-          "right_wins": 1
+          "right_wins": 1,
+          "decided_by_rating": false
         },
         {
           "match_id": "W1M2",
           "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
           "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
-          "left_wins": 0,
-          "right_wins": 1
+          "left_wins": 1,
+          "right_wins": 0,
+          "decided_by_rating": true
         },
         {
           "match_id": "L1M1",
-          "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
-          "right_id": "29d42926ed414f2db46768c470222e21",
+          "left_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "right_id": "player_club",
           "left_wins": 1,
-          "right_wins": 0
+          "right_wins": 0,
+          "decided_by_rating": false
         },
         {
           "match_id": "W2M1",
           "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
-          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
           "left_wins": 1,
-          "right_wins": 0
+          "right_wins": 0,
+          "decided_by_rating": true
         },
         {
           "match_id": "LOWER_FINAL",
-          "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
-          "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "left_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+          "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
           "left_wins": 1,
-          "right_wins": 2
+          "right_wins": 0,
+          "decided_by_rating": true
         },
         {
           "match_id": "GRAND_FINAL",
           "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
           "right_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
-          "left_wins": 2,
-          "right_wins": 1
+          "left_wins": 0,
+          "right_wins": 1,
+          "decided_by_rating": true
         }
       ],
       "ranking": [
-        "world-03e5e1f7fcc659a6b2190986b9f24560",
         "world-fa19f77f8e62593aa71b5f5ded63be9a",
+        "world-03e5e1f7fcc659a6b2190986b9f24560",
         "world-1fc938eccae45bf997dd13b6e6d7af28",
-        "29d42926ed414f2db46768c470222e21"
+        "player_club"
       ],
       "completed": true,
       "declined": false,
       "prize_paid": 500000,
-      "seed": 1065732293,
-      "last_match_date": "2026-01-20",
-      "completed_date": "2026-01-20"
+      "seed": 18859026,
+      "last_match_date": "2026-01-17",
+      "completed_date": "2026-01-17",
+      "preset_id": "cff85c491e4c4fc5baa226a986f6ff36"
     }
   ],
   "starter_candidates": [
@@ -1927,7 +3298,7 @@
       "influence": 50,
       "form_variance": 1,
       "mental": 7,
-      "monthly_salary": 2500000,
+      "monthly_salary": 2780000,
       "loyalty": 6
     },
     {
@@ -1943,31 +3314,180 @@
       "mental": 8,
       "monthly_salary": 1500000,
       "loyalty": 6
+    },
+    {
+      "name": "Smoggy",
+      "hs_pct": 0.38,
+      "dodge_pct": 0.19,
+      "iq": 75,
+      "hit_pct": 0.73,
+      "reaction": 120,
+      "role": "タイガー",
+      "influence": 50,
+      "form_variance": 8,
+      "mental": 6,
+      "monthly_salary": 1180000,
+      "loyalty": 8
+    },
+    {
+      "name": "Lysoar",
+      "hs_pct": 0.33,
+      "dodge_pct": 0.17,
+      "iq": 105,
+      "hit_pct": 0.71,
+      "reaction": 100,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 7,
+      "mental": 2,
+      "monthly_salary": 800000,
+      "loyalty": 6
+    },
+    {
+      "name": "stax",
+      "hs_pct": 0.29,
+      "dodge_pct": 0.15,
+      "iq": 130,
+      "hit_pct": 0.69,
+      "reaction": 80,
+      "role": "フラッシュ",
+      "influence": 70,
+      "form_variance": 4,
+      "mental": 5,
+      "monthly_salary": 1680000,
+      "loyalty": 4
+    },
+    {
+      "name": "Mako",
+      "hs_pct": 0.28,
+      "dodge_pct": 0.16,
+      "iq": 120,
+      "hit_pct": 0.7,
+      "reaction": 85,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 5,
+      "mental": 5,
+      "monthly_salary": 350000,
+      "loyalty": 8
+    },
+    {
+      "name": "Rb",
+      "hs_pct": 0.29,
+      "dodge_pct": 0.23,
+      "iq": 110,
+      "hit_pct": 0.69,
+      "reaction": 80,
+      "role": "スモーカー",
+      "influence": 40,
+      "form_variance": 4,
+      "mental": 5,
+      "monthly_salary": 290000,
+      "loyalty": 4
+    },
+    {
+      "name": "Buzz",
+      "hs_pct": 0.3,
+      "dodge_pct": 0.23,
+      "iq": 80,
+      "hit_pct": 0.72,
+      "reaction": 100,
+      "role": "タイガー",
+      "influence": 60,
+      "form_variance": 5,
+      "mental": 5,
+      "monthly_salary": 500000,
+      "loyalty": 6
+    },
+    {
+      "name": "icy",
+      "hs_pct": 0.26,
+      "dodge_pct": 0.21,
+      "iq": 75,
+      "hit_pct": 0.78,
+      "reaction": 95,
+      "role": "タイガー",
+      "influence": 35,
+      "form_variance": 5,
+      "mental": 9,
+      "monthly_salary": 240000,
+      "loyalty": 3
+    },
+    {
+      "name": "SiuFatBB",
+      "hs_pct": 0.2,
+      "dodge_pct": 0.25,
+      "iq": 95,
+      "hit_pct": 0.7,
+      "reaction": 85,
+      "role": "シーカー",
+      "influence": 150,
+      "form_variance": 7,
+      "mental": 9,
+      "monthly_salary": 310000,
+      "loyalty": 3
+    },
+    {
+      "name": "t3xture",
+      "hs_pct": 0.33,
+      "dodge_pct": 0.19,
+      "iq": 93,
+      "hit_pct": 0.75,
+      "reaction": 150,
+      "role": "タイガー",
+      "influence": 75,
+      "form_variance": 7,
+      "mental": 8,
+      "monthly_salary": 1110000,
+      "loyalty": 6
+    },
+    {
+      "name": "Asuna",
+      "hs_pct": 0.29,
+      "dodge_pct": 0.17,
+      "iq": 85,
+      "hit_pct": 0.75,
+      "reaction": 125,
+      "role": "フラッシュ",
+      "influence": 65,
+      "form_variance": 7,
+      "mental": 8,
+      "monthly_salary": 680000,
+      "loyalty": 10
+    },
+    {
+      "name": "Zekken",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.25,
+      "iq": 85,
+      "hit_pct": 0.7,
+      "reaction": 105,
+      "role": "フラッシュ",
+      "influence": 100,
+      "form_variance": 8,
+      "mental": 8,
+      "monthly_salary": 270000,
+      "loyalty": 8
     }
   ],
   "starter_selection": [
+    "Smoggy",
+    "Lysoar",
     "まーやまくん",
-    "primmie",
-    "valyn",
-    "Less",
-    "Brawk"
+    "Asuna",
+    "Zekken"
   ],
   "starter_selection_pending": false,
   "ratings": [
     {
-      "team_id": "29d42926ed414f2db46768c470222e21",
+      "team_id": "player_club",
       "team_name": "マイチーム",
       "value": 1436.0
     },
     {
-      "team_id": "4468a9817c2844b992d89e2c6bebfc8c",
-      "team_name": "gorigons",
-      "value": 1465.7930275374829
-    },
-    {
       "team_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
       "team_name": "Furina Party",
-      "value": 1585.24904157941
+      "value": 1529.060996942049
     },
     {
       "team_id": "world-0a8f9696d20b5ef39105dcaf03c726ae",
@@ -1977,7 +3497,7 @@
     {
       "team_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
       "team_name": "Fnatic",
-      "value": 1510.2069724625171
+      "value": 1468.0
     },
     {
       "team_id": "world-5f8d32c6ccbc57f698ae83369087c813",
@@ -2002,7 +3522,7 @@
     {
       "team_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
       "team_name": "Evil Geniuses",
-      "value": 1502.75095842059
+      "value": 1566.939003057951
     }
   ],
   "rated_results": [
@@ -2011,8 +3531,7 @@
     "tournament:kachina_2026:L1M1",
     "tournament:kachina_2026:W2M1",
     "tournament:kachina_2026:LOWER_FINAL",
-    "tournament:kachina_2026:GRAND_FINAL",
-    "scrim:3c4c3f24a68948578cca6926704a51f6"
+    "tournament:kachina_2026:GRAND_FINAL"
   ],
   "sponsor_active": true,
   "transferred_players": [],

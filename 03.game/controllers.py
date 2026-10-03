@@ -3,6 +3,7 @@ import random
 from collections import deque
 
 import numpy as np
+from grid_paths import walking_distance
 
 
 class BaseController:
@@ -228,6 +229,8 @@ class BaseController:
 
     def shortest_path_distance(self, pos, target, grid):
         """壁を考慮した上下左右の最短距離。到達不能なら無限大。"""
+        if self._in_bounds is BaseController._in_bounds:
+            return walking_distance(grid, pos, target, moves=self.CARDINAL_MOVES)
         start = (int(pos[0]), int(pos[1]))
         goal = (int(target[0]), int(target[1]))
         if start == goal:

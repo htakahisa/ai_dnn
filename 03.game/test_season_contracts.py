@@ -63,18 +63,18 @@ class ContractRulesTest(unittest.TestCase):
         for name in ("Aspas", "Sato"):
             signed = state.with_scouted_player(name, "year1")
             self.assertIsNone(signed.opponent_owner(name))
-            self.assertEqual(signed.money, state.money - state.transfer_fee(name))
+            self.assertEqual(signed.money, state.money - state.transfer_fee(name) - signed.contract(name).monthly_salary * 3)
 
-    def test_every_term_checks_exact_funds_without_upfront_payment(self):
+    def test_every_term_pays_three_month_signing_bonus_and_checks_remaining_funds(self):
         player = replace(get_by_name("Meiy"), monthly_salary=123_457)
         with patch.dict(character_stats.CHARACTER_TABLE, {"Meiy": player}):
             for kind, duration, wage in (("short", 3, 123_457), ("year1", 12, 123_457),
                                          ("year2", 24, 111_112), ("year3", 36, 98_766)):
                 with self.subTest(kind=kind):
-                    funds = wage * duration
+                    funds = wage * (duration + 3)
                     state = replace(new_season(()), money=funds)
                     signed = state.with_scouted_player("Meiy", kind, 3)
-                    self.assertEqual(signed.money, funds)
+                    self.assertEqual(signed.money, funds - wage * 3)
                     self.assertEqual(signed.contract("Meiy").monthly_salary, wage)
                     self.assertEqual(signed.contract("Meiy").duration_months, duration)
                     self.assertEqual(signed.contract("Meiy").team_loyalty, 50)
@@ -94,12 +94,28 @@ class ContractRulesTest(unittest.TestCase):
             with self.subTest(kind=kind), self.assertRaises(SeasonSaveError):
                 contract_terms(player, kind)
 
+    def test_renewal_requires_bonus_and_remaining_wages_and_cannot_charge_twice(self):
+        expired = new_season(("Leo",)).advance_months(12, pay_salaries=False)
+        for kind in ("short", "year1", "year2", "year3"):
+            with self.subTest(kind=kind):
+                terms = contract_terms(expired.player("Leo"), kind, 1)
+                self.assertEqual(terms.signing_bonus, terms.monthly_salary * 3)
+                ready = replace(expired, money=terms.total_required_funds)
+                with self.assertRaises(SeasonSaveError):
+                    replace(ready, money=ready.money - 1).with_renewed_contract("Leo", kind, 1)
+                renewed = ready.with_renewed_contract("Leo", kind, 1)
+                self.assertEqual(renewed.money, terms.required_funds)
+                self.assertEqual(renewed.contract("Leo").team_loyalty, ready.contract("Leo").team_loyalty)
+                with self.assertRaises(SeasonSaveError):
+                    renewed.with_renewed_contract("Leo", kind, 1)
+                self.assertEqual(ready.money, terms.total_required_funds)
+
     def test_monthly_payroll_and_expiry_use_simulation_months(self):
         state = new_season(()).with_scouted_player("Leo", "short", 2)
         state = state.with_scouted_player("Meiy", "year2")
-        next_month = state.advance_months()
+        next_month = state.with_sponsor_contract(False).advance_months()
         payroll = state.contract("Leo").monthly_salary + state.contract("Meiy").monthly_salary
-        self.assertEqual(next_month.money, INITIAL_MONEY - payroll)
+        self.assertEqual(next_month.money, state.money - payroll)
         self.assertEqual(next_month.game_month, 1)
         self.assertTrue(next_month.can_play("Leo"))
         expiry = next_month.advance_months()
@@ -122,7 +138,7 @@ class ContractRulesTest(unittest.TestCase):
         self.assertEqual(renewed.contract("Leo").end_month, 60)
         self.assertEqual(renewed.contract("Leo").team_loyalty, state.contract("Leo").team_loyalty)
         self.assertEqual(renewed.contract("Leo").team_loyalty, 5)
-        self.assertEqual(renewed.money, state.money)
+        self.assertEqual(renewed.money, state.money - 240_000)
         self.assertEqual(len(renewed.owned_players), 1)
 
     def test_zero_or_negative_team_loyalty_blocks_renewal_but_preserves_long_contract(self):
@@ -238,7 +254,7 @@ class ContractRulesTest(unittest.TestCase):
         self.assertEqual(len(build_scrim_request(state, state.teams[0].id, state.opponent_teams[0].id)["own"]["players"]), 5)
 
     def test_payroll_can_produce_deficit_and_contracts_still_require_funds(self):
-        state = replace(new_season(("Leo",)), money=0)
+        state = replace(new_season(("Leo",)), money=0, sponsor_active=False)
         state = state.advance_months()
         self.assertEqual(state.money, -100_000)
         with self.assertRaises(SeasonSaveError):
@@ -373,8 +389,38 @@ class ContractScreenTest(unittest.TestCase):
         getattr(self.app, f"{screen}_players").selection_set(name)
         self.app.refresh_offer(screen)
 
+    def test_signing_bonus_updates_scout_colors_and_charges_on_renewal(self):
+        app = self.app
+        app.commit(replace(app.state, money=1_200_000), "Only the wage reserve")
+        app.show_screen("scout")
+        self.select("scout", "Leo")
+        self.assertIn("contract_unavailable", app.scout_players.item("Leo", "tags"))
+        self.assertEqual(str(app.offer_buttons["scout"]["state"]), "disabled")
+        before = app.state
+        app.sign_selected_contract("scout")
+        self.assertEqual(app.state, before)
+        app.commit(replace(app.state, money=1_500_000), "Reserve plus signing bonus")
+        self.assertIn("contract_available", app.scout_players.item("Leo", "tags"))
+        self.assertIn("契約金: 300,000", app.offer_summary["scout"].get())
+        app.sign_selected_contract("scout")
+        self.assertEqual(app.state.money, 1_200_000)
+        self.assertIn("契約金: 300,000", app.status.get())
+        self.assertEqual(self.store.load_or_create().money, app.state.money)
+        expired = app.state.advance_months(12, pay_salaries=False)
+        app.commit(replace(expired, money=1_500_000), "Renewal funds")
+        app.show_screen("contracts")
+        self.select("contracts", "Leo")
+        self.assertIn("契約金: 300,000", app.offer_summary["contracts"].get())
+        app.sign_selected_contract("contracts")
+        self.assertEqual(app.state.money, 1_200_000)
+        before = app.state
+        app.sign_selected_contract("contracts")
+        self.assertEqual(app.state, before)
+        self.assertEqual(self.store.load_or_create(), app.state)
+
     def test_scout_to_inventory_and_contract_view_with_restart(self):
         app = self.app
+        app.commit(app.state.with_sponsor_contract(False), "Payroll-only scenario")
         app.show_screen("scout")
         self.select("scout", "Leo")
         app.offer_kind["scout"].set("2年契約")
@@ -382,13 +428,13 @@ class ContractScreenTest(unittest.TestCase):
         self.assertIn("2,160,000", app.offer_summary["scout"].get())
         app.sign_selected_contract("scout")
         self.assertFalse(app.scout_players.exists("Leo"))
-        self.assertEqual(app.state.money, INITIAL_MONEY)
+        self.assertEqual(app.state.money, INITIAL_MONEY - 270_000)
         self.assertEqual(app.state.contract("Leo").monthly_salary, 90_000)
-        self.assertIn("10,000,000", app.home_summary.get())
+        self.assertIn("9,730,000", app.home_summary.get())
         app.show_screen("contracts")
         self.assertEqual(app.contracts_players.item("Leo", "values")[1], "契約中")
         app.advance_game_month()
-        self.assertEqual(app.state.money, INITIAL_MONEY - 90_000)
+        self.assertEqual(app.state.money, INITIAL_MONEY - 270_000 - 90_000)
         self.assertEqual(app.contracts_players.item("Leo", "values")[4], "1 / 24月")
         self.assertEqual(self.store.load_or_create(), app.state)
 
@@ -415,7 +461,7 @@ class ContractScreenTest(unittest.TestCase):
 
     def test_affordability_search_and_short_period_selection(self):
         app = self.app
-        app.commit(replace(app.state, money=100_000), "balance")
+        app.commit(replace(app.state, money=400_000), "balance")
         app.show_screen("scout")
         app.scout_search.set("Leo")
         self.assertTrue(app.scout_players.exists("Leo"))

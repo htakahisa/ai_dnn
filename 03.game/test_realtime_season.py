@@ -156,25 +156,21 @@ class SeasonPersistenceTest(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(SeasonSaveError, f"{name}.*ライバル"):
                 state.with_added_players((name,))
 
-    def test_duplicate_user_affiliation_is_rejected_in_drafts_save_and_old_data(self):
+    def test_presets_reuse_players_in_drafts_save_and_old_data(self):
         state = new_season(PLAYERS).with_roster(PLAYERS[:5]).with_confirmed_team()
         team_a = state.teams[0]
-        with self.assertRaisesRegex(SeasonSaveError, "Leo.*マイチーム"):
-            state.with_new_team().with_roster(("Leo",))
+        self.assertEqual(state.with_new_team().with_roster(("Leo",)).roster, ("Leo",))
         self.store.save(state)
         original = self.path.read_bytes()
         duplicate = SeasonTeam("duplicate-team", "重複チーム", PLAYERS[1:])
-        with self.assertRaises(SeasonSaveError):
-            self.store.save(replace(state, teams=(team_a, duplicate)))
-        self.assertEqual(self.path.read_bytes(), original)
+        self.store.save(replace(state, teams=(team_a, duplicate)))
+        self.assertEqual(len(self.store.load_or_create().teams), 2)
         data = json.loads(self.path.read_text(encoding="utf-8"))
         data["version"] = 2
         data.pop("opponent_teams")
-        data["teams"].append({"id": duplicate.id, "name": duplicate.name, "roster": list(duplicate.roster)})
         self.path.write_text(json.dumps(data), encoding="utf-8")
         invalid = self.path.read_bytes()
-        with self.assertRaisesRegex(SeasonSaveError, "重複所属"):
-            self.store.load_or_create()
+        self.assertEqual(len(self.store.load_or_create().teams), 2)
         self.assertEqual(self.path.read_bytes(), invalid)
 
     def test_valid_version_two_save_keeps_user_team_and_upgrades_when_imported(self):
@@ -213,9 +209,9 @@ class SeasonPersistenceTest(unittest.TestCase):
         self.assertEqual(SeasonStore(self.path).load_or_create(), state)
 
     def test_multiple_teams_and_selected_team_survive_restart(self):
-        state = new_season((*PLAYERS, *SECOND_PLAYERS)).with_team_name("チームA").with_roster(PLAYERS[:5]).with_confirmed_team()
+        state = new_season((*PLAYERS, *SECOND_PLAYERS)).with_preset_name("チームA").with_roster(PLAYERS[:5]).with_confirmed_team()
         team_a = state.teams[0]
-        state = state.with_new_team().with_team_name("チームB").with_roster(SECOND_PLAYERS).with_confirmed_team()
+        state = state.with_new_team().with_preset_name("チームB").with_roster(SECOND_PLAYERS).with_confirmed_team()
         state = state.with_selected_team(team_a.id)
         self.store.save(state)
         loaded = self.store.load_or_create()
@@ -226,7 +222,7 @@ class SeasonPersistenceTest(unittest.TestCase):
     def test_editing_registered_team_keeps_id_and_updates_only_on_confirmation(self):
         state = new_season(PLAYERS).with_roster(PLAYERS[:5]).with_confirmed_team()
         original = state.teams[0]
-        state = state.with_selected_team(original.id).with_roster(PLAYERS[1:]).with_team_name("変更したチーム")
+        state = state.with_selected_team(original.id).with_roster(PLAYERS[1:]).with_preset_name("変更したチーム")
         self.assertEqual(state.selected_team, original)
         state = state.with_confirmed_team()
         self.assertEqual(len(state.teams), 1)
@@ -240,7 +236,7 @@ class SeasonPersistenceTest(unittest.TestCase):
             state.with_confirmed_team()
         state = state.with_roster(PLAYERS[:5]).with_confirmed_team()
         with self.assertRaises(SeasonSaveError):
-            state.with_new_team().with_roster(PLAYERS[1:]).with_team_name(state.team_name).with_confirmed_team()
+            state.with_new_team().with_roster(PLAYERS[1:]).with_preset_name(state.preset_name).with_confirmed_team()
         with self.assertRaises(SeasonSaveError):
             state.with_selected_team("unknown-id")
         with self.assertRaises(SeasonSaveError):
@@ -370,8 +366,8 @@ class SeasonScreenTest(unittest.TestCase):
 
     def register_team(self, name, players):
         self.app.show_editor()
-        self.app.team_name.set(name)
-        self.app.save_team_name()
+        self.app.preset_name.set(name)
+        self.app.save_preset_name()
         for player in players:
             self.select_inventory(player)
             self.app.add_player()
@@ -387,7 +383,7 @@ class SeasonScreenTest(unittest.TestCase):
         self.app.new_team()
         self.register_team("チームB", SECOND_PLAYERS)
         self.app.show_home()
-        self.assertEqual(len(self.app.home_teams.get_children()), 2)
+        self.assertEqual(len(self.app.home_teams.get_children()), 1)
         self.app.show_preparation()
         self.assertEqual(self.app.current_screen, "preparation")
         self.assertEqual(tuple(self.app.prep_team_menu["values"]), ("チームA", "チームB"))
@@ -402,7 +398,7 @@ class SeasonScreenTest(unittest.TestCase):
         self.app.edit_team_choice.set("チームA")
         self.app.edit_saved_team()
         self.assertEqual(self.app.state.roster, PLAYERS[:5])
-        self.assertEqual(self.app.team_name.get(), "チームA")
+        self.assertEqual(self.app.preset_name.get(), "チームA")
         self.app.show_preparation()
         self.app.prep_team_choice.set("チームB")
         self.app.confirm_preparation()
@@ -420,7 +416,7 @@ class SeasonScreenTest(unittest.TestCase):
     def test_preparation_guides_user_until_team_is_confirmed(self):
         self.app.show_preparation()
         self.assertEqual(str(self.app.prep_confirm_button["state"]), "disabled")
-        self.assertIn("登録済みチームがありません", self.app.prep_hint.get())
+        self.assertIn("編成プリセットがありません", self.app.prep_hint.get())
         self.app.show_editor()
         self.app.name_input.insert("1.0", ",".join(PLAYERS))
         self.app.register_players()
@@ -452,21 +448,20 @@ class SeasonScreenTest(unittest.TestCase):
         self.assertEqual(self.app.state.owned_players, ())
         self.assertIn("ライバル", self.app.status.get())
 
-    def test_player_in_another_user_team_cannot_be_added_to_new_lineup(self):
+    def test_player_in_another_preset_can_be_added_to_new_lineup(self):
         self.app.name_input.insert("1.0", ",".join(PLAYERS))
         self.app.register_players()
         self.register_team("チームA", PLAYERS[:5])
         self.app.new_team()
         self.select_inventory("Leo")
-        self.assertEqual(str(self.app.add_button["state"]), "disabled")
-        self.assertIn("チームA", self.app.details.get())
+        self.assertEqual(str(self.app.add_button["state"]), "normal")
+        self.assertIn(self.app.state.team_name, self.app.details.get())
         self.app.add_player()
-        self.assertEqual(self.app.state.roster, ())
-        self.assertIn("チームA", self.app.status.get())
+        self.assertEqual(self.app.state.roster, ("Leo",))
         self.select_inventory("Meiy")
         self.assertEqual(str(self.app.add_button["state"]), "normal")
         self.app.add_player()
-        self.assertEqual(self.app.state.roster, ("Meiy",))
+        self.assertEqual(self.app.state.roster, ("Leo", "Meiy"))
 
     def prepare_scrim(self):
         self.app.name_input.insert("1.0", ",".join(PLAYERS))
@@ -603,16 +598,17 @@ class SeasonScreenTest(unittest.TestCase):
         self.assertIsNotNone(self.app.state.player("Alfajer"))
         self.select_inventory("Meiy")
         self.app.add_player()
-        self.app.team_name.set("日本語チーム")
+        self.app.preset_name.set("日本語チーム")
         self.app.confirm()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded.team_name, "日本語チーム")
+        self.assertEqual(loaded.preset_name, "日本語チーム")
+        self.assertEqual(loaded.team_name, "マイチーム")
         self.assertEqual(loaded.roster, (*PLAYERS[:4], "Meiy"))
         self.root.destroy()
         self.root = tk.Tk()
         self.root.withdraw()
         restored = RealtimeSeasonApp(self.root, self.store, loaded)
-        self.assertEqual(restored.team_name.get(), "日本語チーム")
+        self.assertEqual(restored.preset_name.get(), "日本語チーム")
         self.assertEqual(restored.roster.item("4", "values")[1], "Meiy")
         self.assertEqual(len(restored.players.get_children()), 6)
 

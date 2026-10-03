@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import date
+from datetime import date, timedelta
 import json
 from pathlib import Path
 import tempfile
@@ -28,7 +28,7 @@ RIVALS = [("Aspas", "valyn", "trent", "leaf", "tex", "Sato"),
 
 
 def definition(**changes):
-    return {"id": "cup", "name": "Cup", "start_date": "2026-02-03", "end_date": "2026-02-07",
+    return {"id": "cup", "name": "Cup", "start_date": "2026-02-03",
             "visible_from": "2026-01-01", "team_count": 4, "prizes": {1: 5000000, 2: 2000000, 3: 1000000, 4: 500000},
             "normal_maps_to_win": 1, "lower_final_maps_to_win": 2, "grand_final_maps_to_win": 3, **changes}
 
@@ -106,7 +106,8 @@ class SeasonCompetitionTest(unittest.TestCase):
         with patch.object(config, "TOURNAMENTS", [definition(participation_optional=False)]):
             state = self.state().advance_days(100)
         self.assertEqual(state.date, date(2026, 2, 3))
-        self.assertEqual(state.tournament("cup").own_team_id, state.selected_team_id)
+        self.assertEqual(state.tournament("cup").own_team_id, state.club_id)
+        self.assertEqual(state.tournament("cup").preset_id, state.selected_team_id)
         self.assertEqual(state.advance_days(), state)
         with self.assertRaises(SeasonSaveError):
             state.with_declined_tournament("cup")
@@ -131,7 +132,7 @@ class SeasonCompetitionTest(unittest.TestCase):
         balance = state.money
         state = finish(state)
         run = state.tournament("cup")
-        self.assertEqual(run.ranking[0], state.selected_team_id)
+        self.assertEqual(run.ranking[0], state.club_id)
         self.assertEqual(run.prize_paid, 5000000)
         self.assertEqual(state.money, balance + 5000000)
         self.assertEqual(len(run.results), 6)
@@ -155,8 +156,9 @@ class SeasonCompetitionTest(unittest.TestCase):
         following = state.advance_days(100)
         self.assertEqual(following.date, date(2026, 2, 4))
         self.assertEqual(following.advance_days(), following)
-        build_series_request(following, "cup", render=False)
-        following = record_next(following)
+        with self.assertRaisesRegex(SeasonSaveError, "レート"):
+            build_series_request(following, "cup", render=False)
+        following = following.with_tournament_rating_result("cup")
         # The next lower-bracket match contains our losing team: a forfeit
         # consumes the same daily slot as a played series.
         with self.assertRaisesRegex(SeasonSaveError, "1日1試合"):
@@ -165,19 +167,20 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.assertEqual(following.tournament("cup").last_match_date, "2026-02-05")
 
     def test_final_completes_after_planned_end_and_releases_calendar(self):
-        state = finish(self.entered())
+        state = finish(replace(self.entered(), game_date="2026-02-10"))
         run = state.tournament("cup")
-        self.assertEqual(state.date, date(2026, 2, 8))
-        self.assertEqual(run.completed_date, "2026-02-08")
+        self.assertEqual(state.date, date(2026, 2, 15))
+        self.assertEqual(run.completed_date, "2026-02-15")
         self.assertEqual(run.last_match_date, run.completed_date)
         self.assertFalse(state.pending_tournaments)
-        self.assertEqual(state.advance_days().date, date(2026, 2, 9))
+        self.assertEqual(state.advance_days().date, date(2026, 2, 16))
 
-    def test_final_completes_before_planned_end_without_waiting(self):
+    def test_manual_end_date_is_ignored_and_final_completes_on_calculated_date(self):
         with patch.object(config, "TOURNAMENTS", [definition(end_date="2026-02-20")]):
             state = finish(self.entered())
         self.assertTrue(state.tournament("cup").completed)
         self.assertEqual(state.tournament("cup").completed_date, "2026-02-08")
+        self.assertEqual(state.tournament_definition("cup").end_date, "2026-02-08")
         self.assertEqual(state.tournament("cup").prize_paid, 5000000)
 
     def test_daily_tournament_advance_runs_monthly_finance_and_events_once(self):
@@ -191,12 +194,12 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.assertEqual(following.date, date(2026, 2, 1))
         self.assertEqual(following.money, balance + income - payroll)
         self.assertEqual(following.game_month, 1)
-        self.assertEqual(following.contract("Leo").team_loyalty, 49.5)
+        self.assertEqual(following.contract("Leo").team_loyalty, state.contract("Leo").team_loyalty - .5)
         self.assertEqual(len([e for e in following.monthly_events if e.kind == "month_completed"]), 1)
         self.store.save(following)
         reloaded = self.store.load_or_create()
         self.assertEqual(reloaded.advance_days(100), following)
-        build_series_request(reloaded, "cup")
+        reloaded.with_tournament_rating_result("cup")
 
     def test_planned_end_still_closes_new_registration(self):
         state = self.state().advance_days(40, stop_for_tournaments=False)
@@ -235,7 +238,8 @@ class SeasonCompetitionTest(unittest.TestCase):
             state = self.state().advance_days(33)
         state = state.with_tournament_entry("cup")
         self.assertIsNone(state.tournament("cup").own_team_id)
-        self.assertFalse(build_series_request(state, "cup", render=True)["render"])
+        with self.assertRaisesRegex(SeasonSaveError, "レート"):
+            build_series_request(state, "cup", render=True)
         balance = state.money
         state = finish(state)
         self.assertEqual(state.money, balance)
@@ -259,8 +263,7 @@ class SeasonCompetitionTest(unittest.TestCase):
             if run.own_team_id in (match.left, match.right):
                 state = state.with_tournament_forfeit("cup")
             else:
-                build_series_request(state, "cup", render=False)
-                state = state.with_tournament_result("cup", SeriesScore(match.id, match.left, match.right, match.maps_to_win, 0))
+                state = state.with_tournament_rating_result("cup")
         state.validate()
 
     def test_bad_or_out_of_order_results_preserve_save(self):
@@ -342,7 +345,7 @@ class SeasonCompetitionTest(unittest.TestCase):
         state = self.state()
         self.store.save(state)
         before = self.path.read_bytes()
-        bad = [definition(end_date="2026-01-01"), definition(start_date="2026-02-30"), definition(team_count=3),
+        bad = [definition(format="invalid"), definition(start_date="2026-02-30"), definition(team_count=3),
                definition(normal_maps_to_win=True), definition(prizes={5: 100}), definition(prizes={1: -1}),
                definition(opponent_teams="Rival0"), definition(appearance_conditions={"unknown": 1}),
                definition(appearance_conditions={"completed_tournaments": ["cup"]}), definition(id="../outside")]
@@ -427,6 +430,8 @@ class BracketTest(unittest.TestCase):
                         except StopIteration as finished:
                             ranking = finished.value
                         self.assertEqual(len(matches), 2 * count - 2 if mode == "double_elimination" else count - 1)
+                        self.assertEqual(event.match_count, len(matches))
+                        self.assertEqual(event.end_date, (date(2026, 2, 3) + timedelta(days=len(matches) - 1)).isoformat())
                         self.assertEqual(set(ranking), set(losses))
                         self.assertEqual(len(ranking), count)
                         self.assertEqual(matches[-1].stage, "grand_final")
@@ -462,6 +467,9 @@ class CompetitionScreenTest(SeasonCompetitionTest):
                 app.advance_calendar(1)
             with patch("season_competition_ui.ScrimJob") as factory:
                 app.start_competition_series()
+            if not factory.called:
+                self.assertTrue(app.state.tournament("cup").results[-1].decided_by_rating)
+                continue
             request = factory.call_args.args[0]
             own = app.state.tournament("cup").own_team_id
             left_wins = request["maps_to_win"] if own == request["left_id"] or own not in (request["left_id"], request["right_id"]) else 0
@@ -507,10 +515,14 @@ class CompetitionScreenTest(SeasonCompetitionTest):
 
         with patch("season_competition_ui.ScrimJob", side_effect=make_job):
             app.start_competition_series()
-            while app.competition_job is not None:
+            while not app.state.tournament("cup").completed:
                 self.root.after_cancel(app._competition_after_id)
-                app.poll_competition_series()
-        self.assertEqual(dates, [f"2026-02-{day:02}" for day in range(3, 9)])
+                if app.competition_job is not None:
+                    app.poll_competition_series()
+                else:
+                    app._start_next_competition_series("cup")
+        self.assertEqual(dates, [f"2026-02-{day:02}" for day in (3, 6, 8)])
+        self.assertEqual(len(app.state.tournament("cup").results), 6)
         self.assertEqual(app.state.game_date, "2026-02-08")
         self.assertTrue(app.state.tournament("cup").completed)
         self.assertEqual(self.store.load_or_create(), app.state)
@@ -562,7 +574,7 @@ class CompetitionScreenTest(SeasonCompetitionTest):
         with self.assertRaisesRegex(SeasonSaveError, "1日1試合"):
             build_series_request(app.state, "cup")
         app.advance_calendar(1)
-        build_series_request(app.state, "cup")
+        app.state.with_tournament_rating_result("cup")
 
     def test_phase_badge_updates_and_screen_layout_fits_default_window(self):
         app = self.app

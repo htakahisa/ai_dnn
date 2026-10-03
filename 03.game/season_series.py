@@ -14,6 +14,8 @@ def build_series_request(state, event_id, *, render=True, tick_time_ms=100):
         raise SeasonSaveError("進行中の大会を選択してください。")
     state.check_tournament_match_day(event_id)
     match, _ = next_match(event, run)
+    if run.own_team_id not in (match.left, match.right):
+        raise SeasonSaveError("他チーム同士の試合はレートの勝率で抽選してください。")
     if run.own_team_id in (match.left, match.right):
         own = next(t for t in run.entrants if t.id == run.own_team_id)
         if any(not state.can_play(p.name) for p in own.players):

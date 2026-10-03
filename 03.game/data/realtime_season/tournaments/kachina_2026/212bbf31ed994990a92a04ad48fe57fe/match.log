@@ -1,7 +1,7 @@
 [LOAD] game_character_stats: character_stats.py
 [LOAD] game_player_combos: player_combos.py
 [LOAD] game_awakening_events: awakening_events.py
-[DATA] characters=125 / combos=86 / awakenings=27
+[DATA] characters=125 / combos=85 / awakenings=27
 [touyama_v2] 固定チーム(Defender/search) 確定ステータス:
   夢の街: acc=0.76 hs=0.35 dodge=0.23 reaction=115 ability=FLASH
   いぐるん: acc=0.92 hs=0.43 dodge=0.42 reaction=161 ability=RECON
@@ -58,4 +58,4 @@
 [omoko_v1][DIAG] おもこ spawn=(1, 20) nearest_defense_dist=12 
 [omoko_v1][DIAG] いぬさん spawn=(1, 21) nearest_defense_dist=11 
 [omoko_v1][DIAG] ひつじさん spawn=(1, 22) nearest_defense_dist=10 
-MATCH OVER: Evil Geniuses WINS! (13 - 11)
+MATCH OVER: Furina Party WINS! (13 - 6)

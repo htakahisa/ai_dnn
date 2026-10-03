@@ -158,6 +158,7 @@ class SeriesScore:
     right_id: str
     left_wins: int
     right_wins: int
+    decided_by_rating: bool = False
 
 
 @dataclass(frozen=True)
@@ -183,6 +184,64 @@ class BracketMatch:
     left: str
     right: str
     maps_to_win: int
+
+
+@dataclass(frozen=True)
+class BracketSlot:
+    team_id: str | None
+    source_match: str | None = None
+    source_outcome: str | None = None
+
+
+@dataclass(frozen=True)
+class BracketViewMatch:
+    match: BracketMatch
+    left: BracketSlot
+    right: BracketSlot
+    score: SeriesScore | None = None
+    pending: bool = False
+
+
+def player_eliminated(definition, progress):
+    if progress.own_team_id is None or progress.declined:
+        return False
+    losses = sum(1 for score in progress.results
+                 if progress.own_team_id in (score.left_id, score.right_id)
+                 and (score.left_id if score.left_wins > score.right_wins else score.right_id) != progress.own_team_id)
+    return losses >= (2 if definition.format == "double_elimination" else 1)
+
+
+def bracket_view(definition, progress):
+    """Project every card and feeder using the same bracket as real matches.
+
+    Provisional winners only advance the generator; unresolved slots display
+    their source card instead of inventing a team or a predicted winner.
+    """
+    if progress.declined or not progress.entrants:
+        return ()
+    pending, _ = next_match(definition, progress)
+    scores = {s.match_id: s for s in progress.results}
+    origins = {}
+    cards = []
+
+    def slot(team_id):
+        source, outcome = origins.get(team_id, (None, None))
+        return BracketSlot(team_id if source is None or source in scores else None, source, outcome)
+
+    generator = bracket(definition, progress.entrants)
+    try:
+        match = next(generator)
+        while True:
+            score = scores.get(match.id)
+            cards.append(BracketViewMatch(match, slot(match.left), slot(match.right), score,
+                                          pending is not None and match.id == pending.id))
+            winner = (score.left_id if score.left_wins > score.right_wins else score.right_id) if score else match.left
+            loser = match.right if winner == match.left else match.left
+            origins[winner] = (match.id, "winner")
+            origins[loser] = (match.id, "loser")
+            match = generator.send(winner)
+    except StopIteration:
+        return tuple(cards)
 
 
 def bracket(definition, entrants):
@@ -268,6 +327,8 @@ def next_match(definition, progress):
     try:
         pending = next(generator)
         for result in progress.results:
+            if type(result.decided_by_rating) is not bool:
+                raise CompetitionError("レート判定の記録が不正です。")
             if (result.match_id, result.left_id, result.right_id) != (pending.id, pending.left, pending.right):
                 raise CompetitionError("保存された大会試合の順序または対戦チームが不正です。")
             a, b, need = result.left_wins, result.right_wins, pending.maps_to_win

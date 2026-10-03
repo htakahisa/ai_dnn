@@ -49,6 +49,8 @@ def build_masks(snapshot):
     setup_cells = set(snapshot.setup_cells)
     occupied_allies = {a.position for a in snapshot.allies if a.alive}
     sightings = {s.position for s in snapshot.sightings}
+    walkable = grid != 1
+    target_rows, target_columns = np.indices(grid.shape)
     for a in snapshot.allies:
         kinds[a.slot, 0] = True
         if a.forced_facing or not a.alive:
@@ -76,30 +78,28 @@ def build_masks(snapshot):
                 cap = min(DANCE_MAX_HP, ally.max_hp) if ally.max_hp_lost > 0 else DANCE_MAX_HP
                 targets[a.slot, 0, ally.slot] = ally.slot != a.slot and ally.alive and ally.hp < cap
         elif a.charges > 0 and ABILITIES[a.slot] != "HUNT":
-            for rr, cc in np.argwhere(grid != 1):
-                if ABILITIES[a.slot] == "ASH" and (rr - r) ** 2 + (cc - c) ** 2 > ASH_RANGE_CELLS ** 2:
-                    continue
-                if ABILITIES[a.slot] == "RECON":
-                    # Only the first Bresenham step decides whether launching
-                    # is legal. Do not allocate the engine's extended path for
-                    # every possible target on every tick.
-                    dr, dc = int(rr) - r, int(cc) - c
-                    dx, dy = abs(dc), -abs(dr)
-                    e2 = 2 * (dx + dy)
-                    nr = r + ((1 if dr > 0 else -1) if dr and e2 <= dx else 0)
-                    nc = c + ((1 if dc > 0 else -1) if dc and e2 >= dy else 0)
-                    if (nr, nc) == (r, c) or grid[nr, nc] == 1:
-                        continue
-                targets[a.slot, 0, rr * columns + cc] = True
+            legal = walkable
+            dr, dc = target_rows - r, target_columns - c
+            if ABILITIES[a.slot] == "ASH":
+                legal = legal & (dr ** 2 + dc ** 2 <= ASH_RANGE_CELLS ** 2)
+            elif ABILITIES[a.slot] == "RECON":
+                # Evaluate the same first Bresenham step for all targets at once.
+                dx, dy = abs(dc), -abs(dr)
+                e2 = 2 * (dx + dy)
+                nr = r + np.where((dr != 0) & (e2 <= dx), np.where(dr > 0, 1, -1), 0)
+                nc = c + np.where((dc != 0) & (e2 >= dy), np.where(dc > 0, 1, -1), 0)
+                legal = legal & ((nr != r) | (nc != c)) & (grid[nr, nc] != 1)
+            targets[a.slot, 0] = legal.ravel()
         kinds[a.slot, 8] = targets[a.slot, 0].any()
         if a.points >= a.cost and a.cost > 0 and ULTIMATES[a.slot] != "SERENADE":
             if a.ramp_blocked and ULTIMATES[a.slot] in ("ESCAPE", "RAID"):
                 continue
             if ULTIMATES[a.slot] == "ESCAPE":
-                for rr, cc in np.argwhere(grid != 1):
-                    pos = int(rr), int(cc)
-                    if pos not in occupied_allies and pos not in sightings:
-                        targets[a.slot, 1, rr * columns + cc] = True
+                legal = walkable.copy()
+                for rr, cc in occupied_allies | sightings:
+                    if 0 <= rr < rows and 0 <= cc < columns:
+                        legal[rr, cc] = False
+                targets[a.slot, 1] = legal.ravel()
                 kinds[a.slot, 9] = targets[a.slot, 1].any()
             elif ULTIMATES[a.slot] == "RAID":
                 # Do not mask using unseen enemy occupancy.

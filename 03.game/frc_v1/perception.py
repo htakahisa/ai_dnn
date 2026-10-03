@@ -1,6 +1,8 @@
 """The only FRC sensor allowed to read live game/character objects."""
 
 from dataclasses import dataclass
+from abilities_los import AbilityLosMixin
+from grid_visibility import visible_cells
 
 from public_effects import DisplayEffect, PublicEffectReader
 from frc_v1 import ROSTER, ABILITIES, ULTIMATES, FACING, FACING_STEPS
@@ -126,14 +128,20 @@ class FrcPerceptionBuilder:
         smoke = set(game._smoke_cells())
         visible = set()
         active_viewers = [ally for ally in allies if ally.alive and ally.blind == 0]
-        for r, row in enumerate(grid):
-            for col, cell in enumerate(row):
-                if cell == 1 or (r, col) in smoke:
-                    continue
-                if any(in_front(v.position, (r, col), v.facing) and
-                       game.check_cell_line_of_sight(v.position, (r, col), block_smoke=True)
-                       for v in active_viewers):
-                    visible.add((r, col))
+        if (getattr(game.check_cell_line_of_sight, "__func__", None) is AbilityLosMixin.check_cell_line_of_sight
+                and getattr(game._line_cells, "__func__", None) is AbilityLosMixin._line_cells
+                and getattr(game._smoke_allows_line, "__func__", None) is AbilityLosMixin._smoke_allows_line):
+            visible = visible_cells(grid, ((v.position, FACING_STEPS[FACING.index(v.facing)])
+                                          for v in active_viewers), smoke)
+        else:
+            for r, row in enumerate(grid):
+                for col, cell in enumerate(row):
+                    if cell == 1 or (r, col) in smoke:
+                        continue
+                    if any(in_front(v.position, (r, col), v.facing) and
+                           game.check_cell_line_of_sight(v.position, (r, col), block_smoke=True)
+                           for v in active_viewers):
+                        visible.add((r, col))
         enemies, sightings = [], []
         for index, enemy in enumerate(c for c in game.chars if c.team != self.side):
             enemies.append(EnemyState(index, str(getattr(enemy, "base_name", enemy.name)), str(enemy.role), bool(enemy.is_alive)))

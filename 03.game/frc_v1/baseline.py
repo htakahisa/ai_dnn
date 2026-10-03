@@ -1,6 +1,7 @@
 """Explicit rule teacher for bootstrapping; this is not a trained policy."""
 
 from collections import deque
+from functools import lru_cache
 import math
 import numpy as np
 
@@ -9,6 +10,15 @@ from frc_v1.actions import FrcAction, TeamDecision, KINDS, MOVE_STEPS
 
 
 def plant_sites(grid):
+    return _cached_plant_sites(_grid_key(grid), tuple(MOVE_STEPS.values()))
+
+
+def _grid_key(grid):
+    return grid if isinstance(grid, tuple) and isinstance(grid[0], tuple) else tuple(map(tuple, grid))
+
+
+@lru_cache(maxsize=128)
+def _cached_plant_sites(grid, moves):
     cells = {(r, c) for r, row in enumerate(grid) for c, value in enumerate(row) if value == 2}
     sites = []
     while cells:
@@ -17,7 +27,7 @@ def plant_sites(grid):
         group, pending = [start], [start]
         while pending:
             r, c = pending.pop()
-            for dr, dc in MOVE_STEPS.values():
+            for dr, dc in moves:
                 neighbor = r + dr, c + dc
                 if neighbor in cells:
                     cells.remove(neighbor)
@@ -36,16 +46,61 @@ def facing_to(origin, target):
 
 
 def route_step(grid, start, goals, blocked=(), first_step_blocked=()):
-    goals = set(goals)
+    goals = frozenset(goals)
+    return _cached_route_step(_grid_key(grid), tuple(start), goals, frozenset(blocked) - goals,
+                              frozenset(first_step_blocked), tuple(MOVE_STEPS.items()))
+
+
+@lru_cache(maxsize=4096)
+def _cached_route_step(grid, start, goals, blocked, first_step_blocked, moves):
     if start in goals:
         return "STAY", 0
-    blocked = set(blocked) - goals
-    first_step_blocked = set(first_step_blocked)
+    # A first-step restriction may not be bypassed by returning through start.
+    field_blocked = blocked | {start} if first_step_blocked else blocked
+    distances = _route_distances(grid, goals, field_blocked, moves)
+    rows, columns = len(grid), len(grid[0])
+    best_kind, best_distance = "STAY", None
+    for kind, (dr, dc) in moves:
+        r, c = start[0] + dr, start[1] + dc
+        pos = r, c
+        if (0 <= r < rows and 0 <= c < columns and grid[r][c] != 1
+                and pos not in blocked and pos not in first_step_blocked):
+            distance = distances[r * columns + c]
+            if distance >= 0 and (best_distance is None or distance + 1 < best_distance):
+                best_kind, best_distance = kind, distance + 1
+    return best_kind, 10000 if best_distance is None else best_distance
+
+
+@lru_cache(maxsize=512)
+def _route_distances(grid, goals, blocked, moves):
+    rows, columns = len(grid), len(grid[0])
+    distances = [-1] * (rows * columns)
+    queue = deque()
+    for r, c in goals:
+        if 0 <= r < rows and 0 <= c < columns and grid[r][c] != 1 and (r, c) not in blocked:
+            distances[r * columns + c] = 0
+            queue.append((r, c))
+    while queue:
+        r, c = queue.popleft()
+        distance = distances[r * columns + c] + 1
+        for _, (dr, dc) in moves:
+            nr, nc = r - dr, c - dc
+            if (0 <= nr < rows and 0 <= nc < columns and grid[nr][nc] != 1
+                    and (nr, nc) not in blocked and distances[nr * columns + nc] < 0):
+                distances[nr * columns + nc] = distance
+                queue.append((nr, nc))
+    return tuple(distances)
+
+
+def _bfs_route_step(grid, start, goals, blocked, first_step_blocked, moves):
+    """Original forward search, retained as a correctness reference."""
+    if start in goals:
+        return "STAY", 0
     queue = deque([(start, "STAY", 0)])
     visited = {start}
     while queue:
         (r, c), first, distance = queue.popleft()
-        for kind, (dr, dc) in MOVE_STEPS.items():
+        for kind, (dr, dc) in moves:
             pos = r + dr, c + dc
             if (not (0 <= pos[0] < len(grid) and 0 <= pos[1] < len(grid[0]))
                     or grid[pos[0]][pos[1]] == 1 or pos in blocked or pos in visited

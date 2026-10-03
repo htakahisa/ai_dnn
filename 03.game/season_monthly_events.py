@@ -89,7 +89,7 @@ def process_monthly_events(state):
     for index, club in enumerate(clubs):
         rejected = {c.player_name for c in club.contracts if c.team_loyalty <= 0}
         while len(club.players) < ROSTER_SIZE:
-            pool = tuple(p for p in all_characters() if p.name not in affiliated and p.name not in rejected)
+            pool = tuple(state.salary_player(p) for p in all_characters() if p.name not in affiliated and p.name not in rejected)
             player = choose_recruit(club, pool, state.rating(club.id))
             if player is None:
                 emit("recruitment_unfilled", club, None, f"契約できるLFT選手がいないため、{len(club.players)}人で補充を見送りました。")

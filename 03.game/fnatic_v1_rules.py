@@ -2,7 +2,7 @@
 
 Positions are (row, column). Only observed enemies enter tactical memory.
 """
-from collections import deque
+from collections import OrderedDict, deque
 import heapq
 import math
 
@@ -10,12 +10,15 @@ import numpy as np
 
 from controllers import BaseController
 from game_core import PLANT_REQUIRED_TICKS
+import map_data_defender_setup
 from map_data_defender_setup import is_setup_position_allowed
 
 
 COVER_RADIUS = 3
 DEADLINE_MARGIN = 10
 ENEMY_MEMORY_TICKS = 6
+_ROUTE_CACHE_SIZE = 4096
+_SETUP_POSITION_RULE = is_setup_position_allowed
 
 
 def pos(char):
@@ -31,6 +34,7 @@ class FnaticRulesController(BaseController):
         self.side = side
         self.game = None
         self.round_number = 0
+        self._route_cache = OrderedDict()
         self.reset_round()
 
     def set_game(self, game):
@@ -52,6 +56,25 @@ class FnaticRulesController(BaseController):
 
     def _route(self, start, goals, grid, blocked=(), risks=(), setup=False):
         """Stable multi-goal shortest path; no random fallback on obstruction."""
+        risks = tuple(risks)
+        # Exposure depends on current smoke/visibility. Always recompute it.
+        if risks or (setup and is_setup_position_allowed is not _SETUP_POSITION_RULE):
+            return self._route_uncached(start, goals, grid, blocked, risks, setup)
+        goals = frozenset(goals)
+        blocked = frozenset(blocked) - {start}
+        key = (start, goals, grid.shape, (grid == 1).tobytes(), blocked, setup,
+               tuple(self.CARDINAL_MOVES),
+               map_data_defender_setup.DEFENDER_SETUP_MASK_STR if setup else None)
+        if key in self._route_cache:
+            self._route_cache.move_to_end(key)
+            return self._route_cache[key]
+        result = self._route_uncached(start, goals, grid, blocked, risks, setup)
+        self._route_cache[key] = result
+        if len(self._route_cache) > _ROUTE_CACHE_SIZE:
+            self._route_cache.popitem(last=False)
+        return result
+
+    def _route_uncached(self, start, goals, grid, blocked=(), risks=(), setup=False):
         goals = set(goals)
         blocked = set(blocked) - {start}
         queue = [(0, 0, start)]

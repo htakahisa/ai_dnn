@@ -17,6 +17,8 @@ import random
 from collections import deque
 
 import numpy as np
+from grid_paths import distance_map
+from grid_lines import line_cells
 import torch
 import torch.nn as nn
 
@@ -70,25 +72,7 @@ class DuelingQNet(nn.Module):
 # 補助関数(LOS / BFS)。abilities_los.py / controllers.py とは独立した複製実装。
 # ---------------------------------------------------------------------------
 def _line_cells(p1, p2):
-    y0, x0 = int(p1[0]), int(p1[1])
-    y1, x1 = int(p2[0]), int(p2[1])
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx + dy
-    cells = []
-    while True:
-        cells.append((y0, x0))
-        if x0 == x1 and y0 == y1:
-            return cells
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
+    return line_cells(p1, p2)
 
 def _smoke_allows_line(cells, smoke_cells):
     if not cells or len(cells) <= 2:
@@ -105,23 +89,7 @@ def _has_los(grid, p1, p2, smoke_cells):
 
 
 def _bfs_distance_map(grid, goal):
-    """goal(プラント地点)から各床マスへの最短距離マップ(壁越え不可)。
-    train_defender_retake.py の bfs_distance_map() と同一方式。"""
-    height, width = grid.shape
-    dist = np.full((height, width), -1, dtype=np.int32)
-    gr, gc = int(goal[0]), int(goal[1])
-    if grid[gr, gc] == 1:
-        return dist
-    dist[gr, gc] = 0
-    queue = deque([(gr, gc)])
-    while queue:
-        r, c = queue.popleft()
-        for dr, dc in CARDINAL_MOVES:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
-                dist[nr, nc] = dist[r, c] + 1
-                queue.append((nr, nc))
-    return dist
+    return distance_map(grid, goal, CARDINAL_MOVES)
 
 
 def _good_directions(grid, dist_map, r, c):
@@ -255,18 +223,19 @@ class LearningDefenderRetakeController:
     味方が撃ったSMOKEの残存を内部トラッキングするため。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, obs_dim=None, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, obs_dim=None, greedy=True, verbose=False, device=None):
         self.greedy = greedy
         self.verbose = verbose
         self._obs_dim = obs_dim
         self._model_path = model_path
+        self.device = torch.device(device) if device is not None else DEVICE
         self.model = None
         self.reset_round()
 
     def _lazy_init_model(self, obs_dim):
-        self.model = DuelingQNet(obs_dim, N_ACTIONS).to(DEVICE)
+        self.model = DuelingQNet(obs_dim, N_ACTIONS).to(self.device)
         try:
-            state_dict = torch.load(self._model_path, map_location=DEVICE)
+            state_dict = torch.load(self._model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
             if self.verbose:
                 print(f"[LearningDefenderRetakeController] loaded: {self._model_path}")
@@ -480,8 +449,8 @@ class LearningDefenderRetakeController:
 
         mask = self._action_mask(char, game_state, resolved_plant_pos, is_planted)
 
-        state_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        state_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(state_t).squeeze(0).clone()
