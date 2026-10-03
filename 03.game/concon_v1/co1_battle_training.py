@@ -167,7 +167,7 @@ class BattleRouteEnv:
         Actions use inputs captured inside the production decide_move call instead.
         """
         self._sync()
-        observations, masks = [], []
+        observations, masks, preview_stages = [], [], []
         perception = copy.copy(self.game.current_attacker_team_ai.perception_engine)
         perception._cache = {}
         perception._last_tick = None
@@ -200,7 +200,9 @@ class BattleRouteEnv:
                 mask[ACTION_WAIT] = True
             observations.append(observation)
             masks.append(mask)
+            preview_stages.append(preview._routes[char.name].stage)
             self._preview_routes = preview._routes
+        self._preview_stages = preview_stages
         return observations, masks
 
     @_run_from_project_root
@@ -234,7 +236,9 @@ class BattleRouteEnv:
         rewards = [-0.005 + team_reward] * len(self.attackers)
         for index, (stage, distance_before) in self._decision_routes.items():
             route = self.route_controller._routes[self.attackers[index].name]
-            if route.stage != stage:
+            # Arrival may advance only the bootstrap preview until the next
+            # live decision. Reward the same stage change the target observes.
+            if self._preview_stages[index] != stage:
                 rewards[index] += 0.25
             elif distance_before >= 0:
                 distance = int(route.distance_map[self.positions[index]])

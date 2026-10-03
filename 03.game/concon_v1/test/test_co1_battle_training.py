@@ -1,3 +1,4 @@
+import contextlib
 import unittest
 from unittest.mock import patch
 
@@ -14,6 +15,68 @@ from concon_v1.co1_train_attacker import (
 
 
 class BattleTrainingTests(unittest.TestCase):
+    def c_boundary_env(self, leader_index):
+        env = BattleRouteEnv(seed=0, opponents=["touyama_v2"], map_name="A3")
+        positions = [(22, 35), (22, 36), (19, 40), (18, 40), (18, 41)]
+        positions[leader_index], positions[4] = positions[4], positions[leader_index]
+        for char, pos in zip(env.attackers, positions):
+            char.pos = list(pos)
+            env.route_controller._routes[char.name].set_stage(
+                2, pos, env.scenario.grid, goal=(18, 42), goal_index=0,
+            )
+        env.route_controller._a_completed_groups.update(route.group for route in env.routes)
+        env.game.current_attacker_team_ai.perception_engine.clear_cache()
+        return env
+
+    def route_step_without_combat(self, env, actions):
+        # Isolate waypoint rewards from ability delays and combat outcomes.
+        def advance_clock_without_combat():
+            env.game.battle_tick += 1
+            env.game.round_timer -= 1
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(patch("concon_v1.co1_learn_attacker.preplant_contact_action",
+                                      return_value=None))
+            stack.enter_context(patch.object(env.game, "process_battle",
+                                              side_effect=advance_clock_without_combat))
+            stack.enter_context(patch.object(env.game, "_move_order",
+                                              return_value=list(env.game.chars)))
+            for plan in (env.controller.fixed_smokes, env.controller.fixed_flashes,
+                         env.controller.fixed_recons):
+                stack.enter_context(patch.object(plan, "choose", return_value=None))
+            return env.step(actions)
+
+    def test_last_actor_gets_c_progress_reward_on_arrival_not_on_next_tick(self):
+        env = self.c_boundary_env(4)
+        actions = [ACTION_WAIT] * 5
+        actions[4] = 3  # RIGHT, from (18, 41) onto c.
+        transition = self.route_step_without_combat(env, actions)
+        self.assertEqual(env.positions[4], (18, 42))
+        self.assertEqual(env.route_controller._routes[env.attackers[4].name].stage, 2)
+        self.assertEqual(np.argmax(transition[3][4][8:13]), 3)
+        self.assertAlmostEqual(transition[2][4], -0.005 + 0.25)
+        transition = self.route_step_without_combat(env, [ACTION_WAIT] * 5)
+        self.assertEqual(np.argmax(transition[0][4][8:13]), 3)
+        self.assertAlmostEqual(transition[2][4], -0.005)
+
+    def test_c_progress_reward_does_not_depend_on_actor_order(self):
+        for leader in (0, 4):
+            with self.subTest(leader=leader):
+                env = self.c_boundary_env(leader)
+                actions = [ACTION_WAIT] * 5
+                actions[leader] = 3
+                transition = self.route_step_without_combat(env, actions)
+                self.assertEqual(env.positions[leader], (18, 42))
+                self.assertEqual(np.argmax(transition[3][leader][8:13]), 3)
+                self.assertAlmostEqual(transition[2][leader], -0.005 + 0.25)
+
+    def test_waiting_before_c_gets_no_stage_progress_reward(self):
+        env = self.c_boundary_env(4)
+        transition = self.route_step_without_combat(env, [ACTION_WAIT] * 5)
+        self.assertEqual(env.positions[4], (18, 41))
+        self.assertEqual(np.argmax(transition[3][4][8:13]), 2)
+        self.assertAlmostEqual(transition[2][4], -0.005)
+
     def test_team_round_metrics_use_each_opponents_round_count(self):
         opponents = ("omoko_v1", "gc_v1", "fnatic_v3")
         results = [("omoko_v1", 40, False), ("gc_v1", 100, True),

@@ -13,7 +13,7 @@ from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 
 # 通常対戦・大会で使う攻撃モデル。"A1", "A2", "A3" から選択します。
 # 選択したモデルの best を使用し、なければ latest を使用します。
-CONCON_ATTACKER_MAP = "A3"
+CONCON_ATTACKER_MAP = "A2"
 
 WAYPOINT_ORDER = "abcd"
 
@@ -39,7 +39,7 @@ SCENARIOS = {
     "A2": ScenarioSettings(
         map_module="co1_map_attacker_A2", plant_side="right", waypoint_order="abcde",
         max_candidate_bfs_distance=33,
-        smoke_trigger_bfs_distance=8,
+        smoke_trigger_bfs_distance=13,
         flash_trigger_bfs_distance=6,
         recon_trigger_bfs_distance=6,
     ),
