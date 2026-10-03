@@ -39,8 +39,11 @@ class SeasonRatingMixin:
         team = self.state.sponsor_team
         self.sponsor_team_choice.set(team.name if team else "")
         text = f"対象: {team.name}（レート{self.state.rating(team.id):.3f}）" if team else "対象チーム未登録"
+        world = self.state.world_level_settings
+        rank, count = self.state.world_rank
         self.sponsor_summary.set(f"{text}  月額: {self.state.monthly_sponsor_income:,}円\n"
-                                 "自チームのレート × 0.5万円を毎月入金します（最低500万円）。編成プリセットを切り替えてもレートと収入は共通です。円未満は切り捨てます。")
+                                 f"世界レベル{world.level} / {rank}位・全{count}チーム（上位{self.state.world_top_percent:.2f}%） / 敵倍率{world.enemy_multiplier:g}倍\n"
+                                 "世界レベルのスポンサー資金を毎月入金します。順位が変わると世界レベル・敵倍率・月額資金も上下します。編成プリセットを切り替えても共通です。")
 
     def change_sponsor_contract(self):
         if self.match_running:

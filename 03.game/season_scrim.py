@@ -33,7 +33,7 @@ def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
     if any(not state.can_play(name) for name in own.roster):
         raise SeasonSaveError("契約が終了した選手がいます。再契約またはチームの再編成を行ってください。")
     own_players = [state.player(name) for name in own.roster]
-    opponent_players = list(opponent.players[:ROSTER_SIZE])
+    opponent_players = [state.enemy_player(player) for player in opponent.players[:ROSTER_SIZE]]
 
     def team_data(name, players, ai, igl, spike):
         return {"name": name, "players": [asdict(p) for p in players], "ai": ai,

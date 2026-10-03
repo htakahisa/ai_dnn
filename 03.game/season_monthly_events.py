@@ -4,6 +4,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 
 from character_stats import all_characters
+from season_transfers import restore_regular_members
 
 
 DEFAULT_ROLES = ("タイガー", "シーカー", "フラッシュ", "スモーカー", "エンジニア")
@@ -85,11 +86,14 @@ def process_monthly_events(state):
                                igl=club.igl if club.igl in roster else None,
                                carrier=club.carrier if club.carrier in roster else None)
 
-    affiliated = {p.name for p in state.owned_players} | {p.name for c in clubs for p in c.players} | reserved
+    candidate = restore_regular_members(replace(state, opponent_teams=tuple(clubs)), reserved, emit)
+    candidate = candidate.with_resolved_transfer_offers()
+    clubs = list(candidate.opponent_teams)
+    affiliated = {p.name for p in candidate.owned_players} | {p.name for c in clubs for p in c.players} | reserved
     for index, club in enumerate(clubs):
         rejected = {c.player_name for c in club.contracts if c.team_loyalty <= 0}
         while len(club.players) < ROSTER_SIZE:
-            pool = tuple(state.salary_player(p) for p in all_characters() if p.name not in affiliated and p.name not in rejected)
+            pool = tuple(candidate.salary_player(p) for p in all_characters() if p.name not in affiliated and p.name not in rejected)
             player = choose_recruit(club, pool, state.rating(club.id))
             if player is None:
                 emit("recruitment_unfilled", club, None, f"契約できるLFT選手がいないため、{len(club.players)}人で補充を見送りました。")
@@ -105,7 +109,7 @@ def process_monthly_events(state):
     count = len(events)
     events.append(MonthlyEvent(f"{month}:month_completed", state.date.isoformat(), "month_completed", None, "シーズン", None,
                                f"月次処理が完了しました。他チームの出来事: {count}件。"))
-    candidate = replace(state, opponent_teams=tuple(clubs), monthly_events=(*state.monthly_events, *events),
+    candidate = replace(candidate, opponent_teams=tuple(clubs), monthly_events=(*state.monthly_events, *events),
                         monthly_events_through=month)
     candidate.validate()
     return candidate

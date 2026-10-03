@@ -5,7 +5,8 @@ from tkinter import ttk
 
 
 EVENT_LABELS = {"recruitment": "LFT契約", "renewal": "再契約", "departure": "退団",
-                "recruitment_unfilled": "補充見送り", "month_completed": "月次まとめ"}
+                "recruitment_unfilled": "補充見送り", "month_completed": "月次まとめ",
+                "roster_return": "正規メンバー復帰", "transfer_offer": "移籍オファー"}
 
 
 class SeasonMonthlyMixin:

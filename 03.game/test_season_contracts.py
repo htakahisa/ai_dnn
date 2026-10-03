@@ -46,10 +46,12 @@ class ContractRulesTest(unittest.TestCase):
 
     def test_initial_money_and_new_stats_are_last_and_backward_compatible(self):
         self.assertEqual(new_season(()).money, 10_000_000)
-        self.assertEqual([f.name for f in fields(CharacterStats)][-2:], ["monthly_salary", "loyalty"])
+        self.assertEqual([f.name for f in fields(CharacterStats)][-4:],
+                         ["monthly_salary", "loyalty", "research_level", "aim_lab_level"])
         old_definition = CharacterStats("Example", .3, .2, 100, .7, 100, "フラッシュ", 50, 5, 5)
         self.assertEqual(old_definition.monthly_salary, 100_000)
         self.assertEqual(old_definition.loyalty, 5)
+        self.assertEqual((old_definition.research_level, old_definition.aim_lab_level), (0, 0))
 
     def test_lft_excludes_owned_players_and_opponent_reserves(self):
         with patch.object(realtime_season_teams, "SEASON_TEAMS", [{"name": "Rival", "players": RIVAL}]):

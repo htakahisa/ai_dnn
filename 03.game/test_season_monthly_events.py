@@ -41,7 +41,9 @@ class MonthlyEventsTest(unittest.TestCase):
         self.store = SeasonStore(Path(directory.name) / "save.json")
 
     def state(self):
-        state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
+        # These tests exercise vacancy filling with a fixed NPC lineup.
+        with patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
+            state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
         return state.with_selected_team(state.teams[0].id)
 
     def test_recruits_missing_role_at_boundary_and_can_scrim_again(self):

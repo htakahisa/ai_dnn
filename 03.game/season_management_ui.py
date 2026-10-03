@@ -74,7 +74,8 @@ class SeasonManagementMixin:
                 table.pack(fill="both", expand=True)
             table.columnconfigure(0, weight=1)
             table.rowconfigure(0, weight=1)
-            tree = ttk.Treeview(table, columns=tuple(c[0] for c in columns), show="headings", selectmode="browse", height=12)
+            tree = ttk.Treeview(table, columns=tuple(c[0] for c in columns), show="headings", selectmode="browse",
+                               height=11 if screen == "contracts" else 12)
             for key, label, width in columns:
                 tree.heading(key, text=label)
                 tree.column(key, width=width, minwidth=45, anchor="w")
@@ -91,6 +92,21 @@ class SeasonManagementMixin:
                 for key, criterion in (("iq", "IQ"), ("combat", "総合戦闘力"), ("duel", "撃ち合い戦闘力")):
                     tree.heading(key, command=lambda target=criterion: self.change_scout_sort(target))
             setattr(self, f"{screen}_players", tree)
+            if screen == "contracts":
+                tree.tag_configure("incoming_offer", foreground="#b71c1c", background="#ffebee")
+                self.incoming_offer_summary = tk.StringVar(self.root)
+                incoming = ttk.LabelFrame(host, text="他チームからの移籍オファー", padding=8)
+                incoming.pack(fill="x", pady=(8, 0))
+                ttk.Label(incoming, textvariable=self.incoming_offer_summary, foreground="#b71c1c",
+                          wraplength=950).pack(anchor="w")
+                answers = ttk.Frame(incoming)
+                answers.pack(fill="x", pady=(6, 0))
+                self.accept_transfer_button = ttk.Button(answers, text="オファーを承認して移籍",
+                                                        command=lambda: self.respond_to_transfer(True))
+                self.accept_transfer_button.pack(side="left")
+                self.reject_transfer_button = ttk.Button(answers, text="オファーを断る",
+                                                        command=lambda: self.respond_to_transfer(False))
+                self.reject_transfer_button.pack(side="left", padx=8)
             tree.bind("<<TreeviewSelect>>", lambda _event, target=screen: self.refresh_offer(target))
             offer = ttk.LabelFrame(host, text="契約条件", padding=12)
             offer.pack(fill="x", pady=(12, 8))
@@ -138,12 +154,14 @@ class SeasonManagementMixin:
         labels = {key: label for label, key in CONTRACT_OPTIONS.items()}
         for player in self.state.owned_players:
             contract = self.state.contract(player.name)
+            incoming = self.state.transfer_offer(player.name)
             status = "契約中" if contract.active(self.state.game_month) else "契約終了"
             self.contracts_players.insert("", "end", iid=player.name, values=(
-                player.name, status, labels[contract.kind], f"{contract.monthly_salary:,}",
+                f"● {player.name}" if incoming else player.name,
+                "● オファーあり" if incoming else status, labels[contract.kind], f"{contract.monthly_salary:,}",
                 f"{contract.elapsed(self.state.game_month)} / {contract.duration_months}月",
                 f"{contract.remaining(self.state.game_month)}月", f"{add_months(parse_date(self.state.start_date), contract.end_month):%Y/%m/%d}",
-                f"{player.loyalty:g}", f"{contract.team_loyalty:g}"))
+                f"{player.loyalty:g}", f"{contract.team_loyalty:g}"), tags=("incoming_offer",) if incoming else ())
         if selected and self.contracts_players.exists(selected[0]):
             self.contracts_players.selection_set(selected[0])
         self.refresh_offer("contracts")
@@ -156,6 +174,7 @@ class SeasonManagementMixin:
         pool = self.state.lft_players if self.scout_filter.get() == "LFTのみ" else self.state.scout_players
         for player in pool:
             if query in player.name.casefold():
+                player = self.state.displayed_player(player)
                 self.scout_players.insert("", "end", iid=player.name, values=(
                     player.name, player.role, f"{player.iq:g}", f"{player_combat_power(player):.2f}",
                     f"{player_duel_power(player):.2f}", f"{player.monthly_salary:,}", f"{player.loyalty:g}",
@@ -198,7 +217,7 @@ class SeasonManagementMixin:
             (unavailable if blocked else available).append(name)
         criterion = self.scout_sort.get()
         def sort_value(name):
-            player = players[name]
+            player = self.state.displayed_player(players[name])
             value = player.iq if criterion == "IQ" else (player_combat_power(player)
                 if criterion == "総合戦闘力" else player_duel_power(player))
             return (-value if self.scout_sort_order.get() == "高い順" else value, name.casefold())
@@ -223,17 +242,24 @@ class SeasonManagementMixin:
         if contract is None and owner is not None:
             contract = next((c for c in owner.contracts if c.player_name == player.name), None)
         loyalty = f"{contract.team_loyalty:g}" if contract else "—"
+        if owner is not None:
+            player = self.state.enemy_player(player)
+        world = (f"世界レベル補正: {self.state.world_level_settings.enemy_multiplier:g}倍（獲得後は補正前の能力）\n"
+                 if owner is not None else "")
         self.scout_details.set(
-            f"{player.name} / {player.role}\n所属: {self.state.player_affiliation(player.name)}\n\n"
+            f"{player.name} / {player.role}\n所属: {self.state.player_affiliation(player.name)}\n{world}\n"
             f"総合戦闘力: {player_combat_power(player):.2f}\n撃ち合い戦闘力: {player_duel_power(player):.2f}\n\n"
             f"HS率: {player.hs_pct:.1%} / 命中率: {player.hit_pct:.1%}\n"
             f"回避率: {player.dodge_pct:.1%} / 反応: {player.reaction:g}\n"
             f"IQ: {player.iq:g} / 影響力: {player.influence:g}\n"
             f"メンタル: {player.mental:g} / 調子の波: {player.form_variance:g}\n\n"
+            f"研究Lv: {player.research_level} / 10 / エイムラボLv: {player.aim_lab_level} / 10\n"
             f"基本月給: {player.monthly_salary:,}円\n忠誠心: {player.loyalty:g} / 10\nチームへの忠誠: {loyalty}")
 
     def refresh_offer(self, screen):
         player = self.offer_player(screen)
+        if screen == "contracts":
+            self.refresh_transfer_offer(player)
         options = ("短期契約",) if player is not None and player.loyalty == 0 else tuple(CONTRACT_OPTIONS)
         getattr(self, f"{screen}_kind_menu").configure(values=options)
         if self.offer_kind[screen].get() not in options:
@@ -256,6 +282,39 @@ class SeasonManagementMixin:
         except (SeasonSaveError, ValueError) as exc:
             self.offer_summary[screen].set(str(exc))
             self.offer_buttons[screen].configure(state="disabled")
+
+    def refresh_transfer_offer(self, player):
+        offer = self.state.transfer_offer(player.name) if player is not None else None
+        if offer is None:
+            self.incoming_offer_summary.set("赤い●の選手を選択するとオファーを確認できます。忠誠が30未満になると強制成立します。")
+        else:
+            club = next(c for c in self.state.opponent_teams if c.id == offer.team_id)
+            loyalty = self.state.contract(player.name).team_loyalty
+            self.incoming_offer_summary.set(f"● {player.name} ← {club.name} / 移籍金: {offer.fee:,}円 / チームへの忠誠: {loyalty:g}\n"
+                                            "承認・拒否を選べます。拒否後も忠誠が30未満になると、強制的に移籍します。")
+        enabled = offer is not None and not self.match_running
+        self.accept_transfer_button.configure(state="normal" if enabled else "disabled")
+        self.reject_transfer_button.configure(state="normal" if enabled else "disabled")
+
+    def respond_to_transfer(self, accept):
+        if self.match_running:
+            self.status.set("試合が終了してからオファーに回答してください。")
+            return
+        player = self.offer_player("contracts")
+        offer = self.state.transfer_offer(player.name) if player is not None else None
+        if offer is None:
+            return
+        try:
+            club = next(c for c in self.state.opponent_teams if c.id == offer.team_id)
+            candidate = self.state.with_transfer_response(offer.id, accept)
+        except SeasonSaveError as exc:
+            self.status.set(str(exc))
+            return
+        if candidate.player(player.name) is None:
+            message = f"{player.name}が{club.name}へ移籍しました。移籍金{offer.fee:,}円を受け取りました。編成を確認してください。"
+        else:
+            message = f"{player.name}への{club.name}からのオファーを断りました。忠誠が30未満になると強制成立します。"
+        self.commit(candidate, message)
 
     def sign_selected_contract(self, screen):
         if self.match_running:

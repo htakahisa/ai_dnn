@@ -1,6 +1,7 @@
 """NPC season series use Elo draws even while the player's club survives."""
 
 from dataclasses import replace
+from datetime import timedelta
 import unittest
 from unittest.mock import patch
 
@@ -58,7 +59,7 @@ class NpcSeriesTest(SeasonCompetitionTest):
                 score = state.with_tournament_rating_result("cup").tournament("cup").results[-1]
                 self.assertEqual(score.left_wins > score.right_wins, left_wins)
 
-    def test_reload_before_draw_reproduces_result_and_after_draw_blocks_same_day(self):
+    def test_reload_before_draw_reproduces_result_and_saves_next_day_atomically(self):
         state = self.npc_day()
         expected = state.with_tournament_rating_result("cup")
         self.store.save(state)
@@ -67,8 +68,11 @@ class NpcSeriesTest(SeasonCompetitionTest):
         self.store.save(expected)
         loaded = self.store.load_or_create()
         self.assertEqual(loaded, expected)
-        with self.assertRaisesRegex(SeasonSaveError, "1日1試合"):
-            loaded.with_tournament_rating_result("cup")
+        self.assertEqual(loaded.date, state.date + timedelta(days=1))
+        self.assertEqual(loaded.tournament("cup").last_match_date, state.game_date)
+        next_day = loaded.with_tournament_rating_result("cup")
+        self.assertEqual(next_day.date, state.date + timedelta(days=2))
+        self.assertEqual(len(next_day.tournament("cup").results), len(state.tournament("cup").results) + 2)
 
     def test_player_series_and_invalid_or_early_event_cannot_be_drawn(self):
         state = self.entered()
@@ -93,6 +97,7 @@ class NpcSeriesTest(SeasonCompetitionTest):
         run = state.tournament("cup")
         self.assertTrue(all(s.decided_by_rating for s in run.results))
         self.assertEqual(run.completed_date, "2026-02-04")
+        self.assertEqual(state.game_date, "2026-02-05")
         self.assertEqual((run.prize_paid, state.money), (0, balance))
         self.store.save(state)
         self.assertEqual(self.store.load_or_create(), state)
@@ -128,10 +133,10 @@ class NpcSeriesScreenTest(CompetitionScreenTest):
             request.assert_not_called()
         self.assertEqual(len(app.state.tournament("cup").results), 2)
         self.assertTrue(app.state.tournament("cup").results[-1].decided_by_rating)
-        self.assertEqual(app.state.game_date, state.game_date)
+        self.assertEqual(app.state.date, state.date + timedelta(days=1))
         self.assertIsNone(app.competition_job)
         self.assertEqual(self.store.load_or_create(), app.state)
-        self.assertEqual(str(app.competition_play_button["state"]), "disabled")
+        self.assertEqual(str(app.competition_play_button["state"]), "normal")
 
     def test_failed_npc_result_save_preserves_state_and_retry_draw(self):
         state = self.select_npc_day()

@@ -8,11 +8,13 @@ import unittest
 from unittest.mock import patch
 
 import season_salary_config as config
+import realtime_season_world_levels
 from realtime_season import SalaryMode, SeasonSaveError, new_season
 from season_salary import (CompetitionTotals, SalarySettings, calculate_salaries, clamp_change,
                            invalidate_salary_cache, rounded_salary, salary_from_percentile,
                            salary_records, smoothed_kd, _read_result)
-from test_season_competitions import CompetitionScreenTest, SeasonCompetitionTest, OWN
+from test_season_competitions import (CompetitionScreenTest, SeasonCompetitionTest, OWN,
+                                      config as competition_config, definition)
 
 
 class SalaryRulesTest(unittest.TestCase):
@@ -81,6 +83,10 @@ class SalaryStateTest(SeasonCompetitionTest):
         self.write_stats()
 
     def configure_salary(self):
+        context = patch.object(realtime_season_world_levels, "WORLD_LEVELS",
+                               [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}])
+        context.start()
+        self.addCleanup(context.stop)
         for key, value in (("COMPETITION_RESULTS_DIR", self.results), ("A", 30), ("MIN_GAMES", 10),
                            ("MAX_MONTHLY_CHANGE", .2), ("FIXED_MONTHLY_SALARIES", {}), ("EXCLUDED_RESULT_FILES", ())):
             context = patch.object(config, key, value)
@@ -283,6 +289,26 @@ class SalaryStateTest(SeasonCompetitionTest):
             state.advance_months()
         self.assertEqual(self.path.read_bytes(), before)
         self.assertEqual(self.store.load_or_create(), state)
+
+    def test_skipped_npc_series_updates_dynamic_contracts_on_month_boundary_once(self):
+        with patch.object(competition_config, "TOURNAMENTS", [definition(
+                start_date="2026-01-31", format="single_elimination", team_count=3,
+                prizes={1: 5_000_000, 2: 2_000_000, 3: 1_000_000}, allow_player_entry=False)]):
+            state = self.dynamic_state().with_tournament_entry("cup").advance_days(30)
+        self.write_stats(Leo={"kills": 1000, "deaths": 0}, Derke={"kills": 0, "deaths": 200})
+        following = state.with_tournament_rating_result("cup")
+        self.assertEqual(following.game_date, "2026-02-01")
+        self.assertEqual(following.salary_updated_month, 1)
+        self.assertEqual(following.contract("Leo").monthly_salary, 1_080_000)
+        self.assertEqual(following.contract("Derke").monthly_salary, 2_400_000)
+        self.assertEqual(following.money, state.money + 7_500_000 - 5_600_000)
+        finished = following.with_tournament_rating_result("cup")
+        self.assertEqual(finished.game_date, "2026-02-02")
+        self.assertEqual(finished.tournament("cup").completed_date, "2026-02-01")
+        self.assertEqual(finished.money, following.money)
+        self.assertEqual(len([e for e in finished.monthly_events if e.kind == "month_completed"]), 1)
+        self.store.save(finished)
+        self.assertEqual(self.store.load_or_create(), finished)
 
 
 class SalaryScreenTest(CompetitionScreenTest):

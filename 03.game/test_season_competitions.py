@@ -159,12 +159,12 @@ class SeasonCompetitionTest(unittest.TestCase):
         with self.assertRaisesRegex(SeasonSaveError, "レート"):
             build_series_request(following, "cup", render=False)
         following = following.with_tournament_rating_result("cup")
-        # The next lower-bracket match contains our losing team: a forfeit
-        # consumes the same daily slot as a played series.
-        with self.assertRaisesRegex(SeasonSaveError, "1日1試合"):
-            following.with_tournament_forfeit("cup")
-        following = following.advance_days().with_tournament_forfeit("cup")
-        self.assertEqual(following.tournament("cup").last_match_date, "2026-02-05")
+        self.assertEqual(following.game_date, "2026-02-05")
+        self.assertEqual(following.tournament("cup").last_match_date, "2026-02-04")
+        # NPC results advance the date, so our next series is immediately ready.
+        following = following.with_tournament_forfeit("cup")
+        self.assertEqual(following.tournament("cup").last_match_date, "2026-02-08")
+        self.assertEqual(following.game_date, "2026-02-09")
 
     def test_final_completes_after_planned_end_and_releases_calendar(self):
         state = finish(replace(self.entered(), game_date="2026-02-10"))
@@ -369,7 +369,10 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.assertEqual(request["maps_to_win"], 1)
         self.assertEqual(request["own"]["players"][0]["name"], "Leo")
         self.assertEqual(request["tick_time_ms"], 15)
-        self.assertEqual(request["opponent"]["igl"], "F0rsakeN")
+        opponent = next(t for t in state.tournament("cup").entrants if t.id == request["right_id"])
+        self.assertEqual(request["opponent"]["igl"], opponent.igl)
+        self.assertEqual(tuple(p["name"] for p in request["opponent"]["players"]),
+                         tuple(p.name for p in opponent.players))
 
     def test_series_plays_until_target_and_alternates_sides(self):
         request = build_series_request(self.entered(), "cup", render=False)

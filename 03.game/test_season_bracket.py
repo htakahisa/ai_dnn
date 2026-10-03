@@ -1,6 +1,7 @@
-"""Bracket presentation and same-day completion after player elimination."""
+"""Bracket presentation and daily completion after player elimination."""
 
 from dataclasses import replace
+from datetime import timedelta
 import json
 from random import Random
 from types import SimpleNamespace
@@ -40,7 +41,7 @@ def legacy_eliminated(state):
 
 
 class RatingCompletionTest(SeasonCompetitionTest):
-    def test_upper_loss_continues_second_loss_finishes_same_day_and_pays_once(self):
+    def test_upper_loss_continues_second_loss_finishes_daily_and_pays_once(self):
         first_loss = record_next(self.entered(), left_wins=False)
         self.assertFalse(first_loss.tournament("cup").completed)
         self.assertFalse(player_eliminated(first_loss.tournament_definition("cup"), first_loss.tournament("cup")))
@@ -57,7 +58,8 @@ class RatingCompletionTest(SeasonCompetitionTest):
         self.assertEqual(run.ranking[-1], state.club_id)
         self.assertEqual(run.prize_paid, 500000)
         self.assertEqual(finished.money, state.money + 500000)
-        self.assertEqual((finished.game_date, run.completed_date, run.last_match_date), (state.game_date,) * 3)
+        self.assertEqual((finished.game_date, run.completed_date, run.last_match_date),
+                         ("2026-02-09", "2026-02-08", "2026-02-08"))
         self.assertEqual(len(run.results), 6)
         actual = run.results[:3]
         generated = run.results[3:]
@@ -82,7 +84,7 @@ class RatingCompletionTest(SeasonCompetitionTest):
         loaded = self.store.load_or_create()
         self.assertEqual(loaded, finished)
         self.assertIs(loaded.with_tournament_rating_finish("cup"), loaded)
-        self.assertEqual(loaded.advance_days().date, state.date.replace(day=6))
+        self.assertEqual(loaded.advance_days().date, finished.date + timedelta(days=1))
 
     def test_single_elimination_first_loss_finishes_and_allows_editing(self):
         with patch.object(config, "TOURNAMENTS", [definition(format="single_elimination")]):
@@ -90,7 +92,8 @@ class RatingCompletionTest(SeasonCompetitionTest):
         finished = state.with_tournament_forfeit("cup")
         run = finished.tournament("cup")
         self.assertTrue(run.completed)
-        self.assertEqual(run.completed_date, "2026-02-03")
+        self.assertEqual(run.completed_date, "2026-02-05")
+        self.assertEqual(finished.game_date, "2026-02-06")
         self.assertEqual(len(run.results), 3)
         self.assertEqual([s.decided_by_rating for s in run.results], [False, True, True])
         self.assertEqual(run.ranking[-1], state.club_id)
@@ -114,7 +117,7 @@ class RatingCompletionTest(SeasonCompetitionTest):
         self.store.save(finished)
         self.assertEqual(self.store.load_or_create(), finished)
         self.assertEqual(finished.money, loaded.money + finished.tournament("cup").prize_paid)
-        self.assertEqual(finished.game_date, loaded.game_date)
+        self.assertEqual(finished.date, loaded.date + timedelta(days=4))
 
     def test_lower_final_elimination_keeps_played_cards_and_only_awards_final(self):
         state = self.entered()
@@ -134,7 +137,29 @@ class RatingCompletionTest(SeasonCompetitionTest):
         self.assertEqual(run.ranking[2], state.club_id)
         self.assertEqual(run.prize_paid, 1000000)
         self.assertEqual(max(run.results[-1].left_wins, run.results[-1].right_wins), 3)
-        self.assertEqual(run.completed_date, state.game_date)
+        self.assertEqual(run.completed_date, (state.date + timedelta(days=1)).isoformat())
+        self.assertEqual(finished.date, state.date + timedelta(days=2))
+
+    def test_skipped_matches_cross_month_pay_finances_and_monthly_events_once(self):
+        with patch.object(config, "TOURNAMENTS", [definition(start_date="2026-01-28")]):
+            state = self.state()
+            state = state.with_tournament_entry("cup", state.selected_team_id)
+            state = before_elimination(state.advance_days(27))
+        legacy = legacy_eliminated(state)
+        income = legacy.monthly_sponsor_income
+        payroll = legacy.monthly_payroll
+        finished = state.with_tournament_forfeit("cup")
+        run = finished.tournament("cup")
+        self.assertEqual(state.game_date, "2026-01-30")
+        self.assertEqual((finished.game_date, run.completed_date), ("2026-02-03", "2026-02-02"))
+        self.assertEqual(finished.game_month, 1)
+        self.assertEqual(finished.money, state.money + income - payroll + run.prize_paid)
+        self.assertEqual(finished.contract("Leo").team_loyalty, legacy.contract("Leo").team_loyalty - .5)
+        self.assertEqual(len([e for e in finished.monthly_events if e.kind == "month_completed"]), 1)
+        self.store.save(finished)
+        loaded = self.store.load_or_create()
+        self.assertEqual(loaded, finished)
+        self.assertEqual(loaded.with_tournament_rating_finish("cup"), loaded)
 
     def test_invalid_rating_markers_reject_without_overwriting_save(self):
         state = record_next(self.entered())
@@ -218,7 +243,7 @@ class BracketScreenTest(CompetitionScreenTest):
                              if canvas.type(i) == "rectangle"), 6)
         self.assertIn("敗退", app.competition_info.get())
 
-    def test_elimination_stops_auto_worker_without_advancing_day(self):
+    def test_elimination_stops_worker_and_advances_skipped_match_days(self):
         state = before_elimination(self.entered())
         self.select_entered(state)
         app = self.app
@@ -233,7 +258,7 @@ class BracketScreenTest(CompetitionScreenTest):
             app.poll_competition_series()
             factory.assert_called_once()
         self.assertIsNone(app.competition_job)
-        self.assertEqual(app.state.game_date, state.game_date)
+        self.assertEqual(app.state.game_date, "2026-02-09")
         self.assertTrue(app.state.tournament("cup").completed)
         self.assertEqual(self.store.load_or_create(), app.state)
         self.assertIn("500,000", app.competition_status.get())
@@ -249,7 +274,7 @@ class BracketScreenTest(CompetitionScreenTest):
             self.app.start_competition_series()
             factory.assert_not_called()
         self.assertTrue(self.app.state.tournament("cup").completed)
-        self.assertEqual(self.app.state.game_date, state.game_date)
+        self.assertEqual(self.app.state.game_date, "2026-02-09")
         self.assertEqual(self.store.load_or_create(), self.app.state)
 
 

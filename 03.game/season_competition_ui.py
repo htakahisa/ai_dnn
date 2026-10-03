@@ -181,11 +181,11 @@ class SeasonCompetitionMixin:
                 self.competition_info.set(self.competition_info.get() + ("\n本日の試合は終了しました。「1日進める」で翌日の試合へ進めます。"
                     if run.last_match_date == self.state.date.isoformat() else "\n1日1試合（シリーズ単位・相手同士の試合も含む）。全試合終了時に大会が自動終了します。"))
                 if eliminated:
-                    self.competition_info.set(self.competition_info.get() + "\n自チームは敗退済みです。残りはレート勝率の抽選で確定できます。")
+                    self.competition_info.set(self.competition_info.get() + "\n自チームは敗退済みです。残りは1試合につき1日進め、レート勝率の抽選で確定できます。")
                 if npc_match:
                     probability = expected_score(self.state.rating(pending.left), self.state.rating(pending.right))
                     self.competition_info.set(self.competition_info.get() +
-                        f"\n他チーム同士はシミュレーションを省略し、レート勝率で抽選します。予測: {teams[pending.left]} {probability:.1%} / {teams[pending.right]} {1 - probability:.1%}")
+                        f"\n他チーム同士はレート勝率で抽選し、結果確定後に1日進めます。予測: {teams[pending.left]} {probability:.1%} / {teams[pending.right]} {1 - probability:.1%}")
             else:
                 for rank, team_id in enumerate(ranking, 1):
                     self.competition_matches.insert("", "end", values=(f"{rank}位", teams[team_id], f"{event.prizes.get(rank, 0):,}円"))
@@ -260,14 +260,17 @@ class SeasonCompetitionMixin:
             run = self.state.tournament(event.id)
             if run is not None and not run.completed and player_eliminated(event, run):
                 candidate = self.state.with_tournament_rating_finish(event.id)
-                prize = candidate.tournament(event.id).prize_paid
-                self.commit(candidate, f"残りの試合をレート判定で確定し、大会終了。賞金{prize:,}円を入金しました。")
+                updated = candidate.tournament(event.id)
+                message = (f"残りの試合をレート判定で確定し、大会終了。賞金{updated.prize_paid:,}円を入金しました。"
+                           if updated.completed else "日付の進行が止まりました。他大会の参加判断を確認してください。")
+                if self.commit(candidate, message):
+                    self.competition_status.set(message)
                 return
             self.state.check_tournament_match_day(event.id)
             match, _ = next_match(event, run)
             if run.own_team_id not in (match.left, match.right):
                 candidate = self.state.with_tournament_rating_result(event.id)
-                if self.commit(candidate, "他チーム同士の試合をレート勝率で抽選し、結果を保存しました。"):
+                if self.commit(candidate, "他チーム同士の試合をレート勝率で抽選し、結果と翌日の日付を保存しました。"):
                     self._after_competition_result(event.id)
                 return
             from game_core import validate_tick_time_ms
@@ -315,19 +318,25 @@ class SeasonCompetitionMixin:
     def _after_competition_result(self, event_id):
         run = self.state.tournament(event_id)
         completion = "他チーム同士はレート勝率で抽選。" if any(s.decided_by_rating for s in run.results) else ""
-        self.competition_status.set(f"{run.completed_date} 大会終了。{completion}賞金{run.prize_paid:,}円を入金しました。"
-            if run.completed else "本日のシリーズ終了。1日進めると次の試合を開始できます。")
+        if run.completed:
+            message = f"{run.completed_date} 大会終了。{completion}賞金{run.prize_paid:,}円を入金しました。"
+        elif run.last_match_date == self.state.game_date:
+            message = "本日のシリーズ終了。1日進めると次の試合を開始できます。"
+        else:
+            message = f"{self.state.game_date} 次の試合日へ進めました。"
+        self.competition_status.set(message)
         self.refresh()
         if self.competition_auto.get() and not run.completed:
-            previous = self.state
-            candidate = self.state.advance_days(1)
-            if candidate.date == previous.date:
-                self.competition_status.set("日付の進行が止まりました。他大会の参加判断を確認してください。")
-                return
-            if not self.commit(candidate, "大会の次の試合日へ進めました。"):
-                self.competition_status.set("翌日の保存に失敗しました。日付を進めてから再開してください。")
-                return
-            self.status.set(self.status.get() + self.monthly_event_notice(previous))
+            if run.last_match_date == self.state.game_date:
+                previous = self.state
+                candidate = self.state.advance_days(1)
+                if candidate.date == previous.date:
+                    self.competition_status.set("日付の進行が止まりました。他大会の参加判断を確認してください。")
+                    return
+                if not self.commit(candidate, "大会の次の試合日へ進めました。"):
+                    self.competition_status.set("翌日の保存に失敗しました。日付を進めてから再開してください。")
+                    return
+                self.status.set(self.status.get() + self.monthly_event_notice(previous))
             # Yield between instant NPC results so long tournaments remain responsive.
             self._competition_after_id = self.root.after(0, lambda: self._start_next_competition_series(event_id))
             self.preview_competition()

@@ -13,6 +13,7 @@ import character_stats
 import realtime_season_competitions as calendar
 import realtime_season_config
 import realtime_season_teams
+import realtime_season_world_levels
 from character_stats import get_by_name
 from realtime_season import SeasonSaveError, SeasonStore, new_season
 from run_realtime_season import RealtimeSeasonApp
@@ -37,7 +38,9 @@ class SeasonEconomyTest(unittest.TestCase):
         self.club = dict(name="Rival", players=list(RIVAL), igl="Aspas", carrier="Aspas", transfer_multiplier=12)
         for module, key, value in ((realtime_season_config, "INITIAL_OWNED_PLAYERS", OWN),
                                   (realtime_season_teams, "SEASON_TEAMS", [self.club]),
-                                  (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", [])):
+                                  (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", []),
+                                  (realtime_season_world_levels, "WORLD_LEVELS",
+                                   [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}])):
             context = patch.object(module, key, value)
             context.start()
             self.addCleanup(context.stop)
@@ -46,7 +49,9 @@ class SeasonEconomyTest(unittest.TestCase):
         self.store = SeasonStore(Path(directory.name) / "save.json")
 
     def state(self):
-        state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
+        # Isolate economy calculations from the random starting lineups.
+        with patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
+            state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
         return state.with_selected_team(state.teams[0].id)
 
     def test_exact_rating_parity_with_competition_manager(self):
@@ -192,39 +197,37 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(disabled.money, 9_500_000)
         self.assertEqual(new_season().monthly_sponsor_income, 0)
 
-    def test_sponsor_floor_applies_at_low_ratings_and_preserves_rounding_and_disabled_state(self):
+    def test_sponsor_is_world_level_amount_at_low_ratings_and_respects_disabled_state(self):
         base = self.state()
-        for rating, income in ((0, 5_000_000), (400, 5_000_000), (999.9999, 5_000_000),
-                               (1000, 5_000_000), (1000.00019, 5_000_000), (1000.0002, 5_000_001),
-                               (1500, 7_500_000)):
+        for rating in (0, 400, 999.9999, 1000, 1000.00019, 1000.0002, 1500):
             with self.subTest(rating=rating):
                 state = replace(base, ratings=tuple(replace(r, value=rating) if r.team_id == base.club_id else r for r in base.ratings))
-                self.assertEqual(state.monthly_sponsor_income, income)
+                self.assertEqual(state.monthly_sponsor_income, 7_500_000)
                 self.assertEqual(state.with_sponsor_contract(False).monthly_sponsor_income, 0)
         self.assertEqual(new_season().monthly_sponsor_income, 0)
 
-    def test_low_rating_monthly_floor_is_paid_once_and_saved_alongside_payroll(self):
+    def test_low_rating_world_sponsor_is_paid_once_and_saved_alongside_payroll(self):
         state = self.state()
         state = replace(state, ratings=tuple(replace(r, value=400) if r.team_id == state.club_id else r for r in state.ratings))
         self.assertEqual(state.advance_days(30).money, state.money)
         feb = state.advance_days(31)
-        self.assertEqual(feb.money, state.money + 5_000_000 - state.monthly_payroll)
+        self.assertEqual(feb.money, state.money + 7_500_000 - state.monthly_payroll)
         self.store.save(feb)
         loaded = self.store.load_or_create()
         self.assertEqual(loaded.advance_days().money, feb.money)
-        self.assertEqual(loaded.monthly_sponsor_income, 5_000_000)
+        self.assertEqual(loaded.monthly_sponsor_income, 7_500_000)
         self.assertEqual(state.advance_months(2), feb.advance_months())
 
-    def test_sponsor_uses_actual_club_rate_across_presets(self):
+    def test_sponsor_uses_actual_club_world_level_across_presets(self):
         state = self.state()
         own = state.teams[0]
         state = state.with_rated_result("win", own.id, state.opponent_teams[0].id, 1, 0)
-        self.assertEqual(state.monthly_sponsor_income, 7_660_000)
+        self.assertEqual(state.monthly_sponsor_income, 7_500_000)
         names = tuple(p.name for p in state.lft_players[:5])
         state = state.with_added_players(names).with_new_team().with_roster(names).with_confirmed_team()
-        self.assertEqual(state.monthly_sponsor_income, 7_660_000)
+        self.assertEqual(state.monthly_sponsor_income, 7_500_000)
         state = state.with_selected_team(state.teams[1].id)
-        self.assertEqual(state.monthly_sponsor_income, 7_660_000)
+        self.assertEqual(state.monthly_sponsor_income, 7_500_000)
         state = replace(state, ratings=tuple(replace(r, value=1500.00019) if r.team_id == state.club_id else r for r in state.ratings))
         self.assertEqual(state.monthly_sponsor_income, 7_500_000)
 
@@ -373,7 +376,7 @@ class SeasonEconomyScreenTest(SeasonEconomyTest):
         self.assertEqual(app.state.contract("Leo").team_loyalty, 51)
         self.assertTrue(all(c.team_loyalty == 49.5 for c in app.state.opponent_teams[0].contracts))
         self.assertEqual(self.store.load_or_create(), app.state)
-        self.assertIn("7,660,000", app.home_summary.get())
+        self.assertIn("7,500,000", app.home_summary.get())
 
     def test_new_screens_fit_default_height(self):
         app = self.app
