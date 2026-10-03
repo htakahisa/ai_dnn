@@ -21,7 +21,7 @@ class MarkerCaseTests(unittest.TestCase):
                 parse_strategy_points(text, "ab")
 
     def test_all_later_letters_follow_the_case_rule(self):
-        for letter in string.ascii_lowercase[1:].replace("s", "").replace("u", ""):
+        for letter in string.ascii_lowercase[1:].replace("s", "").replace("u", "").replace("r", ""):
             for uppercase in (False, True):
                 marker = letter.upper() if uppercase else letter
                 scenario = make_scenario({"a": [(3, 2)], marker: [(1, 6), (5, 6)]})

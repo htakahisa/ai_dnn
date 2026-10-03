@@ -79,12 +79,13 @@ class TrainingRouteController(ConconAttackerRouteController):
 class BattleRouteEnv:
     """Production first-round games ending at plant completion or round end."""
 
-    def __init__(self, seed=0, opponents=None, model=None, map_name="A1"):
+    def __init__(self, seed=0, opponents=None, model=None, map_name="A1", *, learn_setup=False):
         self.scenario = get_scenario(map_name)
         self.rng = random.Random(seed)
         self.route_rng = random.Random(seed)
         self.action_rng = random.Random(seed)
         self.model = model if model is not None else SharedRouteDQN(obs_dim=self.scenario.obs_dim)
+        self.learn_setup = learn_setup
         self.opponents = tuple(opponents or OPPONENTS)
         if not self.opponents or any(name not in OPPONENTS for name in self.opponents):
             raise ValueError("at least one known opponent is required")
@@ -116,18 +117,22 @@ class BattleRouteEnv:
             )
             self.game.stop_after_round = True
             self.game.analytics_tracker = None
-            while self.game.defender_setup_phase.active:
-                self.game.step_tick()
         self.controller = self.game.attacker_controller.inner_controller
         self.route_controller = self.controller.route_controller
         self.attackers = [char for char in self.game.chars if char.team == "A"]
         if tuple(char.name for char in self.attackers) != GORIGONS.players:
             raise ValueError("the training attacker roster must be Gorigons in preset order")
         self.attacker_indices = {char.name: i for i, char in enumerate(self.attackers)}
-        self.actions = [ACTION_WAIT] * len(self.attackers)
-        self.policy_action_applied = [False] * len(self.attackers)
         self.forced_actions = None
         self.epsilon = 0.0
+        self._reset_decision_recording()
+        # Setup now calls the attacker policy too, so all policy state must
+        # exist before advancing it (including on subsequent resets).
+        with contextlib.redirect_stdout(io.StringIO()):
+            while not self.learn_setup and self.game.defender_setup_phase.active:
+                self.game.step_tick()
+        # Evaluation can start after setup; training returns its decisions via step().
+        self._reset_decision_recording()
         self.elapsed_ticks = 0
         self.done = False
         self.success = False
@@ -135,6 +140,16 @@ class BattleRouteEnv:
         self.had_spike_drop = False
         self.spike_recovered = False
         return self._collect()
+
+    def _reset_decision_recording(self, current=None):
+        self.actions = [ACTION_WAIT] * len(self.attackers)
+        self.policy_action_applied = [False] * len(self.attackers)
+        self._decision_routes = {}
+        # Only actual policy decisions will enter replay. Others are placeholders.
+        self._tick_observations, self._tick_masks = current if current is not None else (
+            [np.zeros(self.scenario.obs_dim, dtype=np.float32) for _ in self.attackers],
+            [np.eye(ACTION_DIM, dtype=bool)[ACTION_WAIT].copy() for _ in self.attackers],
+        )
 
     @property
     def routes(self):
@@ -158,7 +173,11 @@ class BattleRouteEnv:
         perception._last_tick = None
         perception._defuse_touched_viewers = set(perception._defuse_touched_viewers)
         for char in self.attackers:
-            view = perception.build_game_view(viewer=char, game=self.game)
+            if self.game.defender_setup_phase.active:
+                from iq_perception import build_team_position_view
+                view = build_team_position_view(self.game, char.team)
+            else:
+                view = perception.build_game_view(viewer=char, game=self.game)
             actor = view.perceived_character_for(char)
             preview = copy.copy(self.route_controller)
             # Route progress changes by assigning fields/new distance maps.
@@ -171,7 +190,9 @@ class BattleRouteEnv:
             preview.rng = random.Random()
             preview.rng.setstate(self.route_rng.getstate())
             state = {"grid": view.grid, "chars": view.chars,
-                     "battle_tick": self.game.battle_tick}
+                     "battle_tick": self.game.battle_tick,
+                     "defender_setup_active": self.game.defender_setup_phase.active}
+            preview.set_game(view)
             preview._prepare_route(actor, state)
             observation, mask = preview.policy_inputs(actor, state)
             if not char.is_alive or self.retrieve_active or self.game.is_planted:
@@ -194,14 +215,7 @@ class BattleRouteEnv:
         self.epsilon = epsilon
         if action_rng is not None:
             self.action_rng = action_rng
-        self.actions = [ACTION_WAIT] * len(self.attackers)
-        self.policy_action_applied = [False] * len(self.attackers)
-        self._decision_routes = {}
-        # Only actual policy decisions will enter replay. Others are placeholders.
-        self._tick_observations, self._tick_masks = current if current is not None else (
-            [np.zeros(self.scenario.obs_dim, dtype=np.float32) for _ in self.attackers],
-            [np.eye(ACTION_DIM, dtype=bool)[ACTION_WAIT].copy() for _ in self.attackers],
-        )
+        self._reset_decision_recording(current)
         with contextlib.redirect_stdout(io.StringIO()):
             self.game.step_tick()
         self.elapsed_ticks += 1

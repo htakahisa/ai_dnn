@@ -65,8 +65,8 @@ class FixedSmokePlan:
         return None
 
 
-class FixedFlashPlan:
-    """Trigger a real flash only when its projectile can reach the marked cell."""
+class _FixedProjectilePlan:
+    """Cast once per marked cell after checking the actual projectile endpoint."""
 
     def __init__(self, scenario):
         self.scenario = scenario
@@ -77,36 +77,56 @@ class FixedFlashPlan:
         self.pending = {}
 
     def choose(self, char, game):
-        if not self.scenario.flash_points or game is None:
+        if not getattr(self.scenario, self.points_attr) or game is None:
             return None
         # Charge consumption confirms casts even after their projectiles disappear.
         by_name = {ally.name: ally for ally in game.chars if ally.team == char.team}
         for point, (name, charges) in list(self.pending.items()):
             owner = by_name.get(name)
-            if owner is not None and owner.flash_charges < charges:
+            if owner is not None and getattr(owner, self.charges_attr) < charges:
                 self.used_points.add(point)
                 del self.pending[point]
-        if not char.is_alive or char.ability_name != "FLASH" or not char.flash_charges:
+        if (not char.is_alive or char.ability_name != self.ability
+                or not getattr(char, self.charges_attr)):
             return None
         from concon_v1.co1_attacker_common import bfs_distance_map
 
         allies = [ally for ally in game.chars if ally.is_alive and ally.team == char.team]
-        for point in self.scenario.flash_points:
+        for point in getattr(self.scenario, self.points_attr):
             if point in self.used_points:
                 continue
             distances = bfs_distance_map(game.grid, point)
-            if not any(0 <= distances[tuple(ally.pos)] <= self.scenario.flash_trigger_bfs_distance
+            if not any(0 <= distances[tuple(ally.pos)] <= getattr(self.scenario, self.distance_attr)
                        for ally in allies):
                 continue
-            aim = _impact_aim(game, char, point, flash=True)
+            aim = _impact_aim(game, char, point, flash=self.ability == "FLASH")
             if aim is None:
                 continue
-            self.pending[point] = (char.name, char.flash_charges)
-            return {"ability": "FLASH", "target": aim}
+            self.pending[point] = (char.name, getattr(char, self.charges_attr))
+            return {"ability": self.ability, "target": aim}
         return None
 
 
-def choose_ability(char, game, *, route_goal=None, allow_smoke=True, allow_flash=True):
+class FixedFlashPlan(_FixedProjectilePlan):
+    """Require the flash burst to land on U, including its flight time limit."""
+
+    ability = "FLASH"
+    points_attr = "flash_points"
+    charges_attr = "flash_charges"
+    distance_attr = "flash_trigger_bfs_distance"
+
+
+class FixedReconPlan(_FixedProjectilePlan):
+    """Require the recon dart to stop on R at a wall or the map edge."""
+
+    ability = "RECON"
+    points_attr = "recon_points"
+    charges_attr = "recon_charges"
+    distance_attr = "recon_trigger_bfs_distance"
+
+
+def choose_ability(char, game, *, route_goal=None, allow_smoke=True, allow_flash=True,
+                   allow_recon=True):
     """Return a supported ability payload, using only team sight and smoke history."""
     if game is None or not char.is_alive:
         return None
@@ -125,7 +145,7 @@ def choose_ability(char, game, *, route_goal=None, allow_smoke=True, allow_flash
         if enemy is not None:
             return {"ability": "SMOKE", "target": tuple(enemy.pos)}
 
-    if char.ability_name == "RECON" and char.recon_charges:
+    if allow_recon and char.ability_name == "RECON" and char.recon_charges:
         if not any(projectile.get("team") == char.team
                    for projectile in game.recon_projectiles):
             for enemy in visible:

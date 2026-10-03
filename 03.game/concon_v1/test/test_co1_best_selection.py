@@ -29,10 +29,28 @@ def finished_training_env():
         opponents=("gc_v1", "omoko_v1"), opponent="gc_v1", done=True,
         success=True, had_spike_drop=False, spike_recovered=False,
         elapsed_ticks=0, reset=lambda: ([], []),
+        game=SimpleNamespace(round_over=True, round_timer=1, attacker_wins=1),
     )
 
 
 class BestSelectionTests(unittest.TestCase):
+    def test_elimination_wins_are_logged_directly_below_plants(self):
+        env = finished_training_env()
+        env.success = False
+        output = io.StringIO()
+        with (tempfile.TemporaryDirectory() as directory,
+              patch.object(battle_module, "BattleRouteEnv", return_value=env),
+              patch.object(training, "evaluate_checkpoint", return_value=metrics(0.0, 0.0)),
+              patch.object(training.torch, "save") as save,
+              contextlib.redirect_stdout(output)):
+            training.train(episodes=20, save_dir=directory)
+        lines = output.getvalue().splitlines()
+        plant_index = next(i for i, line in enumerate(lines) if "  team100 " in line)
+        self.assertIn("gc_v1=0/20(0.000)", lines[plant_index])
+        self.assertIn("team_win100 gc_v1=20/20(1.000)", lines[plant_index + 1])
+        self.assertIn("plant_or_elimination", lines[plant_index + 1])
+        self.assertEqual(save.call_args_list[0].args[0]["team_win100"]["gc_v1"]["plants"], 20)
+
     def test_epsilon_reaches_the_exact_configured_floor(self):
         self.assertGreater(training.epsilon_by_episode(1399, 2000), training.EPSILON_END)
         self.assertEqual(training.epsilon_by_episode(1400, 2000), training.EPSILON_END)
@@ -187,6 +205,47 @@ class BestSelectionTests(unittest.TestCase):
             latest = torch.load(Path(directory) / "co1_attacker_A1_latest.pt", weights_only=False)
             self.assertEqual(latest["episode"], 10)
             self.assertEqual(latest["evaluation"], metrics(0.95, 0.7))
+
+    def test_incompatible_best_is_backed_up_and_training_saves_current_map(self):
+        scenario = training.get_scenario("A2")
+        mismatches = (
+            {"waypoint_order": "abcd", "obs_dim": 28},
+            {"obs_dim": 28},
+            {"scenario_signature": "old-map"},
+            {"map_name": "A1"},
+        )
+        for mismatch in mismatches:
+            with self.subTest(mismatch=mismatch), tempfile.TemporaryDirectory() as directory:
+                best_path = Path(directory) / scenario.checkpoint_filename("best")
+                previous = {
+                    "episode": 99, "map_name": "A2",
+                    "waypoint_order": scenario.waypoint_order,
+                    "obs_dim": scenario.obs_dim, "scenario_signature": scenario.signature,
+                    **mismatch,
+                }
+                torch.save(previous, best_path)
+                original_bytes = best_path.read_bytes()
+                output = io.StringIO()
+                with (patch.object(battle_module, "BattleRouteEnv", return_value=finished_training_env()),
+                      patch.object(training, "CHECKPOINT_INTERVAL", 1),
+                      patch.object(training, "evaluate_checkpoint", return_value=metrics(0.0, 0.0)) as evaluate,
+                      contextlib.redirect_stdout(output)):
+                    training.train(episodes=10, save_dir=directory, map_name="A2", force_save=False)
+                self.assertEqual([call.args[0]["episode"] for call in evaluate.call_args_list],
+                                 [7, 8, 9, 10])
+                backups = list(Path(directory).glob("co1_attacker_A2_best_incompatible_*.pt"))
+                self.assertEqual(len(backups), 1)
+                self.assertEqual(backups[0].read_bytes(), original_bytes)
+                self.assertIn("Skipping incompatible existing best", output.getvalue())
+                for kind in ("best", "latest"):
+                    saved = torch.load(Path(directory) / scenario.checkpoint_filename(kind),
+                                       weights_only=False)
+                    training.validate_checkpoint_scenario(saved, scenario)
+                    self.assertEqual(saved["episode"], 10)
+
+    def test_incompatible_checkpoints_still_fail_direct_evaluation(self):
+        with self.assertRaisesRegex(ValueError, "waypoint order"):
+            training.evaluate_checkpoint({"map_name": "A2", "waypoint_order": "abcd"})
 
 
 if __name__ == "__main__":

@@ -82,9 +82,6 @@ FNATIC_V2_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 # FRC policies selected by the GUI and competition manager.
 FRC_V1_ATTACKER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs" / "selfplay_01" / "A_policy.pt"
 FRC_V1_DEFENDER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs" / "tactics_finetune_20260930" / "D_policy.pt"
-# ConCon attacker: change this to "A1", "A2", or "A3".
-# Use the selected map's best checkpoint, or latest if best is unavailable.
-CONCON_ATTACKER_MAP = "A1"
 
 
 def _build_team_ai(key):
@@ -93,7 +90,7 @@ def _build_team_ai(key):
     if normalized in {"concon_v1", "concon_attacker_a1"}:
         from concon_v1.co1_attacker_controller import ConconAttackerController
         from concon_v1.co1_defender_controller import ConconDefenderController
-        from concon_v1.co1_attacker_scenarios import get_scenario
+        from concon_v1.co1_attacker_scenarios import CONCON_ATTACKER_MAP, get_scenario
         scenario = get_scenario(CONCON_ATTACKER_MAP)
         model_path = scenario.model_path
         if not model_path.is_file():

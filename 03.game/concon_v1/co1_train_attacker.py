@@ -3,9 +3,11 @@
 import argparse
 import io
 import random
+import shutil
 import sys
 import time
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +33,10 @@ from concon_v1.co1_attacker_scenarios import (
     SCENARIOS, get_scenario, validate_checkpoint_scenario,
 )
 
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RESET = "\033[0m"
 
 TARGET_UPDATE_INTERVAL = 1000
 
@@ -307,7 +313,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
     replay = deque(maxlen=100_000)
     if mode == "battle":
         from concon_v1.co1_battle_training import BattleRouteEnv
-        env = BattleRouteEnv(seed, opponents, model=model, map_name=scenario)
+        env = BattleRouteEnv(seed, opponents, model=model, map_name=scenario, learn_setup=True)
     elif mode == "route":
         env = RouteEnv(seed, map_name=scenario)
     else:
@@ -323,6 +329,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
     total_timeouts = 0
     team_results = []
     recent_team_results = deque(maxlen=100)
+    recent_team_wins = deque(maxlen=100)
     team_round_results = []
     recent_team_round_results = deque(maxlen=100)
     best_evaluation = None
@@ -381,6 +388,10 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
             result = (env.opponent, planted)
             team_results.append(result)
             recent_team_results.append(result)
+            # Carry training ends at planting, before a possible defuse.
+            # Count that objective plus actual pre-plant elimination wins.
+            carry_success = planted or bool(env.game.round_over and env.game.attacker_wins)
+            recent_team_wins.append((env.opponent, carry_success))
             round_result = (env.opponent, env.elapsed_ticks, timed_out)
             team_round_results.append(round_result)
             recent_team_round_results.append(round_result)
@@ -401,8 +412,11 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
             if mode == "battle":
                 print("  team_total " + format_team_plants(
                     summarize_team_plants(env.opponents, team_results)))
-                print("  team100 " + format_team_plants(
-                    summarize_team_plants(env.opponents, recent_team_results)))
+                print(f"{GREEN}  team100     " + format_team_plants(
+                    summarize_team_plants(env.opponents, recent_team_results)) + f"{RESET}")
+                print(f"{YELLOW}  team_win100 " + format_team_plants(
+                    summarize_team_plants(env.opponents, recent_team_wins))
+                    + " (plant_or_elimination)" + f"{RESET}")
                 round_summary = summarize_team_rounds(env.opponents, team_round_results)
                 recent_round_summary = summarize_team_rounds(env.opponents, recent_team_round_results)
                 print("  team_avg_ticks " + format_team_round_metric(
@@ -429,6 +443,9 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 "evaluation": None,
                 "plant_count_total": total_plants,
                 "plant_rate_total": plant_rate_total,
+                "team_win100": (summarize_team_plants(env.opponents, recent_team_wins)
+                                if mode == "battle" else {}),
+                "team_win100_definition": "plant_or_elimination",
                 "split_patterns": SPLIT_PATTERNS,
                 "map_name": scenario.map_name,
                 "scenario_signature": scenario.signature,
@@ -470,15 +487,24 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 best_path = save_dir / scenario.checkpoint_filename("best")
                 if not checked_existing_best:
                     if best_path.is_file():
-                        print("Evaluating existing best with the current opponents, "
-                              f"rounds={eval_rounds}/team seed={seed}", flush=True)
                         previous = torch.load(best_path, map_location="cpu", weights_only=False)
-                        validate_checkpoint_scenario(previous, scenario)
-                        # Older best files only contain training success100. Re-evaluate
-                        # their weights under the same conditions as the candidate.
-                        previous["training_mode"] = mode
-                        previous["opponents"] = checkpoint["opponents"]
-                        best_evaluation = evaluate_checkpoint(previous, eval_rounds, seed)
+                        try:
+                            validate_checkpoint_scenario(previous, scenario)
+                        except ValueError as error:
+                            stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                            backup_path = best_path.with_name(
+                                f"{best_path.stem}_incompatible_{stamp}{best_path.suffix}")
+                            shutil.copy2(best_path, backup_path)
+                            print(f"Skipping incompatible existing best: {error}. "
+                                  f"Backed up to {backup_path}", flush=True)
+                        else:
+                            print("Evaluating existing best with the current opponents, "
+                                  f"rounds={eval_rounds}/team seed={seed}", flush=True)
+                            # Older best files only contain training success100. Re-evaluate
+                            # their weights under the same conditions as the candidate.
+                            previous["training_mode"] = mode
+                            previous["opponents"] = checkpoint["opponents"]
+                            best_evaluation = evaluate_checkpoint(previous, eval_rounds, seed)
                     checked_existing_best = True
                 print(f"Evaluating episode {episode} with epsilon=0 "
                       f"rounds={eval_rounds}/team seed={seed}", flush=True)

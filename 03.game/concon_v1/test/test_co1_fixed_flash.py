@@ -94,15 +94,22 @@ class FixedFlashTests(unittest.TestCase):
             from concon_v1.co1_battle_training import BattleRouteEnv
             env = BattleRouteEnv(seed=0, opponents=["gc_v1"])
             flasher = next(char for char in env.attackers if char.ability_name == "FLASH")
-            point = next(pos for pos in env.scenario.attacker_spawns
-                         if tuple(flasher.pos) != pos
-                         and env.game._projectile_path(tuple(flasher.pos), pos)[-1] == pos)
-            scenario = replace(env.scenario, flash_points=(point,), flash_trigger_bfs_distance=0)
+            from game_core import FLASH_MAX_FLIGHT_TICKS, FLASH_SPEED_CELLS_PER_TICK
+            # Select an actual endpoint; spawn cells need not be within the flash's flight limit.
+            game = env.game
+            path = next(game._projectile_path(tuple(flasher.pos), (r, c))
+                        for r in range(game.height) for c in range(game.width)
+                        if game.grid[r, c] != 1
+                        and len(game._projectile_path(tuple(flasher.pos), (r, c))) > 1)
+            point = path[min(len(path) - 1, FLASH_MAX_FLIGHT_TICKS * FLASH_SPEED_CELLS_PER_TICK)]
+            scenario = replace(env.scenario, flash_points=(point,), flash_trigger_bfs_distance=1000)
             env.controller.fixed_flashes = FixedFlashPlan(scenario)
             env.route_controller.scenario = scenario
             env.controller.retrieve_controller.allow_flash = False
             charges = flasher.flash_charges
             env.step(actions=[4] * 5)
+            for _ in range(FLASH_MAX_FLIGHT_TICKS):
+                env.game._advance_flash_projectiles()
         self.assertEqual(flasher.flash_charges, charges - 1)
         self.assertTrue(any(tuple(burst["pos"]) == point and burst["owner"] == flasher.name
                             for burst in env.game.flash_bursts))

@@ -104,10 +104,12 @@ class EnvironmentParityTests(unittest.TestCase):
         perception = env.game.current_attacker_team_ai.perception_engine
         rng_state = env.route_rng.getstate()
         cache = dict(perception._cache)
-        self.assertEqual(env.route_controller._routes, {})
+        routes = {name: (route.stage, route.goal)
+                  for name, route in env.route_controller._routes.items()}
         env._collect()
         env._collect()
-        self.assertEqual(env.route_controller._routes, {})
+        self.assertEqual({name: (route.stage, route.goal)
+                          for name, route in env.route_controller._routes.items()}, routes)
         self.assertEqual(env.route_rng.getstate(), rng_state)
         self.assertEqual(perception._cache, cache)
         env.step(epsilon=0.0)
@@ -128,6 +130,28 @@ class EnvironmentParityTests(unittest.TestCase):
             np.testing.assert_array_equal(live_route.distance_map, saved_maps[name])
             self.assertIsNot(env._preview_routes[name], live_route)
             self.assertIs(env._preview_routes[name].scenario, live_route.scenario)
+
+    def test_reset_initializes_setup_policy_and_discards_setup_recordings(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            env = BattleRouteEnv(seed=2, opponents=["omoko_v1"])
+        self.assertTrue(env.route_controller._routes)
+        # Stale live-step controls must not affect the next round's setup.
+        env.forced_actions = []
+        env.epsilon = 1.0
+        env.reset()
+        self.assertFalse(env.game.defender_setup_phase.active)
+        self.assertTrue(env.route_controller._routes)
+        self.assertIsNone(env.forced_actions)
+        self.assertEqual(env.epsilon, 0.0)
+        self.assertEqual(env.elapsed_ticks, 0)
+        self.assertEqual(env.actions, [ACTION_WAIT] * len(env.attackers))
+        self.assertFalse(any(env.policy_action_applied))
+        self.assertEqual(env._decision_routes, {})
+        for observation in env._tick_observations:
+            self.assertFalse(observation.any())
+        env.step(epsilon=0.0)
+        self.assertEqual(env.elapsed_ticks, 1)
+        self.assertTrue(any(env.policy_action_applied))
 
     def test_policy_replay_uses_inputs_at_the_actual_decision(self):
         with contextlib.redirect_stdout(io.StringIO()):

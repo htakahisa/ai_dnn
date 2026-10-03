@@ -11,6 +11,10 @@ import numpy as np
 from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 
 
+# 通常対戦・大会で使う攻撃モデル。"A1", "A2", "A3" から選択します。
+# 選択したモデルの best を使用し、なければ latest を使用します。
+CONCON_ATTACKER_MAP = "A3"
+
 WAYPOINT_ORDER = "abcd"
 
 
@@ -22,6 +26,7 @@ class ScenarioSettings:
     max_candidate_bfs_distance: int = 12
     smoke_trigger_bfs_distance: int = 6
     flash_trigger_bfs_distance: int = 6
+    recon_trigger_bfs_distance: int = 6
 
 
 SCENARIOS = {
@@ -29,18 +34,21 @@ SCENARIOS = {
         map_module="co1_map_attacker_A1", plant_side="left", waypoint_order="abcd",
         smoke_trigger_bfs_distance=6,
         flash_trigger_bfs_distance=6,
+        recon_trigger_bfs_distance=6,
     ),
     "A2": ScenarioSettings(
         map_module="co1_map_attacker_A2", plant_side="right", waypoint_order="abcde",
         max_candidate_bfs_distance=33,
         smoke_trigger_bfs_distance=8,
         flash_trigger_bfs_distance=6,
+        recon_trigger_bfs_distance=6,
     ),
     "A3": ScenarioSettings(
-        map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcde",
+        map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcd",
         max_candidate_bfs_distance=25,
-        smoke_trigger_bfs_distance=11,
+        smoke_trigger_bfs_distance=15,
         flash_trigger_bfs_distance=5,
+        recon_trigger_bfs_distance=6,
     ),
 }
 
@@ -65,6 +73,8 @@ def parse_strategy_points(map_text, waypoint_order=WAYPOINT_ORDER):
         raise ValueError("S is reserved for fixed smoke points")
     if "u" in waypoint_order:
         raise ValueError("U is reserved for fixed flash points")
+    if "r" in waypoint_order:
+        raise ValueError("R is reserved for fixed recon points")
     if (not waypoint_order or waypoint_order[0] != "a"
             or len(set(waypoint_order)) != len(waypoint_order)
             or any(marker not in "abcdefghijklmnopqrstuvwxyz" for marker in waypoint_order)):
@@ -74,7 +84,7 @@ def parse_strategy_points(map_text, waypoint_order=WAYPOINT_ORDER):
     for row_index, row in enumerate(_rows(map_text)):
         for col_index, value in enumerate(row):
             marker = value.lower()
-            if value in ("S", "U"):
+            if value in ("S", "U", "R"):
                 continue
             if marker in points:
                 if marker in marker_cases and marker_cases[marker] != value.isupper():
@@ -106,6 +116,8 @@ class AttackerScenario:
     smoke_trigger_bfs_distance: int = 6
     flash_points: tuple = ()
     flash_trigger_bfs_distance: int = 6
+    recon_points: tuple = ()
+    recon_trigger_bfs_distance: int = 6
 
     @property
     def obs_dim(self):
@@ -128,7 +140,8 @@ class AttackerScenario:
 
 def build_scenario(map_name, strategy_map, plant_side, game_map=GAME_MAZE_STR,
                    max_candidate_bfs_distance=12, waypoint_order=WAYPOINT_ORDER,
-                   smoke_trigger_bfs_distance=6, flash_trigger_bfs_distance=6):
+                   smoke_trigger_bfs_distance=6, flash_trigger_bfs_distance=6,
+                   recon_trigger_bfs_distance=6):
     waypoint_order = waypoint_order.lower()
     if (isinstance(smoke_trigger_bfs_distance, bool)
             or not isinstance(smoke_trigger_bfs_distance, int)
@@ -138,6 +151,10 @@ def build_scenario(map_name, strategy_map, plant_side, game_map=GAME_MAZE_STR,
             or not isinstance(flash_trigger_bfs_distance, int)
             or flash_trigger_bfs_distance < 0):
         raise ValueError("flash trigger BFS distance must be a non-negative integer")
+    if (isinstance(recon_trigger_bfs_distance, bool)
+            or not isinstance(recon_trigger_bfs_distance, int)
+            or recon_trigger_bfs_distance < 0):
+        raise ValueError("recon trigger BFS distance must be a non-negative integer")
     grid = parse_game_grid(game_map)
     points = parse_strategy_points(strategy_map, waypoint_order)
     if grid.shape != (len(_rows(strategy_map)), len(_rows(strategy_map)[0])):
@@ -152,6 +169,10 @@ def build_scenario(map_name, strategy_map, plant_side, game_map=GAME_MAZE_STR,
                          for c, value in enumerate(row) if value == "U")
     if any(grid[point] == 1 for point in flash_points):
         raise ValueError("a fixed flash point overlays a wall in the game terrain map")
+    recon_points = tuple((r, c) for r, row in enumerate(_rows(strategy_map))
+                         for c, value in enumerate(row) if value == "R")
+    if any(grid[point] == 1 for point in recon_points):
+        raise ValueError("a fixed recon point overlays a wall in the game terrain map")
     if len(points["a"]) not in (1, 2):
         raise ValueError("the first waypoint a must have one or two points")
     if any(len(cells) > 5 for cells in points.values()):
@@ -175,14 +196,17 @@ def build_scenario(map_name, strategy_map, plant_side, game_map=GAME_MAZE_STR,
         contents += "\nsmoke_trigger_bfs_distance=" + str(smoke_trigger_bfs_distance)
     if flash_points:
         contents += "\nflash_trigger_bfs_distance=" + str(flash_trigger_bfs_distance)
+    if recon_points:
+        contents += "\nrecon_trigger_bfs_distance=" + str(recon_trigger_bfs_distance)
     signature = hashlib.sha256(contents.encode("utf-8")).hexdigest()
     uppercase_markers = frozenset(value.lower() for row in _rows(strategy_map)
-                                  for value in row if value.isupper() and value not in ("S", "U"))
+                                  for value in row if value.isupper() and value not in ("S", "U", "R"))
     return AttackerScenario(map_name, strategy_map, game_map, plant_side,
                             grid, points, plant_cells, spawns,
                             max_candidate_bfs_distance, waypoint_order, signature, uppercase_markers,
                             smoke_points, smoke_trigger_bfs_distance,
-                            flash_points, flash_trigger_bfs_distance)
+                            flash_points, flash_trigger_bfs_distance,
+                            recon_points, recon_trigger_bfs_distance)
 
 
 @lru_cache(maxsize=None)
@@ -195,7 +219,8 @@ def _load_scenario(map_name):
                           max_candidate_bfs_distance=settings.max_candidate_bfs_distance,
                           waypoint_order=settings.waypoint_order,
                           smoke_trigger_bfs_distance=settings.smoke_trigger_bfs_distance,
-                          flash_trigger_bfs_distance=settings.flash_trigger_bfs_distance)
+                          flash_trigger_bfs_distance=settings.flash_trigger_bfs_distance,
+                          recon_trigger_bfs_distance=settings.recon_trigger_bfs_distance)
 
 
 def get_scenario(map_name="A1"):

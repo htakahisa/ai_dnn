@@ -11,6 +11,7 @@ from controllers import BaseController
 from concon_v1.co1_attacker_abilities import choose_ability
 from concon_v1.co1_attacker_common import (
     ACTION_PLANT,
+    ACTION_WAIT,
     CARDINAL_MOVES,
     GRID,
     GORIGONS,
@@ -51,7 +52,7 @@ def _sees_enemy(char, chars, grid, game):
 
 def preplant_contact_action(char, game_state, game, route_goal,
                             last_enemy_seen_tick, enemy_was_visible, *, allow_smoke=True,
-                            allow_flash=True):
+                            allow_flash=True, allow_recon=True):
     """Use the same perceived contact behavior in training and inference."""
     chars = game_state.get("chars", [])
     grid = np.asarray(game_state.get("grid", GRID), dtype=np.int32)
@@ -71,7 +72,7 @@ def preplant_contact_action(char, game_state, game, route_goal,
         return list(char.pos)
     last_enemy_seen_tick.pop(char.name, None)
     ability = choose_ability(char, game, route_goal=route_goal, allow_smoke=allow_smoke,
-                             allow_flash=allow_flash)
+                             allow_flash=allow_flash, allow_recon=allow_recon)
     if ability is not None:
         return list(char.pos), ability
     return None
@@ -195,6 +196,13 @@ class ConconAttackerRouteController:
             [tuple(map(int, other.pos)) for other in attackers], alive, index, grid,
             carrier_index, self._a_completed_groups,
         )
+        if game_state.get("defender_setup_active"):
+            from map_data_defender_setup import is_setup_position_allowed
+            for action, (dr, dc) in enumerate(CARDINAL_MOVES):
+                if mask[action] and not is_setup_position_allowed(position[0] + dr, position[1] + dc):
+                    mask[action] = False
+            mask[ACTION_PLANT] = False
+            mask[ACTION_WAIT] = True
         return observation, mask
 
     def _choose_policy_action(self, char, observation, mask):
@@ -207,10 +215,12 @@ class ConconAttackerRouteController:
         route = self._prepare_route(char, game_state)
         position = tuple(map(int, char.pos))
         planting = char.has_spike and route.at_plant_stage and position == route.goal
-        if not planting:
+        if not planting and not game_state.get("defender_setup_active"):
             contact_options = {"allow_smoke": False} if self.scenario.smoke_points else {}
             if self.scenario.flash_points:
                 contact_options["allow_flash"] = False
+            if self.scenario.recon_points:
+                contact_options["allow_recon"] = False
             contact = preplant_contact_action(
                 char, game_state, getattr(self, "game", None), route.goal,
                 self._last_enemy_seen_tick, self._enemy_was_visible,

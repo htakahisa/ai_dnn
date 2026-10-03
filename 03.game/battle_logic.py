@@ -393,7 +393,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
         char.moved_this_tick = tuple(char.pos) != old_pos
 
     def _run_defender_setup_tick(self):
-        """Setup Phaseを1Tick処理する。Defenderだけが移動する。"""
+        """Setup Phaseを1Tick処理する。"""
         self._prepare_team_controllers_tick()
         self._build_occupancy_counts()
         try:
