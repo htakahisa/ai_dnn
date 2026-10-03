@@ -26,6 +26,8 @@ OPPONENTS = {
     "toru_ai_v3.1": ("toru_ai_v3.1", "Team Elites"),
 }
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PLANT_SUCCESS_REWARD = 10.0
+ELIMINATION_WIN_REWARD = 7.0
 
 
 def _run_from_project_root(function):
@@ -249,8 +251,10 @@ class BattleRouteEnv:
         self.success = planted
         won_by_elimination = bool(self.game.round_over and self.game.attacker_wins and not planted)
         self.done = bool(planted or self.game.round_over)
-        if newly_planted or won_by_elimination:
-            rewards = [reward + 10.0 for reward in rewards]
+        if newly_planted:
+            rewards = [reward + PLANT_SUCCESS_REWARD for reward in rewards]
+        elif won_by_elimination:
+            rewards = [reward + ELIMINATION_WIN_REWARD for reward in rewards]
         elif self.done and not planted:
             rewards = [reward - 3.0 for reward in rewards]
         return (self._tick_observations, self._tick_masks, rewards,

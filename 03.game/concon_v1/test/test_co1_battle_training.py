@@ -200,11 +200,28 @@ class BattleTrainingTests(unittest.TestCase):
             env.game.attacker_wins += 1
             env.game.round_over = True
 
-        with patch.object(env.game, "process_battle", side_effect=finish_by_elimination):
-            env.step([ACTION_WAIT] * len(env.attackers))
+        with (patch.object(env.game, "process_battle", side_effect=finish_by_elimination),
+              patch("concon_v1.co1_learn_attacker.preplant_contact_action",
+                    side_effect=lambda char, *args, **kwargs: list(char.pos))):
+            _, _, rewards, _, _, _ = env.step([ACTION_WAIT] * len(env.attackers))
         self.assertTrue(env.done)
         self.assertFalse(env.game.is_planted)
         self.assertFalse(env.success)
+        np.testing.assert_allclose(rewards, [7.0 - 0.005] * len(env.attackers))
+
+    def test_failed_round_keeps_its_penalty(self):
+        env = BattleRouteEnv(seed=7, opponents=["omoko_v1"])
+
+        def finish_by_defeat():
+            env.game.round_over = True
+
+        with (patch.object(env.game, "process_battle", side_effect=finish_by_defeat),
+              patch("concon_v1.co1_learn_attacker.preplant_contact_action",
+                    side_effect=lambda char, *args, **kwargs: list(char.pos))):
+            _, _, rewards, _, _, done = env.step([ACTION_WAIT] * len(env.attackers))
+        self.assertTrue(done)
+        self.assertFalse(env.success)
+        np.testing.assert_allclose(rewards, [-3.0 - 0.005] * len(env.attackers))
 
     def test_completed_plant_ends_episode_before_round_result_and_reset_starts_next(self):
         env = BattleRouteEnv(seed=7, opponents=["omoko_v1"])

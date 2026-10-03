@@ -39,6 +39,7 @@ YELLOW = "\033[33m"
 RESET = "\033[0m"
 
 TARGET_UPDATE_INTERVAL = 1000
+GAMMA = 0.99
 
 DEFAULT_EPISODES = 1000
 CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
@@ -150,24 +151,69 @@ class RouteEnv:
         return observations, masks, rewards, next_observations, next_masks, self.done
 
 
+class RouteReplayCollector:
+    """Keep each decision open until that actor decides again or its phase ends.
+
+    Contact/ability ticks belong to the preceding route decision. Bootstrap at
+    the next actual policy input, discounting by the number of elapsed ticks.
+    """
+
+    def __init__(self, player_count, gamma=GAMMA):
+        self.gamma = gamma
+        self.pending = [None] * player_count
+
+    def _finish(self, index, observation, mask, terminal, replay):
+        pending = self.pending[index]
+        if pending is None:
+            return
+        replay.append((pending["observation"], pending["action"], pending["reward"],
+                       observation.copy(), mask.copy(), float(terminal), pending["ticks"]))
+        self.pending[index] = None
+
+    def record(self, transition, actions, policy_applied, active_before, alive,
+               replay, *, route_active=True, interrupted=False):
+        old_obs, old_masks, rewards, next_obs, next_masks, done = transition
+        if not route_active:
+            return 0.0
+        total_reward = 0.0
+        for index, action in enumerate(actions):
+            if not active_before[index]:
+                continue
+            if policy_applied[index]:
+                self._finish(index, old_obs[index], old_masks[index], False, replay)
+                self.pending[index] = {
+                    "observation": old_obs[index].copy(), "action": int(action),
+                    "reward": 0.0, "ticks": 0,
+                }
+            pending = self.pending[index]
+            if pending is not None:
+                pending["reward"] += self.gamma ** pending["ticks"] * rewards[index]
+                pending["ticks"] += 1
+                total_reward += rewards[index]
+            if done or interrupted or not alive[index]:
+                self._finish(index, next_obs[index], next_masks[index], True, replay)
+        return total_reward
+
+
 def _optimize(model, target, optimizer, replay, batch_size, gamma):
     if len(replay) < batch_size:
         return
     batch = random.sample(replay, batch_size)
-    observations, actions, rewards, next_observations, next_masks, dones = zip(*batch)
+    observations, actions, rewards, next_observations, next_masks, dones, durations = zip(*batch)
     observations = torch.as_tensor(np.asarray(observations), dtype=torch.float32)
     actions = torch.as_tensor(actions, dtype=torch.int64)
     rewards = torch.as_tensor(rewards, dtype=torch.float32)
     next_observations = torch.as_tensor(np.asarray(next_observations), dtype=torch.float32)
     next_masks = torch.as_tensor(np.asarray(next_masks), dtype=torch.bool)
     dones = torch.as_tensor(dones, dtype=torch.float32)
+    durations = torch.as_tensor(durations, dtype=torch.float32)
 
     selected = model(observations).gather(1, actions.unsqueeze(1)).squeeze(1)
     with torch.no_grad():
         next_policy = model(next_observations).masked_fill(~next_masks, -torch.inf)
         next_actions = next_policy.argmax(dim=1)
         next_values = target(next_observations).gather(1, next_actions.unsqueeze(1)).squeeze(1)
-        expected = rewards + gamma * next_values * (1.0 - dones)
+        expected = rewards + gamma ** durations * next_values * (1.0 - dones)
     loss = nn.functional.smooth_l1_loss(selected, expected)
     optimizer.zero_grad()
     loss.backward()
@@ -338,6 +384,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
 
     for episode in range(1, episodes + 1):
         observations, masks = env.reset()
+        route_replay = RouteReplayCollector(len(observations))
         epsilon = epsilon_by_episode(episode, episodes)
         total_reward = 0.0
         while not env.done:
@@ -355,21 +402,21 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
             old_obs, old_masks, rewards, next_obs, next_masks, done = transition
             route_active = mode != "battle" or env.route_active_before_step
             route_interrupted = mode == "battle" and (env.retrieve_active or env.success)
-            for index, action in enumerate(actions):
-                if (not active_before[index] or not route_active
-                        or (mode == "battle" and not env.policy_action_applied[index])):
-                    continue
-                # Retrieval is controlled by its own phase. A dropped spike
-                # ends this route transition, but the real round continues.
-                applied_action = env.actions[index] if mode == "battle" else action
-                replay.append((old_obs[index], applied_action, rewards[index], next_obs[index],
-                               next_masks[index], float(done or route_interrupted
-                                                        or not env.alive[index])))
-                total_reward += rewards[index]
+            if mode == "battle":
+                total_reward += route_replay.record(
+                    transition, env.actions, env.policy_action_applied, active_before,
+                    env.alive, replay, route_active=route_active,
+                    interrupted=route_interrupted,
+                )
+            else:
+                for index, action in enumerate(actions):
+                    replay.append((old_obs[index], action, rewards[index], next_obs[index],
+                                   next_masks[index], float(done), 1))
+                    total_reward += rewards[index]
             observations, masks = next_obs, next_masks
             if route_active:
                 global_step += 1
-                _optimize(model, target, optimizer, replay, 128, 0.99)
+                _optimize(model, target, optimizer, replay, 128, GAMMA)
                 if global_step % TARGET_UPDATE_INTERVAL == 0:
                     target.load_state_dict(model.state_dict())
 
