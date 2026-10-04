@@ -7,7 +7,7 @@ from torch import nn
 from torch.distributions import Categorical
 
 from frc_v1 import FACING
-from frc_v1.actions import KINDS, PHASES, INTENTS, FrcAction, TeamDecision
+from frc_v1.actions import KINDS, PHASES, INTENTS, FrcAction, TeamDecision, target_required, ability_for
 from frc_v1.baseline import plant_sites
 from frc_v1.observation import (GRID_FIELDS, VECTOR_FIELDS, TOKEN_FIELDS, ALLY_FIELDS, GLOBAL_FIELDS,
                                 metadata, validate_metadata)
@@ -95,7 +95,8 @@ class FrcActorCritic(nn.Module):
                                     for o, k in zip(observations, kind_numpy)])
             facing = draw(facing_logits, facing_mask,
                           None if records is None else [r["facing"][slot] for r in records])
-            needs_target = (kind_numpy == 8) | ((kind_numpy == 9) & (slot == 1))
+            needs_target = np.array([target_required(slot, KINDS[k], o.masks)
+                                     for o, k in zip(observations, kind_numpy)])
             selected_logits = target_logits.reshape(batch, 2, self.cells)[torch.arange(batch, device=device),
                 torch.as_tensor(kind_numpy == 9, device=device, dtype=torch.long)]
             target_mask = np.stack([o.masks.target[slot, int(k == 9)] for o, k in zip(observations, kind_numpy)]).copy()
@@ -152,7 +153,7 @@ class FrcActorCritic(nn.Module):
             kind = kinds[slot] = choose(logits[:len(KINDS)], observation.masks.kind[slot])
             facings[slot] = choose(logits[len(KINDS):len(KINDS) + 8],
                 observation.masks.ultimate_facing[slot] if kind == 9 else observation.masks.facing[slot])
-            if kind == 8 or kind == 9 and slot == 1:
+            if target_required(slot, KINDS[kind], observation.masks):
                 offset = len(KINDS) + 8 + int(kind == 9) * self.cells
                 target_logits = torch.nn.functional.linear(hidden, output.weight[offset:offset + self.cells],
                     output.bias[offset:offset + self.cells])[0].detach().numpy()
@@ -204,7 +205,7 @@ class FrcPolicy:
         for slot in range(5):
             kind = KINDS[record["kind"][slot]]
             target = int(record["target"][slot])
-            ally_slot = target if slot == 0 and kind == "ABILITY" else None
+            ally_slot = target if observation.masks.abilities[slot] == "DANCE" and kind == "ABILITY" else None
             cell = divmod(target, len(self.grid[0])) if target >= 0 and ally_slot is None else None
             actions.append(FrcAction(kind, FACING[record["facing"][slot]], cell, ally_slot))
         t = record["team"]
@@ -260,11 +261,11 @@ class FrcPolicy:
                     decision = guard_attack_postplant(decision, snapshot, observation.masks,
                                                        plan=self._postplant_plan,
                                                        last_recon_tick=self._postplant_recon_tick)
-                    recon = decision.actions[3]
-                    if (recon.kind == "ABILITY" and recon.target is not None and
-                            max(abs(recon.target[0] - snapshot.spike_planted[0]),
-                                abs(recon.target[1] - snapshot.spike_planted[1])) <= 2):
-                        self._postplant_recon_tick = snapshot.tick
+                    for slot, recon in enumerate(decision.actions):
+                        if (ability_for(snapshot, slot) == "RECON" and recon.kind == "ABILITY" and recon.target is not None and
+                                max(abs(recon.target[0] - snapshot.spike_planted[0]),
+                                    abs(recon.target[1] - snapshot.spike_planted[1])) <= 2):
+                            self._postplant_recon_tick = snapshot.tick
                 else:
                     if snapshot.phase == "setup" and self._attack_setup_anchors is None:
                         self._attack_setup_anchors = attack_setup_positions(
@@ -281,11 +282,11 @@ class FrcPolicy:
             decision = guard_tactical_utility(decision, snapshot, observation.masks,
                                               last_cast=self._last_tactical_utility,
                                               cast_history=self._tactical_cast_history)
-            for slot in (1, 4):
-                if decision.actions[slot].kind == "ABILITY":
+            for slot, action in enumerate(decision.actions):
+                if ability_for(snapshot, slot) in ("SMOKE", "ASH") and action.kind == "ABILITY":
                     self._last_tactical_utility[slot] = snapshot.tick
-                    if slot == 4 and decision.actions[slot].target is not None:
-                        self._tactical_cast_history[4].append(decision.actions[slot].target)
+                    if ability_for(snapshot, slot) == "ASH" and action.target is not None:
+                        self._tactical_cast_history.setdefault(slot, []).append(action.target)
             self._navigation_round = snapshot.round_number
             self._navigation_phase = snapshot.phase
             self._navigation_tick = snapshot.tick

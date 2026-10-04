@@ -1,7 +1,8 @@
 """Season calendar badge, tournament entry, real series execution, and standings."""
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
+from datetime import timedelta
 
 from season_competitions import SeriesScore, next_match, parse_date, player_eliminated
 from season_bracket_ui import SeasonBracketPanel
@@ -121,15 +122,20 @@ class SeasonCompetitionMixin:
         for event in self.state.visible_tournaments:
             run = self.state.tournament(event.id)
             status = "不参加" if run and run.declined else "完了" if run and run.completed else "参加登録済み" if run else "未登録"
-            if self.state.date > parse_date(event.end_date) and run is None:
+            if self.state.date > parse_date(event.start_date) and run is None:
                 status = "参加受付終了"
             elif run and not run.completed and self.state.date >= parse_date(event.start_date):
                 status = "本日試合済み" if run.last_match_date == self.state.date.isoformat() else "本日の試合待ち"
             elif run and run.completed_date:
                 status = f"終了 {run.completed_date}"
+            if run and run.own_team_id is None and not run.declined:
+                status = "自チーム不参加・" + status
             entry = "参加不可" if not event.allow_player_entry else "任意参加" if event.participation_optional else "強制参加"
+            count = len(run.entrants) if run and run.entrants else event.team_count
+            matches = 2 * count - 2 if event.format == "double_elimination" else count - 1
+            end_date = parse_date(event.start_date) + timedelta(days=matches - 1)
             self.competition_list.insert("", "end", iid=event.id, values=(event.name,
-                f"{event.start_date} ～ {event.end_date}", event.team_count, entry, status))
+                f"{event.start_date} ～ {end_date}", count, entry, status))
         if selected and self.competition_list.exists(selected[0]):
             self.competition_list.selection_set(selected[0])
         self.competition_team_menu.configure(values=[team.name for team in self.state.teams])
@@ -154,12 +160,16 @@ class SeasonCompetitionMixin:
             return
         run = self.state.tournament(event.id)
         prizes = " / ".join(f"{rank}位 {money:,}円" for rank, money in sorted(event.prizes.items())) or "賞金なし"
+        count = len(run.entrants) if run and run.entrants else event.team_count
+        matches = 2 * count - 2 if event.format == "double_elimination" else count - 1
+        end_date = parse_date(event.start_date) + timedelta(days=matches - 1)
+        deadline = parse_date(event.start_date)
         self.competition_info.set(f"{event.name}  |  {'ダブル' if event.format == 'double_elimination' else 'シングル'}エリミネーション\n"
-            f"先取マップ数: 通常{event.normal_maps_to_win} / Lower Final {event.lower_final_maps_to_win} / Grand Final {event.grand_final_maps_to_win}\n賞金: {prizes} / 全{event.match_count}試合・終了予定日 {event.end_date}（自動計算）")
-        if run is None and self.state.date <= parse_date(event.end_date) and not self.match_running:
+            f"先取マップ数: 通常{event.normal_maps_to_win} / Lower Final {event.lower_final_maps_to_win} / Grand Final {event.grand_final_maps_to_win}\n賞金: {prizes} / 全{matches}試合・終了予定日 {end_date}（自動計算）\n参加登録締切: {deadline}（開始日当日まで参加可能）")
+        if (run is None or run.declined) and self.state.date <= parse_date(event.start_date) and not self.match_running:
             self.competition_enter_button.configure(state="normal")
             self.competition_enter_button.configure(text="参加登録" if event.allow_player_entry else "相手チームの大会を登録")
-            self.competition_decline_button.configure(state="normal" if event.allow_player_entry and event.participation_optional else "disabled")
+            self.competition_decline_button.configure(state="normal" if run is None and event.allow_player_entry and event.participation_optional else "disabled")
         if run and not run.declined:
             teams = {t.id: t.name for t in run.entrants}
             for score in run.results:
@@ -177,15 +187,21 @@ class SeasonCompetitionMixin:
                 self.competition_play_button.configure(text="レート判定で大会を終了" if eliminated else
                                                        "本日の結果をレート抽選" if npc_match else "本日のシリーズを開始",
                                                        state="normal" if (ready or eliminated and not self.match_running) else "disabled")
+                if run.own_team_id is None:
+                    self.competition_play_button.configure(text="日付進行時に自動試合", state="disabled")
                 self.competition_forfeit_button.configure(state="normal" if ready and run.own_team_id in (pending.left, pending.right) else "disabled")
                 self.competition_info.set(self.competition_info.get() + ("\n本日の試合は終了しました。「1日進める」で翌日の試合へ進めます。"
                     if run.last_match_date == self.state.date.isoformat() else "\n1日1試合（シリーズ単位・相手同士の試合も含む）。全試合終了時に大会が自動終了します。"))
                 if eliminated:
                     self.competition_info.set(self.competition_info.get() + "\n自チームは敗退済みです。残りは1試合につき1日進め、レート勝率の抽選で確定できます。")
-                if npc_match:
+                if npc_match and run.own_team_id is not None:
                     probability = expected_score(self.state.rating(pending.left), self.state.rating(pending.right))
                     self.competition_info.set(self.competition_info.get() +
                         f"\n他チーム同士はレート勝率で抽選し、結果確定後に1日進めます。予測: {teams[pending.left]} {probability:.1%} / {teams[pending.right]} {1 - probability:.1%}")
+                if run.own_team_id is None:
+                    count = 2 * len(run.entrants) - 2 if event.format == "double_elimination" else len(run.entrants) - 1
+                    self.competition_info.set(self.competition_info.get() +
+                        f"\n自チームは不参加です。ライバル{len(run.entrants)}チーム・全{count}試合を1日1試合ずつ自動進行します。スカウト・育成・スクリムも利用できます。")
             else:
                 for rank, team_id in enumerate(ranking, 1):
                     self.competition_matches.insert("", "end", values=(f"{rank}位", teams[team_id], f"{event.prizes.get(rank, 0):,}円"))
@@ -205,6 +221,9 @@ class SeasonCompetitionMixin:
         except ValueError as exc:
             self.status.set(str(exc))
             return
+        if candidate.tournament(event.id) is None:
+            self.status.set("出場可能な相手チームがいないため、参加登録を待っています。選手が5人揃ったチームが必要です。")
+            return
         self.commit(candidate, f"{event.name}に参加登録しました。開催日から試合を進められます。")
 
     def decline_competition(self):
@@ -218,21 +237,63 @@ class SeasonCompetitionMixin:
             return
         self.commit(candidate, f"{event.name}は不参加にしました。")
 
+    def confirm_entry_deadline(self):
+        events = self.state.entry_deadline_tournaments
+        if not events:
+            return True
+        names = "\n".join(f"・{event.name}" for event in events)
+        if messagebox.askyesno("大会のエントリー期限", "エントリー期限が今日までの不参加の大会がありますが、明日に進んでよろしいですか？\n\n"
+                              + names + "\n\n「いいえ」で大会画面を開きます。", parent=self.root):
+            return True
+        self.competition_auto.set(False)
+        self.show_screen("competitions")
+        self.competition_list.selection_set(events[0].id)
+        self.competition_list.see(events[0].id)
+        self.preview_competition()
+        self.status.set("日付の進行を止めました。大会への参加登録ができます。" +
+                        ("完了したアクションの結果は保存済みです。登録後に1日進めてください。"
+                         if self.state.day_advance_pending else ""))
+        return False
+
+    def finish_action_day(self):
+        if self.state.day_advance_pending:
+            return self.advance_calendar(1)
+        return True
+
     def advance_calendar(self, days):
         if self.match_running:
             self.status.set("試合終了後に日付を進めてください。")
-            return
+            return False
+        previous = self.state
+        candidate = previous
         try:
-            candidate = self.state.advance_days(days)
+            for _ in range(days):
+                if candidate.entry_deadline_tournaments:
+                    if candidate is not self.state and not self.commit(candidate, f"ゲーム内 {candidate.date:%Y/%m/%d}。本日が大会の参加登録締切です。"):
+                        return False
+                    self.status.set(self.status.get() + self.monthly_event_notice(previous))
+                    previous = self.state
+                    if not self.confirm_entry_deadline():
+                        return False
+                following = candidate.advance_days(1)
+                if following.date == candidate.date:
+                    break
+                candidate = following
         except ValueError as exc:
             self.status.set(str(exc))
-            return
-        message = f"ゲーム内 {candidate.date:%Y/%m/%d}。スポンサー収入・月給を反映した収支: {candidate.money - self.state.money:+,}円。"
-        if candidate.pending_tournaments:
-            message += " 大会画面で参加判断または試合を進めてください。"
-        previous = self.state
+            return False
+        message = f"ゲーム内 {candidate.date:%Y/%m/%d}。スポンサー収入・月給を反映した収支: {candidate.money - previous.money:+,}円。"
+        if candidate.day_action_blocked:
+            message += " 大会画面で本日の試合を進めてください。"
+        left = [p.name for p in previous.owned_players if candidate.player(p.name) is None]
+        if left:
+            message += f" 退団: {'、'.join(left)}。該当チームは編成し直してください。"
+        if candidate.money < 0:
+            message += " 所持金が赤字です。新規契約には必要資金の確保が必要です。"
         if self.commit(candidate, message):
             self.status.set(self.status.get() + self.monthly_event_notice(previous))
+            return candidate.date > previous.date
+        return False
 
     def advance_to_competition(self):
         if self.state.pending_tournaments:
@@ -265,6 +326,8 @@ class SeasonCompetitionMixin:
                            if updated.completed else "日付の進行が止まりました。他大会の参加判断を確認してください。")
                 if self.commit(candidate, message):
                     self.competition_status.set(message)
+                    if self.state.entry_deadline_tournaments:
+                        self.advance_calendar(1)
                 return
             self.state.check_tournament_match_day(event.id)
             match, _ = next_match(event, run)
@@ -316,6 +379,8 @@ class SeasonCompetitionMixin:
             self._after_competition_result(self._competition_event_id)
 
     def _after_competition_result(self, event_id):
+        if not self.finish_action_day():
+            return
         run = self.state.tournament(event_id)
         completion = "他チーム同士はレート勝率で抽選。" if any(s.decided_by_rating for s in run.results) else ""
         if run.completed:
@@ -328,15 +393,9 @@ class SeasonCompetitionMixin:
         self.refresh()
         if self.competition_auto.get() and not run.completed:
             if run.last_match_date == self.state.game_date:
-                previous = self.state
-                candidate = self.state.advance_days(1)
-                if candidate.date == previous.date:
+                if not self.advance_calendar(1):
                     self.competition_status.set("日付の進行が止まりました。他大会の参加判断を確認してください。")
                     return
-                if not self.commit(candidate, "大会の次の試合日へ進めました。"):
-                    self.competition_status.set("翌日の保存に失敗しました。日付を進めてから再開してください。")
-                    return
-                self.status.set(self.status.get() + self.monthly_event_notice(previous))
             # Yield between instant NPC results so long tournaments remain responsive.
             self._competition_after_id = self.root.after(0, lambda: self._start_next_competition_series(event_id))
             self.preview_competition()

@@ -119,30 +119,32 @@ def guard_attack_postplant(decision, snapshot, masks, *, plan=None, last_recon_t
               and effect.kind != "SMOKE" for cell in effect.cells}
 
     recon_cast = False
-    if (urgent and snapshot.allies[3].alive and snapshot.tick - last_recon_tick >= 5 and
-            masks.kind[3, KINDS.index("ABILITY")]):
+    recon_slot = next((a.slot for a in snapshot.allies if a.alive and masks.abilities[a.slot] == "RECON"
+                       and masks.kind[a.slot, KINDS.index("ABILITY")]), None)
+    if urgent and recon_slot is not None and snapshot.tick - last_recon_tick >= 5:
         columns = len(snapshot.grid[0])
         targets = [(r, c) for r in range(max(0, spike[0] - 2), min(len(snapshot.grid), spike[0] + 3))
                    for c in range(max(0, spike[1] - 2), min(columns, spike[1] + 3))
-                   if masks.target[3, 0, r * columns + c]]
+                   if masks.target[recon_slot, 0, r * columns + c]]
         if targets:
             target = min(targets, key=lambda pos: (_chebyshev(pos, spike), pos))
-            actions[3] = FrcAction("ABILITY", actions[3].facing, target=target)
+            actions[recon_slot] = FrcAction("ABILITY", actions[recon_slot].facing, target=target)
             recon_cast = True
 
     # A friendly smoke on the spike would make the common defuse tactic easier.
-    if (actions[1].kind == "ABILITY" and actions[1].target is not None and
-            _chebyshev(actions[1].target, spike) <= 2):
-        actions[1] = FrcAction("STAY", actions[1].facing)
+    for slot, ability in enumerate(masks.abilities):
+        if (ability == "SMOKE" and actions[slot].kind == "ABILITY" and actions[slot].target is not None and
+                _chebyshev(actions[slot].target, spike) <= 2):
+            actions[slot] = FrcAction("STAY", actions[slot].facing)
 
     rushers = set()
     if urgent:
-        eligible = [ally for ally in alive if ally.slot != 3 or not recon_cast]
+        eligible = [ally for ally in alive if ally.slot != recon_slot or not recon_cast]
         eligible.sort(key=lambda ally: (route_step(snapshot.grid, ally.position, (spike,))[1], ally.slot))
         rushers = {ally.slot for ally in eligible[:2 if snapshot.defuse_notified else 1]}
     for ally in alive:
         slot = ally.slot
-        if recon_cast and slot == 3:
+        if recon_cast and slot == recon_slot:
             continue
         if actions[slot].kind not in ("STAY", *MOVE_STEPS):
             continue

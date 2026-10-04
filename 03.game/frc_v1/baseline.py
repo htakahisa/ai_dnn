@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 from frc_v1 import FACING, FACING_STEPS
-from frc_v1.actions import FrcAction, TeamDecision, KINDS, MOVE_STEPS
+from frc_v1.actions import FrcAction, TeamDecision, KINDS, MOVE_STEPS, ability_for, ultimate_for
 
 
 def plant_sites(grid):
@@ -141,9 +141,11 @@ class FrcBaseline:
         for effect in snapshot.effects:
             if effect.kind in ("NEON", "TUNNEL", "DESTRUCTION", "BALEMOON") and histories[effect.handle].affiliation != "own":
                 danger.update(effect.cells)
+        healers = [a for a in snapshot.allies if ability_for(snapshot, a.slot) == "DANCE" and a.alive]
         actions = []
         reserved = {a.position for a in snapshot.allies if a.alive}
         for a in snapshot.allies:
+            ability, ultimate = ability_for(snapshot, a.slot), ultimate_for(snapshot, a.slot)
             facing = a.facing
             enemies = sorted(snapshot.sightings, key=lambda s: math.dist(a.position, s.position))
             if enemies and not a.forced_facing:
@@ -160,8 +162,8 @@ class FrcBaseline:
                         (snapshot.phase != "setup" or (r, c) in snapshot.setup_cells)]
                 kind, _ = route_step(snapshot.grid, a.position, safe, first_step_blocked=reserved - {a.position})
                 action = FrcAction(kind, facing)
-            elif a.slot == 0 and masks.kind[0, 8]:
-                targets = [ally for ally in snapshot.allies if masks.target[0, 0, ally.slot]]
+            elif ability == "DANCE" and masks.kind[a.slot, 8]:
+                targets = [ally for ally in snapshot.allies if masks.target[a.slot, 0, ally.slot]]
                 target = min(targets, key=lambda ally: (ally.hp > 50, ally.slot != entry, ally.hp))
                 if target.hp <= 70:
                     action = FrcAction("ABILITY", facing, ally_slot=target.slot)
@@ -169,18 +171,25 @@ class FrcBaseline:
                 action = FrcAction("PLANT", facing)
             elif masks.kind[a.slot, 6] and a.slot == objective:
                 action = FrcAction("DEFUSE", facing)
-            elif a.slot == 4 and masks.kind[4, 9] and enemies and (not snapshot.allies[0].alive or
-                    snapshot.is_planted and snapshot.allies[0].charges == 0 and a.hp <= 30):
+            elif ultimate == "BALEMOON" and masks.kind[a.slot, 9] and enemies and (not healers or
+                    snapshot.is_planted and not any(h.charges for h in healers) and a.hp <= 30):
                 action = FrcAction("ULTIMATE", facing)
-            elif a.slot == 3 and masks.kind[3, 9] and snapshot.tick >= 15:
+            elif ultimate in ("MONITOR", "TUNNEL", "RAID") and masks.kind[a.slot, 9] and snapshot.tick >= 15:
+                if ultimate == "RAID" and not masks.ultimate_facing[a.slot, FACING.index(facing)]:
+                    facing = FACING[int(np.flatnonzero(masks.ultimate_facing[a.slot])[0])]
                 action = FrcAction("ULTIMATE", facing)
-            elif a.slot in (1, 3, 4) and masks.kind[a.slot, 8] and (enemies or route_step(snapshot.grid, a.position, goals)[1] < 9):
+            elif ultimate in ("NEON", "ESCAPE") and masks.kind[a.slot, 9] and enemies:
+                columns = len(snapshot.grid[0])
+                candidates = np.flatnonzero(masks.target[a.slot, 1])
+                target_index = min(candidates, key=lambda i: math.dist(divmod(int(i), columns), enemies[0].position))
+                action = FrcAction("ULTIMATE", facing, divmod(int(target_index), columns))
+            elif ability != "DANCE" and masks.kind[a.slot, 8] and (enemies or route_step(snapshot.grid, a.position, goals)[1] < 9):
                 candidate = enemies[0].position if enemies else goals[0]
                 candidates = np.flatnonzero(masks.target[a.slot, 0])
                 columns = len(snapshot.grid[0])
                 target_index = min(candidates, key=lambda i: math.dist(divmod(int(i), columns), candidate))
                 # Keep the teacher from throwing all charges on consecutive ticks.
-                own_flight = any(e.kind == ("SMOKE", "RECON", "ASH")[(1, 3, 4).index(a.slot)] and
+                own_flight = any(e.kind == ability and
                                  histories[e.handle].affiliation == "own" for e in snapshot.effects)
                 if not own_flight and snapshot.tick % 8 == a.slot:
                     action = FrcAction("ABILITY", facing, divmod(int(target_index), columns))

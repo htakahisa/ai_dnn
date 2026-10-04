@@ -13,6 +13,7 @@ import character_stats
 import realtime_season_config as config
 import realtime_season_teams as teams
 import realtime_season_competitions as calendar
+import realtime_season_rival_economy as rival_economy
 from realtime_season import SeasonStore, SeasonSaveError, new_season
 from season_monthly_events import process_monthly_events
 from season_transfers import with_randomized_clubs
@@ -29,6 +30,7 @@ class TransferTests(unittest.TestCase):
                            for i, names in enumerate(RIVALS)]
         fixture = {name: replace(p, monthly_salary=100_000, loyalty=5) for name, p in character_stats.CHARACTER_TABLE.items()}
         patches = [patch.dict(character_stats.CHARACTER_TABLE, fixture),
+                   patch.object(rival_economy, "NON_REGULAR_OFFER_CHANCE", 0),
                    patch.object(config, "INITIAL_OWNED_PLAYERS", OWN),
                    patch.object(teams, "SEASON_TEAMS", self.configured),
                    patch.object(calendar, "START_DATE", "2026-01-01"),
@@ -48,7 +50,7 @@ class TransferTests(unittest.TestCase):
         # Start with a fixed world, but retain the original team membership.
         state = new_season(OWN).with_roster(OWN).with_confirmed_team()
         state = replace(state, opponent_teams=tuple(replace(c, regular_members=c.members,
-                        regular_igl=c.igl, regular_carrier=c.carrier) for c in state.opponent_teams))
+                        regular_igl=c.igl, regular_carrier=c.carrier) for c in state.opponent_teams), money=10_000_000)
         return state.with_scouted_player("Aspas", "year1").advance_months()
 
     def test_initial_mixing_is_unique_and_averages_two_missing_starters(self):
@@ -95,7 +97,7 @@ class TransferTests(unittest.TestCase):
         state = self.offer_state()
         offer = state.transfer_offer("Aspas")
         self.assertIsNotNone(offer)
-        self.assertEqual(offer.fee, 1_200_000)
+        self.assertEqual(offer.fee, 5_000_000)
         self.assertIsNotNone(state.player("Aspas"))
         following = state.advance_months()
         self.assertEqual(following.pending_transfer_offers, (offer,))
@@ -151,7 +153,7 @@ class TransferTests(unittest.TestCase):
         self.assertEqual(month.transfer_offers[-1].status, "forced")
 
     def test_new_offer_already_below_threshold_forces_transfer(self):
-        state = new_season(OWN)
+        state = replace(new_season(OWN), money=10_000_000)
         state = replace(state, opponent_teams=tuple(replace(c, regular_members=c.members) for c in state.opponent_teams))
         state = state.with_scouted_player("Aspas", "year1")
         state = state.with_team_loyalty("Aspas", 29)
@@ -199,7 +201,7 @@ class TransferTests(unittest.TestCase):
         self.assertEqual(state.transfer_offers[-1].status, "cancelled")
 
     def test_version_fourteen_keeps_rosters_and_enables_future_offers(self):
-        state = new_season(OWN).with_scouted_player("Aspas", "year1")
+        state = replace(new_season(OWN), money=10_000_000).with_scouted_player("Aspas", "year1")
         self.store.save(state)
         data = json.loads(self.store.path.read_text(encoding="utf-8"))
         data["version"] = 14
@@ -247,6 +249,9 @@ class TransferTests(unittest.TestCase):
         state = self.offer_state()
         self.store.save(state)
         app = RealtimeSeasonApp(root, self.store, state)
+        self.assertEqual(app.home_teams.item(state.club_id, "values")[3], "50倍")
+        root.update_idletasks()
+        self.assertLessEqual(app.home_host.winfo_reqheight(), 800)
         self.assertEqual(app.transfer_banner.winfo_manager(), "pack")
         app.transfer_banner.invoke()
         self.assertEqual(app.current_screen, "contracts")
@@ -266,14 +271,19 @@ class TransferTests(unittest.TestCase):
 
 class ConfiguredWorldTests(unittest.TestCase):
     def test_full_world_starts_unique_and_restores_regular_members(self):
-        with patch.object(calendar, "TOURNAMENTS", []):
+        # This test checks roster restoration when all transfers are affordable.
+        clubs = [dict(c, initial_money=10_000_000_000) for c in teams.SEASON_TEAMS]
+        taken = {p for c in clubs for p in c["players"]}
+        starters = tuple(p.name for p in character_stats.all_characters() if p.name not in taken)[:5]
+        with patch.object(calendar, "TOURNAMENTS", []), patch.object(teams, "SEASON_TEAMS", clubs), patch.object(rival_economy, "NON_REGULAR_OFFER_CHANCE", 0), patch.object(config, "INITIAL_OWNED_PLAYERS", starters):
             for seed in range(5):
                 with patch("realtime_season.with_randomized_clubs", side_effect=lambda s: with_randomized_clubs(s, Random(seed))):
                     pending = new_season()
                     state = pending.with_initial_selection(tuple(p.name for p in pending.starter_candidates[:5]))
                 state.validate()
                 month = state.advance_months()
-                self.assertTrue(all(club.members == club.regular_members for club in month.opponent_teams))
+                self.assertTrue(all(set(club.regular_members).issubset(club.members) for club in month.opponent_teams))
+                self.assertTrue(all(len(club.players) >= 5 for club in month.opponent_teams))
 
 
 if __name__ == "__main__":

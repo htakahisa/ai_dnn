@@ -5,7 +5,7 @@ from decimal import Decimal
 import math
 
 
-MAX_TRAINING_LEVEL = 10
+MAX_TRAINING_LEVEL = 30
 TRAINING_FIELDS = {"research": ("研究", "research_level", "iq"),
                    "aim_lab": ("エイムラボ", "aim_lab_level", "hit_pct")}
 
@@ -37,17 +37,13 @@ def training_terms(player, kind):
             or not isinstance(costs, (list, tuple)) or len(costs) != MAX_TRAINING_LEVEL
             or any(type(cost) is not int or cost <= 0 for cost in costs)
             or any(right <= left for left, right in zip(costs, costs[1:]))):
-        raise SeasonSaveError(f"{title}は正の上昇量と、順に増える10レベル分の費用（円・整数）を設定してください。")
+        raise SeasonSaveError(f"{title}は正の上昇量と、順に増える{MAX_TRAINING_LEVEL}レベル分の費用（円・整数）を設定してください。")
     level = getattr(player, level_field)
     if level >= MAX_TRAINING_LEVEL:
         raise SeasonSaveError(f"{title}は最大レベル{MAX_TRAINING_LEVEL}です。")
     before = getattr(player, stat_field)
     amount = Decimal(str(growth)) / (100 if kind == "aim_lab" else 1)
     after = float(Decimal(str(before)) + amount)
-    if kind == "aim_lab":
-        if before >= 1:
-            raise SeasonSaveError("命中率は上限の100%に達しています。")
-        after = min(1.0, after)
     if not math.isfinite(after) or after <= before:
         raise SeasonSaveError("育成後の能力値を増加させられません。上昇量を確認してください。")
     return TrainingTerms(kind, title, level_field, stat_field, level + 1, costs[level], before, after)

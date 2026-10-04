@@ -49,6 +49,7 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR
 from ov1_map_data_search import SEARCH_MAZE_STR
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
+from roster_utils import model_slots
 from ov1_train_defender_search import (
     DEFENSE_WATCH_POINTS,
     DEFENSE_WATCH_FACING,
@@ -1097,7 +1098,8 @@ class Ov1LearningDefenderSearchController:
             obs[45] = (watch_pos[1] - c0) / width
 
         # train側と同じ共有ネットワーク用のキャラID one-hot。
-        agent_id = ROSTER_ORDER.index(char.name)
+        teammates = [c for c in chars if c.team == char.team]
+        agent_id = model_slots(teammates, ROSTER_ORDER)[char.name]
         obs[AGENT_ID_OFFSET + agent_id] = 1.0
 
         context_offset = AGENT_ID_OFFSET + AGENT_ID_DIM

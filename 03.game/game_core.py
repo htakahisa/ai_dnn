@@ -248,14 +248,14 @@ def _normalize_hs_rate(value, default):
     return max(0.0, value)
 
 
-def _normalize_accuracy(value, default):
+def _normalize_accuracy(value, default, *, fractional=False):
     """命中率を正規化する。0未満だけ防ぎ、100%超はそのまま保持する。"""
     try:
         value = float(value)
     except (TypeError, ValueError):
         return default
     # Excel等で 110 と書かれている場合は110%として1.10へ変換。
-    if value > 10.0:
+    if not fractional and value > 10.0:
         value /= 100.0
     return max(0.0, value)
 
@@ -281,7 +281,7 @@ def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
         hs_rate /= 100.0
     hs_rate = max(0.0, hs_rate)
     dodge_rate = _clamp_rate(dodge_rate, 0.0)
-    accuracy = _normalize_accuracy(accuracy, 0.0)
+    accuracy = _normalize_accuracy(accuracy, 0.0, fractional=True)
     try:
         iq = float(iq)
     except (TypeError, ValueError):
@@ -349,7 +349,9 @@ def get_character_combat_stats(name):
     def pick_accuracy(keys, default):
         for key in keys:
             if key in raw:
-                return _normalize_accuracy(raw[key], default)
+                # Season snapshots use hit_pct as a fraction (1 = 100%).
+                # Even values above 10 must not be read as percentage input.
+                return _normalize_accuracy(raw[key], default, fractional=key == "hit_pct")
         return default
 
     def pick_hs(keys, default):

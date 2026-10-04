@@ -540,12 +540,12 @@ def guard_defense_navigation(decision, snapshot, masks, *, site_assignments=None
         if slot == defuser:
             force(slot, "DEFUSE")
             continue
-        if slot == 0 and masks.kind[0, KINDS.index("ABILITY")]:
-            hurt = [a for a in snapshot.allies if masks.target[0, 0, a.slot] and a.hp <= 60]
+        if masks.abilities[slot] == "DANCE" and masks.kind[slot, KINDS.index("ABILITY")]:
+            hurt = [a for a in snapshot.allies if masks.target[slot, 0, a.slot] and a.hp <= 60]
             if hurt:
-                force(0, "ABILITY", ally_slot=min(hurt, key=lambda a: a.hp).slot)
+                force(slot, "ABILITY", ally_slot=min(hurt, key=lambda a: a.hp).slot)
                 continue
-        if slot == 3 and masks.kind[slot, KINDS.index("ABILITY")]:
+        if masks.abilities[slot] == "RECON" and masks.kind[slot, KINDS.index("ABILITY")]:
             usable = [seen.position for seen in snapshot.sightings if target_legal(slot, seen.position)]
             if usable and (ally.charges == 2 or snapshot.tick % 15 == 4):
                 target = min(usable, key=lambda pos: route_step(snapshot.grid, ally.position, (pos,))[1])
@@ -605,10 +605,10 @@ def guard_tactical_utility(decision, snapshot, masks, *, last_cast=None, cast_hi
     def safe(slot, target, site):
         if not legal(slot, target):
             return False
-        if slot == 4 and any(cheb(target, previous) <= 2 for previous in cast_history.get(4, ())):
+        if masks.abilities[slot] == "ASH" and any(cheb(target, previous) <= 2 for previous in cast_history.get(slot, ())):
             return False
         allies = (ally for ally in snapshot.allies if ally.alive and ally.slot != slot)
-        if slot == 1:
+        if masks.abilities[slot] == "SMOKE":
             return (all(cheb(target, ally.position) >= 3 for ally in allies) and
                     min(cheb(target, cell) for cell in sites[site]) >= 2 and
                     all(cheb(target, smoke) >= 2 for smoke in snapshot.smoke_cells))
@@ -633,10 +633,10 @@ def guard_tactical_utility(decision, snapshot, masks, *, last_cast=None, cast_hi
     else:
         site = decision.site if 0 <= decision.site < len(sites) else None
     if site is None or snapshot.side == "D" and snapshot.is_planted:
-        if snapshot.side == "D" and actions[1].kind == "ABILITY":
-            actions[1] = FrcAction("STAY", actions[1].facing)
-            return replace(decision, actions=tuple(actions))
-        return decision
+        for slot, ability in enumerate(masks.abilities):
+            if snapshot.side == "D" and ability == "SMOKE" and actions[slot].kind == "ABILITY":
+                actions[slot] = FrcAction("STAY", actions[slot].facing)
+        return replace(decision, actions=tuple(actions))
     seen = [s.position for s in snapshot.sightings if
             site_distances[site].get(s.position, 10000) <= (20 if snapshot.side == "D" else 8)]
     close_contact = any(site_distances[site].get(pos, 10000) <= 8 for pos in seen)
@@ -658,11 +658,14 @@ def guard_tactical_utility(decision, snapshot, masks, *, last_cast=None, cast_hi
                             site_distances[site][pos] <= 5),
                            key=lambda pos: (min(cheb(pos, entrance) for entrance in ingress),
                                             site_distances[site][pos], pos))
-    for slot, cooldown in ((1, 10), (4, 8)):
+    for slot, ability in enumerate(masks.abilities):
+        if ability not in ("SMOKE", "ASH"):
+            continue
+        cooldown = 10 if ability == "SMOKE" else 8
         ally = snapshot.allies[slot]
         if not ally.alive or ally.charges <= 0:
             continue
-        if slot == 4 and snapshot.side == "D" and not (close_contact or local_casualty):
+        if ability == "ASH" and snapshot.side == "D" and not (close_contact or local_casualty):
             continue
         if snapshot.tick - last_cast.get(slot, -100) < cooldown:
             if actions[slot].kind == "ABILITY":
@@ -670,8 +673,8 @@ def guard_tactical_utility(decision, snapshot, masks, *, last_cast=None, cast_hi
             continue
         candidates = ((sorted(seen, key=lambda pos: (site_distances[site].get(pos, 10000), pos),
                               reverse=True) + ingress)
-                      if slot == 1 and snapshot.side == "D" and not close_contact else
-                      ingress if slot == 1 else
+                      if ability == "SMOKE" and snapshot.side == "D" and not close_contact else
+                      ingress if ability == "SMOKE" else
                       sorted(seen, key=lambda pos: (cheb(pos, ally.position), pos)) +
                       ingress + nearby_ingress)
         target = next((pos for pos in candidates if safe(slot, pos, site) and

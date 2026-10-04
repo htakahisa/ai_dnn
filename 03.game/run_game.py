@@ -69,6 +69,7 @@ from defender_setup_phase import DefenderSetupPhase
 from map_data_defender_setup import validate_against_map
 
 ATTACKER_AI_V2_MODEL_PATH = "attacker_ai_v2_data/dqn_attacker_ai_v2_best.pt"
+ATTACKER_MODEL_PATH = "dqn_attacker_combined_best.pt"
 FNATIC_V1_ATTACKER_MODEL_PATH = "policy_fnatic_attacker_dagger_final.pt"
 FNATIC_V1_DEFENDER_MODEL_PATH = "policy_fnatic_defender_dagger_final.pt"
 

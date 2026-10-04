@@ -127,7 +127,8 @@ class SalaryStateTest(SeasonCompetitionTest):
         state = self.dynamic_state()
         self.assertEqual([state.player(name).monthly_salary for name in OWN], [900_000, 1_500_000, 3_000_000, 100_000, 100_000])
         self.assertEqual(state.monthly_payroll, 5_600_000)
-        self.assertEqual(state.money, 10_000_000)
+        from realtime_season import INITIAL_MONEY
+        self.assertEqual(state.money, INITIAL_MONEY)
         for mode in SalaryMode:
             with self.assertRaisesRegex(SeasonSaveError, "開始前"):
                 state.with_salary_mode(mode)
@@ -166,7 +167,8 @@ class SalaryStateTest(SeasonCompetitionTest):
         self.write_stats(Leo={"kills": 1000, "deaths": 0})
         next_month = state.advance_months()
         self.assertEqual(next_month.contract("Leo").monthly_salary, 972_000)
-        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Meiy": 10_000_000}):
+        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Meiy": 10_000_000}), \
+                patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
             state = replace(self.dynamic_state(), money=500_000_000)
         terms = state.contract_terms(next(p for p in state.scout_players if p.name == "Meiy"), "year3")
         self.assertEqual(terms.monthly_salary, 10_000_000)
@@ -175,7 +177,9 @@ class SalaryStateTest(SeasonCompetitionTest):
         self.assertEqual(signed.advance_months().contract("Meiy").monthly_salary, 10_000_000)
 
     def test_npc_contracts_and_lft_use_dynamic_salary_and_transfer_fee(self):
-        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Aspas": 1_000_000, "Meiy": 2_000_000}):
+        # Salary assertions require a known NPC/LFT assignment.
+        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Aspas": 1_000_000, "Meiy": 2_000_000}), \
+                patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
             state = self.dynamic_state()
         rival = next(c for c in state.opponent_teams if "Aspas" in c.members)
         self.assertEqual(next(c.monthly_salary for c in rival.contracts if c.player_name == "Aspas"), 1_000_000)
@@ -296,13 +300,13 @@ class SalaryStateTest(SeasonCompetitionTest):
                 prizes={1: 5_000_000, 2: 2_000_000, 3: 1_000_000}, allow_player_entry=False)]):
             state = self.dynamic_state().with_tournament_entry("cup").advance_days(30)
         self.write_stats(Leo={"kills": 1000, "deaths": 0}, Derke={"kills": 0, "deaths": 200})
-        following = state.with_tournament_rating_result("cup")
+        following = state.advance_days()
         self.assertEqual(following.game_date, "2026-02-01")
         self.assertEqual(following.salary_updated_month, 1)
         self.assertEqual(following.contract("Leo").monthly_salary, 1_080_000)
         self.assertEqual(following.contract("Derke").monthly_salary, 2_400_000)
         self.assertEqual(following.money, state.money + 7_500_000 - 5_600_000)
-        finished = following.with_tournament_rating_result("cup")
+        finished = following.advance_days()
         self.assertEqual(finished.game_date, "2026-02-02")
         self.assertEqual(finished.tournament("cup").completed_date, "2026-02-01")
         self.assertEqual(finished.money, following.money)

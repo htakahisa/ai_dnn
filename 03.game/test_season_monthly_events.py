@@ -12,6 +12,7 @@ import character_stats
 import realtime_season_config
 import realtime_season_teams
 import realtime_season_competitions as calendar
+import realtime_season_rival_economy as rival_economy
 from character_stats import get_by_name
 from realtime_season import SeasonClub, SeasonSaveError, SeasonStore, new_season
 from run_realtime_season import RealtimeSeasonApp
@@ -31,6 +32,7 @@ class MonthlyEventsTest(unittest.TestCase):
         context.start()
         self.addCleanup(context.stop)
         for module, field, value in ((realtime_season_config, "INITIAL_OWNED_PLAYERS", OWN),
+                                     (rival_economy, "NON_REGULAR_OFFER_CHANCE", 0),
                                      (realtime_season_teams, "SEASON_TEAMS", self.config),
                                      (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", [])):
             context = patch.object(module, field, value)
@@ -44,14 +46,14 @@ class MonthlyEventsTest(unittest.TestCase):
         # These tests exercise vacancy filling with a fixed NPC lineup.
         with patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
             state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
-        return state.with_selected_team(state.teams[0].id)
+        return replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
 
     def test_recruits_missing_role_at_boundary_and_can_scrim_again(self):
         state = self.state().with_scouted_player("Aspas", "short", 1)
         old = state.opponent_teams[0]
         self.assertEqual(len(old.players), 4)
-        self.assertEqual(state.advance_days(30).opponent_teams[0], old)
-        month = state.advance_days(31)
+        self.assertEqual(state.advance_days(29).opponent_teams[0], old)
+        month = state.advance_days(30)
         club = month.opponent_teams[0]
         self.assertEqual(len(club.players), 5)
         self.assertEqual(club.players[-1].role, get_by_name("Aspas").role)

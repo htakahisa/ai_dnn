@@ -824,19 +824,8 @@ class LearningDefenderSearchTouyamaController:
             obs[45] = (watch_pos[1] - c0) / width
 
         # train側と同じ共有ネットワーク用のキャラID one-hot。
-        try:
-            agent_id = TOUYAMA_ROSTER_ORDER.index(char.name)
-        except ValueError:
-            team_order = [c for c in chars if c.team == char.team]
-            agent_id = next(
-                (
-                    index
-                    for index, teammate in enumerate(team_order)
-                    if teammate is char
-                ),
-                0,
-            )
-            agent_id = min(agent_id, len(TOUYAMA_ROSTER_ORDER) - 1)
+        from roster_utils import model_slots
+        agent_id = model_slots([c for c in chars if c.team == char.team], TOUYAMA_ROSTER_ORDER)[char.name]
         obs[AGENT_ID_OFFSET + agent_id] = 1.0
 
         return obs, visible_enemies

@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from frc_v1 import ROSTER
-from frc_v1.actions import FrcAction, TeamDecision, validate_action, to_game_action
+from frc_v1.actions import FrcAction, TeamDecision, validate_action, to_game_action, KINDS
 from frc_v1.controller import FrcController
 from frc_v1.memory import FrcMemory
 from frc_v1.observation import FrcObservationEncoder, metadata, validate_metadata, GRID_FIELDS
@@ -160,6 +160,73 @@ class FrcInformationTests(unittest.TestCase):
 
 
 class FrcExecutionTests(unittest.TestCase):
+    def test_replacement_members_use_actual_flash_ramp_and_neon(self):
+        game = make_game()
+        names = ("Derke", "Boaster", "Leo", "Alfajer", "Chronicle")
+        game.chars = [make_character(name, "A", (9, 2 + i)) for i, name in enumerate(names)] + game.chars[-1:]
+        snapshot, _, observation = observe(game)
+        runtime_names = tuple(a.name for a in snapshot.allies)
+        self.assertEqual(set(runtime_names), set(names))
+        for ally in snapshot.allies:
+            char = next(c for c in game.chars if c.name == ally.name)
+            self.assertEqual(ally.ability_name, char.ability_name)
+            self.assertEqual(ally.charges, getattr(char, char.ability_name.lower() + "_charges", 0))
+            if ally.ability_name == "FLASH":
+                action = FrcAction("ABILITY", ally.facing, target=(8, ally.position[1]))
+                validate_action(snapshot, observation.masks, ally.slot, action)
+                self.assertTrue(game.execute_ai_ability(char, to_game_action(snapshot, ally.slot, action, runtime_names)[1]))
+            elif ally.ability_name == "RAMP":
+                action = FrcAction("ABILITY", ally.facing, target=ally.position)
+                validate_action(snapshot, observation.masks, ally.slot, action)
+                self.assertTrue(game.execute_ai_ability(char, to_game_action(snapshot, ally.slot, action, runtime_names)[1]))
+                char.ultimate_points = char.ultimate_cost
+                current, _, current_obs = observe(game)
+                action = FrcAction("ULTIMATE", ally.facing, target=(5, 10))
+                validate_action(current, current_obs.masks, ally.slot, action)
+                self.assertTrue(game.execute_ai_ultimate(char, to_game_action(current, ally.slot, action, runtime_names)[1]))
+
+    def test_second_idol_heals_using_its_own_slot(self):
+        game = make_game()
+        game.chars[4] = make_character("Nanasaki", "A", (9, 6))
+        game.chars[2].hp = 20
+        snapshot, _, observation = observe(game)
+        self.assertEqual(snapshot.allies[4].name, "Nanasaki")
+        action = FrcAction("ABILITY", snapshot.allies[4].facing, ally_slot=2)
+        validate_action(snapshot, observation.masks, 4, action)
+        names = tuple(a.name for a in snapshot.allies)
+        payload = to_game_action(snapshot, 4, action, names)[1]
+        self.assertEqual(payload["target_name"], "Lohen")
+        self.assertTrue(game.execute_ai_ability(game.chars[4], payload))
+        self.assertEqual(game.chars[2].hp, 70)
+
+    def test_model_decodes_targeted_ultimates_and_heals_outside_original_slots(self):
+        from dataclasses import replace
+        import torch
+        from frc_v1.model import FrcActorCritic
+        snapshot, belief, _ = observe(make_game())
+        changed = []
+        for ally in snapshot.allies:
+            changed.append(replace(ally, hp=20, charges=1, points=10, cost=5,
+                ability_name="DANCE" if ally.slot == 4 else "FLASH",
+                ultimate_name="NEON" if ally.slot == 0 else "ESCAPE"))
+        snapshot = replace(snapshot, allies=tuple(changed))
+        observation = FrcObservationEncoder().encode(snapshot, belief)
+        model = FrcActorCritic((len(snapshot.grid), len(snapshot.grid[0])))
+        with torch.no_grad():
+            for slot, head in enumerate(model.role_heads):
+                head[2].weight.zero_()
+                head[2].bias.zero_()
+                head[2].bias[KINDS.index("ABILITY" if slot == 4 else "ULTIMATE")] = 20
+            greedy = model.greedy_record(observation)
+            packed, _, _, _ = model.distribution([observation], deterministic=True)
+        for slot in range(5):
+            self.assertGreaterEqual(greedy["target"][slot], 0)
+            self.assertEqual(int(packed["target"][0, slot]), greedy["target"][slot])
+            target = int(greedy["target"][slot])
+            action = (FrcAction("ABILITY", "N", ally_slot=target) if slot == 4
+                      else FrcAction("ULTIMATE", "N", target=divmod(target, len(snapshot.grid[0]))))
+            validate_action(snapshot, observation.masks, slot, action)
+
     def test_three_dances_far_away_and_contract_cap(self):
         game = make_game()
         for i in range(3):

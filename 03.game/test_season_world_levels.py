@@ -1,6 +1,7 @@
 """World percentile boundaries, scaled match inputs and monthly sponsor payments."""
 
 from dataclasses import asdict, replace
+import json
 from pathlib import Path
 import tempfile
 import tkinter as tk
@@ -15,6 +16,7 @@ from realtime_season import SeasonSaveError, SeasonStore, new_season, validate_p
 from run_realtime_season import RealtimeSeasonApp
 from season_scrim import build_scrim_request
 from season_series import build_series_request
+from season_competitions import SeriesScore, next_match
 from season_world_levels import WorldLevelError, configured_world_levels, world_level_for_rank
 
 
@@ -50,7 +52,7 @@ class WorldLevelTests(unittest.TestCase):
 
     def state(self, rank=4):
         state = new_season(OWN).with_roster(OWN).with_confirmed_team()
-        state = state.with_selected_team(state.teams[0].id)
+        state = replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
         rivals = {c.id: 1900 - index * 100 for index, c in enumerate(state.opponent_teams)}
         state = replace(state, ratings=tuple(replace(r, value=2050 - rank * 100 if r.team_id == state.club_id
                                                     else rivals[r.team_id]) for r in state.ratings))
@@ -119,7 +121,8 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(effective.iq, base.iq * 2)
         self.assertEqual(effective.reaction, base.reaction * 2)
         self.assertEqual(effective.influence, base.influence * 2)
-        for key in ("hs_pct", "hit_pct", "dodge_pct"):
+        self.assertEqual(effective.hit_pct, base.hit_pct * 2)
+        for key in ("hs_pct", "dodge_pct"):
             self.assertEqual(getattr(effective, key), min(1, getattr(base, key) * 2))
         self.assertEqual(effective.mental, min(10, base.mental * 2))
         self.assertEqual((effective.loyalty, effective.monthly_salary, effective.form_variance),
@@ -129,6 +132,7 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(state.displayed_player(base), effective)
         self.assertEqual(state.transfer_fee(base.name), base.monthly_salary * 12)
 
+    @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_scrim_and_series_scale_raw_snapshots_once_at_each_match(self):
         state = self.state(1)
         club = state.opponent_teams[0]
@@ -144,15 +148,71 @@ class WorldLevelTests(unittest.TestCase):
         snapshot = next(t for t in entered.tournament("cup").entrants if t.id == request["right_id"])
         self.assertEqual(request["opponent"]["players"], [asdict(state.enemy_player(p)) for p in snapshot.players])
         lower = replace(entered, ratings=tuple(replace(r, value=100) if r.team_id == state.club_id else r for r in entered.ratings))
-        self.assertEqual(build_series_request(lower, "cup")["opponent"]["players"], [asdict(p) for p in snapshot.players])
+        self.assertEqual(build_series_request(lower, "cup")["opponent"]["players"],
+                         [asdict(entered.enemy_player(p)) for p in snapshot.players])
+        self.assertEqual(lower.world_level, entered.world_level)
         self.assertEqual(lower.tournament("cup").entrants, entered.tournament("cup").entrants)
+
+    def test_world_level_locks_at_start_instead_of_early_registration(self):
+        state = self.state(4)
+        state = state.with_tournament_entry("cup", state.selected_team_id)
+        self.assertIsNone(state.world_level_lock)
+        raised = replace(state, ratings=tuple(replace(r, value=2500) if r.team_id == state.club_id else r
+                                              for r in state.ratings))
+        self.assertEqual(raised.world_level, 3)
+        started = raised.advance_days(59)
+        self.assertEqual(started.game_date, "2026-03-01")
+        self.assertEqual(started.world_level_lock.level, 3)
+        lowered = replace(started, ratings=tuple(replace(r, value=100) if r.team_id == state.club_id else r
+                                                 for r in started.ratings))
+        self.assertEqual(lowered.world_rank, (4, 4))
+        self.assertEqual(lowered.world_level, 3)
+        self.assertEqual(lowered.monthly_sponsor_income, 20_000_000)
+        self.assertEqual(lowered.enemy_player(lowered.opponent_teams[0].players[0]).iq,
+                         lowered.opponent_teams[0].players[0].iq * 2)
+        self.store.save(lowered)
+        self.assertEqual(self.store.load_or_create(), lowered)
+
+    def test_tournament_finish_unlocks_level_after_final_rating_update(self):
+        state = self.state(2)
+        state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(59)
+        state = replace(state, ratings=tuple(replace(r, value=2500) if r.team_id == state.club_id else r
+                                             for r in state.ratings))
+        self.assertEqual(state.world_level, 2)
+        while not state.tournament("cup").completed:
+            match, _ = next_match(state.tournament_definition("cup"), state.tournament("cup"))
+            own = state.club_id
+            score = SeriesScore(match.id, match.left, match.right, 0 if match.right == own else match.maps_to_win,
+                                match.maps_to_win if match.right == own else 0)
+            state = state.with_tournament_result("cup", score)
+            if not state.tournament("cup").completed:
+                self.assertEqual(state.world_level, 2)
+                state = state.advance_days()
+        self.assertIsNone(state.world_level_lock)
+        self.assertEqual(state.world_level, 3)
+        self.assertEqual(state.monthly_sponsor_income, 20_000_000)
+        self.store.save(state)
+        self.assertEqual(self.store.load_or_create(), state)
+
+    def test_legacy_active_tournament_locks_current_level_without_rewriting_save(self):
+        state = self.state(1)
+        state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(59)
+        self.store.save(state)
+        data = json.loads(self.store.path.read_text(encoding="utf-8"))
+        data["version"] = 16
+        data.pop("world_level_lock")
+        self.store.path.write_text(json.dumps(data), encoding="utf-8")
+        before = self.store.path.read_bytes()
+        self.assertEqual(self.store.load_or_create(), state)
+        self.assertEqual(self.store.path.read_bytes(), before)
 
     def test_recruitment_and_restart_keep_base_stats_without_compounding(self):
         state = self.state(1)
         base = state.opponent_teams[0].players[0]
         recruited = state.with_scouted_player(base.name, "short", 1)
-        self.assertEqual(recruited.player(base.name), base)
-        self.assertEqual(recruited.displayed_player(recruited.player(base.name)), base)
+        grown = replace(base, iq=base.iq + .1)
+        self.assertEqual(recruited.player(base.name), grown)
+        self.assertEqual(recruited.displayed_player(recruited.player(base.name)), grown)
         self.store.save(state)
         loaded = self.store.load_or_create()
         self.assertEqual(loaded, state)
@@ -164,6 +224,7 @@ class WorldLevelTests(unittest.TestCase):
             self.assertEqual(loaded.enemy_player(base).iq, base.iq * 3)
             self.assertEqual(loaded.opponent_teams[0].players[0], base)
 
+    @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_enemy_world_multiplier_reaches_actual_battle_characters(self):
         import game_core
         from run_game import VisualFPSBattle

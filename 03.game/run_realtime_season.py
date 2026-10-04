@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from realtime_season import DEFAULT_SAVE_PATH, ROSTER_SIZE, SeasonSaveError, SeasonStore
+from realtime_season_config import DEFAULT_TEAM_AI
 from season_scrim import ScrimJob, ai_options, build_scrim_request
 from season_management_ui import SeasonManagementMixin
 from season_competition_ui import SeasonCompetitionMixin
@@ -14,11 +15,12 @@ from season_starter_ui import SeasonStarterMixin
 from season_rating_ui import SeasonRatingMixin
 from season_monthly_ui import SeasonMonthlyMixin
 from season_training_ui import SeasonTrainingMixin
+from season_pair_familiarity_ui import SeasonPairFamiliarityMixin
 from season_player_stats import player_combat_power, player_duel_power
 from season_salary import SalaryMode
 
 
-class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonStarterMixin, SeasonRatingMixin, SeasonMonthlyMixin, SeasonTrainingMixin):
+class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonStarterMixin, SeasonRatingMixin, SeasonMonthlyMixin, SeasonTrainingMixin, SeasonPairFamiliarityMixin):
     def __init__(self, root, store, state):
         self.root = root
         self.store = store
@@ -46,8 +48,9 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.home_selected = tk.StringVar(root)
         self.prep_hint = tk.StringVar(root)
         self.opponent_choice = tk.StringVar(root)
-        self.own_ai_choice = tk.StringVar(root, value="ロジック")
-        self.opponent_ai_choice = tk.StringVar(root, value="ロジック")
+        default_ai_label = next(label for label, key in ai_options().items() if key == DEFAULT_TEAM_AI)
+        self.own_ai_choice = tk.StringVar(root, value=default_ai_label)
+        self.opponent_ai_choice = tk.StringVar(root, value=default_ai_label)
         self.own_igl = tk.StringVar(root)
         self.opponent_igl = tk.StringVar(root)
         self.own_spike = tk.StringVar(root)
@@ -71,6 +74,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self._build_ratings()
         self._build_monthly_events()
         self._build_training()
+        self._build_pair_familiarity()
         self.search.trace_add("write", lambda *_: self.refresh_players())
         self.role.trace_add("write", lambda *_: self.refresh_players())
         self.refresh()
@@ -170,13 +174,16 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.remove_button.pack(fill="x", pady=10)
         ttk.Label(lineup, text="選手の詳細", font=("Yu Gothic UI", 11, "bold")).pack(anchor="w", pady=(6, 4))
         ttk.Label(lineup, textvariable=self.details, justify="left", wraplength=330).pack(anchor="w")
+        ttk.Button(lineup, text="選択した選手の相棒TOP5", command=lambda: self.show_player_pairs(
+            self.selected_player().name) if self.selected_player() else None).pack(anchor="w", pady=6)
+        ttk.Button(lineup, text="自チームのスタメン練度", command=lambda: self.show_team_pairs(self.state.club_id)).pack(anchor="w")
         self.confirm_button = ttk.Button(lineup, text="この5人で編成を確定", command=self.confirm)
         self.confirm_button.pack(side="bottom", fill="x", pady=(10, 0))
         ttk.Label(host, textvariable=self.status, wraplength=1000).pack(anchor="w", pady=(12, 4))
         ttk.Label(host, text=f"保存先: {self.store.path}", wraplength=1000).pack(anchor="w")
 
     def _build_home(self):
-        self.home_host = host = ttk.Frame(self.root, padding=24)
+        self.home_host = host = ttk.Frame(self.root, padding=18)
         ttk.Label(host, text="リアルタイムシーズン", font=("Yu Gothic UI", 24, "bold")).pack(anchor="w")
         navigation = ttk.Frame(host)
         navigation.pack(fill="x", pady=(4, 8))
@@ -210,7 +217,11 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             card.grid(row=index // 3, column=index % 3, sticky="nsew", padx=(0, 12), pady=(0, 8))
             ttk.Label(card, text=hint, wraplength=280).pack(anchor="w", pady=(0, 12))
             ttk.Button(card, text=f"{text}へ", command=command).pack(fill="x")
-        ttk.Label(host, text="シーズンの所属チーム", font=("Yu Gothic UI", 13, "bold")).pack(anchor="w", pady=(0, 8))
+        pair_navigation = ttk.Frame(host)
+        pair_navigation.pack(fill="x", pady=(0, 8))
+        ttk.Label(pair_navigation, text="シーズンの所属チーム", font=("Yu Gothic UI", 13, "bold")).pack(side="left")
+        ttk.Button(pair_navigation, text="名コンビ TOP20", command=self.show_pair_ranking).pack(side="right")
+        ttk.Button(pair_navigation, text="選択チームの練度", command=self.show_selected_team_pairs).pack(side="right", padx=8)
         table = ttk.Frame(host)
         table.pack(fill="both", expand=True)
         self.home_teams = ttk.Treeview(table, columns=("kind", "name", "rating", "multiplier", "players"), show="headings", selectmode="browse", height=6)
@@ -228,7 +239,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         scrollbar = ttk.Scrollbar(table, command=self.home_teams.yview)
         scrollbar.pack(side="right", fill="y")
         self.home_teams.configure(yscrollcommand=scrollbar.set)
-        ttk.Label(host, textvariable=self.home_selected, font=("Yu Gothic UI", 12, "bold")).pack(anchor="w", pady=(20, 6))
+        ttk.Label(host, textvariable=self.home_selected, font=("Yu Gothic UI", 12, "bold")).pack(anchor="w", pady=(12, 6))
         ttk.Label(host, textvariable=self.scrim_result, wraplength=1000).pack(anchor="w", pady=(0, 8))
         ttk.Label(host, textvariable=self.status, wraplength=1000).pack(anchor="w")
 
@@ -348,6 +359,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
     def refresh_home(self):
         offers = self.state.pending_transfer_offers
+        self.home_teams.configure(height=2 if offers else 6)
         if offers:
             self.transfer_banner.configure(text=f"他チームからこのチームの選手にオファーが来ています（{len(offers)}件）\nクリックして契約状況で確認")
             self.transfer_banner.pack(fill="x", pady=(0, 12), before=self.home_actions)
@@ -357,14 +369,17 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.home_payroll.set(f"今月末の月給合計: {-self.state.monthly_payroll:,}円")
         world = self.state.world_level_settings
         rank, count = self.state.world_rank
-        self.home_summary.set(f"所持金: {self.state.money:,}円\n"
+        world_note = "（大会中は固定）" if self.state.active_tournaments else ""
+        self.home_summary.set(f"所持金: {self.state.money:,}円    スカウト可能回数: {self.state.scout_allowance_text}\n"
                               f"チーム: {self.state.team_name}    所持選手: {len(self.state.owned_players)}人    編成プリセット: {len(self.state.teams)}    他チーム: {len(self.state.opponent_teams)}\n"
-                              f"世界レベル: {world.level}    ランキング: {rank} / {count}位（上位{self.state.world_top_percent:.2f}%）    敵倍率: {world.enemy_multiplier:g}倍\n"
+                              f"世界レベル: {world.level}{world_note}    ランキング: {rank} / {count}位（上位{self.state.world_top_percent:.2f}%）    敵倍率: {world.enemy_multiplier:g}倍\n"
                               f"スポンサー契約: {'有効' if self.state.sponsor_active else '停止'}    月額収入: {self.state.monthly_sponsor_income:,}円    "
                               f"給与: {'成績連動（K/D）' if self.state.salary_mode == SalaryMode.KD_DYNAMIC else '静的（従来）'}")
+        if self.state.day_advance_pending:
+            self.home_summary.set(self.home_summary.get() + "\n完了したアクションの1日進行待ち：大会への参加登録後、日付を進めてください。")
         self.home_teams.delete(*self.home_teams.get_children())
         self.home_teams.insert("", "end", iid=self.state.club_id, values=("自分", self.state.team_name,
-            f"{self.state.rating(self.state.club_id):.3f}", "—", " / ".join(p.name for p in self.state.owned_players)))
+            f"{self.state.rating(self.state.club_id):.3f}", f"{self.state.transfer_multiplier:g}倍", " / ".join(p.name for p in self.state.owned_players)))
         for team in self.state.opponent_teams:
             self.home_teams.insert("", "end", iid=team.id, values=("他チーム", team.name, f"{self.state.rating(team.id):.3f}", f"{team.transfer_multiplier:g}倍", " / ".join(team.members) or "選手なし"))
         selected = self.state.selected_team
@@ -412,7 +427,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.own_igl.set(own_settings[2] if team else "")
             self.own_spike.set(own_settings[3] if team else "")
             labels = {key: label for label, key in ai_options().items()}
-            self.own_ai_choice.set(labels[team.ai] if team else labels["default"])
+            self.own_ai_choice.set(labels[team.ai] if team else labels[DEFAULT_TEAM_AI])
         opponent = next((club for club in self.state.opponent_teams if club.name == self.opponent_choice.get()), None)
         opponent_settings = (opponent.id, opponent.effective_igl, opponent.effective_carrier, opponent.ai) if opponent else None
         if opponent_settings != self._prepared_opponent_settings:
@@ -420,7 +435,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.opponent_igl.set(opponent.effective_igl if opponent else "")
             self.opponent_spike.set(opponent.effective_carrier if opponent else "")
             labels = {key: label for label, key in ai_options().items()}
-            self.opponent_ai_choice.set(labels[opponent.ai] if opponent else labels["default"])
+            self.opponent_ai_choice.set(labels[opponent.ai] if opponent else labels[DEFAULT_TEAM_AI])
         self.opponent_roster.delete(*self.opponent_roster.get_children())
         if opponent:
             for index, player in enumerate(opponent.players[:ROSTER_SIZE]):
@@ -503,8 +518,10 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                     result_id, own_id, opponent_id = self._scrim_rating_context
                     won = result["winner"] == result["own_team"]
                     previous = self.state
-                    candidate = self.state.with_scrim_result(result_id, own_id, opponent_id, int(won), int(not won))
-                    if not self.commit(candidate, f"スクリム結果を反映し、ゲーム内{candidate.date:%Y/%m/%d}へ1日進めました。"):
+                    options = {"advance_day": False} if self.state.entry_deadline_tournaments else {}
+                    candidate = self.state.with_scrim_result(result_id, own_id, opponent_id, int(won), int(not won), **options)
+                    note = "1日進行を待っています。" if candidate.day_advance_pending else f"ゲーム内{candidate.date:%Y/%m/%d}へ1日進めました。"
+                    if not self.commit(candidate, "スクリム結果を反映し、" + note):
                         self._scrim_after_id = self.root.after(1000, self.poll_scrim)
                         return
                     self.status.set(self.status.get() + self.monthly_event_notice(previous))
@@ -521,6 +538,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.scrim_job = None
         self._scrim_rating_context = None
         self.refresh()
+        if result.get("status") == "completed":
+            self.finish_action_day()
 
     def cancel_scrim(self):
         if self.scrim_job is not None:
@@ -543,6 +562,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.preset_name.set(self.state.preset_name)
 
     def refresh(self):
+        self.refresh_pair_windows()
         self.refresh_preset_settings()
         self.refresh_ratings()
         self.refresh_monthly_events()
@@ -623,6 +643,10 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             messagebox.showerror("保存エラー", str(exc), parent=self.root)
             return False
         old_forced = {offer.id for offer in self.state.transfer_offers if offer.status == "forced"}
+        old_news = {e.id for e in self.state.pair_news}
+        new_news = [e for e in candidate.pair_news if e.id not in old_news]
+        if new_news:
+            message += f" ペアニュース{len(new_news)}件。「月次イベント」で確認できます。"
         forced = [offer for offer in candidate.transfer_offers if offer.status == "forced" and offer.id not in old_forced]
         for offer in forced:
             club = next(c for c in candidate.opponent_teams if c.id == offer.team_id)
@@ -630,6 +654,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         if candidate.world_level != self.state.world_level:
             world = candidate.world_level_settings
             message += f" 世界レベルが{self.state.world_level}から{world.level}になりました。敵倍率{world.enemy_multiplier:g}倍・月額スポンサー資金{world.sponsor_funds:,}円。"
+        if self.store.history_export_error:
+            message += f" 履歴ファイルの出力に失敗しました: {self.store.history_export_error}。次の保存で再出力します。"
         self.state = candidate
         self.status.set(f"{message}  自動保存済み ({datetime.now().astimezone():%H:%M:%S})")
         self.refresh()

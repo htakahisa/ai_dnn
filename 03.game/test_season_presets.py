@@ -9,11 +9,39 @@ from realtime_season import SeasonSaveError, new_season
 from season_competitions import next_match
 from season_scrim import build_scrim_request
 from season_series import build_series_request
+from season_world_levels import world_level_for_rank
 from test_season_competitions import (OWN, CompetitionScreenTest, SeasonCompetitionTest,
                                       finish, record_next)
 
 
 class PresetIdentityTest(SeasonCompetitionTest):
+    def test_unspecified_ai_reaches_scrims_tournaments_and_new_drafts(self):
+        state = self.state()
+        self.assertEqual(state.preset_ai, "toru_ai_v3.1")
+        self.assertTrue(all(c.ai == "toru_ai_v3.1" for c in state.opponent_teams))
+        request = build_scrim_request(state, state.selected_team_id, state.opponent_teams[0].id)
+        self.assertEqual(request["own"]["ai"], "toru_ai_v3.1")
+        self.assertEqual(request["opponent"]["ai"], "toru_ai_v3.1")
+        registered = state.with_tournament_entry("cup", state.selected_team_id).advance_days(33)
+        request = build_series_request(registered, "cup")
+        self.assertEqual(request["own"]["ai"], "toru_ai_v3.1")
+        self.assertEqual(request["opponent"]["ai"], "toru_ai_v3.1")
+        self.assertEqual(state.with_new_team().preset_ai, "toru_ai_v3.1")
+        self.assertEqual(state.with_preset_settings().selected_team.ai, "toru_ai_v3.1")
+
+    def test_missing_ai_in_saved_lineups_rivals_and_tournament_snapshots_uses_toru(self):
+        state = self.entered()
+        self.store.save(state)
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        data.pop("preset_ai")
+        for team in (*data["teams"], *data["opponent_teams"], *data["tournaments"][0]["entrants"]):
+            team.pop("ai")
+        self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        loaded = self.store.load_or_create()
+        self.assertEqual(loaded, state)
+        self.assertEqual(loaded.preset_ai, "toru_ai_v3.1")
+        self.assertTrue(all(t.ai == "toru_ai_v3.1" for t in loaded.tournament("cup").entrants))
+
     def test_settings_saved_per_preset_and_used_by_scrims_and_tournaments(self):
         state = self.state().with_preset_settings(igl="Boaster", carrier="Derke", ai="fnatic_v3")
         first = state.selected_team
@@ -32,6 +60,8 @@ class PresetIdentityTest(SeasonCompetitionTest):
                 tournament = editing.with_tournament_entry("cup", team.id).advance_days(33)
                 request = build_series_request(tournament, "cup")
                 self.assertEqual(tuple(request["own"][key] for key in ("igl", "spike_holder", "ai")), expected)
+                self.assertEqual(next(t.ai for t in tournament.tournament("cup").entrants
+                                      if t.id == tournament.club_id), expected[2])
         overridden = build_scrim_request(state, first.id, state.opponent_teams[0].id,
             own_ai="default", own_igl="Chronicle", own_spike="Leo")
         self.assertEqual((overridden["own"]["ai"], overridden["own"]["igl"], overridden["own"]["spike_holder"]),
@@ -53,7 +83,7 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.assertEqual((state.selected_team.igl, state.selected_team.carrier, state.selected_team.ai),
                          ("Chronicle", "Leo", "frc_v1_baseline"))
         state = state.with_new_team()
-        self.assertEqual((state.preset_igl, state.preset_carrier, state.preset_ai), (None, None, "default"))
+        self.assertEqual((state.preset_igl, state.preset_carrier, state.preset_ai), (None, None, "toru_ai_v3.1"))
 
     def test_departure_clears_roles_and_registered_preset_without_losing_draft_ai(self):
         state = self.state().with_preset_settings(igl="Leo", carrier="Leo", ai="fnatic_v3")
@@ -85,6 +115,8 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.store.save(state)
         data = json.loads(self.path.read_text(encoding="utf-8"))
         data["version"] = 12
+        data.pop("developed_players")
+        data.pop("world_level_lock")
         for key in ("preset_igl", "preset_carrier", "preset_ai"):
             data.pop(key)
         for team in data["teams"]:
@@ -93,7 +125,7 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, state)
+        self.assertEqual(loaded, replace(state, developed_players=(), world_level_lock=world_level_for_rank(*state.world_rank)))
         self.assertEqual(self.path.read_bytes(), before)
         self.store.save(loaded)
         self.assertEqual(self.store.load_or_create(), loaded)
@@ -234,7 +266,7 @@ class PresetScreenTest(CompetitionScreenTest):
         self.assertEqual((first.igl, first.carrier, first.ai), ("Boaster", "Derke", "fnatic_v3"))
         app.new_team()
         app.preset_name.set("Second")
-        self.assertEqual(app.preset_ai_choice.get(), "ロジック")
+        self.assertEqual(app.preset_ai_choice.get(), "Toru AI v3.1")
         app.commit(app.state.with_roster(OWN), "roster")
         self.set_settings("Leo", "Alfajer", "FRC v1（基礎ルール）")
         app.confirm()

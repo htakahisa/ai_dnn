@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 import realtime_season_competitions as config
 import realtime_season_config
 import realtime_season_teams
+import realtime_season_rival_economy
 import character_stats
 from realtime_season import SeasonSaveError, SeasonStore, new_season
 from run_realtime_season import RealtimeSeasonApp
@@ -19,6 +20,7 @@ from season_competitions import (CompetitionError, SeriesScore, TournamentProgre
     configured_calendar, definition_from_dict, next_match, phase_for)
 from season_scrim import ScrimJob
 from season_series import build_series_request, play_series
+from season_world_levels import world_level_for_rank
 
 
 OWN = ("Leo", "Boaster", "Derke", "Chronicle", "Alfajer")
@@ -58,6 +60,7 @@ class SeasonCompetitionTest(unittest.TestCase):
         context.start()
         self.addCleanup(context.stop)
         changes = [(config, "START_DATE", "2026-01-01"), (config, "IN_SEASON_PERIODS", [("03-01", "11-30")]),
+                   (realtime_season_rival_economy, "NON_REGULAR_OFFER_CHANCE", 0),
                    (config, "TOURNAMENTS", [definition()]), (realtime_season_config, "INITIAL_OWNED_PLAYERS", list(OWN)),
                    (realtime_season_teams, "SEASON_TEAMS", [{"name": f"Rival{i}", "players": players} for i, players in enumerate(RIVALS)])]
         for module, key, value in changes:
@@ -71,7 +74,7 @@ class SeasonCompetitionTest(unittest.TestCase):
 
     def state(self):
         state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
-        return state.with_selected_team(state.teams[0].id)
+        return replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
 
     def entered(self):
         state = self.state()
@@ -87,28 +90,28 @@ class SeasonCompetitionTest(unittest.TestCase):
         state = state.advance_days()
         self.assertEqual(state.date, date(2026, 2, 1))
         self.assertEqual(state.money, 17000000)
-        state = state.advance_days(2).with_declined_tournament("cup").advance_days(26)
+        state = state.with_declined_tournament("cup").advance_days(27)
+        expected_money = state.money + state.monthly_sponsor_income - state.monthly_payroll
+        state = state.advance_days()
         self.assertEqual(state.date, date(2026, 3, 1))
         self.assertEqual(state.phase, "in_season")
-        self.assertEqual(state.money, 24000000)
+        self.assertEqual(state.money, expected_money)
         self.assertEqual(phase_for(date(2026, 1, 2), [("11-01", "02-28")]), "in_season")
         self.assertEqual(phase_for(date(2026, 3, 1), [("11-01", "02-28")]), "off_season")
 
-    def test_calendar_stops_at_tournament_and_skip_allows_progress(self):
+    def test_unregistered_tournament_does_not_stop_calendar(self):
         state = self.state().advance_days(100)
-        self.assertEqual(state.date, date(2026, 2, 3))
-        self.assertEqual(state.advance_days(), state)
-        state = state.with_declined_tournament("cup")
-        self.assertEqual(state.advance_days().date, date(2026, 2, 4))
-        self.assertTrue(state.tournament("cup").declined)
+        self.assertEqual(state.date, date(2026, 4, 11))
+        self.assertEqual(state.advance_days().date, date(2026, 4, 12))
+        self.assertIsNone(state.tournament("cup").own_team_id)
+        self.assertTrue(state.tournament("cup").completed)
 
     def test_mandatory_entry_and_decline_rejection(self):
         with patch.object(config, "TOURNAMENTS", [definition(participation_optional=False)]):
             state = self.state().advance_days(100)
-        self.assertEqual(state.date, date(2026, 2, 3))
-        self.assertEqual(state.tournament("cup").own_team_id, state.club_id)
-        self.assertEqual(state.tournament("cup").preset_id, state.selected_team_id)
-        self.assertEqual(state.advance_days(), state)
+        self.assertEqual(state.date, date(2026, 4, 11))
+        self.assertIsNone(state.tournament("cup").own_team_id)
+        self.assertIsNone(state.tournament("cup").preset_id)
         with self.assertRaises(SeasonSaveError):
             state.with_declined_tournament("cup")
 
@@ -117,13 +120,14 @@ class SeasonCompetitionTest(unittest.TestCase):
         with self.assertRaises(SeasonSaveError):
             state.with_tournament_entry("cup")
         state = self.state()
-        with self.assertRaises(SeasonSaveError):
-            replace(state, opponent_teams=state.opponent_teams[:2]).with_tournament_entry("cup", state.selected_team_id)
-        state = state.with_added_players(("Meiy",)).with_tournament_entry("cup", state.selected_team_id)
+        reduced = replace(state, opponent_teams=state.opponent_teams[:2]).with_tournament_entry("cup", state.selected_team_id)
+        self.assertEqual(len(reduced.tournament("cup").entrants), 3)
+        free_player = state.lft_players[0].name
+        state = state.with_added_players((free_player,)).with_tournament_entry("cup", state.selected_team_id)
         with self.assertRaises(SeasonSaveError):
             state.with_opponent_teams(())
         with self.assertRaises(SeasonSaveError):
-            state.with_roster((*OWN[:4], "Meiy")).with_confirmed_team()
+            state.with_roster((*OWN[:4], free_player)).with_confirmed_team()
         with self.assertRaises(ValueError):
             build_series_request(state, "cup")
 
@@ -213,12 +217,15 @@ class SeasonCompetitionTest(unittest.TestCase):
                 self.store.save(state)
                 data = json.loads(self.path.read_text(encoding="utf-8"))
                 data["version"] = 9
+                data.pop("developed_players")
+                data.pop("world_level_lock")
                 for run in data["tournaments"]:
                     run.pop("last_match_date")
                     run.pop("completed_date")
                 self.path.write_text(json.dumps(data), encoding="utf-8")
                 before = self.path.read_bytes()
-                self.assertEqual(self.store.load_or_create(), state)
+                locked = world_level_for_rank(*state.world_rank) if state.active_tournaments else None
+                self.assertEqual(self.store.load_or_create(), replace(state, developed_players=(), world_level_lock=locked))
                 self.assertEqual(self.path.read_bytes(), before)
 
     def test_invalid_match_dates_cannot_replace_saved_results(self):
@@ -236,12 +243,11 @@ class SeasonCompetitionTest(unittest.TestCase):
         with patch.object(config, "TOURNAMENTS", [definition(format="single_elimination", team_count=3,
                 prizes={1: 5000000, 2: 2000000, 3: 1000000}, allow_player_entry=False)]):
             state = self.state().advance_days(33)
-        state = state.with_tournament_entry("cup")
         self.assertIsNone(state.tournament("cup").own_team_id)
-        with self.assertRaisesRegex(SeasonSaveError, "レート"):
+        with self.assertRaises(SeasonSaveError):
             build_series_request(state, "cup", render=True)
         balance = state.money
-        state = finish(state)
+        state = state.advance_days(2)
         self.assertEqual(state.money, balance)
         self.assertEqual(state.tournament("cup").prize_paid, 0)
 
@@ -285,7 +291,8 @@ class SeasonCompetitionTest(unittest.TestCase):
         with patch.object(config, "TOURNAMENTS", [definition(), next_event]):
             state = self.entered()
         self.assertEqual([e.id for e in state.visible_tournaments], ["cup"])
-        state = finish(state).advance_days(26)
+        state = finish(state)
+        state = state.advance_days((date(2026, 3, 1) - state.date).days)
         self.assertEqual([e.id for e in state.visible_tournaments], ["cup", "next"])
         self.assertNotIn("next", [e.id for e in replace(state, money=0).visible_tournaments])
 
@@ -326,6 +333,8 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.store.save(state)
         data = json.loads(self.path.read_text(encoding="utf-8"))
         data["version"] = 6
+        data.pop("developed_players")
+        data.pop("world_level_lock")
         data.pop("monthly_events")
         data.pop("monthly_events_through")
         snapshots = [*data["owned_players"], *data["starter_candidates"],
@@ -336,7 +345,7 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.path.write_text(json.dumps(data), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, replace(state, monthly_events=()))
+        self.assertEqual(loaded, replace(state, monthly_events=(), developed_players=()))
         self.assertEqual(self.path.read_bytes(), before)
         self.store.save(loaded)
         self.assertEqual(self.store.load_or_create(), loaded)
@@ -389,6 +398,19 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.assertEqual(len({r["seed"] for r in calls}), 3)
         with patch("season_scrim_worker.play_scrim", return_value={"status": "cancelled"}):
             self.assertEqual(play_series(request)["status"], "cancelled")
+
+    def test_series_preserves_frc_for_different_members_without_changing_progress(self):
+        state = self.entered()
+        run = state.tournament("cup")
+        for ai in ("frc_v1", "frc_v1_baseline"):
+            changed_run = replace(run, entrants=tuple(replace(team, ai=ai) for team in run.entrants))
+            changed = replace(state, tournaments=(changed_run,))
+            request = build_series_request(changed, "cup", render=False)
+            with self.subTest(ai=ai):
+                self.assertEqual(request["own"]["ai"], ai)
+                self.assertEqual(request["opponent"]["ai"], ai)
+                self.assertTrue(all(team.ai == ai for team in changed.tournament("cup").entrants))
+                self.assertEqual(changed.tournament("cup").results, run.results)
 
     def test_real_background_series_worker(self):
         request = build_series_request(self.entered(), "cup", render=False, tick_time_ms=1)

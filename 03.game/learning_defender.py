@@ -347,7 +347,7 @@ class LearningDefenderAllAIController(BaseController):
         height, width = grid.shape
 
         base = [pr/(height-1), pc/(width-1), tr/(height-1), tc/(width-1)]
-        walls = [0.0 if self._is_walkable(pr+dr, pc+dc, grid) else 1.0 for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]]
+        walls = [0.0 if self._is_walkable_cell(pr+dr, pc+dc, grid) else 1.0 for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]]
         last_act = [1.0 if self.last_actions.get(char.name) == i else 0.0 for i in range(5)]
         
         max_dist = height * width
@@ -356,7 +356,7 @@ class LearningDefenderAllAIController(BaseController):
         dists = []
         for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
             nr, nc = pr + dr, pc + dc
-            if self._is_walkable(nr, nc, grid):
+            if self._is_walkable_cell(nr, nc, grid):
                 d = self.cached_dist_maps[char.name][nr, nc]
                 dists.append(d / max_dist if np.isfinite(d) else 1.0)
             else:
@@ -371,7 +371,7 @@ class LearningDefenderAllAIController(BaseController):
 
         return np.array(base + walls + last_act + dists + enemy_info, dtype=np.float32)
 
-    def _is_walkable(self, r, c, grid):
+    def _is_walkable_cell(self, r, c, grid):
         return 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1] and grid[r, c] != 1
 
     def _compute_bfs_map(self, target, grid):

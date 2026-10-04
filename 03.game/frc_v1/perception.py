@@ -5,7 +5,7 @@ from abilities_los import AbilityLosMixin
 from grid_visibility import visible_cells
 
 from public_effects import DisplayEffect, PublicEffectReader
-from frc_v1 import ROSTER, ABILITIES, ULTIMATES, FACING, FACING_STEPS
+from frc_v1 import ROSTER, ABILITIES, FACING, FACING_STEPS
 
 
 @dataclass(frozen=True)
@@ -37,6 +37,8 @@ class AllyState:
     reaction: float
     forced_facing: bool
     ramp_blocked: bool
+    ability_name: str = ""
+    ultimate_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -103,18 +105,25 @@ class FrcPerceptionBuilder:
     def build(self, game):
         own = [c for c in game.chars if c.team == self.side]
         by_name = {str(getattr(c, "base_name", c.name)): c for c in own}
-        if len(own) != 5 or set(by_name) != set(ROSTER):
-            raise ValueError("FRC requires Furina, Lisa, Lohen, Jean, Arlecchino on its own side")
-        own = [by_name[name] for name in ROSTER]
+        if len(own) != 5:
+            raise ValueError("FRC requires five players on its own side")
+        # Preserve trained slots for the original members, then assign players
+        # with matching abilities before filling the remaining slots in team order.
+        ordered = [by_name.get(name) for name in ROSTER]
+        remaining = [c for c in own if all(c is not assigned for assigned in ordered)]
+        for slot, ability in enumerate(ABILITIES):
+            if ordered[slot] is None:
+                match = next((c for c in remaining if c.ability_name == ability), None)
+                if match is not None:
+                    ordered[slot] = match
+                    remaining.remove(match)
+        own = [c if c is not None else remaining.pop(0) for c in ordered]
         allies = []
         for slot, c in enumerate(own):
-            if c.ability_name != ABILITIES[slot] or c.ultimate_name != ULTIMATES[slot]:
-                raise ValueError("FRC roster abilities changed; update schema and retrain")
-            charge_attr = {"DANCE": "dance_charges", "SMOKE": "smoke_charges", "HUNT": "hunt_charges",
-                           "RECON": "recon_charges", "ASH": "ash_charges"}[ABILITIES[slot]]
+            charge_attr = c.ability_name.lower() + "_charges"
             forced = getattr(c, "forced_facing_next_tick", None)
             facing = forced if forced in FACING else c.facing
-            allies.append(AllyState(slot, ROSTER[slot], _pos(c.pos), facing, bool(c.is_alive),
+            allies.append(AllyState(slot, str(getattr(c, "base_name", c.name)), _pos(c.pos), facing, bool(c.is_alive),
                 float(c.hp), float(c.max_hp), int(getattr(c, charge_attr, 0)),
                 int(c.ultimate_points), int(c.ultimate_cost), bool(c.has_spike),
                 int(c.plant_timer), int(c.defuse_timer), int(getattr(c, "orb_collect_timer", 0)),
@@ -123,7 +132,7 @@ class FrcPerceptionBuilder:
                 any(p.get("owner") == c.name for p in getattr(game, "escape_portals", ())),
                 float(getattr(c, "effective_iq", c.iq)), float(c.accuracy), float(c.hs_rate),
                 float(c.dodge_rate), float(c.reaction), bool(forced in FACING or getattr(c, "facing_forced_this_tick", False)),
-                bool(game._ramp_blocks_movement(c))))
+                bool(game._ramp_blocks_movement(c)), c.ability_name, c.ultimate_name))
         grid = tuple(tuple(map(int, row)) for row in game.grid)
         smoke = set(game._smoke_cells())
         visible = set()

@@ -110,7 +110,8 @@ class RatingCompletionTest(SeasonCompetitionTest):
         self.path.write_text(json.dumps(data), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, legacy)
+        # Version 11 did not persist the later development-history snapshots.
+        self.assertEqual(loaded, replace(legacy, developed_players=()))
         self.assertEqual(self.path.read_bytes(), before)
         self.assertFalse(loaded.tournament("cup").completed)
         finished = loaded.with_tournament_rating_finish("cup")

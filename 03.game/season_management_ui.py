@@ -55,7 +55,7 @@ class SeasonManagementMixin:
             else:
                 ttk.Label(host, text="契約終了後はここから再契約できます。チームへの忠誠が0以下の選手は再契約を断ります。",
                           wraplength=960).pack(anchor="w", pady=(0, 8))
-                columns = (("name", "選手", 135), ("status", "状況", 95), ("kind", "契約", 85),
+                columns = (("name", "選手", 135), ("status", "状況", 210), ("kind", "契約", 85),
                            ("salary", "月給（円）", 110), ("progress", "経過 / 期間", 90), ("remaining", "残り", 65),
                            ("end", "終了月", 125), ("loyalty", "忠誠心 / 10", 95), ("team_loyalty", "チームへの忠誠", 115))
             if screen == "scout":
@@ -69,6 +69,8 @@ class SeasonManagementMixin:
                 details_panel = ttk.LabelFrame(body, text="選択中の選手 — 全ステータス", padding=12)
                 details_panel.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
                 ttk.Label(details_panel, textvariable=self.scout_details, justify="left", wraplength=290).pack(anchor="nw")
+                ttk.Button(details_panel, text="選手詳細・相棒TOP5", command=lambda: self.show_player_pairs(
+                    self.offer_player("scout").name) if self.offer_player("scout") else None).pack(anchor="w", pady=8)
             else:
                 table = ttk.Frame(host)
                 table.pack(fill="both", expand=True)
@@ -156,9 +158,12 @@ class SeasonManagementMixin:
             contract = self.state.contract(player.name)
             incoming = self.state.transfer_offer(player.name)
             status = "契約中" if contract.active(self.state.game_month) else "契約終了"
+            deferred = self.state.contract_end_deferred(contract)
+            if deferred:
+                status = "出場中につき契約延期中"
             self.contracts_players.insert("", "end", iid=player.name, values=(
                 f"● {player.name}" if incoming else player.name,
-                "● オファーあり" if incoming else status, labels[contract.kind], f"{contract.monthly_salary:,}",
+                status if deferred else "● オファーあり" if incoming else status, labels[contract.kind], f"{contract.monthly_salary:,}",
                 f"{contract.elapsed(self.state.game_month)} / {contract.duration_months}月",
                 f"{contract.remaining(self.state.game_month)}月", f"{add_months(parse_date(self.state.start_date), contract.end_month):%Y/%m/%d}",
                 f"{player.loyalty:g}", f"{contract.team_loyalty:g}"), tags=("incoming_offer",) if incoming else ())
@@ -197,7 +202,11 @@ class SeasonManagementMixin:
         contract = self.state.contract(player.name)
         fee = self.state.transfer_fee(player.name) if screen == "scout" else 0
         blocked = "試合中は契約を変更できません。" if self.match_running else (self.state.recruitment_blocked(player.name) if screen == "scout" else "")
-        if not blocked and screen == "contracts" and contract.active(self.state.game_month):
+        if not blocked and screen == "scout":
+            blocked = self.state.scout_blocked()
+        if not blocked and screen == "contracts" and self.state.contract_end_deferred(contract):
+            blocked = "出場中につき契約延期中です。大会終了後に再契約できます。"
+        elif not blocked and screen == "contracts" and contract.active(self.state.game_month):
             blocked = "現在の契約が終了してから再契約できます。"
         elif not blocked and contract is not None and contract.team_loyalty <= 0:
             blocked = "チームへの忠誠が0以下のため、再契約できません。"
@@ -312,6 +321,8 @@ class SeasonManagementMixin:
             return
         if candidate.player(player.name) is None:
             message = f"{player.name}が{club.name}へ移籍しました。移籍金{offer.fee:,}円を受け取りました。編成を確認してください。"
+        elif any(o.id == offer.id and o.status == "cancelled" for o in candidate.transfer_offers):
+            message = f"{club.name}が必要資金またはスカウト回数の条件を満たさなくなったため、{player.name}へのオファーは取り消されました。"
         else:
             message = f"{player.name}への{club.name}からのオファーを断りました。忠誠が30未満になると強制成立します。"
         self.commit(candidate, message)
@@ -326,33 +337,19 @@ class SeasonManagementMixin:
         try:
             kind = CONTRACT_OPTIONS[self.offer_kind[screen].get()]
             action = self.state.with_scouted_player if screen == "scout" else self.state.with_renewed_contract
-            candidate = action(player.name, kind, int(self.offer_months[screen].get()))
+            options = {"advance_day": False} if screen == "scout" and self.state.entry_deadline_tournaments else {}
+            candidate = action(player.name, kind, int(self.offer_months[screen].get()), **options)
         except (SeasonSaveError, ValueError) as exc:
             self.status.set(str(exc))
             return
         fee = self.state.transfer_fee(player.name) if screen == "scout" else 0
         bonus = candidate.contract(player.name).monthly_salary * 3
-        self.commit(candidate, f"{player.name}と{self.offer_kind[screen].get()}を結びました。移籍金: {fee:,}円 / 契約金: {bonus:,}円を支払いました。")
+        day_note = (" 1日進行を待っています。" if candidate.day_advance_pending else f" 1日経過しました（{candidate.game_date}）。") + f"スカウト: {candidate.scout_allowance_text}。" if screen == "scout" else ""
+        if self.commit(candidate, f"{player.name}と{self.offer_kind[screen].get()}を結びました。移籍金: {fee:,}円 / 契約金: {bonus:,}円を支払いました。" + day_note):
+            self.finish_action_day()
 
     def advance_game_month(self):
         if self.match_running:
             self.status.set("試合が終了してからゲーム内の月を進めてください。")
             return
-        try:
-            candidate = self.state.advance_months(stop_for_tournaments=True)
-        except ValueError as exc:
-            self.status.set(str(exc))
-            return
-        left = [p.name for p in self.state.owned_players if candidate.player(p.name) is None]
-        months = candidate.game_month - self.state.game_month
-        income = self.state.monthly_sponsor_income if months else 0
-        message = f"ゲーム内 {candidate.date:%Y/%m/%d}へ進めました。スポンサー収入: {income:,}円。収支: {candidate.money - self.state.money:+,}円。"
-        if candidate.pending_tournaments:
-            message += " 開催中の大会で参加判断または試合を進めてください。"
-        if left:
-            message += f" 退団: {'、'.join(left)}。該当チームは編成し直してください。"
-        if candidate.money < 0:
-            message += " 所持金が赤字です。新規契約には必要資金の確保が必要です。"
-        previous = self.state
-        if self.commit(candidate, message):
-            self.status.set(self.status.get() + self.monthly_event_notice(previous))
+        self.advance_calendar((add_months(self.state.date, 1) - self.state.date).days)

@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 
 from character_stats import all_characters
 from season_transfers import restore_regular_members
+from season_rival_economy import can_sign, opportunistic_offers, signing_terms, signed_contract
 
 
 DEFAULT_ROLES = ("タイガー", "シーカー", "フラッシュ", "スモーカー", "エンジニア")
@@ -41,6 +42,58 @@ def choose_recruit(club, candidates, rating):
         abs(player_strength(p) - target), abs(p.monthly_salary - salary), -p.loyalty, p.name))
 
 
+def settle_deferred_contracts(state, deferred, event_id):
+    """End the extension immediately after the last registered event finishes."""
+    events, processed = [], []
+    candidate = state
+    for contract in state.contracts:
+        if ((state.club_id, contract.player_name) not in deferred
+                or candidate.tournament_reserves_contract(contract)
+                or candidate.player(contract.player_name) is None):
+            continue
+        if contract.kind == "short" and contract.team_loyalty <= 0:
+            candidate = candidate._with_departed_player(contract.player_name, record=False)
+        # Normal expiry keeps the player available for the usual renewal UI.
+        processed.append(contract.player_name)
+    clubs = []
+    for club in candidate.opponent_teams:
+        contracts = {c.player_name: c for c in club.contracts}
+        players = []
+        for player in club.players:
+            contract = contracts.get(player.name)
+            if (contract is None or (club.id, player.name) not in deferred
+                    or candidate.tournament_reserves_contract(contract, club.id)):
+                players.append(player)
+                continue
+            short_exit = contract.kind == "short" and contract.team_loyalty <= 0
+            expired = not contract.active(candidate.game_month)
+            if not short_exit and not expired:
+                players.append(player)
+                continue
+            terms = signing_terms(candidate, player)
+            if short_exit or expired and contract.team_loyalty <= 0 or not can_sign(candidate, club, terms):
+                contracts[player.name] = replace(contract, end_reason="left")
+                kind, message = "departure", f"大会終了に伴い、{player.name}が契約を終了して退団し、LFTになりました。"
+            else:
+                club = replace(club, money=club.money - terms.signing_bonus)
+                contracts[player.name] = signed_contract(player, terms, candidate.game_month, contract.team_loyalty)
+                players.append(player)
+                kind, message = "renewal", f"大会終了に伴い、{player.name}と{terms.months}か月の再契約を結びました。"
+            events.append(MonthlyEvent(
+                f"{candidate.game_month}:{kind}:{club.id}:{player.name}:after:{event_id}",
+                candidate.date.isoformat(), kind, club.id, club.name, player.name, message))
+            processed.append(player.name)
+        members = {p.name for p in players}
+        roster = {p.name for p in players[:5]}
+        clubs.append(replace(club, players=tuple(players), contracts=tuple(contracts.values()),
+                             acquired_members=tuple(n for n in club.acquired_members if n in members),
+                             igl=club.igl if club.igl in roster else None,
+                             carrier=club.carrier if club.carrier in roster else None))
+    candidate = replace(candidate, opponent_teams=tuple(clubs), monthly_events=(*candidate.monthly_events, *events))
+    candidate.validate()
+    return candidate._record_history("大会後の契約終了処理") if processed else candidate
+
+
 def process_monthly_events(state):
     from realtime_season import ROSTER_SIZE, initial_contract
 
@@ -64,7 +117,7 @@ def process_monthly_events(state):
         members = []
         for player in club.players:
             contract = contracts.get(player.name) or initial_contract(player, month - 1)
-            if contract.active(month - 1) and player.loyalty < 10:
+            if (contract.active(month - 1) or state.contract_end_deferred(contract, club.id)) and player.loyalty < 10:
                 contract = replace(contract, team_loyalty=round(contract.team_loyalty - (10 - player.loyalty) / 10, 10))
             short_exit = contract.kind == "short" and contract.team_loyalty <= 0
             expired = not contract.active(month)
@@ -75,14 +128,20 @@ def process_monthly_events(state):
                 emit("departure", club, player.name, f"{player.name}が契約を終了して退団し、LFTになりました。")
                 continue
             if player.name not in reserved and expired:
-                renewed = initial_contract(player, month)
-                contract = replace(renewed, team_loyalty=contract.team_loyalty)
+                terms = signing_terms(state, player)
+                if not can_sign(state, club, terms):
+                    contracts[player.name] = replace(contract, end_reason="left")
+                    emit("departure", club, player.name, f"{player.name}との再契約に必要な資金が足りず、LFTになりました。")
+                    continue
+                club = replace(club, money=club.money - terms.signing_bonus)
+                contract = signed_contract(player, terms, month, contract.team_loyalty)
                 emit("renewal", club, player.name,
                      f"{player.name}と{contract.duration_months}か月・月給{contract.monthly_salary:,}円で再契約しました。")
             contracts[player.name] = contract
             members.append(player)
         roster = {p.name for p in members[:ROSTER_SIZE]}
         clubs[index] = replace(club, players=tuple(members), contracts=tuple(contracts.values()),
+                               acquired_members=tuple(n for n in club.acquired_members if n in {p.name for p in members}),
                                igl=club.igl if club.igl in roster else None,
                                carrier=club.carrier if club.carrier in roster else None)
 
@@ -93,23 +152,31 @@ def process_monthly_events(state):
     for index, club in enumerate(clubs):
         rejected = {c.player_name for c in club.contracts if c.team_loyalty <= 0}
         while len(club.players) < ROSTER_SIZE:
+            if candidate.scout_blocked(club.id):
+                emit("recruitment_unfilled", club, None, "インシーズンのスカウト上限に達したため、補充を見送りました。")
+                break
             pool = tuple(candidate.salary_player(p) for p in all_characters() if p.name not in affiliated and p.name not in rejected)
+            pool = tuple(p for p in pool if can_sign(candidate, club, signing_terms(candidate, p)))
             player = choose_recruit(club, pool, state.rating(club.id))
             if player is None:
-                emit("recruitment_unfilled", club, None, f"契約できるLFT選手がいないため、{len(club.players)}人で補充を見送りました。")
+                emit("recruitment_unfilled", club, None, f"資金条件を満たすLFT選手がいないため、{len(club.players)}人で補充を見送りました。")
                 break
-            contract = initial_contract(player, month)
-            club = replace(club, players=(*club.players, player),
+            terms = signing_terms(candidate, player)
+            contract = signed_contract(player, terms, month)
+            candidate = candidate._with_scout_use(club.id)
+            club = replace(club, players=(*club.players, player), money=club.money - terms.signing_bonus,
                            contracts=tuple(c for c in club.contracts if c.player_name != player.name) + (contract,))
             affiliated.add(player.name)
             emit("recruitment", club, player.name,
                  f"LFTの{player.name}（{player.role}）と{contract.duration_months}か月・月給{contract.monthly_salary:,}円で契約しました。")
         clubs[index] = club
 
+    candidate = replace(candidate, opponent_teams=tuple(clubs))
+    candidate = opportunistic_offers(candidate, emit).with_resolved_transfer_offers()
     count = len(events)
     events.append(MonthlyEvent(f"{month}:month_completed", state.date.isoformat(), "month_completed", None, "シーズン", None,
                                f"月次処理が完了しました。他チームの出来事: {count}件。"))
-    candidate = replace(candidate, opponent_teams=tuple(clubs), monthly_events=(*state.monthly_events, *events),
+    candidate = replace(candidate, monthly_events=(*state.monthly_events, *events),
                         monthly_events_through=month)
     candidate.validate()
     return candidate

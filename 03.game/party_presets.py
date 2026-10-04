@@ -113,7 +113,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="JAS",
         players=("Laz", "SugarZ3ro", "Meiy", "Dep", "IbarakiNinja"),
         igl="SugarZ3ro",
-        spike_holder="Meiy",
+        spike_holder="IbarakiNinja",
         description="プレイヤーコンボで全員が底上げ強化、安定の日本オールスターズ",
     ),
     "Queen's Flower Gambit": TeamPreset(
@@ -153,7 +153,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="EK",
         players=("FNS", "crashies", "cNed", "soulcas", "trexx"),
         igl="FNS",
-        spike_holder="cNed",
+        spike_holder="crashies",
         description="昔からの選手たちが集う知の巨人集団",
     ),
     "Touyama Gaming": TeamPreset(

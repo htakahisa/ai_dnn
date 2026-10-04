@@ -24,6 +24,7 @@ def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
                         opponent_spike=None, tick_time_ms=100, seed=None):
     from game_core import validate_tick_time_ms
     state.validate()
+    state.check_day_action()
     own = state.team(own_team_id)
     opponent = next((team for team in state.opponent_teams if team.id == opponent_team_id), None)
     if own is None or opponent is None:
@@ -32,11 +33,12 @@ def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
         raise SeasonSaveError("相手チームの所属選手が5人未満です。所属設定で選手を補充してください。")
     if any(not state.can_play(name) for name in own.roster):
         raise SeasonSaveError("契約が終了した選手がいます。再契約またはチームの再編成を行ってください。")
-    own_players = [state.player(name) for name in own.roster]
-    opponent_players = [state.enemy_player(player) for player in opponent.players[:ROSTER_SIZE]]
+    own_players = state.match_players(state.player(name) for name in own.roster)
+    opponent_players = state.match_players(opponent.players[:ROSTER_SIZE], enemy=True)
 
     def team_data(name, players, ai, igl, spike):
-        return {"name": name, "players": [asdict(p) for p in players], "ai": ai,
+        return {"name": name, "players": [asdict(p) for p in players],
+                "ai": ai,
                 "igl": igl or max(players, key=lambda p: p.iq).name,
                 "spike_holder": spike or players[0].name}
 

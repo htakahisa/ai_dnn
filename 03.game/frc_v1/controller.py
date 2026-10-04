@@ -3,11 +3,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from frc_v1 import ROSTER, ABILITIES, ULTIMATES
 from frc_v1.perception import FrcPerceptionBuilder
 from frc_v1.memory import FrcMemory
 from frc_v1.observation import FrcObservationEncoder
-from frc_v1.actions import validate_action, to_game_action
+from frc_v1.actions import ability_for, ultimate_for, validate_action, to_game_action
 
 
 @dataclass(frozen=True)
@@ -83,7 +82,7 @@ class FrcController:
             ally = snapshot.allies[slot]
             resource = ally.charges if kind == "ABILITY" else ally.points
             if resource < previous_resource:
-                self.memory.record_own_cast(ABILITIES[slot] if kind == "ABILITY" else ULTIMATES[slot], origin, target, tick)
+                self.memory.record_own_cast(ability_for(snapshot, slot) if kind == "ABILITY" else ultimate_for(snapshot, slot), origin, target, tick)
         self._pending.clear()
         belief = self.memory.update(snapshot)
         observation = self.encoder.encode(snapshot, belief, effects_mode=self.effects_mode)
@@ -93,7 +92,7 @@ class FrcController:
         for slot, action in enumerate(decision.actions):
             validate_action(snapshot, observation.masks, slot, action)
         own = {str(getattr(c, "base_name", c.name)): c.name for c in self.game.chars if c.team == self.side}
-        self._names = tuple(own[name] for name in ROSTER)
+        self._names = tuple(own[ally.name] for ally in snapshot.allies)
         self.snapshot, self.belief, self.observation, self.decision = snapshot, belief, observation, decision
         self._cache_key = key
         self._logged_slots.clear()
@@ -102,7 +101,7 @@ class FrcController:
         self.prepare_team_tick()
         if char.team != self.side:
             raise ValueError("FRC character belongs to another side")
-        slot = ROSTER.index(str(getattr(char, "base_name", char.name)))
+        slot = self._names.index(char.name)
         action = self.decision.actions[slot]
         # The legacy objective/utility branches return before parsing facing.
         # Apply the actor output at this execution boundary; the engine still
