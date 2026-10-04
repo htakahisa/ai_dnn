@@ -8,12 +8,13 @@ import tkinter as tk
 
 from character_stats import all_names, get_by_name
 from game_core import calculate_combat_power
-from party_presets import all_preset_names, get_preset
+from party_presets import all_preset_names, get_default_ai_display, get_preset
 
 MAX_ROSTER = 5
 
 TEAM_AI_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
+    "ConCon v1": "concon_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     #"Omoko Gaming v1 R": "omoko_gaming_v1_r",
@@ -24,7 +25,6 @@ TEAM_AI_OPTIONS = {
     "Fnatic v1": "fnatic_v1",
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
-    "ConCon v1 A1": "concon_v1",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
@@ -125,6 +125,7 @@ class RosterSelectScreen:
             frame,
             self.attacker_preset_var,
             *preset_names,
+            command=lambda name: self._set_default_ai("A", name),
         )
         attacker_menu.grid(row=2, column=1, sticky="ew", padx=(7, 8))
         tk.Button(
@@ -140,6 +141,7 @@ class RosterSelectScreen:
             frame,
             self.defender_preset_var,
             *preset_names,
+            command=lambda name: self._set_default_ai("D", name),
         )
         defender_menu.grid(row=3, column=1, sticky="ew", padx=(7, 8), pady=(5, 0))
         tk.Button(
@@ -534,6 +536,7 @@ class RosterSelectScreen:
         roster = self._roster_for(team)
         roster.clear()
         roster.extend(preset.players)
+        self._set_default_ai(team, preset.name)
 
         if team == "A":
             self.attacker_team_name = preset.name
@@ -568,6 +571,10 @@ class RosterSelectScreen:
             details += f"｜{preset.description}"
 
         self.preset_status_label.config(text=details, fg="#2874a6")
+
+    def _set_default_ai(self, team, preset_name):
+        ctrl_var = self.attacker_ctrl_var if team == "A" else self.defender_ctrl_var
+        ctrl_var.set(get_default_ai_display(preset_name, TEAM_AI_OPTIONS))
 
     def select_character(self, team, name):
         roster = self._roster_for(team)

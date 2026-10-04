@@ -10,6 +10,8 @@ igl:
 spike_holder:
     Attackerとして適用した場合のスパイク所持者。
     Defenderとして適用する場合は無視されます。
+default_ai:
+    チーム選択時のAIキー。省略時はAI選択肢の先頭を使用します。
 """
 
 from dataclasses import dataclass
@@ -24,6 +26,7 @@ class TeamPreset:
     spike_holder: Optional[str] = None
     description: str = ""
     short_name: str = ""
+    default_ai: Optional[str] = None
 
     def validate(self, available_names, expected_size=5):
         """現在使用可能なキャラクターに対してプリセットを検証する。"""
@@ -65,6 +68,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Fnatic2023": TeamPreset(
         name="Fnatic2023",
+        default_ai="fnatic_v3",
         short_name="FNC",
         players=("Leo", "Boaster", "Derke", "Chronicle", "Alfajer"),
         igl="Boaster",
@@ -81,6 +85,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Furina Classic": TeamPreset(
         name="Furina Classic",
+        default_ai="frc_v1",
         short_name="FRC",
         players=("Furina", "Lisa", "Lohen", "Jean", "Arlecchino"),
         igl="Furina",
@@ -89,6 +94,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Furina Tartaglia": TeamPreset(
         name="Furina Tartaglia",
+        default_ai="frc_v1",
         short_name="FRT",
         players=("Furina", "Lisa", "Lohen", "Tartaglia", "Arlecchino"),
         igl="Furina",
@@ -153,6 +159,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Touyama Gaming": TeamPreset(
         name="Touyama Gaming",
+        default_ai="touyama_gaming_v2",
         short_name="TYG",
         players=("夢の街", "いぐるん", "ろびぃな", "Tortlilyan", "えんぺん"),
         igl="えんぺん",
@@ -161,6 +168,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Omoko Gaming": TeamPreset(
         name="Omoko Gaming",
+        default_ai="omoko_gaming_v1",
         short_name="OMG",
         players=("ねこさん", "とりさん", "おもこ", "いぬさん", "ひつじさん"),
         igl="ひつじさん",
@@ -169,6 +177,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Gorigons": TeamPreset(
         name="Gorigons",
+        default_ai="concon_v1",
         short_name="GG",
         players=("ごりまる", "ごんごん", "ごんた", "くんた", "くりまる"),
         igl="ごりまる",
@@ -193,6 +202,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Ghost Champions": TeamPreset(
         name="Ghost Champions",
+        default_ai="ghost_champions_v1",
         short_name="GC",
         players=("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         igl="SugarZ3ro",
@@ -261,6 +271,16 @@ def all_preset_names():
 
 def get_preset(name):
     return PARTY_PRESETS.get(canonical_preset_name(name))
+
+
+def get_default_ai_display(name, ai_options):
+    """チームのAIキーを表示名へ変換する。未指定時は先頭の選択肢。"""
+    preset = get_preset(name)
+    if preset and preset.default_ai:
+        for label, key in ai_options.items():
+            if key == preset.default_ai:
+                return label
+    return next(iter(ai_options))
 
 
 def get_team_short_name(name):

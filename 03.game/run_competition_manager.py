@@ -26,7 +26,10 @@ from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction
                             draw_contract_status, draw_serenade_flash,
                             draw_ash_projectiles, draw_balemoon_warnings,
                             TUNNEL_WARNING_COLOR, TUNNEL_ACTIVE_COLOR)
-from party_presets import all_preset_names, canonical_preset_name, get_preset
+from party_presets import (
+    all_preset_names, canonical_preset_name, get_default_ai_display, get_preset,
+)
+from roster_select import TEAM_AI_OPTIONS
 from run_game import VisualFPSBattle, _build_team_ai
 from game_core import (
     PLAYER_COMBOS,
@@ -47,6 +50,7 @@ from simulation_runtime import cpu_inference
 
 CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
+    "ConCon v1": "concon_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
@@ -62,7 +66,7 @@ CONTROLLER_OPTIONS = {
     "ユーザー操作": "user",
 }
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
-DEFAULT_CONTROLLER_DISPLAY = "Toru AI v3.1"
+DEFAULT_CONTROLLER_DISPLAY = next(iter(TEAM_AI_OPTIONS))
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
@@ -2045,9 +2049,15 @@ class TeamSlotEditor(tk.LabelFrame):
             controller_default = (
                 previous_controllers[index]
                 if index < len(previous_controllers)
-                else DEFAULT_CONTROLLER_DISPLAY
+                else get_default_ai_display(default, CONTROLLER_OPTIONS)
             )
             controller_var = tk.StringVar(value=controller_default)
+            box.bind(
+                "<<ComboboxSelected>>",
+                lambda _event, tv=var, cv=controller_var: cv.set(
+                    get_default_ai_display(tv.get(), CONTROLLER_OPTIONS)
+                ),
+            )
             controller_box = ttk.Combobox(
                 self.inner,
                 values=controller_options,
@@ -4301,8 +4311,22 @@ class CompetitionApp:
         )
         self.team2_box.grid(row=0, column=3, padx=8)
 
-        self.team1_controller_var = tk.StringVar(value=DEFAULT_CONTROLLER_DISPLAY)
-        self.team2_controller_var = tk.StringVar(value=DEFAULT_CONTROLLER_DISPLAY)
+        self.team1_controller_var = tk.StringVar(
+            value=get_default_ai_display(self.team1_var.get(), CONTROLLER_OPTIONS)
+        )
+        self.team2_controller_var = tk.StringVar(
+            value=get_default_ai_display(self.team2_var.get(), CONTROLLER_OPTIONS)
+        )
+        for box, team_var, controller_var in (
+            (self.team1_box, self.team1_var, self.team1_controller_var),
+            (self.team2_box, self.team2_var, self.team2_controller_var),
+        ):
+            box.bind(
+                "<<ComboboxSelected>>",
+                lambda _event, tv=team_var, cv=controller_var: cv.set(
+                    get_default_ai_display(tv.get(), CONTROLLER_OPTIONS)
+                ),
+            )
         tk.Label(
             series_box,
             text="Team 1 Controller",
