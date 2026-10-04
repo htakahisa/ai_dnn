@@ -23,7 +23,7 @@ class ActionLog:
 class FrcController:
     handles_team_perception = True
 
-    def __init__(self, side, *, actor=None, mode="learned", checkpoint=None, effects_mode=None):
+    def __init__(self, side, *, actor=None, mode="learned", checkpoint=None, effects_mode=None, inference_only=False):
         self.side = side
         self.mode = mode
         self.sensor = FrcPerceptionBuilder(side)
@@ -39,6 +39,7 @@ class FrcController:
                 from frc_v1.model import FrcPolicy
                 checkpoint = Path(checkpoint) if checkpoint else Path(__file__).parent / "checkpoints" / f"{side}_policy.pt"
                 self.actor = FrcPolicy.load(checkpoint, side=side)
+                self.actor.collect_statistics = not inference_only
             else:
                 raise ValueError("FRC mode must be learned or baseline")
         self.effects_mode = effects_mode or getattr(self.actor, "effects_mode", "all")

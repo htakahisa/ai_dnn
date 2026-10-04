@@ -13,6 +13,7 @@ import character_stats
 import realtime_season_competitions as calendar
 import realtime_season_config
 import realtime_season_teams
+import realtime_season_world_levels
 from character_stats import get_by_name
 from realtime_season import SeasonSaveError, SeasonStore, new_season
 from run_realtime_season import RealtimeSeasonApp
@@ -37,7 +38,9 @@ class SeasonEconomyTest(unittest.TestCase):
         self.club = dict(name="Rival", players=list(RIVAL), igl="Aspas", carrier="Aspas", transfer_multiplier=12)
         for module, key, value in ((realtime_season_config, "INITIAL_OWNED_PLAYERS", OWN),
                                   (realtime_season_teams, "SEASON_TEAMS", [self.club]),
-                                  (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", [])):
+                                  (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", []),
+                                  (realtime_season_world_levels, "WORLD_LEVELS",
+                                   [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}])):
             context = patch.object(module, key, value)
             context.start()
             self.addCleanup(context.stop)
@@ -46,7 +49,9 @@ class SeasonEconomyTest(unittest.TestCase):
         self.store = SeasonStore(Path(directory.name) / "save.json")
 
     def state(self):
-        state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
+        # Isolate economy calculations from the random starting lineups.
+        with patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
+            state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
         return state.with_selected_team(state.teams[0].id)
 
     def test_exact_rating_parity_with_competition_manager(self):
@@ -71,6 +76,8 @@ class SeasonEconomyTest(unittest.TestCase):
         won = state.with_rated_result("scrim:1", own.id, rival.id, 1, 0)
         self.assertEqual(won.rating(own.id), 1532)
         self.assertEqual(won.rating(rival.id), 1468)
+        self.assertEqual(won.contract("Leo").team_loyalty, 51)
+        self.assertEqual(won.opponent_teams[0].contracts[-1].team_loyalty, 49.5)
         self.assertEqual(won.with_rated_result("scrim:1", own.id, rival.id, 1, 0), won)
         self.store.save(won)
         loaded = self.store.load_or_create()
@@ -79,7 +86,66 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(self.state().rating(self.state().opponent_teams[0].id), 1500)
         renamed = won.with_editing_team(own.id).with_team_name("Renamed").with_confirmed_team()
         self.assertEqual(renamed.rating(own.id), 1532)
-        self.assertEqual(next(r.team_name for r in renamed.rating_ranking if r.team_id == own.id), "Renamed")
+        self.assertEqual(next(r.team_name for r in renamed.rating_ranking if r.team_id == renamed.club_id), "Renamed")
+
+    def test_match_loyalty_uses_saved_traits_for_both_sides_and_includes_reserves(self):
+        traits = {name: replace(get_by_name(name), loyalty=value)
+                  for name, value in zip((*OWN, *RIVAL), (0, 1, 5, 9, 10, 0, 1, 5, 9, 10, 5))}
+        with patch.dict(character_stats.CHARACTER_TABLE, traits):
+            state = self.state().with_scouted_player("Meiy", "year1")
+        # A second preset is still the same club and must not multiply changes.
+        state = state.with_new_team().with_roster(OWN).with_confirmed_team()
+        own_id, rival_id = state.teams[-1].id, state.opponent_teams[0].id
+        for left_id, right_id in ((own_id, rival_id), (rival_id, own_id)):
+            for own_won in (True, False):
+                with self.subTest(left=left_id, own_won=own_won):
+                    left_won = own_won if left_id == own_id else not own_won
+                    result = state.with_rated_result("result", left_id, right_id,
+                                                     2 if left_won else 1, 1 if left_won else 2)
+                    for player in state.owned_players:
+                        delta = 1 if own_won else -(10 - player.loyalty) / 10
+                        self.assertAlmostEqual(result.contract(player.name).team_loyalty, 50 + delta)
+                    club = result.opponent_teams[0]
+                    for player, contract in zip(club.players, club.contracts):
+                        delta = -(10 - player.loyalty) / 10 if own_won else 1
+                        self.assertAlmostEqual(contract.team_loyalty, 50 + delta)
+                    self.assertEqual(result.player("Leo").loyalty, 0)
+                    self.assertEqual(result.money, state.money)
+                    self.assertEqual(result.with_rated_result("result", left_id, right_id, 2, 1), result)
+
+    def test_npc_match_changes_only_the_two_clubs(self):
+        state = self.state()
+        other_names = tuple(p.name for p in state.lft_players[:5])
+        with patch.object(realtime_season_teams, "SEASON_TEAMS",
+                          [self.club, dict(name="Other", players=other_names)]):
+            state = self.store.import_season_teams(state)
+        left, right = state.opponent_teams
+        result = state.with_rated_result("npc", left.id, right.id, 0, 3)
+        self.assertEqual(result.contracts, state.contracts)
+        self.assertTrue(all(c.team_loyalty == 49.5 for c in result.opponent_teams[0].contracts))
+        self.assertTrue(all(c.team_loyalty == 51 for c in result.opponent_teams[1].contracts))
+
+    def test_match_loyalty_preserves_inactive_contracts_and_controls_departure_and_renewal(self):
+        # This scenario checks an existing long contract; starters now have
+        # short contracts and would leave early when team loyalty reaches zero.
+        state = new_season(OWN).with_team_loyalty("Leo", .5)
+        rival_id = state.opponent_teams[0].id
+        lost = state.with_rated_result("loss", state.club_id, rival_id, 0, 1)
+        self.assertEqual(lost.contract("Leo").team_loyalty, 0)
+        recovered = lost.with_rated_result("win", state.club_id, rival_id, 1, 0)
+        self.assertEqual(recovered.contract("Leo").team_loyalty, 1)
+        expired = lost.advance_months(12, pay_salaries=False)
+        with self.assertRaisesRegex(SeasonSaveError, "忠誠"):
+            expired.with_renewed_contract("Leo", "year1")
+        after = expired.with_rated_result("after-expiry", expired.club_id, rival_id, 1, 0)
+        self.assertEqual(after.contracts, expired.contracts)
+        released = new_season(OWN).with_team_loyalty("Leo", 17).without_player("Leo")
+        after = released.with_rated_result("after-release", released.club_id, rival_id, 1, 0)
+        self.assertEqual(after.contract("Leo"), released.contract("Leo"))
+        short = new_season(()).with_scouted_player("Leo", "short", 6).with_team_loyalty("Leo", .1)
+        lost = short.with_rated_result("short-loss", short.club_id, short.opponent_teams[0].id, 0, 1)
+        self.assertLess(lost.contract("Leo").team_loyalty, 0)
+        self.assertIsNone(lost.advance_months(pay_salaries=False).player("Leo"))
 
     def test_tournament_results_update_both_ratings_once(self):
         with patch.object(calendar, "TOURNAMENTS", [CUP]):
@@ -87,7 +153,7 @@ class SeasonEconomyTest(unittest.TestCase):
         state = state.with_tournament_entry("cup", state.selected_team_id)
         match, _ = next_match(state.tournament_definition("cup"), state.tournament("cup"))
         score = SeriesScore(match.id, match.left, match.right,
-                            int(match.left == state.selected_team_id), int(match.right == state.selected_team_id))
+                            int(match.left == state.club_id), int(match.right == state.club_id))
         with self.assertRaisesRegex(SeasonSaveError, "大会参加中"):
             state.with_scouted_player("Aspas", "year1")
         # Reserves are not in the event snapshot, so their affiliation may change.
@@ -97,6 +163,8 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(won.rating(state.selected_team_id), 1532)
         self.assertEqual(won.rating(state.opponent_teams[0].id), 1468)
         self.assertEqual(len(won.rated_results), 1)
+        self.assertEqual(won.contract("Leo").team_loyalty, 51)
+        self.assertTrue(all(c.team_loyalty == 49.5 for c in won.opponent_teams[0].contracts))
         self.store.save(won)
         with self.assertRaises(SeasonSaveError):
             self.store.load_or_create().with_tournament_result("cup", score)
@@ -108,7 +176,7 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(state.transfer_fee("Sato"), 0)
         with self.assertRaisesRegex(SeasonSaveError, "短期契約"):
             state.with_scouted_player("Sato", "year3")
-        self.assertEqual(state.with_scouted_player("Sato", "short", 1).money, state.money)
+        self.assertEqual(state.with_scouted_player("Sato", "short", 1).money, state.money - 300_000)
 
     def test_monthly_income_and_payroll_share_a_single_calendar_boundary(self):
         state = self.state()
@@ -129,33 +197,54 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(disabled.money, 9_500_000)
         self.assertEqual(new_season().monthly_sponsor_income, 0)
 
-    def test_sponsor_uses_one_selected_team_and_current_rate(self):
+    def test_sponsor_is_world_level_amount_at_low_ratings_and_respects_disabled_state(self):
+        base = self.state()
+        for rating in (0, 400, 999.9999, 1000, 1000.00019, 1000.0002, 1500):
+            with self.subTest(rating=rating):
+                state = replace(base, ratings=tuple(replace(r, value=rating) if r.team_id == base.club_id else r for r in base.ratings))
+                self.assertEqual(state.monthly_sponsor_income, 7_500_000)
+                self.assertEqual(state.with_sponsor_contract(False).monthly_sponsor_income, 0)
+        self.assertEqual(new_season().monthly_sponsor_income, 0)
+
+    def test_low_rating_world_sponsor_is_paid_once_and_saved_alongside_payroll(self):
+        state = self.state()
+        state = replace(state, ratings=tuple(replace(r, value=400) if r.team_id == state.club_id else r for r in state.ratings))
+        self.assertEqual(state.advance_days(30).money, state.money)
+        feb = state.advance_days(31)
+        self.assertEqual(feb.money, state.money + 7_500_000 - state.monthly_payroll)
+        self.store.save(feb)
+        loaded = self.store.load_or_create()
+        self.assertEqual(loaded.advance_days().money, feb.money)
+        self.assertEqual(loaded.monthly_sponsor_income, 7_500_000)
+        self.assertEqual(state.advance_months(2), feb.advance_months())
+
+    def test_sponsor_uses_actual_club_world_level_across_presets(self):
         state = self.state()
         own = state.teams[0]
         state = state.with_rated_result("win", own.id, state.opponent_teams[0].id, 1, 0)
-        self.assertEqual(state.monthly_sponsor_income, 7_660_000)
+        self.assertEqual(state.monthly_sponsor_income, 7_500_000)
         names = tuple(p.name for p in state.lft_players[:5])
         state = state.with_added_players(names).with_new_team().with_roster(names).with_confirmed_team()
-        self.assertEqual(state.monthly_sponsor_income, 7_660_000)
+        self.assertEqual(state.monthly_sponsor_income, 7_500_000)
         state = state.with_selected_team(state.teams[1].id)
         self.assertEqual(state.monthly_sponsor_income, 7_500_000)
-        state = replace(state, ratings=tuple(replace(r, value=1500.00019) if r.team_id == state.selected_team_id else r for r in state.ratings))
+        state = replace(state, ratings=tuple(replace(r, value=1500.00019) if r.team_id == state.club_id else r for r in state.ratings))
         self.assertEqual(state.monthly_sponsor_income, 7_500_000)
 
-    def test_transfer_charges_fee_only_and_preserves_snapshot_and_unique_affiliation(self):
+    def test_transfer_charges_fee_and_signing_bonus_and_preserves_snapshot_and_affiliation(self):
         with patch.dict(character_stats.CHARACTER_TABLE, {"Aspas": replace(get_by_name("Aspas"), monthly_salary=123_457)}):
             state = self.state()
         state = replace(state, opponent_teams=(replace(state.opponent_teams[0], transfer_multiplier=1.25),))
         fee = state.transfer_fee("Aspas")
         self.assertEqual(fee, 154_322)
-        required = fee + 123_457 * 12
+        required = fee + 123_457 * 15
         state = replace(state, money=required)
         before_player = state.opponent_teams[0].players[0]
         with self.assertRaises(SeasonSaveError):
             replace(state, money=required - 1).with_scouted_player("Aspas", "year1")
         with patch.dict(character_stats.CHARACTER_TABLE, {"Aspas": replace(get_by_name("Aspas"), monthly_salary=999_999)}):
             signed = state.with_scouted_player("Aspas", "year1")
-        self.assertEqual(signed.money, required - fee)
+        self.assertEqual(signed.money, required - fee - 123_457 * 3)
         self.assertEqual(signed.player("Aspas"), before_player)
         self.assertIsNone(signed.opponent_owner("Aspas"))
         self.assertEqual(signed.opponent_teams[0].roster, RIVAL[1:])
@@ -172,13 +261,13 @@ class SeasonEconomyTest(unittest.TestCase):
     def test_reserve_transfers_lft_and_owned_affiliations(self):
         state = self.state()
         signed = state.with_scouted_player("Sato", "short", 1)
-        self.assertEqual(signed.money, state.money - 1_200_000)
+        self.assertEqual(signed.money, state.money - 1_200_000 - 300_000)
         self.assertEqual(signed.opponent_teams[0].roster, RIVAL[:5])
         self.assertEqual(signed.opponent_teams[0].igl, "Aspas")
-        self.assertEqual(state.player_affiliation("Leo"), state.teams[0].name)
+        self.assertEqual(state.player_affiliation("Leo"), state.team_name)
         self.assertEqual(state.player_affiliation("Aspas"), "Rival")
         self.assertEqual(state.player_affiliation("Meiy"), "LFT")
-        self.assertEqual(state.with_scouted_player("Meiy", "year1").money, state.money)
+        self.assertEqual(state.with_scouted_player("Meiy", "year1").money, state.money - 300_000)
         with self.assertRaises(SeasonSaveError):
             state.with_scouted_player("Leo", "year1")
 
@@ -255,10 +344,11 @@ class SeasonEconomyScreenTest(SeasonEconomyTest):
         self.assertEqual(app.scout_players.item("Sato", "values")[-2:], ("Rival", "1,200,000"))
         app.scout_players.selection_set("Sato")
         app.refresh_offer("scout")
-        self.assertIn("2,400,000", app.offer_summary["scout"].get())
+        self.assertIn("2,700,000", app.offer_summary["scout"].get())
+        self.assertIn("契約金: 300,000", app.offer_summary["scout"].get())
         app.sign_selected_contract("scout")
         self.assertIsNotNone(app.state.player("Sato"))
-        self.assertEqual(app.state.money, 8_800_000)
+        self.assertEqual(app.state.money, 8_500_000)
         app.scout_players.selection_set("Sato")
         app.refresh_offer("scout")
         self.assertEqual(str(app.offer_buttons["scout"]["state"]), "disabled")
@@ -283,8 +373,10 @@ class SeasonEconomyScreenTest(SeasonEconomyTest):
         app._scrim_rating_context = ("scrim:example", own.id, rival.id)
         app.poll_scrim()
         self.assertEqual(app.state.rating(own.id), 1532)
+        self.assertEqual(app.state.contract("Leo").team_loyalty, 51)
+        self.assertTrue(all(c.team_loyalty == 49.5 for c in app.state.opponent_teams[0].contracts))
         self.assertEqual(self.store.load_or_create(), app.state)
-        self.assertIn("7,660,000", app.home_summary.get())
+        self.assertIn("7,500,000", app.home_summary.get())
 
     def test_new_screens_fit_default_height(self):
         app = self.app

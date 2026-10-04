@@ -19,7 +19,7 @@ def ai_options():
 
 
 def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
-                        own_ai="default", opponent_ai=None, initial_side="A",
+                        own_ai=None, opponent_ai=None, initial_side="A",
                         own_igl=None, opponent_igl=None, own_spike=None,
                         opponent_spike=None, tick_time_ms=100, seed=None):
     from game_core import validate_tick_time_ms
@@ -33,7 +33,7 @@ def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
     if any(not state.can_play(name) for name in own.roster):
         raise SeasonSaveError("契約が終了した選手がいます。再契約またはチームの再編成を行ってください。")
     own_players = [state.player(name) for name in own.roster]
-    opponent_players = list(opponent.players[:ROSTER_SIZE])
+    opponent_players = [state.enemy_player(player) for player in opponent.players[:ROSTER_SIZE]]
 
     def team_data(name, players, ai, igl, spike):
         return {"name": name, "players": [asdict(p) for p in players], "ai": ai,
@@ -41,7 +41,9 @@ def build_scrim_request(state, own_team_id, opponent_team_id, *, render=True,
                 "spike_holder": spike or players[0].name}
 
     request = {
-        "own": team_data(state.team_name, own_players, own_ai, own_igl, own_spike),
+        "own": team_data(state.team_name, own_players, own.ai if own_ai is None else own_ai,
+                         own.igl if own_igl is None else own_igl,
+                         own.carrier if own_spike is None else own_spike),
         "opponent": team_data(opponent.name, opponent_players,
                               opponent.ai if opponent_ai is None else opponent_ai,
                               opponent.effective_igl if opponent_igl is None else opponent_igl,

@@ -24,9 +24,9 @@ LearningDefenderAllAIController と同様、Defenderチーム全体で1つの
 コントローラーインスタンスを共有する想定(重み共有Dueling DQN)。
 """
 
-from collections import deque
-
 import numpy as np
+from grid_paths import distance_map
+from grid_lines import line_cells
 import torch
 import torch.nn as nn
 
@@ -77,25 +77,7 @@ class DefenderSearchDuelingDQN(nn.Module):
 # 壁のみを考慮する(スモークによる遮蔽は考慮しない)。
 # ---------------------------------------------------------------------------
 def _line_cells(p1, p2):
-    y0, x0 = int(p1[0]), int(p1[1])
-    y1, x1 = int(p2[0]), int(p2[1])
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx + dy
-    cells = []
-    while True:
-        cells.append((y0, x0))
-        if x0 == x1 and y0 == y1:
-            return cells
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
+    return line_cells(p1, p2)
 
 def _has_los(grid, p1, p2):
     for r, c in _line_cells(p1, p2):
@@ -105,23 +87,8 @@ def _has_los(grid, p1, p2):
 
 
 def _bfs_distance_map(grid, goal):
-    """指定ゴールから各セルへの最短距離マップ(壁越え不可)。
-    train_defender_search.py の bfs_distance_map と同一ロジック。"""
-    height, width = grid.shape
-    dist = np.full((height, width), -1, dtype=np.int32)
-    gr, gc = int(goal[0]), int(goal[1])
-    if grid[gr, gc] == 1:
-        return dist
-    dist[gr, gc] = 0
-    queue = deque([(gr, gc)])
-    while queue:
-        r, c = queue.popleft()
-        for dr, dc in CARDINAL:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < height and 0 <= nc < width and grid[nr, nc] != 1 and dist[nr, nc] == -1:
-                dist[nr, nc] = dist[r, c] + 1
-                queue.append((nr, nc))
-    return dist
+    return distance_map(grid, goal, CARDINAL)
+
 
 def _bfs_best_direction(dist_map, grid, r0, c0):
     """dist_map上で、(r0,c0)から見て最も距離が縮む隣接方向(dr,dc)を返す。
@@ -266,12 +233,13 @@ class LearningDefenderSearchController:
     (learning_defender.LearningDefenderAllAIController と同じ運用形態)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, device=None):
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DefenderSearchDuelingDQN().to(DEVICE)
+        self.device = torch.device(device) if device is not None else DEVICE
+        self.model = DefenderSearchDuelingDQN().to(self.device)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            state_dict = torch.load(model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningDefenderSearchController] loaded: {model_path}")
@@ -567,8 +535,8 @@ class LearningDefenderSearchController:
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

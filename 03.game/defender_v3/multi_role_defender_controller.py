@@ -38,13 +38,14 @@ class MultiRoleDefenderController(BaseController):
         search_model_path="defender_v3/data/defender_search_data/dqn_defender_search_best_by_eval.pt",
         retake_model_path="defender_v3/data/defender_retake_data/dqn_defender_retake_best_by_eval.pt",
         greedy=True,
+        device=None,
     ):
         super().__init__()
         self.search_controller = LearningDefenderSearchController(
-            model_path=search_model_path, greedy=greedy
+            model_path=search_model_path, greedy=greedy, device=device
         )
         self.retake_controller = LearningDefenderRetakeController(
-            model_path=retake_model_path, greedy=greedy
+            model_path=retake_model_path, greedy=greedy, device=device
         )
 
     def _build_or_fallback(self, model_path, param_name):

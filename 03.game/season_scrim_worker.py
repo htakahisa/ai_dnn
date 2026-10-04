@@ -11,6 +11,12 @@ from season_scrim import validate_scrim_request
 
 def play_scrim(request):
     validate_scrim_request(request)
+    from simulation_runtime import cpu_inference
+    with cpu_inference(enabled=not request["render"]):
+        return _play_scrim(request)
+
+
+def _play_scrim(request):
     # The worker is isolated: saved individual abilities apply only to this
     # match and never replace the catalog used by the season home or other modes.
     import character_stats

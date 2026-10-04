@@ -46,12 +46,26 @@ class StarterSelectionTest(unittest.TestCase):
         self.assertEqual(tuple(p.name for p in chosen.owned_players), CHOSEN)
         self.assertEqual(chosen.money, INITIAL_MONEY)
         self.assertEqual(len(chosen.contracts), 5)
-        self.assertTrue(all(c.duration_months == 12 and c.monthly_salary == chosen.player(c.player_name).monthly_salary for c in chosen.contracts))
+        self.assertTrue(all(c.kind == "short" and c.duration_months == 6 and c.start_month == 0
+                            and c.monthly_salary == chosen.player(c.player_name).monthly_salary for c in chosen.contracts))
         self.assertTrue({"Boaster", "Chronicle"}.issubset(p.name for p in chosen.lft_players))
         self.store.save(chosen)
         self.assertEqual(self.store.load_or_create(), chosen)
         with self.assertRaises(SeasonSaveError):
             chosen.with_initial_selection(CANDIDATES[:5])
+
+    def test_initial_short_contracts_expire_after_six_game_months_and_can_be_renewed(self):
+        state = self.store.load_or_create().with_initial_selection(CHOSEN)
+        five = state.advance_months(5, pay_salaries=False)
+        self.assertTrue(all(five.can_play(name) for name in CHOSEN))
+        six = five.advance_months(pay_salaries=False)
+        self.assertTrue(all(not six.can_play(name) for name in CHOSEN))
+        self.assertEqual(tuple(p.name for p in six.owned_players), CHOSEN)
+        self.store.save(six)
+        six = self.store.load_or_create()
+        renewed = six.with_renewed_contract("Leo", "year1")
+        self.assertTrue(renewed.can_play("Leo"))
+        self.assertEqual((renewed.contract("Leo").start_month, renewed.contract("Leo").duration_months), (6, 12))
 
     def test_incomplete_excess_duplicate_or_unknown_selection_cannot_acquire_players(self):
         state = self.store.load_or_create()

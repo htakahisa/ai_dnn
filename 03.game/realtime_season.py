@@ -7,20 +7,26 @@ import json
 import math
 import os
 from pathlib import Path
+from random import Random
 import tempfile
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from character_stats import CharacterStats, all_characters, get_by_name
-from season_ratings import DEFAULT_TEAM_RATING, SeasonRating, series_ratings
+from season_ratings import DEFAULT_TEAM_RATING, SeasonRating, expected_score, series_ratings
 from season_monthly_events import MonthlyEvent, process_monthly_events
+from season_transfers import TransferOffer, with_randomized_clubs
+from season_world_levels import WorldLevelError, scale_enemy_player, world_level_for_rank
+from season_training import MAX_TRAINING_LEVEL, training_terms
+from season_salary import (SalaryMode, SalaryRecord, SalarySettings, SalaryDataError,
+                           configured_salary_settings, salary_records, log_salary_change, clamp_change)
 from season_competitions import (
     CompetitionError, CompetitionTeam, SeriesScore, TournamentProgress, add_months,
     configured_calendar, definition_from_dict, month_index, next_match, parse_date,
-    phase_for, validate_definitions, validate_periods,
+    phase_for, player_eliminated, validate_definitions, validate_periods,
 )
 
 
-SAVE_VERSION = 11
+SAVE_VERSION = 16
 PLAYER_CLUB_ID = "player_club"
 ROSTER_SIZE = 5
 INITIAL_MONEY = 10_000_000
@@ -41,6 +47,14 @@ class ContractTerms:
     @property
     def required_funds(self):
         return self.monthly_salary * self.months
+
+    @property
+    def signing_bonus(self):
+        return self.monthly_salary * 3
+
+    @property
+    def total_required_funds(self):
+        return self.signing_bonus + self.required_funds
 
 
 def contract_terms(player, kind, short_months=6):
@@ -113,6 +127,9 @@ class SeasonTeam:
     id: str
     name: str
     roster: tuple[str, ...]
+    igl: str | None = None
+    carrier: str | None = None
+    ai: str = "default"
 
 
 @dataclass(frozen=True)
@@ -126,6 +143,9 @@ class SeasonClub:
     transfer_multiplier: float = 12.0
     preferred_roles: tuple[str, ...] = ()
     contracts: tuple[PlayerContract, ...] = ()
+    regular_members: tuple[str, ...] = ()
+    regular_igl: str | None = None
+    regular_carrier: str | None = None
 
     @property
     def members(self):
@@ -144,6 +164,15 @@ class SeasonClub:
         return self.carrier if self.carrier is not None else (self.players[0].name if self.players else None)
 
 
+def validate_preset_settings(roster, igl, carrier, ai):
+    from roster_select import TEAM_AI_OPTIONS
+    for label, name in (("IGL", igl), ("キャリアー", carrier)):
+        if name is not None and (not isinstance(name, str) or name not in roster):
+            raise SeasonSaveError(f"{label}はこのプリセットのロスターから選択してください。")
+    if not isinstance(ai, str) or ai not in TEAM_AI_OPTIONS.values():
+        raise SeasonSaveError("プリセットのAIが不正です。")
+
+
 def validate_player(player):
     if not isinstance(player, CharacterStats):
         raise SeasonSaveError("選手のデータ形式が不正です。")
@@ -160,6 +189,8 @@ def validate_player(player):
             raise SeasonSaveError(f"{player.name}の能力値 {key} が不正です。")
         if key == "monthly_salary" and type(value) is not int:
             raise SeasonSaveError(f"{player.name}の月給は円単位の整数で設定してください。")
+        if key in {"research_level", "aim_lab_level"} and (type(value) is not int or value > MAX_TRAINING_LEVEL):
+            raise SeasonSaveError(f"{player.name}の育成レベルは0～{MAX_TRAINING_LEVEL}の整数にしてください。")
         maximum = 1 if key in {"hs_pct", "dodge_pct", "hit_pct"} else (
             10 if key in {"form_variance", "mental", "loyalty"} else None
         )
@@ -193,8 +224,104 @@ class SeasonState:
     transferred_players: tuple[str, ...] = ()
     monthly_events: tuple[MonthlyEvent, ...] = ()
     monthly_events_through: int = 0
+    transfer_offers: tuple[TransferOffer, ...] = ()
     preset_name: str = "編成1"
     club_id: str = PLAYER_CLUB_ID
+    preset_igl: str | None = None
+    preset_carrier: str | None = None
+    preset_ai: str = "default"
+    salary_mode: SalaryMode = SalaryMode.STATIC
+    salary_settings: SalarySettings | None = None
+    salary_records: tuple[SalaryRecord, ...] = ()
+    salary_updated_month: int | None = None
+    developed_players: tuple[CharacterStats, ...] = ()
+
+    def salary_player(self, player):
+        if self.player(player.name) is None and self.opponent_owner(player.name) is None:
+            player = next((p for p in self.developed_players if p.name == player.name), player)
+        if self.salary_mode == SalaryMode.STATIC:
+            return player
+        record = next((r for r in self.salary_records if r.name == player.name), None)
+        return replace(player, monthly_salary=record.monthly_salary) if record else player
+
+    def contract_terms(self, player, kind, short_months=6):
+        terms = contract_terms(player, kind, short_months)
+        record = next((r for r in self.salary_records if r.name == player.name), None)
+        if self.salary_mode == SalaryMode.KD_DYNAMIC and record is not None and record.fixed:
+            return replace(terms, monthly_salary=record.monthly_salary)
+        return terms
+
+    def with_salary_mode(self, mode):
+        if not self.starter_selection_pending:
+            raise SeasonSaveError("給与モードは新規シーズン開始前だけ選択できます。")
+        try:
+            mode = SalaryMode(mode)
+            if mode == self.salary_mode:
+                return self
+            if mode == SalaryMode.KD_DYNAMIC:
+                return replace(self, salary_mode=mode, salary_settings=configured_salary_settings()).with_updated_salaries(initial=True)
+            # Switching before start restores the original static snapshots.
+            static = {r.name: r.static_salary for r in self.salary_records}
+            def restore(player):
+                return replace(player, monthly_salary=static.get(player.name, player.monthly_salary))
+            clubs = []
+            for club in self.opponent_teams:
+                players = tuple(restore(p) for p in club.players)
+                by_name = {p.name: p for p in players}
+                contracts = tuple(replace(c, monthly_salary=contract_terms(by_name[c.player_name], c.kind, c.duration_months).monthly_salary)
+                                  if c.active(self.game_month) else c for c in club.contracts)
+                clubs.append(replace(club, players=players, contracts=contracts))
+            candidate = replace(self, salary_mode=mode, salary_settings=None, salary_records=(), salary_updated_month=None,
+                                starter_candidates=tuple(restore(p) for p in self.starter_candidates), opponent_teams=tuple(clubs))
+            candidate.validate()
+            return candidate
+        except SalaryDataError as exc:
+            raise SeasonSaveError(str(exc)) from exc
+
+    def with_updated_salaries(self, *, initial=False):
+        if self.salary_mode == SalaryMode.STATIC or not initial and self.salary_updated_month == self.game_month:
+            return self
+        try:
+            pool = {p.name: p for p in all_characters()}
+            pool.update((p.name, p) for club in self.opponent_teams for p in club.players)
+            pool.update((p.name, p) for p in (*self.starter_candidates, *self.owned_players))
+            old = {r.name: r for r in self.salary_records}
+            static = {name: p.monthly_salary for name, p in pool.items()}
+            static.update((name, r.static_salary) for name, r in old.items())
+            previous = None if initial else {name: old[name].monthly_salary if name in old else p.monthly_salary
+                                            for name, p in pool.items()}
+            if previous is not None:
+                previous.update((name, r.monthly_salary) for name, r in old.items())
+            records = salary_records(static, self.salary_settings, previous)
+        except (SalaryDataError, OSError) as exc:
+            raise SeasonSaveError(str(exc)) from exc
+        by_name = {r.name: r for r in records}
+        def update_player(p):
+            return replace(p, monthly_salary=by_name[p.name].monthly_salary)
+        changes = []
+        def update_contract(c):
+            record = by_name.get(c.player_name)
+            if record is None or not c.active(self.game_month):
+                return c
+            tenths = {"short": 10, "year1": 10, "year2": 9, "year3": 8}[c.kind]
+            salary = record.monthly_salary if record.fixed else (record.monthly_salary * tenths + 9) // 10
+            if not initial and not record.fixed:
+                salary = clamp_change(salary, c.monthly_salary, self.salary_settings.max_change)
+            changes.append((c, salary, record))
+            return replace(c, monthly_salary=salary)
+        clubs = tuple(replace(club, players=tuple(update_player(p) for p in club.players),
+                              contracts=tuple(update_contract(c) for c in club.contracts)) for club in self.opponent_teams)
+        candidate = replace(self, salary_records=records, salary_updated_month=self.game_month,
+                            owned_players=tuple(update_player(p) for p in self.owned_players),
+                            starter_candidates=tuple(update_player(p) for p in self.starter_candidates),
+                            contracts=tuple(update_contract(c) for c in self.contracts), opponent_teams=clubs)
+        candidate.validate()
+        for r in records:
+            before = old[r.name].monthly_salary if r.name in old else r.static_salary
+            log_salary_change(r.name, before, r.monthly_salary, r)
+        for c, salary, r in changes:
+            log_salary_change(c.player_name, c.monthly_salary, salary, r, contract=True)
+        return candidate
 
     def with_registered_ratings(self):
         records = {r.team_id: r for r in self.ratings}
@@ -217,6 +344,35 @@ class SeasonState:
         return tuple(sorted((r for r in self.with_registered_ratings().ratings if r.team_id in active_ids),
                             key=lambda r: (-r.value, r.team_name.casefold())))
 
+    @property
+    def world_rank(self):
+        ranking = self.rating_ranking
+        rank = next(i for i, record in enumerate(ranking, 1) if record.team_id == self.club_id)
+        return rank, len(ranking)
+
+    @property
+    def world_top_percent(self):
+        rank, count = self.world_rank
+        return rank * 100 / count
+
+    @property
+    def world_level_settings(self):
+        try:
+            return world_level_for_rank(*self.world_rank)
+        except WorldLevelError as exc:
+            raise SeasonSaveError(f"世界レベル設定が不正です: {exc}") from exc
+
+    @property
+    def world_level(self):
+        return self.world_level_settings.level
+
+    def enemy_player(self, player):
+        """Effective opponent abilities; persistent ownership and salary use base stats."""
+        return scale_enemy_player(player, self.world_level_settings.enemy_multiplier)
+
+    def displayed_player(self, player):
+        return self.enemy_player(player) if self.opponent_owner(player.name) is not None else player
+
     def with_rated_result(self, result_id, left_id, right_id, left_wins, right_wins):
         if not isinstance(result_id, str) or not result_id:
             raise SeasonSaveError("レート更新の試合IDが不正です。")
@@ -235,8 +391,32 @@ class SeasonState:
         state = replace(state, ratings=tuple(replace(r, value=left if r.team_id == left_id else right)
                                               if r.team_id in (left_id, right_id) else r for r in state.ratings),
                         rated_results=(*state.rated_results, result_id))
+        state = state._with_match_loyalty(left_id, right_id, left_wins > right_wins)
         state.validate()
         return state
+
+    def _with_match_loyalty(self, left_id, right_id, left_won):
+        outcomes = {left_id: left_won, right_id: not left_won}
+
+        def updated_contracts(team_id, players, contracts):
+            if team_id not in outcomes:
+                return contracts
+            members = {p.name: p for p in players}
+            updated = []
+            for contract in contracts:
+                player = members.get(contract.player_name)
+                if player is None or not contract.active(self.game_month):
+                    updated.append(contract)
+                    continue
+                delta = 1.0 if outcomes[team_id] else -(10 - player.loyalty) / 10
+                updated.append(replace(contract, team_loyalty=round(contract.team_loyalty + delta, 10))
+                               if delta else contract)
+            return tuple(updated)
+
+        return replace(self,
+            contracts=updated_contracts(self.club_id, self.owned_players, self.contracts),
+            opponent_teams=tuple(replace(club, contracts=updated_contracts(club.id, club.players, club.contracts))
+                                 if club.id in outcomes else club for club in self.opponent_teams)).with_resolved_transfer_offers()
 
     @property
     def sponsor_team(self):
@@ -248,7 +428,13 @@ class SeasonState:
     @property
     def monthly_sponsor_income(self):
         team = self.sponsor_team
-        return int(Decimal(str(self.rating(team.id))) * 5000) if self.sponsor_active and team else 0
+        if not self.sponsor_active or team is None:
+            return 0
+        return self.world_level_settings.sponsor_funds
+
+    @property
+    def monthly_payroll(self):
+        return sum(c.monthly_salary for c in self.contracts if c.active(self.game_month))
 
     def with_sponsor_contract(self, active):
         if type(active) is not bool:
@@ -261,9 +447,10 @@ class SeasonState:
     def scout_players(self):
         # Saved ability and salary snapshots take priority over the live catalog.
         players = {p.name: p for p in all_characters()}
+        players.update((p.name, p) for p in self.developed_players)
         players.update((p.name, p) for club in self.opponent_teams for p in club.players)
         players.update((p.name, p) for p in self.owned_players)
-        return tuple(players.values())
+        return tuple(self.salary_player(p) for p in players.values())
 
     def player_affiliation(self, name):
         own = self.player(name)
@@ -304,9 +491,11 @@ class SeasonState:
             raise SeasonSaveError("初期キャラの候補から選んでください。")
         players = tuple(pool[name] for name in names)
         candidate = replace(self, starter_selection_pending=False, starter_selection=tuple(names),
-                            owned_players=players, contracts=tuple(initial_contract(p) for p in players))
+                            owned_players=players, contracts=tuple(
+                                PlayerContract(p.name, "short", p.monthly_salary, self.game_month, 6) for p in players))
+        candidate = with_randomized_clubs(candidate)
         candidate.validate()
-        return candidate
+        return candidate.with_updated_salaries(initial=True)
 
     @property
     def date(self):
@@ -342,7 +531,7 @@ class SeasonState:
         if run.last_match_date is not None and self.date <= parse_date(run.last_match_date):
             raise SeasonSaveError("大会は1日1試合です。1日進めてから次のシリーズを開始してください。")
 
-    def with_tournament_entry(self, event_id, team_id=None, *, own_ai="default", igl=None, carrier=None):
+    def with_tournament_entry(self, event_id, team_id=None, *, own_ai=None, igl=None, carrier=None):
         event = self.tournament_definition(event_id)
         if event is None or not event.appears(self) or self.date > parse_date(event.end_date):
             raise SeasonSaveError("大会は未出現または参加登録の締切を過ぎています。")
@@ -356,8 +545,8 @@ class SeasonState:
         entrants = []
         if own:
             players = tuple(self.player(name) for name in own.roster)
-            entrants.append(CompetitionTeam(self.club_id, self.team_name, players, own_ai,
-                igl or max(players, key=lambda p: p.iq).name, carrier or players[0].name))
+            entrants.append(CompetitionTeam(self.club_id, self.team_name, players, own.ai if own_ai is None else own_ai,
+                igl or own.igl or max(players, key=lambda p: p.iq).name, carrier or own.carrier or players[0].name))
         rivals = self.opponent_teams
         if event.opponent_teams:
             by_name = {club.name: club for club in rivals}
@@ -394,6 +583,17 @@ class SeasonState:
         if event is None or run is None or run.completed:
             raise SeasonSaveError("結果を登録する進行中の大会が見つかりません。")
         self.check_tournament_match_day(event_id)
+        candidate = self._with_tournament_score(event, run, score)
+        if run.own_team_id not in (score.left_id, score.right_id):
+            candidate = candidate.advance_days()
+        updated = candidate.tournament(event_id)
+        if not updated.completed and player_eliminated(event, updated):
+            return candidate.with_tournament_rating_finish(event_id)
+        return candidate
+
+    def _with_tournament_score(self, event, run, score):
+        """Record one series, including its rating update and completion prize."""
+        event_id = event.id
         updated = replace(run, results=(*run.results, score), last_match_date=self.date.isoformat())
         pending, ranking = next_match(event, updated)
         prize = 0
@@ -405,7 +605,51 @@ class SeasonState:
         candidate = replace(self, money=self.money + prize,
                             tournaments=tuple(updated if r.tournament_id == event_id else r for r in self.tournaments))
         candidate.validate()
-        return candidate.with_rated_result(f"tournament:{event_id}:{score.match_id}", score.left_id, score.right_id, score.left_wins, score.right_wins)
+        candidate = candidate.with_rated_result(f"tournament:{event_id}:{score.match_id}", score.left_id, score.right_id, score.left_wins, score.right_wins)
+        return candidate
+
+    def _tournament_rating_score(self, run, match):
+        if run.own_team_id in (match.left, match.right):
+            raise SeasonSaveError("自チームの試合をレート判定することはできません。")
+        probability = expected_score(self.rating(match.left), self.rating(match.right))
+        # Stable across save/reload and failed save retries; one draw per series.
+        draw = Random((run.seed + len(run.results) * 1000) % (2**31)).random()
+        left_wins = draw < probability
+        return SeriesScore(match.id, match.left, match.right,
+                           match.maps_to_win if left_wins else 0,
+                           0 if left_wins else match.maps_to_win, decided_by_rating=True)
+
+    def with_tournament_rating_result(self, event_id):
+        """Resolve today's NPC series using the current Elo win probability."""
+        self.check_tournament_match_day(event_id)
+        event, run = self.tournament_definition(event_id), self.tournament(event_id)
+        match, _ = next_match(event, run)
+        return self.with_tournament_result(event_id, self._tournament_rating_score(run, match))
+
+    def with_tournament_rating_finish(self, event_id):
+        """Resolve remaining NPC cards while consuming one calendar day each."""
+        event, run = self.tournament_definition(event_id), self.tournament(event_id)
+        if event is None or run is None:
+            raise SeasonSaveError("進行中の大会を選択してください。")
+        if run.completed:
+            return self
+        if not player_eliminated(event, run):
+            raise SeasonSaveError("自チームの敗退が確定してからレート判定で終了できます。")
+        candidate = self
+        while not run.completed:
+            if run.last_match_date == candidate.game_date:
+                following = candidate.advance_days()
+                if following.date == candidate.date:
+                    break
+                candidate = following
+                run = candidate.tournament(event_id)
+            candidate.check_tournament_match_day(event_id)
+            match, _ = next_match(event, run)
+            score = candidate._tournament_rating_score(run, match)
+            candidate = candidate._with_tournament_score(event, run, score)
+            candidate = candidate.advance_days()
+            run = candidate.tournament(event_id)
+        return candidate
 
     def with_tournament_forfeit(self, event_id):
         event, run = self.tournament_definition(event_id), self.tournament(event_id)
@@ -430,7 +674,31 @@ class SeasonState:
     def lft_players(self):
         affiliated = {p.name for p in self.owned_players}
         affiliated.update(p.name for team in self.opponent_teams for p in team.players)
-        return tuple(p for p in all_characters() if p.name not in affiliated)
+        return tuple(p for p in self.scout_players if p.name not in affiliated)
+
+    def training_terms(self, name, kind):
+        player = self.player(name)
+        if self.starter_selection_pending or player is None:
+            raise SeasonSaveError("育成する所持選手を選択してください。")
+        return training_terms(player, kind)
+
+    def with_trained_player(self, name, kind):
+        terms = self.training_terms(name, kind)
+        if self.money < terms.cost:
+            raise SeasonSaveError(f"{terms.title}には{terms.cost:,}円が必要です（現在{self.money:,}円）。")
+        player = replace(self.player(name), **{terms.level_field: terms.next_level, terms.stat_field: terms.after})
+        candidate = replace(self, money=self.money - terms.cost,
+            owned_players=tuple(player if p.name == name else p for p in self.owned_players),
+            developed_players=tuple(p for p in self.developed_players if p.name != name) + (player,))
+        candidate.validate()
+        return candidate
+
+    def with_scrim_result(self, result_id, own_id, opponent_id, own_wins, opponent_wins):
+        if result_id in self.rated_results:
+            return self
+        candidate = self.with_rated_result(result_id, own_id, opponent_id, own_wins, opponent_wins)
+        # A completed scrim spends its day even while a tournament awaits play.
+        return candidate._with_next_day()
 
     def with_scouted_player(self, name, kind, short_months=6):
         blocked = self.recruitment_blocked(name)
@@ -443,9 +711,9 @@ class SeasonState:
         if old is not None and old.team_loyalty <= 0:
             raise SeasonSaveError("チームへの忠誠が0以下のため、この選手とは再契約できません。")
         fee = self.transfer_fee(name)
-        terms = contract_terms(player, kind, short_months)
-        if self.money < fee + terms.required_funds:
-            raise SeasonSaveError(f"契約には移籍金{fee:,}円と契約条件の資金{terms.required_funds:,}円が必要です（現在{self.money:,}円）。")
+        terms = self.contract_terms(player, kind, short_months)
+        if self.money < fee + terms.total_required_funds:
+            raise SeasonSaveError(f"契約には移籍金{fee:,}円・契約金{terms.signing_bonus:,}円と契約条件の資金{terms.required_funds:,}円が必要です（現在{self.money:,}円）。")
         owner = self.opponent_owner(name)
         clubs = []
         for club in self.opponent_teams:
@@ -473,13 +741,14 @@ class SeasonState:
         return self._with_signed_contract(player, kind, short_months, recruit=False)
 
     def _with_signed_contract(self, player, kind, short_months, recruit):
-        terms = contract_terms(player, kind, short_months)
-        if self.money < terms.required_funds:
-            raise SeasonSaveError(f"契約には所持金{terms.required_funds:,}円が必要です（現在{self.money:,}円）。")
+        terms = self.contract_terms(player, kind, short_months)
+        if self.money < terms.total_required_funds:
+            raise SeasonSaveError(f"契約には契約金{terms.signing_bonus:,}円と契約条件の資金{terms.required_funds:,}円が必要です（現在{self.money:,}円）。")
         previous = self.contract(player.name)
         contract = PlayerContract(player.name, kind, terms.monthly_salary, self.game_month, terms.months,
                                   previous.team_loyalty if previous else 50.0)
         candidate = replace(self,
+                            money=self.money - terms.signing_bonus,
                             owned_players=(*self.owned_players, player) if recruit else self.owned_players,
                             contracts=tuple(c for c in self.contracts if c.player_name != player.name) + (contract,))
         candidate.validate()
@@ -494,8 +763,72 @@ class SeasonState:
         if player is not None and player.loyalty == 10 and value < self.contract(name).team_loyalty:
             return self
         candidate = replace(self, contracts=tuple(replace(c, team_loyalty=value) if c.player_name == name else c for c in self.contracts))
+        candidate = candidate.with_resolved_transfer_offers()
         candidate.validate()
         return candidate
+
+    @property
+    def pending_transfer_offers(self):
+        return tuple(o for o in self.transfer_offers if o.status == "pending")
+
+    def transfer_offer(self, name):
+        return next((o for o in self.pending_transfer_offers if o.player_name == name), None)
+
+    def with_transfer_response(self, offer_id, accept):
+        if type(accept) is not bool:
+            raise SeasonSaveError("オファーへの回答が不正です。")
+        offer = next((o for o in self.pending_transfer_offers if o.id == offer_id), None)
+        if offer is None:
+            raise SeasonSaveError("回答する移籍オファーが見つかりません。")
+        # Threshold takes priority even if the caller attempts to decline.
+        if self.contract(offer.player_name).team_loyalty < 30:
+            candidate = self._with_offer_transfer(offer, "forced")
+        elif accept:
+            candidate = self._with_offer_transfer(offer, "accepted")
+        else:
+            candidate = replace(self, transfer_offers=tuple(replace(o, status="rejected") if o.id == offer_id else o
+                                                           for o in self.transfer_offers))
+        candidate.validate()
+        return candidate
+
+    def with_resolved_transfer_offers(self):
+        candidate = self
+        latest = {offer.player_name: offer for offer in self.transfer_offers}
+        clubs = {club.id for club in self.opponent_teams}
+        for offer in latest.values():
+            if offer.status not in ("pending", "rejected") or offer.team_id not in clubs:
+                continue
+            contract = candidate.contract(offer.player_name)
+            if candidate.player(offer.player_name) is None:
+                candidate = replace(candidate, transfer_offers=tuple(replace(o, status="cancelled") if o.id == offer.id else o
+                                                                     for o in candidate.transfer_offers))
+            elif contract.team_loyalty < 30:
+                candidate = candidate._with_offer_transfer(offer, "forced")
+        return candidate
+
+    def _with_offer_transfer(self, offer, status):
+        player = self.player(offer.player_name)
+        candidate = self._with_departed_player(player.name)
+        clubs = []
+        for club in candidate.opponent_teams:
+            if club.id == offer.team_id:
+                players = [*club.players, player]
+                reserved = {p.name for run in self.tournaments if not run.completed for t in run.entrants for p in t.players}
+                if club.regular_members and not any(p.name in reserved for p in club.players[:ROSTER_SIZE]):
+                    order = {name: i for i, name in enumerate(club.regular_members)}
+                    players.sort(key=lambda p: order.get(p.name, len(order)))
+                    players = [p for i, p in enumerate(players) if i < max(ROSTER_SIZE, len(order)) or p.name in reserved]
+                members = {p.name for p in players}
+                roster = {p.name for p in players[:ROSTER_SIZE]}
+                club = replace(club, players=tuple(players),
+                    contracts=tuple(replace(c, end_reason="released") if c.player_name not in members and c.end_reason is None else c
+                                    for c in club.contracts if c.player_name != player.name)
+                              + (initial_contract(player, self.game_month),),
+                    igl=club.regular_igl if club.regular_igl in roster else club.igl if club.igl in roster else None,
+                    carrier=club.regular_carrier if club.regular_carrier in roster else club.carrier if club.carrier in roster else None)
+            clubs.append(club)
+        return replace(candidate, opponent_teams=tuple(clubs), money=candidate.money + offer.fee,
+            transfer_offers=tuple(replace(o, status=status) if o.id == offer.id else o for o in candidate.transfer_offers))
 
     def advance_months(self, months=1, *, pay_salaries=True, stop_for_tournaments=False):
         if type(months) is not int or months < 1:
@@ -515,32 +848,39 @@ class SeasonState:
                         or candidate.tournament(e.id).last_match_date != candidate.date.isoformat()]
             if blocking and (stop_for_tournaments or any(candidate.tournament(e.id) is not None or not e.participation_optional for e in blocking)):
                 break
-            day = candidate.date + timedelta(days=1)
-            index = month_index(parse_date(candidate.start_date), day)
-            new_month = index != candidate.game_month
-            if index != candidate.game_month:
-                income = candidate.monthly_sponsor_income
-                # Decay only for the month actually spent under contract, including
-                # the final month. Daily advances and bulk advances share this path.
-                players = {p.name: p for p in candidate.owned_players}
-                candidate = replace(candidate, contracts=tuple(
-                    replace(c, team_loyalty=round(c.team_loyalty - (10 - players[c.player_name].loyalty) / 10, 10))
-                    if c.active(candidate.game_month) and c.player_name in players and players[c.player_name].loyalty < 10 else c
-                    for c in candidate.contracts))
-                for contract in candidate.contracts:
-                    if contract.kind == "short" and contract.active(candidate.game_month) and contract.team_loyalty <= 0:
-                        candidate = candidate._with_departed_player(contract.player_name)
-                payroll = sum(c.monthly_salary for c in candidate.contracts if c.active(candidate.game_month)) if pay_salaries else 0
-                candidate = replace(candidate, money=candidate.money - payroll + income, game_month=index)
-            candidate = replace(candidate, game_date=day.isoformat())
-            if new_month:
-                candidate = process_monthly_events(candidate)
-            for event in candidate.pending_tournaments:
-                if not event.participation_optional and candidate.tournament(event.id) is None:
-                    ready = [team for team in candidate.teams if all(candidate.can_play(name) for name in team.roster)]
-                    own = candidate.selected_team if candidate.selected_team in ready else (ready[0] if ready else None)
-                    if own is not None:
-                        candidate = candidate.with_tournament_entry(event.id, own.id)
+            candidate = candidate._with_next_day(pay_salaries=pay_salaries)
+        candidate.validate()
+        return candidate
+
+    def _with_next_day(self, *, pay_salaries=True):
+        candidate = self
+        day = candidate.date + timedelta(days=1)
+        index = month_index(parse_date(candidate.start_date), day)
+        new_month = index != candidate.game_month
+        if new_month:
+            income = candidate.monthly_sponsor_income
+            # Normal calendar advances and completed scrims share monthly settlement.
+            players = {p.name: p for p in candidate.owned_players}
+            candidate = replace(candidate, contracts=tuple(
+                replace(c, team_loyalty=round(c.team_loyalty - (10 - players[c.player_name].loyalty) / 10, 10))
+                if c.active(candidate.game_month) and c.player_name in players and players[c.player_name].loyalty < 10 else c
+                for c in candidate.contracts))
+            candidate = candidate.with_resolved_transfer_offers()
+            for contract in candidate.contracts:
+                if contract.kind == "short" and contract.active(candidate.game_month) and contract.team_loyalty <= 0:
+                    candidate = candidate._with_departed_player(contract.player_name)
+            payroll = candidate.monthly_payroll if pay_salaries else 0
+            candidate = replace(candidate, money=candidate.money - payroll + income, game_month=index)
+        candidate = replace(candidate, game_date=day.isoformat())
+        if new_month:
+            candidate = candidate.with_updated_salaries()
+            candidate = process_monthly_events(candidate)
+        for event in candidate.pending_tournaments:
+            if not event.participation_optional and candidate.tournament(event.id) is None:
+                ready = [team for team in candidate.teams if all(candidate.can_play(name) for name in team.roster)]
+                own = candidate.selected_team if candidate.selected_team in ready else (ready[0] if ready else None)
+                if own is not None:
+                    candidate = candidate.with_tournament_entry(event.id, own.id)
         candidate.validate()
         return candidate
 
@@ -551,9 +891,13 @@ class SeasonState:
         team_ids = {t.id for t in teams}
         return replace(self, owned_players=tuple(p for p in self.owned_players if p.name != name),
                        roster=tuple(n for n in self.roster if n != name), teams=teams,
+                       preset_igl=None if self.preset_igl == name else self.preset_igl,
+                       preset_carrier=None if self.preset_carrier == name else self.preset_carrier,
                        editing_team_id=self.editing_team_id if self.editing_team_id in team_ids else None,
                        selected_team_id=self.selected_team_id if self.selected_team_id in team_ids else None,
-                       contracts=tuple(replace(c, end_reason="left") if c.player_name == name else c for c in self.contracts))
+                       contracts=tuple(replace(c, end_reason="left") if c.player_name == name else c for c in self.contracts),
+                       transfer_offers=tuple(replace(o, status="cancelled") if o.player_name == name and o.status in ("pending", "rejected") else o
+                                             for o in self.transfer_offers))
 
     @property
     def roster_ready(self):
@@ -582,7 +926,11 @@ class SeasonState:
     def with_opponent_teams(self, teams):
         if any(not run.completed for run in self.tournaments):
             raise SeasonSaveError("大会参加中は他チームの所属設定を変更できません。大会終了後に取り込んでください。")
-        candidate = replace(self, opponent_teams=tuple(teams)).with_registered_ratings()
+        teams = tuple(teams)
+        ids = {team.id for team in teams}
+        offers = tuple(replace(o, status="cancelled") if o.status in ("pending", "rejected") and o.team_id not in ids else o
+                       for o in self.transfer_offers)
+        candidate = replace(self, opponent_teams=teams, transfer_offers=offers).with_registered_ratings()
         candidate.validate()
         return candidate
 
@@ -591,13 +939,15 @@ class SeasonState:
         number = 1
         while f"編成{number}" in used_names:
             number += 1
-        return replace(self, preset_name=f"編成{number}", roster=(), editing_team_id=None)
+        return replace(self, preset_name=f"編成{number}", roster=(), editing_team_id=None,
+                       preset_igl=None, preset_carrier=None, preset_ai="default")
 
     def with_editing_team(self, team_id):
         team = self.team(team_id)
         if team is None:
             raise SeasonSaveError("編集するチームが見つかりません。")
-        return replace(self, preset_name=team.name, roster=team.roster, editing_team_id=team.id)
+        return replace(self, preset_name=team.name, roster=team.roster, editing_team_id=team.id,
+                       preset_igl=team.igl, preset_carrier=team.carrier, preset_ai=team.ai)
 
     def with_confirmed_team(self):
         if not self.roster_ready:
@@ -605,7 +955,8 @@ class SeasonState:
         name = self.preset_name.strip()
         if any(team.name.casefold() == name.casefold() and team.id != self.editing_team_id for team in self.teams):
             raise SeasonSaveError("同じ名前の編成プリセットが登録されています。別のプリセット名を入力してください。")
-        team = SeasonTeam(self.editing_team_id or uuid4().hex, name, self.roster)
+        team = SeasonTeam(self.editing_team_id or uuid4().hex, name, self.roster,
+                          self.preset_igl, self.preset_carrier, self.preset_ai)
         teams = tuple(team if old.id == team.id else old for old in self.teams)
         if self.editing_team_id is None:
             teams += (team,)
@@ -619,7 +970,21 @@ class SeasonState:
         return candidate
 
     def with_roster(self, names):
-        candidate = replace(self, roster=tuple(names))
+        roster = tuple(names)
+        candidate = replace(self, roster=roster,
+                            preset_igl=self.preset_igl if self.preset_igl in roster else None,
+                            preset_carrier=self.preset_carrier if self.preset_carrier in roster else None)
+        candidate.validate()
+        return candidate
+
+    def with_preset_settings(self, *, igl=None, carrier=None, ai="default"):
+        candidate = replace(self, preset_igl=igl, preset_carrier=carrier, preset_ai=ai)
+        editing = self.team(self.editing_team_id)
+        # An unchanged saved lineup can receive settings immediately. A new or
+        # edited roster stays a draft until the five-player confirmation.
+        if editing is not None and editing.roster == self.roster:
+            candidate = replace(candidate, teams=tuple(
+                replace(t, igl=igl, carrier=carrier, ai=ai) if t.id == editing.id else t for t in self.teams))
         candidate.validate()
         return candidate
 
@@ -643,9 +1008,10 @@ class SeasonState:
                 raise SeasonSaveError(f"{name}は「{owner.name}」に所属しているため、所持選手に追加できません。")
             if name in existing:
                 raise SeasonSaveError(f"{name}はすでに所持しています（または入力が重複しています）。")
-            player = get_by_name(name)
+            player = next((p for p in self.scout_players if p.name == name), None)
             if player is None:
                 raise SeasonSaveError(f"選手 {name} が見つかりません。既存のプレイヤー名を正確に入力してください。")
+            player = self.salary_player(player)
             players.append(player)
             contracts = [c for c in contracts if c.player_name != name]
             contracts.append(initial_contract(player, self.game_month))
@@ -660,11 +1026,35 @@ class SeasonState:
         if self.player_in_saved_team(name):
             raise SeasonSaveError("先に登録済みチームの編成からその選手を外し、編成を確定してください。")
         candidate = replace(self, owned_players=tuple(p for p in self.owned_players if p.name != name),
-                            contracts=tuple(replace(c, end_reason="released") if c.player_name == name else c for c in self.contracts))
+                            contracts=tuple(replace(c, end_reason="released") if c.player_name == name else c for c in self.contracts),
+                            transfer_offers=tuple(replace(o, status="cancelled") if o.player_name == name and o.status in ("pending", "rejected") else o
+                                                  for o in self.transfer_offers))
         candidate.validate()
         return candidate
 
     def validate(self):
+        if not isinstance(self.salary_mode, SalaryMode):
+            raise SeasonSaveError("給与モードが不正です。")
+        if not isinstance(self.salary_records, tuple):
+            raise SeasonSaveError("給与一覧の形式が不正です。")
+        if self.salary_mode == SalaryMode.STATIC:
+            if self.salary_settings is not None or self.salary_records or self.salary_updated_month is not None:
+                raise SeasonSaveError("静的月給モードの設定が不正です。")
+        else:
+            if not isinstance(self.salary_settings, SalarySettings) or not self.salary_records:
+                raise SeasonSaveError("成績連動月給の設定または給与一覧がありません。")
+            try:
+                self.salary_settings.validate()
+                names = set()
+                for record in self.salary_records:
+                    if not isinstance(record, SalaryRecord) or record.name in names:
+                        raise SalaryDataError("給与一覧の選手が不正または重複しています。")
+                    record.validate()
+                    names.add(record.name)
+            except SalaryDataError as exc:
+                raise SeasonSaveError(str(exc)) from exc
+            if type(self.salary_updated_month) is not int or self.salary_updated_month != self.game_month:
+                raise SeasonSaveError("給与更新月とゲーム内の経過月数が一致しません。")
         if type(self.game_month) is not int or self.game_month < 0:
             raise SeasonSaveError("ゲーム内の経過月数が不正です。")
         if type(self.monthly_events_through) is not int or not 0 <= self.monthly_events_through <= self.game_month:
@@ -675,7 +1065,7 @@ class SeasonState:
             raise SeasonSaveError("月次イベント履歴の形式が不正です。")
         for event in self.monthly_events:
             if (not isinstance(event, MonthlyEvent) or not isinstance(event.id, str) or not event.id or event.id in event_ids
-                    or not isinstance(event.kind, str) or event.kind not in {"recruitment", "recruitment_unfilled", "renewal", "departure", "month_completed"}
+                    or not isinstance(event.kind, str) or event.kind not in {"recruitment", "recruitment_unfilled", "renewal", "departure", "month_completed", "roster_return", "transfer_offer"}
                     or event.team_id is not None and (not isinstance(event.team_id, str) or not event.team_id)
                     or not isinstance(event.team_name, str) or not event.team_name
                     or event.player_name is not None and (not isinstance(event.player_name, str) or not event.player_name)
@@ -691,8 +1081,33 @@ class SeasonState:
             last_date = date
         if type(self.sponsor_active) is not bool:
             raise SeasonSaveError("スポンサー契約の状態が不正です。")
+        if not isinstance(self.transfer_offers, tuple):
+            raise SeasonSaveError("移籍オファーの形式が不正です。")
+        offer_ids, pending_names = set(), set()
+        club_ids = {club.id for club in self.opponent_teams if isinstance(club, SeasonClub) and isinstance(club.id, str)}
+        for offer in self.transfer_offers:
+            if (not isinstance(offer, TransferOffer) or not isinstance(offer.id, str) or not offer.id
+                    or offer.id in offer_ids or not isinstance(offer.team_id, str) or not offer.team_id
+                    or not isinstance(offer.player_name, str) or not offer.player_name
+                    or type(offer.created_month) is not int or not 0 <= offer.created_month <= self.game_month
+                    or type(offer.fee) is not int or offer.fee < 0
+                    or offer.status not in ("pending", "accepted", "rejected", "forced", "cancelled")):
+                raise SeasonSaveError("移籍オファーが不正です。")
+            offer_ids.add(offer.id)
+            if offer.status == "pending":
+                if offer.player_name in pending_names or self.player(offer.player_name) is None or offer.team_id not in club_ids:
+                    raise SeasonSaveError("保留中の移籍オファーと所持選手が一致しません。")
+                pending_names.add(offer.player_name)
         if not isinstance(self.transferred_players, tuple) or any(not isinstance(n, str) or not n for n in self.transferred_players) or len(set(self.transferred_players)) != len(self.transferred_players):
             raise SeasonSaveError("移籍履歴が不正です。")
+        if not isinstance(self.developed_players, tuple):
+            raise SeasonSaveError("育成済み選手の形式が不正です。")
+        developed_names = set()
+        for player in self.developed_players:
+            validate_player(player)
+            if player.name in developed_names or not (player.research_level or player.aim_lab_level):
+                raise SeasonSaveError("育成済み選手の記録が重複または不正です。")
+            developed_names.add(player.name)
         if not isinstance(self.rated_results, tuple) or any(not isinstance(n, str) or not n for n in self.rated_results) or len(set(self.rated_results)) != len(self.rated_results):
             raise SeasonSaveError("レート更新済み試合の記録が不正です。")
         rating_ids = set()
@@ -782,6 +1197,7 @@ class SeasonState:
             raise SeasonSaveError("同じ選手をロスターに重複登録できません。")
         if not set(self.roster).issubset(names):
             raise SeasonSaveError("所持していない選手はロスターに登録できません。")
+        validate_preset_settings(self.roster, self.preset_igl, self.preset_carrier, self.preset_ai)
         team_ids = set()
         team_names = set()
         affiliations = {}
@@ -798,6 +1214,7 @@ class SeasonState:
                 raise SeasonSaveError("登録済みチームに重複または未所持の選手が含まれています。")
             if team.id == self.club_id:
                 raise SeasonSaveError("編成プリセットと自チームのIDが重複しています。")
+            validate_preset_settings(team.roster, team.igl, team.carrier, team.ai)
             team_ids.add(team.id)
             team_names.add(team.name.casefold())
 
@@ -807,6 +1224,7 @@ class SeasonState:
         team_names = {self.team_name.casefold()}
         team_ids.add(self.club_id)
         owned_names = set(names)
+        regular_names = set()
         for team in self.opponent_teams:
             if not isinstance(team, SeasonClub) or not isinstance(team.id, str) or not team.id:
                 raise SeasonSaveError("シーズン所属チームのIDが不正です。")
@@ -816,6 +1234,16 @@ class SeasonState:
                 raise SeasonSaveError(f"シーズン所属チーム「{team.name}」が重複しています。")
             if type(team.transfer_multiplier) not in (int, float) or not math.isfinite(team.transfer_multiplier) or team.transfer_multiplier < 0:
                 raise SeasonSaveError(f"「{team.name}」の移籍金倍率は0以上の有限の数値で設定してください。")
+            if (not isinstance(team.regular_members, tuple)
+                    or any(not isinstance(n, str) or not n for n in team.regular_members)
+                    or len(set(team.regular_members)) != len(team.regular_members)
+                    or regular_names.intersection(team.regular_members)
+                    or team.regular_members and len(team.regular_members) < ROSTER_SIZE):
+                raise SeasonSaveError(f"「{team.name}」の正規メンバーが不正です。")
+            for role in (team.regular_igl, team.regular_carrier):
+                if role is not None and (not isinstance(role, str) or role not in team.regular_members[:ROSTER_SIZE]):
+                    raise SeasonSaveError(f"「{team.name}」の正規メンバーの役割が不正です。")
+            regular_names.update(team.regular_members)
             if (not isinstance(team.contracts, tuple) or not isinstance(team.preferred_roles, tuple) or len(team.preferred_roles) > ROSTER_SIZE
                     or any(not isinstance(role, str) or not role for role in team.preferred_roles)):
                 raise SeasonSaveError(f"「{team.name}」のロール構成が不正です。")
@@ -854,6 +1282,7 @@ class SeasonState:
             self._validate_competitions()
         except (CompetitionError, TypeError, AttributeError) as exc:
             raise SeasonSaveError(f"大会データが不正です: {exc}") from exc
+        self.world_level_settings
 
     def _validate_competitions(self):
         from roster_select import TEAM_AI_OPTIONS
@@ -905,6 +1334,9 @@ class SeasonState:
                     or run.own_team_id is None and run.preset_id is not None):
                 raise CompetitionError("大会の自チーム・編成プリセットの指定が不正です。")
             pending, ranking = next_match(event, run)
+            for score in run.results:
+                if score.decided_by_rating and run.own_team_id in (score.left_id, score.right_id):
+                    raise CompetitionError("レート判定は他チーム同士の試合にのみ使用できます。")
             if run.completed != (pending is None) or run.ranking != ranking:
                 raise CompetitionError("大会の完了状態または順位が試合結果と一致しません。")
             expected = event.prizes.get(ranking.index(run.own_team_id) + 1, 0) if ranking and run.own_team_id else 0
@@ -950,7 +1382,10 @@ def configured_season_teams(existing_teams=(), transferred_players=(), *, game_m
             if player is None:
                 raise SeasonSaveError(f"「{name}」の選手 {member} が見つかりません。")
             players.append(player)
-        if saved_team:
+        if saved_team and saved_team.regular_members:
+            # Import metadata without resetting an evolving season lineup.
+            players = list(saved_team.players)
+        elif saved_team:
             players.extend(p for p in saved_team.players if (saved_team.id, p.name) in automatic_signings
                            and p.name not in configured_names and p.name not in transferred_players)
         contracts = {c.player_name: c for c in saved_team.contracts} if saved_team else {}
@@ -972,13 +1407,16 @@ def configured_season_teams(existing_teams=(), transferred_players=(), *, game_m
             transfer_multiplier=item.get("transfer_multiplier", 12.0),
             preferred_roles=saved_team.preferred_roles if saved_team and saved_team.preferred_roles else tuple(p.role for p in players[:ROSTER_SIZE]),
             contracts=tuple(contracts.values()),
+            regular_members=saved_team.regular_members if saved_team else (),
+            regular_igl=saved_team.regular_igl if saved_team else None,
+            regular_carrier=saved_team.regular_carrier if saved_team else None,
         ))
     # Check team names, membership, reserves, and ability snapshots as one batch.
     SeasonState("マイチーム", (), opponent_teams=tuple(teams), game_month=game_month).validate()
     return tuple(teams)
 
 
-def new_season(starter_names=None):
+def new_season(starter_names=None, *, salary_mode=SalaryMode.STATIC):
     choose_starters = starter_names is None
     if starter_names is None:
         from realtime_season_config import INITIAL_OWNED_PLAYERS
@@ -995,7 +1433,10 @@ def new_season(starter_names=None):
                         in_season_periods=periods, tournament_definitions=events).with_registered_ratings()
     if not choose_starters:
         # Explicit names remain available for administrative setup and simulations.
-        return state.with_added_players(starter_names)
+        state = state.with_added_players(starter_names)
+        if SalaryMode(salary_mode) == SalaryMode.KD_DYNAMIC:
+            state = replace(state, salary_mode=SalaryMode.KD_DYNAMIC, salary_settings=configured_salary_settings()).with_updated_salaries(initial=True)
+        return state
     candidates = []
     for name in starter_names:
         player = get_by_name(name)
@@ -1004,7 +1445,7 @@ def new_season(starter_names=None):
         candidates.append(player)
     state = replace(state, starter_candidates=tuple(candidates), starter_selection_pending=True)
     state.validate()
-    return state
+    return state.with_salary_mode(salary_mode)
 
 
 class SeasonStore:
@@ -1044,9 +1485,12 @@ class SeasonStore:
             data = json.loads(contents)
             if not isinstance(data, dict):
                 raise SeasonSaveError("セーブデータはJSONオブジェクトである必要があります。")
-            if type(data.get("version")) is not int or data["version"] not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, SAVE_VERSION):
+            if type(data.get("version")) is not int or data["version"] not in range(1, SAVE_VERSION + 1):
                 raise SeasonSaveError("このセーブデータのバージョンには対応していません。")
             def load_player(row):
+                if data["version"] >= 16 and (not isinstance(row, dict)
+                        or not {"research_level", "aim_lab_level"}.issubset(row)):
+                    raise SeasonSaveError("選手の育成レベルがセーブデータにありません。")
                 return player_from_save(row, legacy_loyalty=data["version"] < 7)
             if not isinstance(data.get("owned_players"), list) or not isinstance(data.get("roster"), list):
                 raise SeasonSaveError("所持選手またはロスターの形式が不正です。")
@@ -1063,7 +1507,8 @@ class SeasonStore:
                 for item in data["teams"]:
                     if not isinstance(item, dict) or not isinstance(item.get("roster"), list):
                         raise SeasonSaveError("登録済みチームの形式が不正です。")
-                    parsed_teams.append(SeasonTeam(item["id"], item["name"], tuple(item["roster"])))
+                    parsed_teams.append(SeasonTeam(item["id"], item["name"], tuple(item["roster"]),
+                        item.get("igl"), item.get("carrier"), item.get("ai", "default")))
                 teams = tuple(parsed_teams)
                 editing_team_id = data.get("editing_team_id")
                 selected_team_id = data.get("selected_team_id")
@@ -1071,18 +1516,39 @@ class SeasonStore:
             if data["version"] >= 3:
                 if not isinstance(data.get("opponent_teams"), list):
                     raise SeasonSaveError("シーズン所属チームの形式が不正です。")
+                regular_config = {}
+                if data["version"] == 14:
+                    from realtime_season_teams import SEASON_TEAMS
+                    if isinstance(SEASON_TEAMS, (list, tuple)):
+                        regular_config = {row["name"]: row for row in SEASON_TEAMS
+                                          if isinstance(row, dict) and isinstance(row.get("name"), str)}
                 clubs = []
                 for item in data["opponent_teams"]:
                     if not isinstance(item, dict) or not isinstance(item.get("players"), list):
                         raise SeasonSaveError("シーズン所属チームの形式が不正です。")
                     if data["version"] >= 9 and (not isinstance(item.get("contracts"), list) or not isinstance(item.get("preferred_roles"), list)):
                         raise SeasonSaveError("他チームの契約またはロール構成の形式が不正です。")
+                    if data["version"] >= 15 and not isinstance(item.get("regular_members"), list):
+                        raise SeasonSaveError("正規メンバーの形式が不正です。")
+                    regular = item.get("regular_members", ())
+                    regular_igl, regular_carrier = item.get("regular_igl"), item.get("regular_carrier")
+                    if "regular_members" not in item and item["name"] in regular_config:
+                        original = regular_config[item["name"]]
+                        members = original.get("players")
+                        if (isinstance(members, (list, tuple)) and len(members) >= ROSTER_SIZE
+                                and all(isinstance(n, str) and get_by_name(n) is not None for n in members)
+                                and len(set(members)) == len(members)):
+                            regular = members
+                            regular_igl = original.get("igl") if original.get("igl") in members[:ROSTER_SIZE] else None
+                            regular_carrier = original.get("carrier") if original.get("carrier") in members[:ROSTER_SIZE] else None
                     clubs.append(SeasonClub(
                         item["id"], item["name"], tuple(load_player(p) for p in item["players"]),
                         igl=item.get("igl"), carrier=item.get("carrier"), ai=item.get("ai", "default"),
                         transfer_multiplier=item.get("transfer_multiplier", 12.0),
                         preferred_roles=tuple(item.get("preferred_roles", ())),
                         contracts=tuple(PlayerContract(**c) for c in item.get("contracts", ())),
+                        regular_members=tuple(regular),
+                        regular_igl=regular_igl, regular_carrier=regular_carrier,
                     ))
                 opponent_teams = tuple(clubs)
             owned_players = tuple(load_player(p) for p in data["owned_players"])
@@ -1148,6 +1614,11 @@ class SeasonStore:
                 sponsor_active = data["sponsor_active"]
                 transferred_players = tuple(data["transferred_players"])
             monthly_events, monthly_events_through = (), game_month
+            transfer_offers = ()
+            if data["version"] >= 15:
+                if not isinstance(data.get("transfer_offers"), list):
+                    raise SeasonSaveError("移籍オファーの形式が不正です。")
+                transfer_offers = tuple(TransferOffer(**row) for row in data["transfer_offers"])
             if data["version"] >= 9:
                 if not isinstance(data.get("monthly_events"), list):
                     raise SeasonSaveError("月次イベント履歴の形式が不正です。")
@@ -1156,6 +1627,24 @@ class SeasonStore:
             opponent_teams = tuple(replace(club,
                 preferred_roles=club.preferred_roles or tuple(p.role for p in club.players[:ROSTER_SIZE]),
                 contracts=club.contracts or tuple(initial_contract(p, game_month) for p in club.players)) for club in opponent_teams)
+            salary_mode, salary_settings, salary_rows, salary_month = SalaryMode.STATIC, None, (), None
+            developed_players = ()
+            if data["version"] >= 16:
+                if not isinstance(data.get("developed_players"), list):
+                    raise SeasonSaveError("育成済み選手の形式が不正です。")
+                developed_players = tuple(load_player(p) for p in data["developed_players"])
+            if data["version"] >= 14:
+                salary_mode = SalaryMode(data["salary_mode"])
+                settings = data["salary_settings"]
+                if settings is not None:
+                    settings = dict(settings)
+                    settings["fixed_salaries"] = tuple(tuple(row) for row in settings["fixed_salaries"])
+                    settings["excluded_files"] = tuple(settings.get("excluded_files", ()))
+                    salary_settings = SalarySettings(**settings)
+                if not isinstance(data["salary_records"], list):
+                    raise SeasonSaveError("給与一覧の形式が不正です。")
+                salary_rows = tuple(SalaryRecord(**row) for row in data["salary_records"])
+                salary_month = data["salary_updated_month"]
             state = SeasonState(
                 team_name=data["team_name"],
                 owned_players=owned_players,
@@ -1181,12 +1670,22 @@ class SeasonStore:
                 transferred_players=transferred_players,
                 monthly_events=monthly_events,
                 monthly_events_through=monthly_events_through,
+                transfer_offers=transfer_offers,
                 preset_name=data["preset_name"] if data["version"] >= 11 else data.get("preset_name", data["team_name"]),
                 club_id=data["club_id"] if data["version"] >= 11 else data.get("club_id", PLAYER_CLUB_ID),
+                preset_igl=data.get("preset_igl"),
+                preset_carrier=data.get("preset_carrier"),
+                preset_ai=data.get("preset_ai", "default"),
+                salary_mode=salary_mode, salary_settings=salary_settings,
+                salary_records=salary_rows, salary_updated_month=salary_month,
+                developed_players=developed_players,
             )
             old_layout = data["version"] < 11 and "club_id" not in data
             required_ids = {t.id for t in state.opponent_teams}
-            required_ids.update(t.id for t in state.teams) if old_layout else required_ids.add(state.club_id)
+            if old_layout:
+                required_ids.update(t.id for t in state.teams)
+            else:
+                required_ids.add(state.club_id)
             if data["version"] >= 8 and not required_ids.issubset({r.team_id for r in state.ratings}):
                 raise SeasonSaveError("所属チームのレーティングがセーブデータにありません。")
             if old_layout:
@@ -1196,7 +1695,7 @@ class SeasonStore:
                 source = state.team(source_id)
                 source = source or next((t for r in state.tournaments for t in r.entrants if t.id == source_id), None)
                 actual_name = source.name if source else state.team_name
-                own_rating = state.rating(source_id) if source_id else DEFAULT_TEAM_RATING
+                own_rating = next((r.value for r in state.ratings if r.team_id == source_id), DEFAULT_TEAM_RATING)
                 migrated_runs = []
                 def club_key(key):
                     return state.club_id if key in old_ids else key
@@ -1223,7 +1722,14 @@ class SeasonStore:
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "team_name": state.team_name,
             "preset_name": state.preset_name,
+            "preset_igl": state.preset_igl,
+            "preset_carrier": state.preset_carrier,
+            "preset_ai": state.preset_ai,
             "club_id": state.club_id,
+            "salary_mode": state.salary_mode.value,
+            "salary_settings": asdict(state.salary_settings) if state.salary_settings is not None else None,
+            "salary_records": [asdict(r) for r in state.salary_records],
+            "salary_updated_month": state.salary_updated_month,
             # Keep individual ability snapshots so future growth can be saved.
             "owned_players": [asdict(player) for player in state.owned_players],
             "roster": list(state.roster),
@@ -1248,6 +1754,8 @@ class SeasonStore:
             "transferred_players": list(state.transferred_players),
             "monthly_events": [asdict(event) for event in state.monthly_events],
             "monthly_events_through": state.monthly_events_through,
+            "transfer_offers": [asdict(offer) for offer in state.transfer_offers],
+            "developed_players": [asdict(player) for player in state.developed_players],
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = None

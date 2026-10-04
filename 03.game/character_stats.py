@@ -19,6 +19,9 @@ class CharacterStats:
     # リアルタイムシーズン用。月給は円、忠誠心は0～10（チームへの忠誠とは別）。
     monthly_salary: int = 100_000
     loyalty: float = 5.0
+    # リアルタイムシーズンの有料育成。各施設は選手ごとにレベル0～10。
+    research_level: int = 0
+    aim_lab_level: int = 0
 
     @property
     def condition_variance(self) -> float:
@@ -318,7 +321,7 @@ CHARACTER_TABLE: Dict[str, CharacterStats] = {
         "icy", 0.26, 0.21, 75, 0.78, 95, "タイガー", 35, 5, 9, 800_000, 3
     ),
     "yay": CharacterStats(
-        "yay", 0.41, 0.14, 70, 0.8, 100, "タイガー", 90, 9, 4, 1_00_000, 8
+        "yay", 0.41, 0.14, 70, 0.8, 100, "タイガー", 90, 9, 4, 800_000, 8
     ),
     "ろびぃな": CharacterStats(
         "ろびぃな", 0.25, 0.55, 80, 0.65, 122, "スモーカー", 50, 5, 8, 500_000, 5

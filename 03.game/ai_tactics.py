@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import math
 import random
-from collections import deque
 from typing import Iterable, Optional, Sequence, Tuple
+from grid_paths import walking_distance
 
 MOVES = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
@@ -33,22 +32,7 @@ def _walkable(cell, grid, blocked=frozenset()):
 
 
 def _bfs_distance(start, target, grid, blocked=frozenset()):
-    start, target = _pos(start), _pos(target)
-    if start == target:
-        return 0
-    q = deque([(start, 0)])
-    seen = {start}
-    while q:
-        (r, c), dist = q.popleft()
-        for dr, dc in MOVES:
-            nxt = (r + dr, c + dc)
-            if nxt in seen or not _walkable(nxt, grid, blocked):
-                continue
-            if nxt == target:
-                return dist + 1
-            seen.add(nxt)
-            q.append((nxt, dist + 1))
-    return math.inf
+    return walking_distance(grid, start, target, blocked, MOVES)
 
 
 def collision_safe_step(char, desired, target, grid, chars):

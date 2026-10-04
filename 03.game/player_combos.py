@@ -560,13 +560,6 @@ COMBOS = [
         "asuna_zekken_debuff_effect": True,
     },
     {
-        "name": "閃光のコンビネーション",
-        "players": ("Asuna", "Zekken"),
-        "bonuses": {},
-        "renames": {},
-        "asuna_zekken_debuff_effect": True,
-    },
-    {
         "name": "2nd cover",
         "players": ("Lar0k", "lovers rock"),
         "bonuses": {

@@ -2,10 +2,11 @@
 
 from collections import deque
 from dataclasses import replace
+from functools import lru_cache
 
 from frc_v1 import FACING
 from frc_v1.actions import KINDS, MOVE_STEPS, FrcAction
-from frc_v1.baseline import facing_to, plant_sites, route_step
+from frc_v1.baseline import _grid_key, facing_to, plant_sites, route_step
 
 # The east site has a second approach along the outer right corridor.
 EAST_LONG_WAYPOINT = (18, 40)
@@ -251,11 +252,16 @@ def _site_ring(grid, cells, depth=2):
 
 
 def _walk_distances(grid, origins):
+    return _cached_walk_distances(_grid_key(grid), tuple(origins), tuple(MOVE_STEPS.values())).copy()
+
+
+@lru_cache(maxsize=512)
+def _cached_walk_distances(grid, origins, moves):
     distances = {pos: 0 for pos in origins if grid[pos[0]][pos[1]] != 1}
     queue = deque(distances)
     while queue:
         r, c = queue.popleft()
-        for dr, dc in MOVE_STEPS.values():
+        for dr, dc in moves:
             pos = (r + dr, c + dc)
             if (0 <= pos[0] < len(grid) and 0 <= pos[1] < len(grid[0]) and
                     grid[pos[0]][pos[1]] != 1 and pos not in distances):
@@ -285,6 +291,11 @@ def _line_clear(grid, start, end):
 
 
 def site_approaches(grid, site, spawn_value):
+    return _cached_site_approaches(_grid_key(grid), frozenset(site), spawn_value, tuple(MOVE_STEPS.items()))
+
+
+@lru_cache(maxsize=128)
+def _cached_site_approaches(grid, site, spawn_value, moves):
     """Public-map entrances on the side from which a team approaches a site."""
     site = set(site)
     boundary = set()
@@ -307,6 +318,11 @@ def site_approaches(grid, site, spawn_value):
 
 
 def site_interdiction_cells(grid, site, spawn_value):
+    return _cached_site_interdiction(_grid_key(grid), frozenset(site), spawn_value, tuple(MOVE_STEPS.items()))
+
+
+@lru_cache(maxsize=128)
+def _cached_site_interdiction(grid, site, spawn_value, moves):
     """Cells just outside entrances, so a 3x3 smoke does not cover the site."""
     site = set(site)
     spawns = [(r, c) for r, row in enumerate(grid) for c, value in enumerate(row)
@@ -323,6 +339,11 @@ def site_interdiction_cells(grid, site, spawn_value):
 
 
 def site_watch_points(grid, site):
+    return _cached_site_watch_points(_grid_key(grid), frozenset(site), tuple(MOVE_STEPS.items()))
+
+
+@lru_cache(maxsize=128)
+def _cached_site_watch_points(grid, site, moves):
     """Look beyond the attacker-side doorway, toward the lane enemies use."""
     site = set(site)
     points = []
