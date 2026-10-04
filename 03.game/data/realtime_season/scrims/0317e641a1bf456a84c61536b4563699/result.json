@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "マイチーム",
+  "opponent_team": "Evil Geniuses",
+  "own_score": 7,
+  "opponent_score": 13,
+  "winner": "Evil Geniuses",
+  "seed": 1269414497,
+  "player_stats": {
+    "something": {
+      "kills": 19,
+      "deaths": 12
+    },
+    "SiuFatBB": {
+      "kills": 14,
+      "deaths": 16
+    },
+    "valyn": {
+      "kills": 10,
+      "deaths": 14
+    },
+    "ZMJKK": {
+      "kills": 8,
+      "deaths": 17
+    },
+    "Sato": {
+      "kills": 7,
+      "deaths": 18
+    },
+    "Boostio": {
+      "kills": 19,
+      "deaths": 12
+    },
+    "Ethan": {
+      "kills": 9,
+      "deaths": 8
+    },
+    "jawgemo": {
+      "kills": 15,
+      "deaths": 13
+    },
+    "C0M": {
+      "kills": 16,
+      "deaths": 11
+    },
+    "Demon1": {
+      "kills": 18,
+      "deaths": 14
+    }
+  }
+}

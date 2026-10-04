@@ -264,7 +264,7 @@ class WorldLevelTests(unittest.TestCase):
                     self.store.save(state)
             self.assertEqual(self.store.path.read_bytes(), before)
 
-    def test_screen_shows_world_level_effective_iq_and_current_sponsor_funds(self):
+    def test_scout_shows_and_sorts_base_stats_while_match_preparation_keeps_world_bonus(self):
         root = tk.Tk()
         root.withdraw()
         self.addCleanup(root.destroy)
@@ -282,14 +282,26 @@ class WorldLevelTests(unittest.TestCase):
         app.show_screen("scout")
         app.scout_filter.set("全選手")
         base = state.opponent_teams[0].players[0]
-        self.assertEqual(float(app.scout_players.item(base.name, "values")[2]), base.iq * 2)
+        self.assertEqual(float(app.scout_players.item(base.name, "values")[2]), base.iq)
+        from season_player_stats import player_combat_power, player_duel_power
+        self.assertEqual(app.scout_players.item(base.name, "values")[3:5],
+                         (f"{player_combat_power(base):.2f}", f"{player_duel_power(base):.2f}"))
+        higher_iq_lft = next(p for p in state.lft_players if base.iq < p.iq < base.iq * 2
+                            and not app.offer_conditions("scout", p)[2])
+        app.scout_sort.set("IQ")
+        app.scout_sort_order.set("高い順")
+        order = app.scout_players.get_children()
+        self.assertLess(order.index(higher_iq_lft.name), order.index(base.name))
         app.scout_players.selection_set(base.name)
         app.refresh_offer("scout")
-        self.assertIn("世界レベル補正: 2倍", app.scout_details.get())
+        self.assertIn(f"IQ: {base.iq:g} / 影響力: {base.influence:g}", app.scout_details.get())
+        self.assertIn(f"HS率: {base.hs_pct:.1%} / 命中率: {base.hit_pct:.1%}", app.scout_details.get())
+        scout_stats = app.scout_players.item(base.name, "values")[2:5]
         lower = replace(state, ratings=tuple(replace(r, value=100) if r.team_id == state.club_id else r for r in state.ratings))
         app.commit(lower, "順位変更")
         self.assertIn("世界レベルが3から1", app.status.get())
         self.assertIn("世界レベル: 1", app.home_summary.get())
+        self.assertEqual(app.scout_players.item(base.name, "values")[2:5], scout_stats)
         self.assertEqual(self.store.load_or_create(), app.state)
 
 

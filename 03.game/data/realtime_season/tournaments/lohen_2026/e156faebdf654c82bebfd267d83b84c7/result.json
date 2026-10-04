@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L2M2",
+  "left_id": "player_club",
+  "right_id": "world-5f8d32c6ccbc57f698ae83369087c813",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 0,
+      "opponent_score": 13,
+      "winner": "Omoko Gaming",
+      "seed": 536867880,
+      "player_stats": {
+        "Brawk": {
+          "kills": 1,
+          "deaths": 13
+        },
+        "valyn": {
+          "kills": 2,
+          "deaths": 13
+        },
+        "SiuFatBB": {
+          "kills": 3,
+          "deaths": 11
+        },
+        "ZMJKK": {
+          "kills": 2,
+          "deaths": 12
+        },
+        "Sato": {
+          "kills": 2,
+          "deaths": 12
+        },
+        "ねこさん": {
+          "kills": 3,
+          "deaths": 3
+        },
+        "とりさん": {
+          "kills": 4,
+          "deaths": 1
+        },
+        "おもこ": {
+          "kills": 15,
+          "deaths": 0
+        },
+        "いぬさん": {
+          "kills": 19,
+          "deaths": 3
+        },
+        "ひつじさん": {
+          "kills": 20,
+          "deaths": 3
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 2,
+      "opponent_score": 13,
+      "winner": "Omoko Gaming",
+      "seed": 536867881,
+      "player_stats": {
+        "ねこさん": {
+          "kills": 5,
+          "deaths": 4
+        },
+        "とりさん": {
+          "kills": 9,
+          "deaths": 4
+        },
+        "おもこ": {
+          "kills": 18,
+          "deaths": 3
+        },
+        "いぬさん": {
+          "kills": 22,
+          "deaths": 6
+        },
+        "ひつじさん": {
+          "kills": 10,
+          "deaths": 4
+        },
+        "Brawk": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "valyn": {
+          "kills": 0,
+          "deaths": 14
+        },
+        "SiuFatBB": {
+          "kills": 4,
+          "deaths": 10
+        },
+        "ZMJKK": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "Sato": {
+          "kills": 8,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

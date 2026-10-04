@@ -134,7 +134,7 @@ class SeasonCompetitionMixin:
             count = len(run.entrants) if run and run.entrants else event.team_count
             matches = 2 * count - 2 if event.format == "double_elimination" else count - 1
             end_date = parse_date(event.start_date) + timedelta(days=matches - 1)
-            self.competition_list.insert("", "end", iid=event.id, values=(event.name,
+            self.competition_list.insert("", "end", iid=event.id, values=(event.display_name,
                 f"{event.start_date} ～ {end_date}", count, entry, status))
         if selected and self.competition_list.exists(selected[0]):
             self.competition_list.selection_set(selected[0])
@@ -164,7 +164,7 @@ class SeasonCompetitionMixin:
         matches = 2 * count - 2 if event.format == "double_elimination" else count - 1
         end_date = parse_date(event.start_date) + timedelta(days=matches - 1)
         deadline = parse_date(event.start_date)
-        self.competition_info.set(f"{event.name}  |  {'ダブル' if event.format == 'double_elimination' else 'シングル'}エリミネーション\n"
+        self.competition_info.set(f"{event.display_name}  |  {'ダブル' if event.format == 'double_elimination' else 'シングル'}エリミネーション\n"
             f"先取マップ数: 通常{event.normal_maps_to_win} / Lower Final {event.lower_final_maps_to_win} / Grand Final {event.grand_final_maps_to_win}\n賞金: {prizes} / 全{matches}試合・終了予定日 {end_date}（自動計算）\n参加登録締切: {deadline}（開始日当日まで参加可能）")
         if (run is None or run.declined) and self.state.date <= parse_date(event.start_date) and not self.match_running:
             self.competition_enter_button.configure(state="normal")
@@ -197,7 +197,7 @@ class SeasonCompetitionMixin:
                 if npc_match and run.own_team_id is not None:
                     probability = expected_score(self.state.rating(pending.left), self.state.rating(pending.right))
                     self.competition_info.set(self.competition_info.get() +
-                        f"\n他チーム同士はレート勝率で抽選し、結果確定後に1日進めます。予測: {teams[pending.left]} {probability:.1%} / {teams[pending.right]} {1 - probability:.1%}")
+                        f"\n他チーム同士はマップごとにレート勝率で抽選し、結果確定後に1日進めます。各マップの予測: {teams[pending.left]} {probability:.1%} / {teams[pending.right]} {1 - probability:.1%}")
                 if run.own_team_id is None:
                     count = 2 * len(run.entrants) - 2 if event.format == "double_elimination" else len(run.entrants) - 1
                     self.competition_info.set(self.competition_info.get() +
@@ -224,7 +224,7 @@ class SeasonCompetitionMixin:
         if candidate.tournament(event.id) is None:
             self.status.set("出場可能な相手チームがいないため、参加登録を待っています。選手が5人揃ったチームが必要です。")
             return
-        self.commit(candidate, f"{event.name}に参加登録しました。開催日から試合を進められます。")
+        self.commit(candidate, f"{event.display_name}に参加登録しました。開催日から試合を進められます。")
 
     def decline_competition(self):
         event = self.selected_competition()
@@ -235,13 +235,13 @@ class SeasonCompetitionMixin:
         except ValueError as exc:
             self.status.set(str(exc))
             return
-        self.commit(candidate, f"{event.name}は不参加にしました。")
+        self.commit(candidate, f"{event.display_name}は不参加にしました。")
 
     def confirm_entry_deadline(self):
         events = self.state.entry_deadline_tournaments
         if not events:
             return True
-        names = "\n".join(f"・{event.name}" for event in events)
+        names = "\n".join(f"・{event.display_name}" for event in events)
         if messagebox.askyesno("大会のエントリー期限", "エントリー期限が今日までの不参加の大会がありますが、明日に進んでよろしいですか？\n\n"
                               + names + "\n\n「いいえ」で大会画面を開きます。", parent=self.root):
             return True

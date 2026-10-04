@@ -1,7 +1,7 @@
 """Calendar, validated configuration, and resumable pure tournament brackets."""
 
 from calendar import monthrange
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 import re
 
@@ -22,6 +22,26 @@ def parse_date(value):
         return parsed
     except ValueError as exc:
         raise CompetitionError(f"日付はYYYY-MM-DDで指定してください: {value!r}") from exc
+
+
+def parse_month_day(value):
+    if not isinstance(value, str) or re.fullmatch(r"\d{2}-\d{2}", value) is None:
+        raise CompetitionError("毎年の開催日・告知日はMM-DDで指定してください。")
+    return parse_date("2000-" + value)
+
+
+def annual_date(year, month_day, *, notice=False):
+    if type(year) is not int or not 1 <= year <= 9999:
+        raise CompetitionError("毎年開催の大会日付を計算できません。開催年・告知日を確認してください。")
+    value = parse_month_day(month_day)
+    try:
+        return date(year, value.month, value.day)
+    except ValueError:
+        if (value.month, value.day) != (2, 29):
+            raise
+        # There is no February 29 tournament in a common year; a notice
+        # scheduled for that date appears on February 28 instead.
+        return date(year, 2, 28) if notice else None
 
 
 def add_months(day, months):
@@ -68,6 +88,24 @@ class TournamentDefinition:
     allow_player_entry: bool = True
     opponent_teams: tuple[str, ...] = ()
     visible_from: str = "2026-01-01"
+    annual_id: str | None = None
+    annual_notice: str | None = None
+
+    @property
+    def display_name(self):
+        return f"{self.name} {parse_date(self.start_date).year}" if self.annual_id else self.name
+
+    def for_year(self, year):
+        if self.annual_id is None:
+            return self
+        original = parse_date(self.start_date)
+        start = annual_date(year, original.strftime("%m-%d"))
+        if start is None:
+            return None
+        notice = parse_date(self.visible_from)
+        notice_year = year + notice.year - original.year
+        visible = annual_date(notice_year, self.annual_notice or notice.strftime("%m-%d"), notice=True)
+        return replace(self, id=f"{self.annual_id}_{year}", start_date=start.isoformat(), visible_from=visible.isoformat())
 
     @property
     def match_count(self):
@@ -87,6 +125,18 @@ class TournamentDefinition:
         if re.fullmatch(r"[A-Za-z0-9_-]+", self.id) is None:
             raise CompetitionError("大会IDは英数字・ハイフン・アンダースコアで指定してください。")
         parse_date(self.start_date)
+        if self.annual_id is not None:
+            if (not isinstance(self.annual_id, str)
+                    or re.fullmatch(r"[A-Za-z0-9_-]+", self.annual_id) is None
+                    or self.id != f"{self.annual_id}_{parse_date(self.start_date).year}"):
+                raise CompetitionError("毎年開催の大会IDが不正です。")
+            if self.annual_notice is not None:
+                parse_month_day(self.annual_notice)
+                notice = parse_date(self.visible_from)
+                if annual_date(notice.year, self.annual_notice, notice=True) != notice:
+                    raise CompetitionError("毎年開催の告知月日と告知日が一致しません。")
+        elif self.annual_notice is not None:
+            raise CompetitionError("毎年開催ではない大会に告知月日が指定されています。")
         if parse_date(self.visible_from) > parse_date(self.start_date):
             raise CompetitionError(f"{self.name}: 告知開始日は開催開始日以前にしてください。")
         if self.format not in ("double_elimination", "single_elimination"):
@@ -131,14 +181,25 @@ class TournamentDefinition:
         if c.get("phase", state.phase) != state.phase:
             return False
         for event_id in c.get("completed_tournaments", []):
-            run = state.tournament(event_id)
+            run = self.condition_run(state, event_id)
             if run is None or not run.completed or run.own_team_id is None:
                 return False
         for event_id, rank in c.get("best_rank", {}).items():
-            run = state.tournament(event_id)
+            run = self.condition_run(state, event_id)
             if run is None or not run.completed or run.own_team_id not in run.ranking or run.ranking.index(run.own_team_id) + 1 > rank:
                 return False
         return True
+
+    def condition_run(self, state, event_id):
+        year = parse_date(self.start_date).year
+        annual = any(event.annual_id == event_id for event in state.tournament_definitions)
+        run = state.tournament(f"{event_id}_{year}" if annual else event_id)
+        if run is None and annual:
+            # An imported old one-off may use the bare ID instead of ID_year.
+            legacy = state.tournament_definition(event_id)
+            if legacy is not None and parse_date(legacy.start_date).year == year:
+                run = state.tournament(event_id)
+        return run
 
 
 @dataclass(frozen=True)
@@ -343,10 +404,36 @@ def next_match(definition, progress):
         return None, tuple(finished.value)
 
 
-def definition_from_dict(row):
+def definition_from_dict(row, *, year=None):
     if not isinstance(row, dict):
         raise CompetitionError("大会設定は辞書で指定してください。")
     row = dict(row)
+    if isinstance(row.get("start_date"), str) and len(row["start_date"]) == 5:
+        md = row["start_date"]
+        parse_month_day(md)
+        if "annual_id" in row or "annual_notice" in row:
+            raise CompetitionError("MM-DDの設定に内部の年度データは指定できません。")
+        base_id = row.get("id")
+        if not isinstance(base_id, str) or re.fullmatch(r"[A-Za-z0-9_-]+", base_id) is None:
+            raise CompetitionError("大会IDは英数字・ハイフン・アンダースコアで指定してください。")
+        if year is None:
+            from realtime_season_competitions import START_DATE
+            year = parse_date(START_DATE).year
+        start = annual_date(year, md)
+        while start is None:
+            year += 1
+            if year > 9999:
+                raise CompetitionError("次回の開催日を計算できません。開催年を確認してください。")
+            start = annual_date(year, md)
+        notice = row.get("visible_from", "01-01")
+        if isinstance(notice, str) and len(notice) == 5:
+            visible = annual_date(year - (notice > md), notice, notice=True)
+            notice_md = notice
+        else:
+            visible = parse_date(notice)
+            notice_md = visible.strftime("%m-%d")
+        row.update(id=f"{base_id}_{year}", start_date=start.isoformat(),
+                   visible_from=visible.isoformat(), annual_id=base_id, annual_notice=notice_md)
     # Old configuration and saved rules may still contain a manual end date.
     # Duration is now derived from the actual bracket's series count.
     row.pop("end_date", None)
@@ -370,16 +457,49 @@ def definition_from_dict(row):
         raise CompetitionError(f"大会設定の項目が不正です: {exc}") from exc
 
 
-def configured_calendar():
+def configured_calendar(*, on_date=None, existing_definitions=()):
     from realtime_season_competitions import START_DATE, IN_SEASON_PERIODS, TOURNAMENTS
     parse_date(START_DATE)
     validate_periods(IN_SEASON_PERIODS)
     if not isinstance(TOURNAMENTS, (list, tuple)):
         raise CompetitionError("TOURNAMENTS は大会設定のリストにしてください。")
-    definitions = tuple(definition_from_dict({"visible_from": START_DATE, **row} if isinstance(row, dict) else row)
-                        for row in TOURNAMENTS)
-    validate_definitions(definitions)
+    day = parse_date(START_DATE) if on_date is None else on_date
+    definitions = []
+    for row in TOURNAMENTS:
+        annual = isinstance(row, dict) and isinstance(row.get("start_date"), str) and len(row["start_date"]) == 5
+        default_notice = "01-01" if annual else START_DATE
+        definitions.append(definition_from_dict({"visible_from": default_notice, **row}
+                                               if isinstance(row, dict) else row, year=day.year))
+    definitions = tuple(definitions)
+    ids = [event.annual_id or event.id for event in definitions]
+    if len(set(ids)) != len(ids):
+        raise CompetitionError("大会IDが重複しています。")
+    definitions = extend_annual_calendar(definitions, day, day, omit_past=True)
+    validation = {event.id: event for event in (*definitions, *existing_definitions)}
+    validate_definitions(tuple(validation.values()))
     return START_DATE, tuple(tuple(pair) for pair in IN_SEASON_PERIODS), definitions
+
+
+def extend_annual_calendar(definitions, day, first_day, *, omit_past=False):
+    """Persist annual occurrences ahead of time without changing old results."""
+    sources = {}
+    for definition in definitions:
+        if definition.annual_id is not None:
+            sources[definition.annual_id] = definition
+    events = [event for event in definitions
+              if not (omit_past and event.annual_id and parse_date(event.start_date) < first_day)]
+    ids = {event.id for event in events}
+    # A February 29 source can be several years ahead; generate its same-year
+    # qualifiers as well so dependency validation remains complete.
+    last_year = max([day.year + 1, *(parse_date(source.start_date).year for source in sources.values())])
+    for year in range(day.year, min(last_year, 9999) + 1):
+        for source in sources.values():
+            event = source.for_year(year)
+            if event is None or parse_date(event.start_date) < first_day or event.id in ids:
+                continue
+            events.append(event)
+            ids.add(event.id)
+    return tuple(events)
 
 
 def validate_definitions(definitions):
@@ -391,11 +511,26 @@ def validate_definitions(definitions):
         if definition.id in seen:
             raise CompetitionError(f"大会IDが重複しています: {definition.id}")
         seen.add(definition.id)
+    aliases = {d.annual_id for d in definitions if d.annual_id is not None}
+    valid_ids = seen | aliases
     for definition in definitions:
         dependencies = set(definition.appearance_conditions.get("completed_tournaments", [])) | set(definition.appearance_conditions.get("best_rank", {}))
-        if definition.id in dependencies or dependencies - seen:
+        if definition.id in dependencies or definition.annual_id in dependencies or dependencies - valid_ids:
             raise CompetitionError(f"{definition.name}: 出現条件の大会IDが不正です。")
-    graph = {d.id: set(d.appearance_conditions.get("completed_tournaments", [])) | set(d.appearance_conditions.get("best_rank", {})) for d in definitions}
+    by_id = {d.id: d for d in definitions}
+    graph = {d.id: set() for d in definitions}
+    for d in definitions:
+        dependencies = set(d.appearance_conditions.get("completed_tournaments", [])) | set(d.appearance_conditions.get("best_rank", {}))
+        for key in dependencies:
+            target = key
+            if key in aliases:
+                year = parse_date(d.start_date).year
+                target = f"{key}_{year}"
+                if target not in seen:
+                    legacy = by_id.get(key)
+                    target = key if legacy and parse_date(legacy.start_date).year == year else None
+            if target is not None:
+                graph[d.id].add(target)
     def visit(node, path):
         if node in path:
             raise CompetitionError("大会の出現条件が循環しています。")

@@ -36,15 +36,25 @@ def can_sign(state, club, terms, fee=0, *, exclude=None, surplus=0):
     return club.money - reserved_funds(state, club, exclude=exclude) >= fee + terms.total_required_funds + surplus
 
 
-def signed_contract(player, terms, month, loyalty=50.0):
+def signed_contract(player, terms, month, loyalty=None, *, state=None, team_id=None):
     from realtime_season import PlayerContract
+    from season_loyalty import CONTRACT_LOYALTY, signing_loyalty
 
-    return PlayerContract(player.name, terms.kind, terms.monthly_salary, month, terms.months, loyalty)
+    count = 1
+    if state is not None:
+        loyalty, count = signing_loyalty(state, player.name, team_id, terms.kind)
+    elif loyalty is None:
+        loyalty = CONTRACT_LOYALTY[terms.kind][0]
+
+    return PlayerContract(player.name, terms.kind, terms.monthly_salary, month, terms.months, loyalty,
+                          signing_number=count, signed_on=state.date.isoformat() if state is not None else None)
 
 
 def make_offer(state, club, player, emit, *, surplus=0):
     from season_transfers import TransferOffer
 
+    if state.contract_refused(player.name, club.id):
+        return state
     remaining = state.scout_remaining(club.id)
     reserved = sum(o.team_id == club.id and o.status in ("pending", "rejected")
                    and state.player(o.player_name) is not None for o in state.transfer_offers)

@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from random import Random
 
 from character_stats import all_characters
+from season_loyalty import remember_loyalties, signing_count
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ def with_randomized_clubs(state, rng=None):
     """Replace 1–3 starters per NPC club, preserving unique ownership."""
     from realtime_season import initial_contract
 
+    state = remember_loyalties(state)
     rng = rng or Random()
     retained = []
     slots = []
@@ -106,8 +108,11 @@ def with_randomized_clubs(state, rng=None):
             regular_igl=club.igl, regular_carrier=club.carrier,
             igl=club.igl if club.igl in roster else None,
             carrier=club.carrier if club.carrier in roster else None,
-            contracts=tuple(initial_contract(p, state.game_month) for p in players)))
-    return replace(state, opponent_teams=tuple(clubs))
+            contracts=tuple(replace(initial_contract(p, state.game_month, signed_on=state.date.isoformat()),
+                                    team_loyalty=state.team_loyalty(p.name, club.id)
+                                    if signing_count(state, p.name, club.id) else initial_contract(p).team_loyalty,
+                                    signing_number=max(1, signing_count(state, p.name, club.id))) for p in players)))
+    return remember_loyalties(replace(state, opponent_teams=tuple(clubs)))
 
 
 def restore_regular_members(state, reserved, emit):
@@ -116,6 +121,7 @@ def restore_regular_members(state, reserved, emit):
     from season_monthly_events import player_strength
     from season_rival_economy import can_sign, make_offer, signing_terms, signed_contract, transfer_cost
 
+    state = remember_loyalties(state)
     clubs = list(state.opponent_teams)
     snapshots = {p.name: p for p in state.scout_players}
     destinations = {}
@@ -127,7 +133,7 @@ def restore_regular_members(state, reserved, emit):
                 break
             if name in club.members:
                 continue
-            if any(c.player_name == name and c.end_reason == "left" and c.team_loyalty <= 0 for c in club.contracts):
+            if state.contract_refused(name, club.id):
                 continue
             if state.player(name) is not None:
                 state = make_offer(state, club, state.player(name), emit)
@@ -142,7 +148,7 @@ def restore_regular_members(state, reserved, emit):
             if not can_sign(state, club, terms, fee):
                 continue
             destinations[name] = club.id
-            incoming_contracts[name] = signed_contract(player, terms, state.game_month)
+            incoming_contracts[name] = signed_contract(player, terms, state.game_month, state=state, team_id=club.id)
             state = state._with_scout_use(club.id)
             state = replace(state, opponent_teams=tuple(
                 replace(c, money=c.money - fee - terms.signing_bonus) if c.id == club.id else
@@ -171,7 +177,8 @@ def restore_regular_members(state, reserved, emit):
             if player.name in incoming_contracts:
                 contracts[player.name] = incoming_contracts[player.name]
             elif old is None or old.end_reason is not None:
-                contracts[player.name] = initial_contract(player, state.game_month)
+                contracts[player.name] = signed_contract(player, signing_terms(state, player), state.game_month,
+                                                        state=state, team_id=club.id)
         roster = {p.name for p in players[:5]}
         clubs[index] = replace(club, players=tuple(players), contracts=tuple(contracts.values()),
             acquired_members=tuple(n for n in club.acquired_members if n in members),
@@ -179,4 +186,4 @@ def restore_regular_members(state, reserved, emit):
             carrier=club.regular_carrier if club.regular_carrier in roster else club.carrier if club.carrier in roster else None)
         for player in incoming:
             emit("roster_return", club, player.name, f"正規メンバーの{player.name}が復帰しました。")
-    return replace(state, opponent_teams=tuple(clubs))
+    return remember_loyalties(replace(state, opponent_teams=tuple(clubs)))

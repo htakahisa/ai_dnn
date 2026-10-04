@@ -181,7 +181,9 @@ class SeasonPairFamiliarityMixin:
             try:
                 kind = CONTRACT_OPTIONS[self.offer_kind["scout"].get()]
                 options = {"advance_day": False} if self.state.entry_deadline_tournaments else {}
-                candidate = self.state.with_scouted_player(name, kind, int(self.offer_months["scout"].get()), **options)
+                player = next(p for p in self.state.scout_players if p.name == name)
+                terms, _, _ = self.offer_conditions("scout", player)
+                candidate = self.state.with_scouted_player(name, kind, terms.months, **options)
             except (SeasonSaveError, ValueError) as exc:
                 self.status.set(f"{', '.join(signed)}のみ契約成立。{name}の契約は成立しませんでした：{exc}" if signed else str(exc))
                 return

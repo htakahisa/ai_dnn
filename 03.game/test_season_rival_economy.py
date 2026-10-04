@@ -12,7 +12,7 @@ import realtime_season_competitions as calendar
 import realtime_season_rival_economy as settings
 import realtime_season_teams as teams
 import realtime_season_world_levels as levels
-from realtime_season import SeasonSaveError, SeasonStore, new_season
+from realtime_season import SeasonSaveError, SeasonStore, new_season, FORCED_OFFER_LOYALTY
 from season_competitions import SeriesScore, next_match
 from season_monthly_events import process_monthly_events
 from season_ratings import SeasonRating
@@ -107,7 +107,7 @@ class RivalEconomyTests(unittest.TestCase):
         rejected = state.with_transfer_response(offer.id, False)
         self.assertEqual(rejected.opponent_teams[0].money, state.opponent_teams[0].money)
         self.assertEqual(reserved_funds(rejected, rejected.opponent_teams[0]), 6_500_000)
-        forced = rejected.with_team_loyalty("Leo", 29.9)
+        forced = rejected.with_team_loyalty("Leo", FORCED_OFFER_LOYALTY - .1)
         self.assertIsNone(forced.player("Leo"))
         self.assertEqual(forced.opponent_teams[0].money, 14_700_000)
         self.assertEqual(forced.transfer_offers[0].status, "forced")
@@ -191,11 +191,12 @@ class RivalEconomyTests(unittest.TestCase):
         club = replace(club, contracts=contracts, regular_members=(), sponsor_active=False)
         state = replace(state, opponent_teams=(club, state.opponent_teams[1]))
         rich = state.advance_months()
-        self.assertEqual(rich.opponent_teams[0].money, 19_200_000)
+        self.assertEqual(rich.opponent_teams[0].money, 19_300_000)
         self.assertTrue(any(e.kind == "renewal" for e in rich.monthly_events))
         poor = replace(state, opponent_teams=(replace(club, money=500_000), state.opponent_teams[1])).advance_months()
-        self.assertNotIn("Aspas", poor.opponent_teams[0].members)
-        self.assertEqual(poor.opponent_teams[0].money, 0)
+        self.assertIn("Aspas", poor.opponent_teams[0].members)
+        self.assertEqual(poor.opponent_teams[0].money, 100_000)
+        self.assertNotIn("Aspas", poor.advance_months().opponent_teams[0].members)
 
     def test_all_finalists_receive_prizes_once_including_npc_only_cup(self):
         for own_entry in (True, False):

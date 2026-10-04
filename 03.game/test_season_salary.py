@@ -193,7 +193,7 @@ class SalaryStateTest(SeasonCompetitionTest):
             for p in club.players:
                 self.assertEqual(p.monthly_salary, following.salary_player(p).monthly_salary)
                 contract = next(c for c in club.contracts if c.player_name == p.name)
-                if contract.active(following.game_month):
+                if following.contract_active(contract):
                     self.assertEqual(contract.monthly_salary, p.monthly_salary)
 
     def test_sum_by_name_across_teams_and_legacy_map_stats_without_double_counting(self):

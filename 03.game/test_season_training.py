@@ -304,7 +304,7 @@ class TrainingTest(unittest.TestCase):
         state = replace(state, contracts=tuple(replace(c, kind="short", duration_months=1)
                                               if c.player_name == "Leo" else c for c in state.contracts))
         grown = state.advance_days(31)
-        self.assertEqual(grown.player("Leo").iq, 153.1)
+        self.assertEqual(grown.player("Leo").iq, 153)
         self.assertFalse(grown.can_play("Leo"))
         self.assertEqual(grown.player("Boostio").iq, state.player("Boostio").iq + 3.1)
         later = grown.advance_days(10)

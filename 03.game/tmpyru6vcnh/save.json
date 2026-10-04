@@ -1,0 +1,2368 @@
+{
+  "version": 26,
+  "updated_at": "2026-10-04T11:31:08.415896+00:00",
+  "team_name": "マイチーム",
+  "preset_name": "編成1",
+  "preset_igl": null,
+  "preset_carrier": null,
+  "preset_ai": "toru_ai_v3.1",
+  "club_id": "player_club",
+  "salary_mode": "STATIC",
+  "salary_settings": null,
+  "salary_records": [],
+  "salary_updated_month": null,
+  "owned_players": [
+    {
+      "name": "Leo",
+      "hs_pct": 0.27,
+      "dodge_pct": 0.22,
+      "iq": 150,
+      "hit_pct": 0.83,
+      "reaction": 135,
+      "role": "シーカー",
+      "influence": 65,
+      "form_variance": 1,
+      "mental": 10,
+      "monthly_salary": 100000,
+      "loyalty": 10,
+      "research_level": 0,
+      "aim_lab_level": 0
+    },
+    {
+      "name": "Boaster",
+      "hs_pct": 0.2,
+      "dodge_pct": 0.12,
+      "iq": 175,
+      "hit_pct": 0.62,
+      "reaction": 96,
+      "role": "スモーカー",
+      "influence": 50,
+      "form_variance": 5,
+      "mental": 10,
+      "monthly_salary": 100000,
+      "loyalty": 10,
+      "research_level": 0,
+      "aim_lab_level": 0
+    },
+    {
+      "name": "Derke",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.24,
+      "iq": 90,
+      "hit_pct": 0.75,
+      "reaction": 115,
+      "role": "タイガー",
+      "influence": 90,
+      "form_variance": 8,
+      "mental": 8,
+      "monthly_salary": 100000,
+      "loyalty": 10,
+      "research_level": 0,
+      "aim_lab_level": 0
+    },
+    {
+      "name": "Chronicle",
+      "hs_pct": 0.35,
+      "dodge_pct": 0.23,
+      "iq": 105,
+      "hit_pct": 0.78,
+      "reaction": 135,
+      "role": "フラッシュ",
+      "influence": 80,
+      "form_variance": 3,
+      "mental": 9,
+      "monthly_salary": 100000,
+      "loyalty": 10,
+      "research_level": 0,
+      "aim_lab_level": 0
+    },
+    {
+      "name": "Alfajer",
+      "hs_pct": 0.45,
+      "dodge_pct": 0.13,
+      "iq": 60,
+      "hit_pct": 0.91,
+      "reaction": 145,
+      "role": "エンジニア",
+      "influence": 60,
+      "form_variance": 4,
+      "mental": 7,
+      "monthly_salary": 100000,
+      "loyalty": 10,
+      "research_level": 0,
+      "aim_lab_level": 0
+    }
+  ],
+  "roster": [
+    "Leo",
+    "Boaster",
+    "Derke",
+    "Chronicle",
+    "Alfajer"
+  ],
+  "teams": [
+    {
+      "id": "b0a9cac5d18b4413b6ac557e4e812cfa",
+      "name": "編成1",
+      "roster": [
+        "Leo",
+        "Boaster",
+        "Derke",
+        "Chronicle",
+        "Alfajer"
+      ],
+      "igl": null,
+      "carrier": null,
+      "ai": "toru_ai_v3.1"
+    }
+  ],
+  "editing_team_id": "b0a9cac5d18b4413b6ac557e4e812cfa",
+  "selected_team_id": "b0a9cac5d18b4413b6ac557e4e812cfa",
+  "opponent_teams": [
+    {
+      "id": "world-8500f26bb6405e668603ecf00b3af11c",
+      "name": "Rival0",
+      "players": [
+        {
+          "name": "Aspas",
+          "hs_pct": 0.4,
+          "dodge_pct": 0.24,
+          "iq": 90,
+          "hit_pct": 0.87,
+          "reaction": 120,
+          "role": "タイガー",
+          "influence": 150,
+          "form_variance": 10,
+          "mental": 10,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "valyn",
+          "hs_pct": 0.26,
+          "dodge_pct": 0.13,
+          "iq": 140,
+          "hit_pct": 0.64,
+          "reaction": 95,
+          "role": "スモーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 5,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "trent",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.18,
+          "iq": 120,
+          "hit_pct": 0.71,
+          "reaction": 85,
+          "role": "シーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 5,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "leaf",
+          "hs_pct": 0.38,
+          "dodge_pct": 0.17,
+          "iq": 89,
+          "hit_pct": 0.74,
+          "reaction": 80,
+          "role": "フラッシュ",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 3,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "tex",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.19,
+          "iq": 85,
+          "hit_pct": 0.74,
+          "reaction": 95,
+          "role": "フラッシュ",
+          "influence": 60,
+          "form_variance": 7,
+          "mental": 8,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Sato",
+          "hs_pct": 0.4,
+          "dodge_pct": 0.19,
+          "iq": 67,
+          "hit_pct": 0.73,
+          "reaction": 105,
+          "role": "タイガー",
+          "influence": 60,
+          "form_variance": 6,
+          "mental": 7,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        }
+      ],
+      "igl": null,
+      "carrier": null,
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 12.0,
+      "preferred_roles": [
+        "タイガー",
+        "スモーカー",
+        "シーカー",
+        "フラッシュ",
+        "フラッシュ"
+      ],
+      "contracts": [
+        {
+          "player_name": "Aspas",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "valyn",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "trent",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "leaf",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "tex",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Sato",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        }
+      ],
+      "regular_members": [],
+      "regular_igl": null,
+      "regular_carrier": null,
+      "money": 100000000,
+      "sponsor_active": true,
+      "acquired_members": [],
+      "world_level_lock": null,
+      "initial_rating": 1500.0,
+      "initial_shared_members": []
+    },
+    {
+      "id": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+      "name": "Rival1",
+      "players": [
+        {
+          "name": "Boostio",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.15,
+          "iq": 128,
+          "hit_pct": 0.68,
+          "reaction": 85,
+          "role": "エンジニア",
+          "influence": 70,
+          "form_variance": 6,
+          "mental": 9,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Ethan",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.18,
+          "iq": 150,
+          "hit_pct": 0.8,
+          "reaction": 90,
+          "role": "シーカー",
+          "influence": 55,
+          "form_variance": 4,
+          "mental": 10,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "jawgemo",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.31,
+          "iq": 93,
+          "hit_pct": 0.67,
+          "reaction": 135,
+          "role": "タイガー",
+          "influence": 75,
+          "form_variance": 8,
+          "mental": 9,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "C0M",
+          "hs_pct": 0.28,
+          "dodge_pct": 0.16,
+          "iq": 120,
+          "hit_pct": 0.69,
+          "reaction": 95,
+          "role": "シーカー",
+          "influence": 60,
+          "form_variance": 9,
+          "mental": 7,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Demon1",
+          "hs_pct": 0.5,
+          "dodge_pct": 0.13,
+          "iq": 78,
+          "hit_pct": 0.85,
+          "reaction": 145,
+          "role": "スモーカー",
+          "influence": 150,
+          "form_variance": 4,
+          "mental": 7,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        }
+      ],
+      "igl": null,
+      "carrier": null,
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 12.0,
+      "preferred_roles": [
+        "エンジニア",
+        "シーカー",
+        "タイガー",
+        "シーカー",
+        "スモーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Boostio",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Ethan",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "jawgemo",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "C0M",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Demon1",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        }
+      ],
+      "regular_members": [],
+      "regular_igl": null,
+      "regular_carrier": null,
+      "money": 100000000,
+      "sponsor_active": true,
+      "acquired_members": [],
+      "world_level_lock": null,
+      "initial_rating": 1500.0,
+      "initial_shared_members": []
+    },
+    {
+      "id": "world-61c937d4a51350a7993db332e4b1fdd8",
+      "name": "Rival2",
+      "players": [
+        {
+          "name": "F0rsakeN",
+          "hs_pct": 0.27,
+          "dodge_pct": 0.14,
+          "iq": 125,
+          "hit_pct": 0.69,
+          "reaction": 95,
+          "role": "スモーカー",
+          "influence": 50,
+          "form_variance": 3,
+          "mental": 6,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Jinggg",
+          "hs_pct": 0.3,
+          "dodge_pct": 0.26,
+          "iq": 68,
+          "hit_pct": 0.71,
+          "reaction": 90,
+          "role": "タイガー",
+          "influence": 50,
+          "form_variance": 4,
+          "mental": 3,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "d4v41",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.17,
+          "iq": 70,
+          "hit_pct": 0.71,
+          "reaction": 105,
+          "role": "シーカー",
+          "influence": 40,
+          "form_variance": 5,
+          "mental": 3,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "something",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.26,
+          "iq": 65,
+          "hit_pct": 0.88,
+          "reaction": 165,
+          "role": "タイガー",
+          "influence": 85,
+          "form_variance": 7,
+          "mental": 2,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "PatMen",
+          "hs_pct": 0.33,
+          "dodge_pct": 0.2,
+          "iq": 80,
+          "hit_pct": 0.8,
+          "reaction": 125,
+          "role": "スモーカー",
+          "influence": 55,
+          "form_variance": 5,
+          "mental": 8,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        }
+      ],
+      "igl": null,
+      "carrier": null,
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 12.0,
+      "preferred_roles": [
+        "スモーカー",
+        "タイガー",
+        "シーカー",
+        "タイガー",
+        "スモーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "F0rsakeN",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Jinggg",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "d4v41",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "something",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "PatMen",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        }
+      ],
+      "regular_members": [],
+      "regular_igl": null,
+      "regular_carrier": null,
+      "money": 100000000,
+      "sponsor_active": true,
+      "acquired_members": [],
+      "world_level_lock": null,
+      "initial_rating": 1500.0,
+      "initial_shared_members": []
+    },
+    {
+      "id": "world-3fdfcec158c15dcaa9a4e26647861f81",
+      "name": "Rival3",
+      "players": [
+        {
+          "name": "Wo0t",
+          "hs_pct": 0.4,
+          "dodge_pct": 0.16,
+          "iq": 78,
+          "hit_pct": 0.75,
+          "reaction": 120,
+          "role": "タイガー",
+          "influence": 75,
+          "form_variance": 9,
+          "mental": 7,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "kaajak",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.2,
+          "iq": 115,
+          "hit_pct": 0.76,
+          "reaction": 100,
+          "role": "フラッシュ",
+          "influence": 70,
+          "form_variance": 7,
+          "mental": 6,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Meiy",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.22,
+          "iq": 70,
+          "hit_pct": 0.73,
+          "reaction": 110,
+          "role": "タイガー",
+          "influence": 90,
+          "form_variance": 7,
+          "mental": 4,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Verno",
+          "hs_pct": 0.35,
+          "dodge_pct": 0.16,
+          "iq": 86,
+          "hit_pct": 0.7,
+          "reaction": 95,
+          "role": "シーカー",
+          "influence": 80,
+          "form_variance": 7,
+          "mental": 6,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        },
+        {
+          "name": "Sayonara",
+          "hs_pct": 0.33,
+          "dodge_pct": 0.19,
+          "iq": 95,
+          "hit_pct": 0.7,
+          "reaction": 90,
+          "role": "シーカー",
+          "influence": 80,
+          "form_variance": 5,
+          "mental": 10,
+          "monthly_salary": 100000,
+          "loyalty": 10,
+          "research_level": 0,
+          "aim_lab_level": 0
+        }
+      ],
+      "igl": null,
+      "carrier": null,
+      "ai": "toru_ai_v3.1",
+      "transfer_multiplier": 12.0,
+      "preferred_roles": [
+        "タイガー",
+        "フラッシュ",
+        "タイガー",
+        "シーカー",
+        "シーカー"
+      ],
+      "contracts": [
+        {
+          "player_name": "Wo0t",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "kaajak",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Meiy",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Verno",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        },
+        {
+          "player_name": "Sayonara",
+          "kind": "year1",
+          "monthly_salary": 100000,
+          "start_month": 0,
+          "duration_months": 12,
+          "team_loyalty": 30.0,
+          "end_reason": null,
+          "signing_number": 1,
+          "expired_on": null
+        }
+      ],
+      "regular_members": [],
+      "regular_igl": null,
+      "regular_carrier": null,
+      "money": 100000000,
+      "sponsor_active": true,
+      "acquired_members": [],
+      "world_level_lock": null,
+      "initial_rating": 1500.0,
+      "initial_shared_members": []
+    }
+  ],
+  "money": 100000000,
+  "game_month": 0,
+  "contracts": [
+    {
+      "player_name": "Leo",
+      "kind": "year1",
+      "monthly_salary": 100000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 30.0,
+      "end_reason": null,
+      "signing_number": 1,
+      "expired_on": null
+    },
+    {
+      "player_name": "Boaster",
+      "kind": "year1",
+      "monthly_salary": 100000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 30.0,
+      "end_reason": null,
+      "signing_number": 1,
+      "expired_on": null
+    },
+    {
+      "player_name": "Derke",
+      "kind": "year1",
+      "monthly_salary": 100000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 30.0,
+      "end_reason": null,
+      "signing_number": 1,
+      "expired_on": null
+    },
+    {
+      "player_name": "Chronicle",
+      "kind": "year1",
+      "monthly_salary": 100000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 30.0,
+      "end_reason": null,
+      "signing_number": 1,
+      "expired_on": null
+    },
+    {
+      "player_name": "Alfajer",
+      "kind": "year1",
+      "monthly_salary": 100000,
+      "start_month": 0,
+      "duration_months": 12,
+      "team_loyalty": 30.0,
+      "end_reason": null,
+      "signing_number": 1,
+      "expired_on": null
+    }
+  ],
+  "start_date": "2026-01-01",
+  "game_date": "2026-01-01",
+  "in_season_periods": [
+    [
+      "03-01",
+      "11-30"
+    ]
+  ],
+  "tournament_definitions": [
+    {
+      "id": "cup",
+      "name": "Cup",
+      "start_date": "2026-01-05",
+      "team_count": 4,
+      "prizes": {
+        "1": 5000000,
+        "2": 2000000,
+        "3": 1000000,
+        "4": 500000
+      },
+      "normal_maps_to_win": 1,
+      "lower_final_maps_to_win": 2,
+      "grand_final_maps_to_win": 3,
+      "format": "double_elimination",
+      "appearance_conditions": {},
+      "participation_optional": true,
+      "allow_player_entry": true,
+      "opponent_teams": [],
+      "visible_from": "2026-01-01"
+    }
+  ],
+  "tournaments": [],
+  "starter_candidates": [],
+  "starter_selection": [],
+  "starter_selection_pending": false,
+  "ratings": [
+    {
+      "team_id": "player_club",
+      "team_name": "マイチーム",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-3fdfcec158c15dcaa9a4e26647861f81",
+      "team_name": "Rival3",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-61c937d4a51350a7993db332e4b1fdd8",
+      "team_name": "Rival2",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+      "team_name": "Rival1",
+      "value": 1500.0
+    },
+    {
+      "team_id": "world-8500f26bb6405e668603ecf00b3af11c",
+      "team_name": "Rival0",
+      "value": 1500.0
+    }
+  ],
+  "rated_results": [],
+  "sponsor_active": true,
+  "transferred_players": [],
+  "monthly_events": [],
+  "monthly_events_through": 0,
+  "transfer_offers": [],
+  "developed_players": [],
+  "world_level_lock": null,
+  "history": [
+    {
+      "番号": 1,
+      "種別": "シーズン開始",
+      "ゲーム内日付": "2026-01-01",
+      "チーム名": "マイチーム",
+      "資金": 1000000,
+      "月給総額": 0,
+      "レート": 1500.0,
+      "世界レベル": 1,
+      "世界順位": 5,
+      "チーム数": 5,
+      "大会中の世界レベル固定": false,
+      "月額スポンサー収入": 7500000,
+      "大会順位": [],
+      "所属": {
+        "Aspas": "Rival0",
+        "valyn": "Rival0",
+        "trent": "Rival0",
+        "leaf": "Rival0",
+        "tex": "Rival0",
+        "Sato": "Rival0",
+        "Boostio": "Rival1",
+        "Ethan": "Rival1",
+        "jawgemo": "Rival1",
+        "C0M": "Rival1",
+        "Demon1": "Rival1",
+        "F0rsakeN": "Rival2",
+        "Jinggg": "Rival2",
+        "d4v41": "Rival2",
+        "something": "Rival2",
+        "PatMen": "Rival2",
+        "Wo0t": "Rival3",
+        "kaajak": "Rival3",
+        "Meiy": "Rival3",
+        "Verno": "Rival3",
+        "Sayonara": "Rival3"
+      },
+      "所属チームID": {
+        "Aspas": "world-8500f26bb6405e668603ecf00b3af11c",
+        "valyn": "world-8500f26bb6405e668603ecf00b3af11c",
+        "trent": "world-8500f26bb6405e668603ecf00b3af11c",
+        "leaf": "world-8500f26bb6405e668603ecf00b3af11c",
+        "tex": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Sato": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Boostio": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Ethan": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "jawgemo": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "C0M": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Demon1": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "F0rsakeN": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Jinggg": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "d4v41": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "something": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "PatMen": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Wo0t": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "kaajak": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Meiy": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Verno": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Sayonara": "world-3fdfcec158c15dcaa9a4e26647861f81"
+      },
+      "オファー": {},
+      "収入": [],
+      "支出": [],
+      "移籍ログ": []
+    },
+    {
+      "番号": 2,
+      "種別": "選手追加",
+      "ゲーム内日付": "2026-01-01",
+      "チーム名": "マイチーム",
+      "資金": 1000000,
+      "月給総額": 500000,
+      "レート": 1500.0,
+      "世界レベル": 1,
+      "世界順位": 5,
+      "チーム数": 5,
+      "大会中の世界レベル固定": false,
+      "月額スポンサー収入": 7500000,
+      "大会順位": [],
+      "所属": {
+        "Aspas": "Rival0",
+        "valyn": "Rival0",
+        "trent": "Rival0",
+        "leaf": "Rival0",
+        "tex": "Rival0",
+        "Sato": "Rival0",
+        "Boostio": "Rival1",
+        "Ethan": "Rival1",
+        "jawgemo": "Rival1",
+        "C0M": "Rival1",
+        "Demon1": "Rival1",
+        "F0rsakeN": "Rival2",
+        "Jinggg": "Rival2",
+        "d4v41": "Rival2",
+        "something": "Rival2",
+        "PatMen": "Rival2",
+        "Wo0t": "Rival3",
+        "kaajak": "Rival3",
+        "Meiy": "Rival3",
+        "Verno": "Rival3",
+        "Sayonara": "Rival3",
+        "Leo": "マイチーム",
+        "Boaster": "マイチーム",
+        "Derke": "マイチーム",
+        "Chronicle": "マイチーム",
+        "Alfajer": "マイチーム"
+      },
+      "所属チームID": {
+        "Aspas": "world-8500f26bb6405e668603ecf00b3af11c",
+        "valyn": "world-8500f26bb6405e668603ecf00b3af11c",
+        "trent": "world-8500f26bb6405e668603ecf00b3af11c",
+        "leaf": "world-8500f26bb6405e668603ecf00b3af11c",
+        "tex": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Sato": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Boostio": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Ethan": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "jawgemo": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "C0M": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Demon1": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "F0rsakeN": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Jinggg": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "d4v41": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "something": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "PatMen": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Wo0t": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "kaajak": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Meiy": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Verno": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Sayonara": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Leo": "player_club",
+        "Boaster": "player_club",
+        "Derke": "player_club",
+        "Chronicle": "player_club",
+        "Alfajer": "player_club"
+      },
+      "オファー": {},
+      "収入": [],
+      "支出": [],
+      "移籍ログ": [
+        {
+          "選手": "Alfajer",
+          "移籍元": "LFT",
+          "移籍先": "マイチーム",
+          "種別": "加入"
+        },
+        {
+          "選手": "Boaster",
+          "移籍元": "LFT",
+          "移籍先": "マイチーム",
+          "種別": "加入"
+        },
+        {
+          "選手": "Chronicle",
+          "移籍元": "LFT",
+          "移籍先": "マイチーム",
+          "種別": "加入"
+        },
+        {
+          "選手": "Derke",
+          "移籍元": "LFT",
+          "移籍先": "マイチーム",
+          "種別": "加入"
+        },
+        {
+          "選手": "Leo",
+          "移籍元": "LFT",
+          "移籍先": "マイチーム",
+          "種別": "加入"
+        }
+      ]
+    },
+    {
+      "番号": 3,
+      "種別": "初期設定完了",
+      "ゲーム内日付": "2026-01-01",
+      "チーム名": "マイチーム",
+      "資金": 1000000,
+      "月給総額": 500000,
+      "レート": 1500.0,
+      "世界レベル": 1,
+      "世界順位": 5,
+      "チーム数": 5,
+      "大会中の世界レベル固定": false,
+      "月額スポンサー収入": 7500000,
+      "大会順位": [],
+      "所属": {
+        "Aspas": "Rival0",
+        "valyn": "Rival0",
+        "trent": "Rival0",
+        "leaf": "Rival0",
+        "tex": "Rival0",
+        "Sato": "Rival0",
+        "Boostio": "Rival1",
+        "Ethan": "Rival1",
+        "jawgemo": "Rival1",
+        "C0M": "Rival1",
+        "Demon1": "Rival1",
+        "F0rsakeN": "Rival2",
+        "Jinggg": "Rival2",
+        "d4v41": "Rival2",
+        "something": "Rival2",
+        "PatMen": "Rival2",
+        "Wo0t": "Rival3",
+        "kaajak": "Rival3",
+        "Meiy": "Rival3",
+        "Verno": "Rival3",
+        "Sayonara": "Rival3",
+        "Leo": "マイチーム",
+        "Boaster": "マイチーム",
+        "Derke": "マイチーム",
+        "Chronicle": "マイチーム",
+        "Alfajer": "マイチーム"
+      },
+      "所属チームID": {
+        "Aspas": "world-8500f26bb6405e668603ecf00b3af11c",
+        "valyn": "world-8500f26bb6405e668603ecf00b3af11c",
+        "trent": "world-8500f26bb6405e668603ecf00b3af11c",
+        "leaf": "world-8500f26bb6405e668603ecf00b3af11c",
+        "tex": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Sato": "world-8500f26bb6405e668603ecf00b3af11c",
+        "Boostio": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Ethan": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "jawgemo": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "C0M": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "Demon1": "world-628ea7cd28f15c0da71ca9ac2838b30f",
+        "F0rsakeN": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Jinggg": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "d4v41": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "something": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "PatMen": "world-61c937d4a51350a7993db332e4b1fdd8",
+        "Wo0t": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "kaajak": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Meiy": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Verno": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Sayonara": "world-3fdfcec158c15dcaa9a4e26647861f81",
+        "Leo": "player_club",
+        "Boaster": "player_club",
+        "Derke": "player_club",
+        "Chronicle": "player_club",
+        "Alfajer": "player_club"
+      },
+      "オファー": {},
+      "収入": [],
+      "支出": [],
+      "移籍ログ": []
+    }
+  ],
+  "pair_days": [
+    [
+      "Aspas",
+      "Sato",
+      460
+    ],
+    [
+      "Aspas",
+      "leaf",
+      445
+    ],
+    [
+      "Aspas",
+      "tex",
+      486
+    ],
+    [
+      "Aspas",
+      "trent",
+      342
+    ],
+    [
+      "Aspas",
+      "valyn",
+      336
+    ],
+    [
+      "Boostio",
+      "C0M",
+      479
+    ],
+    [
+      "Boostio",
+      "Demon1",
+      487
+    ],
+    [
+      "Boostio",
+      "Ethan",
+      486
+    ],
+    [
+      "Boostio",
+      "jawgemo",
+      467
+    ],
+    [
+      "C0M",
+      "Demon1",
+      395
+    ],
+    [
+      "C0M",
+      "Ethan",
+      576
+    ],
+    [
+      "C0M",
+      "jawgemo",
+      443
+    ],
+    [
+      "Demon1",
+      "Ethan",
+      392
+    ],
+    [
+      "Demon1",
+      "jawgemo",
+      397
+    ],
+    [
+      "Ethan",
+      "jawgemo",
+      411
+    ],
+    [
+      "F0rsakeN",
+      "Jinggg",
+      603
+    ],
+    [
+      "F0rsakeN",
+      "PatMen",
+      467
+    ],
+    [
+      "F0rsakeN",
+      "d4v41",
+      496
+    ],
+    [
+      "F0rsakeN",
+      "something",
+      598
+    ],
+    [
+      "Jinggg",
+      "PatMen",
+      663
+    ],
+    [
+      "Jinggg",
+      "d4v41",
+      625
+    ],
+    [
+      "Jinggg",
+      "something",
+      552
+    ],
+    [
+      "Meiy",
+      "Sayonara",
+      224
+    ],
+    [
+      "Meiy",
+      "Verno",
+      242
+    ],
+    [
+      "Meiy",
+      "Wo0t",
+      269
+    ],
+    [
+      "Meiy",
+      "kaajak",
+      262
+    ],
+    [
+      "PatMen",
+      "d4v41",
+      570
+    ],
+    [
+      "PatMen",
+      "something",
+      669
+    ],
+    [
+      "Sato",
+      "leaf",
+      337
+    ],
+    [
+      "Sato",
+      "tex",
+      407
+    ],
+    [
+      "Sato",
+      "trent",
+      401
+    ],
+    [
+      "Sato",
+      "valyn",
+      451
+    ],
+    [
+      "Sayonara",
+      "Verno",
+      246
+    ],
+    [
+      "Sayonara",
+      "Wo0t",
+      229
+    ],
+    [
+      "Sayonara",
+      "kaajak",
+      228
+    ],
+    [
+      "Verno",
+      "Wo0t",
+      236
+    ],
+    [
+      "Verno",
+      "kaajak",
+      263
+    ],
+    [
+      "Wo0t",
+      "kaajak",
+      242
+    ],
+    [
+      "d4v41",
+      "something",
+      657
+    ],
+    [
+      "leaf",
+      "tex",
+      345
+    ],
+    [
+      "leaf",
+      "trent",
+      377
+    ],
+    [
+      "leaf",
+      "valyn",
+      461
+    ],
+    [
+      "tex",
+      "trent",
+      390
+    ],
+    [
+      "tex",
+      "valyn",
+      366
+    ],
+    [
+      "trent",
+      "valyn",
+      469
+    ]
+  ],
+  "pair_familiarity_seed": 2026,
+  "pair_news": [],
+  "scout_uses": [],
+  "day_advance_pending": false,
+  "team_loyalties": {
+    "Aspas": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "valyn": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "trent": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "leaf": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "tex": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Sato": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Boostio": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Ethan": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "jawgemo": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "C0M": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Demon1": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "F0rsakeN": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 30.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Jinggg": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 30.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "d4v41": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 30.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "something": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 30.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "PatMen": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 30.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Wo0t": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "player_club": 50.0
+    },
+    "kaajak": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "player_club": 50.0
+    },
+    "Meiy": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "player_club": 50.0
+    },
+    "Verno": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "player_club": 50.0
+    },
+    "Sayonara": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 30.0,
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "player_club": 50.0
+    },
+    "WsLeo": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Homelander": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Loita": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ひつじさん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "とりさん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Katarina": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "mindfreak": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "nAts": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Lar0k": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Blacknoir": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Leo": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 30.0
+    },
+    "まーやまくん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Less": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Asuna": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "いぬさん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Nanasaki": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Rosé": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "くりまる": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "いぐるん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Jean": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "icy": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ろびぃな": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Rossy": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "keiko": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "CHICHOO": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "IbarakiNinja": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Crewn": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Munchkin": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Lisa": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Rarga": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "FNS": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Foxy9": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "eKo": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Mazino": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "A-Train": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "くんた": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "mada": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "SugarZ3ro": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Deep": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Stormfront": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Derke": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 30.0
+    },
+    "crashies": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Meteor": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "skuba": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Furina": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "SiuFatBB": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Kachina": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "primmie": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Smoggy": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Tartaglia": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Kr1stal": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Flashback": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "marteen": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "alecks": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "SereNa": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Rb": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "TenZ": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "trexx": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "vo0kashu": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Chronicle": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 30.0
+    },
+    "eggsterr": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Dep": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "WoohyuN": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ごんごん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Buzz": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "BABYBAY": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Jamppi": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Brawk": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ZMJKK": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Absol": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Boaster": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 30.0
+    },
+    "Alfajer": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 30.0
+    },
+    "Zest": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Retloff": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "おもこ": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "夢の街": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "RieNs": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Tortlilyan": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ごんた": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Laz": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "えんぺん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "benjyfishy": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ごりまる": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "ねこさん": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "t3xture": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Lohen": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "s0m": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "koldamenta": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "HYUNMIN": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Cryocells": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "stax": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Arlecchino": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "soulcas": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Mako": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Zekken": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "lovers rock": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Lysoar": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "S1Mon": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "yay": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "SyouTa": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Canezerra": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "cNed": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "Xdll": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    },
+    "eeiu": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 50.0,
+      "world-8500f26bb6405e668603ecf00b3af11c": 50.0,
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 50.0,
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 50.0,
+      "player_club": 50.0
+    }
+  },
+  "contract_signings": {
+    "Aspas": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "valyn": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "trent": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "leaf": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "tex": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "Sato": {
+      "world-8500f26bb6405e668603ecf00b3af11c": 1
+    },
+    "Boostio": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 1
+    },
+    "Ethan": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 1
+    },
+    "jawgemo": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 1
+    },
+    "C0M": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 1
+    },
+    "Demon1": {
+      "world-628ea7cd28f15c0da71ca9ac2838b30f": 1
+    },
+    "F0rsakeN": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 1
+    },
+    "Jinggg": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 1
+    },
+    "d4v41": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 1
+    },
+    "something": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 1
+    },
+    "PatMen": {
+      "world-61c937d4a51350a7993db332e4b1fdd8": 1
+    },
+    "Wo0t": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 1
+    },
+    "kaajak": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 1
+    },
+    "Meiy": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 1
+    },
+    "Verno": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 1
+    },
+    "Sayonara": {
+      "world-3fdfcec158c15dcaa9a4e26647861f81": 1
+    },
+    "Leo": {
+      "player_club": 1
+    },
+    "Boaster": {
+      "player_club": 1
+    },
+    "Derke": {
+      "player_club": 1
+    },
+    "Chronicle": {
+      "player_club": 1
+    },
+    "Alfajer": {
+      "player_club": 1
+    }
+  },
+  "contract_bans": []
+}

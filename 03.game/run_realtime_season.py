@@ -6,8 +6,9 @@ import re
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from realtime_season import DEFAULT_SAVE_PATH, ROSTER_SIZE, SeasonSaveError, SeasonStore
+from realtime_season import DEFAULT_SAVE_PATH, EXPIRED_ROSTER_WARNING, ROSTER_SIZE, SeasonSaveError, SeasonStore
 from realtime_season_config import DEFAULT_TEAM_AI
+from season_training import MAX_TRAINING_LEVEL
 from season_scrim import ScrimJob, ai_options, build_scrim_request
 from season_management_ui import SeasonManagementMixin
 from season_competition_ui import SeasonCompetitionMixin
@@ -41,6 +42,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                                    "セーブデータを読み込みました。変更は自動保存されます。")
         self.summary = tk.StringVar(root)
         self.details = tk.StringVar(root, value="所持選手を選ぶと能力を表示します。")
+        self.editor_contract_warning = tk.StringVar(root)
         self.edit_team_choice = tk.StringVar(root)
         self.prep_team_choice = tk.StringVar(root)
         self.home_summary = tk.StringVar(root)
@@ -64,6 +66,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self._prepared_opponent_settings = None
         self._prepared_own_settings = None
         self._scrim_rating_context = None
+        self._scrim_participants = None
         self.current_screen = "home"
         self._build()
         self._build_competitions()
@@ -121,7 +124,14 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         ttk.Label(host, text="設定は自動保存。自動選択のIGLはIQ最大、キャリアーはロスター先頭。新規・入れ替え中の編成は5人で確定してください。",
                   wraplength=1000).pack(anchor="w", pady=(0, 8))
 
-        main = ttk.Frame(host)
+        self.editor_contract_banner = ttk.Frame(host)
+        ttk.Label(self.editor_contract_banner, textvariable=self.editor_contract_warning,
+                  foreground="#b71c1c", wraplength=770).pack(side="left", fill="x", expand=True)
+        self.editor_renew_button = ttk.Button(self.editor_contract_banner, text="契約状況で再契約",
+                                              command=self.show_expired_contracts)
+        self.editor_renew_button.pack(side="right", padx=(8, 0))
+
+        self.editor_main = main = ttk.Frame(host)
         main.pack(fill="both", expand=True)
         main.columnconfigure(0, weight=3)
         main.columnconfigure(1, weight=2)
@@ -145,6 +155,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         scroll = ttk.Scrollbar(inventory, orient="vertical", command=self.players.yview)
         scroll.grid(row=1, column=1, sticky="ns")
         self.players.configure(yscrollcommand=scroll.set)
+        self.players.tag_configure("contract_expired", foreground="#b71c1c", background="#ffebee")
         self.players.bind("<<TreeviewSelect>>", self.select_player)
         self.players.bind("<Double-1>", lambda _: self.add_player())
         self.add_button = ttk.Button(inventory, text="選択した選手をロスターに追加 →", command=self.add_player)
@@ -174,8 +185,12 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.remove_button.pack(fill="x", pady=10)
         ttk.Label(lineup, text="選手の詳細", font=("Yu Gothic UI", 11, "bold")).pack(anchor="w", pady=(6, 4))
         ttk.Label(lineup, textvariable=self.details, justify="left", wraplength=330).pack(anchor="w")
-        ttk.Button(lineup, text="選択した選手の相棒TOP5", command=lambda: self.show_player_pairs(
-            self.selected_player().name) if self.selected_player() else None).pack(anchor="w", pady=6)
+        player_links = ttk.Frame(lineup)
+        player_links.pack(anchor="w", pady=6)
+        ttk.Button(player_links, text="相棒TOP5", command=lambda: self.show_player_pairs(
+            self.selected_player().name) if self.selected_player() else None).pack(side="left")
+        ttk.Button(player_links, text="チーム別忠誠", command=lambda: self.show_player_loyalties(
+            self.selected_player().name) if self.selected_player() else None).pack(side="left", padx=(8, 0))
         ttk.Button(lineup, text="自チームのスタメン練度", command=lambda: self.show_team_pairs(self.state.club_id)).pack(anchor="w")
         self.confirm_button = ttk.Button(lineup, text="この5人で編成を確定", command=self.confirm)
         self.confirm_button.pack(side="bottom", fill="x", pady=(10, 0))
@@ -332,7 +347,9 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                  "scout": "スカウト", "contracts": "契約状況", "competitions": "大会", "starter": "初期キャラ選択", "ratings": "レーティング", "monthly": "月次イベント",
                  "research": "研究", "aim_lab": "エイムラボ"}[screen]
         self.root.title(f"リアルタイムシーズン — {title}")
-        if screen == "preparation":
+        if screen == "editor":
+            self.refresh()
+        elif screen == "preparation":
             self.refresh_preparation()
         elif screen in ("scout", "contracts"):
             self.refresh_management()
@@ -353,6 +370,16 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
     def show_editor(self):
         return self.show_screen("editor")
+
+    def show_expired_contracts(self):
+        player = self.selected_player()
+        name = player.name if player and not self.state.can_play(player.name) else next(
+            (p.name for p in self.state.owned_players if not self.state.can_play(p.name)), None)
+        if name is not None and self.show_screen("contracts"):
+            self.contracts_players.selection_set(name)
+            self.contracts_players.see(name)
+            self.refresh_offer("contracts")
+            self.status.set(f"{name}の契約状況を開きました。契約条件を確認して再契約してください。")
 
     def show_preparation(self):
         return self.show_screen("preparation")
@@ -495,6 +522,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                 return
             self.scrim_job = ScrimJob(request, self.store.path.parent / "scrims")
             self._scrim_rating_context = (f"scrim:{self.scrim_job.directory.name}", own.id, opponent.id)
+            self._scrim_participants = {self.state.club_id: tuple(p["name"] for p in request["own"]["players"]),
+                                        opponent.id: tuple(p["name"] for p in request["opponent"]["players"])}
         except (OSError, ValueError, KeyError) as exc:
             self.scrim_result.set(f"試合を開始できません: {exc}")
             return
@@ -519,6 +548,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                     won = result["winner"] == result["own_team"]
                     previous = self.state
                     options = {"advance_day": False} if self.state.entry_deadline_tournaments else {}
+                    if self._scrim_participants is not None:
+                        options["participants"] = self._scrim_participants
                     candidate = self.state.with_scrim_result(result_id, own_id, opponent_id, int(won), int(not won), **options)
                     note = "1日進行を待っています。" if candidate.day_advance_pending else f"ゲーム内{candidate.date:%Y/%m/%d}へ1日進めました。"
                     if not self.commit(candidate, "スクリム結果を反映し、" + note):
@@ -537,6 +568,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.scrim_result.set(f"スクリムでエラーが発生しました: {result.get('message', '詳細不明')}")
         self.scrim_job = None
         self._scrim_rating_context = None
+        self._scrim_participants = None
         self.refresh()
         if result.get("status") == "completed":
             self.finish_action_day()
@@ -562,6 +594,14 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.preset_name.set(self.state.preset_name)
 
     def refresh(self):
+        from season_contract_endings import settle_contract_endings
+        settled = settle_contract_endings(self.state)
+        if settled != self.state:
+            if self.commit(settled, "契約終了・再契約猶予の状況を更新しました。"):
+                return
+        if self.state.unplayable_roster:
+            if self.commit(self.state, "契約状況に合わせて編成を更新しました。"):
+                return
         self.refresh_pair_windows()
         self.refresh_preset_settings()
         self.refresh_ratings()
@@ -581,12 +621,22 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             player = self.state.player(name)
             self.roster.insert("", "end", iid=str(index), values=(index + 1, name or "未登録", player.role if player else ""))
         count = len(self.state.roster)
-        self.summary.set(f"{count} / {ROSTER_SIZE}人  —  " + ("編成完了" if self.state.roster_ready else f"あと{ROSTER_SIZE - count}人"))
+        summary = ("契約終了選手を外してください" if self.state.unplayable_roster else
+                   "編成完了" if self.state.roster_ready else f"あと{ROSTER_SIZE - count}人")
+        self.summary.set(f"{count} / {ROSTER_SIZE}人  —  {summary}")
         self.update_buttons()
         self.refresh_management()
         self.refresh_competitions()
         self.refresh_starters()
         self.refresh_training()
+        expired = tuple(p.name for p in self.state.owned_players if not self.state.can_play(p.name))
+        if expired:
+            names = "、".join(expired[:3]) + (f" ほか{len(expired) - 3}人" if len(expired) > 3 else "")
+            self.editor_contract_warning.set(f"契約終了: {names}\n{EXPIRED_ROSTER_WARNING}。再契約すると編成に追加できます。")
+            self.editor_contract_banner.pack(fill="x", pady=(0, 8), before=self.editor_main)
+        else:
+            self.editor_contract_banner.pack_forget()
+            self.editor_contract_warning.set("")
 
     def refresh_players(self):
         selected = self.players.selection()
@@ -596,8 +646,10 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             if query not in player.name.casefold() or self.role.get() not in ("すべて", player.role):
                 continue
             owner = next((team for team in self.state.teams if player.name in team.roster), None)
-            affiliation = "編成中" if player.name in self.state.roster else self.state.team_name
-            self.players.insert("", "end", iid=str(index), values=(player.name, player.role, f"{player.iq:g}", affiliation))
+            expired = not self.state.can_play(player.name)
+            affiliation = "契約終了・再契約が必要" if expired else "編成中" if player.name in self.state.roster else self.state.team_name
+            self.players.insert("", "end", iid=str(index), values=(player.name, player.role, f"{player.iq:g}", affiliation),
+                                tags=("contract_expired",) if expired else ())
         if selected and self.players.exists(selected[0]):
             self.players.selection_set(selected[0])
         self.select_player()
@@ -616,27 +668,35 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                 f"HS率: {player.hs_pct:.0%}    命中率: {player.hit_pct:.0%}\n"
                 f"回避率: {player.dodge_pct:.0%}    反応: {player.reaction:g}\n"
                 f"IQ: {player.iq:g}    影響力: {player.influence:g}\n"
-                f"研究Lv: {player.research_level} / 10    エイムラボLv: {player.aim_lab_level} / 10\n"
+                f"研究Lv: {player.research_level} / {MAX_TRAINING_LEVEL}    エイムラボLv: {player.aim_lab_level} / {MAX_TRAINING_LEVEL}\n"
                 f"総合戦闘力: {player_combat_power(player):.2f}\n"
                 f"撃ち合い戦闘力: {player_duel_power(player):.2f}\n"
                 f"メンタル: {player.mental:g}    調子の波: {player.form_variance:g}\n"
                 f"基本月給: {player.monthly_salary:,}円    忠誠心: {player.loyalty:g}"
             )
+            if not self.state.can_play(player.name):
+                self.details.set(self.details.get() + f"\n\n{EXPIRED_ROSTER_WARNING}。\n契約状況で再契約してください。")
         self.update_buttons()
 
     def update_buttons(self):
         player = self.selected_player()
-        can_add = player is not None and player.name not in self.state.roster and not self.state.roster_ready and self.state.roster_owner(player.name) is None
+        can_add = player is not None and self.state.can_play(player.name) and player.name not in self.state.roster and not self.state.roster_ready and self.state.roster_owner(player.name) is None
         self.add_button.configure(state="normal" if can_add else "disabled")
         can_delete = player is not None and player.name not in self.state.roster and not self.state.player_in_saved_team(player.name)
         self.delete_button.configure(state="normal" if can_delete else "disabled")
         selection = self.roster.selection()
         can_remove = bool(selection) and int(selection[0]) < len(self.state.roster)
         self.remove_button.configure(state="normal" if can_remove else "disabled")
-        self.confirm_button.configure(state="normal" if self.state.roster_ready else "disabled")
+        self.confirm_button.configure(state="normal" if self.state.roster_ready and not self.state.unplayable_roster else "disabled")
 
     def commit(self, candidate, message):
         try:
+            from season_contract_endings import settle_contract_endings
+            candidate = settle_contract_endings(candidate)
+            expired = candidate.unplayable_roster
+            if expired:
+                candidate = candidate.with_playable_roster()
+                message += f" {'、'.join(expired)}: {EXPIRED_ROSTER_WARNING}。ロスターから自動で外しました。契約状況で再契約してください。"
             self.store.save(candidate)
         except (OSError, SeasonSaveError) as exc:
             self.status.set("保存に失敗しました。もう一度操作してください。")
@@ -663,6 +723,10 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
     def add_player(self):
         player = self.selected_player()
+        if player is not None and not self.state.can_play(player.name):
+            self.status.set(f"{player.name}: {EXPIRED_ROSTER_WARNING}。契約状況で再契約してください。")
+            self.refresh()
+            return
         if player and player.name not in self.state.roster and not self.state.roster_ready:
             owner = self.state.roster_owner(player.name)
             if owner:
@@ -748,6 +812,9 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.commit(candidate, "チーム名を変更しました。編成プリセットとレートは引き継ぎます。")
 
     def confirm(self):
+        if self.state.unplayable_roster:
+            self.refresh()
+            return
         if self.state.roster_ready and self.save_preset_name():
             try:
                 candidate = self.state.with_confirmed_team()

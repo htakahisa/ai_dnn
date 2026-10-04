@@ -92,7 +92,7 @@ class PairFamiliarityTests(unittest.TestCase):
     def test_month_end_uses_final_roster_after_departures(self):
         state = self.state(bench=True)
         state = replace(state, contracts=tuple(
-            replace(c, kind="short", duration_months=6, team_loyalty=0) if c.player_name == "Meiy" else c
+            replace(c, kind="short", duration_months=6, team_loyalty=-.1) if c.player_name == "Meiy" else c
             for c in state.contracts))
         state = state.advance_days(31)
         self.assertIsNone(state.player("Meiy"))
@@ -342,7 +342,7 @@ class PairFamiliarityTests(unittest.TestCase):
     def test_monthly_separation_news_uses_final_day_and_news_ui_renders_it(self):
         state = self.state(bench=True)
         state = replace(state, pair_days={pair_key("Leo", "Meiy"): 100}, contracts=tuple(
-            replace(c, kind="short", duration_months=6, team_loyalty=0) if c.player_name == "Meiy" else c
+            replace(c, kind="short", duration_months=6, team_loyalty=-.1) if c.player_name == "Meiy" else c
             for c in state.contracts))
         advanced = state.advance_days(31)
         event = next(e for e in advanced.pair_news if e.kind == "pair_separation")

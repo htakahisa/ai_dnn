@@ -121,8 +121,8 @@ class ScoutCalendarTests(unittest.TestCase):
 
     def test_renewal_does_not_consume_scout_slot_or_day(self):
         state = self.state()
-        state = replace(state, contracts=tuple(replace(c, kind="short", duration_months=1) for c in state.contracts))
-        state = state.advance_days(59)
+        state = replace(state, contracts=tuple(replace(c, kind="short", duration_months=2) for c in state.contracts))
+        state = state.advance_days(60)
         updated = state.with_renewed_contract(OWN[0], "year1")
         self.assertEqual(updated.date, state.date)
         self.assertEqual(updated.scout_remaining(), 2)

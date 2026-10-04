@@ -14,7 +14,7 @@ import realtime_season_config as config
 import realtime_season_teams as teams
 import realtime_season_competitions as calendar
 import realtime_season_rival_economy as rival_economy
-from realtime_season import SeasonStore, SeasonSaveError, new_season
+from realtime_season import SeasonStore, SeasonSaveError, new_season, FORCED_OFFER_LOYALTY
 from season_monthly_events import process_monthly_events
 from season_transfers import with_randomized_clubs
 from run_realtime_season import RealtimeSeasonApp
@@ -51,7 +51,8 @@ class TransferTests(unittest.TestCase):
         state = new_season(OWN).with_roster(OWN).with_confirmed_team()
         state = replace(state, opponent_teams=tuple(replace(c, regular_members=c.members,
                         regular_igl=c.igl, regular_carrier=c.carrier) for c in state.opponent_teams), money=10_000_000)
-        return state.with_scouted_player("Aspas", "year1").advance_months()
+        # Keep the ordinary offer pending; threshold tests lower loyalty explicitly.
+        return state.with_scouted_player("Aspas", "year1").with_team_loyalty("Aspas", 50).advance_months()
 
     def test_initial_mixing_is_unique_and_averages_two_missing_starters(self):
         counts = []
@@ -136,15 +137,15 @@ class TransferTests(unittest.TestCase):
         self.assertNotEqual(following.transfer_offer("Aspas").id, offer.id)
 
     def test_threshold_is_strict_and_forces_transfer_immediately(self):
-        state = self.offer_state().with_team_loyalty("Aspas", 30)
+        state = self.offer_state().with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY)
         self.assertIsNotNone(state.player("Aspas"))
-        forced = state.with_team_loyalty("Aspas", 29.99)
+        forced = state.with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY - .01)
         self.assertIsNone(forced.player("Aspas"))
         self.assertEqual(forced.transfer_offers[-1].status, "forced")
         self.assertEqual(forced.money, state.money + state.transfer_offer("Aspas").fee)
 
     def test_match_loss_and_monthly_decay_force_pending_transfers(self):
-        state = self.offer_state().with_team_loyalty("Aspas", 30)
+        state = self.offer_state().with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY)
         lost = state.with_rated_result("loss", state.club_id, state.opponent_teams[0].id, 0, 1)
         self.assertIsNone(lost.player("Aspas"))
         self.assertEqual(lost.transfer_offers[-1].status, "forced")
@@ -156,18 +157,18 @@ class TransferTests(unittest.TestCase):
         state = replace(new_season(OWN), money=10_000_000)
         state = replace(state, opponent_teams=tuple(replace(c, regular_members=c.members) for c in state.opponent_teams))
         state = state.with_scouted_player("Aspas", "year1")
-        state = state.with_team_loyalty("Aspas", 29)
+        state = state.with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY - 1)
         month = state.advance_months()
         self.assertIsNone(month.player("Aspas"))
         self.assertEqual(month.transfer_offers[-1].status, "forced")
 
     def test_declined_offer_still_forces_transfer_when_loyalty_falls(self):
-        state = self.offer_state().with_team_loyalty("Aspas", 30)
+        state = self.offer_state().with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY)
         offer = state.transfer_offer("Aspas")
         state = state.with_transfer_response(offer.id, False)
         self.assertFalse(state.pending_transfer_offers)
         self.assertIsNotNone(state.player("Aspas"))
-        forced = state.with_team_loyalty("Aspas", 29.9)
+        forced = state.with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY - .1)
         self.assertIsNone(forced.player("Aspas"))
         self.assertEqual(forced.transfer_offers[-1].status, "forced")
         self.assertEqual(forced.money, state.money + offer.fee)
@@ -227,7 +228,7 @@ class TransferTests(unittest.TestCase):
         state = state.with_selected_team(state.teams[-1].id)
         state = state.with_tournament_entry("cup", state.selected_team_id)
         snapshot = state.tournament("cup").entrants
-        forced = state.with_team_loyalty("Aspas", 29)
+        forced = state.with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY - 1)
         self.assertIsNone(forced.player("Aspas"))
         self.assertEqual(forced.tournament("cup").entrants, snapshot)
         forced.validate()
