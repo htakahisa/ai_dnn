@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 573744470,
+      "player_stats": {
+        "まーやまくん": {
+          "kills": 12,
+          "deaths": 15
+        },
+        "Brawk": {
+          "kills": 2,
+          "deaths": 17
+        },
+        "valyn": {
+          "kills": 3,
+          "deaths": 17
+        },
+        "SiuFatBB": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "Sato": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "Furina": {
+          "kills": 16,
+          "deaths": 8
+        },
+        "Lohen": {
+          "kills": 13,
+          "deaths": 6
+        },
+        "Arlecchino": {
+          "kills": 12,
+          "deaths": 7
+        },
+        "Jean": {
+          "kills": 13,
+          "deaths": 6
+        },
+        "Tartaglia": {
+          "kills": 25,
+          "deaths": 7
+        }
+      }
+    }
+  ]
+}

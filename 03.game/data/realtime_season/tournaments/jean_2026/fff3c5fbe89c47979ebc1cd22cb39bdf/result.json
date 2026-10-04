@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L3M1",
+  "left_id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "BBL",
+      "opponent_team": "マイチーム",
+      "own_score": 4,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 1457566350,
+      "player_stats": {
+        "Lar0k": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "Loita": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Crewn": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "lovers rock": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "CHICHOO": {
+          "kills": 3,
+          "deaths": 14
+        },
+        "Brawk": {
+          "kills": 10,
+          "deaths": 4
+        },
+        "something": {
+          "kills": 12,
+          "deaths": 3
+        },
+        "SiuFatBB": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "まーやまくん": {
+          "kills": 21,
+          "deaths": 9
+        },
+        "valyn": {
+          "kills": 14,
+          "deaths": 9
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "BBL",
+      "opponent_team": "マイチーム",
+      "own_score": 1,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 1457566351,
+      "player_stats": {
+        "Brawk": {
+          "kills": 9,
+          "deaths": 6
+        },
+        "something": {
+          "kills": 11,
+          "deaths": 4
+        },
+        "SiuFatBB": {
+          "kills": 8,
+          "deaths": 5
+        },
+        "まーやまくん": {
+          "kills": 29,
+          "deaths": 7
+        },
+        "valyn": {
+          "kills": 4,
+          "deaths": 9
+        },
+        "Lar0k": {
+          "kills": 13,
+          "deaths": 10
+        },
+        "Loita": {
+          "kills": 3,
+          "deaths": 13
+        },
+        "Crewn": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "lovers rock": {
+          "kills": 4,
+          "deaths": 11
+        },
+        "CHICHOO": {
+          "kills": 6,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

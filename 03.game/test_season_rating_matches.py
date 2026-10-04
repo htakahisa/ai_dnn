@@ -29,6 +29,29 @@ class NpcSeriesTest(SeasonCompetitionTest):
     def npc_day(self):
         return record_next(self.entered()).advance_days()
 
+    def test_each_map_is_drawn_until_best_of_three_or_five_is_decided(self):
+        cases = ((2, (.1, .9, .1), (2, 1)), (2, (.9, .1, .9), (1, 2)),
+                 (3, (.1, .9, .1, .9, .1), (3, 2)), (3, (.9, .1, .9, .1, .9), (2, 3)))
+        for required, draws, expected in cases:
+            with self.subTest(score=expected), patch.object(config, "TOURNAMENTS", [definition(normal_maps_to_win=required)]):
+                state = self.npc_day()
+                run = state.tournament("cup")
+                event = state.tournament_definition("cup")
+                match, _ = next_match(event, run)
+                state = replace(state, ratings=tuple(replace(r, value=1500) for r in state.ratings))
+                with patch("realtime_season.Random") as rng, patch("realtime_season.expected_score", wraps=expected_score) as probability:
+                    rng.return_value.random.side_effect = draws
+                    result = state.with_tournament_rating_result("cup")
+                    self.assertEqual(rng.return_value.random.call_count, sum(expected))
+                    self.assertEqual(probability.call_count, sum(expected))
+                score = result.tournament("cup").results[-1]
+                self.assertEqual((score.left_wins, score.right_wins), expected)
+                self.assertEqual(len(result.rated_results), len(state.rated_results) + 1)
+                self.assertEqual((result.rating(match.left), result.rating(match.right)),
+                                 series_ratings(1500, 1500, *expected))
+                self.store.save(result)
+                self.assertEqual(self.store.load_or_create(), result)
+
     def test_draw_threshold_uses_current_ratings_without_map_probability_conversion(self):
         state = self.npc_day()
         event, run = state.tournament_definition("cup"), state.tournament("cup")
@@ -41,7 +64,7 @@ class NpcSeriesTest(SeasonCompetitionTest):
                 rng.return_value.random.return_value = draw
                 result = state.with_tournament_rating_result("cup")
                 rng.assert_called_once_with((run.seed + len(run.results) * 1000) % (2**31))
-                rng.return_value.random.assert_called_once_with()
+                self.assertEqual(rng.return_value.random.call_count, match.maps_to_win)
             score = result.tournament("cup").results[-1]
             self.assertEqual(score.left_wins > score.right_wins, left_wins)
             self.assertTrue(score.decided_by_rating)

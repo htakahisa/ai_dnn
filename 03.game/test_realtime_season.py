@@ -181,7 +181,7 @@ class SeasonPersistenceTest(unittest.TestCase):
         self.path.write_text(json.dumps(data), encoding="utf-8")
         with patch.object(realtime_season_teams, "SEASON_TEAMS", [{"name": "ライバル", "players": list(RIVAL_PLAYERS)}]):
             loaded = self.store.load_or_create()
-            self.assertEqual(loaded, state)
+            self.assertEqual(loaded, replace(state, contracts=tuple(replace(c, signed_on=None) for c in state.contracts)))
             imported = self.store.import_season_teams(loaded)
         self.assertEqual(imported.teams, state.teams)
         self.assertEqual(len(imported.opponent_teams), 1)

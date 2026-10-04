@@ -22,7 +22,7 @@ def snapshot(state):
         event = state.tournament_definition(run.tournament_id)
         names = {team.id: team.name for team in run.entrants}
         rank = run.ranking.index(run.own_team_id) + 1 if run.own_team_id in run.ranking else None
-        standings.append({"大会ID": run.tournament_id, "大会名": event.name,
+        standings.append({"大会ID": run.tournament_id, "大会名": event.display_name,
                           "状態": "不参加" if run.declined else "終了" if run.completed else "進行中",
                           "順位": rank, "順位表": [names[team_id] for team_id in run.ranking],
                           "受取賞金": run.prize_paid})

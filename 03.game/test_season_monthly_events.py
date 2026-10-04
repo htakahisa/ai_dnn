@@ -64,7 +64,8 @@ class MonthlyEventsTest(unittest.TestCase):
         self.assertEqual((contract.kind, contract.start_month, contract.duration_months), ("year1", 1, 12))
         self.assertEqual(contract.monthly_salary, player.monthly_salary)
         self.assertEqual([e.kind for e in month.monthly_events], ["recruitment", "month_completed"])
-        self.assertEqual(month.money, state.money + state.monthly_sponsor_income - sum(c.monthly_salary for c in state.contracts))
+        self.assertEqual(month.money, state.money + state.monthly_sponsor_income
+                         - sum(c.monthly_salary for c in state.contracts if c.player_name in OWN))
         build_scrim_request(month, month.selected_team_id, club.id)
 
     def test_multiple_clubs_and_slots_share_a_unique_lft_pool(self):
@@ -122,21 +123,21 @@ class MonthlyEventsTest(unittest.TestCase):
         state = self.state()
         club = state.opponent_teams[0]
         club = replace(club, contracts=tuple(replace(c, kind="short", duration_months=1,
-                               team_loyalty=0 if c.player_name == "Aspas" else 17) if c.player_name in ("Aspas", "valyn") else c
+                               team_loyalty=-.1 if c.player_name == "Aspas" else 17) if c.player_name in ("Aspas", "valyn") else c
                                             for c in club.contracts))
         state = replace(state, opponent_teams=(club, state.opponent_teams[1]))
         month = state.advance_months()
         self.assertNotIn("Aspas", month.opponent_teams[0].members)
         renewal = next(c for c in month.opponent_teams[0].contracts if c.player_name == "valyn")
         self.assertEqual(renewal.start_month, 1)
-        self.assertEqual(renewal.team_loyalty, 16.5)
+        self.assertEqual(renewal.team_loyalty, 27)
         self.assertEqual({e.kind for e in month.monthly_events}, {"departure", "renewal", "recruitment", "month_completed"})
         imported = self.store.import_season_teams(month)
         self.assertNotIn("Aspas", imported.opponent_teams[0].members)
         self.assertEqual(imported.opponent_teams[0].members, month.opponent_teams[0].members)
 
     def test_registered_tournament_members_are_not_removed_at_month_boundary(self):
-        cup = dict(id="cup", name="Cup", start_date="2026-02-02", end_date="2026-02-04", team_count=2,
+        cup = dict(id="cup", name="Cup", start_date="2026-01-31", end_date="2026-02-04", team_count=2,
                    format="single_elimination", prizes={}, normal_maps_to_win=1, lower_final_maps_to_win=1,
                    grand_final_maps_to_win=1)
         with patch.object(calendar, "TOURNAMENTS", [cup]):
@@ -158,7 +159,7 @@ class MonthlyEventsTest(unittest.TestCase):
         club = replace(club, contracts=tuple(replace(c, kind="short", duration_months=1, team_loyalty=17)
                                              if c.player_name == "Aspas" else c for c in club.contracts))
         month = replace(state, opponent_teams=(club, state.opponent_teams[1])).advance_months()
-        self.assertEqual(next(c.team_loyalty for c in month.opponent_teams[0].contracts if c.player_name == "Aspas"), 17)
+        self.assertEqual(next(c.team_loyalty for c in month.opponent_teams[0].contracts if c.player_name == "Aspas"), 27)
 
     def test_import_preserves_autorecruits_contracts_and_rating(self):
         state = self.state().with_scouted_player("Aspas", "short", 1).advance_months()

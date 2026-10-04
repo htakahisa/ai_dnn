@@ -78,8 +78,8 @@ class SeasonEconomyTest(unittest.TestCase):
         won = state.with_rated_result("scrim:1", own.id, rival.id, 1, 0)
         self.assertEqual(won.rating(own.id), 1532)
         self.assertEqual(won.rating(rival.id), 1468)
-        self.assertEqual(won.contract("Leo").team_loyalty, 51)
-        self.assertEqual(won.opponent_teams[0].contracts[-1].team_loyalty, 49.5)
+        self.assertEqual(won.contract("Leo").team_loyalty, 21)
+        self.assertEqual(won.opponent_teams[0].contracts[-1].team_loyalty, 27)
         self.assertEqual(won.with_rated_result("scrim:1", own.id, rival.id, 1, 0), won)
         self.store.save(won)
         loaded = self.store.load_or_create()
@@ -105,12 +105,12 @@ class SeasonEconomyTest(unittest.TestCase):
                     result = state.with_rated_result("result", left_id, right_id,
                                                      2 if left_won else 1, 1 if left_won else 2)
                     for player in state.owned_players:
-                        delta = 1 if own_won else -(10 - player.loyalty) / 10
-                        self.assertAlmostEqual(result.contract(player.name).team_loyalty, 50 + delta)
+                        delta = (1 if own_won else -(10 - player.loyalty) / 10) if player.name in OWN else -3
+                        self.assertAlmostEqual(result.contract(player.name).team_loyalty, state.contract(player.name).team_loyalty + delta)
                     club = result.opponent_teams[0]
                     for player, contract in zip(club.players, club.contracts):
-                        delta = -(10 - player.loyalty) / 10 if own_won else 1
-                        self.assertAlmostEqual(contract.team_loyalty, 50 + delta)
+                        delta = (-(10 - player.loyalty) / 10 if own_won else 1) if player.name in RIVAL[:5] else -3
+                        self.assertAlmostEqual(contract.team_loyalty, state.team_loyalty(player.name, rival_id) + delta)
                     self.assertEqual(result.player("Leo").loyalty, 0)
                     self.assertEqual(result.money, state.money)
                     self.assertEqual(result.with_rated_result("result", left_id, right_id, 2, 1), result)
@@ -124,8 +124,9 @@ class SeasonEconomyTest(unittest.TestCase):
         left, right = state.opponent_teams
         result = state.with_rated_result("npc", left.id, right.id, 0, 3)
         self.assertEqual(result.contracts, state.contracts)
-        self.assertTrue(all(c.team_loyalty == 49.5 for c in result.opponent_teams[0].contracts))
-        self.assertTrue(all(c.team_loyalty == 51 for c in result.opponent_teams[1].contracts))
+        self.assertTrue(all(c.team_loyalty == (29.5 if c.player_name in RIVAL[:5] else 27)
+                            for c in result.opponent_teams[0].contracts))
+        self.assertTrue(all(c.team_loyalty == 31 for c in result.opponent_teams[1].contracts))
 
     def test_match_loyalty_preserves_inactive_contracts_and_controls_departure_and_renewal(self):
         # This scenario checks an existing long contract; starters now have
@@ -165,8 +166,9 @@ class SeasonEconomyTest(unittest.TestCase):
         self.assertEqual(won.rating(state.selected_team_id), 1532)
         self.assertEqual(won.rating(state.opponent_teams[0].id), 1468)
         self.assertEqual(len(won.rated_results), 1)
-        self.assertEqual(won.contract("Leo").team_loyalty, 51)
-        self.assertTrue(all(c.team_loyalty == 49.5 for c in won.opponent_teams[0].contracts))
+        self.assertEqual(won.contract("Leo").team_loyalty, 21)
+        self.assertTrue(all(c.team_loyalty == (29.5 if c.player_name in RIVAL[:5] else 27)
+                            for c in won.opponent_teams[0].contracts))
         self.store.save(won)
         with self.assertRaises(SeasonSaveError):
             self.store.load_or_create().with_tournament_result("cup", score)
@@ -375,8 +377,9 @@ class SeasonEconomyScreenTest(SeasonEconomyTest):
         app._scrim_rating_context = ("scrim:example", own.id, rival.id)
         app.poll_scrim()
         self.assertEqual(app.state.rating(own.id), 1532)
-        self.assertEqual(app.state.contract("Leo").team_loyalty, 51)
-        self.assertTrue(all(c.team_loyalty == 49.5 for c in app.state.opponent_teams[0].contracts))
+        self.assertEqual(app.state.contract("Leo").team_loyalty, 21)
+        self.assertTrue(all(c.team_loyalty == (29.5 if c.player_name in RIVAL[:5] else 27)
+                            for c in app.state.opponent_teams[0].contracts))
         self.assertEqual(self.store.load_or_create(), app.state)
         self.assertIn("7,500,000", app.home_summary.get())
 

@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "マイチーム",
+  "opponent_team": "Furina Party",
+  "own_score": 10,
+  "opponent_score": 13,
+  "winner": "Furina Party",
+  "seed": 1427081756,
+  "player_stats": {
+    "Brawk": {
+      "kills": 7,
+      "deaths": 20
+    },
+    "something": {
+      "kills": 15,
+      "deaths": 14
+    },
+    "SiuFatBB": {
+      "kills": 13,
+      "deaths": 17
+    },
+    "まーやまくん": {
+      "kills": 20,
+      "deaths": 18
+    },
+    "valyn": {
+      "kills": 6,
+      "deaths": 18
+    },
+    "くりまる": {
+      "kills": 12,
+      "deaths": 12
+    },
+    "Arlecchino": {
+      "kills": 15,
+      "deaths": 12
+    },
+    "Jean": {
+      "kills": 12,
+      "deaths": 6
+    },
+    "Furina": {
+      "kills": 17,
+      "deaths": 14
+    },
+    "benjyfishy": {
+      "kills": 31,
+      "deaths": 18
+    }
+  }
+}

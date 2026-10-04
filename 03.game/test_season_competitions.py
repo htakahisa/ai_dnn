@@ -193,7 +193,7 @@ class SeasonCompetitionTest(unittest.TestCase):
             state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(30)
         state = record_next(state)
         balance, income = state.money, state.monthly_sponsor_income
-        payroll = sum(c.monthly_salary for c in state.contracts if c.active(state.game_month))
+        payroll = sum(c.monthly_salary for c in state.contracts if state.contract_active(c))
         following = state.advance_days(100)
         self.assertEqual(following.date, date(2026, 2, 1))
         self.assertEqual(following.money, balance + income - payroll)

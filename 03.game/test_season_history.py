@@ -13,7 +13,7 @@ import realtime_season_competitions as calendar
 import realtime_season_teams as teams
 import realtime_season_training as training
 import realtime_season_world_levels as levels
-from realtime_season import SeasonSaveError, SeasonStore, new_season
+from realtime_season import SeasonSaveError, SeasonStore, new_season, FORCED_OFFER_LOYALTY
 from season_competitions import SeriesScore, next_match
 
 
@@ -97,7 +97,7 @@ class SeasonHistoryTest(unittest.TestCase):
         state = state.with_scouted_player("Aspas", "year1").advance_months()
         offer = state.transfer_offer("Aspas")
         self.assertIsNotNone(offer)
-        state = state.with_transfer_response(offer.id, False).with_team_loyalty("Aspas", 29)
+        state = state.with_transfer_response(offer.id, False).with_team_loyalty("Aspas", FORCED_OFFER_LOYALTY - 1)
         data = self.export(state)
         kinds = {log["種別"] for log in data["移籍ログ"] if log["選手"] == "Aspas"}
         self.assertTrue({"オファー到着", "オファー拒否", "強制移籍成立", "移籍"}.issubset(kinds))

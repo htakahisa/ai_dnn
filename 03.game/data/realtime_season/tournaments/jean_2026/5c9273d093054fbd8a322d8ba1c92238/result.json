@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L2M1",
+  "left_id": "world-819dc24a828657f48dfff35f19834e50",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "マイチーム",
+      "own_score": 8,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 1457565350,
+      "player_stats": {
+        "Nanasaki": {
+          "kills": 17,
+          "deaths": 14
+        },
+        "Canezerra": {
+          "kills": 16,
+          "deaths": 9
+        },
+        "WoohyuN": {
+          "kills": 4,
+          "deaths": 16
+        },
+        "Zest": {
+          "kills": 4,
+          "deaths": 15
+        },
+        "yay": {
+          "kills": 5,
+          "deaths": 15
+        },
+        "Brawk": {
+          "kills": 12,
+          "deaths": 8
+        },
+        "something": {
+          "kills": 14,
+          "deaths": 11
+        },
+        "SiuFatBB": {
+          "kills": 13,
+          "deaths": 9
+        },
+        "まーやまくん": {
+          "kills": 22,
+          "deaths": 6
+        },
+        "valyn": {
+          "kills": 8,
+          "deaths": 12
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "マイチーム",
+      "own_score": 4,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 1457565351,
+      "player_stats": {
+        "Brawk": {
+          "kills": 8,
+          "deaths": 10
+        },
+        "something": {
+          "kills": 12,
+          "deaths": 6
+        },
+        "SiuFatBB": {
+          "kills": 9,
+          "deaths": 8
+        },
+        "まーやまくん": {
+          "kills": 27,
+          "deaths": 9
+        },
+        "valyn": {
+          "kills": 8,
+          "deaths": 10
+        },
+        "Nanasaki": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "Canezerra": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "WoohyuN": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "Zest": {
+          "kills": 6,
+          "deaths": 12
+        },
+        "yay": {
+          "kills": 9,
+          "deaths": 14
+        }
+      }
+    }
+  ]
+}

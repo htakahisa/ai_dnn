@@ -2,7 +2,12 @@
 
 START_DATE はゲーム内の日付で、現実の時計とは無関係です。
 IN_SEASON_PERIODS は毎年繰り返す月日範囲（両端を含む、年またぎも可）。
-TOURNAMENTS の日付は YYYY-MM-DD、prizes は順位:賞金（円）です。
+TOURNAMENTS の start_date は MM-DD で毎年開催、YYYY-MM-DD で指定年のみ開催します。
+毎年開催の visible_from も MM-DD で設定します。未指定なら毎年01-01に告知します。
+告知月日が開催月日より後なら前年の告知です（例: 01-15開催 / 12-01告知）。
+年度別IDは自動で「設定ID_年」になり、参加登録・順位・賞金・履歴を年ごとに保存します。
+02-29の大会はうるう年のみ開催します。02-29告知は平年なら02-28になります。
+prizes は順位:賞金（円）です。
 start_date 以降、1日1シリーズずつ進行します。
 終了予定日は開始日・参加数・大会形式から自動計算します。end_date の設定は不要です。
 シングルは参加数-1試合、ダブルは参加数×2-2試合（GFリセットなし）。
@@ -18,7 +23,7 @@ opponent_teams は招待の優先順です。5人未満のチームの代わり�
 appearance_conditions は全条件を満たすと出現します。対応キー:
 min_money, min_owned_players, completed_tournaments（自分が完走した大会IDのリスト）,
 best_rank（大会ID:何位以内か）, phase（in_season/off_season）。
-visible_from は告知開始日（未指定ならゲーム開始日）。
+visible_from は告知開始日（指定年のみの大会で未指定ならゲーム開始日）。
 
 設定の変更は新規セーブに適用します。既存セーブには
 python run_realtime_season.py --import-competitions
@@ -30,10 +35,10 @@ IN_SEASON_PERIODS = [("03-01", "11-30")]
 
 TOURNAMENTS = [
     {
-        "id": "kachina_2026",
-        "name": "カチーナ杯 2026",
-        "start_date": "2026-01-15",
-        "visible_from": "2026-01-01",
+        "id": "kachina",
+        "name": "カチーナ杯",
+        "start_date": "01-15",
+        "visible_from": "01-01",
         "team_count": 4,
         "format": "double_elimination",
         "prizes": {1: 10_000_000, 2: 5_000_000, 3: 2_000_000, 4: 1_000_000},
@@ -46,10 +51,10 @@ TOURNAMENTS = [
         "opponent_teams": [],
     },
     {
-        "id": "lisa_2026",
-        "name": "リサ杯 2026",
-        "start_date": "2026-03-10",
-        "visible_from": "2026-02-01",
+        "id": "lisa",
+        "name": "リサ杯",
+        "start_date": "03-10",
+        "visible_from": "02-01",
         "team_count": 4,
         "format": "double_elimination",
         "prizes": {
@@ -67,10 +72,10 @@ TOURNAMENTS = [
         "opponent_teams": [],
     },
     {
-        "id": "jean_2026",
-        "name": "ジン杯 2026",
-        "start_date": "2026-04-20",
-        "visible_from": "2026-04-01",
+        "id": "jean",
+        "name": "ジン杯",
+        "start_date": "04-20",
+        "visible_from": "04-01",
         "team_count": 6,
         "format": "double_elimination",
         "prizes": {
@@ -90,10 +95,10 @@ TOURNAMENTS = [
         "opponent_teams": [],
     },
     {
-        "id": "lohen_2026",
-        "name": "ローエン杯 2026",
-        "start_date": "2026-06-30",
-        "visible_from": "2026-06-01",
+        "id": "lohen",
+        "name": "ローエン杯",
+        "start_date": "06-30",
+        "visible_from": "06-01",
         "team_count": 8,
         "format": "double_elimination",
         "prizes": {
@@ -115,10 +120,10 @@ TOURNAMENTS = [
         "opponent_teams": [],
     },
     {
-        "id": "furina_2026",
-        "name": "フリーナ杯 2026",
-        "start_date": "2026-09-30",
-        "visible_from": "2026-08-01",
+        "id": "furina",
+        "name": "フリーナ杯",
+        "start_date": "09-30",
+        "visible_from": "08-01",
         "team_count": 16,
         "format": "double_elimination",
         "prizes": {

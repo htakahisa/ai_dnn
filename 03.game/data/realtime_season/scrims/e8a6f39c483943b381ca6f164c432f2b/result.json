@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "マイチーム",
+  "opponent_team": "BBL",
+  "own_score": 13,
+  "opponent_score": 7,
+  "winner": "マイチーム",
+  "seed": 1651422537,
+  "player_stats": {
+    "something": {
+      "kills": 16,
+      "deaths": 7
+    },
+    "SiuFatBB": {
+      "kills": 7,
+      "deaths": 9
+    },
+    "valyn": {
+      "kills": 0,
+      "deaths": 10
+    },
+    "ZMJKK": {
+      "kills": 23,
+      "deaths": 10
+    },
+    "Sato": {
+      "kills": 7,
+      "deaths": 9
+    },
+    "Rosé": {
+      "kills": 2,
+      "deaths": 11
+    },
+    "Lar0k": {
+      "kills": 27,
+      "deaths": 5
+    },
+    "Loita": {
+      "kills": 8,
+      "deaths": 12
+    },
+    "Crewn": {
+      "kills": 3,
+      "deaths": 10
+    },
+    "lovers rock": {
+      "kills": 5,
+      "deaths": 15
+    }
+  }
+}

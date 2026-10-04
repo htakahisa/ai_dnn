@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 11,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 2097004499,
+      "player_stats": {
+        "まーやまくん": {
+          "kills": 21,
+          "deaths": 13
+        },
+        "Brawk": {
+          "kills": 11,
+          "deaths": 22
+        },
+        "valyn": {
+          "kills": 18,
+          "deaths": 20
+        },
+        "SiuFatBB": {
+          "kills": 12,
+          "deaths": 14
+        },
+        "Sato": {
+          "kills": 17,
+          "deaths": 14
+        },
+        "benjyfishy": {
+          "kills": 21,
+          "deaths": 15
+        },
+        "Dep": {
+          "kills": 11,
+          "deaths": 18
+        },
+        "Arlecchino": {
+          "kills": 13,
+          "deaths": 10
+        },
+        "alecks": {
+          "kills": 15,
+          "deaths": 19
+        },
+        "Jean": {
+          "kills": 23,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 0,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 2097004500,
+      "player_stats": {
+        "benjyfishy": {
+          "kills": 15,
+          "deaths": 3
+        },
+        "Dep": {
+          "kills": 7,
+          "deaths": 6
+        },
+        "Arlecchino": {
+          "kills": 5,
+          "deaths": 3
+        },
+        "alecks": {
+          "kills": 11,
+          "deaths": 8
+        },
+        "Jean": {
+          "kills": 20,
+          "deaths": 9
+        },
+        "まーやまくん": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Brawk": {
+          "kills": 2,
+          "deaths": 11
+        },
+        "valyn": {
+          "kills": 5,
+          "deaths": 11
+        },
+        "SiuFatBB": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "Sato": {
+          "kills": 5,
+          "deaths": 10
+        }
+      }
+    }
+  ]
+}

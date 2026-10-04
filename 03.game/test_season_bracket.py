@@ -65,13 +65,20 @@ class RatingCompletionTest(SeasonCompetitionTest):
         generated = run.results[3:]
         self.assertTrue(all(not s.decided_by_rating for s in actual))
         self.assertTrue(all(s.decided_by_rating for s in generated))
-        # Each draw uses ratings updated by the preceding result.
+        # Every map uses the pre-series ratings, updated after each series.
         expected_ratings = dict(snapshot)
         for index, score in enumerate(generated, len(actual)):
-            winner = score.left_id if score.left_wins > score.right_wins else score.right_id
+            match, _ = next_match(state.tournament_definition("cup"),
+                                  replace(run, results=run.results[:index]))
             probability = expected_score(expected_ratings[score.left_id], expected_ratings[score.right_id])
-            draw = Random((run.seed + index * 1000) % (2**31)).random()
-            self.assertEqual(winner, score.left_id if draw < probability else score.right_id)
+            rng = Random((run.seed + index * 1000) % (2**31))
+            left_wins = right_wins = 0
+            while max(left_wins, right_wins) < match.maps_to_win:
+                if rng.random() < probability:
+                    left_wins += 1
+                else:
+                    right_wins += 1
+            self.assertEqual((score.left_wins, score.right_wins), (left_wins, right_wins))
             self.assertNotIn(state.club_id, (score.left_id, score.right_id))
             left, right = series_ratings(expected_ratings[score.left_id], expected_ratings[score.right_id],
                                          score.left_wins, score.right_wins)

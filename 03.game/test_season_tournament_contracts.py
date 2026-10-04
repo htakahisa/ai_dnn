@@ -65,7 +65,7 @@ class TournamentContractTests(unittest.TestCase):
 
     def test_expired_starter_continues_until_finish_and_can_then_renew(self):
         state = self.in_progress()
-        self.assertFalse(state.contract("Leo").active(state.game_month))
+        self.assertFalse(state.contract_active(state.contract("Leo")))
         self.assertTrue(state.contract_end_deferred(state.contract("Leo")))
         self.assertTrue(state.can_play("Leo"))
         self.assertFalse(state.can_play("Meiy"))
@@ -136,7 +136,7 @@ class TournamentContractTests(unittest.TestCase):
         ended = finish(during)
         renewed = next(c for c in ended.opponent_teams[0].contracts if c.player_name == "Aspas")
         self.assertEqual(renewed.start_month, ended.game_month)
-        self.assertTrue(renewed.active(ended.game_month))
+        self.assertTrue(ended.contract_active(renewed))
         self.assertTrue(any(e.kind == "renewal" and e.player_name == "Aspas" and "大会終了" in e.message for e in ended.monthly_events))
 
     def test_save_reload_and_contract_status_with_offer(self):
@@ -162,7 +162,7 @@ class TournamentContractTests(unittest.TestCase):
         app.refresh_management()
         self.assertNotIn("延期中", app.contracts_players.item("Leo", "values")[1])
 
-    def test_poor_rival_ends_deferred_contract_immediately_at_completion(self):
+    def test_poor_rival_gets_one_month_grace_after_tournament_completion(self):
         self.cup["prizes"] = {}
         state = self.state()
         rival = state.opponent_teams[0]
@@ -173,9 +173,10 @@ class TournamentContractTests(unittest.TestCase):
         during = self.in_progress(state)
         self.assertIn("Aspas", during.opponent_teams[0].members)
         ended = finish(during)
-        self.assertNotIn("Aspas", ended.opponent_teams[0].members)
+        self.assertIn("Aspas", ended.opponent_teams[0].members)
         contract = next(c for c in ended.opponent_teams[0].contracts if c.player_name == "Aspas")
-        self.assertEqual(contract.end_reason, "left")
+        self.assertIsNone(contract.end_reason)
+        self.assertEqual(contract.expired_on, ended.game_date)
         self.store.save(ended)
         self.assertEqual(self.store.load_or_create(), ended)
 

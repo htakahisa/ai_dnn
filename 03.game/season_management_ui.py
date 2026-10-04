@@ -6,6 +6,7 @@ from tkinter import ttk
 from realtime_season import CONTRACT_OPTIONS, SeasonSaveError
 from season_competitions import add_months, parse_date
 from season_player_stats import player_combat_power, player_duel_power
+from season_training import MAX_TRAINING_LEVEL
 
 
 def game_calendar(month):
@@ -53,11 +54,11 @@ class SeasonManagementMixin:
                            ("salary", "基本月給（円）", 110), ("loyalty", "忠誠心 / 10", 90),
                            ("affiliation", "所属", 130), ("fee", "移籍金（円）", 110))
             else:
-                ttk.Label(host, text="契約終了後はここから再契約できます。チームへの忠誠が0以下の選手は再契約を断ります。",
+                ttk.Label(host, text="契約終了後1か月以内に再契約してください。未更新でLFTに移ると忠誠−5。忠誠が負の退団選手はこのチームと永久に再契約しません（0は再契約可能）。",
                           wraplength=960).pack(anchor="w", pady=(0, 8))
                 columns = (("name", "選手", 135), ("status", "状況", 210), ("kind", "契約", 85),
                            ("salary", "月給（円）", 110), ("progress", "経過 / 期間", 90), ("remaining", "残り", 65),
-                           ("end", "終了月", 125), ("loyalty", "忠誠心 / 10", 95), ("team_loyalty", "チームへの忠誠", 115))
+                           ("end", "終了日", 125), ("loyalty", "忠誠心 / 10", 95), ("team_loyalty", "チームへの忠誠", 115))
             if screen == "scout":
                 body = ttk.Frame(host)
                 body.pack(fill="both", expand=True)
@@ -66,11 +67,15 @@ class SeasonManagementMixin:
                 body.rowconfigure(0, weight=1)
                 table = ttk.Frame(body)
                 table.grid(row=0, column=0, sticky="nsew")
-                details_panel = ttk.LabelFrame(body, text="選択中の選手 — 全ステータス", padding=12)
+                details_panel = ttk.LabelFrame(body, text="選択中の選手 — 世界レベル補正前", padding=12)
                 details_panel.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
                 ttk.Label(details_panel, textvariable=self.scout_details, justify="left", wraplength=290).pack(anchor="nw")
-                ttk.Button(details_panel, text="選手詳細・相棒TOP5", command=lambda: self.show_player_pairs(
-                    self.offer_player("scout").name) if self.offer_player("scout") else None).pack(anchor="w", pady=8)
+                detail_actions = ttk.Frame(details_panel)
+                detail_actions.pack(anchor="w", pady=8)
+                ttk.Button(detail_actions, text="相棒TOP5", command=lambda: self.show_player_pairs(
+                    self.offer_player("scout").name) if self.offer_player("scout") else None).pack(side="left")
+                ttk.Button(detail_actions, text="チーム別忠誠", command=lambda: self.show_player_loyalties(
+                    self.offer_player("scout").name) if self.offer_player("scout") else None).pack(side="left", padx=(8, 0))
             else:
                 table = ttk.Frame(host)
                 table.pack(fill="both", expand=True)
@@ -114,14 +119,14 @@ class SeasonManagementMixin:
             offer.pack(fill="x", pady=(12, 8))
             row = ttk.Frame(offer)
             row.pack(fill="x")
-            self.offer_kind[screen] = kind = tk.StringVar(self.root, value="1年契約")
-            self.offer_months[screen] = months = tk.StringVar(self.root, value="6")
+            self.offer_kind[screen] = kind = tk.StringVar(self.root, value="365日契約")
+            self.offer_months[screen] = days = tk.StringVar(self.root, value="180")
             ttk.Label(row, text="契約の種類").pack(side="left")
             menu = ttk.Combobox(row, textvariable=kind, values=tuple(CONTRACT_OPTIONS), state="readonly", width=15)
             setattr(self, f"{screen}_kind_menu", menu)
             menu.pack(side="left", padx=8)
-            ttk.Label(row, text="短期契約の月数").pack(side="left", padx=(12, 0))
-            duration = ttk.Combobox(row, textvariable=months, values=tuple(str(n) for n in range(1, 7)), state="readonly", width=5)
+            ttk.Label(row, text="短期契約の日数").pack(side="left", padx=(12, 0))
+            duration = ttk.Combobox(row, textvariable=days, values=tuple(str(n * 30) for n in range(1, 7)), state="readonly", width=5)
             duration.pack(side="left", padx=8)
             self.offer_buttons[screen] = button = ttk.Button(row, text="契約して獲得" if screen == "scout" else "再契約する",
                                                             command=lambda target=screen: self.sign_selected_contract(target))
@@ -132,7 +137,7 @@ class SeasonManagementMixin:
             self.offer_summary[screen] = summary = tk.StringVar(self.root)
             ttk.Label(offer, textvariable=summary, wraplength=960).pack(anchor="w", pady=(8, 0))
             ttk.Label(host, text="契約金は契約後の月給の3倍を支払います。移籍金も別途支払い、残金で契約期間分の月給を払えるか確認します。\n"
-                      "短期は基本月給、1年は基本月給、2年は0.9倍、3年は0.8倍。短期契約は忠誠が0以下になると次の月の開始時に退団します。",
+                      "短期・365日は基本月給、730日は0.9倍、1095日は0.8倍。短期契約は忠誠が負になると次の月の開始時に退団します。",
                       wraplength=960).pack(anchor="w", pady=(0, 8))
             ttk.Label(host, text="忠誠心は0〜10。0の選手は短期契約のみ。契約中は毎月、チームへの忠誠が (10 − 忠誠心) ÷ 10 下がります。10なら下がりません。",
                       wraplength=960).pack(anchor="w", pady=(0, 8))
@@ -157,15 +162,15 @@ class SeasonManagementMixin:
         for player in self.state.owned_players:
             contract = self.state.contract(player.name)
             incoming = self.state.transfer_offer(player.name)
-            status = "契約中" if contract.active(self.state.game_month) else "契約終了"
+            status = "契約中" if self.state.contract_active(contract) else "契約終了"
             deferred = self.state.contract_end_deferred(contract)
             if deferred:
                 status = "出場中につき契約延期中"
             self.contracts_players.insert("", "end", iid=player.name, values=(
                 f"● {player.name}" if incoming else player.name,
                 status if deferred else "● オファーあり" if incoming else status, labels[contract.kind], f"{contract.monthly_salary:,}",
-                f"{contract.elapsed(self.state.game_month)} / {contract.duration_months}月",
-                f"{contract.remaining(self.state.game_month)}月", f"{add_months(parse_date(self.state.start_date), contract.end_month):%Y/%m/%d}",
+                f"{contract.elapsed(self.state.date, self.state.start_date)} / {contract.duration_days}日",
+                f"{contract.remaining(self.state.date, self.state.start_date)}日", f"{contract.ends_on(self.state.start_date):%Y/%m/%d}",
                 f"{player.loyalty:g}", f"{contract.team_loyalty:g}"), tags=("incoming_offer",) if incoming else ())
         if selected and self.contracts_players.exists(selected[0]):
             self.contracts_players.selection_set(selected[0])
@@ -179,7 +184,6 @@ class SeasonManagementMixin:
         pool = self.state.lft_players if self.scout_filter.get() == "LFTのみ" else self.state.scout_players
         for player in pool:
             if query in player.name.casefold():
-                player = self.state.displayed_player(player)
                 self.scout_players.insert("", "end", iid=player.name, values=(
                     player.name, player.role, f"{player.iq:g}", f"{player_combat_power(player):.2f}",
                     f"{player_duel_power(player):.2f}", f"{player.monthly_salary:,}", f"{player.loyalty:g}",
@@ -198,18 +202,23 @@ class SeasonManagementMixin:
 
     def offer_conditions(self, screen, player):
         kind = "short" if player.loyalty == 0 else CONTRACT_OPTIONS[self.offer_kind[screen].get()]
-        terms = self.state.contract_terms(player, kind, int(self.offer_months[screen].get()))
+        days = int(self.offer_months[screen].get())
+        if not 30 <= days <= 180 or days % 30:
+            raise SeasonSaveError("短期契約の期間は30～180日（30日単位）から選択してください。")
+        terms = self.state.contract_terms(player, kind, days // 30)
         contract = self.state.contract(player.name)
         fee = self.state.transfer_fee(player.name) if screen == "scout" else 0
         blocked = "試合中は契約を変更できません。" if self.match_running else (self.state.recruitment_blocked(player.name) if screen == "scout" else "")
         if not blocked and screen == "scout":
             blocked = self.state.scout_blocked()
+            if not blocked and self.state.contract_refused(player.name):
+                blocked = "このチームとの契約を永久に拒否しています。"
         if not blocked and screen == "contracts" and self.state.contract_end_deferred(contract):
             blocked = "出場中につき契約延期中です。大会終了後に再契約できます。"
-        elif not blocked and screen == "contracts" and contract.active(self.state.game_month):
+        elif not blocked and screen == "contracts" and self.state.contract_active(contract):
             blocked = "現在の契約が終了してから再契約できます。"
-        elif not blocked and contract is not None and contract.team_loyalty <= 0:
-            blocked = "チームへの忠誠が0以下のため、再契約できません。"
+        elif not blocked and self.state.contract_refused(player.name):
+            blocked = "このチームとの再契約を永久に拒否しています。"
         elif not blocked and self.state.money < terms.total_required_funds + fee:
             blocked = "必要資金に対して所持金が不足しています。"
         return terms, fee, blocked
@@ -226,7 +235,7 @@ class SeasonManagementMixin:
             (unavailable if blocked else available).append(name)
         criterion = self.scout_sort.get()
         def sort_value(name):
-            player = self.state.displayed_player(players[name])
+            player = players[name]
             value = player.iq if criterion == "IQ" else (player_combat_power(player)
                 if criterion == "総合戦闘力" else player_duel_power(player))
             return (-value if self.scout_sort_order.get() == "高い順" else value, name.casefold())
@@ -246,24 +255,48 @@ class SeasonManagementMixin:
         if player is None:
             self.scout_details.set("選手を選択すると全ステータスを表示します。")
             return
-        contract = self.state.contract(player.name)
         owner = self.state.opponent_owner(player.name)
-        if contract is None and owner is not None:
-            contract = next((c for c in owner.contracts if c.player_name == player.name), None)
-        loyalty = f"{contract.team_loyalty:g}" if contract else "—"
-        if owner is not None:
-            player = self.state.enemy_player(player)
-        world = (f"世界レベル補正: {self.state.world_level_settings.enemy_multiplier:g}倍（獲得後は補正前の能力）\n"
-                 if owner is not None else "")
+        loyalty = self.state.team_loyalty(player.name, owner.id if owner else self.state.club_id)
+        loyalty_label = "所属チームへの忠誠" if owner is not None else "自チームへの忠誠"
         self.scout_details.set(
-            f"{player.name} / {player.role}\n所属: {self.state.player_affiliation(player.name)}\n{world}\n"
+            f"{player.name} / {player.role}\n所属: {self.state.player_affiliation(player.name)}\n\n"
             f"総合戦闘力: {player_combat_power(player):.2f}\n撃ち合い戦闘力: {player_duel_power(player):.2f}\n\n"
             f"HS率: {player.hs_pct:.1%} / 命中率: {player.hit_pct:.1%}\n"
             f"回避率: {player.dodge_pct:.1%} / 反応: {player.reaction:g}\n"
             f"IQ: {player.iq:g} / 影響力: {player.influence:g}\n"
             f"メンタル: {player.mental:g} / 調子の波: {player.form_variance:g}\n\n"
-            f"研究Lv: {player.research_level} / 10 / エイムラボLv: {player.aim_lab_level} / 10\n"
-            f"基本月給: {player.monthly_salary:,}円\n忠誠心: {player.loyalty:g} / 10\nチームへの忠誠: {loyalty}")
+            f"研究Lv: {player.research_level} / {MAX_TRAINING_LEVEL} / エイムラボLv: {player.aim_lab_level} / {MAX_TRAINING_LEVEL}\n"
+            f"基本月給: {player.monthly_salary:,}円\n忠誠心: {player.loyalty:g} / 10\n{loyalty_label}: {loyalty:g}")
+
+    def show_player_loyalties(self, player_name):
+        window = tk.Toplevel(self.root)
+        window.title(f"{player_name} — チーム別忠誠")
+        window.geometry("580x440")
+        ttk.Label(window, text=player_name, font=("Yu Gothic UI", 16, "bold")).pack(anchor="w", padx=16, pady=12)
+        ttk.Label(window, text="未契約時の値は50。初回契約で期間に応じた初期値になり、再契約は以前の値から回復します。", wraplength=540).pack(anchor="w", padx=16)
+        table = ttk.Frame(window)
+        table.pack(fill="both", expand=True, padx=16, pady=12)
+        tree = ttk.Treeview(table, columns=("team", "loyalty", "current"), show="headings", height=12)
+        for key, title, width in (("team", "チーム", 290), ("loyalty", "忠誠", 100), ("current", "現在の所属", 110)):
+            tree.heading(key, text=title)
+            tree.column(key, width=width)
+        tree.pack(side="left", fill="both", expand=True)
+        scroll = ttk.Scrollbar(table, command=tree.yview)
+        scroll.pack(side="right", fill="y")
+        tree.configure(yscrollcommand=scroll.set)
+        labels = {r.team_id: r.team_name for r in self.state.ratings}
+        labels.update({c.id: c.name for c in self.state.opponent_teams})
+        labels[self.state.club_id] = self.state.team_name
+        ids = list(dict.fromkeys((self.state.club_id, *(c.id for c in self.state.opponent_teams),
+                                  *self.state.team_loyalties.get(player_name, {}))))
+        owner = self.state.opponent_owner(player_name)
+        current = self.state.club_id if self.state.player(player_name) else owner.id if owner else None
+        for identifier in ids:
+            tree.insert("", "end", iid=identifier, values=(labels.get(identifier, "旧チーム: " + identifier),
+                        f"{self.state.team_loyalty(player_name, identifier):g}", "● 所属中" if identifier == current else ""))
+        window.loyalty_table = tree
+        ttk.Button(window, text="閉じる", command=window.destroy).pack(anchor="e", padx=16, pady=(0, 12))
+        return window
 
     def refresh_offer(self, screen):
         player = self.offer_player(screen)
@@ -284,7 +317,14 @@ class SeasonManagementMixin:
             return
         try:
             terms, fee, blocked = self.offer_conditions(screen, player)
-            self.offer_summary[screen].set(f"{player.name}: 月給{terms.monthly_salary:,}円 × {terms.months}か月\n"
+            from season_loyalty import signing_loyalty
+            loyalty, count = signing_loyalty(self.state, player.name, self.state.club_id, kind)
+            deadline = ""
+            current = self.state.contract(player.name)
+            if screen == "contracts" and current and not self.state.contract_active(current) and not self.state.contract_end_deferred(current):
+                expiry = parse_date(current.expired_on) if current.expired_on else current.ends_on(self.state.start_date)
+                deadline = f" / 再契約期限: {add_months(expiry, 1):%Y/%m/%d}"
+            self.offer_summary[screen].set(f"{player.name}: {terms.days}日間 / 月給{terms.monthly_salary:,}円 / 契約後の忠誠: {loyalty:g}（契約{count}回目）{deadline}\n"
                                           f"移籍金: {fee:,}円 / 契約金: {terms.signing_bonus:,}円（支払い）  残金条件: {terms.required_funds:,}円\n"
                                           f"必要資金合計: {fee + terms.total_required_funds:,}円  {blocked or '契約可能です。'}")
             self.offer_buttons[screen].configure(state="disabled" if blocked else "normal")
@@ -322,7 +362,7 @@ class SeasonManagementMixin:
         if candidate.player(player.name) is None:
             message = f"{player.name}が{club.name}へ移籍しました。移籍金{offer.fee:,}円を受け取りました。編成を確認してください。"
         elif any(o.id == offer.id and o.status == "cancelled" for o in candidate.transfer_offers):
-            message = f"{club.name}が必要資金またはスカウト回数の条件を満たさなくなったため、{player.name}へのオファーは取り消されました。"
+            message = f"{club.name}への忠誠・必要資金・スカウト回数の条件を満たさなくなったため、{player.name}へのオファーは取り消されました。"
         else:
             message = f"{player.name}への{club.name}からのオファーを断りました。忠誠が30未満になると強制成立します。"
         self.commit(candidate, message)
@@ -338,7 +378,8 @@ class SeasonManagementMixin:
             kind = CONTRACT_OPTIONS[self.offer_kind[screen].get()]
             action = self.state.with_scouted_player if screen == "scout" else self.state.with_renewed_contract
             options = {"advance_day": False} if screen == "scout" and self.state.entry_deadline_tournaments else {}
-            candidate = action(player.name, kind, int(self.offer_months[screen].get()), **options)
+            terms, _, _ = self.offer_conditions(screen, player)
+            candidate = action(player.name, kind, terms.months, **options)
         except (SeasonSaveError, ValueError) as exc:
             self.status.set(str(exc))
             return
