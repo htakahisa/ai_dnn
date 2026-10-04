@@ -13,7 +13,9 @@ from concon_v1.co1_attacker_common import bfs_distance_map, GORIGONS
 MOVES = ((-1, 0), (1, 0), (0, -1), (0, 1), (0, 0))
 ABILITIES = ("SMOKE", "FLASH", "RECON")
 TARGET_COUNT = 3  # planted spike, assigned facing point, known enemy
-ACTION_DIM = (len(MOVES) + len(ABILITIES) * TARGET_COUNT) * 8
+LEGACY_ACTION_DIM = (len(MOVES) + len(ABILITIES) * TARGET_COUNT) * 8
+ULTIMATE_ACTION = LEGACY_ACTION_DIM
+ACTION_DIM = LEGACY_ACTION_DIM + TARGET_COUNT * 8
 WAIT_ACTION = 4 * 8
 MAP_CHANNELS = 6
 FEATURE_DIM = 34 + 5 * 15 + 5 * 16
@@ -58,7 +60,7 @@ def clear_shot(char, enemy, chars, grid, smoke, game=None):
 
 
 class GuardDQN(nn.Module):
-    def __init__(self, scenario):
+    def __init__(self, scenario, navigation=False):
         super().__init__()
         self.height, self.width = scenario.grid.shape
         self.map_size = MAP_CHANNELS * scenario.grid.size
@@ -69,10 +71,61 @@ class GuardDQN(nn.Module):
         )
         self.head = nn.Sequential(nn.Linear(32 * 4 * 6 + FEATURE_DIM, 256),
                                   nn.ReLU(), nn.Linear(256, ACTION_DIM))
+        # A learned tabular head for the fixed map's quiet positioning task.
+        # Combat retains the perception-dependent network. No route search or
+        # move/facing override is performed when this model is used at runtime.
+        self.navigation = navigation
+        if navigation:
+            self.navigation_values = nn.Embedding(5 * self.height * self.width * 16, 40)
+            nn.init.zeros_(self.navigation_values.weight)
+            self.navigation_yield_values = nn.Embedding(5 * 16, 40)
+            nn.init.zeros_(self.navigation_yield_values.weight)
+            self.register_buffer("navigation_other_posts", torch.tensor([
+                [scenario.positions[other][0] * self.width + scenario.positions[other][1]
+                 for other in "abcde" if other != letter] for letter in "abcde"], dtype=torch.long))
 
     def forward(self, observations):
         maps = observations[:, :self.map_size].reshape(-1, MAP_CHANNELS, self.height, self.width)
-        return self.head(torch.cat((self.encoder(maps), observations[:, self.map_size:]), dim=1))
+        features = observations[:, self.map_size:]
+        values = self.head(torch.cat((self.encoder(maps), features), dim=1))
+        if self.navigation:
+            rows = (features[:, 0] * self.height).round().long().clamp(0, self.height - 1)
+            cols = (features[:, 1] * self.width).round().long().clamp(0, self.width - 1)
+            slots = features[:, 29:34].argmax(1)
+            other_posts = self.navigation_other_posts[slots]
+            occupied = ((maps[:, 3] - maps[:, 2]).flatten(1).gather(1, other_posts) > 0)
+            occupancy = (occupied.long() * torch.tensor([1, 2, 4, 8], device=observations.device)).sum(1)
+            indices = (slots * self.height * self.width + rows * self.width + cols) * 16 + occupancy
+            quiet = (features[:, 12] == 0) & (features[:, 16] == 0)
+            navigation_moves = self.navigation_values(indices)
+            ally_features = features[:, 34:109].reshape(-1, 5, 15)
+            self_indices = ((ally_features[:, :, 1:3] - features[:, None, :2]).square().sum(2)
+                            + (1 - ally_features[:, :, 0]) * 100).argmin(1)
+            ally_rows = (ally_features[:, :, 1] * self.height).round().long()
+            ally_cols = (ally_features[:, :, 2] * self.width).round().long()
+            higher = ((torch.arange(5, device=observations.device)[None, :] < self_indices[:, None])
+                      & (ally_features[:, :, 0] > 0))
+            higher_neighbors = torch.zeros(len(values), dtype=torch.long, device=observations.device)
+            for bit, (dr, dc) in enumerate(MOVES[:4]):
+                neighbor = higher & (ally_rows == rows[:, None] + dr) & (ally_cols == cols[:, None] + dc)
+                higher_neighbors += neighbor.any(1).long() * (1 << bit)
+            preferred = navigation_moves.reshape(-1, 5, 8).amax(2).argmax(1)
+            navigation_moves = navigation_moves + self.navigation_yield_values(preferred * 16 + higher_neighbors)
+            navigation_values = torch.cat((navigation_moves, values[:, 40:]), dim=1)
+            values = torch.where(quiet[:, None], navigation_values, values)
+        return values
+
+
+def load_guard_weights(model, state, *, strict=True):
+    """Expand old checkpoints without changing any existing learned outputs."""
+    state = dict(state)
+    if state["head.2.bias"].shape[0] == LEGACY_ACTION_DIM:
+        for key in ("head.2.weight", "head.2.bias"):
+            previous = state[key]
+            # Until trained, ultimates start with the corresponding WAIT values.
+            state[key] = torch.cat((previous, previous[32:40].repeat(
+                (TARGET_COUNT,) + (1,) * (previous.ndim - 1))), dim=0)
+    return model.load_state_dict(state, strict=strict)
 
 
 def build_inputs(controller, char, state):
@@ -182,8 +235,15 @@ def build_inputs(controller, char, state):
         r, c = destination
         if (0 <= r < height and 0 <= c < width and grid[r, c] != 1
                 and (move_index == 4 or destination not in occupied)):
-            mask[move_index * 8:(move_index + 1) * 8] = True
+            if getattr(char, "facing_forced_this_tick", False):
+                # Incoming-fire response owns this tick's facing. Do not train
+                # a turn which the engine will replace with the locked facing.
+                mask[move_index * 8 + FACING_DIRECTIONS.index(char.facing)] = True
+            else:
+                mask[move_index * 8:(move_index + 1) * 8] = True
     for ability_index, ability in enumerate(ABILITIES):
+        if getattr(char, "ability_name", ability) != ability:
+            continue
         if getattr(char, ability.lower() + "_charges", 0) <= 0:
             continue
         for target_index, destination in enumerate(targets):
@@ -200,17 +260,66 @@ def build_inputs(controller, char, state):
             # The engine applies explicit facing to movement/turn actions;
             # ability ticks retain the current facing. Do not offer fictitious turns.
             mask[start + FACING_DIRECTIONS.index(char.facing)] = True
+    ultimate_actions = {}
+    name = str(getattr(char, "ultimate_name", "")).upper()
+    cost = getattr(char, "ultimate_cost", 0)
+    game = getattr(controller, "game", None)
+    ready = cost > 0 and getattr(char, "ultimate_points", 0) >= cost and char.is_alive
+    movement_blocked = (game is not None and name in ("RAID", "ESCAPE")
+                        and game._ramp_blocks_movement(char))
+    portal_active = (game is not None and name == "ESCAPE" and any(
+        portal.get("owner") == char.name for portal in getattr(game, "escape_portals", [])))
+    if ready and not movement_blocked and not portal_active:
+        for target_index, destination in enumerate(targets):
+            if name in ("NEON", "ESCAPE"):
+                if destination is None:
+                    continue
+                r, c = destination
+                if not (0 <= r < height and 0 <= c < width) or grid[r, c] == 1:
+                    continue
+                if name == "ESCAPE" and (destination == position or destination in occupied):
+                    continue
+            elif target_index != 0 or name not in ("RAID", "MONITOR", "TUNNEL", "BALEMOON"):
+                continue
+            for facing_index, facing in enumerate(FACING_DIRECTIONS):
+                if getattr(char, "facing_forced_this_tick", False) and facing != char.facing:
+                    continue
+                if name == "RAID":
+                    vx, vy = FACING_VECTORS[facing]
+                    next_cell = (position[0] + int(round(vy)), position[1] + int(round(vx)))
+                    r, c = next_cell
+                    if not (0 <= r < height and 0 <= c < width) or grid[r, c] == 1 or next_cell in occupied:
+                        continue
+                elif name not in ("RAID", "TUNNEL") and facing != char.facing:
+                    continue
+                action = ULTIMATE_ACTION + target_index * 8 + facing_index
+                payload = {"ultimate": name, "facing": facing}
+                if name in ("NEON", "ESCAPE"):
+                    payload["target"] = destination
+                mask[action] = True
+                ultimate_actions[action] = payload
+    # Abilities and ultimates share one priority. The model chooses the cast,
+    # target and direction; after resources are spent, learned movement resumes.
+    if mask[40:].any():
+        mask[:40] = False
     context = {
         "position": position, "goal": goal, "aim": aim, "spike": spike,
         "distance_goal": distance_goal, "distance_spike": distance_spike,
         "tap": tap_progress > 0, "fireable": target is not None,
         "target": tuple(target.pos) if target is not None else None,
         "targets": targets, "stopped": stopped, "tick": tick,
+        "can_move": any(0 <= position[0] + dr < height and 0 <= position[1] + dc < width
+                        and grid[position[0] + dr, position[1] + dc] != 1
+                        and (position[0] + dr, position[1] + dc) not in occupied
+                        for dr, dc in MOVES[:4]),
+        "ultimate_actions": ultimate_actions,
     }
     return observation, mask, context
 
 
-def decode_action(action, position, targets):
+def decode_action(action, position, targets, ultimate_actions=None):
+    if int(action) >= ULTIMATE_ACTION:
+        return list(position), ultimate_actions[int(action)]
     operation, facing_index = divmod(int(action), 8)
     payload = {"facing": FACING_DIRECTIONS[facing_index]}
     if operation < len(MOVES):
