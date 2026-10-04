@@ -89,17 +89,16 @@ def _build_team_ai(key):
     normalized = str(key or "default").strip().lower()
 
     if normalized in {"concon_v1", "concon_attacker_a1"}:
-        from concon_v1.co1_attacker_controller import ConconAttackerController
+        from concon_v1.co1_attacker_controller import ConconRoundAttackerController
         from concon_v1.co1_defender_controller import ConconDefenderController
-        from concon_v1.co1_attacker_scenarios import CONCON_ATTACKER_MAP, get_scenario
-        scenario = get_scenario(CONCON_ATTACKER_MAP)
-        model_path = scenario.model_path
-        if not model_path.is_file():
-            model_path = scenario.save_dir / scenario.checkpoint_filename("latest")
+        from concon_v1.co1_attacker_scenarios import (
+            CONCON_ATTACKER_MAP, CONCON_ATTACKER_POSTPLANT_MODELS,
+        )
         return DualRoleTeamAI(
-            name=f"ConCon v1 {scenario.map_name}",
-            attacker_factory=lambda: ConconAttackerController(
-                map_name=scenario.map_name, model_path=model_path,
+            name="ConCon v1",
+            attacker_factory=lambda: ConconRoundAttackerController(
+                map_names=CONCON_ATTACKER_MAP,
+                postplant_factories=CONCON_ATTACKER_POSTPLANT_MODELS,
             ),
             defender_factory=ConconDefenderController,
         )

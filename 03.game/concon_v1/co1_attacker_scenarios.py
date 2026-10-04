@@ -11,9 +11,14 @@ import numpy as np
 from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 
 
-# 通常対戦・大会で使う攻撃モデル。"A1", "A2", "A3" から選択します。
-# 選択したモデルの best を使用し、なければ latest を使用します。
-CONCON_ATTACKER_MAP = "A2"
+# 通常対戦・大会では各ラウンドで独立にランダム選択（連続選択も可）。
+# 単一指定 "A2" も可。各モデルの best がなければ latest を使用します。
+CONCON_ATTACKER_MAP = ("A1", "A2", "A3")
+
+# プラント後モデルの追加口。サイトごとに引数なしのコントローラ factory を
+# 指定します（例: "left": (LeftPostplantController,)）。空なら標準動作。
+# factory がモデルのロードを担当し、set_game/reset_round/decide_move を実装。
+CONCON_ATTACKER_POSTPLANT_MODELS = {"left": (), "right": ()}
 
 WAYPOINT_ORDER = "abcd"
 

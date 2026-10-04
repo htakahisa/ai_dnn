@@ -1,5 +1,7 @@
 """Runtime adapter for the concon_v1 route-learning controller."""
 
+import random
+
 from controllers import BaseController, DefaultAttackerController
 
 from concon_v1.co1_learn_attacker import (
@@ -23,6 +25,7 @@ class ConconAttackerController(BaseController):
         )
         self.retrieve_controller = ConconAttackerRetrieveController()
         self.default_controller = DefaultAttackerController()
+        self.postplant_controller = None
         self.enemy_sightings = TeamEnemySightings()
         scenario = getattr(self.route_controller, "scenario", get_scenario(map_name))
         self.fixed_smokes = FixedSmokePlan(scenario)
@@ -36,11 +39,15 @@ class ConconAttackerController(BaseController):
         self.game = game
         self.route_controller.set_game(game)
         self.retrieve_controller.set_game(game)
+        if getattr(self, "postplant_controller", None) is not None:
+            self.postplant_controller.set_game(game)
 
     def reset_round(self):
         self.route_controller.reset_round()
         self.retrieve_controller.reset_round()
         self.default_controller.reset_round()
+        if getattr(self, "postplant_controller", None) is not None:
+            self.postplant_controller.reset_round()
         self.enemy_sightings.reset_round()
         self.fixed_smokes.reset_round()
         self.fixed_flashes.reset_round()
@@ -72,7 +79,8 @@ class ConconAttackerController(BaseController):
             None,
         )
         if game_state.get("is_planted"):
-            result = self.default_controller.decide_move(char, game_state)
+            controller = getattr(self, "postplant_controller", None) or self.default_controller
+            result = controller.decide_move(char, game_state)
         elif game_state.get("spike_pos") is not None:
             result = self.retrieve_controller.decide_move(char, game_state)
         elif carrier is None:
@@ -80,6 +88,83 @@ class ConconAttackerController(BaseController):
         else:
             result = self.route_controller.decide_move(char, game_state)
         return self.enemy_sightings.guard_move(result, char.pos, tick)
+
+
+class ConconRoundAttackerController(BaseController):
+    """Choose one complete attack scenario independently for each round.
+
+    Frozen models are loaded once. Route, utility and retrieval state belong
+    to the selected scenario; all five attackers share that selection.
+    Postplant factories construct controllers with the BaseController API.
+    """
+
+    def __init__(self, map_names=("A1", "A2", "A3"), seed=None,
+                 postplant_factories=None):
+        super().__init__()
+        names = (map_names,) if isinstance(map_names, str) else tuple(map_names)
+        if not names or len(set(names)) != len(names):
+            raise ValueError("attacker map candidates must be non-empty and unique")
+        self.rng = random.Random(seed)
+        self.map_names = names
+        self.controllers = {}
+        for name in names:
+            scenario = get_scenario(name)
+            model_path = scenario.model_path
+            if not model_path.is_file():
+                model_path = scenario.save_dir / scenario.checkpoint_filename("latest")
+            self.controllers[name] = ConconAttackerController(
+                map_name=name, model_path=model_path,
+                seed=self.rng.randrange(2 ** 32),
+            )
+        self.postplant_factories = {
+            site: tuple(factories)
+            for site, factories in (postplant_factories or {}).items()
+        }
+        if any(site not in ("left", "right") for site in self.postplant_factories):
+            raise ValueError("postplant sites must be left or right")
+        if any(not callable(factory) for factories in self.postplant_factories.values()
+               for factory in factories):
+            raise ValueError("postplant candidates must be controller factories")
+        self._postplant_cache = {}
+        self.current_map_name = None
+        self.current_controller = None
+        self._postplant_selected = False
+
+    def set_game(self, game):
+        self.game = game
+        if self.current_controller is not None:
+            self.current_controller.set_game(game)
+
+    def reset_round(self):
+        self.current_map_name = self.rng.choice(self.map_names)
+        self.current_controller = self.controllers[self.current_map_name]
+        self.current_controller.postplant_controller = None
+        if getattr(self, "game", None) is not None:
+            self.current_controller.set_game(self.game)
+        self.current_controller.reset_round()
+        self._postplant_selected = False
+
+    def decide_move(self, char, game_state):
+        # Also support runtimes that first bind/act before calling reset_round.
+        if self.current_controller is None:
+            self.reset_round()
+        if game_state.get("is_planted") and not self._postplant_selected:
+            position = game_state.get("planted_pos")
+            if position is not None:
+                site = "left" if position[1] < len(game_state["grid"][0]) / 2 else "right"
+                factories = self.postplant_factories.get(site, ())
+                if factories:
+                    index = self.rng.randrange(len(factories))
+                    key = (site, index)
+                    if key not in self._postplant_cache:
+                        self._postplant_cache[key] = factories[index]()
+                    controller = self._postplant_cache[key]
+                    if getattr(self, "game", None) is not None:
+                        controller.set_game(self.game)
+                    controller.reset_round()
+                    self.current_controller.postplant_controller = controller
+                self._postplant_selected = True
+        return self.current_controller.decide_move(char, game_state)
 
 
 Ov1AttackerController = ConconAttackerController
