@@ -14,6 +14,7 @@ import realtime_season_competitions as calendar
 import realtime_season_config
 import realtime_season_teams
 import realtime_season_world_levels
+import realtime_season_rival_economy
 from character_stats import get_by_name
 from realtime_season import SeasonSaveError, SeasonStore, new_season
 from run_realtime_season import RealtimeSeasonApp
@@ -37,6 +38,7 @@ class SeasonEconomyTest(unittest.TestCase):
         self.addCleanup(context.stop)
         self.club = dict(name="Rival", players=list(RIVAL), igl="Aspas", carrier="Aspas", transfer_multiplier=12)
         for module, key, value in ((realtime_season_config, "INITIAL_OWNED_PLAYERS", OWN),
+                                  (realtime_season_rival_economy, "NON_REGULAR_OFFER_CHANCE", 0),
                                   (realtime_season_teams, "SEASON_TEAMS", [self.club]),
                                   (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", []),
                                   (realtime_season_world_levels, "WORLD_LEVELS",
@@ -52,7 +54,7 @@ class SeasonEconomyTest(unittest.TestCase):
         # Isolate economy calculations from the random starting lineups.
         with patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
             state = new_season().with_initial_selection(OWN).with_roster(OWN).with_confirmed_team()
-        return state.with_selected_team(state.teams[0].id)
+        return replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
 
     def test_exact_rating_parity_with_competition_manager(self):
         from run_competition_manager import SeriesResult, TeamRatingStore
@@ -149,16 +151,16 @@ class SeasonEconomyTest(unittest.TestCase):
 
     def test_tournament_results_update_both_ratings_once(self):
         with patch.object(calendar, "TOURNAMENTS", [CUP]):
-            state = self.state().advance_days()
-        state = state.with_tournament_entry("cup", state.selected_team_id)
+            state = self.state()
+        state = state.with_tournament_entry("cup", state.selected_team_id).advance_days()
         match, _ = next_match(state.tournament_definition("cup"), state.tournament("cup"))
         score = SeriesScore(match.id, match.left, match.right,
                             int(match.left == state.club_id), int(match.right == state.club_id))
-        with self.assertRaisesRegex(SeasonSaveError, "大会参加中"):
+        with self.assertRaisesRegex(SeasonSaveError, "出場中"):
             state.with_scouted_player("Aspas", "year1")
-        # Reserves are not in the event snapshot, so their affiliation may change.
-        reserved = state.with_scouted_player("Sato", "year1")
-        self.assertIsNone(reserved.opponent_owner("Sato"))
+        # A scouting action spends a day, including signing an opponent's bench.
+        with self.assertRaisesRegex(SeasonSaveError, "出場中"):
+            state.with_scouted_player("Sato", "year1")
         won = state.with_tournament_result("cup", score)
         self.assertEqual(won.rating(state.selected_team_id), 1532)
         self.assertEqual(won.rating(state.opponent_teams[0].id), 1468)
@@ -245,7 +247,7 @@ class SeasonEconomyTest(unittest.TestCase):
         with patch.dict(character_stats.CHARACTER_TABLE, {"Aspas": replace(get_by_name("Aspas"), monthly_salary=999_999)}):
             signed = state.with_scouted_player("Aspas", "year1")
         self.assertEqual(signed.money, required - fee - 123_457 * 3)
-        self.assertEqual(signed.player("Aspas"), before_player)
+        self.assertEqual(signed.player("Aspas"), replace(before_player, iq=before_player.iq + .1))
         self.assertIsNone(signed.opponent_owner("Aspas"))
         self.assertEqual(signed.opponent_teams[0].roster, RIVAL[1:])
         self.assertIn(signed.opponent_teams[0].effective_igl, RIVAL[1:])
@@ -256,7 +258,7 @@ class SeasonEconomyTest(unittest.TestCase):
         imported = self.store.import_season_teams(signed)
         self.assertIsNone(imported.opponent_owner("Aspas"))
         self.assertEqual(imported.opponent_teams[0].transfer_multiplier, 20)
-        self.assertEqual(imported.player("Aspas"), before_player)
+        self.assertEqual(imported.player("Aspas"), signed.player("Aspas"))
 
     def test_reserve_transfers_lft_and_owned_affiliations(self):
         state = self.state()

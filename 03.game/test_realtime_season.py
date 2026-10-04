@@ -99,17 +99,15 @@ class SeasonPersistenceTest(unittest.TestCase):
         club = loaded.opponent_teams[0]
         self.assertEqual(club.effective_igl, max(club.players[:5], key=lambda p: p.iq).name)
         self.assertEqual(club.effective_carrier, "Aspas")
-        self.assertEqual(club.ai, "default")
+        self.assertEqual(club.ai, "toru_ai_v3.1")
 
     def test_invalid_world_config_and_ownership_overlap_never_create_save(self):
         club = {"name": "ライバルA", "players": list(RIVAL_PLAYERS)}
         bad_configs = (
             "invalid",
             [{"name": "ライバル", "players": "Aspas"}],
-            [{"name": "ライバル", "players": list(RIVAL_PLAYERS[:4])}],
             [{"name": "ライバル", "players": [*RIVAL_PLAYERS[:5], "Aspas"]}],
             [{"name": "ライバル", "players": [*RIVAL_PLAYERS[:4], "NoSuchPlayer"]}],
-            [club, dict(club, name="ライバルB")],
             [club, dict(club, players=list(SECOND_PLAYERS))],
         )
         for config in bad_configs:
@@ -117,10 +115,10 @@ class SeasonPersistenceTest(unittest.TestCase):
                 with self.assertRaises(SeasonSaveError):
                     self.store.load_or_create()
                 self.assertFalse(self.path.exists())
-        with patch.object(realtime_season_teams, "SEASON_TEAMS", [club]), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", ["Sato"]):
-            with self.assertRaisesRegex(SeasonSaveError, "Sato.*ライバルA"):
-                self.store.load_or_create()
-            self.assertFalse(self.path.exists())
+        with patch.object(realtime_season_teams, "SEASON_TEAMS", [club]), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", [*PLAYERS[:4], "Sato"]):
+            state = self.store.load_or_create().with_initial_selection([*PLAYERS[:4], "Sato"])
+            self.assertIsNotNone(state.player("Sato"))
+            self.assertIsNone(state.opponent_owner("Sato"))
 
     def test_import_updates_world_but_keeps_saved_abilities_and_user_state(self):
         state = new_season(PLAYERS).with_roster(PLAYERS[:5]).with_confirmed_team()
@@ -142,16 +140,15 @@ class SeasonPersistenceTest(unittest.TestCase):
         self.assertEqual(updated.opponent_teams[0].players[0].iq, 180)
         self.assertEqual(self.store.load_or_create(), updated)
 
-    def test_failed_import_and_adding_rival_players_preserve_save(self):
+    def test_import_prioritizes_owned_players_and_adding_rivals_is_still_rejected(self):
         state = new_season(PLAYERS)
         self.store.save(state)
-        original = self.path.read_bytes()
         with patch.object(realtime_season_teams, "SEASON_TEAMS", [{"name": "ライバル", "players": list(PLAYERS[:5])}]):
-            with self.assertRaisesRegex(SeasonSaveError, "Leo.*ライバル"):
-                self.store.import_season_teams(state)
-        self.assertEqual(self.path.read_bytes(), original)
+            imported = self.store.import_season_teams(state)
+        self.assertEqual(imported.owned_players, state.owned_players)
+        self.assertFalse(imported.opponent_teams[0].players)
         with patch.object(realtime_season_teams, "SEASON_TEAMS", [{"name": "ライバル", "players": list(RIVAL_PLAYERS)}]):
-            state = self.store.import_season_teams(state)
+            state = self.store.import_season_teams(imported)
         for name in ("Aspas", "Sato"):
             with self.subTest(name=name), self.assertRaisesRegex(SeasonSaveError, f"{name}.*ライバル"):
                 state.with_added_players((name,))
@@ -335,7 +332,7 @@ class SeasonPersistenceTest(unittest.TestCase):
             with self.assertRaises(OSError):
                 self.store.save(state.with_added_players(PLAYERS))
         self.assertEqual(self.path.read_bytes(), original)
-        self.assertEqual(list(self.path.parent.iterdir()), [self.path])
+        self.assertEqual(set(self.path.parent.iterdir()), {self.path, self.store.history_path})
 
 
 class SeasonScreenTest(unittest.TestCase):

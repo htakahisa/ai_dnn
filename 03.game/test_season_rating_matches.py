@@ -88,16 +88,15 @@ class NpcSeriesTest(SeasonCompetitionTest):
     def test_opponent_only_event_draws_daily_and_never_pays_player_prize(self):
         with patch.object(config, "TOURNAMENTS", [definition(format="single_elimination", team_count=3,
                                                             allow_player_entry=False, prizes={1: 5000000, 2: 2000000, 3: 1000000})]):
-            state = self.state().advance_days(33).with_tournament_entry("cup")
+            state = self.state().advance_days(33)
         balance = state.money
         while not state.tournament("cup").completed:
             if state.tournament("cup").last_match_date == state.game_date:
                 state = state.advance_days()
-            state = state.with_tournament_rating_result("cup")
         run = state.tournament("cup")
         self.assertTrue(all(s.decided_by_rating for s in run.results))
         self.assertEqual(run.completed_date, "2026-02-04")
-        self.assertEqual(state.game_date, "2026-02-05")
+        self.assertEqual(state.game_date, "2026-02-04")
         self.assertEqual((run.prize_paid, state.money), (0, balance))
         self.store.save(state)
         self.assertEqual(self.store.load_or_create(), state)

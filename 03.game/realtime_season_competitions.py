@@ -9,8 +9,12 @@ start_date 以降、1日1シリーズずつ進行します。
 参加済み大会は全試合終了時に自動終了し、途中で止めても最後まで続行できます。
 maps_to_win は先取マップ数（2ならBO3、3ならBO5）。GFのリセットはありません。
 format は double_elimination（4～32チーム）または single_elimination（2～32）。
-participation_optional=False は強制参加、allow_player_entry=False は相手のみの大会。
-opponent_teams を空にすると、専用所属環境のチームを設定順に必要数選びます。
+参加登録は start_date 当日まで。翌日へ進む前に不参加の大会を確認します。
+未登録・不参加の大会もライバルのみで自動開催します。
+participation_optional=False は事前の不参加ボタンを無効化します（未登録なら当日は不参加）。
+allow_player_entry=False は相手のみの大会。
+opponent_teams は招待の優先順です。5人未満のチームの代わりにリーグ内の別チームを選びます。
+空にすると、専用所属環境のチームを設定順に必要数選びます。
 appearance_conditions は全条件を満たすと出現します。対応キー:
 min_money, min_owned_players, completed_tournaments（自分が完走した大会IDのリスト）,
 best_rank（大会ID:何位以内か）, phase（in_season/off_season）。
@@ -32,7 +36,7 @@ TOURNAMENTS = [
         "visible_from": "2026-01-01",
         "team_count": 4,
         "format": "double_elimination",
-        "prizes": {1: 10_000_000, 2: 7_000_000, 3: 6_000_000, 4: 5_000_000},
+        "prizes": {1: 10_000_000, 2: 5_000_000, 3: 2_000_000, 4: 1_000_000},
         "normal_maps_to_win": 1,
         "lower_final_maps_to_win": 2,
         "grand_final_maps_to_win": 2,
@@ -50,9 +54,9 @@ TOURNAMENTS = [
         "format": "double_elimination",
         "prizes": {
             1: 50_000_000,
-            2: 30_000_000,
-            3: 20_000_000,
-            4: 10_000_000,
+            2: 10_000_000,
+            3: 5_000_000,
+            4: 2_500_000,
         },
         "normal_maps_to_win": 1,
         "lower_final_maps_to_win": 2,
@@ -72,10 +76,10 @@ TOURNAMENTS = [
         "prizes": {
             1: 80_000_000,
             2: 60_000_000,
-            3: 50_000_000,
-            4: 30_000_000,
-            5: 20_000_000,
-            6: 15_000_000,
+            3: 30_000_000,
+            4: 20_000_000,
+            5: 10_000_000,
+            6: 5_000_000,
         },
         "normal_maps_to_win": 2,
         "lower_final_maps_to_win": 3,
@@ -95,12 +99,12 @@ TOURNAMENTS = [
         "prizes": {
             1: 100_000_000,
             2: 80_000_000,
-            3: 60_000_000,
-            4: 50_000_000,
-            5: 40_000_000,
-            6: 30_000_000,
-            7: 20_000_000,
-            8: 10_000_000,
+            3: 40_000_000,
+            4: 30_000_000,
+            5: 20_000_000,
+            6: 15_000_000,
+            7: 10_000_000,
+            8: 7_500_000,
         },
         "normal_maps_to_win": 2,
         "lower_final_maps_to_win": 3,
@@ -115,17 +119,25 @@ TOURNAMENTS = [
         "name": "フリーナ杯 2026",
         "start_date": "2026-09-30",
         "visible_from": "2026-08-01",
-        "team_count": 8,
+        "team_count": 16,
         "format": "double_elimination",
         "prizes": {
-            1: 1_000_000_000,
-            2: 800_000_000,
-            3: 600_000_000,
-            4: 500_000_000,
-            5: 400_000_000,
-            6: 300_000_000,
-            7: 200_000_000,
-            8: 100_000_000,
+            1: 100_000_000,
+            2: 100_000_000,
+            3: 60_000_000,
+            4: 50_000_000,
+            5: 40_000_000,
+            6: 30_000_000,
+            7: 20_000_000,
+            8: 10_000_000,
+            9: 9_000_000,
+            10: 8_000_000,
+            11: 7_000_000,
+            12: 6_000_000,
+            13: 5_000_000,
+            14: 4_000_000,
+            15: 3_000_000,
+            16: 2_000_000,
         },
         "normal_maps_to_win": 2,
         "lower_final_maps_to_win": 3,

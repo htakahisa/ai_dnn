@@ -13,13 +13,19 @@ import realtime_season_config
 import realtime_season_competitions
 import realtime_season_teams
 from character_stats import CharacterStats, get_by_name
-from realtime_season import INITIAL_MONEY, SeasonSaveError, SeasonStore, contract_terms, new_season
+from realtime_season import INITIAL_MONEY, SeasonSaveError, SeasonStore, contract_terms, new_season as configured_new_season
 from run_realtime_season import RealtimeSeasonApp
 from season_scrim import build_scrim_request
 
 
 OWN = ("Leo", "Boaster", "Derke", "Chronicle", "Alfajer")
 RIVAL = ("Aspas", "valyn", "trent", "leaf", "tex", "Sato")
+CONTRACT_TEST_MONEY = 10_000_000
+
+
+def new_season(*args, **kwargs):
+    # Affordability scenarios supply their own budget independently of defaults.
+    return replace(configured_new_season(*args, **kwargs), money=CONTRACT_TEST_MONEY)
 
 
 def patch_economy_defaults(test):
@@ -45,7 +51,7 @@ class ContractRulesTest(unittest.TestCase):
             self.addCleanup(config.stop)
 
     def test_initial_money_and_new_stats_are_last_and_backward_compatible(self):
-        self.assertEqual(new_season(()).money, 10_000_000)
+        self.assertEqual(configured_new_season(()).money, INITIAL_MONEY)
         self.assertEqual([f.name for f in fields(CharacterStats)][-4:],
                          ["monthly_salary", "loyalty", "research_level", "aim_lab_level"])
         old_definition = CharacterStats("Example", .3, .2, 100, .7, 100, "フラッシュ", 50, 5, 5)
@@ -201,7 +207,7 @@ class ContractRulesTest(unittest.TestCase):
                 player = replace(get_by_name("Leo"), loyalty=trait)
                 with patch.dict(character_stats.CHARACTER_TABLE, {"Leo": player}):
                     state = new_season(()).with_scouted_player("Leo", "short", 6)
-                before_boundary = state.advance_days(30)
+                before_boundary = state.advance_days(29)
                 self.assertEqual(before_boundary.contract("Leo").team_loyalty, 50)
                 crossed = before_boundary.advance_days()
                 self.assertAlmostEqual(crossed.contract("Leo").team_loyalty, 50 - loss)
@@ -430,13 +436,13 @@ class ContractScreenTest(unittest.TestCase):
         self.assertIn("2,160,000", app.offer_summary["scout"].get())
         app.sign_selected_contract("scout")
         self.assertFalse(app.scout_players.exists("Leo"))
-        self.assertEqual(app.state.money, INITIAL_MONEY - 270_000)
+        self.assertEqual(app.state.money, CONTRACT_TEST_MONEY - 270_000)
         self.assertEqual(app.state.contract("Leo").monthly_salary, 90_000)
         self.assertIn("9,730,000", app.home_summary.get())
         app.show_screen("contracts")
         self.assertEqual(app.contracts_players.item("Leo", "values")[1], "契約中")
         app.advance_game_month()
-        self.assertEqual(app.state.money, INITIAL_MONEY - 270_000 - 90_000)
+        self.assertEqual(app.state.money, CONTRACT_TEST_MONEY - 270_000 - 90_000)
         self.assertEqual(app.contracts_players.item("Leo", "values")[4], "1 / 24月")
         self.assertEqual(self.store.load_or_create(), app.state)
 

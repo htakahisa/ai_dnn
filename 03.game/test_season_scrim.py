@@ -26,6 +26,7 @@ class SeasonScrimTests(unittest.TestCase):
         state = scrim_state()
         return build_scrim_request(state, state.teams[0].id, state.opponent_teams[0].id, seed=17, **kwargs)
 
+    @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_request_uses_saved_abilities_and_only_five_rival_players(self):
         state = scrim_state()
         state = replace(state, owned_players=(replace(state.owned_players[0], iq=180), *state.owned_players[1:]))

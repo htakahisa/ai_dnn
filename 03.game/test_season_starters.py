@@ -1,6 +1,7 @@
 from dataclasses import replace
 import json
 from pathlib import Path
+from random import Random
 import tempfile
 import tkinter as tk
 import unittest
@@ -34,6 +35,49 @@ class StarterSelectionTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.path = Path(directory.name) / "save.json"
         self.store = SeasonStore(self.path)
+
+    def test_large_pool_draws_seven_unique_candidates_and_varies_between_new_games(self):
+        pool = (*CANDIDATES, "Aspas", "valyn", "trent", "leaf", "tex")
+        draws = []
+        with patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", pool):
+            for seed in range(5):
+                with patch("realtime_season.Random", return_value=Random(seed)):
+                    state = new_season()
+                names = tuple(p.name for p in state.starter_candidates)
+                self.assertEqual(len(names), 7)
+                self.assertEqual(len(set(names)), 7)
+                self.assertTrue(set(names).issubset(pool))
+                draws.append(names)
+                omitted = next(name for name in pool if name not in names)
+                with self.assertRaises(SeasonSaveError):
+                    state.with_initial_selection((*names[:4], omitted))
+        self.assertGreater(len(set(draws)), 1)
+
+    def test_random_candidates_and_partial_choice_survive_restart_without_redrawing(self):
+        pool = (*CANDIDATES, "Aspas", "valyn", "trent")
+        with patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", pool):
+            state = self.store.load_or_create()
+        chosen = tuple(p.name for p in state.starter_candidates[:5])
+        state = state.with_starter_selection(chosen[:2])
+        self.store.save(state)
+        with patch("realtime_season.Random", side_effect=AssertionError("redrawn on reload")):
+            loaded = self.store.load_or_create()
+        self.assertEqual(loaded, state)
+        self.assertEqual(tuple(p.name for p in loaded.starter_candidates), tuple(p.name for p in state.starter_candidates))
+        started = loaded.with_initial_selection(chosen)
+        self.assertEqual(tuple(p.name for p in started.owned_players), chosen)
+
+    def test_five_or_six_configured_candidates_are_all_available(self):
+        for size in (5, 6):
+            with self.subTest(size=size), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", CANDIDATES[:size]):
+                self.assertEqual(tuple(p.name for p in new_season().starter_candidates), CANDIDATES[:size])
+
+    def test_bad_entry_outside_draw_is_still_rejected(self):
+        for names in ((*CANDIDATES, "missing"), (*CANDIDATES, "Leo")):
+            with self.subTest(names=names), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", names), patch("realtime_season.Random") as rng:
+                with self.assertRaises(SeasonSaveError):
+                    new_season()
+                rng.assert_not_called()
 
     def test_first_launch_owns_nobody_then_acquires_only_the_five_selected(self):
         state = self.store.load_or_create()
@@ -97,16 +141,16 @@ class StarterSelectionTest(unittest.TestCase):
                 action()
         self.assertEqual(self.path.read_bytes(), original)
 
-    def test_too_few_candidates_or_rival_reserves_are_rejected_without_creating_save(self):
+    def test_too_few_candidates_are_rejected_and_initial_selection_overrides_rival_reserves(self):
         for names in ([], ["Leo"], list(CANDIDATES[:4])):
             with patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", names), self.assertRaises(SeasonSaveError):
                 self.store.load_or_create()
             self.assertFalse(self.path.exists())
         rival = [{"name": "Rival", "players": ["Aspas", "valyn", "trent", "leaf", "tex", "Sato"]}]
-        with patch.object(realtime_season_teams, "SEASON_TEAMS", rival), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", [*CANDIDATES, "Sato"]):
-            with self.assertRaisesRegex(SeasonSaveError, "Sato.*Rival"):
-                self.store.load_or_create()
-        self.assertFalse(self.path.exists())
+        with patch.object(realtime_season_teams, "SEASON_TEAMS", rival), patch.object(realtime_season_config, "INITIAL_OWNED_PLAYERS", [*CANDIDATES[:6], "Sato"]):
+            state = self.store.load_or_create().with_initial_selection([*CHOSEN[:4], "Sato"])
+            self.assertIsNotNone(state.player("Sato"))
+            self.assertIsNone(state.opponent_owner("Sato"))
 
     def test_legacy_version_five_inventory_and_roster_are_preserved(self):
         state = new_season(CANDIDATES).with_roster(CANDIDATES[:5]).with_confirmed_team()

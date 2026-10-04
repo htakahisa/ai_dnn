@@ -23,7 +23,8 @@ def build_series_request(state, event_id, *, render=True, tick_time_ms=100):
     teams = {t.id: t for t in run.entrants}
 
     def data(team):
-        players = tuple(state.player(p.name) for p in team.players) if team.id == state.club_id else tuple(state.enemy_player(p) for p in team.players)
+        base = tuple(state.player(p.name) for p in team.players) if team.id == state.club_id else team.players
+        players = state.match_players(base, enemy=team.id != state.club_id)
         return {"name": team.name, "players": [asdict(p) for p in players],
                 "ai": team.ai,
                 "igl": team.igl, "spike_holder": team.carrier}

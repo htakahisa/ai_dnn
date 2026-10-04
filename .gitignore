@@ -21,6 +21,10 @@ dist/
 env/
 venv/
 
+#Match datas
+competition_results/
+series_data/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

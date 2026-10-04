@@ -64,7 +64,7 @@ def scale_enemy_player(player, multiplier):
         return player
     changes = {name: getattr(player, name) * multiplier
                for name in ("hs_pct", "dodge_pct", "hit_pct", "iq", "reaction", "influence", "mental")}
-    for name in ("hs_pct", "dodge_pct", "hit_pct"):
+    for name in ("hs_pct", "dodge_pct"):
         changes[name] = min(1.0, changes[name])
     changes["mental"] = min(10.0, changes["mental"])
     return replace(player, **changes)

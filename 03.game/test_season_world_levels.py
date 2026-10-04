@@ -52,7 +52,7 @@ class WorldLevelTests(unittest.TestCase):
 
     def state(self, rank=4):
         state = new_season(OWN).with_roster(OWN).with_confirmed_team()
-        state = state.with_selected_team(state.teams[0].id)
+        state = replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
         rivals = {c.id: 1900 - index * 100 for index, c in enumerate(state.opponent_teams)}
         state = replace(state, ratings=tuple(replace(r, value=2050 - rank * 100 if r.team_id == state.club_id
                                                     else rivals[r.team_id]) for r in state.ratings))
@@ -121,7 +121,8 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(effective.iq, base.iq * 2)
         self.assertEqual(effective.reaction, base.reaction * 2)
         self.assertEqual(effective.influence, base.influence * 2)
-        for key in ("hs_pct", "hit_pct", "dodge_pct"):
+        self.assertEqual(effective.hit_pct, base.hit_pct * 2)
+        for key in ("hs_pct", "dodge_pct"):
             self.assertEqual(getattr(effective, key), min(1, getattr(base, key) * 2))
         self.assertEqual(effective.mental, min(10, base.mental * 2))
         self.assertEqual((effective.loyalty, effective.monthly_salary, effective.form_variance),
@@ -131,6 +132,7 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(state.displayed_player(base), effective)
         self.assertEqual(state.transfer_fee(base.name), base.monthly_salary * 12)
 
+    @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_scrim_and_series_scale_raw_snapshots_once_at_each_match(self):
         state = self.state(1)
         club = state.opponent_teams[0]
@@ -172,8 +174,8 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(self.store.load_or_create(), lowered)
 
     def test_tournament_finish_unlocks_level_after_final_rating_update(self):
-        state = self.state(2).advance_days(59)
-        state = state.with_tournament_entry("cup", state.selected_team_id)
+        state = self.state(2)
+        state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(59)
         state = replace(state, ratings=tuple(replace(r, value=2500) if r.team_id == state.club_id else r
                                              for r in state.ratings))
         self.assertEqual(state.world_level, 2)
@@ -193,8 +195,8 @@ class WorldLevelTests(unittest.TestCase):
         self.assertEqual(self.store.load_or_create(), state)
 
     def test_legacy_active_tournament_locks_current_level_without_rewriting_save(self):
-        state = self.state(1).advance_days(59)
-        state = state.with_tournament_entry("cup", state.selected_team_id)
+        state = self.state(1)
+        state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(59)
         self.store.save(state)
         data = json.loads(self.store.path.read_text(encoding="utf-8"))
         data["version"] = 16
@@ -208,8 +210,9 @@ class WorldLevelTests(unittest.TestCase):
         state = self.state(1)
         base = state.opponent_teams[0].players[0]
         recruited = state.with_scouted_player(base.name, "short", 1)
-        self.assertEqual(recruited.player(base.name), base)
-        self.assertEqual(recruited.displayed_player(recruited.player(base.name)), base)
+        grown = replace(base, iq=base.iq + .1)
+        self.assertEqual(recruited.player(base.name), grown)
+        self.assertEqual(recruited.displayed_player(recruited.player(base.name)), grown)
         self.store.save(state)
         loaded = self.store.load_or_create()
         self.assertEqual(loaded, state)
@@ -221,6 +224,7 @@ class WorldLevelTests(unittest.TestCase):
             self.assertEqual(loaded.enemy_player(base).iq, base.iq * 3)
             self.assertEqual(loaded.opponent_teams[0].players[0], base)
 
+    @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_enemy_world_multiplier_reaches_actual_battle_characters(self):
         import game_core
         from run_game import VisualFPSBattle
