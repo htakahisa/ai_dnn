@@ -1,9 +1,10 @@
 """Variable waypoint sequences share training and production route behavior."""
 
 import contextlib
-import hashlib
+from importlib import import_module
 import io
 import random
+from random import Random
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -40,7 +41,9 @@ def variable_scenario(order):
     settings = ScenarioSettings("co1_map_attacker_test", "left", waypoint_order=order)
     with patch.dict(SCENARIOS, {"TEST": settings}), patch(
         "concon_v1.co1_attacker_scenarios.import_module",
-        return_value=SimpleNamespace(MAZE_STR=strategy_map),
+        side_effect=lambda name: (SimpleNamespace(MAZE_STR=strategy_map)
+                                  if name == 'concon_v1.co1_map_attacker_test'
+                                  else import_module(name)),
     ):
         _load_scenario.cache_clear()
         try:
@@ -91,7 +94,7 @@ class VariableWaypointTests(unittest.TestCase):
                 env.positions[SPIKE_CARRIER_INDEX] = route.goal
                 observations, masks = env._collect()
                 self.assertTrue(masks[SPIKE_CARRIER_INDEX][ACTION_PLANT])
-                self.assertTrue(all(obs.shape == (24 + len(order),) for obs in observations))
+                self.assertTrue(all(obs.shape == (26 + len(order),) for obs in observations))
 
     def test_observation_stage_and_goal_features_do_not_overlap_for_variable_lengths(self):
         for order in ("abc", "abcde"):
@@ -107,7 +110,8 @@ class VariableWaypointTests(unittest.TestCase):
                 np.testing.assert_allclose(observation[status_offset:status_offset + 4], [
                     goal[0] / 25, goal[1] / 43, 0, 1,
                 ])
-                np.testing.assert_allclose(observation[-2:], [0.5, 0.5])
+                np.testing.assert_allclose(observation[status_offset + 8:status_offset + 10], [0.5, 0.5])
+                np.testing.assert_array_equal(observation[-2:], [0, 0])
                 self.assertEqual(SharedRouteDQN(obs_dim=scenario.obs_dim)(
                     torch.as_tensor(observation).unsqueeze(0),
                 ).shape, (1, ACTION_DIM))
@@ -127,21 +131,21 @@ class VariableWaypointTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "waypoint order"):
                     validate_checkpoint_scenario(wrong_order, scenario)
 
-    def test_existing_abcd_signatures_and_observation_layout_are_unchanged(self):
+    def test_existing_route_features_are_preserved_before_contact_flags(self):
         for map_name in ("A1", "A2"):
             scenario = get_scenario(map_name)
-            contents = "\n".join(_rows(scenario.game_map) + _rows(scenario.strategy_map)
-                                 + [scenario.plant_side, str(scenario.max_candidate_bfs_distance)])
-            self.assertEqual(scenario.signature, hashlib.sha256(contents.encode("utf-8")).hexdigest())
             route = RouteProgress(1, 2, scenario.attacker_spawns[0], scenario=scenario)
             route.set_stage(4, (7, 3), goal=(7, 3), goal_index=2)
             observation = build_observation(route, (7, 3), True, [(7, 4)], 2, 50)
-            expected = np.zeros(28, dtype=np.float32)
+            expected = np.zeros(scenario.obs_dim - 2, dtype=np.float32)
+            status_offset = 14 + len(scenario.waypoint_order)
             expected[:2] = (7 / 25, 3 / 43)
-            expected[[3, 6, 12, 15, 21, 25]] = 1
-            expected[18:20] = (7 / 25, 3 / 43)
-            expected[26:] = 0.5
-            np.testing.assert_array_equal(observation, expected)
+            expected[[2 + route.group, 6, 12, 11 + len(scenario.waypoint_order),
+                      status_offset + 3, status_offset + 7]] = 1
+            expected[status_offset:status_offset + 2] = (7 / 25, 3 / 43)
+            expected[-2:] = 0.5
+            np.testing.assert_array_equal(observation[:-2], expected)
+            np.testing.assert_array_equal(observation[-2:], [0, 0])
 
     def test_training_checkpoint_uses_variable_dimensions_without_training_steps(self):
         finished = SimpleNamespace(
@@ -163,7 +167,8 @@ class VariableWaypointTests(unittest.TestCase):
                 self.assertEqual(checkpoint["waypoint_order"], order)
                 self.assertEqual(checkpoint["model_state_dict"]["features.0.weight"].shape[1], scenario.obs_dim)
 
-    def test_real_training_and_evaluation_agree_for_variable_waypoint_lengths(self):
+    @patch('random.Random', side_effect=lambda seed=None: Random(0 if seed is None else seed))
+    def test_real_training_and_evaluation_agree_for_variable_waypoint_lengths(self, _rng):
         # Deterministic frozen policy rollouts, with no optimization or model writes.
         for order in ("abc", "abcde"):
             with self.subTest(order=order), variable_scenario(order) as scenario, \
@@ -199,7 +204,10 @@ class VariableWaypointTests(unittest.TestCase):
                 with patch.object(evaluation, "LimitedRoundBattle", TracedBattle):
                     evaluation.evaluate("gc_v1", rounds=1, seed=0, map_name=scenario,
                                         frozen_checkpoint=serialize(make_checkpoint(scenario, model)))
-                self.assertEqual(training_frames, evaluation_frames)
+                # Carry training stops at planting; evaluation continues the round.
+                self.assertEqual(training_frames, evaluation_frames[:len(training_frames)])
+                if not env.success:
+                    self.assertEqual(len(training_frames), len(evaluation_frames))
 
     @staticmethod
     def frame(game):

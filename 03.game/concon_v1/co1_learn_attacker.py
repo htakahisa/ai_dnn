@@ -105,7 +105,9 @@ class ConconAttackerRouteController:
             if (tuple(checkpoint.get("training_roster", ())) != GORIGONS.players
                     or checkpoint.get("spike_carrier") != GORIGONS.spike_holder):
                 raise ValueError("model was not trained for Gorigons / ごんた; retrain co1_train_attacker.py")
-            model = SharedRouteDQN(self.scenario.obs_dim, ACTION_DIM)
+            # Loading frozen weights must not change other controllers' RNG.
+            with torch.random.fork_rng(devices=[]):
+                model = SharedRouteDQN(self.scenario.obs_dim, ACTION_DIM)
             model.load_state_dict(checkpoint["model_state_dict"])
             model.eval()
         self.model = model
@@ -181,6 +183,16 @@ class ConconAttackerRouteController:
             if other is not char and getattr(other, "team", None) == char.team
             and getattr(other, "is_alive", True)
         ]
+        # Use only this viewer's IQ-filtered characters, as contact handling does.
+        game = getattr(self, "game", None)
+        enemy_visible = enemy_fireable = False
+        if not game_state.get("defender_setup_active"):
+            contact_chars = [other for other in chars
+                             if other.team == char.team or getattr(other, "position_known", True)]
+            enemy_fireable = choose_team_fire_target(
+                char, contact_chars, grid, game_state.get("smoke_cells", ()), game,
+            ) is not None
+            enemy_visible = enemy_fireable or _sees_enemy(char, contact_chars, grid, game)
         observation = build_observation(
             route,
             position,
@@ -189,6 +201,8 @@ class ConconAttackerRouteController:
             getattr(char, "plant_timer", 0),
             game_state.get("battle_tick", 0),
             grid,
+            enemy_visible=enemy_visible,
+            enemy_fireable=enemy_fireable,
         )
         index = next(i for i, other in enumerate(attackers) if other.name == char.name)
         mask = build_team_route_action_mask(

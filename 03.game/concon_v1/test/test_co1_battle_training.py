@@ -57,7 +57,7 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertAlmostEqual(transition[2][4], -0.005 + 0.25)
         transition = self.route_step_without_combat(env, [ACTION_WAIT] * 5)
         self.assertEqual(np.argmax(transition[0][4][8:13]), 3)
-        self.assertAlmostEqual(transition[2][4], -0.005)
+        self.assertAlmostEqual(transition[2][4], -0.105)
 
     def test_c_progress_reward_does_not_depend_on_actor_order(self):
         for leader in (0, 4):
@@ -70,12 +70,12 @@ class BattleTrainingTests(unittest.TestCase):
                 self.assertEqual(np.argmax(transition[3][leader][8:13]), 3)
                 self.assertAlmostEqual(transition[2][leader], -0.005 + 0.25)
 
-    def test_waiting_before_c_gets_no_stage_progress_reward(self):
+    def test_waiting_before_c_gets_idle_penalty_instead_of_stage_progress_reward(self):
         env = self.c_boundary_env(4)
         transition = self.route_step_without_combat(env, [ACTION_WAIT] * 5)
         self.assertEqual(env.positions[4], (18, 41))
         self.assertEqual(np.argmax(transition[3][4][8:13]), 2)
-        self.assertAlmostEqual(transition[2][4], -0.005)
+        self.assertAlmostEqual(transition[2][4], -0.105)
 
     def test_team_round_metrics_use_each_opponents_round_count(self):
         opponents = ("omoko_v1", "gc_v1", "fnatic_v3")
@@ -148,7 +148,7 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertTrue(seen_views)
         self.assertTrue(all(isinstance(char, PerceivedCharacter)
                             and isinstance(view, PerceivedGameView)
-                            and view.real_game is env.game
+                            and view.real_game is view
                             and game_state["chars"] is view.chars
                             for char, game_state, view in seen_views))
         self.assertFalse(any(env.policy_action_applied))

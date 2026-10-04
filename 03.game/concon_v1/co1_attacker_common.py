@@ -25,7 +25,7 @@ CARDINAL_MOVES = ((-1, 0), (1, 0), (0, -1), (0, 1))
 ACTION_WAIT = 4
 ACTION_PLANT = 5
 ACTION_DIM = 6
-OBS_DIM = 28
+OBS_DIM = get_scenario("A1").obs_dim
 MAX_TICKS = 100
 PLANT_REQUIRED_TICKS = 4
 DEFAULT_SCENARIO = get_scenario("A1")
@@ -124,6 +124,10 @@ def choose_split_assignment(rng, player_count=5, pattern_index=None, *, a_point_
 def _choose_action(model, observation, mask, epsilon, rng, *, route=None, position=None):
     valid_actions = np.flatnonzero(mask)
     if rng.random() < epsilon:
+        # Sample the full legal set too: exclusively guided exploration leaves
+        # WAIT untrained until epsilon drops, allowing an unsupported high Q.
+        if rng.random() < 0.2:
+            return int(rng.choice(valid_actions.tolist()))
         # Unrestricted random walks rarely finish the longer A2/A3 routes
         # within a round. Explore among the best available route moves while
         # leaving the policy's full mask (including detours) unchanged.
@@ -461,8 +465,9 @@ def advance_team_routes(routes, positions, alive, completed_a_groups,
                                 goal=positions[j], goal_index=0)
 
 
-def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, elapsed_ticks, grid=None):
-    """Shared actor observation; enemies and their unobserved coordinates are excluded."""
+def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, elapsed_ticks,
+                      grid=None, *, enemy_visible=False, enemy_fireable=False):
+    """Route features plus contact flags derived from the actor's perceived view."""
     row, col = map(int, pos)
     grid = route.scenario.grid if grid is None else grid
     height, width = grid.shape
@@ -474,7 +479,7 @@ def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, e
     observation[2 + route.group] = 1.0
     observation[4 + route.pattern_index] = 1.0
     observation[8 + min(route.stage, stage_count - 1)] = 1.0
-    # Preserve A1's 28-feature model. Extra plant-cell indices share the last
+    # Preserve the original route feature offsets. Extra plant-cell indices share the last
     # index slot; the exact goal is still represented by its coordinates.
     observation[goal_offset + min(route.goal_index, 4)] = 1.0
     observation[status_offset:status_offset + 2] = (
@@ -488,6 +493,8 @@ def build_observation(route, pos, is_carrier, occupied_allies, plant_progress, e
         observation[status_offset + 4 + action] = float((row + row_delta, col + col_delta) in occupied)
     observation[status_offset + 8] = min(int(plant_progress), PLANT_REQUIRED_TICKS) / PLANT_REQUIRED_TICKS
     observation[status_offset + 9] = min(int(elapsed_ticks), MAX_TICKS) / MAX_TICKS
+    observation[status_offset + 10] = float(enemy_visible)
+    observation[status_offset + 11] = float(enemy_fireable)
     return observation
 
 

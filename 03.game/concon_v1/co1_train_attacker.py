@@ -32,6 +32,7 @@ from concon_v1.co1_attacker_common import (
 from concon_v1.co1_attacker_scenarios import (
     SCENARIOS, get_scenario, validate_checkpoint_scenario,
 )
+from concon_v1.co1_training_rewards import avoidable_wait_penalty
 
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -56,6 +57,13 @@ def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
     if fraction >= 1.0:
         return EPSILON_END
     return EPSILON_START + (EPSILON_END - EPSILON_START) * fraction
+
+
+def training_epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
+    scheduled = epsilon_by_episode(episode, total_episodes)
+    # Observe policy-only deadlocks and their terminal penalties during training,
+    # instead of discovering them only in checkpoint evaluation.
+    return 0.0 if scheduled <= 0.5 and episode % 5 == 0 else scheduled
 
 
 class RouteEnv:
@@ -113,6 +121,9 @@ class RouteEnv:
         for index, action in enumerate(actions):
             if not masks[index][int(action)]:
                 action = ACTION_WAIT
+            rewards[index] -= avoidable_wait_penalty(
+                action, observations[index], masks[index], previous_distances[index],
+            )
             row, col = self.positions[index]
             if action < len(CARDINAL_MOVES):
                 row_delta, col_delta = CARDINAL_MOVES[action]
@@ -366,6 +377,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
         raise ValueError("mode must be 'battle' or 'route'")
     global_step = 0
     recent_success = deque(maxlen=100)
+    recent_policy_results = deque(maxlen=100)
     recent_ticks = deque(maxlen=100)
     recent_timeouts = deque(maxlen=100)
     recent_drops = deque(maxlen=100)
@@ -385,7 +397,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
     for episode in range(1, episodes + 1):
         observations, masks = env.reset()
         route_replay = RouteReplayCollector(len(observations))
-        epsilon = epsilon_by_episode(episode, episodes)
+        scheduled_epsilon = epsilon_by_episode(episode, episodes)
+        epsilon = training_epsilon_by_episode(episode, episodes)
         total_reward = 0.0
         while not env.done:
             active_before = list(env.alive)
@@ -423,6 +436,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
         planted = bool(env.success)
         total_plants += int(planted)
         recent_success.append(float(planted))
+        recent_policy_results.append((epsilon == 0.0, planted))
         total_ticks += env.elapsed_ticks
         recent_ticks.append(env.elapsed_ticks)
         timed_out = not planted and (
@@ -447,6 +461,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
         success_rate = sum(recent_success) / len(recent_success)
         plant_rate_total = total_plants / episode
         if episode % 20 == 0:
+            greedy_results = [int(planted) for greedy, planted in recent_policy_results if greedy]
+            explore_results = [int(planted) for greedy, planted in recent_policy_results if not greedy]
             recovery = (f" recovered100={sum(recent_recoveries)}/{sum(recent_drops)}"
                         if mode == "battle" else "")
             print(
@@ -454,8 +470,11 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 f" plant_total={total_plants}/{episode}"
                 f" plant_rate_total={plant_rate_total:.3f}"
                 f"{recovery} reward={total_reward:.2f} ticks={env.elapsed_ticks} "
-                f"epsilon={epsilon:.3f} elapsed={time.perf_counter() - started:.1f}s"
+                f"epsilon={epsilon:.3f} scheduled_epsilon={scheduled_epsilon:.3f} "
+                f"elapsed={time.perf_counter() - started:.1f}s"
             )
+            print(f"  train_greedy100={sum(greedy_results)}/{len(greedy_results)}"
+                  f" train_explore100={sum(explore_results)}/{len(explore_results)}")
             if mode == "battle":
                 print("  team_total " + format_team_plants(
                     summarize_team_plants(env.opponents, team_results)))
@@ -485,6 +504,8 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 "episode": episode,
                 "success_rate": success_rate,
                 "epsilon": epsilon,
+                "scheduled_epsilon": scheduled_epsilon,
+                "training_revision": "idle_coverage_and_greedy_rollouts_v1",
                 "epsilon_end": EPSILON_END,
                 "best_selection": "greedy_mean_and_min_team",
                 "evaluation": None,
@@ -530,7 +551,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 torch.save(checkpoint, debug_path)
                 print(f"Force-saved debug model at episode {episode} "
                       f"epsilon={epsilon:.3f}: {debug_path}", flush=True)
-            if epsilon <= EPSILON_END:
+            if scheduled_epsilon <= EPSILON_END:
                 best_path = save_dir / scenario.checkpoint_filename("best")
                 if not checked_existing_best:
                     if best_path.is_file():
@@ -575,7 +596,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
                 )
             else:
                 print(f"Saved latest at episode {episode}; best evaluation starts "
-                      f"when epsilon reaches {EPSILON_END:g} (current={epsilon:.3f})")
+                      f"when scheduled epsilon reaches {EPSILON_END:g} (current={scheduled_epsilon:.3f})")
     return model
 
 

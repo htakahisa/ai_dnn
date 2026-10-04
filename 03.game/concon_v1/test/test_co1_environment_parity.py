@@ -4,6 +4,7 @@ import contextlib
 import io
 from itertools import product
 import random
+from random import Random
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -37,7 +38,8 @@ def game_frame(game):
 
 
 class EnvironmentParityTests(unittest.TestCase):
-    def test_training_and_evaluation_match_until_plant_or_round_end_for_all_opponents(self):
+    @patch('random.Random', side_effect=lambda seed=None: Random(0 if seed is None else seed))
+    def test_training_and_evaluation_match_until_plant_or_round_end_for_all_opponents(self, _rng):
         # Prefer planting when legal, then a BFS-progress move, then waiting.
         # This creates a reproducible policy without relying on a trained artifact.
         for map_name, opponent in product(("A1", "A2"), OPPONENTS):

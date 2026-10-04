@@ -26,9 +26,11 @@ with contextlib.redirect_stdout(io.StringIO()):
 
 
 def checkpoint_bytes(map_name=None):
-    model = SharedRouteDQN()
+    scenario = get_scenario(map_name or "A1")
+    model = SharedRouteDQN(scenario.obs_dim)
     checkpoint = {
-        "model_state_dict": model.state_dict(), "obs_dim": OBS_DIM,
+        "model_state_dict": model.state_dict(), "obs_dim": scenario.obs_dim,
+        "waypoint_order": scenario.waypoint_order,
         "n_actions": ACTION_DIM, "training_roster": GORIGONS.players,
         "spike_carrier": GORIGONS.spike_holder,
     }
@@ -59,8 +61,11 @@ class MapSelectionTests(unittest.TestCase):
             build_scenario("TEST", scenario.strategy_map.replace("33333", "a3333"), "left")
 
     def test_a3_can_be_registered_without_changing_shared_behavior(self):
+        from concon_v1.co1_attacker_scenarios import _load_scenario
+        _load_scenario.cache_clear()
         with patch.dict(SCENARIOS, {"A3": ScenarioSettings(
             "co1_map_attacker_A2", "right", max_candidate_bfs_distance=16,
+            waypoint_order=get_scenario("A2").waypoint_order,
         )}):
             try:
                 a3 = get_scenario("A3")
@@ -119,7 +124,7 @@ class MapSelectionTests(unittest.TestCase):
     def test_a2_team_advances_to_right_plant_cells(self):
         env = training.RouteEnv(seed=0, map_name="A2")
         scenario = env.scenario
-        for marker in "abcd":
+        for marker in scenario.waypoint_order:
             self.assertTrue(all(route.goal in scenario.waypoint_points[marker]
                                 for route in env.routes))
             env.positions = [route.goal for route in env.routes]
@@ -137,11 +142,13 @@ class MapSelectionTests(unittest.TestCase):
         route = RouteProgress(0, 0, scenario.attacker_spawns[0], scenario=scenario)
         for index, goal in enumerate(scenario.plant_cells):
             with self.subTest(index=index):
-                route.set_stage(4, goal, goal=goal, goal_index=index)
+                route.set_stage(len(scenario.waypoint_order), goal, goal=goal, goal_index=index)
                 observation = build_observation(route, goal, True, [], 0, 0)
-                self.assertEqual(observation.shape, (28,))
-                self.assertEqual(observation[13:18].sum(), 1.0)
-                np.testing.assert_allclose(observation[18:22], [
+                self.assertEqual(observation.shape, (scenario.obs_dim,))
+                goal_offset = 9 + len(scenario.waypoint_order)
+                status_offset = goal_offset + 5
+                self.assertEqual(observation[goal_offset:status_offset].sum(), 1.0)
+                np.testing.assert_allclose(observation[status_offset:status_offset + 4], [
                     goal[0] / (height - 1), goal[1] / (width - 1), 0.0, 1.0,
                 ])
                 self.assertTrue(build_action_mask(
@@ -151,13 +158,13 @@ class MapSelectionTests(unittest.TestCase):
     def test_a2_distance_limit_covers_every_existing_b_to_c_route(self):
         scenario = get_scenario("A2")
         self.assertEqual(get_scenario("A1").max_candidate_bfs_distance, 12)
-        self.assertEqual(scenario.max_candidate_bfs_distance, 16)
+        self.assertEqual(scenario.max_candidate_bfs_distance, SCENARIOS['A2'].max_candidate_bfs_distance)
         route = RouteProgress(0, 0, scenario.attacker_spawns[0], scenario=scenario)
         for point in scenario.waypoint_points["b"]:
             with self.subTest(point=point):
                 route.set_stage(2, point)
                 self.assertIn(route.goal, scenario.waypoint_points["c"])
-                self.assertLessEqual(route.distance_map[point], 16)
+                self.assertLessEqual(route.distance_map[point], scenario.max_candidate_bfs_distance)
 
     def test_old_a1_weights_load_and_cross_map_models_are_rejected(self):
         legacy = checkpoint_bytes()
@@ -178,6 +185,7 @@ class MapSelectionTests(unittest.TestCase):
 
     def test_frozen_evaluation_preserves_selected_map_for_every_opponent(self):
         checkpoint = {"map_name": "A2", "training_mode": "battle",
+                      "waypoint_order": get_scenario("A2").waypoint_order,
                       "opponents": ("gc_v1", "omoko_v1")}
         with patch.object(evaluation, "evaluate", return_value={
             "plants": 1, "rounds": 2, "plant_success_rate": 0.5,
@@ -199,11 +207,12 @@ class MapSelectionTests(unittest.TestCase):
             with self.subTest(map_name=map_name), \
                     patch("concon_v1.co1_battle_training.BattleRouteEnv", return_value=finished) as env, \
                     patch.object(training.Path, "mkdir"), \
+                    patch.object(training.Path, "is_file", return_value=False), \
                     patch.object(training, "evaluate_checkpoint", return_value={
                         "success_rate": 1.0, "min_team_plant_rate": 1.0,
                     }), patch.object(training.torch, "save") as save, \
                     contextlib.redirect_stdout(io.StringIO()):
-                training.train(episodes=1, map_name=map_name)
+                training.train(episodes=1, map_name=map_name, force_save=False)
             self.assertIs(env.call_args.kwargs["map_name"], scenario)
             self.assertEqual([call.args[1] for call in save.call_args_list], [
                 scenario.save_dir / scenario.checkpoint_filename("latest"),

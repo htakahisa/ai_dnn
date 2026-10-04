@@ -144,7 +144,7 @@ class BestSelectionTests(unittest.TestCase):
             training.train(episodes=10, save_dir=directory, eval_rounds=20)
             self.assertEqual([call.args[0]["episode"] for call in evaluate.call_args_list],
                              [7, 8, 9, 10])
-            self.assertTrue(all(call.args[0]["epsilon"] == training.EPSILON_END
+            self.assertTrue(all(call.args[0]["scheduled_epsilon"] == training.EPSILON_END
                                 for call in evaluate.call_args_list))
             self.assertEqual([episode for name, episode in saved if name.endswith("_best.pt")],
                              [7, 10])

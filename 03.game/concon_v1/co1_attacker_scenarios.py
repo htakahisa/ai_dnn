@@ -13,7 +13,7 @@ from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 
 # 通常対戦・大会で使う攻撃モデル。"A1", "A2", "A3" から選択します。
 # 選択したモデルの best を使用し、なければ latest を使用します。
-CONCON_ATTACKER_MAP = "A3"
+CONCON_ATTACKER_MAP = "A2"
 
 WAYPOINT_ORDER = "abcd"
 
@@ -121,8 +121,8 @@ class AttackerScenario:
 
     @property
     def obs_dim(self):
-        # 8 actor/split features + waypoint/plant stages + 15 goal/status features.
-        return 24 + len(self.waypoint_order)
+        # Route features followed by perceived enemy visibility / firing line.
+        return 26 + len(self.waypoint_order)
 
     @property
     def save_dir(self):
