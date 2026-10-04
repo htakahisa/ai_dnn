@@ -43,13 +43,13 @@ TARGET_UPDATE_INTERVAL = 1000
 GAMMA = 0.99
 
 # 学習エピソード数
-DEFAULT_EPISODES = 2000
+DEFAULT_EPISODES = 1000
 CHECKPOINT_INTERVAL = 50  # bestモデル算出episode間隔
 DEFAULT_EVAL_ROUNDS = 20  # 探索なし評価の各相手teamとの試合数
 EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
-FORCE_SAVE = False  # Keep numbered debug models at every checkpoint interval.
+FORCE_SAVE = True  # Keep numbered debug models at every checkpoint interval.
 
 
 def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
