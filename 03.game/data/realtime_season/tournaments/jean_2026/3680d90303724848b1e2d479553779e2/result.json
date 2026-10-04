@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 3,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "マイチーム",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 717189747,
+      "player_stats": {
+        "Furina": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "Lohen": {
+          "kills": 20,
+          "deaths": 12
+        },
+        "Arlecchino": {
+          "kills": 21,
+          "deaths": 12
+        },
+        "Lisa": {
+          "kills": 11,
+          "deaths": 18
+        },
+        "Jean": {
+          "kills": 11,
+          "deaths": 18
+        },
+        "Mako": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Rb": {
+          "kills": 13,
+          "deaths": 17
+        },
+        "Buzz": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "stax": {
+          "kills": 17,
+          "deaths": 14
+        },
+        "まーやまくん": {
+          "kills": 19,
+          "deaths": 18
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "マイチーム",
+      "own_score": 13,
+      "opponent_score": 15,
+      "winner": "マイチーム",
+      "seed": 717189748,
+      "player_stats": {
+        "Mako": {
+          "kills": 22,
+          "deaths": 17
+        },
+        "Rb": {
+          "kills": 19,
+          "deaths": 18
+        },
+        "Buzz": {
+          "kills": 22,
+          "deaths": 12
+        },
+        "stax": {
+          "kills": 13,
+          "deaths": 16
+        },
+        "まーやまくん": {
+          "kills": 7,
+          "deaths": 22
+        },
+        "Furina": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "Lohen": {
+          "kills": 21,
+          "deaths": 14
+        },
+        "Arlecchino": {
+          "kills": 26,
+          "deaths": 16
+        },
+        "Lisa": {
+          "kills": 19,
+          "deaths": 21
+        },
+        "Jean": {
+          "kills": 12,
+          "deaths": 19
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "マイチーム",
+      "own_score": 11,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 717189749,
+      "player_stats": {
+        "Furina": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "Lohen": {
+          "kills": 22,
+          "deaths": 12
+        },
+        "Arlecchino": {
+          "kills": 20,
+          "deaths": 12
+        },
+        "Lisa": {
+          "kills": 13,
+          "deaths": 17
+        },
+        "Jean": {
+          "kills": 9,
+          "deaths": 16
+        },
+        "Mako": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "Rb": {
+          "kills": 11,
+          "deaths": 15
+        },
+        "Buzz": {
+          "kills": 12,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 15,
+          "deaths": 11
+        },
+        "まーやまくん": {
+          "kills": 15,
+          "deaths": 22
+        }
+      }
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from realtime_season import SeasonSaveError, new_season
 from season_competitions import next_match
 from season_scrim import build_scrim_request
 from season_series import build_series_request
+from season_world_levels import world_level_for_rank
 from test_season_competitions import (OWN, CompetitionScreenTest, SeasonCompetitionTest,
                                       finish, record_next)
 
@@ -32,6 +33,8 @@ class PresetIdentityTest(SeasonCompetitionTest):
                 tournament = editing.with_tournament_entry("cup", team.id).advance_days(33)
                 request = build_series_request(tournament, "cup")
                 self.assertEqual(tuple(request["own"][key] for key in ("igl", "spike_holder", "ai")), expected)
+                self.assertEqual(next(t.ai for t in tournament.tournament("cup").entrants
+                                      if t.id == tournament.club_id), expected[2])
         overridden = build_scrim_request(state, first.id, state.opponent_teams[0].id,
             own_ai="default", own_igl="Chronicle", own_spike="Leo")
         self.assertEqual((overridden["own"]["ai"], overridden["own"]["igl"], overridden["own"]["spike_holder"]),
@@ -85,6 +88,8 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.store.save(state)
         data = json.loads(self.path.read_text(encoding="utf-8"))
         data["version"] = 12
+        data.pop("developed_players")
+        data.pop("world_level_lock")
         for key in ("preset_igl", "preset_carrier", "preset_ai"):
             data.pop(key)
         for team in data["teams"]:
@@ -93,7 +98,7 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, state)
+        self.assertEqual(loaded, replace(state, developed_players=(), world_level_lock=world_level_for_rank(*state.world_rank)))
         self.assertEqual(self.path.read_bytes(), before)
         self.store.save(loaded)
         self.assertEqual(self.store.load_or_create(), loaded)

@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 2,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "マイチーム",
+      "seed": 1799140795,
+      "player_stats": {
+        "Homelander": {
+          "kills": 27,
+          "deaths": 3
+        },
+        "A-Train": {
+          "kills": 15,
+          "deaths": 7
+        },
+        "Deep": {
+          "kills": 12,
+          "deaths": 1
+        },
+        "Blacknoir": {
+          "kills": 10,
+          "deaths": 3
+        },
+        "Stormfront": {
+          "kills": 5,
+          "deaths": 0
+        },
+        "Lohen": {
+          "kills": 2,
+          "deaths": 13
+        },
+        "Arlecchino": {
+          "kills": 1,
+          "deaths": 14
+        },
+        "Lisa": {
+          "kills": 1,
+          "deaths": 14
+        },
+        "Jean": {
+          "kills": 3,
+          "deaths": 14
+        },
+        "Tartaglia": {
+          "kills": 7,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 8,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 1799140796,
+      "player_stats": {
+        "Lohen": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Arlecchino": {
+          "kills": 6,
+          "deaths": 12
+        },
+        "Lisa": {
+          "kills": 3,
+          "deaths": 16
+        },
+        "Jean": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "Tartaglia": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "Homelander": {
+          "kills": 26,
+          "deaths": 10
+        },
+        "A-Train": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "Deep": {
+          "kills": 10,
+          "deaths": 2
+        },
+        "Blacknoir": {
+          "kills": 13,
+          "deaths": 6
+        },
+        "Stormfront": {
+          "kills": 11,
+          "deaths": 4
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 13,
+      "opponent_score": 10,
+      "winner": "マイチーム",
+      "seed": 1799140797,
+      "player_stats": {
+        "Homelander": {
+          "kills": 29,
+          "deaths": 4
+        },
+        "A-Train": {
+          "kills": 13,
+          "deaths": 8
+        },
+        "Deep": {
+          "kills": 11,
+          "deaths": 2
+        },
+        "Blacknoir": {
+          "kills": 11,
+          "deaths": 4
+        },
+        "Stormfront": {
+          "kills": 11,
+          "deaths": 3
+        },
+        "Lohen": {
+          "kills": 1,
+          "deaths": 14
+        },
+        "Arlecchino": {
+          "kills": 3,
+          "deaths": 15
+        },
+        "Lisa": {
+          "kills": 3,
+          "deaths": 15
+        },
+        "Jean": {
+          "kills": 7,
+          "deaths": 14
+        },
+        "Tartaglia": {
+          "kills": 7,
+          "deaths": 17
+        }
+      }
+    }
+  ]
+}

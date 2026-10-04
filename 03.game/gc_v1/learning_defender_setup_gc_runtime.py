@@ -24,6 +24,7 @@ from gc_v1.map_data_defender_setup_positions_gc import (
     get_gc_setup_position_candidates,
 )
 from party_presets import all_preset_names, canonical_preset_name, get_preset
+from roster_utils import model_slots
 
 
 GC_ROSTER_ORDER = ["Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"]
@@ -392,21 +393,16 @@ class LearningDefenderSetupGCRuntime:
         if errors:
             raise RuntimeError("\n".join(errors))
 
-        by_name = {
-            c.name: c for c in chars
-            if getattr(c, "team", None) == "D"
-            and getattr(c, "is_alive", True)
-            and c.name in GC_ROSTER_ORDER
-        }
-        missing = [n for n in GC_ROSTER_ORDER if n not in by_name]
-        if missing:
-            raise RuntimeError("Missing GC players: " + ", ".join(missing))
+        teammates = [c for c in chars if getattr(c, "team", None) == "D"]
+        if len(teammates) != PLAYER_COUNT:
+            raise RuntimeError(f"GC Setup requires {PLAYER_COUNT} defenders")
+        slots = model_slots(teammates, GC_ROSTER_ORDER)
 
         selected = []
         assignments = {}
 
-        for player_index, name in enumerate(GC_ROSTER_ORDER):
-            char = by_name[name]
+        for char in sorted(teammates, key=lambda c: slots[c.name]):
+            player_index, name = slots[char.name], char.name
             obs = _build_obs(char, player_index, selected, self.opponent_name,
                              self.variation_index, self.opponent_index,
                              self.opponent_dim)
@@ -438,7 +434,7 @@ class LearningDefenderSetupGCRuntime:
 
         return [
             SetupAssignment(name, assignments[name])
-            for name in GC_ROSTER_ORDER
+            for name in assignments
         ]
 
     def _neighbors(self, pos):

@@ -19,6 +19,7 @@ from season_competitions import (CompetitionError, SeriesScore, TournamentProgre
     configured_calendar, definition_from_dict, next_match, phase_for)
 from season_scrim import ScrimJob
 from season_series import build_series_request, play_series
+from season_world_levels import world_level_for_rank
 
 
 OWN = ("Leo", "Boaster", "Derke", "Chronicle", "Alfajer")
@@ -213,12 +214,15 @@ class SeasonCompetitionTest(unittest.TestCase):
                 self.store.save(state)
                 data = json.loads(self.path.read_text(encoding="utf-8"))
                 data["version"] = 9
+                data.pop("developed_players")
+                data.pop("world_level_lock")
                 for run in data["tournaments"]:
                     run.pop("last_match_date")
                     run.pop("completed_date")
                 self.path.write_text(json.dumps(data), encoding="utf-8")
                 before = self.path.read_bytes()
-                self.assertEqual(self.store.load_or_create(), state)
+                locked = world_level_for_rank(*state.world_rank) if state.active_tournaments else None
+                self.assertEqual(self.store.load_or_create(), replace(state, developed_players=(), world_level_lock=locked))
                 self.assertEqual(self.path.read_bytes(), before)
 
     def test_invalid_match_dates_cannot_replace_saved_results(self):
@@ -326,6 +330,8 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.store.save(state)
         data = json.loads(self.path.read_text(encoding="utf-8"))
         data["version"] = 6
+        data.pop("developed_players")
+        data.pop("world_level_lock")
         data.pop("monthly_events")
         data.pop("monthly_events_through")
         snapshots = [*data["owned_players"], *data["starter_candidates"],
@@ -336,7 +342,7 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.path.write_text(json.dumps(data), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, replace(state, monthly_events=()))
+        self.assertEqual(loaded, replace(state, monthly_events=(), developed_players=()))
         self.assertEqual(self.path.read_bytes(), before)
         self.store.save(loaded)
         self.assertEqual(self.store.load_or_create(), loaded)
@@ -389,6 +395,19 @@ class SeasonCompetitionTest(unittest.TestCase):
         self.assertEqual(len({r["seed"] for r in calls}), 3)
         with patch("season_scrim_worker.play_scrim", return_value={"status": "cancelled"}):
             self.assertEqual(play_series(request)["status"], "cancelled")
+
+    def test_series_preserves_frc_for_different_members_without_changing_progress(self):
+        state = self.entered()
+        run = state.tournament("cup")
+        for ai in ("frc_v1", "frc_v1_baseline"):
+            changed_run = replace(run, entrants=tuple(replace(team, ai=ai) for team in run.entrants))
+            changed = replace(state, tournaments=(changed_run,))
+            request = build_series_request(changed, "cup", render=False)
+            with self.subTest(ai=ai):
+                self.assertEqual(request["own"]["ai"], ai)
+                self.assertEqual(request["opponent"]["ai"], ai)
+                self.assertTrue(all(team.ai == ai for team in changed.tournament("cup").entrants))
+                self.assertEqual(changed.tournament("cup").results, run.results)
 
     def test_real_background_series_worker(self):
         request = build_series_request(self.entered(), "cup", render=False, tick_time_ms=1)

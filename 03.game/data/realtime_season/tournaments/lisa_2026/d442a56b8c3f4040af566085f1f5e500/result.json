@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Furina Party",
+      "own_score": 2,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 215126558,
+      "player_stats": {
+        "Mako": {
+          "kills": 2,
+          "deaths": 12
+        },
+        "Rb": {
+          "kills": 3,
+          "deaths": 13
+        },
+        "Buzz": {
+          "kills": 5,
+          "deaths": 11
+        },
+        "stax": {
+          "kills": 2,
+          "deaths": 13
+        },
+        "まーやまくん": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Furina": {
+          "kills": 2,
+          "deaths": 6
+        },
+        "Lohen": {
+          "kills": 13,
+          "deaths": 4
+        },
+        "Arlecchino": {
+          "kills": 21,
+          "deaths": 3
+        },
+        "Lisa": {
+          "kills": 10,
+          "deaths": 4
+        },
+        "Jean": {
+          "kills": 17,
+          "deaths": 3
+        }
+      }
+    }
+  ]
+}

@@ -357,9 +357,10 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.home_payroll.set(f"今月末の月給合計: {-self.state.monthly_payroll:,}円")
         world = self.state.world_level_settings
         rank, count = self.state.world_rank
+        world_note = "（大会中は固定）" if self.state.active_tournaments else ""
         self.home_summary.set(f"所持金: {self.state.money:,}円\n"
                               f"チーム: {self.state.team_name}    所持選手: {len(self.state.owned_players)}人    編成プリセット: {len(self.state.teams)}    他チーム: {len(self.state.opponent_teams)}\n"
-                              f"世界レベル: {world.level}    ランキング: {rank} / {count}位（上位{self.state.world_top_percent:.2f}%）    敵倍率: {world.enemy_multiplier:g}倍\n"
+                              f"世界レベル: {world.level}{world_note}    ランキング: {rank} / {count}位（上位{self.state.world_top_percent:.2f}%）    敵倍率: {world.enemy_multiplier:g}倍\n"
                               f"スポンサー契約: {'有効' if self.state.sponsor_active else '停止'}    月額収入: {self.state.monthly_sponsor_income:,}円    "
                               f"給与: {'成績連動（K/D）' if self.state.salary_mode == SalaryMode.KD_DYNAMIC else '静的（従来）'}")
         self.home_teams.delete(*self.home_teams.get_children())

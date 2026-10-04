@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L3M1",
+  "left_id": "world-819dc24a828657f48dfff35f19834e50",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "マイチーム",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 717186747,
+      "player_stats": {
+        "Nanasaki": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Canezerra": {
+          "kills": 10,
+          "deaths": 12
+        },
+        "WoohyuN": {
+          "kills": 10,
+          "deaths": 12
+        },
+        "Zest": {
+          "kills": 14,
+          "deaths": 13
+        },
+        "Meteor": {
+          "kills": 9,
+          "deaths": 16
+        },
+        "Mako": {
+          "kills": 7,
+          "deaths": 14
+        },
+        "Rb": {
+          "kills": 7,
+          "deaths": 10
+        },
+        "Buzz": {
+          "kills": 12,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 21,
+          "deaths": 13
+        },
+        "まーやまくん": {
+          "kills": 19,
+          "deaths": 8
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "マイチーム",
+      "own_score": 3,
+      "opponent_score": 13,
+      "winner": "マイチーム",
+      "seed": 717186748,
+      "player_stats": {
+        "Mako": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Rb": {
+          "kills": 11,
+          "deaths": 5
+        },
+        "Buzz": {
+          "kills": 9,
+          "deaths": 6
+        },
+        "stax": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "まーやまくん": {
+          "kills": 13,
+          "deaths": 5
+        },
+        "Nanasaki": {
+          "kills": 7,
+          "deaths": 8
+        },
+        "Canezerra": {
+          "kills": 3,
+          "deaths": 9
+        },
+        "WoohyuN": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "Zest": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "Meteor": {
+          "kills": 6,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

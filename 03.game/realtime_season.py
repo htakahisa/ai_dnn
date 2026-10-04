@@ -15,7 +15,7 @@ from character_stats import CharacterStats, all_characters, get_by_name
 from season_ratings import DEFAULT_TEAM_RATING, SeasonRating, expected_score, series_ratings
 from season_monthly_events import MonthlyEvent, process_monthly_events
 from season_transfers import TransferOffer, with_randomized_clubs
-from season_world_levels import WorldLevelError, scale_enemy_player, world_level_for_rank
+from season_world_levels import WorldLevel, WorldLevelError, scale_enemy_player, validate_world_level, world_level_for_rank
 from season_training import MAX_TRAINING_LEVEL, training_terms
 from season_salary import (SalaryMode, SalaryRecord, SalarySettings, SalaryDataError,
                            configured_salary_settings, salary_records, log_salary_change, clamp_change)
@@ -26,7 +26,7 @@ from season_competitions import (
 )
 
 
-SAVE_VERSION = 16
+SAVE_VERSION = 17
 PLAYER_CLUB_ID = "player_club"
 ROSTER_SIZE = 5
 INITIAL_MONEY = 10_000_000
@@ -235,6 +235,7 @@ class SeasonState:
     salary_records: tuple[SalaryRecord, ...] = ()
     salary_updated_month: int | None = None
     developed_players: tuple[CharacterStats, ...] = ()
+    world_level_lock: WorldLevel | None = None
 
     def salary_player(self, player):
         if self.player(player.name) is None and self.opponent_owner(player.name) is None:
@@ -358,7 +359,8 @@ class SeasonState:
     @property
     def world_level_settings(self):
         try:
-            return world_level_for_rank(*self.world_rank)
+            current = world_level_for_rank(*self.world_rank)
+            return self.world_level_lock if self.world_level_lock is not None and self.active_tournaments else current
         except WorldLevelError as exc:
             raise SeasonSaveError(f"世界レベル設定が不正です: {exc}") from exc
 
@@ -512,6 +514,19 @@ class SeasonState:
         return next((event for event in self.tournament_definitions if event.id == event_id), None)
 
     @property
+    def active_tournaments(self):
+        return tuple(run for run in self.tournaments if not run.completed
+                     and self.tournament_definition(run.tournament_id) is not None
+                     and parse_date(self.tournament_definition(run.tournament_id).start_date) <= self.date)
+
+    def _with_tournament_world_level(self):
+        if not self.active_tournaments:
+            return replace(self, world_level_lock=None) if self.world_level_lock is not None else self
+        if self.world_level_lock is None:
+            return replace(self, world_level_lock=self.world_level_settings)
+        return self
+
+    @property
     def visible_tournaments(self):
         return tuple(event for event in self.tournament_definitions if self.tournament(event.id) is not None or event.appears(self))
 
@@ -562,7 +577,7 @@ class SeasonState:
                                        club.effective_igl, club.effective_carrier) for club in rivals[:needed])
         run = TournamentProgress(event.id, self.club_id if own else None, tuple(entrants),
             seed=int(uuid4().hex[:8], 16) % (2**31), preset_id=own.id if own else None)
-        candidate = replace(self, tournaments=(*self.tournaments, run))
+        candidate = replace(self, tournaments=(*self.tournaments, run))._with_tournament_world_level()
         candidate.validate()
         return candidate
 
@@ -606,7 +621,7 @@ class SeasonState:
                             tournaments=tuple(updated if r.tournament_id == event_id else r for r in self.tournaments))
         candidate.validate()
         candidate = candidate.with_rated_result(f"tournament:{event_id}:{score.match_id}", score.left_id, score.right_id, score.left_wins, score.right_wins)
-        return candidate
+        return candidate._with_tournament_world_level()
 
     def _tournament_rating_score(self, run, match):
         if run.own_team_id in (match.left, match.right):
@@ -691,7 +706,7 @@ class SeasonState:
             owned_players=tuple(player if p.name == name else p for p in self.owned_players),
             developed_players=tuple(p for p in self.developed_players if p.name != name) + (player,))
         candidate.validate()
-        return candidate
+        return candidate._with_next_day()
 
     def with_scrim_result(self, result_id, own_id, opponent_id, own_wins, opponent_wins):
         if result_id in self.rated_results:
@@ -853,7 +868,14 @@ class SeasonState:
         return candidate
 
     def _with_next_day(self, *, pay_salaries=True):
-        candidate = self
+        # A day belongs to the contracts active at its beginning, including the
+        # last day before expiry or a month-end departure/transfer.
+        active = {c.player_name for c in self.contracts if c.active(self.game_month)}
+        grown = tuple(replace(p, iq=float(Decimal(str(p.iq)) + Decimal("0.1"))) if p.name in active else p
+                      for p in self.owned_players)
+        developed = {p.name: p for p in self.developed_players}
+        developed.update((p.name, p) for p in grown if p.name in active)
+        candidate = replace(self, owned_players=grown, developed_players=tuple(developed.values()))
         day = candidate.date + timedelta(days=1)
         index = month_index(parse_date(candidate.start_date), day)
         new_month = index != candidate.game_month
@@ -881,6 +903,7 @@ class SeasonState:
                 own = candidate.selected_team if candidate.selected_team in ready else (ready[0] if ready else None)
                 if own is not None:
                     candidate = candidate.with_tournament_entry(event.id, own.id)
+        candidate = candidate._with_tournament_world_level()
         candidate.validate()
         return candidate
 
@@ -1105,9 +1128,14 @@ class SeasonState:
         developed_names = set()
         for player in self.developed_players:
             validate_player(player)
-            if player.name in developed_names or not (player.research_level or player.aim_lab_level):
+            if player.name in developed_names:
                 raise SeasonSaveError("育成済み選手の記録が重複または不正です。")
             developed_names.add(player.name)
+        if self.world_level_lock is not None:
+            try:
+                validate_world_level(self.world_level_lock)
+            except WorldLevelError as exc:
+                raise SeasonSaveError(f"大会中の世界レベル設定が不正です: {exc}") from exc
         if not isinstance(self.rated_results, tuple) or any(not isinstance(n, str) or not n for n in self.rated_results) or len(set(self.rated_results)) != len(self.rated_results):
             raise SeasonSaveError("レート更新済み試合の記録が不正です。")
         rating_ids = set()
@@ -1629,6 +1657,13 @@ class SeasonStore:
                 contracts=club.contracts or tuple(initial_contract(p, game_month) for p in club.players)) for club in opponent_teams)
             salary_mode, salary_settings, salary_rows, salary_month = SalaryMode.STATIC, None, (), None
             developed_players = ()
+            world_level_lock = None
+            if data["version"] >= 17:
+                locked = data["world_level_lock"]
+                if locked is not None:
+                    if not isinstance(locked, dict):
+                        raise SeasonSaveError("大会中の世界レベル設定の形式が不正です。")
+                    world_level_lock = WorldLevel(**locked)
             if data["version"] >= 16:
                 if not isinstance(data.get("developed_players"), list):
                     raise SeasonSaveError("育成済み選手の形式が不正です。")
@@ -1679,6 +1714,7 @@ class SeasonStore:
                 salary_mode=salary_mode, salary_settings=salary_settings,
                 salary_records=salary_rows, salary_updated_month=salary_month,
                 developed_players=developed_players,
+                world_level_lock=world_level_lock,
             )
             old_layout = data["version"] < 11 and "club_id" not in data
             required_ids = {t.id for t in state.opponent_teams}
@@ -1710,6 +1746,10 @@ class SeasonStore:
                     ratings=(*tuple(r for r in state.ratings if r.team_id not in old_ids and r.team_id != state.club_id),
                              SeasonRating(state.club_id, actual_name, own_rating)))
             state = state.with_registered_ratings()
+            if data["version"] < 17:
+                state = state._with_tournament_world_level()
+            elif bool(state.active_tournaments) != (state.world_level_lock is not None):
+                raise SeasonSaveError("大会の進行状態と固定された世界レベルが一致しません。")
             state.validate()
             return state
         except (KeyError, TypeError, ValueError) as exc:
@@ -1756,6 +1796,7 @@ class SeasonStore:
             "monthly_events_through": state.monthly_events_through,
             "transfer_offers": [asdict(offer) for offer in state.transfer_offers],
             "developed_players": [asdict(player) for player in state.developed_players],
+            "world_level_lock": asdict(state.world_level_lock) if state.world_level_lock is not None else None,
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = None

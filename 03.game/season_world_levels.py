@@ -16,6 +16,17 @@ class WorldLevel:
     sponsor_funds: int
 
 
+def validate_world_level(row):
+    if not isinstance(row, WorldLevel) or type(row.level) is not int or row.level < 1:
+        raise WorldLevelError("世界レベルは1以上の整数にしてください。")
+    if type(row.top_percent) not in (int, float) or not math.isfinite(row.top_percent) or not 0 < row.top_percent <= 100:
+        raise WorldLevelError("上位%は0より大きく100以下の有限の数値にしてください。")
+    if type(row.enemy_multiplier) not in (int, float) or not math.isfinite(row.enemy_multiplier) or row.enemy_multiplier <= 0:
+        raise WorldLevelError("敵倍率は0より大きい有限の数値にしてください。")
+    if type(row.sponsor_funds) is not int or row.sponsor_funds < 0:
+        raise WorldLevelError("スポンサー資金は0以上の円単位の整数にしてください。")
+
+
 def configured_world_levels():
     from realtime_season_world_levels import WORLD_LEVELS
 
@@ -26,15 +37,9 @@ def configured_world_levels():
         if not isinstance(row, dict) or set(row) != {"レベル", "上位%", "敵倍率", "スポンサー資金"}:
             raise WorldLevelError("世界レベルには「レベル」「上位%」「敵倍率」「スポンサー資金」を設定してください。")
         level, percent, multiplier, funds = (row[k] for k in ("レベル", "上位%", "敵倍率", "スポンサー資金"))
-        if type(level) is not int or level < 1:
-            raise WorldLevelError("世界レベルは1以上の整数にしてください。")
-        if type(percent) not in (int, float) or not math.isfinite(percent) or not 0 < percent <= 100:
-            raise WorldLevelError("上位%は0より大きく100以下の有限の数値にしてください。")
-        if type(multiplier) not in (int, float) or not math.isfinite(multiplier) or multiplier <= 0:
-            raise WorldLevelError("敵倍率は0より大きい有限の数値にしてください。")
-        if type(funds) is not int or funds < 0:
-            raise WorldLevelError("スポンサー資金は0以上の円単位の整数にしてください。")
-        result.append(WorldLevel(level, percent, multiplier, funds))
+        row = WorldLevel(level, percent, multiplier, funds)
+        validate_world_level(row)
+        result.append(row)
     result.sort(key=lambda row: row.level)
     if result[0].top_percent != 100:
         raise WorldLevelError("最低世界レベルの上位%は100にしてください。")

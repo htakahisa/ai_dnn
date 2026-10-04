@@ -175,7 +175,9 @@ class SalaryStateTest(SeasonCompetitionTest):
         self.assertEqual(signed.advance_months().contract("Meiy").monthly_salary, 10_000_000)
 
     def test_npc_contracts_and_lft_use_dynamic_salary_and_transfer_fee(self):
-        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Aspas": 1_000_000, "Meiy": 2_000_000}):
+        # Salary assertions require a known NPC/LFT assignment.
+        with patch.object(config, "FIXED_MONTHLY_SALARIES", {"Aspas": 1_000_000, "Meiy": 2_000_000}), \
+                patch("realtime_season.with_randomized_clubs", side_effect=lambda state: state):
             state = self.dynamic_state()
         rival = next(c for c in state.opponent_teams if "Aspas" in c.members)
         self.assertEqual(next(c.monthly_salary for c in rival.contracts if c.player_name == "Aspas"), 1_000_000)

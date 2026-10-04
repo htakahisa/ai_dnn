@@ -37,6 +37,16 @@ class ActionMasks:
     facing: np.ndarray
     ultimate_facing: np.ndarray
     target: np.ndarray  # [slot, ability/ultimate, flattened cell]; DANCE uses first 5 entries.
+    abilities: tuple[str, ...] = ABILITIES
+    ultimates: tuple[str, ...] = ULTIMATES
+
+
+def ability_for(snapshot, slot):
+    return snapshot.allies[slot].ability_name or ABILITIES[slot]
+
+
+def ultimate_for(snapshot, slot):
+    return snapshot.allies[slot].ultimate_name or ULTIMATES[slot]
 
 
 def build_masks(snapshot):
@@ -52,6 +62,7 @@ def build_masks(snapshot):
     walkable = grid != 1
     target_rows, target_columns = np.indices(grid.shape)
     for a in snapshot.allies:
+        ability, ultimate = ability_for(snapshot, a.slot), ultimate_for(snapshot, a.slot)
         kinds[a.slot, 0] = True
         if a.forced_facing or not a.alive:
             facings[a.slot] = False
@@ -73,16 +84,18 @@ def build_masks(snapshot):
             and active_defuser in (None, a.slot))
         # The game permits collection at full points; leave that legal choice available.
         kinds[a.slot, 7] = a.position in snapshot.orbs
-        if a.charges > 0 and ABILITIES[a.slot] == "DANCE":
+        if a.charges > 0 and ability == "DANCE":
             for ally in snapshot.allies:
                 cap = min(DANCE_MAX_HP, ally.max_hp) if ally.max_hp_lost > 0 else DANCE_MAX_HP
                 targets[a.slot, 0, ally.slot] = ally.slot != a.slot and ally.alive and ally.hp < cap
-        elif a.charges > 0 and ABILITIES[a.slot] != "HUNT":
+        elif a.charges > 0 and ability == "RAMP":
+            targets[a.slot, 0, r * columns + c] = True
+        elif a.charges > 0 and ability in ("SMOKE", "FLASH", "RECON", "ASH"):
             legal = walkable
             dr, dc = target_rows - r, target_columns - c
-            if ABILITIES[a.slot] == "ASH":
+            if ability == "ASH":
                 legal = legal & (dr ** 2 + dc ** 2 <= ASH_RANGE_CELLS ** 2)
-            elif ABILITIES[a.slot] == "RECON":
+            elif ability in ("RECON", "FLASH"):
                 # Evaluate the same first Bresenham step for all targets at once.
                 dx, dy = abs(dc), -abs(dr)
                 e2 = 2 * (dx + dy)
@@ -91,17 +104,20 @@ def build_masks(snapshot):
                 legal = legal & ((nr != r) | (nc != c)) & (grid[nr, nc] != 1)
             targets[a.slot, 0] = legal.ravel()
         kinds[a.slot, 8] = targets[a.slot, 0].any()
-        if a.points >= a.cost and a.cost > 0 and ULTIMATES[a.slot] != "SERENADE":
-            if a.ramp_blocked and ULTIMATES[a.slot] in ("ESCAPE", "RAID"):
+        if a.points >= a.cost and a.cost > 0 and ultimate != "SERENADE":
+            if a.ramp_blocked and ultimate in ("ESCAPE", "RAID"):
                 continue
-            if ULTIMATES[a.slot] == "ESCAPE":
+            if ultimate == "ESCAPE":
                 legal = walkable.copy()
                 for rr, cc in occupied_allies | sightings:
                     if 0 <= rr < rows and 0 <= cc < columns:
                         legal[rr, cc] = False
                 targets[a.slot, 1] = legal.ravel()
                 kinds[a.slot, 9] = targets[a.slot, 1].any()
-            elif ULTIMATES[a.slot] == "RAID":
+            elif ultimate == "NEON":
+                targets[a.slot, 1] = walkable.ravel()
+                kinds[a.slot, 9] = targets[a.slot, 1].any()
+            elif ultimate == "RAID":
                 # Do not mask using unseen enemy occupancy.
                 possible = [a.facing] if a.forced_facing else FACING
                 ultimate_facings[a.slot] = False
@@ -116,11 +132,14 @@ def build_masks(snapshot):
     ultimate_facings &= facings
     for value in (kinds, facings, ultimate_facings, targets):
         value.setflags(write=False)
-    return ActionMasks(kinds, facings, ultimate_facings, targets)
+    return ActionMasks(kinds, facings, ultimate_facings, targets,
+                       tuple(ability_for(snapshot, i) for i in range(5)),
+                       tuple(ultimate_for(snapshot, i) for i in range(5)))
 
 
-def target_required(slot, kind):
-    return kind == "ABILITY" or (kind == "ULTIMATE" and ULTIMATES[slot] == "ESCAPE")
+def target_required(slot, kind, masks=None):
+    ultimates = masks.ultimates if masks is not None else ULTIMATES
+    return kind == "ABILITY" or (kind == "ULTIMATE" and ultimates[slot] in ("ESCAPE", "NEON"))
 
 
 def validate_action(snapshot, masks, slot, action):
@@ -130,8 +149,8 @@ def validate_action(snapshot, masks, slot, action):
         raise ValueError("masked FRC facing")
     if action.kind == "ULTIMATE" and not masks.ultimate_facing[slot, FACING.index(action.facing)]:
         raise ValueError("masked ultimate facing")
-    if target_required(slot, action.kind):
-        if slot == 0 and action.kind == "ABILITY":
+    if target_required(slot, action.kind, masks):
+        if masks.abilities[slot] == "DANCE" and action.kind == "ABILITY":
             index = action.ally_slot
             if index is None or not 0 <= index < 5:
                 raise ValueError("DANCE requires a teammate slot")
@@ -147,7 +166,7 @@ def validate_action(snapshot, masks, slot, action):
             raise ValueError("masked FRC target")
     elif action.target is not None or action.ally_slot is not None:
         raise ValueError("unexpected target on FRC action")
-    if action.kind == "ULTIMATE" and slot == 2:
+    if action.kind == "ULTIMATE" and masks.ultimates[slot] == "RAID":
         a = snapshot.allies[slot]
         dr, dc = FACING_STEPS[FACING.index(action.facing)]
         pos = a.position[0] + dr, a.position[1] + dc
@@ -162,11 +181,12 @@ def to_game_action(snapshot, slot, action, runtime_names):
         dr, dc = MOVE_STEPS[action.kind]
         return (pos[0] + dr, pos[1] + dc), {"facing": action.facing}
     if action.kind == "ABILITY":
-        payload = {"ability": ABILITIES[slot], "facing": action.facing}
-        payload.update({"target_name": runtime_names[action.ally_slot]} if slot == 0 else {"target": action.target})
+        ability = ability_for(snapshot, slot)
+        payload = {"ability": ability, "facing": action.facing}
+        payload.update({"target_name": runtime_names[action.ally_slot]} if ability == "DANCE" else {"target": action.target})
         return pos, payload
     if action.kind == "ULTIMATE":
-        payload = {"ultimate": ULTIMATES[slot], "facing": action.facing}
+        payload = {"ultimate": ultimate_for(snapshot, slot), "facing": action.facing}
         if action.target is not None:
             payload["target"] = action.target
         return pos, payload

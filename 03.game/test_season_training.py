@@ -59,18 +59,19 @@ class TrainingTest(unittest.TestCase):
         self.store.save(state)
         return RealtimeSeasonApp(root, self.store, state)
 
-    def test_research_changes_only_selected_player_iq_and_level_and_cost_increases(self):
+    def test_research_spends_a_day_adds_daily_growth_and_cost_increases(self):
         state = self.state()
         first = state.with_trained_player("Leo", "research")
-        self.assertEqual(first.player("Leo"), replace(state.player("Leo"), iq=155, research_level=1))
+        self.assertEqual(first.player("Leo"), replace(state.player("Leo"), iq=155.1, research_level=1))
         self.assertEqual(first.money, state.money - 100_000)
-        self.assertEqual(first.date, state.date)
-        self.assertEqual(first.owned_players[1:], state.owned_players[1:])
+        self.assertEqual(first.date, state.date + timedelta(days=1))
+        self.assertEqual(first.owned_players[1:], tuple(replace(p, iq=p.iq + .1) for p in state.owned_players[1:]))
         self.assertEqual(first.opponent_teams, state.opponent_teams)
         self.assertEqual(first.contracts, state.contracts)
         self.assertEqual(first.training_terms("Leo", "research").cost, 200_000)
         second = first.with_trained_player("Leo", "research")
-        self.assertEqual(second.player("Leo").iq, 160)
+        self.assertEqual(second.player("Leo").iq, 160.2)
+        self.assertEqual(second.date, state.date + timedelta(days=2))
         self.assertEqual(second.player("Leo").research_level, 2)
         self.assertEqual(second.money, state.money - 300_000)
 
@@ -80,7 +81,8 @@ class TrainingTest(unittest.TestCase):
         for level in range(1, 11):
             state = state.with_trained_player("Leo", "research")
             self.assertEqual(state.player("Leo").research_level, level)
-        self.assertEqual(state.player("Leo").iq, before.player("Leo").iq + 50)
+        self.assertEqual(state.player("Leo").iq, before.player("Leo").iq + 51)
+        self.assertEqual(state.date, before.date + timedelta(days=10))
         self.assertEqual(state.money, before.money - 5_500_000)
         self.store.save(state)
         loaded = self.store.load_or_create()
@@ -95,7 +97,7 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(state.player("Leo").hit_pct, .93)
         self.assertEqual(state.player("Leo").aim_lab_level, 10)
         self.assertEqual(state.player("Leo").research_level, 0)
-        self.assertEqual(state.player("Leo").iq, 150)
+        self.assertEqual(state.player("Leo").iq, 151)
         with self.assertRaisesRegex(SeasonSaveError, "最大レベル10"):
             state.with_trained_player("Leo", "aim_lab")
         state = state.with_trained_player("Leo", "research")
@@ -130,10 +132,10 @@ class TrainingTest(unittest.TestCase):
         snapshot = state.tournament("cup").entrants
         state = state.with_trained_player("Leo", "research").with_trained_player("Leo", "aim_lab")
         request = build_scrim_request(state, state.selected_team_id, state.opponent_teams[0].id)
-        self.assertEqual(request["own"]["players"][0]["iq"], 155)
+        self.assertEqual(request["own"]["players"][0]["iq"], 155.2)
         self.assertEqual(request["own"]["players"][0]["hit_pct"], .84)
         request = build_series_request(state, "cup")
-        self.assertEqual(request["own"]["players"][0]["iq"], 155)
+        self.assertEqual(request["own"]["players"][0]["iq"], 155.2)
         self.assertEqual(state.tournament("cup").entrants, snapshot)
 
     def test_training_survives_release_lft_reacquisition_and_opponent_transfer(self):
@@ -190,13 +192,16 @@ class TrainingTest(unittest.TestCase):
         app.refresh_training_offer("research")
         self.assertIn("100,000", app.training_summaries["research"].get())
         app.training_buttons["research"].invoke()
-        self.assertEqual(app.state.player("Leo").iq, 155)
+        self.assertEqual(app.state.player("Leo").iq, 155.1)
+        self.assertEqual(app.state.date, self.state().date + timedelta(days=1))
         self.assertIn("200,000", app.training_summaries["research"].get())
         app.show_screen("aim_lab")
         app.training_players["aim_lab"].selection_set("Leo")
         app.refresh_training_offer("aim_lab")
         app.training_buttons["aim_lab"].invoke()
         self.assertEqual(app.state.player("Leo").hit_pct, .84)
+        self.assertEqual(app.state.player("Leo").iq, 155.2)
+        self.assertEqual(app.state.date, self.state().date + timedelta(days=2))
         self.assertEqual(self.store.load_or_create(), app.state)
         with patch.object(type(app), "match_running", new_callable=unittest.mock.PropertyMock, return_value=True):
             app.refresh_training_offer("aim_lab")
@@ -215,6 +220,7 @@ class TrainingTest(unittest.TestCase):
         done = state.with_scrim_result("scrim:one", state.selected_team_id, state.opponent_teams[0].id, 1, 0)
         self.assertEqual(done.date, state.date + timedelta(days=1))
         self.assertEqual(done.rating(done.club_id), 1532)
+        self.assertEqual(done.player("Leo").iq, 150.1)
         self.assertEqual(done.with_scrim_result("scrim:one", state.selected_team_id, state.opponent_teams[0].id, 1, 0), done)
         self.store.save(done)
         loaded = self.store.load_or_create()
@@ -228,6 +234,48 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(done.monthly_events_through, 1)
         self.assertEqual(sum(e.kind == "month_completed" for e in done.monthly_events), 1)
         self.assertEqual(done, state.with_rated_result("scrim:month", state.selected_team_id, state.opponent_teams[0].id, 0, 1).advance_days())
+
+    def test_daily_iq_growth_includes_bench_and_stops_on_expiry(self):
+        state = self.state().with_added_players(("Boostio",))
+        state = replace(state, contracts=tuple(replace(c, kind="short", duration_months=1)
+                                              if c.player_name == "Leo" else c for c in state.contracts))
+        grown = state.advance_days(31)
+        self.assertEqual(grown.player("Leo").iq, 153.1)
+        self.assertFalse(grown.can_play("Leo"))
+        self.assertEqual(grown.player("Boostio").iq, state.player("Boostio").iq + 3.1)
+        later = grown.advance_days(10)
+        self.assertEqual(later.player("Leo").iq, grown.player("Leo").iq)
+        self.assertEqual(later.player("Boostio").iq, state.player("Boostio").iq + 4.1)
+        self.store.save(later)
+        self.assertEqual(self.store.load_or_create(), later)
+        self.assertEqual(self.store.load_or_create().advance_days().player("Boostio").iq,
+                         state.player("Boostio").iq + 4.2)
+
+    def test_passive_growth_survives_release_and_only_resumes_after_signing(self):
+        state = new_season(OWN).advance_days(10)
+        grown = state.player("Leo")
+        self.assertEqual(grown.iq, 151)
+        self.assertEqual((grown.research_level, grown.aim_lab_level), (0, 0))
+        released = state.without_player("Leo").advance_days(10)
+        self.store.save(released)
+        loaded = self.store.load_or_create()
+        self.assertEqual(next(p for p in loaded.lft_players if p.name == "Leo"), grown)
+        signed = loaded.with_scouted_player("Leo", "short", 1)
+        self.assertEqual(signed.player("Leo"), grown)
+        self.assertEqual(signed.advance_days().player("Leo").iq, 151.1)
+
+    def test_training_on_month_boundary_settles_once_and_failed_training_spends_no_day(self):
+        state = self.state().advance_days(30)
+        done = state.with_trained_player("Leo", "aim_lab")
+        self.assertEqual(done.game_date, "2026-02-01")
+        self.assertEqual(done.money, state.money - 100_000 + 7_500_000 - state.monthly_payroll)
+        self.assertEqual(done.player("Leo").iq, 153.1)
+        self.assertEqual(sum(e.kind == "month_completed" for e in done.monthly_events), 1)
+        poor = replace(state, money=0)
+        with self.assertRaises(SeasonSaveError):
+            poor.with_trained_player("Leo", "research")
+        self.assertEqual(poor.game_date, "2026-01-31")
+        self.assertEqual(poor.player("Leo").iq, 153)
 
     def test_scrim_spends_day_even_with_an_unplayed_registered_tournament(self):
         with patch.object(calendar, "TOURNAMENTS", [CUP]):

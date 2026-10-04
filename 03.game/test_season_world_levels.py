@@ -1,6 +1,7 @@
 """World percentile boundaries, scaled match inputs and monthly sponsor payments."""
 
 from dataclasses import asdict, replace
+import json
 from pathlib import Path
 import tempfile
 import tkinter as tk
@@ -15,6 +16,7 @@ from realtime_season import SeasonSaveError, SeasonStore, new_season, validate_p
 from run_realtime_season import RealtimeSeasonApp
 from season_scrim import build_scrim_request
 from season_series import build_series_request
+from season_competitions import SeriesScore, next_match
 from season_world_levels import WorldLevelError, configured_world_levels, world_level_for_rank
 
 
@@ -144,8 +146,63 @@ class WorldLevelTests(unittest.TestCase):
         snapshot = next(t for t in entered.tournament("cup").entrants if t.id == request["right_id"])
         self.assertEqual(request["opponent"]["players"], [asdict(state.enemy_player(p)) for p in snapshot.players])
         lower = replace(entered, ratings=tuple(replace(r, value=100) if r.team_id == state.club_id else r for r in entered.ratings))
-        self.assertEqual(build_series_request(lower, "cup")["opponent"]["players"], [asdict(p) for p in snapshot.players])
+        self.assertEqual(build_series_request(lower, "cup")["opponent"]["players"],
+                         [asdict(entered.enemy_player(p)) for p in snapshot.players])
+        self.assertEqual(lower.world_level, entered.world_level)
         self.assertEqual(lower.tournament("cup").entrants, entered.tournament("cup").entrants)
+
+    def test_world_level_locks_at_start_instead_of_early_registration(self):
+        state = self.state(4)
+        state = state.with_tournament_entry("cup", state.selected_team_id)
+        self.assertIsNone(state.world_level_lock)
+        raised = replace(state, ratings=tuple(replace(r, value=2500) if r.team_id == state.club_id else r
+                                              for r in state.ratings))
+        self.assertEqual(raised.world_level, 3)
+        started = raised.advance_days(59)
+        self.assertEqual(started.game_date, "2026-03-01")
+        self.assertEqual(started.world_level_lock.level, 3)
+        lowered = replace(started, ratings=tuple(replace(r, value=100) if r.team_id == state.club_id else r
+                                                 for r in started.ratings))
+        self.assertEqual(lowered.world_rank, (4, 4))
+        self.assertEqual(lowered.world_level, 3)
+        self.assertEqual(lowered.monthly_sponsor_income, 20_000_000)
+        self.assertEqual(lowered.enemy_player(lowered.opponent_teams[0].players[0]).iq,
+                         lowered.opponent_teams[0].players[0].iq * 2)
+        self.store.save(lowered)
+        self.assertEqual(self.store.load_or_create(), lowered)
+
+    def test_tournament_finish_unlocks_level_after_final_rating_update(self):
+        state = self.state(2).advance_days(59)
+        state = state.with_tournament_entry("cup", state.selected_team_id)
+        state = replace(state, ratings=tuple(replace(r, value=2500) if r.team_id == state.club_id else r
+                                             for r in state.ratings))
+        self.assertEqual(state.world_level, 2)
+        while not state.tournament("cup").completed:
+            match, _ = next_match(state.tournament_definition("cup"), state.tournament("cup"))
+            own = state.club_id
+            score = SeriesScore(match.id, match.left, match.right, 0 if match.right == own else match.maps_to_win,
+                                match.maps_to_win if match.right == own else 0)
+            state = state.with_tournament_result("cup", score)
+            if not state.tournament("cup").completed:
+                self.assertEqual(state.world_level, 2)
+                state = state.advance_days()
+        self.assertIsNone(state.world_level_lock)
+        self.assertEqual(state.world_level, 3)
+        self.assertEqual(state.monthly_sponsor_income, 20_000_000)
+        self.store.save(state)
+        self.assertEqual(self.store.load_or_create(), state)
+
+    def test_legacy_active_tournament_locks_current_level_without_rewriting_save(self):
+        state = self.state(1).advance_days(59)
+        state = state.with_tournament_entry("cup", state.selected_team_id)
+        self.store.save(state)
+        data = json.loads(self.store.path.read_text(encoding="utf-8"))
+        data["version"] = 16
+        data.pop("world_level_lock")
+        self.store.path.write_text(json.dumps(data), encoding="utf-8")
+        before = self.store.path.read_bytes()
+        self.assertEqual(self.store.load_or_create(), state)
+        self.assertEqual(self.store.path.read_bytes(), before)
 
     def test_recruitment_and_restart_keep_base_stats_without_compounding(self):
         state = self.state(1)

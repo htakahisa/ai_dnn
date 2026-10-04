@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-0a8f9696d20b5ef39105dcaf03c726ae",
+  "left_wins": 3,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Touyama Gaming",
+      "own_score": 13,
+      "opponent_score": 7,
+      "winner": "マイチーム",
+      "seed": 1904246649,
+      "player_stats": {
+        "Homelander": {
+          "kills": 6,
+          "deaths": 4
+        },
+        "A-Train": {
+          "kills": 21,
+          "deaths": 6
+        },
+        "Deep": {
+          "kills": 3,
+          "deaths": 3
+        },
+        "Blacknoir": {
+          "kills": 25,
+          "deaths": 5
+        },
+        "Stormfront": {
+          "kills": 18,
+          "deaths": 3
+        },
+        "Tortlilyan": {
+          "kills": 7,
+          "deaths": 14
+        },
+        "ろびぃな": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "いぐるん": {
+          "kills": 3,
+          "deaths": 16
+        },
+        "えんぺん": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "夢の街": {
+          "kills": 1,
+          "deaths": 16
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Touyama Gaming",
+      "own_score": 14,
+      "opponent_score": 12,
+      "winner": "マイチーム",
+      "seed": 1904246650,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 8,
+          "deaths": 20
+        },
+        "ろびぃな": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "いぐるん": {
+          "kills": 9,
+          "deaths": 20
+        },
+        "えんぺん": {
+          "kills": 15,
+          "deaths": 18
+        },
+        "夢の街": {
+          "kills": 3,
+          "deaths": 19
+        },
+        "Homelander": {
+          "kills": 13,
+          "deaths": 7
+        },
+        "A-Train": {
+          "kills": 19,
+          "deaths": 5
+        },
+        "Deep": {
+          "kills": 16,
+          "deaths": 5
+        },
+        "Blacknoir": {
+          "kills": 24,
+          "deaths": 11
+        },
+        "Stormfront": {
+          "kills": 22,
+          "deaths": 12
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "マイチーム",
+      "opponent_team": "Touyama Gaming",
+      "own_score": 13,
+      "opponent_score": 7,
+      "winner": "マイチーム",
+      "seed": 1904246651,
+      "player_stats": {
+        "Homelander": {
+          "kills": 12,
+          "deaths": 4
+        },
+        "A-Train": {
+          "kills": 23,
+          "deaths": 6
+        },
+        "Deep": {
+          "kills": 5,
+          "deaths": 5
+        },
+        "Blacknoir": {
+          "kills": 17,
+          "deaths": 7
+        },
+        "Stormfront": {
+          "kills": 15,
+          "deaths": 4
+        },
+        "Tortlilyan": {
+          "kills": 7,
+          "deaths": 13
+        },
+        "ろびぃな": {
+          "kills": 6,
+          "deaths": 13
+        },
+        "いぐるん": {
+          "kills": 5,
+          "deaths": 15
+        },
+        "えんぺん": {
+          "kills": 5,
+          "deaths": 15
+        },
+        "夢の街": {
+          "kills": 3,
+          "deaths": 16
+        }
+      }
+    }
+  ]
+}

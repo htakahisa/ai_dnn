@@ -23,7 +23,7 @@ class SeasonTrainingMixin:
             ttk.Button(navigation, text=f"{TRAINING_FIELDS[other][0]}へ",
                        command=lambda target=other: self.show_screen(target)).pack(side="left", padx=8)
             ability = "IQ" if kind == "research" else "命中率"
-            ttk.Label(host, text=f"所持選手を選び、資金を使って{ability}と{title}レベルを上げます。最大レベルは10です。",
+            ttk.Label(host, text=f"所持選手を選び、資金を使って{ability}と{title}レベルを上げます。最大レベルは10です。実行すると1日経過します。契約中の全選手は毎日IQが0.1上がります。",
                       wraplength=950).pack(anchor="w", pady=(0, 12))
             table = ttk.Frame(host)
             table.pack(fill="both", expand=True)
@@ -78,7 +78,7 @@ class SeasonTrainingMixin:
                   else f"命中率: {terms.before:.2%} → {terms.after:.2%}")
         blocked = "試合が終了してから育成してください。" if self.match_running else (
                   "所持金が不足しています。" if self.state.money < terms.cost else "")
-        self.training_summaries[kind].set(prefix + f"次のレベル: {terms.next_level} / {growth}\n費用: {terms.cost:,}円  {blocked}")
+        self.training_summaries[kind].set(prefix + f"次のレベル: {terms.next_level} / {growth}\n費用: {terms.cost:,}円 / 所要日数: 1日  {blocked}")
         button.configure(text=f"{title}する（{terms.cost:,}円）", state="disabled" if blocked else "normal")
 
     def train_selected_player(self, kind):
@@ -97,4 +97,4 @@ class SeasonTrainingMixin:
             return
         growth = (f"IQ {terms.before:g} → {terms.after:g}" if kind == "research"
                   else f"命中率 {terms.before:.2%} → {terms.after:.2%}")
-        self.commit(candidate, f"{selected[0]}の{terms.title}がレベル{terms.next_level}になりました。{growth}。費用: {terms.cost:,}円。")
+        self.commit(candidate, f"{selected[0]}の{terms.title}がレベル{terms.next_level}になりました。育成で{growth}。費用: {terms.cost:,}円。1日経過しました（{candidate.game_date}）。")

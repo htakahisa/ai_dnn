@@ -28,6 +28,28 @@ DEFAULT_ROLE_COMPOSITION = {
 }
 
 
+def model_slots(players, trained_names):
+    """Map actual teammates to distinct trained slots without renaming players.
+
+    Original members keep their learned slot; replacements fill unused slots in
+    roster order. Include dead allies so their slot stays reserved this round.
+    """
+    players = tuple(players)
+    slots, used = {}, set()
+    for player in players:
+        name = str(getattr(player, "base_name", player.name))
+        if name in trained_names:
+            slot = trained_names.index(name)
+            if slot not in used:
+                slots[player.name] = slot
+                used.add(slot)
+    free = iter(slot for slot in range(len(trained_names)) if slot not in used)
+    for player in players:
+        if player.name not in slots:
+            slots[player.name] = next(free)
+    return slots
+
+
 def _build_role_map():
     """役割名 → キャラ名リスト の辞書を作る"""
     role_map = defaultdict(list)
