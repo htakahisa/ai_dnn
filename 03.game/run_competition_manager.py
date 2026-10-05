@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import math
 import queue
 import random
 import secrets
@@ -2359,6 +2360,7 @@ class TournamentSeedEditor(tk.LabelFrame):
 # Team combat-power index (after player combos)
 # ---------------------------------------------------------------------------
 COMBAT_POWER_IQ_EFFECTIVE_CAP = 200.0
+COMBAT_POWER_STAT_KEYS = ("hs_rate", "dodge_rate", "iq", "accuracy", "reaction")
 
 
 def calculate_combat_power_index(
@@ -2413,7 +2415,7 @@ def calculate_combat_power_index(
 
 
 def _combo_stat_key(stat_key: Any) -> str | None:
-    normalized = str(stat_key).strip().lower()
+    normalized = str(stat_key).strip().lower().replace("％", "%").replace(" ", "")
     aliases = {
         "accuracy": "accuracy",
         "aim": "accuracy",
@@ -2441,14 +2443,21 @@ def _combo_stat_key(stat_key: Any) -> str | None:
         "intelligence": "iq",
         "判断力": "iq",
         "知能": "iq",
+        "mental": "mental",
+        "mentality": "mental",
+        "メンタル": "mental",
+        "form_variance": "form_variance",
+        "condition_variance": "form_variance",
+        "consistency": "form_variance",
+        "調子の波": "form_variance",
     }
     return aliases.get(normalized)
 
 
 def _apply_combo_bonus_to_stats(
-    stats: dict[str, float], stat_key: Any, value: Any
+    stats: dict[str, Any], stat_key: Any, value: Any
 ) -> None:
-    """Mirror game_core combo stat behavior for the five power-index stats."""
+    """Mirror game_core combo behavior for the displayed static stats."""
     key = _combo_stat_key(stat_key)
     if key is None:
         return
@@ -2456,19 +2465,24 @@ def _apply_combo_bonus_to_stats(
         amount = float(value)
     except (TypeError, ValueError):
         return
+    if not math.isfinite(amount):
+        return
 
     if key in {"accuracy", "hs_rate", "dodge_rate"}:
         if abs(amount) > 1.0:
             amount /= 100.0
         updated = float(stats[key]) + amount
-        if key == "accuracy":
+        if key in {"accuracy", "hs_rate"}:
             stats[key] = max(
                 0.0, updated
-            )  # game_core allows >100% accuracy after combos
+            )  # game_core allows >100% accuracy and HS rate after combos
         else:
             stats[key] = max(0.0, min(1.0, updated))
     elif key in {"reaction", "iq"}:
         stats[key] = max(0.0, float(stats[key]) + amount)
+    elif key in {"mental", "form_variance"}:
+        cap = 20.0 if key == "mental" else 10.0
+        stats[key] = max(0.0, min(cap, float(stats[key]) + amount))
 
 
 def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
@@ -2482,8 +2496,8 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
     validate_preset(preset)
     player_names = [str(name) for name in preset.players]
 
-    base_stats: dict[str, dict[str, float]] = {}
-    combo_stats: dict[str, dict[str, float]] = {}
+    base_stats: dict[str, dict[str, Any]] = {}
+    combo_stats: dict[str, dict[str, Any]] = {}
     player_aliases: dict[str, str] = {}
     for name in player_names:
         raw = get_character_combat_stats(name)
@@ -2493,6 +2507,10 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
             "iq": float(raw.get("iq", 0.0)),
             "accuracy": float(raw.get("accuracy", 0.0)),
             "reaction": float(raw.get("reaction", 0.0)),
+            "influence": float(raw.get("influence", 0.0)),
+            "form_variance": float(raw.get("form_variance", 0.0)),
+            "mental": float(raw.get("mental", 5.0)),
+            "role": str(raw.get("role", "")),
         }
         base_stats[name] = dict(row)
         combo_stats[name] = dict(row)
@@ -2534,8 +2552,12 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
     for name in player_names:
         base = base_stats[name]
         after = combo_stats[name]
-        base_power = calculate_combat_power_index(**base)
-        combo_power = calculate_combat_power_index(**after)
+        base_power = calculate_combat_power_index(
+            **{key: base[key] for key in COMBAT_POWER_STAT_KEYS}
+        )
+        combo_power = calculate_combat_power_index(
+            **{key: after[key] for key in COMBAT_POWER_STAT_KEYS}
+        )
         base_total += base_power
         combo_total += combo_power
         rows.append(
@@ -2597,10 +2619,13 @@ class CompetitionApp:
         self.current_rating_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
-        self.power_team_var = tk.StringVar(value=self.names[0])
-        self.power_summary_var = tk.StringVar(value="チームを選択して計算してください")
-        self.power_combo_var = tk.StringVar(value="発動コンボ: -")
-        self.power_tree: ttk.Treeview | None = None
+        self.team_power_reports: dict[str, dict[str, Any]] = {}
+        self.team_power_tree: ttk.Treeview | None = None
+        self.team_power_players_tree: ttk.Treeview | None = None
+        self.team_power_detail_var = tk.StringVar(value="チームを選択してください")
+        self.team_power_combos_var = tk.StringVar(value="")
+        self.player_power_tree: ttk.Treeview | None = None
+        self.player_power_status_var = tk.StringVar(value="")
 
         # 右側の図表示に使う進行状態。
         self.visual_mode = "series"
@@ -4280,11 +4305,13 @@ class CompetitionApp:
         self.series_tab = tk.Frame(self.notebook)
         self.swiss_tab = tk.Frame(self.notebook)
         self.league_tab = tk.Frame(self.notebook)
-        self.power_tab = tk.Frame(self.notebook)
+        self.player_power_tab = tk.Frame(self.notebook)
+        self.team_power_tab = tk.Frame(self.notebook)
         self.notebook.add(self.series_tab, text="単独シリーズ")
         self.notebook.add(self.swiss_tab, text="ダブルエリミネーション")
         self.notebook.add(self.league_tab, text="総当たりリーグ")
-        self.notebook.add(self.power_tab, text="戦闘力指数")
+        self.notebook.add(self.player_power_tab, text="選手戦闘力")
+        self.notebook.add(self.team_power_tab, text="チーム戦闘力")
 
         self.team1_var = tk.StringVar(value=self.names[0])
         self.team2_var = tk.StringVar(value=self.names[1])
@@ -4436,7 +4463,8 @@ class CompetitionApp:
         )
         self.league_slots.pack(fill="both", expand=True, padx=8, pady=8)
 
-        self._build_power_index_tab()
+        self._build_team_power_tab()
+        self._build_player_power_tab()
 
     def import_round_robin_qualifiers(self) -> None:
         if self.worker is not None and self.worker.is_alive():
@@ -4468,157 +4496,296 @@ class CompetitionApp:
         self.qualifier_status_var.set(f"{Path(path).name} / 上位{count}チームを設定済み")
         self.status_var.set(f"予選上位{count}チームを順位順のシードで設定しました")
 
-    def _build_power_index_tab(self) -> None:
-        top = tk.LabelFrame(
-            self.power_tab, text="コンボ後チーム戦闘力指数", padx=10, pady=8
-        )
-        top.pack(fill="x", padx=8, pady=(8, 4))
-
-        tk.Label(top, text="チーム").grid(row=0, column=0, sticky="w")
-        self.power_team_box = ttk.Combobox(
-            top,
-            values=self.names,
-            textvariable=self.power_team_var,
-            state="readonly",
-            width=34,
-        )
-        self.power_team_box.grid(row=0, column=1, padx=(8, 12), sticky="w")
-        self.power_refresh_button = tk.Button(
-            top,
-            text="戦闘力指数を計算",
-            command=self._reload_and_refresh_power_index,
-        )
-        self.power_refresh_button.grid(row=0, column=2, padx=4)
-
-        tk.Label(
-            top,
-            text="IQは実値を保持しつつ、戦闘力指数への寄与だけ200を上限として計算。",
-            fg="#555",
-            anchor="w",
-        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(7, 0))
-
-        tk.Label(
-            self.power_tab,
-            textvariable=self.power_summary_var,
-            font=("Arial", 11, "bold"),
-            anchor="w",
-            fg="#1f5f7a",
-        ).pack(fill="x", padx=12, pady=(4, 2))
-        tk.Label(
-            self.power_tab,
-            textvariable=self.power_combo_var,
-            anchor="w",
-            justify="left",
-            wraplength=1040,
-            fg="#444",
-        ).pack(fill="x", padx=12, pady=(0, 5))
-
-        columns = (
-            "player",
-            "base_power",
-            "combo_power",
-            "delta",
-            "hs",
-            "dodge",
-            "iq",
-            "iq_used",
-            "accuracy",
-            "reaction",
-        )
-        self.power_tree = ttk.Treeview(
-            self.power_tab, columns=columns, show="headings", height=7
-        )
-        headings = {
-            "player": "Player",
-            "base_power": "素指数",
-            "combo_power": "コンボ後",
-            "delta": "増減",
-            "hs": "HS%",
-            "dodge": "回避%",
-            "iq": "IQ",
-            "iq_used": "指数IQ",
-            "accuracy": "命中%",
-            "reaction": "反応",
-        }
-        widths = {
-            "player": 130,
-            "base_power": 78,
-            "combo_power": 78,
-            "delta": 70,
-            "hs": 62,
-            "dodge": 62,
-            "iq": 58,
-            "iq_used": 64,
-            "accuracy": 62,
-            "reaction": 62,
-        }
-        for key in columns:
-            self.power_tree.heading(key, text=headings[key])
-            self.power_tree.column(key, width=widths[key], anchor="center")
-        self.power_tree.pack(fill="x", padx=10, pady=(2, 8))
-
-        self.power_team_box.bind(
-            "<<ComboboxSelected>>", lambda _e: self._refresh_power_index()
-        )
-        self._refresh_power_index()
-
-    def _refresh_power_index(self) -> None:
-        if self.power_tree is None:
-            return
-        team_name = self.power_team_var.get()
-        try:
-            report = build_team_combo_power_report(team_name)
-        except Exception as exc:
-            self.power_summary_var.set(f"計算エラー: {exc}")
-            self.power_combo_var.set("発動コンボ: -")
-            return
-
-        for item in self.power_tree.get_children():
-            self.power_tree.delete(item)
-
-        for row in report["players"]:
-            after = row["after"]
-            iq = float(after["iq"])
-            self.power_tree.insert(
-                "",
-                "end",
-                values=(
-                    row["name"],
-                    f'{row["base_power"]:.1f}',
-                    f'{row["combo_power"]:.1f}',
-                    f'{row["delta"]:+.1f}',
-                    f'{after["hs_rate"] * 100:.1f}',
-                    f'{after["dodge_rate"] * 100:.1f}',
-                    f"{iq:.0f}",
-                    f"{min(iq, COMBAT_POWER_IQ_EFFECTIVE_CAP):.0f}",
-                    f'{after["accuracy"] * 100:.1f}',
-                    f'{after["reaction"]:.0f}',
-                ),
-            )
-
-        self.power_summary_var.set(
-            f'{team_name}  |  チーム合計: {report["base_total"]:.1f} → '
-            f'{report["combo_total"]:.1f} ({report["delta"]:+.1f})  |  '
-            f'5人平均: {report["base_average"]:.1f} → {report["combo_average"]:.1f}'
-        )
-        combos = report["active_combos"]
-        self.power_combo_var.set(
-            "発動コンボ: "
-            + (" / ".join(combos) if combos else "なし")
-            + "  ※ IGL補正・覚醒・メンタル/コンディション等は含めません"
-        )
-
-    def _reload_and_refresh_power_index(self) -> None:
+    def _reload_and_refresh_team_power(self) -> None:
         try:
             reload_game_data()
         except Exception as exc:
-            self.power_summary_var.set(f"データ再読み込みエラー: {exc}")
-            self.power_combo_var.set("発動コンボ: -")
-            if self.power_tree is not None:
-                for item in self.power_tree.get_children():
-                    self.power_tree.delete(item)
+            if self.team_power_tree is not None:
+                self.team_power_tree.delete(*self.team_power_tree.get_children())
+                self.team_power_reports.clear()
+                self.team_power_sort_values[self.team_power_tree].clear()
+                self._show_team_power_details()
+                self.team_power_detail_var.set(f"データ再読み込みエラー: {exc}")
+            if getattr(self, "player_power_tree", None) is not None:
+                self.player_power_tree.delete(*self.player_power_tree.get_children())
+                self.team_power_sort_values[self.player_power_tree].clear()
+                self.player_power_status_var.set(f"データ再読み込みエラー: {exc}")
             return
-        self._refresh_power_index()
+        self._refresh_team_power()
+        if getattr(self, "player_power_tree", None) is not None:
+            self._refresh_player_power()
+
+    def _build_player_power_tab(self) -> None:
+        toolbar = tk.Frame(self.player_power_tab)
+        toolbar.pack(fill="x", padx=10, pady=(8, 4))
+        tk.Label(
+            toolbar, textvariable=self.player_power_status_var, anchor="w",
+        ).pack(side="left")
+        self.player_power_refresh_button = tk.Button(
+            toolbar, text="再読み込み・再計算",
+            command=self._reload_and_refresh_team_power,
+        )
+        self.player_power_refresh_button.pack(side="right")
+
+        frame = tk.Frame(self.player_power_tab)
+        frame.pack(fill="both", expand=True, padx=10, pady=(4, 8))
+        columns = (
+            "no", "name", "team", "hs_rate", "accuracy", "dodge_rate", "reaction", "iq",
+            "influence", "form_variance", "mental", "role", "power",
+        )
+        headings = (
+            "No.", "名前", "チーム名", "HS率", "命中率", "回避率", "反射速度", "IQ",
+            "影響力", "調子の波", "メンタル", "ロール", "戦闘力",
+        )
+        self.player_power_tree = ttk.Treeview(
+            frame, columns=columns, show="headings", height=24,
+        )
+        self._configure_team_power_sorting(
+            self.player_power_tree, dict(zip(columns[1:], headings[1:])),
+        )
+        self.player_power_tree.heading("no", text="No.")
+        for column in columns:
+            width = 55 if column == "no" else 180 if column == "team" else 140 if column in {"name", "role"} else 115
+            self.player_power_tree.column(
+                column, width=width, minwidth=width, stretch=False,
+                anchor="w" if column == "name" else "center",
+            )
+        vertical = ttk.Scrollbar(frame, orient="vertical", command=self.player_power_tree.yview)
+        horizontal = ttk.Scrollbar(frame, orient="horizontal", command=self.player_power_tree.xview)
+        self.player_power_tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.player_power_tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        self._refresh_player_power()
+
+    def _refresh_player_power(self) -> None:
+        tree = self.player_power_tree
+        selected_players = {(tree.set(item, "team"), tree.set(item, "name")) for item in tree.selection()}
+        tree.delete(*tree.get_children())
+        sort_values = self.team_power_sort_values[tree]
+        sort_values.clear()
+        stat_keys = (
+            "hs_rate", "accuracy", "dodge_rate", "reaction", "iq", "influence",
+            "form_variance", "mental", "role",
+        )
+        selected_items = []
+        for team_name, report in self.team_power_reports.items():
+            for row in report["players"]:
+                values = ["", row["name"], team_name]
+                for key in stat_keys:
+                    before, after = row["base"][key], row["after"][key]
+                    if key == "role":
+                        values.append(f"{after} ({before})")
+                    elif key in {"hs_rate", "accuracy", "dodge_rate"}:
+                        values.append(f"{after * 100:.1f}% ({before * 100:.1f}%)")
+                    else:
+                        values.append(f"{after:g} ({before:g})")
+                values.append(f'{row["combo_power"]:.1f} ({row["base_power"]:.1f})')
+                item = tree.insert("", "end", values=values)
+                sort_values[item] = {
+                    **row["after"], "name": row["name"].casefold(),
+                    "team": team_name.casefold(), "role": row["after"]["role"].casefold(),
+                    "power": row["combo_power"],
+                }
+                if (team_name, row["name"]) in selected_players:
+                    selected_items.append(item)
+        self._restore_team_power_sort(tree)
+        self._renumber_power_rows(tree)
+        if selected_items:
+            tree.selection_set(selected_items)
+            tree.see(selected_items[0])
+        self.player_power_status_var.set(
+            f"全チームの選手: {len(sort_values)}行 — コンボ後 (コンボ前)"
+        )
+
+    def _build_team_power_tab(self) -> None:
+        self.team_power_sort_states: dict[ttk.Treeview, tuple[str, bool]] = {}
+        self.team_power_sort_values: dict[ttk.Treeview, dict[str, dict[str, Any]]] = {}
+        self.team_power_heading_labels: dict[ttk.Treeview, dict[str, str]] = {}
+        toolbar = tk.Frame(self.team_power_tab)
+        toolbar.pack(fill="x", padx=10, pady=(8, 4))
+        tk.Label(toolbar, text="総合戦闘力: コンボ後 (コンボ前)").pack(side="left")
+        self.team_power_refresh_button = tk.Button(
+            toolbar, text="再読み込み・再計算",
+            command=self._reload_and_refresh_team_power,
+        )
+        self.team_power_refresh_button.pack(side="right")
+
+        teams = tk.Frame(self.team_power_tab)
+        teams.pack(fill="both", expand=True, padx=10, pady=4)
+        self.team_power_tree = ttk.Treeview(
+            teams, columns=("no", "team", "power"), show="headings",
+            selectmode="browse", height=14,
+        )
+        self._configure_team_power_sorting(
+            self.team_power_tree, {"team": "チーム名", "power": "総合戦闘力"},
+        )
+        self.team_power_tree.heading("no", text="No.")
+        self.team_power_tree.column("no", width=55, minwidth=45, stretch=False, anchor="center")
+        self.team_power_tree.column("team", width=420, anchor="w")
+        self.team_power_tree.column("power", width=240, anchor="center")
+        scrollbar = ttk.Scrollbar(
+            teams, orient="vertical", command=self.team_power_tree.yview,
+        )
+        self.team_power_tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        self.team_power_tree.pack(side="left", fill="both", expand=True)
+        self.team_power_tree.bind("<<TreeviewSelect>>", self._show_team_power_details)
+
+        tk.Label(
+            self.team_power_tab, textvariable=self.team_power_detail_var,
+            anchor="w", font=("Arial", 11, "bold"),
+        ).pack(fill="x", padx=12, pady=(4, 2))
+        tk.Label(
+            self.team_power_tab, text="選手ステータス・戦闘力: コンボ後 (コンボ前)",
+            anchor="w",
+        ).pack(fill="x", padx=12)
+
+        players = tk.Frame(self.team_power_tab)
+        players.pack(fill="x", padx=10, pady=4)
+        columns = (
+            "name", "hs_rate", "accuracy", "dodge_rate", "reaction", "iq",
+            "influence", "form_variance", "mental", "role", "power",
+        )
+        headings = (
+            "名前", "HS率", "命中率", "回避率", "反射速度", "IQ",
+            "影響力", "調子の波", "メンタル", "ロール", "戦闘力",
+        )
+        self.team_power_players_tree = ttk.Treeview(
+            players, columns=columns, show="headings", height=5,
+        )
+        self._configure_team_power_sorting(
+            self.team_power_players_tree, dict(zip(columns, headings)),
+        )
+        for column in columns:
+            width = 140 if column in {"name", "role"} else 115
+            self.team_power_players_tree.column(
+                column, width=width, minwidth=width, stretch=False,
+                anchor="w" if column == "name" else "center",
+            )
+        horizontal = ttk.Scrollbar(
+            players, orient="horizontal", command=self.team_power_players_tree.xview,
+        )
+        self.team_power_players_tree.configure(xscrollcommand=horizontal.set)
+        self.team_power_players_tree.pack(fill="x")
+        horizontal.pack(fill="x")
+        tk.Label(
+            self.team_power_tab, textvariable=self.team_power_combos_var,
+            anchor="w", justify="left", wraplength=1040,
+        ).pack(fill="x", padx=12, pady=(0, 8))
+        self._refresh_team_power()
+
+    def _configure_team_power_sorting(
+        self, tree: ttk.Treeview, headings: dict[str, str],
+    ) -> None:
+        self.team_power_heading_labels[tree] = headings
+        self.team_power_sort_values[tree] = {}
+        for column, label in headings.items():
+            tree.heading(
+                column, text=label,
+                command=lambda column=column: self._sort_team_power_rows(tree, column),
+            )
+
+    def _sort_team_power_rows(
+        self, tree: ttk.Treeview, column: str, descending: bool | None = None,
+    ) -> None:
+        previous = self.team_power_sort_states.get(tree)
+        if descending is None:
+            descending = not previous[1] if previous and previous[0] == column else True
+        values = self.team_power_sort_values[tree]
+        valid = [item for item in tree.get_children() if values[item][column] is not None]
+        invalid = [item for item in tree.get_children() if values[item][column] is None]
+        valid.sort(key=lambda item: values[item][column], reverse=descending)
+        for index, item in enumerate(valid + invalid):
+            tree.move(item, "", index)
+        if "no" in tree["columns"]:
+            self._renumber_power_rows(tree)
+        self.team_power_sort_states[tree] = (column, descending)
+        for key, label in self.team_power_heading_labels[tree].items():
+            indicator = (" ▼" if descending else " ▲") if key == column else ""
+            tree.heading(key, text=label + indicator)
+
+    def _renumber_power_rows(self, tree: ttk.Treeview) -> None:
+        for number, item in enumerate(tree.get_children(), start=1):
+            tree.set(item, "no", number)
+
+    def _restore_team_power_sort(self, tree: ttk.Treeview) -> None:
+        state = self.team_power_sort_states.get(tree)
+        if state is not None:
+            self._sort_team_power_rows(tree, *state)
+
+    def _refresh_team_power(self) -> None:
+        if self.team_power_tree is None:
+            return
+        selected = self.team_power_tree.selection()
+        self.team_power_tree.delete(*self.team_power_tree.get_children())
+        self.team_power_reports.clear()
+        sort_values = self.team_power_sort_values[self.team_power_tree]
+        sort_values.clear()
+        for team_name in self.names:
+            combo_total = None
+            try:
+                report = build_team_combo_power_report(team_name)
+                self.team_power_reports[team_name] = report
+                combo_total = report["combo_total"]
+                power = f'{combo_total:.1f} ({report["base_total"]:.1f})'
+            except Exception as exc:
+                power = f"計算エラー: {exc}"
+            self.team_power_tree.insert(
+                "", "end", iid=team_name, values=("", team_name, power),
+            )
+            sort_values[team_name] = {"team": team_name.casefold(), "power": combo_total}
+        self._restore_team_power_sort(self.team_power_tree)
+        self._renumber_power_rows(self.team_power_tree)
+        target = selected[0] if selected and selected[0] in self.names else self.names[0]
+        self.team_power_tree.selection_set(target)
+        self.team_power_tree.focus(target)
+        self.team_power_tree.see(target)
+        self._show_team_power_details()
+
+    def _show_team_power_details(self, _event: Any = None) -> None:
+        if self.team_power_tree is None or self.team_power_players_tree is None:
+            return
+        self.team_power_players_tree.delete(*self.team_power_players_tree.get_children())
+        sort_values = self.team_power_sort_values[self.team_power_players_tree]
+        sort_values.clear()
+        self.team_power_combos_var.set("")
+        selected = self.team_power_tree.selection()
+        if not selected:
+            self.team_power_detail_var.set("チームを選択してください")
+            return
+        team_name = selected[0]
+        report = self.team_power_reports.get(team_name)
+        if report is None:
+            self.team_power_detail_var.set(f"{team_name}: ステータスを計算できませんでした")
+            return
+        self.team_power_detail_var.set(f"{team_name} — 選手ステータス")
+        stat_keys = (
+            "hs_rate", "accuracy", "dodge_rate", "reaction", "iq", "influence",
+            "form_variance", "mental", "role",
+        )
+        for row in report["players"]:
+            values = [row["name"]]
+            for key in stat_keys:
+                before, after = row["base"][key], row["after"][key]
+                if key == "role":
+                    values.append(f"{after} ({before})")
+                elif key in {"hs_rate", "accuracy", "dodge_rate"}:
+                    values.append(f"{after * 100:.1f}% ({before * 100:.1f}%)")
+                else:
+                    values.append(f"{after:g} ({before:g})")
+            values.append(f'{row["combo_power"]:.1f} ({row["base_power"]:.1f})')
+            item = self.team_power_players_tree.insert("", "end", values=values)
+            sort_values[item] = {
+                **row["after"], "name": row["name"].casefold(),
+                "role": row["after"]["role"].casefold(), "power": row["combo_power"],
+            }
+        self._restore_team_power_sort(self.team_power_players_tree)
+        self.team_power_combos_var.set(
+            "発動コンボ: " + (" / ".join(report["active_combos"]) or "なし")
+        )
 
     def _build_results(self) -> None:
         status_bar = tk.Frame(self.root)
@@ -5241,7 +5408,8 @@ class CompetitionApp:
         self.render_check.config(state="normal")
         self.rating_enabled_check.config(state=state)
         self.start_button.config(state=state)
-        self.power_refresh_button.config(state=state)
+        self.team_power_refresh_button.config(state=state)
+        self.player_power_refresh_button.config(state=state)
         self.rating_button.config(state="normal")
         self.team1_box.config(state="readonly" if enabled else "disabled")
         self.team2_box.config(state="readonly" if enabled else "disabled")
