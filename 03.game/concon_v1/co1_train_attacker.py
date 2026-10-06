@@ -32,7 +32,7 @@ from concon_v1.co1_attacker_common import (
 from concon_v1.co1_attacker_scenarios import (
     SCENARIOS, get_scenario, validate_checkpoint_scenario,
 )
-from concon_v1.co1_training_rewards import avoidable_wait_penalty
+from concon_v1.co1_attacker_rewards import avoidable_wait_penalty
 
 RED = "\033[31m"
 GREEN = "\033[32m"

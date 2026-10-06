@@ -1,0 +1,22 @@
+{
+  "provenance": {
+    "version": 1,
+    "seed": 0,
+    "opponents": [
+      "omoko_v1",
+      "touyama_v2",
+      "fnatic_v3",
+      "gc_v1",
+      "toru_ai_v3.1"
+    ],
+    "sites": [
+      "L",
+      "R"
+    ],
+    "search_model_sha256": "8507f976f1b56f9d559bf4fa3c154031f1996300d47c8fd32c64be53e621c731",
+    "map_sha256": "0f9a01b2b21c1a000ce471a675679996c449799d377df8fe8501d7445a69bdb9"
+  },
+  "search_model": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\concon_v1\\data\\defender_search_data\\co1_defender_search_best.pt",
+  "cases_per_site": 50,
+  "capture_boundary": "end_of_first_plant_tick_before_retake_decisions"
+}

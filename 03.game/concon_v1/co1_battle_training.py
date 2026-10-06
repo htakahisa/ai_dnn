@@ -17,7 +17,7 @@ from concon_v1.co1_attacker_common import (
 )
 
 from concon_v1.co1_attacker_scenarios import get_scenario
-from concon_v1.co1_training_rewards import avoidable_wait_penalty
+from concon_v1.co1_attacker_rewards import avoidable_wait_penalty
 
 OPPONENTS = {
     "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
