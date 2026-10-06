@@ -15,9 +15,9 @@ from concon_v1.co1_guard_common import (
 from concon_v1.co1_learn_guard import ConconGuardController
 from concon_v1.co1_attacker_sighting import facing_towards
 from concon_v1.co1_attacker_scenarios import GAME_MAZE_STR
+from concon_v1.co1_guard_rewards import GAMMA, DEATH_PENALTY, ROUND_REWARD, decision_reward
 
 START_MODES = ("hold", "transition", "smoke")
-GAMMA = 0.99
 
 
 class TrainingGuardController(ConconGuardController):
@@ -32,7 +32,8 @@ class TrainingGuardController(ConconGuardController):
         if self.env.forced_actions is not None:
             requested = self.env.forced_actions[index]
             action = int(requested) if mask[int(requested)] else WAIT_ACTION
-        elif self.env.action_rng.random() < self.env.epsilon:
+        elif (not (self.model.navigation and not context["tap"] and not context["fireable"] and not mask[40:].any())
+              and self.env.action_rng.random() < self.env.epsilon):
             action = int(self.env.action_rng.choice(valid.tolist()))
         else:
             action = super().choose_action(char, observation, mask, context)
@@ -90,9 +91,14 @@ class GuardBattleEnv:
         self.forced_actions = None
         self.done = False
         self.elapsed_ticks = 0
+        self._quiet_history = {}
         self.metrics = {"tap_ticks": 0, "blocked_tap_decisions": 0,
                         "approach_decisions": 0, "recon_on_tap": 0,
-                        "stationary_fire_decisions": 0, "two_tick_fire_decisions": 0}
+                        "stationary_fire_decisions": 0, "two_tick_fire_decisions": 0,
+                        "quiet_decisions": 0, "quiet_at_goal_decisions": 0,
+                        "quiet_leave_goal_decisions": 0, "quiet_reversals": 0,
+                        "quiet_bad_facing_decisions": 0, "fireable_decisions": 0,
+                        "moving_fire_decisions": 0, "bad_fire_facing_decisions": 0}
         attacker_ai = DualRoleTeamAI(
             "ConCon guard", attacker_factory=lambda: TrainingGuardController(self),
             defender_factory=DefaultDefenderController, use_iq_perception=True,
@@ -130,6 +136,8 @@ class GuardBattleEnv:
                 char.forced_facing_next_tick = None
                 char.los_revealed = False
                 char.reveal_remaining = 0
+                # Train ready, partly charged and spent ultimate states.
+                char.ultimate_points = self.rng.choice((0, char.ultimate_cost // 2, char.ultimate_cost))
                 # Spent utility is part of the postplant start distribution.
                 for ability in ABILITIES:
                     attribute = ability.lower() + "_charges"
@@ -211,6 +219,7 @@ class GuardBattleEnv:
         self.decisions = {}
         self.transitions = []
         hp_before = [char.hp for char in self.defenders]
+        alive_before = [char.is_alive for char in self.attackers]
         tap_before = any(char.is_alive and char.defuse_timer > 0 for char in self.defenders)
         with contextlib.redirect_stdout(io.StringIO()):
             self.game.step_tick()
@@ -219,7 +228,7 @@ class GuardBattleEnv:
         self.done = bool(self.game.round_over or self.game.match_over)
         if not self.done and self.elapsed_ticks >= 100:
             self.done = True
-        terminal_reward = 10.0 if self.game.attacker_wins else -10.0
+        terminal_reward = ROUND_REWARD if self.game.attacker_wins else -ROUND_REWARD
         team_damage = sum(max(0, before - char.hp) for before, char in zip(hp_before, self.defenders))
         rewards = [0.0] * 5
         for index, (action, context) in self.decisions.items():
@@ -227,46 +236,60 @@ class GuardBattleEnv:
             position = tuple(char.pos)
             operation = action // 8
             facing = char.facing  # engine can override facing after incoming fire
-            reward = -0.005 + min(team_damage / 1000, 0.1)
             goal = context["spike"] if context["tap"] and not context["fireable"] else context["goal"]
-            previous_distance = context["distance_spike"] if goal == context["spike"] else context["distance_goal"]
+            previous_distance = context["distance_spike"] if context["tap"] and not context["fireable"] else context["distance_goal"]
             new_distance = int(bfs_distance_map(self.scenario.grid, goal)[position])
-            if previous_distance >= 0 and new_distance >= 0 and not context["fireable"]:
-                # Discounted potential shaping avoids rewarding repeated back-and-forth movement.
-                reward += 0.025 * (previous_distance - GAMMA * new_distance)
+            reward = decision_reward(action, context, position, facing, new_distance)
+            reward += min(team_damage / 1000, 0.1)
             stationary = position == context["position"]
             if context["tap"] and not context["fireable"]:
                 self.metrics["blocked_tap_decisions"] += 1
                 if not stationary and new_distance < previous_distance:
                     self.metrics["approach_decisions"] += 1
-                if stationary and operation < 5:
-                    reward -= 0.03
                 if operation >= 5 and (operation - 5) // 3 == 2:
                     self.metrics["recon_on_tap"] += 1
             elif context["fireable"]:
+                self.metrics["fireable_decisions"] += 1
                 alignment = aim_alignment(position, context["target"], facing)
+                self.metrics["moving_fire_decisions"] += int(not stationary)
+                self.metrics["bad_fire_facing_decisions"] += int(alignment <= 0)
                 if stationary and alignment > 0.7:
                     self.metrics["stationary_fire_decisions"] += 1
-                    reward += 0.015
                     if context["stopped"] >= 1:
                         self.metrics["two_tick_fire_decisions"] += 1
-                        reward += 0.015
-                elif not stationary:
-                    reward -= 0.03
-            elif position == context["goal"] and stationary:
-                reward += 0.01 * max(0, aim_alignment(position, context["aim"], facing))
-            if not char.is_alive:
-                reward -= 0.5
-            if self.done:
-                reward += terminal_reward
+            else:
+                self.metrics["quiet_decisions"] += 1
+                self.metrics["quiet_bad_facing_decisions"] += int(
+                    aim_alignment(position, context["aim"], facing) <= 0)
+                if context["position"] == context["goal"]:
+                    self.metrics["quiet_at_goal_decisions"] += 1
+                    self.metrics["quiet_leave_goal_decisions"] += int(not stationary)
+                previous = self._quiet_history.get(index)
+                if (not stationary and previous is not None
+                        and previous[0] == context["tick"] - 1
+                        and previous[1] == position and previous[2] == context["position"]):
+                    self.metrics["quiet_reversals"] += 1
+                self._quiet_history[index] = (context["tick"], context["position"], position)
+            if context["tap"] or context["fireable"]:
+                self._quiet_history.pop(index, None)
+            rewards[index] = reward
+        # Keep the final decision of a dead actor until the round ends. Otherwise
+        # dying early avoids the defeat reward. Count every elapsed tick, even
+        # when death or an engine status prevents another policy decision.
+        for index, char in enumerate(self.attackers):
             pending = self.pending[index]
             if pending is not None:
+                reward = rewards[index]
+                if alive_before[index] and not char.is_alive:
+                    reward -= DEATH_PENALTY
+                if self.done:
+                    reward += terminal_reward
                 pending["reward"] += GAMMA ** pending["duration"] * reward
                 pending["duration"] += 1
-            rewards[index] = reward
+                rewards[index] = reward
         terminal_observation, terminal_mask = self._terminal_inputs()
         for index, char in enumerate(self.attackers):
-            if self.done or not char.is_alive:
+            if self.done:
                 self.finish_pending(index, terminal_observation, terminal_mask, True)
         return self.transitions, rewards, self.done
 

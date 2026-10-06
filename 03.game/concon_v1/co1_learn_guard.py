@@ -10,7 +10,7 @@ import torch
 from controllers import BaseController
 from concon_v1.co1_guard_scenarios import get_scenario, validate_checkpoint
 from concon_v1.co1_guard_common import (
-    GuardDQN, ACTION_DIM, observation_dim, build_inputs, decode_action, GORIGONS,
+    GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, load_guard_weights, observation_dim, build_inputs, decode_action, GORIGONS,
 )
 
 
@@ -19,19 +19,28 @@ class ConconGuardController(BaseController):
         super().__init__()
         self.scenario = get_scenario(map_name)
         self.rng = random.Random(seed)
+        self.model_path = None
+        self.checkpoint_episode = None
+        self.positioning_version = None
         if model is None:
             path = Path(model_path) if model_path is not None else self.scenario.model_path
             source = io.BytesIO(checkpoint_bytes) if checkpoint_bytes is not None else path
             checkpoint = torch.load(source, map_location="cpu", weights_only=False)
+            self.model_path = path.resolve() if checkpoint_bytes is None else None
+            self.checkpoint_episode = checkpoint.get("episode")
+            self.positioning_version = checkpoint.get("positioning_version")
             validate_checkpoint(checkpoint, self.scenario)
             if (checkpoint.get("obs_dim") != observation_dim(self.scenario)
-                    or checkpoint.get("n_actions") != ACTION_DIM
+                    or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, ACTION_DIM)
                     or tuple(checkpoint.get("training_roster", ())) != GORIGONS.players):
                 raise ValueError("guard checkpoint dimensions/roster do not match")
             with torch.random.fork_rng(devices=[]):
-                model = GuardDQN(self.scenario)
-            model.load_state_dict(checkpoint["model_state_dict"])
+                model = GuardDQN(self.scenario, navigation=checkpoint.get("positioning_version") == 1)
+            load_guard_weights(model, checkpoint["model_state_dict"])
             model.eval()
+            if self.model_path is not None:
+                print(f"[ConCon guard] map={self.scenario.map_name} model={self.model_path} "
+                      f"episode={self.checkpoint_episode} positioning={self.positioning_version}", flush=True)
         self.model = model
         self.reset_round()
 
@@ -83,7 +92,7 @@ class ConconGuardController(BaseController):
             return list(char.pos)
         observation, mask, context = self.policy_inputs(char, game_state)
         action = self.choose_action(char, observation, mask, context)
-        return decode_action(action, tuple(char.pos), context["targets"])
+        return decode_action(action, tuple(char.pos), context["targets"], context["ultimate_actions"])
 
 
 def guard_factory(map_name="L", model_path=None):

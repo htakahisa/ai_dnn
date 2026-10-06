@@ -16,16 +16,32 @@ if str(ROOT) not in sys.path:
 import numpy as np
 import torch
 
-from concon_v1.co1_guard_common import GuardDQN, ACTION_DIM, observation_dim, GORIGONS
+from concon_v1.co1_guard_common import GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, load_guard_weights, observation_dim, GORIGONS
 from concon_v1.co1_guard_scenarios import SCENARIOS, get_scenario, validate_checkpoint
 from concon_v1.co1_guard_battle_training import GuardBattleEnv, OPPONENTS, START_MODES
+from concon_v1.co1_guard_positioning import positioning_evaluation, formation_evaluation
+
+
+def behavior_summary(details):
+    pairs = {
+        "quiet_leave_goal_rate": ("quiet_leave_goal_decisions", "quiet_at_goal_decisions"),
+        "quiet_reversal_rate": ("quiet_reversals", "quiet_decisions"),
+        "quiet_bad_facing_rate": ("quiet_bad_facing_decisions", "quiet_decisions"),
+        "moving_fire_rate": ("moving_fire_decisions", "fireable_decisions"),
+        "bad_fire_facing_rate": ("bad_fire_facing_decisions", "fireable_decisions"),
+    }
+    totals = {key: sum(record.get(key, 0) for record in details)
+              for pair in pairs.values() for key in pair}
+    rates = {rate: totals[numerator] / totals[denominator] if totals[denominator] else 0.0
+             for rate, (numerator, denominator) in pairs.items()}
+    return {**totals, **rates, "behavior_error": sum(rates.values()) / len(rates)}
 
 
 def summarize(details):
     rounds = len(details)
     counts = Counter(record["end_reason"] for record in details)
     wins = sum(record["winner"] == "A" for record in details)
-    return {"rounds": rounds, "attacker_wins": wins,
+    return {**behavior_summary(details), "rounds": rounds, "attacker_wins": wins,
             "win_rate": wins / rounds if rounds else None,
             "defuse_rate": counts["defused"] / rounds if rounds else None,
             "end_reasons": dict(counts),
@@ -51,15 +67,18 @@ def evaluate(map_name="L", rounds=36, seed=0, opponents=None, model_path=None,
     checkpoint = torch.load(io.BytesIO(frozen_checkpoint), map_location="cpu", weights_only=False)
     validate_checkpoint(checkpoint, scenario)
     if (checkpoint.get("obs_dim") != observation_dim(scenario)
-            or checkpoint.get("n_actions") != ACTION_DIM
+            or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, ACTION_DIM)
             or tuple(checkpoint.get("training_roster", ())) != GORIGONS.players):
         raise ValueError("guard checkpoint dimensions/roster do not match")
     python_state, numpy_state = random.getstate(), np.random.get_state()
     torch_state = torch.get_rng_state()
     try:
-        model = GuardDQN(scenario)
-        model.load_state_dict(checkpoint["model_state_dict"])
+        model = GuardDQN(scenario, navigation=checkpoint.get("positioning_version") == 1)
+        load_guard_weights(model, checkpoint["model_state_dict"])
         model.eval()
+        positioning = positioning_evaluation(model, scenario, seed=seed + 7919)
+        positioning["formation"] = formation_evaluation(model, scenario)
+        positioning["passed"] &= positioning["formation"]["passed"]
         results = {}
         for opponent in opponents:
             random.seed(seed)
@@ -83,7 +102,10 @@ def evaluate(map_name="L", rounds=36, seed=0, opponents=None, model_path=None,
         return {"map_name": scenario.map_name, "model_episode": checkpoint.get("episode"),
                 "model_sha256": hashlib.sha256(frozen_checkpoint).hexdigest(),
                 "epsilon": 0.0, "seed": seed, "rounds_per_opponent": rounds,
+                "positioning": positioning,
                 "start_modes": list(start_modes), "opponents": results,
+                "behavior": behavior_summary([record for result in results.values()
+                                               for record in result["details"]]),
                 "mean_win_rate": sum(result["win_rate"] for result in results.values()) / len(results),
                 "min_team_win_rate": min(result["win_rate"] for result in results.values())}
     finally:
@@ -93,10 +115,25 @@ def evaluate(map_name="L", rounds=36, seed=0, opponents=None, model_path=None,
 
 
 def print_summary(result):
+    positioning = result.get("positioning")
+    if positioning:
+        print(f"positioning: arrival={positioning['arrival_rate']:.1%} "
+              f"hold={positioning['hold_rate']:.1%} facing={positioning['facing_rate']:.1%} "
+              f"reversals={positioning['reversals']} passed={positioning['passed']}", flush=True)
+        formation = positioning.get("formation")
+        if formation:
+            print(f"  five actors: arrival={formation['arrival_rate']:.1%} "
+                  f"hold={formation['hold_rate']:.1%} facing={formation['facing_rate']:.1%} "
+                  f"leave_goal={formation['leave_goal_decisions']}", flush=True)
     for opponent, counts in result["opponents"].items():
         print(f"map={result['map_name']} {opponent}: guard wins "
               f"{counts['attacker_wins']}/{counts['rounds']} ({counts['win_rate']:.1%}), "
               f"defused={counts['defuse_rate']:.1%} end={counts['end_reasons']}", flush=True)
+        print(f"  leave_goal={counts['quiet_leave_goal_rate']:.1%} "
+              f"reversals={counts['quiet_reversal_rate']:.1%} "
+              f"quiet_bad_facing={counts['quiet_bad_facing_rate']:.1%} "
+              f"moving_fire={counts['moving_fire_rate']:.1%} "
+              f"bad_fire_facing={counts['bad_fire_facing_rate']:.1%}", flush=True)
         for mode, mode_counts in counts["by_start_mode"].items():
             if mode_counts["rounds"]:
                 print(f"  {mode}: wins={mode_counts['attacker_wins']}/{mode_counts['rounds']} "

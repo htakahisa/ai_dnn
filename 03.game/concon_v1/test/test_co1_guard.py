@@ -147,7 +147,7 @@ class GuardContractTests(unittest.TestCase):
         state = {"grid": controller.scenario.grid, "chars": [char],
                  "is_planted": True, "planted_pos": (8, 3), "battle_tick": 0}
         obs, mask, context = controller.policy_inputs(char, state)
-        self.assertTrue(mask[WAIT_ACTION:WAIT_ACTION + 8].all())
+        self.assertFalse(mask[:40].any())
         recon_start = (5 + 2 * 3) * 8
         self.assertEqual(mask[recon_start:recon_start + 8].sum(), 1)
         recon = recon_start + 2  # current E facing on an ability tick
@@ -158,6 +158,7 @@ class GuardContractTests(unittest.TestCase):
             for parameter in controller.model.parameters():
                 parameter.zero_()
             controller.model.head[-1].bias[WAIT_ACTION + 6] = 100
+        char.recon_charges = 0
         destination, payload = controller.decide_move(char, state)
         self.assertEqual(destination, char.pos)
         self.assertEqual(payload["facing"], "W")
@@ -174,6 +175,25 @@ class GuardContractTests(unittest.TestCase):
         self.assertEqual(controller.stationary_ticks(char, 3), 0)
         controller.reset_round()
         self.assertEqual(controller.stationary_ticks(char, 4), 0)
+
+    def test_incoming_fire_lock_masks_only_impossible_facing_not_movement(self):
+        controller = self.controller()
+        char = actor(GORIGONS.players[0])
+        char.recon_charges = 0
+        state = {"grid": controller.scenario.grid, "chars": [char],
+                 "is_planted": True, "planted_pos": (8, 3), "battle_tick": 0}
+        _, free, _ = controller.policy_inputs(char, state)
+        char.facing_forced_this_tick = True
+        _, locked, _ = controller.policy_inputs(char, state)
+        self.assertEqual(locked[WAIT_ACTION:WAIT_ACTION + 8].sum(), 1)
+        self.assertTrue(locked[WAIT_ACTION + 2])  # E
+        for operation in range(5):
+            start = operation * 8
+            self.assertEqual(locked[start:start + 8].any(), free[start:start + 8].any())
+            self.assertLessEqual(locked[start:start + 8].sum(), 1)
+        char.facing_forced_this_tick = False
+        _, restored, _ = controller.policy_inputs(char, state)
+        np.testing.assert_array_equal(restored, free)
 
     def test_checkpoint_rejects_wrong_side_or_map_change(self):
         controller = self.controller()
