@@ -9,7 +9,7 @@ from realtime_season import SeasonSaveError, new_season
 from season_competitions import next_match
 from season_scrim import build_scrim_request
 from season_series import build_series_request
-from season_world_levels import world_level_for_rank
+from season_world_levels import world_level_for_rating
 from test_season_competitions import (OWN, CompetitionScreenTest, SeasonCompetitionTest,
                                       finish, record_next)
 
@@ -125,7 +125,7 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         before = self.path.read_bytes()
         loaded = self.store.load_or_create()
-        self.assertEqual(loaded, replace(state, developed_players=(), world_level_lock=world_level_for_rank(*state.world_rank)))
+        self.assertEqual(loaded, replace(state, developed_players=(), world_level_lock=world_level_for_rating(state.rating(state.club_id))))
         self.assertEqual(self.path.read_bytes(), before)
         self.store.save(loaded)
         self.assertEqual(self.store.load_or_create(), loaded)
@@ -171,7 +171,7 @@ class PresetIdentityTest(SeasonCompetitionTest):
             with self.subTest(name=name), self.assertRaises(SeasonSaveError):
                 renamed.with_team_name(name)
 
-    def test_tournament_uses_actual_club_and_locks_only_its_preset(self):
+    def test_tournament_uses_actual_club_and_allows_applying_changed_preset(self):
         state = self.state().with_team_name("Real Club")
         first = state.selected_team
         state = state.with_new_team().with_preset_name("Second").with_roster(tuple(reversed(OWN))).with_confirmed_team()
@@ -183,8 +183,10 @@ class PresetIdentityTest(SeasonCompetitionTest):
         self.assertEqual(next(t.name for t in run.entrants if t.id == state.club_id), "Real Club")
         self.assertEqual(build_series_request(state, "cup")["own"]["name"], "Real Club")
         state = state.with_editing_team(second.id).with_roster(OWN).with_confirmed_team()
-        with self.assertRaisesRegex(SeasonSaveError, "大会参加中"):
-            state.with_editing_team(first.id).with_roster(tuple(reversed(OWN))).with_confirmed_team()
+        state = state.with_editing_team(first.id).with_roster(tuple(reversed(OWN))).with_confirmed_team()
+        self.assertEqual(tuple(p.name for p in state.tournament_team("cup").players), OWN)
+        state = state.with_tournament_roster("cup", state.team(first.id).roster, preset_id=first.id)
+        self.assertEqual(tuple(p.name for p in state.tournament_team("cup").players), tuple(reversed(OWN)))
         finished = finish(state)
         self.assertEqual(finished.tournament("cup").ranking[0], finished.club_id)
         finished.with_editing_team(first.id).with_roster(tuple(reversed(OWN))).with_confirmed_team()

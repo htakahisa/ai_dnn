@@ -1,0 +1,214 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-2bb90d1a04e15b53a3605315bdd60d70",
+  "left_wins": 3,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Eine Kleine",
+      "own_score": 13,
+      "opponent_score": 11,
+      "winner": "test",
+      "seed": 1698627180,
+      "player_stats": {
+        "soulcas": {
+          "kills": 18,
+          "deaths": 15
+        },
+        "cNed": {
+          "kills": 13,
+          "deaths": 9
+        },
+        "FNS": {
+          "kills": 8,
+          "deaths": 13
+        },
+        "Nanasaki": {
+          "kills": 26,
+          "deaths": 18
+        },
+        "Ethan": {
+          "kills": 22,
+          "deaths": 10
+        },
+        "trexx": {
+          "kills": 18,
+          "deaths": 15
+        },
+        "Absol": {
+          "kills": 10,
+          "deaths": 19
+        },
+        "Asuna": {
+          "kills": 9,
+          "deaths": 15
+        },
+        "Boostio": {
+          "kills": 23,
+          "deaths": 18
+        },
+        "Kr1stal": {
+          "kills": 5,
+          "deaths": 20
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Eine Kleine",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "Eine Kleine",
+      "seed": 1698627181,
+      "player_stats": {
+        "trexx": {
+          "kills": 15,
+          "deaths": 12
+        },
+        "Absol": {
+          "kills": 17,
+          "deaths": 15
+        },
+        "Asuna": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "Boostio": {
+          "kills": 11,
+          "deaths": 16
+        },
+        "Kr1stal": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "soulcas": {
+          "kills": 22,
+          "deaths": 15
+        },
+        "cNed": {
+          "kills": 17,
+          "deaths": 11
+        },
+        "FNS": {
+          "kills": 8,
+          "deaths": 13
+        },
+        "Nanasaki": {
+          "kills": 10,
+          "deaths": 16
+        },
+        "Ethan": {
+          "kills": 11,
+          "deaths": 15
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Eine Kleine",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 1698627182,
+      "player_stats": {
+        "soulcas": {
+          "kills": 17,
+          "deaths": 10
+        },
+        "cNed": {
+          "kills": 21,
+          "deaths": 9
+        },
+        "FNS": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "trexx": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "Absol": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "Asuna": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Boostio": {
+          "kills": 10,
+          "deaths": 16
+        },
+        "Kr1stal": {
+          "kills": 7,
+          "deaths": 15
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Eine Kleine",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "test",
+      "seed": 1698627183,
+      "player_stats": {
+        "trexx": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Absol": {
+          "kills": 5,
+          "deaths": 15
+        },
+        "Asuna": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Boostio": {
+          "kills": 13,
+          "deaths": 13
+        },
+        "Kr1stal": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "soulcas": {
+          "kills": 16,
+          "deaths": 6
+        },
+        "cNed": {
+          "kills": 26,
+          "deaths": 5
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 8
+        },
+        "Nanasaki": {
+          "kills": 20,
+          "deaths": 11
+        },
+        "Ethan": {
+          "kills": 2,
+          "deaths": 6
+        }
+      }
+    }
+  ]
+}

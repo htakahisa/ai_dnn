@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "test",
+  "opponent_team": "Dragon Moon",
+  "own_score": 13,
+  "opponent_score": 9,
+  "winner": "test",
+  "seed": 606886557,
+  "player_stats": {
+    "soulcas": {
+      "kills": 14,
+      "deaths": 10
+    },
+    "cNed": {
+      "kills": 20,
+      "deaths": 11
+    },
+    "FNS": {
+      "kills": 6,
+      "deaths": 15
+    },
+    "Nanasaki": {
+      "kills": 15,
+      "deaths": 18
+    },
+    "Ethan": {
+      "kills": 6,
+      "deaths": 20
+    },
+    "Canezerra": {
+      "kills": 17,
+      "deaths": 10
+    },
+    "WoohyuN": {
+      "kills": 18,
+      "deaths": 11
+    },
+    "Zest": {
+      "kills": 10,
+      "deaths": 12
+    },
+    "Meteor": {
+      "kills": 20,
+      "deaths": 13
+    },
+    "yay": {
+      "kills": 9,
+      "deaths": 15
+    }
+  }
+}

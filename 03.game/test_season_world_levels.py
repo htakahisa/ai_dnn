@@ -1,4 +1,4 @@
-"""World percentile boundaries, scaled match inputs and monthly sponsor payments."""
+"""World rating boundaries, scaled match inputs and monthly sponsor payments."""
 
 from dataclasses import asdict, replace
 import json
@@ -17,7 +17,7 @@ from run_realtime_season import RealtimeSeasonApp
 from season_scrim import build_scrim_request
 from season_series import build_series_request
 from season_competitions import SeriesScore, next_match
-from season_world_levels import WorldLevelError, configured_world_levels, world_level_for_rank
+from season_world_levels import WorldLevelError, configured_world_levels, world_level_for_rating
 
 
 OWN = ("Leo", "Boaster", "Derke", "Chronicle", "Alfajer")
@@ -25,9 +25,9 @@ RIVALS = (("Aspas", "valyn", "trent", "leaf", "tex"),
           ("Boostio", "Ethan", "jawgemo", "C0M", "Demon1"),
           ("F0rsakeN", "Jinggg", "d4v41", "something", "PatMen"))
 LEVELS = [
-    {"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000},
-    {"レベル": 2, "上位%": 50, "敵倍率": 1.5, "スポンサー資金": 10_000_000},
-    {"レベル": 3, "上位%": 25, "敵倍率": 2, "スポンサー資金": 20_000_000},
+    {"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000},
+    {"レベル": 2, "必要レート": 1800, "敵倍率": 1.5, "スポンサー資金": 10_000_000},
+    {"レベル": 3, "必要レート": 1900, "敵倍率": 2, "スポンサー資金": 20_000_000},
 ]
 CUP = dict(id="cup", name="Cup", start_date="2026-03-01", team_count=4, format="single_elimination",
            prizes={}, normal_maps_to_win=1)
@@ -54,26 +54,28 @@ class WorldLevelTests(unittest.TestCase):
         state = new_season(OWN).with_roster(OWN).with_confirmed_team()
         state = replace(state.with_selected_team(state.teams[0].id), money=10_000_000)
         rivals = {c.id: 1900 - index * 100 for index, c in enumerate(state.opponent_teams)}
-        state = replace(state, ratings=tuple(replace(r, value=2050 - rank * 100 if r.team_id == state.club_id
+        state = replace(state, ratings=tuple(replace(r, value=(1950, 1890, 1750, 1650)[rank - 1] if r.team_id == state.club_id
                                                     else rivals[r.team_id]) for r in state.ratings))
         state.validate()
         return state
 
-    def test_rank_boundaries_include_threshold_and_use_highest_eligible_level(self):
-        for rank, level, percent in ((1, 3, 25), (2, 2, 50), (3, 1, 75), (4, 1, 100)):
-            with self.subTest(rank=rank):
-                state = self.state(rank)
-                self.assertEqual(state.world_rank, (rank, 4))
-                self.assertEqual(state.world_top_percent, percent)
-                self.assertEqual(state.world_level, level)
-        self.assertEqual(world_level_for_rank(1, 1).level, 1)
-        self.assertEqual(world_level_for_rank(1, 3).level, 2)
-        self.assertEqual(world_level_for_rank(1, 4).level, 3)
+    def test_rating_boundaries_include_threshold_and_use_highest_eligible_level(self):
+        for rating, level in ((0, 1), (1799.9999, 1), (1800, 2), (1899.9999, 2), (1900, 3), (3000, 3)):
+            with self.subTest(rating=rating):
+                self.assertEqual(world_level_for_rating(rating).level, level)
+        for rating in (-1, True, "1800", float("nan"), float("inf")):
+            with self.subTest(rating=rating), self.assertRaises(WorldLevelError):
+                world_level_for_rating(rating)
 
-    def test_percentile_comparison_does_not_round_up_to_a_higher_level(self):
-        with patch.object(settings, "WORLD_LEVELS", [LEVELS[0], {**LEVELS[1], "上位%": 33.33}]):
-            self.assertEqual(world_level_for_rank(1, 3).level, 1)
-            self.assertEqual(world_level_for_rank(33, 100).level, 2)
+    def test_world_level_does_not_depend_on_other_teams_or_their_ratings(self):
+        state = self.state(2)
+        self.assertEqual(state.world_level, 2)
+        without = state.with_opponent_teams(())
+        self.assertEqual(without.world_rank, (1, 1))
+        self.assertEqual(without.world_level, 2)
+        stronger = replace(state, ratings=tuple(replace(r, value=3000) if r.team_id != state.club_id else r for r in state.ratings))
+        self.assertEqual(stronger.world_rank, (4, 4))
+        self.assertEqual(stronger.world_level, 2)
 
     def test_match_results_raise_and_lower_world_level_without_a_latch(self):
         state = self.state(2)
@@ -224,6 +226,30 @@ class WorldLevelTests(unittest.TestCase):
             self.assertEqual(loaded.enemy_player(base).iq, base.iq * 3)
             self.assertEqual(loaded.opponent_teams[0].players[0], base)
 
+    def test_old_percentile_locks_keep_their_effects_until_tournament_completion(self):
+        state = self.state(1)
+        state = state.with_tournament_entry("cup", state.selected_team_id)
+        state = state.advance_days(59)
+        self.store.save(state)
+        data = json.loads(self.store.path.read_text(encoding="utf-8"))
+        data["version"] = 28
+        locks = [data["world_level_lock"], *(c["world_level_lock"] for c in data["opponent_teams"])]
+        for lock in locks:
+            lock.pop("required_rating")
+            lock["top_percent"] = 25
+        self.store.path.write_text(json.dumps(data), encoding="utf-8")
+        before = self.store.path.read_bytes()
+        loaded = self.store.load_or_create()
+        self.assertEqual(loaded.world_level, state.world_level)
+        self.assertEqual(loaded.monthly_sponsor_income, state.monthly_sponsor_income)
+        self.assertEqual(loaded.enemy_player(state.opponent_teams[0].players[0]),
+                         state.enemy_player(state.opponent_teams[0].players[0]))
+        self.assertEqual([c.world_level_lock.enemy_multiplier for c in loaded.opponent_teams],
+                         [c.world_level_lock.enemy_multiplier for c in state.opponent_teams])
+        self.assertEqual(self.store.path.read_bytes(), before)
+        self.store.save(loaded)
+        self.assertEqual(self.store.load_or_create(), loaded)
+
     @patch("realtime_season_pair_familiarity.pair_familiarity_enabled", False)
     def test_enemy_world_multiplier_reaches_actual_battle_characters(self):
         import game_core
@@ -250,10 +276,10 @@ class WorldLevelTests(unittest.TestCase):
         state = self.state()
         self.store.save(state)
         before = self.store.path.read_bytes()
-        bad_tables = [[], [{**LEVELS[0], "上位%": 90}], [LEVELS[0], LEVELS[0]],
+        bad_tables = [[], [{**LEVELS[0], "必要レート": 90}], [LEVELS[0], LEVELS[0]],
                       [{**LEVELS[0], "敵倍率": float("nan")}], [{**LEVELS[0], "スポンサー資金": -1}],
                       [{**LEVELS[0], "スポンサー資金": 3.5}], [{**LEVELS[0], "レベル": True}],
-                      [{**LEVELS[0], "上位%": 0}], [{**LEVELS[0], "敵倍率": 0}],
+                      [{**LEVELS[0], "必要レート": -1}], [{**LEVELS[0], "敵倍率": 0}],
                       [LEVELS[0], {**LEVELS[1], "スポンサー資金": 1}],
                       [LEVELS[0], {**LEVELS[1], "敵倍率": .5}], [{"レベル": 1}]]
         for table in bad_tables:
@@ -274,7 +300,7 @@ class WorldLevelTests(unittest.TestCase):
         self.assertIn("20,000,000", app.home_summary.get())
         app.show_screen("ratings")
         self.assertIn("世界レベル3", app.sponsor_summary.get())
-        self.assertIn("上位25.00%", app.sponsor_summary.get())
+        self.assertIn("必要レート1900以上", app.sponsor_summary.get())
         app.opponent_choice.set("Rival0")
         app.preview_preparation()
         self.assertEqual(float(app.opponent_roster.item(app.opponent_roster.get_children()[0], "values")[-1]),

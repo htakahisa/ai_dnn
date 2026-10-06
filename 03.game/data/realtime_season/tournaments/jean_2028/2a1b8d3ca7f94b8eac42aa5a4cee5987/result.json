@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W3M1",
+  "left_id": "player_club",
+  "right_id": "world-5f8d32c6ccbc57f698ae83369087c813",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "Omoko Gaming",
+      "seed": 455991608,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 8,
+          "deaths": 17
+        },
+        "ろびぃな": {
+          "kills": 9,
+          "deaths": 16
+        },
+        "いぐるん": {
+          "kills": 14,
+          "deaths": 17
+        },
+        "えんぺん": {
+          "kills": 15,
+          "deaths": 18
+        },
+        "夢の街": {
+          "kills": 4,
+          "deaths": 18
+        },
+        "とりさん": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "ひつじさん": {
+          "kills": 10,
+          "deaths": 8
+        },
+        "Deep": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "A-Train": {
+          "kills": 15,
+          "deaths": 15
+        },
+        "Stormfront": {
+          "kills": 42,
+          "deaths": 7
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "Omoko Gaming",
+      "seed": 455991609,
+      "player_stats": {
+        "とりさん": {
+          "kills": 5,
+          "deaths": 8
+        },
+        "ひつじさん": {
+          "kills": 7,
+          "deaths": 9
+        },
+        "Deep": {
+          "kills": 21,
+          "deaths": 9
+        },
+        "A-Train": {
+          "kills": 13,
+          "deaths": 15
+        },
+        "Stormfront": {
+          "kills": 17,
+          "deaths": 8
+        },
+        "Tortlilyan": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "ろびぃな": {
+          "kills": 6,
+          "deaths": 12
+        },
+        "いぐるん": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "えんぺん": {
+          "kills": 14,
+          "deaths": 12
+        },
+        "夢の街": {
+          "kills": 6,
+          "deaths": 14
+        }
+      }
+    }
+  ]
+}

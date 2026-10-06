@@ -2,6 +2,9 @@
 
 import tkinter as tk
 from tkinter import ttk
+import realtime_season
+from character_stats import awakening_details_text
+from player_details_ui import readonly_details, shield_stats_text
 
 from realtime_season import CONTRACT_OPTIONS, SeasonSaveError
 from season_competitions import add_months, parse_date
@@ -69,7 +72,8 @@ class SeasonManagementMixin:
                 table.grid(row=0, column=0, sticky="nsew")
                 details_panel = ttk.LabelFrame(body, text="選択中の選手 — 世界レベル補正前", padding=12)
                 details_panel.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
-                ttk.Label(details_panel, textvariable=self.scout_details, justify="left", wraplength=290).pack(anchor="nw")
+                self.scout_details_view = readonly_details(details_panel, self.scout_details)
+                self.scout_details_view.pack(fill="both", expand=True)
                 detail_actions = ttk.Frame(details_panel)
                 detail_actions.pack(anchor="w", pady=8)
                 ttk.Button(detail_actions, text="相棒TOP5", command=lambda: self.show_player_pairs(
@@ -259,14 +263,16 @@ class SeasonManagementMixin:
         loyalty = self.state.team_loyalty(player.name, owner.id if owner else self.state.club_id)
         loyalty_label = "所属チームへの忠誠" if owner is not None else "自チームへの忠誠"
         self.scout_details.set(
-            f"{player.name} / {player.role}\n所属: {self.state.player_affiliation(player.name)}\n\n"
+            f"{player.name} / {player.role} / 登場章: 第{player.debut_chapter}章\n所属: {self.state.player_affiliation(player.name)}\n\n"
             f"総合戦闘力: {player_combat_power(player):.2f}\n撃ち合い戦闘力: {player_duel_power(player):.2f}\n\n"
             f"HS率: {player.hs_pct:.1%} / 命中率: {player.hit_pct:.1%}\n"
             f"回避率: {player.dodge_pct:.1%} / 反応: {player.reaction:g}\n"
             f"IQ: {player.iq:g} / 影響力: {player.influence:g}\n"
             f"メンタル: {player.mental:g} / 調子の波: {player.form_variance:g}\n\n"
+            f"{shield_stats_text(player)}\n\n"
             f"研究Lv: {player.research_level} / {MAX_TRAINING_LEVEL} / エイムラボLv: {player.aim_lab_level} / {MAX_TRAINING_LEVEL}\n"
-            f"基本月給: {player.monthly_salary:,}円\n忠誠心: {player.loyalty:g} / 10\n{loyalty_label}: {loyalty:g}")
+            f"基本月給: {player.monthly_salary:,}円\n忠誠心: {player.loyalty:g} / 10\n{loyalty_label}: {loyalty:g}"
+            + awakening_details_text(player))
 
     def show_player_loyalties(self, player_name):
         window = tk.Toplevel(self.root)
@@ -335,12 +341,12 @@ class SeasonManagementMixin:
     def refresh_transfer_offer(self, player):
         offer = self.state.transfer_offer(player.name) if player is not None else None
         if offer is None:
-            self.incoming_offer_summary.set("赤い●の選手を選択するとオファーを確認できます。忠誠が30未満になると強制成立します。")
+            self.incoming_offer_summary.set(f"赤い●の選手を選択するとオファーを確認できます。忠誠が{realtime_season.FORCED_OFFER_LOYALTY:g}未満になると強制成立します。")
         else:
             club = next(c for c in self.state.opponent_teams if c.id == offer.team_id)
             loyalty = self.state.contract(player.name).team_loyalty
             self.incoming_offer_summary.set(f"● {player.name} ← {club.name} / 移籍金: {offer.fee:,}円 / チームへの忠誠: {loyalty:g}\n"
-                                            "承認・拒否を選べます。拒否後も忠誠が30未満になると、強制的に移籍します。")
+                                            f"承認・拒否を選べます。拒否後も忠誠が{realtime_season.FORCED_OFFER_LOYALTY:g}未満になると、強制的に移籍します。")
         enabled = offer is not None and not self.match_running
         self.accept_transfer_button.configure(state="normal" if enabled else "disabled")
         self.reject_transfer_button.configure(state="normal" if enabled else "disabled")
@@ -364,7 +370,7 @@ class SeasonManagementMixin:
         elif any(o.id == offer.id and o.status == "cancelled" for o in candidate.transfer_offers):
             message = f"{club.name}への忠誠・必要資金・スカウト回数の条件を満たさなくなったため、{player.name}へのオファーは取り消されました。"
         else:
-            message = f"{player.name}への{club.name}からのオファーを断りました。忠誠が30未満になると強制成立します。"
+            message = f"{player.name}への{club.name}からのオファーを断りました。忠誠が{realtime_season.FORCED_OFFER_LOYALTY:g}未満になると強制成立します。"
         self.commit(candidate, message)
 
     def sign_selected_contract(self, screen):

@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Furina Party",
+      "own_score": 0,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 574261747,
+      "player_stats": {
+        "Kachina": {
+          "kills": 0,
+          "deaths": 9
+        },
+        "S1Mon": {
+          "kills": 1,
+          "deaths": 9
+        },
+        "Aspas": {
+          "kills": 5,
+          "deaths": 8
+        },
+        "Lohen": {
+          "kills": 2,
+          "deaths": 9
+        },
+        "Furina": {
+          "kills": 0,
+          "deaths": 9
+        },
+        "Arlecchino": {
+          "kills": 5,
+          "deaths": 1
+        },
+        "Lisa": {
+          "kills": 5,
+          "deaths": 2
+        },
+        "Jean": {
+          "kills": 14,
+          "deaths": 1
+        },
+        "Nanasaki": {
+          "kills": 7,
+          "deaths": 3
+        },
+        "cNed": {
+          "kills": 13,
+          "deaths": 1
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Furina Party",
+      "own_score": 1,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 574261748,
+      "player_stats": {
+        "Arlecchino": {
+          "kills": 9,
+          "deaths": 6
+        },
+        "Lisa": {
+          "kills": 4,
+          "deaths": 9
+        },
+        "Jean": {
+          "kills": 7,
+          "deaths": 8
+        },
+        "Nanasaki": {
+          "kills": 4,
+          "deaths": 12
+        },
+        "cNed": {
+          "kills": 35,
+          "deaths": 3
+        },
+        "Kachina": {
+          "kills": 6,
+          "deaths": 9
+        },
+        "S1Mon": {
+          "kills": 7,
+          "deaths": 13
+        },
+        "Aspas": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "Lohen": {
+          "kills": 9,
+          "deaths": 13
+        },
+        "Furina": {
+          "kills": 3,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

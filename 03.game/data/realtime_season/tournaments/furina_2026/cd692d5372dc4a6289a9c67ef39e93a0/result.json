@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-bf589d52f7dc5be3adbc654e665a99ca",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Epic Esports",
+      "own_score": 13,
+      "opponent_score": 3,
+      "winner": "test",
+      "seed": 1833132521,
+      "player_stats": {
+        "Buzz": {
+          "kills": 7,
+          "deaths": 3
+        },
+        "stax": {
+          "kills": 9,
+          "deaths": 7
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 4
+        },
+        "icy": {
+          "kills": 18,
+          "deaths": 8
+        },
+        "cNed": {
+          "kills": 16,
+          "deaths": 7
+        },
+        "Jinggg": {
+          "kills": 4,
+          "deaths": 12
+        },
+        "Wo0t": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "yay": {
+          "kills": 6,
+          "deaths": 12
+        },
+        "Katarina": {
+          "kills": 9,
+          "deaths": 13
+        },
+        "Kr1stal": {
+          "kills": 4,
+          "deaths": 12
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Epic Esports",
+      "own_score": 13,
+      "opponent_score": 2,
+      "winner": "test",
+      "seed": 1833132522,
+      "player_stats": {
+        "Jinggg": {
+          "kills": 0,
+          "deaths": 9
+        },
+        "Wo0t": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "yay": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "Katarina": {
+          "kills": 8,
+          "deaths": 10
+        },
+        "Kr1stal": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "Buzz": {
+          "kills": 8,
+          "deaths": 3
+        },
+        "stax": {
+          "kills": 7,
+          "deaths": 8
+        },
+        "kaajak": {
+          "kills": 19,
+          "deaths": 5
+        },
+        "icy": {
+          "kills": 4,
+          "deaths": 4
+        },
+        "cNed": {
+          "kills": 18,
+          "deaths": 6
+        }
+      }
+    }
+  ]
+}

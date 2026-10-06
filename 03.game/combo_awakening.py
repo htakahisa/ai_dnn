@@ -1,6 +1,7 @@
 """Player combo, awakening, and announcement-queue behavior."""
 
 import random
+from effect_text_generator import format_stat_bonus
 from game_core import (
     PLAYER_COMBOS,
     AWAKENING_EVENTS,
@@ -27,6 +28,9 @@ _AWAKENING_SNAPSHOT_KEYS = (
     "mental",
     "move_steps_per_tick",
     "max_hp",
+    "max_shield_hp",
+    "shield_piercer",
+    "shield_crash",
     "role",
     "ability_name",
     "hunter_active",
@@ -48,10 +52,16 @@ def _snapshot_character_awakening_state(char):
 
 
 def _restore_character_awakening_state(char, snapshot):
+    old_shield_max = getattr(char, "max_shield_hp", None)
     for key, value in snapshot.items():
         if key == "_contract_max_hp_lost":
             continue
         setattr(char, key, value)
+    restored_shield_max = getattr(char, "max_shield_hp", None)
+    if old_shield_max is not None and restored_shield_max is not None:
+        char.shield_hp = max(
+            0, min(restored_shield_max, char.shield_hp + restored_shield_max - old_shield_max)
+        )
     lost_since_snapshot = max(0, getattr(char, "contract_max_hp_lost", 0) - snapshot.get("_contract_max_hp_lost", 0))
     if lost_since_snapshot:
         char.max_hp = max(0, char.max_hp - lost_since_snapshot)
@@ -191,6 +201,11 @@ class ComboAwakeningMixin:
             for key, value in common_bonuses.items():
                 canonical = _canonical_combo_stat_key(key)
                 if canonical:
+                    if canonical in ("shield_hp", "shield_piercer", "shield_crash"):
+                        line = format_stat_bonus(canonical, value)
+                        if line:
+                            parts.append(line)
+                        continue
                     amount = float(value)
                     if (
                         canonical

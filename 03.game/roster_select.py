@@ -5,6 +5,8 @@
 """
 
 import tkinter as tk
+from character_stats import awakening_details_text
+from player_details_ui import shield_stats_text
 
 from character_stats import all_names, get_by_name
 from game_core import calculate_combat_power
@@ -483,7 +485,9 @@ class RosterSelectScreen:
                 f"反応速度: {self._format_number(stats.reaction)}   "
                 f"ロール: {stats.role}\n"
                 f"影響度: {self._format_number(stats.influence)}   "
-                f"総合戦闘力: {self._format_number(combat_power)}"
+                f"総合戦闘力: {self._format_number(combat_power)}\n"
+                f"{shield_stats_text(stats)}"
+                + awakening_details_text(stats)
             )
         )
 

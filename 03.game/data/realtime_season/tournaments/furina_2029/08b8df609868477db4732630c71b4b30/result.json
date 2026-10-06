@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "left_wins": 1,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 1971479170,
+      "player_stats": {
+        "Furina": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "Kachina": {
+          "kills": 10,
+          "deaths": 8
+        },
+        "S1Mon": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "Aspas": {
+          "kills": 22,
+          "deaths": 11
+        },
+        "Blacknoir": {
+          "kills": 28,
+          "deaths": 10
+        },
+        "Boaster": {
+          "kills": 3,
+          "deaths": 15
+        },
+        "Derke": {
+          "kills": 15,
+          "deaths": 16
+        },
+        "Alfajer": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "Chronicle": {
+          "kills": 9,
+          "deaths": 13
+        },
+        "Leo": {
+          "kills": 10,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "Fnatic",
+      "seed": 1971479171,
+      "player_stats": {
+        "Boaster": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Derke": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "Alfajer": {
+          "kills": 22,
+          "deaths": 13
+        },
+        "Chronicle": {
+          "kills": 27,
+          "deaths": 10
+        },
+        "Leo": {
+          "kills": 8,
+          "deaths": 8
+        },
+        "Furina": {
+          "kills": 3,
+          "deaths": 13
+        },
+        "Kachina": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "S1Mon": {
+          "kills": 9,
+          "deaths": 16
+        },
+        "Aspas": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "Blacknoir": {
+          "kills": 21,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 6,
+      "opponent_score": 13,
+      "winner": "Fnatic",
+      "seed": 1971479172,
+      "player_stats": {
+        "Furina": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Kachina": {
+          "kills": 17,
+          "deaths": 10
+        },
+        "S1Mon": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "Aspas": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "Blacknoir": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "Boaster": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "Derke": {
+          "kills": 21,
+          "deaths": 10
+        },
+        "Alfajer": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Chronicle": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "Leo": {
+          "kills": 19,
+          "deaths": 9
+        }
+      }
+    }
+  ]
+}

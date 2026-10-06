@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-a7467b366e32570589c9f495bf021534",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Meta Beat",
+      "opponent_team": "test",
+      "own_score": 1,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 308945487,
+      "player_stats": {
+        "t3xture": {
+          "kills": 4,
+          "deaths": 8
+        },
+        "valyn": {
+          "kills": 4,
+          "deaths": 8
+        },
+        "Rarga": {
+          "kills": 4,
+          "deaths": 8
+        },
+        "Rb": {
+          "kills": 4,
+          "deaths": 9
+        },
+        "Flashback": {
+          "kills": 4,
+          "deaths": 7
+        },
+        "SyouTa": {
+          "kills": 8,
+          "deaths": 6
+        },
+        "Ethan": {
+          "kills": 6,
+          "deaths": 4
+        },
+        "Nanasaki": {
+          "kills": 18,
+          "deaths": 4
+        },
+        "FNS": {
+          "kills": 2,
+          "deaths": 5
+        },
+        "cNed": {
+          "kills": 6,
+          "deaths": 1
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Meta Beat",
+      "opponent_team": "test",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 308945488,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 18,
+          "deaths": 6
+        },
+        "Ethan": {
+          "kills": 14,
+          "deaths": 8
+        },
+        "Nanasaki": {
+          "kills": 15,
+          "deaths": 8
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "cNed": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "t3xture": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "valyn": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "Rarga": {
+          "kills": 6,
+          "deaths": 14
+        },
+        "Rb": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "Flashback": {
+          "kills": 15,
+          "deaths": 14
+        }
+      }
+    }
+  ]
+}

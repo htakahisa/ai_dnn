@@ -38,8 +38,8 @@ class RivalEconomyTests(unittest.TestCase):
                     patch.object(calendar, "TOURNAMENTS", []),
                     patch.object(settings, "NON_REGULAR_OFFER_CHANCE", 0),
                     patch.object(levels, "WORLD_LEVELS", [
-                        {"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000},
-                        {"レベル": 2, "上位%": 50, "敵倍率": 1.5, "スポンサー資金": 10_000_000}])]
+                        {"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000},
+                        {"レベル": 2, "必要レート": 1510, "敵倍率": 1.5, "スポンサー資金": 10_000_000}])]
         for context in contexts:
             context.start()
             self.addCleanup(context.stop)

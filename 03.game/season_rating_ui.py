@@ -42,8 +42,8 @@ class SeasonRatingMixin:
         world = self.state.world_level_settings
         rank, count = self.state.world_rank
         self.sponsor_summary.set(f"{text}  月額: {self.state.monthly_sponsor_income:,}円\n"
-                                 f"世界レベル{world.level} / {rank}位・全{count}チーム（上位{self.state.world_top_percent:.2f}%） / 敵倍率{world.enemy_multiplier:g}倍\n"
-                                 "世界レベルのスポンサー資金を毎月入金します。大会中は開始時の世界レベル・敵倍率・月額資金を固定し、終了後に現在の順位へ合わせます。編成プリセットを切り替えても共通です。")
+                                 f"世界レベル{world.level} / 必要レート{world.required_rating:g}以上 / {rank}位・全{count}チーム / 敵倍率{world.enemy_multiplier:g}倍\n"
+                                 "現在のレートで世界レベルを判定し、スポンサー資金を毎月入金します。大会中は開始時の世界レベル・敵倍率・月額資金を固定し、終了後に現在のレートへ合わせます。編成プリセットを切り替えても共通です。")
 
     def change_sponsor_contract(self):
         if self.match_running:

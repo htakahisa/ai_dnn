@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-00b13484f02553fc88de5e34ba2b8f1b",
+  "right_id": "player_club",
+  "left_wins": 2,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1454614333,
+      "player_stats": {
+        "jawgemo": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "Flashback": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Meiy": {
+          "kills": 15,
+          "deaths": 17
+        },
+        "C0M": {
+          "kills": 18,
+          "deaths": 13
+        },
+        "benjyfishy": {
+          "kills": 7,
+          "deaths": 21
+        },
+        "Buzz": {
+          "kills": 17,
+          "deaths": 14
+        },
+        "stax": {
+          "kills": 16,
+          "deaths": 12
+        },
+        "kaajak": {
+          "kills": 16,
+          "deaths": 9
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 16
+        },
+        "Sato": {
+          "kills": 13,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 9,
+      "winner": "Team Mixed",
+      "seed": 1454614334,
+      "player_stats": {
+        "Buzz": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "stax": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "kaajak": {
+          "kills": 21,
+          "deaths": 11
+        },
+        "icy": {
+          "kills": 19,
+          "deaths": 20
+        },
+        "Sato": {
+          "kills": 9,
+          "deaths": 19
+        },
+        "jawgemo": {
+          "kills": 12,
+          "deaths": 11
+        },
+        "Flashback": {
+          "kills": 15,
+          "deaths": 11
+        },
+        "Meiy": {
+          "kills": 19,
+          "deaths": 14
+        },
+        "C0M": {
+          "kills": 23,
+          "deaths": 12
+        },
+        "benjyfishy": {
+          "kills": 10,
+          "deaths": 16
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 9,
+      "winner": "Team Mixed",
+      "seed": 1454614335,
+      "player_stats": {
+        "jawgemo": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "Flashback": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "Meiy": {
+          "kills": 22,
+          "deaths": 18
+        },
+        "C0M": {
+          "kills": 6,
+          "deaths": 14
+        },
+        "benjyfishy": {
+          "kills": 20,
+          "deaths": 16
+        },
+        "Buzz": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "stax": {
+          "kills": 11,
+          "deaths": 17
+        },
+        "kaajak": {
+          "kills": 15,
+          "deaths": 11
+        },
+        "icy": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "Sato": {
+          "kills": 20,
+          "deaths": 18
+        }
+      }
+    }
+  ]
+}

@@ -33,8 +33,8 @@ class SeasonHistoryTest(unittest.TestCase):
                     patch.object(calendar, "START_DATE", "2026-01-01"),
                     patch.object(calendar, "TOURNAMENTS", []),
                     patch.object(levels, "WORLD_LEVELS", [
-                        {"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000},
-                        {"レベル": 2, "上位%": 50, "敵倍率": 1.5, "スポンサー資金": 10_000_000}]),
+                        {"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000},
+                        {"レベル": 2, "必要レート": 1510, "敵倍率": 1.5, "スポンサー資金": 10_000_000}]),
                     patch.object(training, "TRAINING", {
                         title: {"上昇量": growth, "費用": [100_000 * level for level in range(1, 31)]}
                         for title, growth in (("研究", 5), ("エイムラボ", 1))})]

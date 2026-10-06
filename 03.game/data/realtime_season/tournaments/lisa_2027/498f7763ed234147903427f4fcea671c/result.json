@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-675bbe52f97b501bbd5002828c9489c2",
+  "left_wins": 2,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Elites",
+      "own_score": 13,
+      "opponent_score": 9,
+      "winner": "test",
+      "seed": 1174577101,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 10,
+          "deaths": 8
+        },
+        "Ethan": {
+          "kills": 17,
+          "deaths": 10
+        },
+        "Nanasaki": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "FNS": {
+          "kills": 9,
+          "deaths": 15
+        },
+        "cNed": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "まーやまくん": {
+          "kills": 6,
+          "deaths": 12
+        },
+        "Demon1": {
+          "kills": 22,
+          "deaths": 13
+        },
+        "Dep": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "S1Mon": {
+          "kills": 12,
+          "deaths": 16
+        },
+        "icy": {
+          "kills": 11,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Elites",
+      "own_score": 11,
+      "opponent_score": 13,
+      "winner": "Team Elites",
+      "seed": 1174577102,
+      "player_stats": {
+        "まーやまくん": {
+          "kills": 13,
+          "deaths": 8
+        },
+        "Demon1": {
+          "kills": 20,
+          "deaths": 13
+        },
+        "Dep": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "S1Mon": {
+          "kills": 14,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 16,
+          "deaths": 14
+        },
+        "SyouTa": {
+          "kills": 11,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 13,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "FNS": {
+          "kills": 9,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 7,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Elites",
+      "own_score": 13,
+      "opponent_score": 7,
+      "winner": "test",
+      "seed": 1174577103,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Ethan": {
+          "kills": 6,
+          "deaths": 8
+        },
+        "Nanasaki": {
+          "kills": 22,
+          "deaths": 13
+        },
+        "FNS": {
+          "kills": 7,
+          "deaths": 13
+        },
+        "cNed": {
+          "kills": 22,
+          "deaths": 11
+        },
+        "まーやまくん": {
+          "kills": 19,
+          "deaths": 13
+        },
+        "Demon1": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "Dep": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "S1Mon": {
+          "kills": 9,
+          "deaths": 13
+        },
+        "icy": {
+          "kills": 11,
+          "deaths": 14
+        }
+      }
+    }
+  ]
+}

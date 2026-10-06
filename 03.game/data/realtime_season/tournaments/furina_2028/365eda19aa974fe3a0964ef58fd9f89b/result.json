@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L3M1",
+  "left_id": "world-fa19f77f8e62593aa71b5f5ded63be9a",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Evil Geniuses",
+      "opponent_team": "test",
+      "own_score": 3,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 2012824609,
+      "player_stats": {
+        "Boostio": {
+          "kills": 6,
+          "deaths": 9
+        },
+        "Ethan": {
+          "kills": 6,
+          "deaths": 10
+        },
+        "jawgemo": {
+          "kills": 6,
+          "deaths": 10
+        },
+        "Demon1": {
+          "kills": 7,
+          "deaths": 9
+        },
+        "s0m": {
+          "kills": 3,
+          "deaths": 10
+        },
+        "Tortlilyan": {
+          "kills": 11,
+          "deaths": 5
+        },
+        "ろびぃな": {
+          "kills": 6,
+          "deaths": 4
+        },
+        "いぐるん": {
+          "kills": 19,
+          "deaths": 4
+        },
+        "えんぺん": {
+          "kills": 6,
+          "deaths": 8
+        },
+        "夢の街": {
+          "kills": 6,
+          "deaths": 7
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Evil Geniuses",
+      "opponent_team": "test",
+      "own_score": 2,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 2012824610,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 1,
+          "deaths": 2
+        },
+        "ろびぃな": {
+          "kills": 16,
+          "deaths": 1
+        },
+        "いぐるん": {
+          "kills": 24,
+          "deaths": 2
+        },
+        "えんぺん": {
+          "kills": 10,
+          "deaths": 5
+        },
+        "夢の街": {
+          "kills": 3,
+          "deaths": 2
+        },
+        "Boostio": {
+          "kills": 0,
+          "deaths": 9
+        },
+        "Ethan": {
+          "kills": 4,
+          "deaths": 9
+        },
+        "jawgemo": {
+          "kills": 5,
+          "deaths": 12
+        },
+        "Demon1": {
+          "kills": 1,
+          "deaths": 12
+        },
+        "s0m": {
+          "kills": 2,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

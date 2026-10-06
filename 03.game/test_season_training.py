@@ -33,14 +33,14 @@ CUP = dict(id="cup", name="Cup", start_date="2026-01-31", team_count=2,
 
 class TrainingTest(unittest.TestCase):
     def setUp(self):
-        fixture = {name: replace(p, monthly_salary=100_000, loyalty=5)
+        fixture = {name: replace(p, monthly_salary=100_000, loyalty=5, debut_chapter=1)
                    for name, p in character_stats.CHARACTER_TABLE.items()}
         contexts = [patch.dict(character_stats.CHARACTER_TABLE, fixture),
                     patch.object(config, "INITIAL_OWNED_PLAYERS", OWN),
                     patch.object(teams, "SEASON_TEAMS", [dict(name="Rival", players=list(RIVAL))]),
                     patch.object(calendar, "START_DATE", "2026-01-01"),
                     patch.object(calendar, "TOURNAMENTS", []),
-                    patch.object(world, "WORLD_LEVELS", [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}]),
+                    patch.object(world, "WORLD_LEVELS", [{"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000}]),
                     patch.object(training, "TRAINING", TRAINING)]
         for context in contexts:
             context.start()
@@ -68,13 +68,93 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(first.date, state.date + timedelta(days=1))
         self.assertEqual(first.owned_players[1:], tuple(replace(p, iq=p.iq + .1) for p in state.owned_players[1:]))
         self.assertEqual(first.opponent_teams, state.opponent_teams)
-        self.assertEqual(first.contracts, state.contracts)
+        self.assertEqual(first.contracts, tuple(
+            replace(c, team_loyalty=c.team_loyalty + 1) if c.player_name == "Leo" else c
+            for c in state.contracts))
         self.assertEqual(first.training_terms("Leo", "research").cost, 200_000)
         second = first.with_trained_player("Leo", "research")
         self.assertEqual(second.player("Leo").iq, 160.2)
         self.assertEqual(second.date, state.date + timedelta(days=2))
         self.assertEqual(second.player("Leo").research_level, 2)
         self.assertEqual(second.money, state.money - 300_000)
+
+    def test_research_increases_only_selected_players_loyalty_to_own_team(self):
+        state = self.state()
+        other_id = state.opponent_teams[0].id
+        trained = state.with_trained_player("Leo", "research")
+        self.assertEqual(trained.team_loyalty("Leo"), state.team_loyalty("Leo") + 1)
+        self.assertEqual(trained.team_loyalties["Leo"][state.club_id], trained.contract("Leo").team_loyalty)
+        self.assertEqual(trained.team_loyalty("Leo", other_id), state.team_loyalty("Leo", other_id))
+        self.assertEqual(trained.player("Leo").loyalty, state.player("Leo").loyalty)
+        self.assertEqual(trained.contracts[1:], state.contracts[1:])
+        self.assertEqual(trained.opponent_teams, state.opponent_teams)
+        aimed = trained.with_trained_player("Leo", "aim_lab")
+        self.assertEqual(aimed.team_loyalty("Leo"), trained.team_loyalty("Leo"))
+
+    def test_research_loyalty_gain_is_configurable_and_can_be_disabled(self):
+        for gain in (0, 2.5):
+            with self.subTest(gain=gain), patch.object(training, "TRAINING", {
+                    **TRAINING, "研究": {**TRAINING["研究"], "忠誠上昇量": gain}}):
+                state = self.state()
+                trained = state.with_trained_player("Leo", "research")
+                self.assertEqual(trained.team_loyalty("Leo"), state.team_loyalty("Leo") + gain)
+                self.assertEqual(trained.money, state.money - 100_000)
+
+    def test_invalid_research_loyalty_gain_does_not_charge_or_save(self):
+        state = self.state()
+        self.store.save(state)
+        original = self.store.path.read_bytes()
+        for gain in (-1, True, None, "1", float("nan"), float("inf")):
+            with self.subTest(gain=gain), patch.object(training, "TRAINING", {
+                    **TRAINING, "研究": {**TRAINING["研究"], "忠誠上昇量": gain}}):
+                with self.assertRaisesRegex(SeasonSaveError, "忠誠上昇量"):
+                    state.with_trained_player("Leo", "research")
+                self.assertEqual(self.store.path.read_bytes(), original)
+                self.assertEqual(state.player("Leo").research_level, 0)
+
+    def test_research_loyalty_is_saved_before_pending_day_and_not_applied_twice(self):
+        state = self.state()
+        trained = state.with_trained_player("Leo", "research", advance_day=False)
+        self.assertTrue(trained.day_advance_pending)
+        self.assertEqual(trained.team_loyalty("Leo"), state.team_loyalty("Leo") + 1)
+        self.store.save(trained)
+        loaded = self.store.load_or_create()
+        self.assertEqual(loaded, trained)
+        advanced = loaded.advance_days()
+        self.assertEqual(advanced.team_loyalty("Leo"), trained.team_loyalty("Leo"))
+        self.assertFalse(advanced.day_advance_pending)
+        self.assertEqual(sum(e["種別"] == "研究" for e in advanced.history), 1)
+
+    def test_research_on_month_boundary_keeps_normal_loyalty_decay(self):
+        state = self.state().advance_days(30)
+        trained = state.with_trained_player("Leo", "research")
+        self.assertEqual(trained.game_date, "2026-02-01")
+        self.assertAlmostEqual(trained.team_loyalty("Leo"), state.team_loyalty("Leo") + 0.5)
+        self.assertAlmostEqual(trained.team_loyalty("Boaster"), state.team_loyalty("Boaster") - 0.5)
+        self.assertEqual(trained.team_loyalties["Leo"][state.club_id], trained.team_loyalty("Leo"))
+
+    def test_research_failures_and_level_cap_do_not_increase_loyalty(self):
+        state = self.state()
+        poor = replace(state, money=0)
+        with self.assertRaises(SeasonSaveError):
+            poor.with_trained_player("Leo", "research")
+        self.assertEqual(poor.team_loyalty("Leo"), state.team_loyalty("Leo"))
+        capped = replace(state, owned_players=tuple(replace(p, research_level=30)
+                                                  if p.name == "Leo" else p for p in state.owned_players))
+        with self.assertRaises(SeasonSaveError):
+            capped.with_trained_player("Leo", "research")
+        self.assertEqual(capped.team_loyalty("Leo"), state.team_loyalty("Leo"))
+
+    def test_research_screen_previews_loyalty_gain_and_saves_it(self):
+        app = self.app(self.state())
+        app.show_screen("research")
+        app.training_players["research"].selection_set("Leo")
+        app.refresh_training_offer("research")
+        self.assertIn("チームへの忠誠: 30 → 31", app.training_summaries["research"].get())
+        app.training_buttons["research"].invoke()
+        self.assertEqual(app.state.team_loyalty("Leo"), 31)
+        self.assertEqual(self.store.load_or_create().team_loyalty("Leo"), 31)
+        self.assertIn("チームへの忠誠 +1", app.status.get())
 
     def test_research_cap_thirty_is_persisted_without_extra_charges(self):
         state = replace(self.state(), money=100_000_000)

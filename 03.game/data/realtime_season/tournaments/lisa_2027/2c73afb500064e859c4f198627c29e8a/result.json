@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "L1M1",
+  "left_id": "world-a7467b366e32570589c9f495bf021534",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Meta Beat",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 15,
+      "winner": "test",
+      "seed": 1174575101,
+      "player_stats": {
+        "t3xture": {
+          "kills": 24,
+          "deaths": 15
+        },
+        "valyn": {
+          "kills": 17,
+          "deaths": 15
+        },
+        "Rarga": {
+          "kills": 13,
+          "deaths": 13
+        },
+        "Rb": {
+          "kills": 10,
+          "deaths": 18
+        },
+        "Flashback": {
+          "kills": 15,
+          "deaths": 19
+        },
+        "SyouTa": {
+          "kills": 24,
+          "deaths": 13
+        },
+        "Ethan": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "Nanasaki": {
+          "kills": 14,
+          "deaths": 16
+        },
+        "FNS": {
+          "kills": 4,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 19,
+          "deaths": 20
+        }
+      }
+    }
+  ]
+}

@@ -51,6 +51,7 @@ def signed_contract(player, terms, month, loyalty=None, *, state=None, team_id=N
 
 
 def make_offer(state, club, player, emit, *, surplus=0):
+    from realtime_season import FORCED_OFFER_LOYALTY
     from season_transfers import TransferOffer
 
     if state.contract_refused(player.name, club.id):
@@ -78,7 +79,7 @@ def make_offer(state, club, player, emit, *, surplus=0):
                           state.game_month, fee, contract_kind=terms.kind,
                           contract_months=terms.months, monthly_salary=terms.monthly_salary)
     emit("transfer_offer", club, player.name,
-         f"{player.name}に移籍金{fee:,}円のオファーを送りました。忠誠が30未満になると強制成立します。")
+         f"{player.name}に移籍金{fee:,}円のオファーを送りました。忠誠が{FORCED_OFFER_LOYALTY:g}未満になると強制成立します。")
     return replace(candidate, transfer_offers=(*offers, offer))
 
 
@@ -106,13 +107,11 @@ def opportunistic_offers(state, emit):
 
 
 def monthly_settlement(state, *, pay_salaries=True):
-    from season_world_levels import world_level_for_rank
+    from season_world_levels import world_level_for_rating
 
-    ranking = state.rating_ranking
-    ranks = {r.team_id: i for i, r in enumerate(ranking, 1)}
     clubs = []
     for club in state.opponent_teams:
-        level = club.world_level_lock if club.world_level_lock is not None and state.active_tournaments else world_level_for_rank(ranks[club.id], len(ranking))
+        level = club.world_level_lock if club.world_level_lock is not None and state.active_tournaments else world_level_for_rating(state.rating(club.id))
         income = level.sponsor_funds if club.sponsor_active else 0
         payroll = sum(c.monthly_salary for c in club.contracts if state.contract_usable(c, club.id)) if pay_salaries else 0
         clubs.append(replace(club, money=club.money + income - payroll))

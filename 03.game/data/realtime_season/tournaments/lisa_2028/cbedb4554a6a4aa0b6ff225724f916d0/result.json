@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Furina Party",
+      "own_score": 8,
+      "opponent_score": 13,
+      "winner": "Furina Party",
+      "seed": 462772922,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "ろびぃな": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "いぐるん": {
+          "kills": 13,
+          "deaths": 11
+        },
+        "えんぺん": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "夢の街": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "Furina": {
+          "kills": 12,
+          "deaths": 11
+        },
+        "Lohen": {
+          "kills": 26,
+          "deaths": 12
+        },
+        "Arlecchino": {
+          "kills": 12,
+          "deaths": 9
+        },
+        "Lisa": {
+          "kills": 5,
+          "deaths": 9
+        },
+        "おもこ": {
+          "kills": 12,
+          "deaths": 11
+        }
+      }
+    }
+  ]
+}

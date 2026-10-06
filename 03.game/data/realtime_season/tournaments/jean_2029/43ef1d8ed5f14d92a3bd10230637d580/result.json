@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L3M1",
+  "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "right_id": "player_club",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 11,
+      "winner": "Fnatic",
+      "seed": 908065971,
+      "player_stats": {
+        "Boaster": {
+          "kills": 8,
+          "deaths": 16
+        },
+        "Derke": {
+          "kills": 20,
+          "deaths": 14
+        },
+        "Alfajer": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "Chronicle": {
+          "kills": 15,
+          "deaths": 15
+        },
+        "Leo": {
+          "kills": 13,
+          "deaths": 17
+        },
+        "Furina": {
+          "kills": 9,
+          "deaths": 11
+        },
+        "Kachina": {
+          "kills": 9,
+          "deaths": 11
+        },
+        "S1Mon": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "Aspas": {
+          "kills": 15,
+          "deaths": 16
+        },
+        "Blacknoir": {
+          "kills": 36,
+          "deaths": 16
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 6,
+      "winner": "Fnatic",
+      "seed": 908065972,
+      "player_stats": {
+        "Furina": {
+          "kills": 4,
+          "deaths": 12
+        },
+        "Kachina": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "S1Mon": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Aspas": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "Blacknoir": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "Boaster": {
+          "kills": 8,
+          "deaths": 13
+        },
+        "Derke": {
+          "kills": 9,
+          "deaths": 11
+        },
+        "Alfajer": {
+          "kills": 20,
+          "deaths": 9
+        },
+        "Chronicle": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "Leo": {
+          "kills": 16,
+          "deaths": 10
+        }
+      }
+    }
+  ]
+}

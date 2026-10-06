@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L2M1",
+  "left_id": "world-0a8f9696d20b5ef39105dcaf03c726ae",
+  "right_id": "player_club",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Touyama Gaming",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 3,
+      "winner": "Touyama Gaming",
+      "seed": 574263747,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 20,
+          "deaths": 7
+        },
+        "ろびぃな": {
+          "kills": 2,
+          "deaths": 4
+        },
+        "いぐるん": {
+          "kills": 12,
+          "deaths": 7
+        },
+        "えんぺん": {
+          "kills": 19,
+          "deaths": 2
+        },
+        "夢の街": {
+          "kills": 3,
+          "deaths": 7
+        },
+        "Kachina": {
+          "kills": 3,
+          "deaths": 8
+        },
+        "S1Mon": {
+          "kills": 14,
+          "deaths": 12
+        },
+        "Aspas": {
+          "kills": 4,
+          "deaths": 11
+        },
+        "Lohen": {
+          "kills": 2,
+          "deaths": 12
+        },
+        "Furina": {
+          "kills": 4,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Touyama Gaming",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 2,
+      "winner": "Touyama Gaming",
+      "seed": 574263748,
+      "player_stats": {
+        "Kachina": {
+          "kills": 2,
+          "deaths": 9
+        },
+        "S1Mon": {
+          "kills": 5,
+          "deaths": 9
+        },
+        "Aspas": {
+          "kills": 10,
+          "deaths": 8
+        },
+        "Lohen": {
+          "kills": 0,
+          "deaths": 10
+        },
+        "Furina": {
+          "kills": 2,
+          "deaths": 10
+        },
+        "Tortlilyan": {
+          "kills": 28,
+          "deaths": 4
+        },
+        "ろびぃな": {
+          "kills": 2,
+          "deaths": 4
+        },
+        "いぐるん": {
+          "kills": 5,
+          "deaths": 3
+        },
+        "えんぺん": {
+          "kills": 6,
+          "deaths": 3
+        },
+        "夢の街": {
+          "kills": 5,
+          "deaths": 5
+        }
+      }
+    }
+  ]
+}

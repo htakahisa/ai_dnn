@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "W3M1",
+  "left_id": "player_club",
+  "right_id": "world-fbee58f742685aa08fa17af9a5d07ba6",
+  "left_wins": 1,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "radiantdancer",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "radiantdancer",
+      "seed": 1833136521,
+      "player_stats": {
+        "Buzz": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "stax": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "kaajak": {
+          "kills": 9,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 17,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 23,
+          "deaths": 17
+        },
+        "Loita": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "SiuFatBB": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "koldamenta": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "soulcas": {
+          "kills": 20,
+          "deaths": 16
+        },
+        "mindfreak": {
+          "kills": 14,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "radiantdancer",
+      "own_score": 14,
+      "opponent_score": 12,
+      "winner": "test",
+      "seed": 1833136522,
+      "player_stats": {
+        "Loita": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "SiuFatBB": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "koldamenta": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "soulcas": {
+          "kills": 8,
+          "deaths": 17
+        },
+        "mindfreak": {
+          "kills": 11,
+          "deaths": 16
+        },
+        "Buzz": {
+          "kills": 12,
+          "deaths": 7
+        },
+        "stax": {
+          "kills": 18,
+          "deaths": 13
+        },
+        "kaajak": {
+          "kills": 9,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 11,
+          "deaths": 15
+        },
+        "cNed": {
+          "kills": 23,
+          "deaths": 13
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "radiantdancer",
+      "own_score": 13,
+      "opponent_score": 15,
+      "winner": "radiantdancer",
+      "seed": 1833136523,
+      "player_stats": {
+        "Buzz": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "stax": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "kaajak": {
+          "kills": 21,
+          "deaths": 11
+        },
+        "icy": {
+          "kills": 16,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 24,
+          "deaths": 19
+        },
+        "Loita": {
+          "kills": 17,
+          "deaths": 18
+        },
+        "SiuFatBB": {
+          "kills": 10,
+          "deaths": 17
+        },
+        "koldamenta": {
+          "kills": 13,
+          "deaths": 15
+        },
+        "soulcas": {
+          "kills": 16,
+          "deaths": 20
+        },
+        "mindfreak": {
+          "kills": 18,
+          "deaths": 15
+        }
+      }
+    }
+  ]
+}

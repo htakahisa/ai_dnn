@@ -8,6 +8,7 @@ from map_data_defender_setup import (
 """Tkinter input handling and all visual rendering."""
 
 import math
+from character_stats import get_awakening_description
 from public_effects import displayed_projectile_path, displayed_area_cells
 from pathlib import Path
 import tkinter as tk
@@ -540,6 +541,15 @@ class RenderingUIMixin:
                 fill=accent, outline=""
             )
             hp_text = f"HP {char.hp}/{char.max_hp}" if char.is_alive else "DEAD"
+            shield_hp = getattr(char, "shield_hp", 0)
+            if char.is_alive and getattr(char, "max_shield_hp", 0) > 0:
+                hp_text += f"  SH {shield_hp:g}/{char.max_shield_hp:g}"
+                if shield_hp > 0:
+                    shield_ratio = min(1, shield_hp / char.max_shield_hp)
+                    self.canvas.create_rectangle(
+                        bar_x1, y + 38, bar_x1 + (bar_x2 - bar_x1) * shield_ratio,
+                        y + 41, fill="#66d9ff", outline=""
+                    )
             self.canvas.create_text(
                 (bar_x1 + bar_x2) / 2, y + 31,
                 text=hp_text, fill="white", font=("Arial", 7, "bold")
@@ -1041,6 +1051,11 @@ class RenderingUIMixin:
             hp_ratio = min(1, char.hp / char.max_hp) if char.max_hp > 0 else 0
             self.canvas.create_rectangle(px1+4, py2-7, px1+panel_w-4, py2-3, fill="#3a404a", outline="")
             self.canvas.create_rectangle(px1+4, py2-7, px1+4+(panel_w-8)*hp_ratio, py2-3, fill=char.bg_color, outline="")
+            shield_hp = getattr(char, "shield_hp", 0)
+            if shield_hp > 0 and getattr(char, "max_shield_hp", 0) > 0:
+                shield_ratio = min(1, shield_hp / char.max_shield_hp)
+                self.canvas.create_rectangle(px1+4, py2-2, px1+4+(panel_w-8)*shield_ratio, py2,
+                                             fill="#66d9ff", outline="")
 
         if getattr(self, "serenade_flash_remaining", 0) > 0:
             draw_serenade_flash(self.canvas, self.width, self.height, self.cell_size, self.map_offset_x)
@@ -1260,9 +1275,18 @@ class RenderingUIMixin:
             fill="white", font=("Arial", 11, "bold")
         )
         self.canvas.create_text(
-            total_w/2, 73, text=announcement.get("effect_text", "特殊効果"),
+            total_w/2, 73, text=self._announcement_effect_text(announcement),
             fill="#b9c6d8", font=("Arial", 10)
         )
+
+    @staticmethod
+    def _announcement_effect_text(announcement):
+        if announcement.get("type") == "awakening":
+            players = announcement.get("players", ())
+            description = get_awakening_description(players[0]) if players else ""
+            if description:
+                return description
+        return announcement.get("effect_text", "特殊効果")
 
     def _draw_bottom_combo_announcement(self, bottom_y):
         """ユーザー操作が無い試合で、コンボ/覚醒告知を下部の枠内に表示する。"""
@@ -1296,6 +1320,6 @@ class RenderingUIMixin:
             fill="white", font=("Arial", 10, "bold")
         )
         self.canvas.create_text(
-            cx, y1 + 58, text=announcement.get("effect_text", "特殊効果"),
+            cx, y1 + 58, text=self._announcement_effect_text(announcement),
             fill="#b9c6d8", font=("Arial", 9)
         )

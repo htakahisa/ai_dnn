@@ -20,6 +20,7 @@ def _play_scrim(request):
     # The worker is isolated: saved individual abilities apply only to this
     # match and never replace the catalog used by the season home or other modes.
     import character_stats
+    from realtime_season import player_from_save
     import game_core
     import numpy as np
     import torch
@@ -31,7 +32,7 @@ def _play_scrim(request):
     torch.manual_seed(request["seed"])
     for key in ("own", "opponent"):
         for row in request[key]["players"]:
-            character_stats.CHARACTER_TABLE[row["name"]] = character_stats.CharacterStats(**row)
+            character_stats.CHARACTER_TABLE[row["name"]] = player_from_save(row)
     # game_core ordinarily loads its own copy of the character module.
     # Point its stat getter at this worker's saved snapshots as well.
     game_core._character_stats = character_stats

@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc7ad6529ce5024bcdbe5c59c9a4b8b",
+  "left_wins": 1,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Queen's Flower Gambit",
+      "own_score": 13,
+      "opponent_score": 5,
+      "winner": "test",
+      "seed": 308940487,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 5,
+          "deaths": 3
+        },
+        "Ethan": {
+          "kills": 13,
+          "deaths": 1
+        },
+        "Nanasaki": {
+          "kills": 15,
+          "deaths": 4
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "cNed": {
+          "kills": 19,
+          "deaths": 9
+        },
+        "Lar0k": {
+          "kills": 7,
+          "deaths": 11
+        },
+        "Meiy": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "mindfreak": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "Smoggy": {
+          "kills": 3,
+          "deaths": 12
+        },
+        "koldamenta": {
+          "kills": 3,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

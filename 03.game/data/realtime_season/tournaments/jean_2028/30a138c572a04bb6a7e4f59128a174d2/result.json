@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "left_wins": 2,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "Fnatic",
+      "seed": 455987608,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 22,
+          "deaths": 13
+        },
+        "ろびぃな": {
+          "kills": 8,
+          "deaths": 18
+        },
+        "いぐるん": {
+          "kills": 22,
+          "deaths": 12
+        },
+        "えんぺん": {
+          "kills": 18,
+          "deaths": 11
+        },
+        "夢の街": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "Boaster": {
+          "kills": 4,
+          "deaths": 19
+        },
+        "Derke": {
+          "kills": 8,
+          "deaths": 16
+        },
+        "Chronicle": {
+          "kills": 19,
+          "deaths": 13
+        },
+        "Leo": {
+          "kills": 17,
+          "deaths": 16
+        },
+        "Sayonara": {
+          "kills": 20,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 14,
+      "opponent_score": 12,
+      "winner": "test",
+      "seed": 455987609,
+      "player_stats": {
+        "Boaster": {
+          "kills": 10,
+          "deaths": 20
+        },
+        "Derke": {
+          "kills": 11,
+          "deaths": 20
+        },
+        "Chronicle": {
+          "kills": 25,
+          "deaths": 14
+        },
+        "Leo": {
+          "kills": 15,
+          "deaths": 18
+        },
+        "Sayonara": {
+          "kills": 11,
+          "deaths": 17
+        },
+        "Tortlilyan": {
+          "kills": 24,
+          "deaths": 16
+        },
+        "ろびぃな": {
+          "kills": 8,
+          "deaths": 20
+        },
+        "いぐるん": {
+          "kills": 25,
+          "deaths": 10
+        },
+        "えんぺん": {
+          "kills": 17,
+          "deaths": 12
+        },
+        "夢の街": {
+          "kills": 15,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 13,
+      "opponent_score": 6,
+      "winner": "test",
+      "seed": 455987610,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 31,
+          "deaths": 11
+        },
+        "ろびぃな": {
+          "kills": 5,
+          "deaths": 16
+        },
+        "いぐるん": {
+          "kills": 13,
+          "deaths": 8
+        },
+        "えんぺん": {
+          "kills": 19,
+          "deaths": 6
+        },
+        "夢の街": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "Boaster": {
+          "kills": 7,
+          "deaths": 18
+        },
+        "Derke": {
+          "kills": 10,
+          "deaths": 15
+        },
+        "Chronicle": {
+          "kills": 24,
+          "deaths": 14
+        },
+        "Leo": {
+          "kills": 3,
+          "deaths": 15
+        },
+        "Sayonara": {
+          "kills": 10,
+          "deaths": 16
+        }
+      }
+    }
+  ]
+}

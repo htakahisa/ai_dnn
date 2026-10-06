@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc7ad6529ce5024bcdbe5c59c9a4b8b",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Queen's Flower Gambit",
+      "own_score": 14,
+      "opponent_score": 12,
+      "winner": "test",
+      "seed": 27544798,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 3,
+          "deaths": 14
+        },
+        "Nanasaki": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "FNS": {
+          "kills": 10,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 33,
+          "deaths": 14
+        },
+        "Lar0k": {
+          "kills": 19,
+          "deaths": 16
+        },
+        "Meiy": {
+          "kills": 14,
+          "deaths": 18
+        },
+        "mindfreak": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Smoggy": {
+          "kills": 17,
+          "deaths": 17
+        },
+        "koldamenta": {
+          "kills": 10,
+          "deaths": 19
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Queen's Flower Gambit",
+      "own_score": 13,
+      "opponent_score": 9,
+      "winner": "test",
+      "seed": 27544799,
+      "player_stats": {
+        "Lar0k": {
+          "kills": 8,
+          "deaths": 16
+        },
+        "Meiy": {
+          "kills": 21,
+          "deaths": 13
+        },
+        "mindfreak": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "Smoggy": {
+          "kills": 12,
+          "deaths": 14
+        },
+        "koldamenta": {
+          "kills": 7,
+          "deaths": 19
+        },
+        "SyouTa": {
+          "kills": 23,
+          "deaths": 12
+        },
+        "Ethan": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "Nanasaki": {
+          "kills": 16,
+          "deaths": 7
+        },
+        "FNS": {
+          "kills": 11,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 15,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

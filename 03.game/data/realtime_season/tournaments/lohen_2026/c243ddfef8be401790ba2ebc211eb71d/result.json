@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W3M1",
+  "left_id": "player_club",
+  "right_id": "world-817213c36458561297f4478f39cc9d2f",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fake Gaming",
+      "own_score": 13,
+      "opponent_score": 2,
+      "winner": "test",
+      "seed": 739694883,
+      "player_stats": {
+        "Buzz": {
+          "kills": 4,
+          "deaths": 2
+        },
+        "stax": {
+          "kills": 24,
+          "deaths": 3
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 1
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 7
+        },
+        "cNed": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "primmie": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "d4v41": {
+          "kills": 3,
+          "deaths": 13
+        },
+        "IbarakiNinja": {
+          "kills": 1,
+          "deaths": 14
+        },
+        "skuba": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "valyn": {
+          "kills": 3,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fake Gaming",
+      "own_score": 17,
+      "opponent_score": 15,
+      "winner": "test",
+      "seed": 739694884,
+      "player_stats": {
+        "primmie": {
+          "kills": 17,
+          "deaths": 17
+        },
+        "d4v41": {
+          "kills": 11,
+          "deaths": 21
+        },
+        "IbarakiNinja": {
+          "kills": 17,
+          "deaths": 22
+        },
+        "skuba": {
+          "kills": 21,
+          "deaths": 21
+        },
+        "valyn": {
+          "kills": 17,
+          "deaths": 25
+        },
+        "Buzz": {
+          "kills": 13,
+          "deaths": 16
+        },
+        "stax": {
+          "kills": 35,
+          "deaths": 14
+        },
+        "kaajak": {
+          "kills": 20,
+          "deaths": 14
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 22
+        },
+        "cNed": {
+          "kills": 23,
+          "deaths": 17
+        }
+      }
+    }
+  ]
+}

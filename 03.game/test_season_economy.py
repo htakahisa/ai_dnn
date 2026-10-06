@@ -42,7 +42,7 @@ class SeasonEconomyTest(unittest.TestCase):
                                   (realtime_season_teams, "SEASON_TEAMS", [self.club]),
                                   (calendar, "START_DATE", "2026-01-01"), (calendar, "TOURNAMENTS", []),
                                   (realtime_season_world_levels, "WORLD_LEVELS",
-                                   [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}])):
+                                   [{"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000}])):
             context = patch.object(module, key, value)
             context.start()
             self.addCleanup(context.stop)

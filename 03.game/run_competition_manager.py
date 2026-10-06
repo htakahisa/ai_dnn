@@ -729,6 +729,7 @@ def play_map(
     mental_fatigue_state: dict[str, float] | None = None,
     series_tactical_state: dict[str, Any] | None = None,
     tick_time_ms: int | Callable[[], int] = TICK_TIME,
+    shield_abilities_enabled: bool = True,
 ) -> MResult:
     seed_all(seed)
 
@@ -808,6 +809,7 @@ def play_map(
             disable_side_swap=False,
             series_context=series_context,
             tick_time_ms=tick_time_ms,
+            shield_abilities_enabled=shield_abilities_enabled,
         )
 
         if render:
@@ -2595,6 +2597,8 @@ class CompetitionApp:
         self.tick_time_var.trace_add("write", self._on_tick_time_change)
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
+        self.shield_abilities_var = tk.BooleanVar(value=True)
+        self.current_shield_abilities_enabled = True
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
         self.power_team_var = tk.StringVar(value=self.names[0])
@@ -2722,6 +2726,11 @@ class CompetitionApp:
         )
         self.tick_time_spin.pack(side="left", padx=(6, 12))
         tk.Label(timing_frame, text="100ms = 0.1秒 ／ 描画・シミュレーションに随時反映").pack(side="left")
+        self.shield_abilities_check = tk.Checkbutton(
+            timing_frame, text="シールド系能力を有効化",
+            variable=self.shield_abilities_var,
+        )
+        self.shield_abilities_check.pack(side="left", padx=(20, 0))
         self._update_seed_entry_state()
 
     def _on_tick_time_change(self, *_args) -> None:
@@ -3798,6 +3807,7 @@ class CompetitionApp:
                     attacker_ai_name=attacker_ai_key,
                     defender_ai_name=defender_ai_key,
                     custom_roster=custom_roster,
+                    shield_abilities_enabled=bool(self.shield_abilities_var.get()),
                 )
                 playback.update(
                     simulator=simulator,
@@ -5240,6 +5250,7 @@ class CompetitionApp:
         # 描画ON/OFFは大会途中でも変更可能。
         self.render_check.config(state="normal")
         self.rating_enabled_check.config(state=state)
+        self.shield_abilities_check.config(state=state)
         self.start_button.config(state=state)
         self.power_refresh_button.config(state=state)
         self.rating_button.config(state="normal")
@@ -5324,6 +5335,8 @@ class CompetitionApp:
             self.append(f"  {team}: " f"{CONTROLLER_KEY_TO_DISPLAY.get(key, key)}\n")
         self.current_rating_enabled = bool(self.rating_enabled_var.get())
         self.append(f"RATING: {'ON' if self.current_rating_enabled else 'OFF'}\n")
+        self.current_shield_abilities_enabled = bool(self.shield_abilities_var.get())
+        self.append(f"SHIELD ABILITIES: {'ON' if self.current_shield_abilities_enabled else 'OFF'}\n")
         self.append("-" * 78 + "\n")
         self.competition_id = f"{payload[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.competition_rating_updates = []
@@ -5403,6 +5416,7 @@ class CompetitionApp:
                     series_maps_to_win,
                     mental_fatigue_state,
                     series_tactical_state,
+                    shield_abilities_enabled=getattr(self.app, "current_shield_abilities_enabled", True),
                 )
 
             request = {
@@ -5417,6 +5431,7 @@ class CompetitionApp:
                 "series_maps_to_win": series_maps_to_win,
                 "mental_fatigue_state": mental_fatigue_state,
                 "series_tactical_state": series_tactical_state,
+                "shield_abilities_enabled": getattr(self.app, "current_shield_abilities_enabled", True),
                 "done": threading.Event(),
                 "result": None,
                 "error": None,
@@ -5458,6 +5473,7 @@ class CompetitionApp:
                 request["mental_fatigue_state"],
                 request.get("series_tactical_state"),
                 tick_time_ms=lambda: self.tick_time_ms,
+                shield_abilities_enabled=request.get("shield_abilities_enabled", True),
             )
         except BaseException as exc:
             request["error"] = exc
@@ -5497,6 +5513,7 @@ class CompetitionApp:
                     "base_seed": (base_seed if seed_mode == "fixed" else None),
                     "team_controllers": dict(team_controllers),
                     "rating_enabled": bool(self.current_rating_enabled),
+                    "shield_abilities_enabled": bool(self.current_shield_abilities_enabled),
                     **asdict(series),
                     "player_leaderboards": build_player_leaderboards([series]),
                 }
@@ -5765,6 +5782,7 @@ class CompetitionApp:
                     champion = data.get("champion", data.get("winner", "?"))
 
                     data["rating_enabled"] = bool(self.current_rating_enabled)
+                    data["shield_abilities_enabled"] = bool(self.current_shield_abilities_enabled)
                     data["rating_system"] = {
                         "default_rating": DEFAULT_TEAM_RATING,
                         "k_factor": RATING_K_FACTOR,

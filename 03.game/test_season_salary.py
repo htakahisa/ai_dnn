@@ -84,7 +84,7 @@ class SalaryStateTest(SeasonCompetitionTest):
 
     def configure_salary(self):
         context = patch.object(realtime_season_world_levels, "WORLD_LEVELS",
-                               [{"レベル": 1, "上位%": 100, "敵倍率": 1, "スポンサー資金": 7_500_000}])
+                               [{"レベル": 1, "必要レート": 0, "敵倍率": 1, "スポンサー資金": 7_500_000}])
         context.start()
         self.addCleanup(context.stop)
         for key, value in (("COMPETITION_RESULTS_DIR", self.results), ("A", 30), ("MIN_GAMES", 10),

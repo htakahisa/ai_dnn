@@ -39,7 +39,7 @@ class PairFamiliarityTests(unittest.TestCase):
             patch.object(economy, "NON_REGULAR_OFFER_CHANCE", 0),
             patch.object(settings, "pair_familiarity_enabled", True),
             patch.object(world, "WORLD_LEVELS", [
-                {"レベル": 1, "上位%": 100, "敵倍率": 1.5, "スポンサー資金": 10_000_000}]),
+                {"レベル": 1, "必要レート": 0, "敵倍率": 1.5, "スポンサー資金": 10_000_000}]),
         ):
             context.start()
             self.addCleanup(context.stop)
@@ -187,7 +187,8 @@ class PairFamiliarityTests(unittest.TestCase):
         self.assertEqual(request["own"]["players"], [asdict(scale_enemy_player(state.player(n), 0.8)) for n in OWN])
         multiplier = state.pair_metrics(rival.roster)[1] * 1.5
         self.assertEqual(request["opponent"]["players"], [asdict(scale_enemy_player(p, multiplier)) for p in rival.players[:5]])
-        self.assertEqual(state.player("Leo"), character_stats.get_by_name("Leo"))
+        from season_player_stats import season_player
+        self.assertEqual(state.player("Leo"), season_player(character_stats.get_by_name("Leo")))
 
     def test_disabled_requests_are_identical_to_legacy_match_snapshots(self):
         from season_scrim import build_scrim_request

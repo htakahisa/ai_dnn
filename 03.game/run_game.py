@@ -287,9 +287,11 @@ class VisualFPSBattle(
         disable_side_swap=False,
         series_context=None,
         tick_time_ms=TICK_TIME,
+        shield_abilities_enabled=True,
     ):
         self.maze_str = maze_str
         self.headless = headless
+        self.shield_abilities_enabled = bool(shield_abilities_enabled)
         self.tick_time_ms = tick_time_ms
         self._tick_delay_ms()
         self._init_playback()
@@ -422,6 +424,8 @@ class VisualFPSBattle(
                     "pos": pos(char.pos),
                     "hp": float(getattr(char, "hp", 0)),
                     "max_hp": float(getattr(char, "max_hp", 100)),
+                    "shield_hp": float(getattr(char, "shield_hp", 0)),
+                    "max_shield_hp": float(getattr(char, "max_shield_hp", 0)),
                     "heal_sparkle": int(getattr(char, "heal_sparkle_remaining", 0)),
                     "life_contract": int(getattr(char, "life_contract_remaining", 0)),
                     "alive": bool(getattr(char, "is_alive", False)),
@@ -884,6 +888,7 @@ class VisualFPSBattle(
                     deaths=saved["deaths"],
                     ultimate_points=saved.get("ultimate_points", 0),
                     mental_pressure=self._mental_pressure_for_player(name, "A"),
+                    shield_abilities_enabled=self.shield_abilities_enabled,
                 )
             )
 
@@ -935,6 +940,7 @@ class VisualFPSBattle(
                     deaths=saved["deaths"],
                     ultimate_points=saved.get("ultimate_points", 0),
                     mental_pressure=self._mental_pressure_for_player(name, "D"),
+                    shield_abilities_enabled=self.shield_abilities_enabled,
                 )
             )
 

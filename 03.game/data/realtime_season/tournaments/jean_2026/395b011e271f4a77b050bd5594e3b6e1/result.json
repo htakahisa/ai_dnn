@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+  "left_wins": 3,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 51653328,
+      "player_stats": {
+        "Buzz": {
+          "kills": 20,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 13,
+          "deaths": 5
+        },
+        "kaajak": {
+          "kills": 7,
+          "deaths": 7
+        },
+        "icy": {
+          "kills": 23,
+          "deaths": 11
+        },
+        "Sato": {
+          "kills": 13,
+          "deaths": 9
+        },
+        "Crewn": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "lovers rock": {
+          "kills": 5,
+          "deaths": 15
+        },
+        "CHICHOO": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Cryocells": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "eKo": {
+          "kills": 14,
+          "deaths": 15
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 51653329,
+      "player_stats": {
+        "Crewn": {
+          "kills": 10,
+          "deaths": 15
+        },
+        "lovers rock": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "CHICHOO": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "Cryocells": {
+          "kills": 12,
+          "deaths": 14
+        },
+        "eKo": {
+          "kills": 18,
+          "deaths": 11
+        },
+        "Buzz": {
+          "kills": 13,
+          "deaths": 11
+        },
+        "stax": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "kaajak": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "Sato": {
+          "kills": 18,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "test",
+      "seed": 51653330,
+      "player_stats": {
+        "Buzz": {
+          "kills": 14,
+          "deaths": 3
+        },
+        "stax": {
+          "kills": 12,
+          "deaths": 5
+        },
+        "kaajak": {
+          "kills": 7,
+          "deaths": 6
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 9
+        },
+        "Sato": {
+          "kills": 14,
+          "deaths": 7
+        },
+        "Crewn": {
+          "kills": 8,
+          "deaths": 13
+        },
+        "lovers rock": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "CHICHOO": {
+          "kills": 5,
+          "deaths": 12
+        },
+        "Cryocells": {
+          "kills": 3,
+          "deaths": 14
+        },
+        "eKo": {
+          "kills": 5,
+          "deaths": 11
+        }
+      }
+    }
+  ]
+}

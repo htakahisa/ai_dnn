@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L2M2",
+  "left_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "test",
+      "own_score": 4,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 2012822609,
+      "player_stats": {
+        "Boaster": {
+          "kills": 1,
+          "deaths": 15
+        },
+        "Derke": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "Alfajer": {
+          "kills": 5,
+          "deaths": 11
+        },
+        "Chronicle": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "Leo": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "Tortlilyan": {
+          "kills": 16,
+          "deaths": 7
+        },
+        "ろびぃな": {
+          "kills": 13,
+          "deaths": 9
+        },
+        "いぐるん": {
+          "kills": 17,
+          "deaths": 5
+        },
+        "えんぺん": {
+          "kills": 12,
+          "deaths": 6
+        },
+        "夢の街": {
+          "kills": 15,
+          "deaths": 5
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Fnatic",
+      "opponent_team": "test",
+      "own_score": 6,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 2012822610,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 21,
+          "deaths": 6
+        },
+        "ろびぃな": {
+          "kills": 20,
+          "deaths": 13
+        },
+        "いぐるん": {
+          "kills": 14,
+          "deaths": 6
+        },
+        "えんぺん": {
+          "kills": 13,
+          "deaths": 5
+        },
+        "夢の街": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "Boaster": {
+          "kills": 4,
+          "deaths": 18
+        },
+        "Derke": {
+          "kills": 8,
+          "deaths": 18
+        },
+        "Alfajer": {
+          "kills": 10,
+          "deaths": 12
+        },
+        "Chronicle": {
+          "kills": 4,
+          "deaths": 18
+        },
+        "Leo": {
+          "kills": 14,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

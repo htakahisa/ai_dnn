@@ -4,6 +4,7 @@ from collections import deque
 from grid_lines import line_cells
 
 from game_core import (
+    absorb_shield_damage,
     FLASH_SPEED_CELLS_PER_TICK,
     FLASH_MAX_FLIGHT_TICKS,
     RECON_SPEED_CELLS_PER_TICK,
@@ -350,11 +351,12 @@ class AbilityLosMixin:
             if not char.is_alive or getattr(char, "life_contract_remaining", 0) <= 0:
                 continue
             old_max = char.max_hp
-            char.max_hp = max(0, old_max - CONTRACT_DAMAGE_PER_TICK)
-            char.contract_max_hp_lost = getattr(char, "contract_max_hp_lost", 0) + old_max - char.max_hp
-            char.hp = max(0, min(char.max_hp, char.hp - CONTRACT_DAMAGE_PER_TICK))
-            char.life_contract_remaining -= 1
             owner = owners.get(char.life_contract_owner)
+            hp_damage = absorb_shield_damage(char, CONTRACT_DAMAGE_PER_TICK, owner)
+            char.max_hp = max(0, old_max - hp_damage)
+            char.contract_max_hp_lost = getattr(char, "contract_max_hp_lost", 0) + old_max - char.max_hp
+            char.hp = max(0, min(char.max_hp, char.hp - hp_damage))
+            char.life_contract_remaining -= 1
             tracker = getattr(self, "analytics_tracker", None)
             if tracker is not None and owner is not None:
                 tracker.record_contribution(owner, char, self.battle_tick, "damage")
@@ -468,7 +470,7 @@ class AbilityLosMixin:
             owner = owners.get(burst["owner"])
             for char in self.chars:
                 if char.is_alive and char.team != burst["team"] and tuple(char.pos) in burst["cells"]:
-                    damage = NEON_DAMAGE_PER_TICK
+                    damage = absorb_shield_damage(char, NEON_DAMAGE_PER_TICK, owner)
                     tracker = getattr(self, "analytics_tracker", None)
                     if tracker is not None:
                         tracker.record_contribution(owner, char, self.battle_tick, "damage")

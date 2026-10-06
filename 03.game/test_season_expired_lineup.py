@@ -116,6 +116,8 @@ class ExpiredLineupTests(unittest.TestCase):
         self.assertEqual(app.state.game_date, "2026-01-31")
         self.assertNotIn("Leo", app.state.roster)
         self.assertIn("Leo", app.editor_contract_warning.get())
+        self.assertEqual(app.contract_banner.winfo_manager(), "pack")
+        self.assertIn("Leo", app.contract_banner.cget("text"))
         self.assertEqual(self.store.load_or_create(), app.state)
 
     def test_tournament_contract_extension_keeps_expired_starter_usable(self):
@@ -128,7 +130,82 @@ class ExpiredLineupTests(unittest.TestCase):
         self.assertNotIn("contract_expired", app.players.item(identifier, "tags"))
         self.assertNotIn("Leo", app.editor_contract_warning.get())
         self.assertIn("Meiy", app.editor_contract_warning.get())
+        self.assertNotIn("Leo", app.contract_banner.cget("text"))
+        self.assertIn("Meiy", app.contract_banner.cget("text"))
         app.state.with_confirmed_team()
+
+    def test_home_contract_warning_opens_renewal_and_disappears_after_renewing(self):
+        app = self.app(self.state())
+        self.assertEqual(app.contract_banner.winfo_manager(), "")
+        app.commit(self.expired(), "Contracts expired")
+        self.assertEqual(app.contract_banner.winfo_manager(), "pack")
+        self.assertIn("2人", app.contract_banner.cget("text"))
+        self.assertIn("Leo", app.contract_banner.cget("text"))
+        self.assertIn("Meiy", app.contract_banner.cget("text"))
+        app.root.update_idletasks()
+        self.assertLessEqual(app.home_host.winfo_reqheight(), 800)
+        app.contract_banner.invoke()
+        self.assertEqual(app.current_screen, "contracts")
+        self.assertEqual(app.contracts_players.selection(), ("Leo",))
+        self.assertEqual(str(app.offer_buttons["contracts"]["state"]), "normal")
+        app.sign_selected_contract("contracts")
+        self.assertNotIn("Leo", app.contract_banner.cget("text"))
+        app.contract_banner.invoke()
+        self.assertEqual(app.contracts_players.selection(), ("Meiy",))
+        app.sign_selected_contract("contracts")
+        self.assertEqual(app.contract_banner.winfo_manager(), "")
+        self.assertEqual(app.home_actions.winfo_manager(), "pack")
+        self.assertEqual(app.home_compact_actions.winfo_manager(), "")
+        self.assertEqual(self.store.load_or_create(), app.state)
+
+    def test_home_warning_counts_calendar_month_grace_and_warns_on_last_day(self):
+        app = self.app(self.expired().advance_days(19))
+        self.assertEqual(app.state.game_date, "2026-02-20")
+        self.assertIn("あと8日", app.contract_banner.cget("text"))
+        self.assertIn("2026/02/28にLFTへ", app.contract_banner.cget("text"))
+        self.assertNotIn("期限が迫っています", app.contract_banner.cget("text"))
+        app.commit(app.state.advance_days(), "Seven days remaining")
+        self.assertIn("期限が迫っています", app.contract_banner.cget("text"))
+        app.commit(app.state.advance_days(6), "Last renewal day")
+        self.assertIn("今日が再契約の最終日", app.contract_banner.cget("text"))
+        app.commit(app.state.advance_days(), "Grace period ended")
+        self.assertIsNone(app.state.player("Leo"))
+        self.assertIsNone(app.state.player("Meiy"))
+        self.assertEqual(app.contract_banner.winfo_manager(), "")
+
+    def test_home_warning_opens_earliest_deadline_instead_of_editor_selection(self):
+        state = self.expired().advance_days(26)
+        state = replace(state, contracts=tuple(
+            replace(c, expired_on="2026-02-01") if c.player_name == "Leo" else c
+            for c in state.contracts))
+        app = self.app(state)
+        self.select(app, "Leo")
+        app.contract_banner.invoke()
+        self.assertEqual(app.contracts_players.selection(), ("Meiy",))
+
+    def test_home_contract_and_offer_banners_fit_and_remain_separately_clickable(self):
+        from season_rival_economy import make_offer
+        state = self.expired()
+        state = make_offer(state, state.opponent_teams[0], state.player("Boaster"), lambda *args: None)
+        self.assertTrue(state.pending_transfer_offers)
+        app = self.app(state)
+        self.assertEqual(app.contract_banner.winfo_manager(), "pack")
+        self.assertEqual(app.transfer_banner.winfo_manager(), "pack")
+        app.root.update_idletasks()
+        self.assertLessEqual(app.home_host.winfo_reqheight(), 800)
+        app.transfer_banner.invoke()
+        self.assertEqual(app.contracts_players.selection(), ("Boaster",))
+        app.contract_banner.invoke()
+        self.assertEqual(app.contracts_players.selection(), ("Leo",))
+        offer = app.state.pending_transfer_offers[0]
+        app.commit(app.state.with_transfer_response(offer.id, False), "Offer rejected")
+        self.assertEqual(app.transfer_banner.winfo_manager(), "")
+        self.assertEqual(app.contract_banner.winfo_manager(), "pack")
+        for name in ("Leo", "Meiy"):
+            app.commit(app.state.with_renewed_contract(name, "year1"), "Contract renewed")
+        self.assertEqual(app.contract_banner.winfo_manager(), "")
+        self.assertEqual(app.home_actions.winfo_manager(), "pack")
+        self.assertEqual(app.home_compact_actions.winfo_manager(), "")
 
     def test_failed_repair_save_keeps_original_data_and_blocks_confirm(self):
         state = self.expired()

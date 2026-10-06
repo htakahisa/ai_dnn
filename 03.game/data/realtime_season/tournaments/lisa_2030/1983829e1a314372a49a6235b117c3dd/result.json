@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "L1M1",
+  "left_id": "world-78bd86bbdf2650a0bd6d8c38443558aa",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Ghost Champions",
+      "opponent_team": "test",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 214275839,
+      "player_stats": {
+        "Xdll": {
+          "kills": 4,
+          "deaths": 12
+        },
+        "SyouTa": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "Absol": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "SugarZ3ro": {
+          "kills": 1,
+          "deaths": 14
+        },
+        "trent": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "Kachina": {
+          "kills": 13,
+          "deaths": 5
+        },
+        "S1Mon": {
+          "kills": 13,
+          "deaths": 8
+        },
+        "Aspas": {
+          "kills": 12,
+          "deaths": 4
+        },
+        "Lohen": {
+          "kills": 14,
+          "deaths": 6
+        },
+        "Furina": {
+          "kills": 8,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

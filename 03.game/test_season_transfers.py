@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 import character_stats
+import realtime_season
 import realtime_season_config as config
 import realtime_season_teams as teams
 import realtime_season_competitions as calendar
@@ -268,6 +269,53 @@ class TransferTests(unittest.TestCase):
         self.assertIsNone(app.state.player("Aspas"))
         self.assertEqual(app.transfer_banner.winfo_manager(), "")
         self.assertEqual(self.store.load_or_create(), app.state)
+
+    def test_answer_messages_and_transfer_decisions_use_the_same_threshold(self):
+        baseline = self.offer_state()
+        for threshold, loyalty, forced in ((10, 28.6, False), (10, 10, False),
+                                          (10, 9.9, True), (30, 28.6, True)):
+            with self.subTest(threshold=threshold, loyalty=loyalty), patch.object(
+                    realtime_season, "FORCED_OFFER_LOYALTY", threshold):
+                state = replace(baseline, contracts=tuple(
+                    replace(c, team_loyalty=loyalty) if c.player_name == "Aspas" else c
+                    for c in baseline.contracts))
+                root = tk.Tk()
+                root.withdraw()
+                try:
+                    app = RealtimeSeasonApp(root, self.store, state)
+                    app.show_screen("contracts")
+                    app.contracts_players.selection_set("Aspas")
+                    app.refresh_offer("contracts")
+                    self.assertIn(f"忠誠が{threshold}未満", app.incoming_offer_summary.get())
+                    app.respond_to_transfer(False)
+                    self.assertEqual(app.state.player("Aspas") is None, forced)
+                    self.assertIn(f"忠誠が{threshold}未満", app.status.get())
+                    self.assertEqual(app.state.transfer_offers[-1].status,
+                                     "forced" if forced else "rejected")
+                    self.assertEqual(self.store.load_or_create(), app.state)
+                finally:
+                    root.destroy()
+
+    def test_empty_offer_hint_uses_configured_threshold(self):
+        root = tk.Tk()
+        root.withdraw()
+        self.addCleanup(root.destroy)
+        app = RealtimeSeasonApp(root, self.store, self.state())
+        with patch.object(realtime_season, "FORCED_OFFER_LOYALTY", 12.5):
+            app.refresh_transfer_offer(None)
+            self.assertIn("忠誠が12.5未満", app.incoming_offer_summary.get())
+
+    def test_new_offer_event_message_uses_configured_threshold(self):
+        from season_rival_economy import make_offer
+
+        state = replace(self.offer_state(), transfer_offers=())
+        messages = []
+        with patch.object(realtime_season, "FORCED_OFFER_LOYALTY", 12.5):
+            proposed = make_offer(state, state.opponent_teams[0], state.player("Aspas"),
+                                  lambda *args: messages.append(args[-1]))
+        self.assertIsNotNone(proposed.transfer_offer("Aspas"))
+        self.assertEqual(len(messages), 1)
+        self.assertIn("忠誠が12.5未満", messages[0])
 
 
 class ConfiguredWorldTests(unittest.TestCase):

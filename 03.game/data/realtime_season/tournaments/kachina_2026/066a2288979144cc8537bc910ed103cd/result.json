@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-00b13484f02553fc88de5e34ba2b8f1b",
+  "left_wins": 1,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Mixed",
+      "own_score": 13,
+      "opponent_score": 3,
+      "winner": "test",
+      "seed": 1901053123,
+      "player_stats": {
+        "Buzz": {
+          "kills": 11,
+          "deaths": 4
+        },
+        "stax": {
+          "kills": 6,
+          "deaths": 10
+        },
+        "kaajak": {
+          "kills": 14,
+          "deaths": 7
+        },
+        "icy": {
+          "kills": 14,
+          "deaths": 10
+        },
+        "Sato": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "Meiy": {
+          "kills": 3,
+          "deaths": 7
+        },
+        "jawgemo": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Flashback": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "C0M": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "benjyfishy": {
+          "kills": 6,
+          "deaths": 8
+        }
+      }
+    }
+  ]
+}

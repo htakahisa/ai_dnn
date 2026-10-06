@@ -16,15 +16,12 @@ def build_series_request(state, event_id, *, render=True, tick_time_ms=100):
     match, _ = next_match(event, run)
     if run.own_team_id not in (match.left, match.right):
         raise SeasonSaveError("他チーム同士の試合はレートの勝率で抽選してください。")
-    if run.own_team_id in (match.left, match.right):
-        own = next(t for t in run.entrants if t.id == run.own_team_id)
-        if any(not state.can_play(p.name) for p in own.players):
-            raise SeasonSaveError("大会参加選手の契約が終了しています。契約状況から再契約してください。")
-    teams = {t.id: t for t in run.entrants}
+    teams = {t.id: state.tournament_team(event_id) if t.id == run.own_team_id else t
+             for t in run.entrants}
 
     def data(team):
-        base = tuple(state.player(p.name) for p in team.players) if team.id == state.club_id else team.players
-        players = state.match_players(base, enemy=team.id != state.club_id)
+        players = state.match_players(team.players, enemy=team.id != state.club_id,
+                                      tournament_multiplier=event.enemy_multiplier)
         return {"name": team.name, "players": [asdict(p) for p in players],
                 "ai": team.ai,
                 "igl": team.igl, "spike_holder": team.carrier}

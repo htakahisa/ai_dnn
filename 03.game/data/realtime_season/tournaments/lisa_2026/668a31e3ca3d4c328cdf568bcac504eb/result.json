@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "BBL",
+      "opponent_team": "test",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1454613333,
+      "player_stats": {
+        "Crewn": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "lovers rock": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "CHICHOO": {
+          "kills": 13,
+          "deaths": 15
+        },
+        "Cryocells": {
+          "kills": 11,
+          "deaths": 16
+        },
+        "eKo": {
+          "kills": 20,
+          "deaths": 13
+        },
+        "Buzz": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "stax": {
+          "kills": 20,
+          "deaths": 12
+        },
+        "kaajak": {
+          "kills": 15,
+          "deaths": 8
+        },
+        "icy": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "Sato": {
+          "kills": 18,
+          "deaths": 11
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "BBL",
+      "opponent_team": "test",
+      "own_score": 4,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1454613334,
+      "player_stats": {
+        "Buzz": {
+          "kills": 2,
+          "deaths": 7
+        },
+        "stax": {
+          "kills": 13,
+          "deaths": 8
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 7
+        },
+        "icy": {
+          "kills": 17,
+          "deaths": 13
+        },
+        "Sato": {
+          "kills": 13,
+          "deaths": 9
+        },
+        "Crewn": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "lovers rock": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "CHICHOO": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "Cryocells": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "eKo": {
+          "kills": 11,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

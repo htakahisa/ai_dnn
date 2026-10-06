@@ -22,7 +22,7 @@ from test_season_competitions import definition, finish, OWN, RIVALS
 
 class TournamentContractTests(unittest.TestCase):
     def setUp(self):
-        fixture = {n: replace(p, monthly_salary=100_000, loyalty=10)
+        fixture = {n: replace(p, monthly_salary=100_000, loyalty=10, debut_chapter=1)
                    for n, p in character_stats.CHARACTER_TABLE.items()}
         self.cup = definition(start_date="2026-01-29", format="double_elimination")
         for context in (
@@ -100,7 +100,7 @@ class TournamentContractTests(unittest.TestCase):
         self.assertAlmostEqual(advanced.player("Leo").iq, state.player("Leo").iq + 0.1)
         self.assertEqual(advanced.player("Meiy").iq, state.player("Meiy").iq)
         ended = finish(advanced)
-        self.assertEqual(ended.monthly_payroll, 400_000)
+        self.assertEqual(ended.monthly_payroll, 500_000)
         self.assertEqual(ended.advance_days().player("Leo").iq, ended.player("Leo").iq)
 
     def test_zero_loyalty_departure_is_delayed_until_tournament_finishes(self):
@@ -117,8 +117,10 @@ class TournamentContractTests(unittest.TestCase):
         state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(33)
         self.assertFalse(state.contract_end_deferred(state.contract("Leo")))
         self.assertFalse(state.can_play("Leo"))
-        with self.assertRaises(SeasonSaveError):
-            build_series_request(state, "cup")
+        request = build_series_request(state, "cup")
+        own = request["own"] if request["left_id"] == state.club_id else request["opponent"]
+        self.assertNotIn("Leo", [p["name"] for p in own["players"]])
+        self.assertIn("友達", [p["name"] for p in own["players"]])
 
     def test_rival_expiry_settles_immediately_on_finish_not_next_month(self):
         state = self.state()

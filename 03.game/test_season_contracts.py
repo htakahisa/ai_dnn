@@ -29,7 +29,7 @@ def new_season(*args, **kwargs):
 
 
 def patch_economy_defaults(test):
-    fixture = {name: replace(p, monthly_salary=100_000, loyalty=5) for name, p in character_stats.CHARACTER_TABLE.items()}
+    fixture = {name: replace(p, monthly_salary=100_000, loyalty=5, debut_chapter=1) for name, p in character_stats.CHARACTER_TABLE.items()}
     context = patch.dict(character_stats.CHARACTER_TABLE, fixture)
     context.start()
     test.addCleanup(context.stop)
@@ -53,11 +53,12 @@ class ContractRulesTest(unittest.TestCase):
     def test_initial_money_and_new_stats_are_last_and_backward_compatible(self):
         self.assertEqual(configured_new_season(()).money, INITIAL_MONEY)
         self.assertEqual([f.name for f in fields(CharacterStats)][-4:],
-                         ["monthly_salary", "loyalty", "research_level", "aim_lab_level"])
+                         ["monthly_salary", "loyalty", "debut_chapter", "awakening_description"])
         old_definition = CharacterStats("Example", .3, .2, 100, .7, 100, "フラッシュ", 50, 5, 5)
         self.assertEqual(old_definition.monthly_salary, 100_000)
         self.assertEqual(old_definition.loyalty, 5)
-        self.assertEqual((old_definition.research_level, old_definition.aim_lab_level), (0, 0))
+        self.assertFalse(hasattr(old_definition, "research_level"))
+        self.assertFalse(hasattr(old_definition, "aim_lab_level"))
 
     def test_lft_excludes_owned_players_and_opponent_reserves(self):
         with patch.object(realtime_season_teams, "SEASON_TEAMS", [{"name": "Rival", "players": RIVAL}]):
@@ -132,7 +133,7 @@ class ContractRulesTest(unittest.TestCase):
         self.assertIsNotNone(expiry.player("Leo"))
         self.assertNotIn("Leo", {p.name for p in expiry.lft_players})
         after_expiry = expiry.advance_months()
-        self.assertEqual(expiry.money - after_expiry.money, state.contract("Meiy").monthly_salary)
+        self.assertEqual(expiry.money - after_expiry.money, payroll)
         self.assertEqual(expiry.contract("Leo").elapsed(expiry.date, expiry.start_date), 60)
         self.assertEqual(expiry.contract("Leo").remaining(expiry.date, expiry.start_date), 0)
 
@@ -186,7 +187,7 @@ class ContractRulesTest(unittest.TestCase):
         self.assertEqual(next_month.teams, ())
         self.assertIsNone(next_month.selected_team_id)
         self.assertIsNone(next_month.editing_team_id)
-        self.assertEqual(next_month.money - state.money, state.monthly_sponsor_income - 400_000)
+        self.assertEqual(next_month.money - state.money, state.monthly_sponsor_income - 500_000)
         next_month.validate()
 
     def test_zero_trait_rejects_every_long_contract_including_initial_setup(self):

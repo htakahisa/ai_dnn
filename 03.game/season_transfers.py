@@ -86,7 +86,7 @@ def with_randomized_clubs(state, rng=None):
     occupied = {p.name for p in state.owned_players}
     occupied.update(p.name for _, players in retained for p in players if p is not None)
     originals = {p.name for _, p in removed}
-    pool = [state.salary_player(p) for p in all_characters() if p.name not in occupied | originals]
+    pool = [state.salary_player(p) for p in all_characters() if state.player_available(p) and p.name not in occupied | originals]
     rng.shuffle(slots)
     for club_index, slot in slots:
         club, players = retained[club_index]

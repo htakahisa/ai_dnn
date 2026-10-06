@@ -3,6 +3,7 @@
 from calendar import monthrange
 from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
+import math
 import re
 
 from character_stats import CharacterStats
@@ -90,6 +91,7 @@ class TournamentDefinition:
     visible_from: str = "2026-01-01"
     annual_id: str | None = None
     annual_notice: str | None = None
+    enemy_multiplier: float = 1.0
 
     @property
     def display_name(self):
@@ -150,6 +152,9 @@ class TournamentDefinition:
                 raise CompetitionError("先取マップ数は1～10の整数で設定してください。")
         if type(self.participation_optional) is not bool or type(self.allow_player_entry) is not bool:
             raise CompetitionError("参加設定はTrueまたはFalseで設定してください。")
+        if (type(self.enemy_multiplier) not in (int, float)
+                or not math.isfinite(self.enemy_multiplier) or self.enemy_multiplier <= 0):
+            raise CompetitionError("enemy_multiplier は0より大きい有限の数値で設定してください。")
         if not isinstance(self.prizes, dict) or any(type(rank) is not int or not 1 <= rank <= self.team_count
                 or type(money) is not int or money < 0 for rank, money in self.prizes.items()):
             raise CompetitionError("賞金は参加数以内の順位と0以上の円単位整数で設定してください。")

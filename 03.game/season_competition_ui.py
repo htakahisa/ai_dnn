@@ -29,6 +29,7 @@ class SeasonCompetitionMixin:
         self.competition_info = tk.StringVar(self.root)
         self.competition_status = tk.StringVar(self.root, value="大会を選択して参加条件を確認してください。")
         self.competition_team = tk.StringVar(self.root)
+        self.competition_roster_summary = tk.StringVar(self.root, value="出場ロスター：参加登録後に表示します。")
         self.competition_auto = tk.BooleanVar(self.root, value=False)
         self.competition_render = tk.BooleanVar(self.root, value=True)
         self.competition_tick_ms = tk.StringVar(self.root, value="100")
@@ -58,12 +59,36 @@ class SeasonCompetitionMixin:
         self.competition_enter_button.pack(side="left")
         self.competition_decline_button = ttk.Button(entry, text="今回は参加しない", command=self.decline_competition)
         self.competition_decline_button.pack(side="left", padx=8)
+        self.competition_entry_cancel_button = ttk.Button(entry, text="参加をキャンセル", command=self.cancel_competition_entry)
+        self.competition_entry_cancel_button.pack(side="left", padx=8)
         ttk.Label(host, text="自分のAI・IGL・キャリアーは参加する編成プリセットの設定を使います。相手は所属設定を使います。",
                   wraplength=900).pack(anchor="w", pady=(0, 8))
+        ttk.Label(host, textvariable=self.competition_roster_summary, wraplength=950,
+                  font=("Yu Gothic UI", 10, "bold")).pack(anchor="w", pady=(0, 6))
         self.competition_tabs = ttk.Notebook(host)
         self.competition_tabs.pack(fill="both", expand=True)
         self.competition_bracket = SeasonBracketPanel(self.competition_tabs, self.competition_status.set)
         self.competition_tabs.add(self.competition_bracket, text="トーナメント表")
+        roster_tab = ttk.Frame(self.competition_tabs, padding=10)
+        self.competition_tabs.add(roster_tab, text="出場ロスター")
+        ttk.Label(roster_tab, text="出場する選手を5人まで選択してください（Ctrl・Shiftで複数選択）。不足する枠は初期能力の「友達」で補充します。",
+                  wraplength=900).pack(anchor="w", pady=(0, 6))
+        roster_list = ttk.Frame(roster_tab)
+        roster_list.pack(fill="both", expand=True)
+        self.competition_roster_players = ttk.Treeview(roster_list, columns=("name", "role", "iq"),
+                                                       show="headings", selectmode="extended", height=5)
+        for key, label in (("name", "出場可能な所持選手"), ("role", "ロール"), ("iq", "IQ")):
+            self.competition_roster_players.heading(key, text=label)
+        self.competition_roster_players.pack(side="left", fill="both", expand=True)
+        roster_scroll = ttk.Scrollbar(roster_list, command=self.competition_roster_players.yview)
+        roster_scroll.pack(side="right", fill="y")
+        self.competition_roster_players.configure(yscrollcommand=roster_scroll.set)
+        roster_actions = ttk.Frame(roster_tab)
+        roster_actions.pack(fill="x", pady=(8, 0))
+        self.competition_roster_apply_button = ttk.Button(roster_actions, text="選択した選手で出場", command=self.apply_competition_roster)
+        self.competition_roster_apply_button.pack(side="left")
+        self.competition_roster_preset_button = ttk.Button(roster_actions, text="上で選んだ編成プリセットを適用", command=self.apply_competition_preset)
+        self.competition_roster_preset_button.pack(side="left", padx=8)
         result_tab = ttk.Frame(self.competition_tabs)
         self.competition_tabs.add(result_tab, text="結果・順位")
         self.competition_matches = ttk.Treeview(result_tab, columns=("stage", "teams", "score"), show="headings", height=6)
@@ -119,7 +144,7 @@ class SeasonCompetitionMixin:
             icon.create_rectangle(20, 11, 23, 25, fill="white", outline="")
         selected = self.competition_list.selection()
         self.competition_list.delete(*self.competition_list.get_children())
-        for event in self.state.visible_tournaments:
+        for event in sorted(self.state.visible_tournaments, key=lambda event: parse_date(event.start_date)):
             run = self.state.tournament(event.id)
             status = "不参加" if run and run.declined else "完了" if run and run.completed else "参加登録済み" if run else "未登録"
             if self.state.date > parse_date(event.start_date) and run is None:
@@ -155,16 +180,40 @@ class SeasonCompetitionMixin:
         self.competition_next_day_button.configure(state="disabled" if self.match_running else "normal")
         for button in (self.competition_enter_button, self.competition_decline_button, self.competition_play_button, self.competition_forfeit_button):
             button.configure(state="disabled")
+        self.competition_entry_cancel_button.configure(state="disabled")
+        self.competition_roster_apply_button.configure(state="disabled")
+        self.competition_roster_preset_button.configure(state="disabled")
+        self.competition_roster_players.delete(*self.competition_roster_players.get_children())
+        self.competition_roster_summary.set("出場ロスター：参加登録後に表示します。")
         if event is None:
             self.competition_info.set("出現中の大会を選択してください。大会は専用Pythonファイルから設定できます。")
             return
         run = self.state.tournament(event.id)
+        if run and run.own_team_id is not None and not run.declined:
+            own = self.state.tournament_team(event.id)
+            names = tuple(p.name for p in own.players)
+            self.competition_roster_summary.set("出場ロスター：" + " / ".join(names)
+                + f"（IGL: {own.igl} / キャリアー: {own.carrier}）")
+            editable = not run.completed and not self.match_running and not player_eliminated(event, run)
+            if editable:
+                self.competition_roster_apply_button.configure(state="normal")
+                self.competition_roster_preset_button.configure(state="normal" if self.state.teams else "disabled")
+                opponents = {p.name for t in run.entrants if t.id != run.own_team_id for p in t.players}
+                for player in self.state.owned_players:
+                    if self.state.can_play(player.name) and player.name not in opponents:
+                        self.competition_roster_players.insert("", "end", iid=player.name,
+                            values=(player.name, player.role, f"{player.iq:g}"))
+                self.competition_roster_players.selection_set(tuple(
+                    name for name in names if self.competition_roster_players.exists(name)))
+            if not run.completed and not run.results and self.state.date < parse_date(event.start_date) and not self.match_running:
+                self.competition_entry_cancel_button.configure(state="normal")
         prizes = " / ".join(f"{rank}位 {money:,}円" for rank, money in sorted(event.prizes.items())) or "賞金なし"
         count = len(run.entrants) if run and run.entrants else event.team_count
         matches = 2 * count - 2 if event.format == "double_elimination" else count - 1
         end_date = parse_date(event.start_date) + timedelta(days=matches - 1)
         deadline = parse_date(event.start_date)
         self.competition_info.set(f"{event.display_name}  |  {'ダブル' if event.format == 'double_elimination' else 'シングル'}エリミネーション\n"
+            f"大会の敵ステータス倍率: {event.enemy_multiplier:g}倍（世界レベル・ペア練度の倍率と乗算）\n"
             f"先取マップ数: 通常{event.normal_maps_to_win} / Lower Final {event.lower_final_maps_to_win} / Grand Final {event.grand_final_maps_to_win}\n賞金: {prizes} / 全{matches}試合・終了予定日 {end_date}（自動計算）\n参加登録締切: {deadline}（開始日当日まで参加可能）")
         if (run is None or run.declined) and self.state.date <= parse_date(event.start_date) and not self.match_running:
             self.competition_enter_button.configure(state="normal")
@@ -236,6 +285,41 @@ class SeasonCompetitionMixin:
             self.status.set(str(exc))
             return
         self.commit(candidate, f"{event.display_name}は不参加にしました。")
+
+    def cancel_competition_entry(self):
+        event = self.selected_competition()
+        if event is None or self.match_running:
+            return
+        try:
+            candidate = self.state.with_cancelled_tournament_entry(event.id)
+        except ValueError as exc:
+            self.status.set(str(exc))
+            return
+        self.competition_auto.set(False)
+        if self._competition_after_id is not None:
+            self.root.after_cancel(self._competition_after_id)
+            self._competition_after_id = None
+        self.commit(candidate, f"{event.display_name}の参加をキャンセルしました。開始日まで再登録できます。")
+
+    def apply_competition_roster(self):
+        self._apply_competition_roster(self.competition_roster_players.selection())
+
+    def apply_competition_preset(self):
+        preset = next((t for t in self.state.teams if t.name == self.competition_team.get()), None)
+        if preset:
+            self._apply_competition_roster(tuple(n for n in preset.roster if self.state.can_play(n)),
+                ai=preset.ai, igl=preset.igl, carrier=preset.carrier, preset_id=preset.id)
+
+    def _apply_competition_roster(self, names, **settings):
+        event = self.selected_competition()
+        if event is None or self.match_running:
+            return
+        try:
+            candidate = self.state.with_tournament_roster(event.id, names, **settings)
+        except ValueError as exc:
+            self.status.set(str(exc))
+            return
+        self.commit(candidate, "大会の出場ロスターを更新しました。次のシリーズから反映します。")
 
     def confirm_entry_deadline(self):
         events = self.state.entry_deadline_tournaments
@@ -337,6 +421,9 @@ class SeasonCompetitionMixin:
                     self._after_competition_result(event.id)
                 return
             from game_core import validate_tick_time_ms
+            candidate = self.state.with_prepared_tournament_roster(event.id)
+            if candidate != self.state and not self.commit(candidate, "本日の大会出場ロスターを保存しました。不足枠は友達が出場します。"):
+                return
             request = build_series_request(self.state, event.id, render=self.competition_render.get(),
                                            tick_time_ms=validate_tick_time_ms(self.competition_tick_ms.get()))
             self._competition_event_id = event.id

@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-9d369397a5c9508b8b77b66ba4798c1c",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Japan All-Stars",
+      "own_score": 13,
+      "opponent_score": 2,
+      "winner": "test",
+      "seed": 1757696231,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 10,
+          "deaths": 3
+        },
+        "Ethan": {
+          "kills": 16,
+          "deaths": 0
+        },
+        "Nanasaki": {
+          "kills": 5,
+          "deaths": 5
+        },
+        "FNS": {
+          "kills": 1,
+          "deaths": 7
+        },
+        "cNed": {
+          "kills": 21,
+          "deaths": 8
+        },
+        "SugarZ3ro": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "IbarakiNinja": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "SiuFatBB": {
+          "kills": 3,
+          "deaths": 10
+        },
+        "Jinggg": {
+          "kills": 3,
+          "deaths": 10
+        },
+        "trexx": {
+          "kills": 3,
+          "deaths": 9
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Japan All-Stars",
+      "own_score": 13,
+      "opponent_score": 6,
+      "winner": "test",
+      "seed": 1757696232,
+      "player_stats": {
+        "SugarZ3ro": {
+          "kills": 2,
+          "deaths": 12
+        },
+        "IbarakiNinja": {
+          "kills": 21,
+          "deaths": 12
+        },
+        "SiuFatBB": {
+          "kills": 2,
+          "deaths": 7
+        },
+        "Jinggg": {
+          "kills": 4,
+          "deaths": 7
+        },
+        "trexx": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "SyouTa": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "Ethan": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "Nanasaki": {
+          "kills": 5,
+          "deaths": 11
+        },
+        "FNS": {
+          "kills": 1,
+          "deaths": 7
+        },
+        "cNed": {
+          "kills": 23,
+          "deaths": 7
+        }
+      }
+    }
+  ]
+}

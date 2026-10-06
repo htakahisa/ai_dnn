@@ -2,6 +2,8 @@
 
 from numbers import Real
 
+from shield_bonus import parse_shield_bonus, shield_stat_key
+
 RATE_STATS = {"accuracy", "hs_rate", "dodge_rate"}
 
 STAT_LABELS = {
@@ -13,6 +15,9 @@ STAT_LABELS = {
     "mental": "メンタル",
     "condition_bonus": "調子補正",
     "調子補正": "調子補正",
+    "shield_hp": "シールド",
+    "shield_piercer": "シールドピアサー",
+    "shield_crash": "シールドクラッシュ",
 }
 
 CONDITION_LABELS = {
@@ -33,6 +38,18 @@ def _number_text(value):
 
 
 def format_stat_bonus(stat_name, value):
+    shield_stat = shield_stat_key(stat_name)
+    if shield_stat:
+        parsed = parse_shield_bonus(shield_stat, value)
+        if parsed is None:
+            return ""
+        operation, amount = parsed
+        label = STAT_LABELS[shield_stat]
+        if shield_stat == "shield_piercer":
+            return f"{label} {'有効化' if amount else '無効化'}"
+        if operation == "set":
+            return f"{label}を{_number_text(max(0, amount))}HPに設定"
+        return f"{label} {amount:+g}HP"
     label = STAT_LABELS.get(stat_name, stat_name)
 
     if stat_name in ("condition_bonus", "調子補正"):
@@ -51,11 +68,13 @@ def format_bonus_lines(bonuses):
     if not bonuses:
         return []
 
-    return [
-        format_stat_bonus(stat_name, value)
-        for stat_name, value in bonuses.items()
-        if isinstance(value, Real)
-    ]
+    lines = []
+    for stat_name, value in bonuses.items():
+        if isinstance(value, Real) or shield_stat_key(stat_name):
+            line = format_stat_bonus(stat_name, value)
+            if line:
+                lines.append(line)
+    return lines
 
 
 def format_awakening_condition(event):

@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-819dc24a828657f48dfff35f19834e50",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 13,
+      "opponent_score": 11,
+      "winner": "test",
+      "seed": 1698620180,
+      "player_stats": {
+        "soulcas": {
+          "kills": 19,
+          "deaths": 13
+        },
+        "cNed": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "FNS": {
+          "kills": 4,
+          "deaths": 12
+        },
+        "Nanasaki": {
+          "kills": 20,
+          "deaths": 20
+        },
+        "Ethan": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "Canezerra": {
+          "kills": 17,
+          "deaths": 10
+        },
+        "WoohyuN": {
+          "kills": 11,
+          "deaths": 16
+        },
+        "Zest": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "Meteor": {
+          "kills": 16,
+          "deaths": 16
+        },
+        "yay": {
+          "kills": 16,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 15,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1698620181,
+      "player_stats": {
+        "Canezerra": {
+          "kills": 22,
+          "deaths": 13
+        },
+        "WoohyuN": {
+          "kills": 21,
+          "deaths": 20
+        },
+        "Zest": {
+          "kills": 4,
+          "deaths": 10
+        },
+        "Meteor": {
+          "kills": 18,
+          "deaths": 20
+        },
+        "yay": {
+          "kills": 26,
+          "deaths": 18
+        },
+        "soulcas": {
+          "kills": 20,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 14,
+          "deaths": 17
+        },
+        "FNS": {
+          "kills": 11,
+          "deaths": 16
+        },
+        "Nanasaki": {
+          "kills": 26,
+          "deaths": 18
+        },
+        "Ethan": {
+          "kills": 10,
+          "deaths": 22
+        }
+      }
+    }
+  ]
+}

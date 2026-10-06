@@ -19,6 +19,9 @@ format は double_elimination（4～32チーム）または single_elimination�
 participation_optional=False は事前の不参加ボタンを無効化します（未登録なら当日は不参加）。
 allow_player_entry=False は相手のみの大会。
 opponent_teams は招待の優先順です。5人未満のチームの代わりにリーグ内の別チームを選びます。
+enemy_multiplier は大会ごとの敵ステータス倍率（0より大きい数値、省略時1.0）。
+世界レベルの敵倍率・敵チームのペア練度倍率と乗算し、自チームとスクリムには適用しません。
+HS率・回避率は100%、メンタルは10で上限処理し、所持選手の保存値は変更しません。
 空にすると、専用所属環境のチームを設定順に必要数選びます。
 appearance_conditions は全条件を満たすと出現します。対応キー:
 min_money, min_owned_players, completed_tournaments（自分が完走した大会IDのリスト）,
@@ -36,6 +39,7 @@ IN_SEASON_PERIODS = [("03-01", "11-30")]
 TOURNAMENTS = [
     {
         "id": "kachina",
+        "enemy_multiplier": 1.0,
         "name": "カチーナ杯",
         "start_date": "01-15",
         "visible_from": "01-01",
@@ -52,6 +56,7 @@ TOURNAMENTS = [
     },
     {
         "id": "lisa",
+        "enemy_multiplier": 1.2,
         "name": "リサ杯",
         "start_date": "03-10",
         "visible_from": "02-01",
@@ -73,6 +78,7 @@ TOURNAMENTS = [
     },
     {
         "id": "jean",
+        "enemy_multiplier": 1.3,
         "name": "ジン杯",
         "start_date": "04-20",
         "visible_from": "04-01",
@@ -96,6 +102,7 @@ TOURNAMENTS = [
     },
     {
         "id": "lohen",
+        "enemy_multiplier": 1.4,
         "name": "ローエン杯",
         "start_date": "06-30",
         "visible_from": "06-01",
@@ -121,6 +128,7 @@ TOURNAMENTS = [
     },
     {
         "id": "furina",
+        "enemy_multiplier": 1.5,
         "name": "フリーナ杯",
         "start_date": "09-30",
         "visible_from": "08-01",

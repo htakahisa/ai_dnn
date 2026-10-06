@@ -20,6 +20,7 @@ class TrainingTerms:
     cost: int
     before: float
     after: float
+    loyalty_gain: float = 0.0
 
 
 def training_terms(player, kind):
@@ -33,6 +34,10 @@ def training_terms(player, kind):
     if not isinstance(row, dict):
         raise SeasonSaveError(f"{title}の育成設定が見つかりません。")
     growth, costs = row.get("上昇量"), row.get("費用")
+    loyalty_gain = row.get("忠誠上昇量", 1.0) if kind == "research" else 0.0
+    if (type(loyalty_gain) not in (int, float) or not math.isfinite(loyalty_gain)
+            or loyalty_gain < 0):
+        raise SeasonSaveError("研究の忠誠上昇量は0以上の有限の数値で設定してください。")
     if (type(growth) not in (int, float) or not math.isfinite(growth) or growth <= 0
             or not isinstance(costs, (list, tuple)) or len(costs) != MAX_TRAINING_LEVEL
             or any(type(cost) is not int or cost <= 0 for cost in costs)
@@ -46,4 +51,5 @@ def training_terms(player, kind):
     after = float(Decimal(str(before)) + amount)
     if not math.isfinite(after) or after <= before:
         raise SeasonSaveError("育成後の能力値を増加させられません。上昇量を確認してください。")
-    return TrainingTerms(kind, title, level_field, stat_field, level + 1, costs[level], before, after)
+    return TrainingTerms(kind, title, level_field, stat_field, level + 1, costs[level], before, after,
+                         loyalty_gain)

@@ -5,10 +5,15 @@ from datetime import datetime
 import re
 import tkinter as tk
 from tkinter import messagebox, ttk
+import realtime_season
 
 from realtime_season import DEFAULT_SAVE_PATH, EXPIRED_ROSTER_WARNING, ROSTER_SIZE, SeasonSaveError, SeasonStore
 from realtime_season_config import DEFAULT_TEAM_AI
+from character_stats import awakening_details_text
+from player_details_ui import readonly_details, shield_stats_text
+from season_league_ui import SeasonChapterSelection
 from season_training import MAX_TRAINING_LEVEL
+from season_competitions import add_months, parse_date
 from season_scrim import ScrimJob, ai_options, build_scrim_request
 from season_management_ui import SeasonManagementMixin
 from season_competition_ui import SeasonCompetitionMixin
@@ -22,11 +27,12 @@ from season_salary import SalaryMode
 
 
 class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonStarterMixin, SeasonRatingMixin, SeasonMonthlyMixin, SeasonTrainingMixin, SeasonPairFamiliarityMixin):
-    def __init__(self, root, store, state):
+    def __init__(self, root, store, state, *, on_chapter_selection=None):
         self.root = root
         self.store = store
         self.state = state
-        root.title("リアルタイムシーズン")
+        self._on_chapter_selection = on_chapter_selection
+        root.title(f"リアルタイムシーズン — 第{state.chapter}章 {state.league_name}")
         root.geometry("1120x800")
         root.minsize(960, 800)
         root.protocol("WM_DELETE_WINDOW", self.close)
@@ -184,7 +190,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.remove_button = ttk.Button(lineup, text="選択した選手をロスターから外す", command=self.remove_player)
         self.remove_button.pack(fill="x", pady=10)
         ttk.Label(lineup, text="選手の詳細", font=("Yu Gothic UI", 11, "bold")).pack(anchor="w", pady=(6, 4))
-        ttk.Label(lineup, textvariable=self.details, justify="left", wraplength=330).pack(anchor="w")
+        self.player_details_view = readonly_details(lineup, self.details, height=6)
+        self.player_details_view.pack(fill="both", expand=True)
         player_links = ttk.Frame(lineup)
         player_links.pack(anchor="w", pady=6)
         ttk.Button(player_links, text="相棒TOP5", command=lambda: self.show_player_pairs(
@@ -199,7 +206,11 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
     def _build_home(self):
         self.home_host = host = ttk.Frame(self.root, padding=18)
-        ttk.Label(host, text="リアルタイムシーズン", font=("Yu Gothic UI", 24, "bold")).pack(anchor="w")
+        heading = ttk.Frame(host)
+        heading.pack(fill="x")
+        ttk.Label(heading, text="リアルタイムシーズン", font=("Yu Gothic UI", 24, "bold")).pack(side="left")
+        self.chapter_selection_button = ttk.Button(heading, text="章選択に戻る", command=self.return_to_chapter_selection)
+        self.chapter_selection_button.pack(side="right")
         navigation = ttk.Frame(host)
         navigation.pack(fill="x", pady=(4, 8))
         ttk.Label(navigation, text="ホーム", font=("Yu Gothic UI", 14)).pack(side="left")
@@ -215,23 +226,31 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.transfer_banner = tk.Button(host, command=self.show_transfer_offers,
             font=("Yu Gothic UI", 16, "bold"), foreground="#b71c1c", background="#ffebee",
             activebackground="#ffcdd2", wraplength=950, cursor="hand2", relief="solid", borderwidth=1)
+        self.contract_banner = tk.Button(host, command=self.show_contract_warning,
+            font=("Yu Gothic UI", 16, "bold"), foreground="#b71c1c", background="#ffebee",
+            activebackground="#ffcdd2", wraplength=950, cursor="hand2", relief="solid", borderwidth=1)
         self.home_actions = actions = ttk.Frame(host)
         actions.pack(fill="x", pady=(0, 12))
         actions.columnconfigure(0, weight=1)
         actions.columnconfigure(1, weight=1)
         actions.columnconfigure(2, weight=1)
+        self.home_compact_actions = compact_actions = ttk.Frame(host)
+        for column in range(3):
+            compact_actions.columnconfigure(column, weight=1)
         for index, (text, hint, command) in enumerate((
             ("チーム編成", "所持選手から5人の編成プリセットを保存", self.show_editor),
             ("スクリム", "相手と使用する編成を選んで練習試合", self.show_preparation),
             ("スカウト", "LFTとの契約・他チームからの引き抜き", lambda: self.show_screen("scout")),
             ("契約状況", "契約の経過・忠誠を確認して再契約", lambda: self.show_screen("contracts")),
-            ("研究", "選手のIQと研究レベルを強化", lambda: self.show_screen("research")),
+            ("研究", "選手のIQ・チームへの忠誠と研究レベルを強化", lambda: self.show_screen("research")),
             ("エイムラボ", "選手の命中率とエイムラボレベルを強化", lambda: self.show_screen("aim_lab")),
         )):
             card = ttk.LabelFrame(actions, text=text, padding=10)
             card.grid(row=index // 3, column=index % 3, sticky="nsew", padx=(0, 12), pady=(0, 8))
             ttk.Label(card, text=hint, wraplength=280).pack(anchor="w", pady=(0, 12))
             ttk.Button(card, text=f"{text}へ", command=command).pack(fill="x")
+            ttk.Button(compact_actions, text=f"{text}へ", command=command).grid(
+                row=index // 3, column=index % 3, sticky="ew", padx=(0, 12), pady=(0, 8))
         pair_navigation = ttk.Frame(host)
         pair_navigation.pack(fill="x", pady=(0, 8))
         ttk.Label(pair_navigation, text="シーズンの所属チーム", font=("Yu Gothic UI", 13, "bold")).pack(side="left")
@@ -346,7 +365,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         title = {"home": "ホーム", "editor": "チーム編成", "preparation": "スクリム準備",
                  "scout": "スカウト", "contracts": "契約状況", "competitions": "大会", "starter": "初期キャラ選択", "ratings": "レーティング", "monthly": "月次イベント",
                  "research": "研究", "aim_lab": "エイムラボ"}[screen]
-        self.root.title(f"リアルタイムシーズン — {title}")
+        self.root.title(f"リアルタイムシーズン — 第{self.state.chapter}章 {self.state.league_name} — {title}")
         if screen == "editor":
             self.refresh()
         elif screen == "preparation":
@@ -371,35 +390,77 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
     def show_editor(self):
         return self.show_screen("editor")
 
-    def show_expired_contracts(self):
+    def show_expired_contracts(self, name=None):
         player = self.selected_player()
-        name = player.name if player and not self.state.can_play(player.name) else next(
-            (p.name for p in self.state.owned_players if not self.state.can_play(p.name)), None)
+        if name is None:
+            name = player.name if player and not self.state.can_play(player.name) else next(
+                (p.name for p in self.state.owned_players if not self.state.can_play(p.name)), None)
         if name is not None and self.show_screen("contracts"):
             self.contracts_players.selection_set(name)
             self.contracts_players.see(name)
             self.refresh_offer("contracts")
             self.status.set(f"{name}の契約状況を開きました。契約条件を確認して再契約してください。")
 
+    def contract_warnings(self):
+        warnings = []
+        for player in self.state.owned_players:
+            contract = self.state.contract(player.name)
+            if contract is None or self.state.can_play(player.name):
+                continue
+            expired = parse_date(contract.expired_on) if contract.expired_on else contract.ends_on(self.state.start_date)
+            warnings.append((player.name, add_months(expired, 1)))
+        return sorted(warnings, key=lambda row: (row[1], row[0]))
+
+    def show_contract_warning(self):
+        warnings = self.contract_warnings()
+        if warnings:
+            self.show_expired_contracts(warnings[0][0])
+
     def show_preparation(self):
         return self.show_screen("preparation")
 
     def refresh_home(self):
+        self.chapter_selection_button.configure(
+            state="disabled" if self.match_running or self._on_chapter_selection is None else "normal"
+        )
         offers = self.state.pending_transfer_offers
-        self.home_teams.configure(height=2 if offers else 6)
+        warnings = self.contract_warnings()
+        banner_count = bool(offers) + bool(warnings)
+        self.home_teams.configure(height=max(1, 6 - 4 * banner_count))
+        actions, other_actions = ((self.home_compact_actions, self.home_actions) if warnings
+                                  else (self.home_actions, self.home_compact_actions))
+        if actions.winfo_manager() != "pack":
+            actions.pack(fill="x", pady=(0, 12), before=other_actions)
+            other_actions.pack_forget()
         if offers:
             self.transfer_banner.configure(text=f"他チームからこのチームの選手にオファーが来ています（{len(offers)}件）\nクリックして契約状況で確認")
-            self.transfer_banner.pack(fill="x", pady=(0, 12), before=self.home_actions)
+            self.transfer_banner.pack(fill="x", pady=(0, 12), before=actions)
         else:
             self.transfer_banner.pack_forget()
+        if warnings:
+            names = "、".join(name for name, _ in warnings[:3])
+            if len(warnings) > 3:
+                names += f" ほか{len(warnings) - 3}人"
+            name, deadline = warnings[0]
+            remaining = (deadline - self.state.date).days
+            urgency = ("今日が再契約の最終日です" if remaining <= 1 else
+                       "再契約期限が迫っています" if remaining <= 7 else "再契約が必要です")
+            self.contract_banner.configure(text=(
+                f"契約が切れた選手がいます（{len(warnings)}人）：{names}\n"
+                f"{urgency}：{name}（あと{remaining}日、{deadline:%Y/%m/%d}にLFTへ）\n"
+                "クリックして契約状況で再契約"))
+            self.contract_banner.pack(fill="x", pady=(0, 12), before=(
+                self.transfer_banner if offers else actions))
+        else:
+            self.contract_banner.pack_forget()
         self.club_name.set(self.state.team_name)
         self.home_payroll.set(f"今月末の月給合計: {-self.state.monthly_payroll:,}円")
         world = self.state.world_level_settings
         rank, count = self.state.world_rank
         world_note = "（大会中は固定）" if self.state.active_tournaments else ""
-        self.home_summary.set(f"所持金: {self.state.money:,}円    スカウト可能回数: {self.state.scout_allowance_text}\n"
+        self.home_summary.set(f"第{self.state.chapter}章　{self.state.league_name}    所持金: {self.state.money:,}円    スカウト可能回数: {self.state.scout_allowance_text}\n"
                               f"チーム: {self.state.team_name}    所持選手: {len(self.state.owned_players)}人    編成プリセット: {len(self.state.teams)}    他チーム: {len(self.state.opponent_teams)}\n"
-                              f"世界レベル: {world.level}{world_note}    ランキング: {rank} / {count}位（上位{self.state.world_top_percent:.2f}%）    敵倍率: {world.enemy_multiplier:g}倍\n"
+                              f"世界レベル: {world.level}{world_note}    レート: {self.state.rating(self.state.club_id):.3f}    ランキング: {rank} / {count}位    敵倍率: {world.enemy_multiplier:g}倍\n"
                               f"スポンサー契約: {'有効' if self.state.sponsor_active else '停止'}    月額収入: {self.state.monthly_sponsor_income:,}円    "
                               f"給与: {'成績連動（K/D）' if self.state.salary_mode == SalaryMode.KD_DYNAMIC else '静的（従来）'}")
         if self.state.day_advance_pending:
@@ -664,15 +725,18 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.details.set("所持選手を選ぶと能力を表示します。")
         else:
             self.details.set(
-                f"{player.name}  /  {player.role}\n所属: {self.state.team_name}\n\n"
+                f"{player.name}  /  {player.role}  /  登場章: 第{player.debut_chapter}章\n"
+                f"総合戦闘力: {player_combat_power(player):.2f}\n"
+                f"撃ち合い戦闘力: {player_duel_power(player):.2f}\n\n"
+                f"所属: {self.state.team_name}\n"
                 f"HS率: {player.hs_pct:.0%}    命中率: {player.hit_pct:.0%}\n"
                 f"回避率: {player.dodge_pct:.0%}    反応: {player.reaction:g}\n"
                 f"IQ: {player.iq:g}    影響力: {player.influence:g}\n"
                 f"研究Lv: {player.research_level} / {MAX_TRAINING_LEVEL}    エイムラボLv: {player.aim_lab_level} / {MAX_TRAINING_LEVEL}\n"
-                f"総合戦闘力: {player_combat_power(player):.2f}\n"
-                f"撃ち合い戦闘力: {player_duel_power(player):.2f}\n"
                 f"メンタル: {player.mental:g}    調子の波: {player.form_variance:g}\n"
+                f"{shield_stats_text(player)}\n"
                 f"基本月給: {player.monthly_salary:,}円    忠誠心: {player.loyalty:g}"
+                + awakening_details_text(player)
             )
             if not self.state.can_play(player.name):
                 self.details.set(self.details.get() + f"\n\n{EXPIRED_ROSTER_WARNING}。\n契約状況で再契約してください。")
@@ -710,7 +774,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         forced = [offer for offer in candidate.transfer_offers if offer.status == "forced" and offer.id not in old_forced]
         for offer in forced:
             club = next(c for c in candidate.opponent_teams if c.id == offer.team_id)
-            message += f" 忠誠が30未満になり、{offer.player_name}の{club.name}への移籍が強制成立しました（移籍金{offer.fee:,}円）。編成を確認してください。"
+            message += f" 忠誠が{realtime_season.FORCED_OFFER_LOYALTY:g}未満になり、{offer.player_name}の{club.name}への移籍が強制成立しました（移籍金{offer.fee:,}円）。編成を確認してください。"
         if candidate.world_level != self.state.world_level:
             world = candidate.world_level_settings
             message += f" 世界レベルが{self.state.world_level}から{world.level}になりました。敵倍率{world.enemy_multiplier:g}倍・月額スポンサー資金{world.sponsor_funds:,}円。"
@@ -823,6 +887,46 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
                 return
             self.commit(candidate, "5人の編成プリセットを保存しました。試合前の準備画面で選択できます。")
 
+    def return_to_chapter_selection(self):
+        if self.match_running:
+            self.status.set("試合終了後に章選択画面へ戻ってください。")
+            return False
+        if self._on_chapter_selection is None:
+            return False
+        if self.current_screen == "editor" and not self.save_preset_name():
+            return False
+        try:
+            self.store.save(self.state)
+        except (OSError, SeasonSaveError) as exc:
+            self.status.set("保存に失敗しました。章選択画面へ戻れませんでした。")
+            messagebox.showerror("保存エラー", str(exc), parent=self.root)
+            return False
+        for attribute in ("_scrim_after_id", "_competition_after_id"):
+            callback_id = getattr(self, attribute, None)
+            if callback_id is not None:
+                self.root.after_cancel(callback_id)
+                setattr(self, attribute, None)
+        # Tcl variable traces otherwise retain the previous chapter's UI callbacks.
+        def remove_traces(value):
+            if isinstance(value, tk.Variable):
+                for modes, callback in value.trace_info():
+                    value.trace_remove(modes, callback)
+            elif isinstance(value, dict):
+                for child in value.values():
+                    remove_traces(child)
+        for value in vars(self).values():
+            remove_traces(value)
+        close_command = self.root.protocol("WM_DELETE_WINDOW")
+        self.root.protocol("WM_DELETE_WINDOW", "")
+        if close_command:
+            self.root.deletecommand(close_command)
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        callback = self._on_chapter_selection
+        self._on_chapter_selection = None
+        callback()
+        return True
+
     def close(self):
         if self.current_screen != "editor" or self.save_preset_name():
             if self.scrim_job is not None:
@@ -844,18 +948,36 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = tk.Tk()
     root.withdraw()
+    selector = None
+    imported_chapters = set()
     store = SeasonStore(args.save_file)
-    try:
+
+    def show_chapter_selection():
+        nonlocal selector
         state = store.load_or_create()
-        if args.import_season_teams:
-            state = store.import_season_teams(state)
-        if args.import_competitions:
-            state = store.import_competitions(state)
-    except (OSError, SeasonSaveError) as exc:
-        messagebox.showerror("セーブデータを開けません", f"{exc}\n\n保存先: {store.path}\n既存のセーブデータは保持されています。", parent=root)
+        selector = SeasonChapterSelection(root, open_chapter, state=state)
+
+    def open_chapter(chapter):
+        try:
+            state = store.load_or_create().with_chapter(chapter)
+            if args.import_season_teams and chapter not in imported_chapters:
+                state = store.import_season_teams(state)
+            if args.import_competitions and chapter not in imported_chapters:
+                state = store.import_competitions(state)
+            store.save(state)
+        except (OSError, SeasonSaveError, ValueError) as exc:
+            messagebox.showerror("セーブデータを開けません", f"{exc}\n\n保存先: {store.path}\n既存のセーブデータは保持されています。", parent=root)
+            return
+        imported_chapters.add(chapter)
+        selector.host.destroy()
+        RealtimeSeasonApp(root, store, state, on_chapter_selection=show_chapter_selection)
+
+    try:
+        show_chapter_selection()
+    except (ValueError, OSError, SeasonSaveError) as exc:
+        messagebox.showerror("シーズンを開けません", str(exc), parent=root)
         root.destroy()
         return 1
-    RealtimeSeasonApp(root, store, state)
     root.deiconify()
     root.mainloop()
     return 0

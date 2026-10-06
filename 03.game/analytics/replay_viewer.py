@@ -448,6 +448,15 @@ class ReplayViewer(tk.Toplevel):
                     fill="white",
                     font=("Arial", 9, "bold"),
                 )
+            shield_hp = char.get("shield_hp", 0)
+            max_shield_hp = char.get("max_shield_hp", 0)
+            if shield_hp > 0 and max_shield_hp > 0:
+                shield_ratio = min(1, shield_hp / max_shield_hp)
+                self.canvas.create_rectangle(
+                    c * self.cell + 2, (r + 1) * self.cell - 4,
+                    c * self.cell + 2 + (self.cell - 4) * shield_ratio,
+                    (r + 1) * self.cell - 2, fill="#66d9ff", outline=""
+                )
             if char.get("electric", 0) > 0:
                 self._draw_neon_bolt(r, c)
             if char.get("heal_sparkle", 0) > 0:

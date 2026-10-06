@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-00b13484f02553fc88de5e34ba2b8f1b",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Mixed",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "test",
+      "seed": 51647328,
+      "player_stats": {
+        "Buzz": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 5,
+          "deaths": 8
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "icy": {
+          "kills": 10,
+          "deaths": 12
+        },
+        "Sato": {
+          "kills": 16,
+          "deaths": 10
+        },
+        "Brawk": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "jawgemo": {
+          "kills": 9,
+          "deaths": 10
+        },
+        "Flashback": {
+          "kills": 12,
+          "deaths": 6
+        },
+        "Meiy": {
+          "kills": 12,
+          "deaths": 14
+        },
+        "C0M": {
+          "kills": 11,
+          "deaths": 11
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Team Mixed",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 51647329,
+      "player_stats": {
+        "Brawk": {
+          "kills": 4,
+          "deaths": 11
+        },
+        "jawgemo": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "Flashback": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "Meiy": {
+          "kills": 22,
+          "deaths": 12
+        },
+        "C0M": {
+          "kills": 14,
+          "deaths": 16
+        },
+        "Buzz": {
+          "kills": 15,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 8,
+          "deaths": 15
+        },
+        "kaajak": {
+          "kills": 17,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "Sato": {
+          "kills": 14,
+          "deaths": 11
+        }
+      }
+    }
+  ]
+}

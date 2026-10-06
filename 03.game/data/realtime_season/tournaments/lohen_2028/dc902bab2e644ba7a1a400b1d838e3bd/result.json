@@ -1,0 +1,163 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-5f8d32c6ccbc57f698ae83369087c813",
+  "left_wins": 3,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 13,
+      "opponent_score": 9,
+      "winner": "test",
+      "seed": 1519853297,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 25,
+          "deaths": 14
+        },
+        "ろびぃな": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "いぐるん": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "えんぺん": {
+          "kills": 17,
+          "deaths": 15
+        },
+        "夢の街": {
+          "kills": 11,
+          "deaths": 15
+        },
+        "ねこさん": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "とりさん": {
+          "kills": 5,
+          "deaths": 18
+        },
+        "おもこ": {
+          "kills": 17,
+          "deaths": 13
+        },
+        "ひつじさん": {
+          "kills": 8,
+          "deaths": 18
+        },
+        "Deep": {
+          "kills": 32,
+          "deaths": 16
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 13,
+      "opponent_score": 3,
+      "winner": "test",
+      "seed": 1519853298,
+      "player_stats": {
+        "ねこさん": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "とりさん": {
+          "kills": 0,
+          "deaths": 15
+        },
+        "おもこ": {
+          "kills": 15,
+          "deaths": 13
+        },
+        "ひつじさん": {
+          "kills": 6,
+          "deaths": 13
+        },
+        "Deep": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "Tortlilyan": {
+          "kills": 18,
+          "deaths": 6
+        },
+        "ろびぃな": {
+          "kills": 15,
+          "deaths": 6
+        },
+        "いぐるん": {
+          "kills": 11,
+          "deaths": 10
+        },
+        "えんぺん": {
+          "kills": 11,
+          "deaths": 6
+        },
+        "夢の街": {
+          "kills": 11,
+          "deaths": 8
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Omoko Gaming",
+      "own_score": 13,
+      "opponent_score": 7,
+      "winner": "test",
+      "seed": 1519853299,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 19,
+          "deaths": 8
+        },
+        "ろびぃな": {
+          "kills": 7,
+          "deaths": 9
+        },
+        "いぐるん": {
+          "kills": 22,
+          "deaths": 11
+        },
+        "えんぺん": {
+          "kills": 19,
+          "deaths": 12
+        },
+        "夢の街": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "ねこさん": {
+          "kills": 4,
+          "deaths": 15
+        },
+        "とりさん": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "おもこ": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "ひつじさん": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "Deep": {
+          "kills": 28,
+          "deaths": 14
+        }
+      }
+    }
+  ]
+}

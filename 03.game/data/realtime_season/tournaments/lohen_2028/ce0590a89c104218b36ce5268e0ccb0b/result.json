@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 15,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1519846297,
+      "player_stats": {
+        "Tortlilyan": {
+          "kills": 27,
+          "deaths": 18
+        },
+        "ろびぃな": {
+          "kills": 18,
+          "deaths": 20
+        },
+        "いぐるん": {
+          "kills": 21,
+          "deaths": 13
+        },
+        "えんぺん": {
+          "kills": 22,
+          "deaths": 11
+        },
+        "夢の街": {
+          "kills": 16,
+          "deaths": 14
+        },
+        "Boaster": {
+          "kills": 5,
+          "deaths": 24
+        },
+        "Derke": {
+          "kills": 8,
+          "deaths": 22
+        },
+        "Alfajer": {
+          "kills": 19,
+          "deaths": 16
+        },
+        "Chronicle": {
+          "kills": 27,
+          "deaths": 23
+        },
+        "Leo": {
+          "kills": 17,
+          "deaths": 19
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "test",
+      "seed": 1519846298,
+      "player_stats": {
+        "Boaster": {
+          "kills": 2,
+          "deaths": 14
+        },
+        "Derke": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "Alfajer": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "Chronicle": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "Leo": {
+          "kills": 6,
+          "deaths": 14
+        },
+        "Tortlilyan": {
+          "kills": 20,
+          "deaths": 8
+        },
+        "ろびぃな": {
+          "kills": 12,
+          "deaths": 9
+        },
+        "いぐるん": {
+          "kills": 14,
+          "deaths": 4
+        },
+        "えんぺん": {
+          "kills": 7,
+          "deaths": 5
+        },
+        "夢の街": {
+          "kills": 17,
+          "deaths": 5
+        }
+      }
+    }
+  ]
+}

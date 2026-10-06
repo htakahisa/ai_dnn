@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "L2M2",
+  "left_id": "world-03e5e1f7fcc659a6b2190986b9f24560",
+  "right_id": "player_club",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 1,
+      "winner": "Furina Party",
+      "seed": 1583923091,
+      "player_stats": {
+        "Lohen": {
+          "kills": 8,
+          "deaths": 7
+        },
+        "Arlecchino": {
+          "kills": 18,
+          "deaths": 5
+        },
+        "Lisa": {
+          "kills": 9,
+          "deaths": 11
+        },
+        "Jean": {
+          "kills": 12,
+          "deaths": 10
+        },
+        "Nanasaki": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "Furina": {
+          "kills": 6,
+          "deaths": 13
+        },
+        "Kachina": {
+          "kills": 14,
+          "deaths": 11
+        },
+        "S1Mon": {
+          "kills": 4,
+          "deaths": 10
+        },
+        "Aspas": {
+          "kills": 2,
+          "deaths": 13
+        },
+        "Blacknoir": {
+          "kills": 17,
+          "deaths": 11
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Furina Party",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "Furina Party",
+      "seed": 1583923092,
+      "player_stats": {
+        "Furina": {
+          "kills": 2,
+          "deaths": 14
+        },
+        "Kachina": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "S1Mon": {
+          "kills": 2,
+          "deaths": 14
+        },
+        "Aspas": {
+          "kills": 3,
+          "deaths": 15
+        },
+        "Blacknoir": {
+          "kills": 10,
+          "deaths": 16
+        },
+        "Lohen": {
+          "kills": 17,
+          "deaths": 5
+        },
+        "Arlecchino": {
+          "kills": 15,
+          "deaths": 4
+        },
+        "Lisa": {
+          "kills": 9,
+          "deaths": 7
+        },
+        "Jean": {
+          "kills": 22,
+          "deaths": 6
+        },
+        "Nanasaki": {
+          "kills": 9,
+          "deaths": 9
+        }
+      }
+    }
+  ]
+}

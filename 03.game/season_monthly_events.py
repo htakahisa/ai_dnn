@@ -174,7 +174,7 @@ def process_monthly_events(state):
             if candidate.scout_blocked(club.id):
                 emit("recruitment_unfilled", club, None, "インシーズンのスカウト上限に達したため、補充を見送りました。")
                 break
-            pool = tuple(candidate.salary_player(p) for p in all_characters() if p.name not in affiliated and p.name not in rejected)
+            pool = tuple(candidate.salary_player(p) for p in all_characters() if candidate.player_available(p) and p.name not in affiliated and p.name not in rejected)
             pool = tuple(p for p in pool if not candidate.contract_refused(p.name, club.id)
                          and can_sign(candidate, club, signing_terms(candidate, p)))
             player = choose_recruit(club, pool, state.rating(club.id))

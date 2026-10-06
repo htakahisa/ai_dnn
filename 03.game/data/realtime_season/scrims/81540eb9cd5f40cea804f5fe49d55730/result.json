@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "test",
+  "opponent_team": "Evil Geniuses",
+  "own_score": 11,
+  "opponent_score": 13,
+  "winner": "Evil Geniuses",
+  "seed": 2016359947,
+  "player_stats": {
+    "Furina": {
+      "kills": 2,
+      "deaths": 13
+    },
+    "Kachina": {
+      "kills": 21,
+      "deaths": 10
+    },
+    "S1Mon": {
+      "kills": 16,
+      "deaths": 11
+    },
+    "Aspas": {
+      "kills": 8,
+      "deaths": 18
+    },
+    "Blacknoir": {
+      "kills": 38,
+      "deaths": 14
+    },
+    "えんぺん": {
+      "kills": 9,
+      "deaths": 17
+    },
+    "Ethan": {
+      "kills": 5,
+      "deaths": 15
+    },
+    "いぐるん": {
+      "kills": 11,
+      "deaths": 18
+    },
+    "s0m": {
+      "kills": 11,
+      "deaths": 16
+    },
+    "Demon1": {
+      "kills": 30,
+      "deaths": 19
+    }
+  }
+}

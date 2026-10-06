@@ -1,0 +1,214 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-fbee58f742685aa08fa17af9a5d07ba6",
+  "right_id": "player_club",
+  "left_wins": 1,
+  "right_wins": 3,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "radiantdancer",
+      "opponent_team": "test",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1833138521,
+      "player_stats": {
+        "Loita": {
+          "kills": 5,
+          "deaths": 18
+        },
+        "SiuFatBB": {
+          "kills": 4,
+          "deaths": 17
+        },
+        "koldamenta": {
+          "kills": 16,
+          "deaths": 15
+        },
+        "soulcas": {
+          "kills": 22,
+          "deaths": 15
+        },
+        "mindfreak": {
+          "kills": 11,
+          "deaths": 17
+        },
+        "Buzz": {
+          "kills": 27,
+          "deaths": 11
+        },
+        "stax": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "kaajak": {
+          "kills": 15,
+          "deaths": 8
+        },
+        "icy": {
+          "kills": 12,
+          "deaths": 15
+        },
+        "cNed": {
+          "kills": 18,
+          "deaths": 15
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "radiantdancer",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 11,
+      "winner": "radiantdancer",
+      "seed": 1833138522,
+      "player_stats": {
+        "Buzz": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "stax": {
+          "kills": 21,
+          "deaths": 11
+        },
+        "kaajak": {
+          "kills": 12,
+          "deaths": 9
+        },
+        "icy": {
+          "kills": 20,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 13,
+          "deaths": 16
+        },
+        "Loita": {
+          "kills": 20,
+          "deaths": 15
+        },
+        "SiuFatBB": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "koldamenta": {
+          "kills": 8,
+          "deaths": 15
+        },
+        "soulcas": {
+          "kills": 24,
+          "deaths": 11
+        },
+        "mindfreak": {
+          "kills": 10,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "radiantdancer",
+      "opponent_team": "test",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1833138523,
+      "player_stats": {
+        "Loita": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "SiuFatBB": {
+          "kills": 6,
+          "deaths": 13
+        },
+        "koldamenta": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "soulcas": {
+          "kills": 13,
+          "deaths": 13
+        },
+        "mindfreak": {
+          "kills": 12,
+          "deaths": 17
+        },
+        "Buzz": {
+          "kills": 6,
+          "deaths": 8
+        },
+        "stax": {
+          "kills": 21,
+          "deaths": 8
+        },
+        "kaajak": {
+          "kills": 14,
+          "deaths": 4
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 15,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "radiantdancer",
+      "opponent_team": "test",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1833138524,
+      "player_stats": {
+        "Buzz": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "stax": {
+          "kills": 15,
+          "deaths": 10
+        },
+        "kaajak": {
+          "kills": 8,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 16,
+          "deaths": 11
+        },
+        "cNed": {
+          "kills": 13,
+          "deaths": 15
+        },
+        "Loita": {
+          "kills": 7,
+          "deaths": 14
+        },
+        "SiuFatBB": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "koldamenta": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "soulcas": {
+          "kills": 14,
+          "deaths": 12
+        },
+        "mindfreak": {
+          "kills": 16,
+          "deaths": 15
+        }
+      }
+    }
+  ]
+}

@@ -121,7 +121,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="QFG",
         players=("leaf", "nAts", "Lar0k", "Chronicle", "Sayonara"),
         igl="nAts",
-        spike_holder="Lar0k",
+        spike_holder="Sayonara",
         description="圧倒的な補完性能、元祖2Flash構成",
     ),
     "Dragon Tail": TeamPreset(
@@ -213,7 +213,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         short_name="CLLS",
         players=("koldamenta", "Rossy", "CHICHOO", "Smoggy", "SereNa"),
         igl="SereNa",
-        spike_holder="SereNa",
+        spike_holder="Rossy",
         description="圧倒的なミクロ、瞬発的なフィジカル",
     ),
     "SUPES": TeamPreset(
@@ -238,6 +238,14 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
         players=("icy", "SiuFatBB", "t3xture", "Asuna", "Zekken"),
         igl="SiuFatBB",
         spike_holder="t3xture",
+        description="相手にどんどんデバフをかけていく害悪デッキ",
+    ),
+    "SereNade": TeamPreset(
+        name="SereNade",
+        short_name="SN",
+        players=("Katarina", "SereNa", "Kr1stal", "Foxy9", "Furina"),
+        igl="Furina",
+        spike_holder="Kr1stal",
         description="相手にどんどんデバフをかけていく害悪デッキ",
     ),
 }

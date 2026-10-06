@@ -20,7 +20,7 @@ from season_competitions import (CompetitionError, SeriesScore, TournamentProgre
     configured_calendar, definition_from_dict, next_match, phase_for)
 from season_scrim import ScrimJob
 from season_series import build_series_request, play_series
-from season_world_levels import world_level_for_rank
+from season_world_levels import world_level_for_rating
 
 
 OWN = ("Leo", "Boaster", "Derke", "Chronicle", "Alfajer")
@@ -126,8 +126,9 @@ class SeasonCompetitionTest(unittest.TestCase):
         state = state.with_added_players((free_player,)).with_tournament_entry("cup", state.selected_team_id)
         with self.assertRaises(SeasonSaveError):
             state.with_opponent_teams(())
-        with self.assertRaises(SeasonSaveError):
-            state.with_roster((*OWN[:4], free_player)).with_confirmed_team()
+        changed = state.with_roster((*OWN[:4], free_player)).with_confirmed_team()
+        changed.validate()
+        self.assertEqual(tuple(p.name for p in changed.tournament_team("cup").players), OWN)
         with self.assertRaises(ValueError):
             build_series_request(state, "cup")
 
@@ -224,7 +225,7 @@ class SeasonCompetitionTest(unittest.TestCase):
                     run.pop("completed_date")
                 self.path.write_text(json.dumps(data), encoding="utf-8")
                 before = self.path.read_bytes()
-                locked = world_level_for_rank(*state.world_rank) if state.active_tournaments else None
+                locked = world_level_for_rating(state.rating(state.club_id)) if state.active_tournaments else None
                 self.assertEqual(self.store.load_or_create(), replace(state, developed_players=(), world_level_lock=locked))
                 self.assertEqual(self.path.read_bytes(), before)
 
@@ -259,8 +260,9 @@ class SeasonCompetitionTest(unittest.TestCase):
         state = state.with_tournament_entry("cup", state.selected_team_id).advance_days(33)
         self.assertIsNone(state.player("Leo"))
         self.assertIsNone(state.selected_team)
-        with self.assertRaises(SeasonSaveError):
-            build_series_request(state, "cup")
+        request = build_series_request(state, "cup")
+        own = request["own"] if request["left_id"] == state.club_id else request["opponent"]
+        self.assertIn("友達", [p["name"] for p in own["players"]])
         state = state.with_tournament_forfeit("cup")
         while not state.tournament("cup").completed:
             state = state.advance_days(1)

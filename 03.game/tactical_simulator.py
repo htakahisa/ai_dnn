@@ -95,6 +95,7 @@ class TacticalSimulator(VisualFPSBattle):
         attacker_ai_name: str = "touyama_gaming_v2",
         defender_ai_name: str = "touyama_gaming_v2",
         custom_roster: list = None,
+        shield_abilities_enabled: bool = True,
     ):
         # NEW_MAZE_STRのパース結果をデバッグ表示
         lines = [
@@ -119,6 +120,7 @@ class TacticalSimulator(VisualFPSBattle):
             initial_attacker_team_ai=attacker_ai,
             initial_defender_team_ai=defender_ai,
             headless=True,  # UIを無効化してヘッドレス実行
+            shield_abilities_enabled=shield_abilities_enabled,
         )
         # The parent starts defender setup in init_round(). This retake scenario
         # starts with a planted spike, so the live setup state must be finished.
@@ -208,6 +210,7 @@ class TacticalSimulator(VisualFPSBattle):
             pos=list(pos),
             text_color="#ffffff" if team == "A" else "#000000",
             bg_color="#0066ff" if team == "A" else "#00cc00",
+            shield_abilities_enabled=self.shield_abilities_enabled,
         )
         char.facing = facing
         # 親クラスで必要なプロパティを全て設定

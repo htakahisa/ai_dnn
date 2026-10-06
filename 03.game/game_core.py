@@ -8,6 +8,8 @@ import math
 import random
 from pathlib import Path
 
+from shield_bonus import parse_shield_bonus, shield_stat_key
+
 # Gameplay configuration
 WINNING_ROUNDS = 13
 TICK_TIME = 100
@@ -300,6 +302,31 @@ def calculate_combat_power(hs_rate, dodge_rate, iq, accuracy, reaction):
     )
 
 
+def _normalize_shield_hp(value):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return 0
+    if not math.isfinite(value) or value <= 0:
+        return 0
+    return int(value) if value.is_integer() else value
+
+
+def absorb_shield_damage(character, damage, attacker=None):
+    """攻撃者の貫通・追加シールド削りを適用し、本体へのダメージを返す。"""
+    damage = max(0, damage)
+    shield_hp = max(0, getattr(character, "shield_hp", 0))
+    if damage <= 0 or shield_hp <= 0:
+        return damage
+    crash = _normalize_shield_hp(getattr(attacker, "shield_crash", 0))
+    if getattr(attacker, "shield_piercer", False):
+        character.shield_hp = max(0, shield_hp - crash)
+        return damage
+    absorbed = min(shield_hp, damage)
+    character.shield_hp = max(0, shield_hp - absorbed - crash)
+    return damage - absorbed
+
+
 def get_character_combat_stats(name):
     """キャラクター定義から命中率・弾除け率・HS率を取得する。未定義時は既定値。"""
     defaults = {
@@ -312,6 +339,9 @@ def get_character_combat_stats(name):
         "influence": 0.0,
         "form_variance": 0.0,
         "mental": 5.0,
+        "shield_hp": 0.0,
+        "shield_piercer": False,
+        "shield_crash": 0.0,
     }
     if _character_stats is None:
         return defaults
@@ -421,6 +451,13 @@ def get_character_combat_stats(name):
                 ),
             ),
         ),
+        "shield_hp": _normalize_shield_hp(
+            pick_number(("shield_hp", "シールドHP", "シールドhp"), defaults["shield_hp"])
+        ),
+        "shield_piercer": raw.get("shield_piercer", defaults["shield_piercer"]) is True,
+        "shield_crash": _normalize_shield_hp(
+            pick_number(("shield_crash", "シールドクラッシュ"), defaults["shield_crash"])
+        ),
     }
 
 
@@ -507,6 +544,7 @@ class Character:
         deaths=0,
         ultimate_points=0,
         mental_pressure=0.0,
+        shield_abilities_enabled=True,
     ):
         self.name = name
         self.base_name = name
@@ -544,6 +582,14 @@ class Character:
         # invert the series-pressure effect and make positive condition more
         # likely under pressure.
         self.mental = max(0.0, min(20.0, float(stats.get("mental", 5.0))))
+        self.max_shield_hp = _normalize_shield_hp(stats.get("shield_hp", 0))
+        self.shield_hp = self.max_shield_hp
+        self.shield_piercer = stats.get("shield_piercer", False)
+        self.shield_crash = _normalize_shield_hp(stats.get("shield_crash", 0))
+        self.shield_abilities_enabled = bool(shield_abilities_enabled)
+        if not self.shield_abilities_enabled:
+            self.max_shield_hp = self.shield_hp = self.shield_crash = 0
+            self.shield_piercer = False
         self.mental_pressure = max(-0.75, min(0.75, float(mental_pressure)))
 
         # スプレッドシートの「調子の波」。
@@ -742,7 +788,7 @@ def _canonical_combo_stat_key(key):
         "move_steps_per_tick": "move_steps_per_tick",
         "移動マス数": "move_steps_per_tick",
     }
-    return aliases.get(normalized)
+    return aliases.get(normalized) or shield_stat_key(normalized)
 
 
 def _refresh_condition_modifier(character):
@@ -761,10 +807,35 @@ def _refresh_condition_modifier(character):
 
 
 def _apply_combo_bonus(character, stat_key, value):
-    """一つのコンボ補正を適用する。率は加算後0～100%に収める。"""
+    """Apply one bonus; shield HP supports addition and explicit set operations."""
     attr = _canonical_combo_stat_key(stat_key)
     if attr is None:
         return False
+    if attr in ("shield_hp", "shield_piercer", "shield_crash"):
+        parsed = parse_shield_bonus(attr, value)
+        if parsed is None or not getattr(character, "shield_abilities_enabled", True):
+            return False
+        operation, amount = parsed
+        if attr == "shield_piercer":
+            character.shield_piercer = amount
+        elif attr == "shield_crash":
+            current = _normalize_shield_hp(getattr(character, attr, 0))
+            updated = amount if operation == "set" else current + amount
+            if not math.isfinite(updated):
+                return False
+            character.shield_crash = _normalize_shield_hp(updated)
+        else:
+            current = _normalize_shield_hp(getattr(character, "shield_hp", 0))
+            old_max = _normalize_shield_hp(getattr(character, "max_shield_hp", current))
+            updated = amount if operation == "set" else old_max + amount
+            if not math.isfinite(updated):
+                return False
+            character.max_shield_hp = _normalize_shield_hp(updated)
+            # Preserve damage already absorbed if this helper is used mid-round.
+            character.shield_hp = max(
+                0, min(character.max_shield_hp, current + character.max_shield_hp - old_max)
+            )
+        return True
     try:
         amount = float(value)
     except (TypeError, ValueError):

@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-817213c36458561297f4478f39cc9d2f",
+  "left_wins": 1,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fake Gaming",
+      "own_score": 13,
+      "opponent_score": 6,
+      "winner": "test",
+      "seed": 1454609333,
+      "player_stats": {
+        "Buzz": {
+          "kills": 16,
+          "deaths": 5
+        },
+        "stax": {
+          "kills": 16,
+          "deaths": 6
+        },
+        "kaajak": {
+          "kills": 1,
+          "deaths": 8
+        },
+        "icy": {
+          "kills": 9,
+          "deaths": 10
+        },
+        "Sato": {
+          "kills": 21,
+          "deaths": 10
+        },
+        "d4v41": {
+          "kills": 6,
+          "deaths": 9
+        },
+        "IbarakiNinja": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "skuba": {
+          "kills": 9,
+          "deaths": 14
+        },
+        "valyn": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "Foxy9": {
+          "kills": 4,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

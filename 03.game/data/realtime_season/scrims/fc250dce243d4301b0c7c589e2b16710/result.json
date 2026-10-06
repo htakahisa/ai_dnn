@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "test",
+  "opponent_team": "Alien Rex",
+  "own_score": 13,
+  "opponent_score": 6,
+  "winner": "test",
+  "seed": 1704134863,
+  "player_stats": {
+    "SyouTa": {
+      "kills": 9,
+      "deaths": 8
+    },
+    "Ethan": {
+      "kills": 8,
+      "deaths": 7
+    },
+    "Nanasaki": {
+      "kills": 11,
+      "deaths": 11
+    },
+    "FNS": {
+      "kills": 5,
+      "deaths": 10
+    },
+    "cNed": {
+      "kills": 7,
+      "deaths": 15
+    },
+    "alecks": {
+      "kills": 17,
+      "deaths": 10
+    },
+    "something": {
+      "kills": 10,
+      "deaths": 7
+    },
+    "eggsterr": {
+      "kills": 8,
+      "deaths": 5
+    },
+    "nAts": {
+      "kills": 10,
+      "deaths": 11
+    },
+    "Rossy": {
+      "kills": 6,
+      "deaths": 7
+    }
+  }
+}

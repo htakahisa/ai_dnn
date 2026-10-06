@@ -3,6 +3,16 @@
 effect_text は任意です。
 省略した場合、bonuses / player_bonuses / renames から自動生成されます。
 率系の値は 0.10 = 10ポイントです。
+
+bonuses / player_bonuses のシールド設定例:
+    "shield_hp": 50                 # シールドを50HP追加（負数で減少）
+    "shield_hp": {"set": 100}       # シールド容量を100HPに設定
+    "shield_crash": -10             # クラッシュを10HP減少
+    "shield_crash": {"set": 20}     # クラッシュを20HPに設定
+    "shield_piercer": True          # 貫通を有効化（Falseで無効化）
+同じ項目の例は選択して使います。数値は0未満にはなりません。
+共通補正→選手別補正の順で適用し、複数コンボはCOMBOSの順で適用します。
+補正は各ラウンドの初期値から適用し、シールド系能力Off時は無効です。
 """
 
 from effect_text_generator import apply_combo_effect_texts
@@ -662,6 +672,36 @@ COMBOS = [
         "player_bonuses": {
             "eggsterr": {"reaction": 50},
             "cgrs": {"reaction": 50},
+        },
+        "renames": {},
+    },
+    {
+        "name": "AI",
+        "players": ("SereNa", "Katarina", "Furina"),
+        "player_bonuses": {
+            "SereNa": {"hs_rate": 0.2},
+            "Katarina": {"hs_rate": 0.2},
+            "Furina": {"hs_rate": 0.2},
+        },
+        "renames": {},
+    },
+    {
+        "name": "URAGIRI",
+        "players": ("SereNa", "Katarina", "Foxy9"),
+        "player_bonuses": {
+            "SereNa": {"accuracy": 0.3},
+            "Katarina": {"accuracy": 0.3},
+            "Foxy9": {"accuracy": 0.3},
+        },
+        "renames": {},
+    },
+    {
+        "name": "ZIKOHITEI",
+        "players": ("SereNa", "Katarina", "Kr1stal"),
+        "player_bonuses": {
+            "SereNa": {"shield_crash": {"set": 80}},
+            "Katarina": {"shield_piercer": True},
+            "Kr1stal": {"shield_piercer": True},
         },
         "renames": {},
     },

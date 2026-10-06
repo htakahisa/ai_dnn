@@ -13,6 +13,7 @@ from analytics.combat_tracker import CombatTracker
 from controllers import UserInputController
 from iq_perception import build_team_position_view
 from game_core import (
+    absorb_shield_damage,
     TICK_TIME,
     validate_tick_time_ms,
     PLANT_REQUIRED_TICKS,
@@ -1403,7 +1404,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
 
             if damage > 0:
                 pre_damage_hp = target.hp
-                target.hp = max(0, target.hp - damage)
+                hp_damage = absorb_shield_damage(target, damage, shooter)
+                target.hp = max(0, target.hp - hp_damage)
                 if target.hp <= 0:
                     if getattr(target, "is_ultimate_drone", False):
                         target.is_alive = False
@@ -1697,7 +1699,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
             # Carnal Lust Syndicate loses 1 HP per live tick after setup.
             for char in self.chars:
                 if char.is_alive and getattr(char, "carnal_lust_syndicate_active", False):
-                    char.hp = max(0, char.hp - 1)
+                    char.hp = max(0, char.hp - absorb_shield_damage(char, 1))
                     if char.hp <= 0:
                         char.is_alive = False
                         char.just_died = True

@@ -1,0 +1,214 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "world-00b13484f02553fc88de5e34ba2b8f1b",
+  "right_id": "player_club",
+  "left_wins": 1,
+  "right_wins": 3,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 16,
+      "opponent_score": 18,
+      "winner": "test",
+      "seed": 1833137521,
+      "player_stats": {
+        "Brawk": {
+          "kills": 8,
+          "deaths": 23
+        },
+        "jawgemo": {
+          "kills": 24,
+          "deaths": 20
+        },
+        "Flashback": {
+          "kills": 38,
+          "deaths": 22
+        },
+        "valyn": {
+          "kills": 6,
+          "deaths": 23
+        },
+        "Meiy": {
+          "kills": 19,
+          "deaths": 24
+        },
+        "Buzz": {
+          "kills": 10,
+          "deaths": 19
+        },
+        "stax": {
+          "kills": 14,
+          "deaths": 20
+        },
+        "kaajak": {
+          "kills": 23,
+          "deaths": 13
+        },
+        "icy": {
+          "kills": 38,
+          "deaths": 22
+        },
+        "cNed": {
+          "kills": 27,
+          "deaths": 21
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 4,
+      "winner": "Team Mixed",
+      "seed": 1833137522,
+      "player_stats": {
+        "Buzz": {
+          "kills": 7,
+          "deaths": 11
+        },
+        "stax": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "kaajak": {
+          "kills": 7,
+          "deaths": 7
+        },
+        "icy": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "cNed": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "Brawk": {
+          "kills": 10,
+          "deaths": 6
+        },
+        "jawgemo": {
+          "kills": 12,
+          "deaths": 9
+        },
+        "Flashback": {
+          "kills": 18,
+          "deaths": 8
+        },
+        "valyn": {
+          "kills": 4,
+          "deaths": 9
+        },
+        "Meiy": {
+          "kills": 7,
+          "deaths": 10
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 11,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1833137523,
+      "player_stats": {
+        "Brawk": {
+          "kills": 8,
+          "deaths": 16
+        },
+        "jawgemo": {
+          "kills": 12,
+          "deaths": 17
+        },
+        "Flashback": {
+          "kills": 20,
+          "deaths": 16
+        },
+        "valyn": {
+          "kills": 2,
+          "deaths": 17
+        },
+        "Meiy": {
+          "kills": 26,
+          "deaths": 16
+        },
+        "Buzz": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "stax": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "kaajak": {
+          "kills": 15,
+          "deaths": 11
+        },
+        "icy": {
+          "kills": 22,
+          "deaths": 12
+        },
+        "cNed": {
+          "kills": 20,
+          "deaths": 18
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Team Mixed",
+      "opponent_team": "test",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 1833137524,
+      "player_stats": {
+        "Buzz": {
+          "kills": 14,
+          "deaths": 7
+        },
+        "stax": {
+          "kills": 16,
+          "deaths": 11
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 7
+        },
+        "icy": {
+          "kills": 12,
+          "deaths": 8
+        },
+        "cNed": {
+          "kills": 15,
+          "deaths": 12
+        },
+        "Brawk": {
+          "kills": 5,
+          "deaths": 8
+        },
+        "jawgemo": {
+          "kills": 17,
+          "deaths": 11
+        },
+        "Flashback": {
+          "kills": 15,
+          "deaths": 17
+        },
+        "valyn": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "Meiy": {
+          "kills": 2,
+          "deaths": 16
+        }
+      }
+    }
+  ]
+}

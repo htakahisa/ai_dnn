@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "test",
+  "opponent_team": "Furina Party",
+  "own_score": 4,
+  "opponent_score": 13,
+  "winner": "Furina Party",
+  "seed": 1321871382,
+  "player_stats": {
+    "Tortlilyan": {
+      "kills": 4,
+      "deaths": 14
+    },
+    "ろびぃな": {
+      "kills": 7,
+      "deaths": 16
+    },
+    "いぐるん": {
+      "kills": 10,
+      "deaths": 12
+    },
+    "えんぺん": {
+      "kills": 5,
+      "deaths": 12
+    },
+    "夢の街": {
+      "kills": 4,
+      "deaths": 13
+    },
+    "Furina": {
+      "kills": 13,
+      "deaths": 8
+    },
+    "Lohen": {
+      "kills": 28,
+      "deaths": 8
+    },
+    "Arlecchino": {
+      "kills": 14,
+      "deaths": 7
+    },
+    "Lisa": {
+      "kills": 7,
+      "deaths": 5
+    },
+    "おもこ": {
+      "kills": 5,
+      "deaths": 4
+    }
+  }
+}

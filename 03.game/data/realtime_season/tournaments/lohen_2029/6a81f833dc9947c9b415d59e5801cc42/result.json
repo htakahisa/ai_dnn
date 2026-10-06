@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "W2M1",
+  "left_id": "player_club",
+  "right_id": "world-1fc938eccae45bf997dd13b6e6d7af28",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 4,
+      "opponent_score": 13,
+      "winner": "Fnatic",
+      "seed": 1583920091,
+      "player_stats": {
+        "Furina": {
+          "kills": 2,
+          "deaths": 16
+        },
+        "Kachina": {
+          "kills": 7,
+          "deaths": 11
+        },
+        "S1Mon": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "Aspas": {
+          "kills": 13,
+          "deaths": 14
+        },
+        "Blacknoir": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "Boaster": {
+          "kills": 9,
+          "deaths": 11
+        },
+        "Derke": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "Alfajer": {
+          "kills": 21,
+          "deaths": 10
+        },
+        "Chronicle": {
+          "kills": 16,
+          "deaths": 7
+        },
+        "Leo": {
+          "kills": 13,
+          "deaths": 6
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Fnatic",
+      "own_score": 2,
+      "opponent_score": 13,
+      "winner": "Fnatic",
+      "seed": 1583920092,
+      "player_stats": {
+        "Boaster": {
+          "kills": 8,
+          "deaths": 12
+        },
+        "Derke": {
+          "kills": 23,
+          "deaths": 5
+        },
+        "Alfajer": {
+          "kills": 6,
+          "deaths": 13
+        },
+        "Chronicle": {
+          "kills": 19,
+          "deaths": 4
+        },
+        "Leo": {
+          "kills": 8,
+          "deaths": 9
+        },
+        "Furina": {
+          "kills": 3,
+          "deaths": 12
+        },
+        "Kachina": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "S1Mon": {
+          "kills": 4,
+          "deaths": 13
+        },
+        "Aspas": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "Blacknoir": {
+          "kills": 18,
+          "deaths": 12
+        }
+      }
+    }
+  ]
+}

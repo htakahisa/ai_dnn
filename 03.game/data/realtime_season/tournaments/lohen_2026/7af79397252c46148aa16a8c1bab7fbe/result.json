@@ -1,0 +1,214 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-f7395cd2990b5bfbb5f7d63f22539122",
+  "left_wins": 3,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 739696883,
+      "player_stats": {
+        "Buzz": {
+          "kills": 10,
+          "deaths": 9
+        },
+        "stax": {
+          "kills": 10,
+          "deaths": 14
+        },
+        "kaajak": {
+          "kills": 10,
+          "deaths": 10
+        },
+        "icy": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "cNed": {
+          "kills": 21,
+          "deaths": 11
+        },
+        "Rosé": {
+          "kills": 7,
+          "deaths": 15
+        },
+        "Crewn": {
+          "kills": 5,
+          "deaths": 10
+        },
+        "lovers rock": {
+          "kills": 16,
+          "deaths": 16
+        },
+        "CHICHOO": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "Cryocells": {
+          "kills": 17,
+          "deaths": 14
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 7,
+      "winner": "test",
+      "seed": 739696884,
+      "player_stats": {
+        "Rosé": {
+          "kills": 5,
+          "deaths": 14
+        },
+        "Crewn": {
+          "kills": 10,
+          "deaths": 12
+        },
+        "lovers rock": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "CHICHOO": {
+          "kills": 12,
+          "deaths": 17
+        },
+        "Cryocells": {
+          "kills": 6,
+          "deaths": 16
+        },
+        "Buzz": {
+          "kills": 17,
+          "deaths": 6
+        },
+        "stax": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "kaajak": {
+          "kills": 9,
+          "deaths": 6
+        },
+        "icy": {
+          "kills": 13,
+          "deaths": 12
+        },
+        "cNed": {
+          "kills": 22,
+          "deaths": 10
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 10,
+      "opponent_score": 13,
+      "winner": "BBL",
+      "seed": 739696885,
+      "player_stats": {
+        "Buzz": {
+          "kills": 18,
+          "deaths": 13
+        },
+        "stax": {
+          "kills": 16,
+          "deaths": 14
+        },
+        "kaajak": {
+          "kills": 11,
+          "deaths": 11
+        },
+        "icy": {
+          "kills": 14,
+          "deaths": 14
+        },
+        "cNed": {
+          "kills": 12,
+          "deaths": 15
+        },
+        "Rosé": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "Crewn": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "lovers rock": {
+          "kills": 17,
+          "deaths": 13
+        },
+        "CHICHOO": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "Cryocells": {
+          "kills": 15,
+          "deaths": 18
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "BBL",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "test",
+      "seed": 739696886,
+      "player_stats": {
+        "Rosé": {
+          "kills": 4,
+          "deaths": 15
+        },
+        "Crewn": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "lovers rock": {
+          "kills": 12,
+          "deaths": 13
+        },
+        "CHICHOO": {
+          "kills": 13,
+          "deaths": 11
+        },
+        "Cryocells": {
+          "kills": 15,
+          "deaths": 17
+        },
+        "Buzz": {
+          "kills": 6,
+          "deaths": 10
+        },
+        "stax": {
+          "kills": 12,
+          "deaths": 11
+        },
+        "kaajak": {
+          "kills": 8,
+          "deaths": 8
+        },
+        "icy": {
+          "kills": 15,
+          "deaths": 10
+        },
+        "cNed": {
+          "kills": 26,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "player_club",
+  "right_id": "world-819dc24a828657f48dfff35f19834e50",
+  "left_wins": 3,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 16,
+      "opponent_score": 14,
+      "winner": "test",
+      "seed": 1757708231,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 11,
+          "deaths": 14
+        },
+        "Ethan": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "Nanasaki": {
+          "kills": 25,
+          "deaths": 19
+        },
+        "FNS": {
+          "kills": 10,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 30,
+          "deaths": 18
+        },
+        "Canezerra": {
+          "kills": 15,
+          "deaths": 17
+        },
+        "WoohyuN": {
+          "kills": 18,
+          "deaths": 12
+        },
+        "Zest": {
+          "kills": 16,
+          "deaths": 14
+        },
+        "Meteor": {
+          "kills": 18,
+          "deaths": 21
+        },
+        "yay": {
+          "kills": 18,
+          "deaths": 19
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 9,
+      "opponent_score": 13,
+      "winner": "Dragon Moon",
+      "seed": 1757708232,
+      "player_stats": {
+        "Canezerra": {
+          "kills": 5,
+          "deaths": 9
+        },
+        "WoohyuN": {
+          "kills": 14,
+          "deaths": 8
+        },
+        "Zest": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "Meteor": {
+          "kills": 26,
+          "deaths": 13
+        },
+        "yay": {
+          "kills": 19,
+          "deaths": 13
+        },
+        "SyouTa": {
+          "kills": 11,
+          "deaths": 9
+        },
+        "Ethan": {
+          "kills": 10,
+          "deaths": 16
+        },
+        "Nanasaki": {
+          "kills": 10,
+          "deaths": 19
+        },
+        "FNS": {
+          "kills": 7,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 14,
+          "deaths": 18
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "Dragon Moon",
+      "seed": 1757708233,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 17,
+          "deaths": 13
+        },
+        "Ethan": {
+          "kills": 2,
+          "deaths": 17
+        },
+        "Nanasaki": {
+          "kills": 12,
+          "deaths": 16
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 17
+        },
+        "cNed": {
+          "kills": 8,
+          "deaths": 16
+        },
+        "Canezerra": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "WoohyuN": {
+          "kills": 13,
+          "deaths": 5
+        },
+        "Zest": {
+          "kills": 5,
+          "deaths": 4
+        },
+        "Meteor": {
+          "kills": 30,
+          "deaths": 11
+        },
+        "yay": {
+          "kills": 22,
+          "deaths": 12
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 13,
+      "opponent_score": 10,
+      "winner": "test",
+      "seed": 1757708234,
+      "player_stats": {
+        "Canezerra": {
+          "kills": 10,
+          "deaths": 11
+        },
+        "WoohyuN": {
+          "kills": 12,
+          "deaths": 6
+        },
+        "Zest": {
+          "kills": 19,
+          "deaths": 8
+        },
+        "Meteor": {
+          "kills": 25,
+          "deaths": 13
+        },
+        "yay": {
+          "kills": 16,
+          "deaths": 13
+        },
+        "SyouTa": {
+          "kills": 10,
+          "deaths": 13
+        },
+        "Ethan": {
+          "kills": 6,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 22,
+          "deaths": 18
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 8,
+          "deaths": 18
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 13,
+      "opponent_score": 11,
+      "winner": "test",
+      "seed": 1757708235,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 19,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 8,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 16,
+          "deaths": 19
+        },
+        "FNS": {
+          "kills": 6,
+          "deaths": 18
+        },
+        "cNed": {
+          "kills": 20,
+          "deaths": 20
+        },
+        "Canezerra": {
+          "kills": 21,
+          "deaths": 12
+        },
+        "WoohyuN": {
+          "kills": 19,
+          "deaths": 16
+        },
+        "Zest": {
+          "kills": 11,
+          "deaths": 12
+        },
+        "Meteor": {
+          "kills": 20,
+          "deaths": 16
+        },
+        "yay": {
+          "kills": 16,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}

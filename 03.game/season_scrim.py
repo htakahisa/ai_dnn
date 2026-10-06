@@ -9,8 +9,7 @@ import subprocess
 import sys
 from uuid import uuid4
 
-from character_stats import CharacterStats
-from realtime_season import ROSTER_SIZE, SeasonSaveError, validate_player
+from realtime_season import ROSTER_SIZE, SeasonSaveError, player_from_save, validate_player
 
 
 def ai_options():
@@ -76,7 +75,7 @@ def validate_scrim_request(request):
         members = []
         for row in team["players"]:
             try:
-                player = CharacterStats(**row)
+                player = player_from_save(row)
             except TypeError as exc:
                 raise SeasonSaveError("スクリム選手のデータが不正です。") from exc
             validate_player(player)

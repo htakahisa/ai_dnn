@@ -1,0 +1,61 @@
+{
+  "status": "completed",
+  "match_id": "W1M1",
+  "left_id": "player_club",
+  "right_id": "world-819dc24a828657f48dfff35f19834e50",
+  "left_wins": 0,
+  "right_wins": 1,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "test",
+      "opponent_team": "Dragon Moon",
+      "own_score": 2,
+      "opponent_score": 13,
+      "winner": "Dragon Moon",
+      "seed": 1174573101,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 7,
+          "deaths": 13
+        },
+        "Ethan": {
+          "kills": 2,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 4,
+          "deaths": 14
+        },
+        "FNS": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "cNed": {
+          "kills": 12,
+          "deaths": 12
+        },
+        "Canezerra": {
+          "kills": 8,
+          "deaths": 6
+        },
+        "WoohyuN": {
+          "kills": 20,
+          "deaths": 6
+        },
+        "Zest": {
+          "kills": 8,
+          "deaths": 3
+        },
+        "Meteor": {
+          "kills": 9,
+          "deaths": 8
+        },
+        "yay": {
+          "kills": 22,
+          "deaths": 7
+        }
+      }
+    }
+  ]
+}

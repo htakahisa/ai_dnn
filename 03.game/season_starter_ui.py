@@ -2,6 +2,8 @@
 
 import tkinter as tk
 from tkinter import ttk
+from character_stats import awakening_details_text
+from player_details_ui import readonly_details, shield_stats_text
 
 from realtime_season import ROSTER_SIZE, SeasonSaveError
 from season_salary import SALARY_MODE_LABELS
@@ -14,6 +16,8 @@ class SeasonStarterMixin:
         self.starter_details = tk.StringVar(self.root)
         self.starter_team_name = tk.StringVar(self.root, value=self.state.team_name)
         ttk.Label(host, text="初期キャラを5人選択", font=("Yu Gothic UI", 24, "bold")).pack(anchor="w")
+        ttk.Label(host, text=f"第{self.state.chapter}章　{self.state.league_name}",
+                  font=("Yu Gothic UI", 14)).pack(anchor="w", pady=(8, 0))
         ttk.Label(host, text="候補から選んだ5人だけを入手して、リアルタイムシーズンを始めます。\n"
                   "選ばなかった候補は所持しません。ゲーム開始後にスカウトで契約できます。",
                   wraplength=900).pack(anchor="w", pady=(12, 16))
@@ -52,7 +56,8 @@ class SeasonStarterMixin:
         tree.configure(yscrollcommand=scrollbar.set)
         tree.bind("<<TreeviewSelect>>", lambda _: self.preview_starter())
         tree.bind("<Double-1>", lambda _: self.toggle_starter())
-        ttk.Label(host, textvariable=self.starter_details, wraplength=900).pack(anchor="w", pady=12)
+        self.starter_details_view = readonly_details(host, self.starter_details, height=4)
+        self.starter_details_view.pack(fill="x", pady=12)
         actions = ttk.Frame(host)
         actions.pack(fill="x", pady=(0, 12))
         self.starter_toggle_button = ttk.Button(actions, text="このキャラを選択", command=self.toggle_starter)
@@ -93,7 +98,9 @@ class SeasonStarterMixin:
                                  f"回避率 {player.dodge_pct:.0%}  反応 {player.reaction:g}  "
                                  f"IQ {player.iq:g}  影響力 {player.influence:g}\n"
                                  f"メンタル {player.mental:g}  調子の波 {player.form_variance:g}  "
-                                 f"月給 {player.monthly_salary:,}円  忠誠心 {player.loyalty:g}")
+                                 f"月給 {player.monthly_salary:,}円  忠誠心 {player.loyalty:g}\n"
+                                 f"{shield_stats_text(player, compact=True)}"
+                                 + awakening_details_text(player))
         chosen = player.name in self.state.starter_selection
         can_toggle = self.state.starter_selection_pending and (chosen or len(self.state.starter_selection) < ROSTER_SIZE)
         self.starter_toggle_button.configure(text="このキャラの選択を解除" if chosen else "このキャラを選択",

@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "GRAND_FINAL",
+  "left_id": "world-819dc24a828657f48dfff35f19834e50",
+  "right_id": "player_club",
+  "left_wins": 2,
+  "right_wins": 0,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 8,
+      "winner": "Dragon Moon",
+      "seed": 1174578101,
+      "player_stats": {
+        "Canezerra": {
+          "kills": 10,
+          "deaths": 11
+        },
+        "WoohyuN": {
+          "kills": 16,
+          "deaths": 9
+        },
+        "Zest": {
+          "kills": 24,
+          "deaths": 11
+        },
+        "Meteor": {
+          "kills": 15,
+          "deaths": 14
+        },
+        "yay": {
+          "kills": 14,
+          "deaths": 12
+        },
+        "SyouTa": {
+          "kills": 7,
+          "deaths": 14
+        },
+        "Ethan": {
+          "kills": 14,
+          "deaths": 15
+        },
+        "Nanasaki": {
+          "kills": 23,
+          "deaths": 17
+        },
+        "FNS": {
+          "kills": 2,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 11,
+          "deaths": 17
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Dragon Moon",
+      "opponent_team": "test",
+      "own_score": 13,
+      "opponent_score": 10,
+      "winner": "Dragon Moon",
+      "seed": 1174578102,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 8,
+          "deaths": 17
+        },
+        "Ethan": {
+          "kills": 7,
+          "deaths": 19
+        },
+        "Nanasaki": {
+          "kills": 19,
+          "deaths": 19
+        },
+        "FNS": {
+          "kills": 3,
+          "deaths": 16
+        },
+        "cNed": {
+          "kills": 10,
+          "deaths": 15
+        },
+        "Canezerra": {
+          "kills": 16,
+          "deaths": 9
+        },
+        "WoohyuN": {
+          "kills": 16,
+          "deaths": 9
+        },
+        "Zest": {
+          "kills": 14,
+          "deaths": 9
+        },
+        "Meteor": {
+          "kills": 18,
+          "deaths": 10
+        },
+        "yay": {
+          "kills": 22,
+          "deaths": 10
+        }
+      }
+    }
+  ]
+}

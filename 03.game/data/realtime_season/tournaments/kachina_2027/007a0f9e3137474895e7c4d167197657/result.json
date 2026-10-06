@@ -1,0 +1,112 @@
+{
+  "status": "completed",
+  "match_id": "LOWER_FINAL",
+  "left_id": "world-1fc7ad6529ce5024bcdbe5c59c9a4b8b",
+  "right_id": "player_club",
+  "left_wins": 0,
+  "right_wins": 2,
+  "maps": [
+    {
+      "status": "completed",
+      "own_team": "Queen's Flower Gambit",
+      "opponent_team": "test",
+      "own_score": 7,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 308944487,
+      "player_stats": {
+        "Lar0k": {
+          "kills": 14,
+          "deaths": 10
+        },
+        "Meiy": {
+          "kills": 8,
+          "deaths": 14
+        },
+        "mindfreak": {
+          "kills": 16,
+          "deaths": 11
+        },
+        "Smoggy": {
+          "kills": 11,
+          "deaths": 13
+        },
+        "koldamenta": {
+          "kills": 5,
+          "deaths": 13
+        },
+        "SyouTa": {
+          "kills": 17,
+          "deaths": 15
+        },
+        "Ethan": {
+          "kills": 9,
+          "deaths": 12
+        },
+        "Nanasaki": {
+          "kills": 9,
+          "deaths": 7
+        },
+        "FNS": {
+          "kills": 8,
+          "deaths": 11
+        },
+        "cNed": {
+          "kills": 18,
+          "deaths": 9
+        }
+      }
+    },
+    {
+      "status": "completed",
+      "own_team": "Queen's Flower Gambit",
+      "opponent_team": "test",
+      "own_score": 5,
+      "opponent_score": 13,
+      "winner": "test",
+      "seed": 308944488,
+      "player_stats": {
+        "SyouTa": {
+          "kills": 12,
+          "deaths": 10
+        },
+        "Ethan": {
+          "kills": 14,
+          "deaths": 6
+        },
+        "Nanasaki": {
+          "kills": 11,
+          "deaths": 7
+        },
+        "FNS": {
+          "kills": 9,
+          "deaths": 10
+        },
+        "cNed": {
+          "kills": 17,
+          "deaths": 11
+        },
+        "Lar0k": {
+          "kills": 17,
+          "deaths": 14
+        },
+        "Meiy": {
+          "kills": 7,
+          "deaths": 12
+        },
+        "mindfreak": {
+          "kills": 6,
+          "deaths": 11
+        },
+        "Smoggy": {
+          "kills": 3,
+          "deaths": 13
+        },
+        "koldamenta": {
+          "kills": 11,
+          "deaths": 13
+        }
+      }
+    }
+  ]
+}
