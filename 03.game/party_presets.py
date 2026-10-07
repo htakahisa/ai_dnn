@@ -85,7 +85,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Furina Classic": TeamPreset(
         name="Furina Classic",
-        default_ai="frc_v1_baseline",
+        default_ai="frc_v1",
         short_name="FRC",
         players=("Furina", "Lisa", "Lohen", "Jean", "Arlecchino"),
         igl="Furina",
