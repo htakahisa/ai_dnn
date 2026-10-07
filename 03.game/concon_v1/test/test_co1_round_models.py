@@ -18,7 +18,7 @@ class RoundModelTests(unittest.TestCase):
     def build(self, names=("A1", "A2", "A3"), **kwargs):
         def scenario(name):
             return SimpleNamespace(
-                model_path=SimpleNamespace(is_file=lambda: True),
+                model_path=Mock(is_file=Mock(return_value=True), read_bytes=Mock(return_value=b"test-model")),
             )
 
         with patch("concon_v1.co1_attacker_controller.get_scenario", side_effect=scenario), \

@@ -1,6 +1,7 @@
 """Runtime adapter for the concon_v1 route-learning controller."""
 
 import random
+import hashlib
 
 from controllers import BaseController, DefaultAttackerController
 
@@ -12,6 +13,9 @@ from concon_v1.co1_attacker_retrieve import ConconAttackerRetrieveController
 from concon_v1.co1_attacker_sighting import TeamEnemySightings
 from concon_v1.co1_attacker_abilities import FixedSmokePlan, FixedFlashPlan, FixedReconPlan
 from concon_v1.co1_attacker_scenarios import get_scenario
+from concon_v1.co1_attacker_selection import (
+    SELECTION_PATH, load_selection, route_candidates, defending_opponent,
+)
 
 
 class ConconAttackerController(BaseController):
@@ -91,7 +95,7 @@ class ConconAttackerController(BaseController):
 
 
 class ConconRoundAttackerController(BaseController):
-    """Choose an attack scenario independently at random each round.
+    """Randomly choose an evaluated route for the opposing AI each round.
 
     Frozen models are loaded once. Route, utility and retrieval state belong
     to the selected scenario; all five attackers share that selection.
@@ -99,7 +103,7 @@ class ConconRoundAttackerController(BaseController):
     """
 
     def __init__(self, map_names=("A1", "A2", "A3", "A4"), seed=None,
-                 postplant_factories=None):
+                 postplant_factories=None, selection_path=SELECTION_PATH):
         super().__init__()
         names = (map_names,) if isinstance(map_names, str) else tuple(map_names)
         if not names or len(set(names)) != len(names):
@@ -107,13 +111,18 @@ class ConconRoundAttackerController(BaseController):
         self.rng = random.Random(seed)
         self.map_names = names
         self.controllers = {}
+        self.model_hashes = {}
+        self.selection_report = load_selection(selection_path) if selection_path is not None else None
         for name in names:
             scenario = get_scenario(name)
             model_path = scenario.model_path
             if not model_path.is_file():
                 model_path = scenario.save_dir / scenario.checkpoint_filename("latest")
+            checkpoint_bytes = model_path.read_bytes()
+            self.model_hashes[name] = hashlib.sha256(checkpoint_bytes).hexdigest()
             self.controllers[name] = ConconAttackerController(
                 map_name=name, model_path=model_path,
+                checkpoint_bytes=checkpoint_bytes,
                 seed=self.rng.randrange(2 ** 32),
             )
         self.postplant_factories = {
@@ -136,7 +145,9 @@ class ConconRoundAttackerController(BaseController):
             self.current_controller.set_game(game)
 
     def reset_round(self):
-        self.current_map_name = self.rng.choice(self.map_names)
+        opponent = defending_opponent(getattr(self, "game", None))
+        self.current_candidates = route_candidates(self.selection_report, opponent, self.map_names, self.model_hashes)
+        self.current_map_name = self.rng.choice(self.current_candidates)
         self.current_controller = self.controllers[self.current_map_name]
         self.current_controller.postplant_controller = None
         if getattr(self, "game", None) is not None:

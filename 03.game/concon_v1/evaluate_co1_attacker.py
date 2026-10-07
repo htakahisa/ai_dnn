@@ -153,9 +153,19 @@ def summarize_spike_drops(round_results):
     }
 
 
+def summarize_attack_success(round_results):
+    """A plant remains a success even if the subsequent retake wins."""
+    plants = sum(bool(record["planted"]) for record in round_results)
+    eliminations = sum(not record["planted"] and record["end_reason"] == "defender_eliminated"
+                       for record in round_results)
+    successes = plants + eliminations
+    return dict(attack_successes=successes, preplant_defender_eliminations=eliminations,
+                attack_success_rate=successes / len(round_results) if round_results else 0.)
+
+
 @_run_from_project_root
 def evaluate(opponent, rounds=3, seed=0, model_path=None,
-             frozen_checkpoint=None, map_name="A1"):
+             frozen_checkpoint=None, map_name="A1", on_trial=None):
     scenario = get_scenario(map_name)
     model_path = scenario.model_path if model_path is None else Path(model_path)
     if opponent not in OPPONENTS:
@@ -214,6 +224,8 @@ def evaluate(opponent, rounds=3, seed=0, model_path=None,
         if len(game.round_results) != 1:
             raise RuntimeError("evaluation game did not finish exactly one round")
         results.append({**game.round_results[0], "trial": trial})
+        if on_trial is not None:
+            on_trial(trial, rounds)
     plant_count = sum(r["planted"] for r in results)
     plant_results = [r for r in results if r["attacker_alive_at_plant"] is not None]
     no_plant_results = [r for r in results if not r["planted"]]
@@ -232,6 +244,7 @@ def evaluate(opponent, rounds=3, seed=0, model_path=None,
         "attacker_wins": sum(r["winner"] == "A" for r in results),
         "plants": plant_count,
         "plant_success_rate": plant_count / len(results) if results else 0.0,
+        **summarize_attack_success(results),
         "avg_attacker_alive_at_plant": (
             sum(r["attacker_alive_at_plant"] for r in plant_results) / len(plant_results)
             if plant_results else None

@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "metric": "plant_or_preplant_defender_elimination",
+  "threshold": 0.8,
+  "seed": 0,
+  "created_at": "2026-10-08",
+  "details_available": false,
+  "recovery_note": "Aggregate results recovered from evaluation stdout after destination directory creation failed. Per-round details were not saved. Checkpoint files were last modified before evaluation; their SHA256 was verified after evaluation.",
+  "results": [
+    {
+      "map_name": "A1",
+      "opponent": "omoko_v1",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A1",
+      "opponent": "touyama_v2",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A1",
+      "opponent": "fnatic_v3",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A1",
+      "opponent": "gc_v1",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 33,
+      "attack_success_rate": 0.9166666666666666,
+      "plants": 32,
+      "preplant_defender_eliminations": 1
+    },
+    {
+      "map_name": "A1",
+      "opponent": "toru_ai_v3.1",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 35,
+      "attack_success_rate": 0.9722222222222222,
+      "plants": 35,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A1",
+      "opponent": "frc_v1",
+      "model_sha256": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+      "rounds": 36,
+      "attack_successes": 30,
+      "attack_success_rate": 0.8333333333333334,
+      "plants": 30,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A2",
+      "opponent": "omoko_v1",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A2",
+      "opponent": "touyama_v2",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 32,
+      "attack_success_rate": 0.8888888888888888,
+      "plants": 32,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A2",
+      "opponent": "fnatic_v3",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 30,
+      "attack_success_rate": 0.8333333333333334,
+      "plants": 30,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A2",
+      "opponent": "gc_v1",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 35,
+      "attack_success_rate": 0.9722222222222222,
+      "plants": 33,
+      "preplant_defender_eliminations": 2
+    },
+    {
+      "map_name": "A2",
+      "opponent": "toru_ai_v3.1",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 27,
+      "attack_success_rate": 0.75,
+      "plants": 23,
+      "preplant_defender_eliminations": 4
+    },
+    {
+      "map_name": "A2",
+      "opponent": "frc_v1",
+      "model_sha256": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+      "rounds": 36,
+      "attack_successes": 18,
+      "attack_success_rate": 0.5,
+      "plants": 18,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "omoko_v1",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "touyama_v2",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 34,
+      "attack_success_rate": 0.9444444444444444,
+      "plants": 34,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "fnatic_v3",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 34,
+      "attack_success_rate": 0.9444444444444444,
+      "plants": 34,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "gc_v1",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "toru_ai_v3.1",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A3",
+      "opponent": "frc_v1",
+      "model_sha256": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+      "rounds": 36,
+      "attack_successes": 34,
+      "attack_success_rate": 0.9444444444444444,
+      "plants": 34,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A4",
+      "opponent": "omoko_v1",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A4",
+      "opponent": "touyama_v2",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A4",
+      "opponent": "fnatic_v3",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 34,
+      "attack_success_rate": 0.9444444444444444,
+      "plants": 34,
+      "preplant_defender_eliminations": 0
+    },
+    {
+      "map_name": "A4",
+      "opponent": "gc_v1",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 33,
+      "attack_success_rate": 0.9166666666666666,
+      "plants": 29,
+      "preplant_defender_eliminations": 4
+    },
+    {
+      "map_name": "A4",
+      "opponent": "toru_ai_v3.1",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 21,
+      "attack_success_rate": 0.5833333333333334,
+      "plants": 14,
+      "preplant_defender_eliminations": 7
+    },
+    {
+      "map_name": "A4",
+      "opponent": "frc_v1",
+      "model_sha256": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c",
+      "rounds": 36,
+      "attack_successes": 36,
+      "attack_success_rate": 1,
+      "plants": 36,
+      "preplant_defender_eliminations": 0
+    }
+  ]
+}
