@@ -12,6 +12,7 @@ from analytics.combat_tracker import CombatTracker
 
 from controllers import UserInputController
 from iq_perception import build_team_position_view
+from roster_utils import roster_information
 from game_core import (
     absorb_shield_damage,
     TICK_TIME,
@@ -147,6 +148,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
             return "N" if dr < 0 else "S"
         return "W" if dc < 0 else "E"
 
+    def _attacker_rule_snapshot(self):
+        """Optional controller telemetry; never supplies analytics to the policy."""
+        controller = getattr(self, "attacker_controller", None)
+        snapshot = getattr(controller, "attacker_snapshot", None)
+        return snapshot() if callable(snapshot) else None
+
     def _analytics_tactic_snapshot(self):
         def strategy(controller):
             seen = set()
@@ -179,16 +186,21 @@ class BattleLogicMixin(MatchPlaybackMixin):
         left = sum(pos[1] < self.width / 3 for pos in defenders)
         mid = sum(self.width / 3 <= pos[1] <= self.width * 2 / 3 for pos in defenders)
         right = len(defenders) - left - mid
+        rule_snapshot = self._attacker_rule_snapshot()
+        target = self.planted_pos or self.target_plant_pos
+        if not self.is_planted and rule_snapshot and rule_snapshot.get("site_selection_active"):
+            target = rule_snapshot.get("target_plant_pos")
         return {
+            **({"gc_attacker_v2": rule_snapshot} if rule_snapshot is not None else {}),
             "attacker_strategy": attack_type,
             "attacker_strategy_raw": attack_strategy,
             "final_attack_site": (
                 (
                     "A"
-                    if (self.planted_pos or self.target_plant_pos)[1] < self.width / 2
+                    if target[1] < self.width / 2
                     else "B"
                 )
-                if (self.planted_pos or self.target_plant_pos)
+                if target
                 else None
             ),
             "defender_initial_setup": f"{left}-{mid}-{right}",
@@ -323,6 +335,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
             "round_timer": self.round_timer,
             "defender_setup_active": True,
             "defender_setup_ticks_remaining": self.defender_setup_phase.ticks_remaining,
+            **roster_information(self.chars, char.team),
         }
 
         # Setup Phase はラウンド前の自陣配置なので、IQ知覚補正を通さない。
@@ -520,6 +533,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
             "ultimate_cost": int(char.ultimate_cost),
             "ultimate_name": char.ultimate_name,
             "orb_collect_timer": int(char.orb_collect_timer),
+            **roster_information(self.chars, char.team),
         }
 
         if char.team == "A":

@@ -28,6 +28,32 @@ DEFAULT_ROLE_COMPOSITION = {
 }
 
 
+def roster_information(chars, viewer_team):
+    """Public lineup information, independent of visibility and survival.
+
+    Entries follow character/roster order and contain copied base stats, never
+    live enemy objects, positions, HP, spike ownership or remaining charges.
+    Runtime names distinguish duplicate players; base_name identifies their
+    character definition (including season-specific player keys).
+    """
+    allies, enemies = [], []
+    for char in chars:
+        base_name = getattr(char, "base_name", char.name)
+        stats = dict(get_character_combat_stats(base_name))
+        entry = {
+            "name": str(char.name),
+            "base_name": str(base_name),
+            "team": char.team,
+            "role": getattr(char, "role", stats["role"]),
+            "ability_name": getattr(char, "ability_name", None),
+            "ultimate_name": getattr(char, "ultimate_name", None),
+            "ultimate_cost": getattr(char, "ultimate_cost", None),
+            "stats": stats,
+        }
+        (allies if char.team == viewer_team else enemies).append(entry)
+    return {"ally_roster": allies, "enemy_roster": enemies}
+
+
 def model_slots(players, trained_names):
     """Map actual teammates to distinct trained slots without renaming players.
 

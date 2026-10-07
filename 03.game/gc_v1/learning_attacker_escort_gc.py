@@ -52,6 +52,7 @@ run_game.pyからは他のlearning_attacker_*.py系コントローラーと同�
 (next_pos, {"ability": ..., "target": (r, c)}))で呼び出される想定。
 """
 
+
 import os
 from collections import deque
 
@@ -66,6 +67,11 @@ except ImportError:
     from gc_facing import FACING_DIRS, append_facing_onehot
     from tactical_ability import choose_pre_entry_ability
     from ultimate_tactics_gc import build_ultimate_action, ultimate_context_features, orb_context_features, attacker_orb_context_features, can_collect_orb
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
+
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -113,6 +119,7 @@ FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
 FAKE_WAIT_SUPPORT_OBS_DIM = FACING_HEAD_OBS_DIM + 6  # v12: waiting bodyguard context.
 LEGACY_ORB_OBS_DIM = FAKE_WAIT_SUPPORT_OBS_DIM + 4
 ORB_OBS_DIM = LEGACY_ORB_OBS_DIM + 1  # v14: nearby-orb proximity
+ROSTER_OBS_DIM = ORB_OBS_DIM + ENEMY_ROSTER_DIM
 FACING_HEAD_VERSION = 2
 
 
@@ -272,7 +279,7 @@ class LearningAttackerEscortGCController:
             model_path, map_location=self.device, weights_only=False
         )
         self.positioning_version = int(checkpoint.get("positioning_version", 0))
-        obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
+        obs_dim = base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
 
         expected_dim = (ORB_OBS_DIM if self.positioning_version >= 14 else
@@ -296,10 +303,10 @@ class LearningAttackerEscortGCController:
             )
 
         checkpoint_facing_version = int(checkpoint.get("facing_head_version", 0))
-        self.policy_net = DuelingQNetwork(obs_dim, n_actions).to(self.device)
+        self.policy_net = DuelingQNetwork(obs_dim + ENEMY_ROSTER_DIM, n_actions).to(self.device)
         self.policy_net.facing_head_version = checkpoint_facing_version
         incompatible = self.policy_net.load_state_dict(
-            checkpoint["model_state_dict"], strict=False
+            expand_roster_state(self.policy_net, checkpoint["model_state_dict"]), strict=False
         )
         unexpected = list(incompatible.unexpected_keys)
         missing = [key for key in incompatible.missing_keys
@@ -759,7 +766,7 @@ class LearningAttackerEscortGCController:
                 else orb_context_features(char, available_orbs)
             )
             obs_arr = np.concatenate((obs_arr, features))
-        return obs_arr
+        return append_enemy_roster(obs_arr, game_state=game_state, game=getattr(self, "game", None), chars=chars, viewer_team=char.team)
 
     def _ultimate_action(self, char, chars):
         try:

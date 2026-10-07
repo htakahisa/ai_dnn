@@ -146,7 +146,7 @@ class PositioningLearningTests(unittest.TestCase):
                                       set(), env.dist_map, 0, carry.MAX_TICKS,
                                       env.reached_waypoint, env.target_plant_pos)
         self.assertEqual(obs[3], 1.0)
-        self.assertEqual(obs.shape, (31,))
+        self.assertEqual(obs.shape, (31 + carry_runtime.ENEMY_ROSTER_DIM,))
         env.carrier.plant_timer = carry.PLANT_REQUIRED_TICKS - 1
         obs = ctrl._build_observation(env.carrier, env.attackers + env.defenders,
                                       set(), env.dist_map, 0, carry.MAX_TICKS,

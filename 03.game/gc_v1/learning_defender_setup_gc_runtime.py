@@ -14,6 +14,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
+
 from map_data import NEW_MAZE_STR
 from map_data_defender_setup import (
     DEFENDER_SETUP_TICKS,
@@ -49,6 +53,7 @@ OBS_DIM = (
     PLAYER_COUNT + ACTION_DIM + 2 + ACTION_DIM * 2
     + OPPONENT_DIM + VARIATION_DIM
 )
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 
 _ROWS = [row.strip() for row in str(NEW_MAZE_STR).strip().splitlines() if row.strip()]
 HEIGHT = len(_ROWS)
@@ -195,7 +200,7 @@ class SetupAssignment:
 
 
 class SetupQNet(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim, 256),
@@ -218,7 +223,7 @@ def _normalize_pos(pos):
 
 
 def _build_obs(char, player_index, selected_indices, opponent_name, variation_index,
-               opponent_index=None, opponent_dim=None):
+               opponent_index=None, opponent_dim=None, *, game=None, chars=()):
     player_one_hot = np.zeros(PLAYER_COUNT, dtype=np.float32)
     player_one_hot[player_index] = 1.0
 
@@ -256,7 +261,9 @@ def _build_obs(char, player_index, selected_indices, opponent_name, variation_in
     expected_dim = OBS_DIM - OPPONENT_DIM + dimension
     if obs.shape != (expected_dim,):
         raise RuntimeError(f"Setup OBS mismatch: {obs.shape} != {(expected_dim,)}")
-    return obs
+    preset = get_preset(opponent_name) if opponent_name else None
+    roster = tuple(preset.players) if game is None and not chars and preset else None
+    return append_enemy_roster(obs, game=game, chars=chars, viewer_team="D", roster=roster)
 
 
 class LearningDefenderSetupGCRuntime:
@@ -287,7 +294,7 @@ class LearningDefenderSetupGCRuntime:
             weights_only=False,
         )
 
-        ck_obs = int(checkpoint.get("obs_dim", -1))
+        ck_obs = base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", -1))
         ck_action = int(checkpoint.get("action_dim", -1))
         ck_max_dist = checkpoint.get("max_candidate_bfs_distance")
         if ck_max_dist is not None and int(ck_max_dist) != MAX_CANDIDATE_BFS_DISTANCE:
@@ -298,8 +305,8 @@ class LearningDefenderSetupGCRuntime:
         ck_opponents = checkpoint.get("opponent_names")
         fixed_dim = OBS_DIM - OPPONENT_DIM
         self.opponent_dim = len(ck_opponents) if ck_opponents is not None else ck_obs - fixed_dim
-        self.obs_dim = fixed_dim + self.opponent_dim
-        if self.opponent_dim < 0 or ck_obs != self.obs_dim:
+        self.obs_dim = fixed_dim + self.opponent_dim + ENEMY_ROSTER_DIM
+        if self.opponent_dim < 0 or ck_obs != self.obs_dim - ENEMY_ROSTER_DIM:
             raise RuntimeError(
                 f"GC Setup OBS_DIM mismatch: checkpoint={ck_obs} current={OBS_DIM}"
             )
@@ -336,7 +343,7 @@ class LearningDefenderSetupGCRuntime:
                 raise RuntimeError("GC Setup candidate positions changed")
 
         self.model = SetupQNet(obs_dim=self.obs_dim).to(self.device)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.model.load_state_dict(expand_roster_state(self.model, checkpoint["model_state_dict"]))
         self.model.eval()
 
         self.episode = int(checkpoint.get("episode", 0))
@@ -405,7 +412,7 @@ class LearningDefenderSetupGCRuntime:
             player_index, name = slots[char.name], char.name
             obs = _build_obs(char, player_index, selected, self.opponent_name,
                              self.variation_index, self.opponent_index,
-                             self.opponent_dim)
+                             self.opponent_dim, game=self.game, chars=chars)
 
             valid = _valid_action_mask(
                 player_index,

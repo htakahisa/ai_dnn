@@ -28,6 +28,7 @@ character_stats_gc.py は game_core.py / map_data.py と同様、
 --------------------------------------------------------------------------
 """
 
+
 import os
 import sys
 import random
@@ -56,6 +57,10 @@ if not torch.cuda.is_available():
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster, expand_roster_state,
+)
 
 from map_data import NEW_MAZE_STR
 try:
@@ -158,6 +163,7 @@ BASE_OBS_DIM = 36
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
 OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 BASE_ACTION_DIM = 10
 ACTION_ULTIMATE = BASE_ACTION_DIM
 ACTION_COLLECT_ORB = BASE_ACTION_DIM + 1
@@ -728,7 +734,7 @@ class TeamMemory:
 
 
 class DefenderSearchDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -929,7 +935,7 @@ def build_observation(
         getattr(unit, "facing", "S"),
     )
 
-    return obs
+    return append_enemy_roster(obs, roster=attackers, viewer_team="D")
 
 
 def decode_action(action_idx):
@@ -2038,8 +2044,9 @@ def optimize(policy_net, target_net, optimizer, buffer, batch_size, gamma):
 def expand_search_policy_state(checkpoint, policy_net):
     """Warm-start the factorized policy from either legacy search format."""
     source = checkpoint.get("model_state_dict", checkpoint)
-    target = policy_net.state_dict()
     old_obs = int(source["feature.0.weight"].shape[1])
+    source = expand_roster_state(policy_net, source)
+    target = policy_net.state_dict()
     old_actions = int(source["advantage_head.2.weight"].shape[0])
     for key, value in source.items():
         if key in target and target[key].shape == value.shape:
@@ -2047,7 +2054,7 @@ def expand_search_policy_state(checkpoint, policy_net):
 
     feature_key = "feature.0.weight"
     if feature_key in source and old_obs in (BASE_OBS_DIM, BASE_OBS_DIM + len(FACING_DIRS)):
-        expanded = target[feature_key].detach().clone()
+        expanded = torch.zeros_like(target[feature_key])
         expanded[:, :BASE_OBS_DIM] = source[feature_key][:, :BASE_OBS_DIM]
         if old_obs > BASE_OBS_DIM:
             expanded[:, ORB_CONTEXT_OBS_DIM:OBS_DIM] = source[feature_key][
@@ -2076,7 +2083,8 @@ def checkpoint_payload(policy_net, episode, metrics=None):
     return {
         "model_state_dict": policy_net.state_dict(),
         "episode": int(episode),
-        "obs_dim": OBS_DIM,
+        "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA,
         "n_actions": ACTION_DIM,
         "facing_head_version": FACING_HEAD_VERSION,
         "training_revision": "defender_search_current",

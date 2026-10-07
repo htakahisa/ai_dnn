@@ -38,6 +38,7 @@ decode_action() / build_action_mask()と完全に一致させる必要がある�
 ここがズレると学習結果が正しく反映されない。
 """
 
+
 import os
 import random
 from collections import deque
@@ -45,6 +46,11 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
+
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
     GC_ROSTER_ORDER,
@@ -77,6 +83,7 @@ ULTIMATE_CONTEXT_OBS_DIM = 70  # v10: ready/combat/objective/urgency cast contex
 FACING_HEAD_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + len(FACING_DIRS)
 LEGACY_ORB_OBS_DIM = FACING_HEAD_OBS_DIM + 4
 ORB_OBS_DIM = LEGACY_ORB_OBS_DIM + 1  # v13: nearby-orb proximity
+ROSTER_OBS_DIM = ORB_OBS_DIM + ENEMY_ROSTER_DIM
 FACING_HEAD_VERSION = 2
 LEGACY_ACTION_DIM = 11
 ACTION_DIM = 13
@@ -102,7 +109,7 @@ SIGHTING_STALENESS_CAP = 20
 
 
 class AttackerCarryDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -383,7 +390,7 @@ class LearningAttackerCarryGCController:
         self.model_episode = checkpoint.get("episode")
         self.model_path = str(model_path)
 
-        ckpt_obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
+        ckpt_obs_dim = base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", OBS_DIM))
         ckpt_n_actions = int(checkpoint.get("n_actions", ACTION_DIM))
         expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
                             LEGACY_ORB_OBS_DIM if self.positioning_version >= 12 else
@@ -405,11 +412,11 @@ class LearningAttackerCarryGCController:
 
         checkpoint_facing_version = int(checkpoint.get("facing_head_version", 0))
         self.policy_net = AttackerCarryDuelingDQN(
-            obs_dim=ckpt_obs_dim, action_dim=ckpt_n_actions
+            obs_dim=ckpt_obs_dim + ENEMY_ROSTER_DIM, action_dim=ckpt_n_actions
         ).to(self.device)
         self.policy_net.facing_head_version = checkpoint_facing_version
         incompatible = self.policy_net.load_state_dict(
-            checkpoint["model_state_dict"], strict=False
+            expand_roster_state(self.policy_net, checkpoint["model_state_dict"]), strict=False
         )
         unexpected = list(incompatible.unexpected_keys)
         missing = [key for key in incompatible.missing_keys
@@ -585,6 +592,7 @@ class LearningAttackerCarryGCController:
         max_ticks,
         reached_waypoint,
         target_plant_pos=None,
+        *, game_state=None,
     ):
         modern = self.positioning_version >= 3
         obs_dim = (ORB_OBS_DIM if self.positioning_version >= 13 else
@@ -791,7 +799,9 @@ class LearningAttackerCarryGCController:
                 obs[FACING_HEAD_OBS_DIM:LEGACY_ORB_OBS_DIM] = orb_context_features(
                     char, available_orbs
                 )
-        return obs
+        return append_enemy_roster(obs, game_state=game_state,
+                                   game=getattr(self, "game", None), chars=chars,
+                                   viewer_team=char.team)
 
     def _build_mask(self, char, chars, on_site, ultimate_target=None):
         grid = self.game.grid
@@ -1081,6 +1091,7 @@ class LearningAttackerCarryGCController:
             max_ticks,
             self._reached_waypoint,
             target_plant_pos,
+            game_state=game_state,
         )
         mask = self._build_mask(char, chars, on_site, ultimate_target=target_plant_pos)
         action_idx = self._select_action(obs, mask)

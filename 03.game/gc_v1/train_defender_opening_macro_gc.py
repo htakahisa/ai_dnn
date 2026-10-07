@@ -52,6 +52,10 @@ try:
 except Exception:
     MultiRoleAttackerController = None
     MultiRoleDefenderController = None
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, base_checkpoint_dim, expand_roster_state,
+)
+
 from map_data import NEW_MAZE_STR
 from roster_utils import build_two_balanced_rosters
 from party_presets import get_preset
@@ -193,7 +197,7 @@ class OpeningSelectionQNet(nn.Module):
 
 
 class OpeningExecutionQNet(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=EXEC_ACTION_DIM):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=EXEC_ACTION_DIM):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim, 192),
@@ -558,7 +562,7 @@ class TrainableOpeningMacro(LearningDefenderOpeningMacroGCController):
         if terminal_obs is None:
             terminal_obs = self._last_obs
         if terminal_obs is None:
-            terminal_obs = np.zeros(OBS_DIM, dtype=np.float32)
+            terminal_obs = np.zeros(OBS_DIM + ENEMY_ROSTER_DIM, dtype=np.float32)
 
         selections = []
         for step in self.round_selection_steps:
@@ -951,7 +955,8 @@ def save_checkpoint(
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save({
         "model_type": "gc_defender_opening_macro_dqn_v1",
-        "obs_dim": OBS_DIM,
+        "obs_dim": OBS_DIM + ENEMY_ROSTER_DIM,
+        **ROSTER_METADATA,
         "action_dims": action_dims,
         "execution_action_dim": EXEC_ACTION_DIM,
         "selection_state_dict": selection.state_dict(),
@@ -977,21 +982,21 @@ def load_checkpoint(
     device,
 ):
     ckpt = torch.load(path, map_location=device, weights_only=False)
-    if int(ckpt.get("obs_dim", -1)) != OBS_DIM:
+    if base_checkpoint_dim(ckpt, ckpt.get("obs_dim", -1)) != OBS_DIM:
         raise ValueError("checkpoint OBS_DIM mismatch")
 
-    selection.load_state_dict(ckpt["selection_state_dict"])
-    execution.load_state_dict(ckpt["execution_state_dict"])
+    selection.load_state_dict(expand_roster_state(selection, ckpt["selection_state_dict"]))
+    execution.load_state_dict(expand_roster_state(execution, ckpt["execution_state_dict"]))
     selection_target.load_state_dict(
-        ckpt.get("selection_target_state_dict", ckpt["selection_state_dict"])
+        expand_roster_state(selection_target, ckpt.get("selection_target_state_dict", ckpt["selection_state_dict"]))
     )
     execution_target.load_state_dict(
-        ckpt.get("execution_target_state_dict", ckpt["execution_state_dict"])
+        expand_roster_state(execution_target, ckpt.get("execution_target_state_dict", ckpt["execution_state_dict"]))
     )
 
-    if "selection_optimizer_state_dict" in ckpt:
+    if ckpt.get("enemy_roster_version") and "selection_optimizer_state_dict" in ckpt:
         selection_optimizer.load_state_dict(ckpt["selection_optimizer_state_dict"])
-    if "execution_optimizer_state_dict" in ckpt:
+    if ckpt.get("enemy_roster_version") and "execution_optimizer_state_dict" in ckpt:
         execution_optimizer.load_state_dict(ckpt["execution_optimizer_state_dict"])
 
     return (
@@ -1208,8 +1213,8 @@ def train(args):
     probe = LearningDefenderOpeningMacroGCController()
     action_dims = _select_action_dims(probe.patterns)
 
-    selection = OpeningSelectionQNet(OBS_DIM, action_dims).to(device)
-    selection_target = OpeningSelectionQNet(OBS_DIM, action_dims).to(device)
+    selection = OpeningSelectionQNet(OBS_DIM + ENEMY_ROSTER_DIM, action_dims).to(device)
+    selection_target = OpeningSelectionQNet(OBS_DIM + ENEMY_ROSTER_DIM, action_dims).to(device)
     execution = OpeningExecutionQNet().to(device)
     execution_target = OpeningExecutionQNet().to(device)
 

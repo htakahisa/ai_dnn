@@ -142,6 +142,10 @@ def _build_team_ai(key):
             ),
         )
 
+    if normalized == "ghost_champions_v2":
+        from ghost_champions_v2 import build_team_ai
+        return build_team_ai()
+
     if normalized in {
         "fnatic_v2",
         "fnatic_2",
@@ -462,8 +466,10 @@ class VisualFPSBattle(
                 "progress": int(item.get("progress", 0)),
             }
 
+        rule_snapshot = self._attacker_rule_snapshot()
         self.replay_frames.append(
             {
+                **({"gc_attacker_v2": rule_snapshot} if rule_snapshot is not None else {}),
                 "round": int(getattr(self, "current_round", 0)),
                 "tick": int(getattr(self, "battle_tick", 0)),
                 "setup": bool(getattr(self, "in_defender_setup_phase", False)),
@@ -476,7 +482,11 @@ class VisualFPSBattle(
                 "defender_wins": int(getattr(self, "defender_wins", 0)),
                 "planted": bool(getattr(self, "is_planted", False)),
                 "round_over": bool(getattr(self, "round_over", False)),
-                "target_plant_pos": pos(getattr(self, "target_plant_pos", None)),
+                "target_plant_pos": pos(
+                    rule_snapshot.get("target_plant_pos")
+                    if rule_snapshot and rule_snapshot.get("site_selection_active")
+                    else getattr(self, "target_plant_pos", None)
+                ),
                 "planted_pos": pos(getattr(self, "planted_pos", None)),
                 "spike_pos": pos(getattr(self, "spike_pos", None)),
                 "available_orbs": [

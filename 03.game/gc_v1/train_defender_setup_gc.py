@@ -30,6 +30,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster,
+)
+
 from map_data import NEW_MAZE_STR
 from map_data_defender_setup import (
     DEFENDER_SETUP_TICKS,
@@ -220,6 +224,7 @@ OBS_DIM = (
     + OPPONENT_DIM
     + VARIATION_DIM
 )
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 
 REPLAY_CAPACITY = 50_000
 BATCH_SIZE = 128
@@ -567,7 +572,7 @@ class ReplayBuffer:
 
 
 class SetupQNet(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim, 256),
@@ -589,7 +594,7 @@ def _normalize_pos(pos):
     )
 
 
-def build_obs(char, player_index, selected_indices, opponent_name, variation_index):
+def build_obs(char, player_index, selected_indices, opponent_name, variation_index, *, chars=()):
     player_one_hot = np.zeros(PLAYER_COUNT, dtype=np.float32)
     player_one_hot[player_index] = 1.0
 
@@ -624,7 +629,9 @@ def build_obs(char, player_index, selected_indices, opponent_name, variation_ind
 
     if obs.shape != (OBS_DIM,):
         raise RuntimeError(f"Setup OBS mismatch: {obs.shape} != {(OBS_DIM,)}")
-    return obs
+    preset = get_preset(opponent_name) if opponent_name else None
+    roster = tuple(preset.players) if not chars and preset else None
+    return append_enemy_roster(obs, chars=chars, viewer_team="D", roster=roster)
 
 
 def valid_action_mask(player_index, selected_indices):
@@ -717,7 +724,7 @@ class TrainableSetupPlanner(GCDefenderSetupPlanner):
 
         for player_index, name in enumerate(GC_ROSTER_ORDER):
             char = char_by_name[name]
-            obs = build_obs(char, player_index, selected, self.opponent_name, self.variation_index)
+            obs = build_obs(char, player_index, selected, self.opponent_name, self.variation_index, chars=chars)
             mask = valid_action_mask(player_index, selected)
             eps = 0.0 if self.greedy else self.epsilon
             action = choose_action(
@@ -727,7 +734,7 @@ class TrainableSetupPlanner(GCDefenderSetupPlanner):
             assignments[name] = target
             selected.append(action)
 
-            next_obs = build_obs(char, player_index, selected, self.opponent_name, self.variation_index)
+            next_obs = build_obs(char, player_index, selected, self.opponent_name, self.variation_index, chars=chars)
             self.pending_choices.append({
                 "obs": obs,
                 "action": action,
@@ -1170,7 +1177,8 @@ def save_checkpoint(path, model, optimizer, *, episode, global_step, best_setup_
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save({
         "model_type": "gc_defender_setup_dqn_setup_v3_contextual",
-        "obs_dim": OBS_DIM,
+        "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA,
         "action_dim": ACTION_DIM,
         "candidate_positions": list(CANDIDATES),
         "roster_order": list(GC_ROSTER_ORDER),

@@ -36,6 +36,7 @@ map_data_guard_plant_gc.py の5～9を共有し、対応するGuard配置と結�
 "success_rate","priority_cells","has_priority_cells"} を含むdict形式で保存する。
 """
 
+
 import os
 import sys
 import random
@@ -50,6 +51,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster, expand_roster_state,
+)
 
 from map_data_carry_gc import NEW_MAZE_STR
 from positioning_gc import (POSITIONING_VERSION, REGISTERED_PLANT_CELLS,
@@ -98,6 +103,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 29
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 ACTION_DIM = (
     11  # move_idx(0-4)*2 + use_ability_flag(0/1) の10種類 + 明示PLANT(index=10)
 )
@@ -786,7 +792,7 @@ class SightingMemory:
 
 
 class AttackerCarryDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -920,7 +926,7 @@ def build_observation(
     # target_plant_pos向けかを区別するためのフラグ(未配置サイトは常に1.0)。
     obs[28] = 1.0 if reached_waypoint else 0.0
 
-    return obs
+    return append_enemy_roster(obs, roster=defenders)
 
 
 def decode_action(action_idx):
@@ -1325,7 +1331,7 @@ class CarryEnv:
         obs, mask = (
             self._collect_observation()
             if self.carrier.is_alive
-            else (np.zeros(OBS_DIM, dtype=np.float32), np.ones(ACTION_DIM, dtype=bool))
+            else (np.zeros(ROSTER_OBS_DIM, dtype=np.float32), np.ones(ACTION_DIM, dtype=bool))
         )
         return obs, mask, reward, done
 
@@ -1590,7 +1596,7 @@ def train(
     policy_net = AttackerCarryDuelingDQN().to(DEVICE)
     if init_model is not None:
         checkpoint = torch.load(init_model, map_location=DEVICE, weights_only=False)
-        policy_net.load_state_dict(checkpoint["model_state_dict"])
+        policy_net.load_state_dict(expand_roster_state(policy_net, checkpoint["model_state_dict"]))
     target_net = AttackerCarryDuelingDQN().to(DEVICE)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
@@ -1615,7 +1621,8 @@ def train(
                 "model_state_dict": policy_net.state_dict(),
                 "positioning_version": POSITIONING_VERSION,
                 "evaluation": evaluation,
-                "obs_dim": OBS_DIM,
+                "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA,
                 "n_actions": ACTION_DIM,
                 "episode": episode_no,
                 "success_rate": success_rate_value,

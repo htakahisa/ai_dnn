@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 from gc_v1.learning_defender_setup_gc_runtime import (
     LearningDefenderSetupGCRuntime, GC_ROSTER_ORDER, DEFENDER_SPAWNS,
-    _build_obs, OBS_DIM, OPPONENT_DIM,
+    _build_obs, OBS_DIM, OPPONENT_DIM, ENEMY_ROSTER_DIM,
 )
 
 
@@ -25,7 +25,7 @@ class SetupCompatibilityTests(unittest.TestCase):
         char = SimpleNamespace(pos=[1, 1])
         obs = _build_obs(char, 0, [], 'new team', 0,
                          {'Touyama Gaming': 0}, 1)
-        self.assertEqual(len(obs), OBS_DIM - OPPONENT_DIM + 1)
+        self.assertEqual(len(obs), OBS_DIM - OPPONENT_DIM + 1 + ENEMY_ROSTER_DIM)
         offset = OBS_DIM - OPPONENT_DIM - 3
         self.assertEqual(obs[offset], 0.0)
         self.assertTrue(np.isfinite(obs).all())

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "plant_targets": {"A": [8, 3], "B": [7, 40]},
+  "support": {"dance_min_missing_hp": 25},
+  "flags": {
+    "post_plant_hold": true,
+    "early_recon": true,
+    "opponent_profiles": true,
+    "entry_discipline": true
+  },
+  "hold": {
+    "radius": 5.0,
+    "trade_radius": 4.0,
+    "leash_radius": 8.0,
+    "defuse_radius": 3.0,
+    "crossfire_angle": 60.0,
+    "minimum_radius": 2.0,
+    "responders": 2,
+    "travel_weight": 0.2,
+    "coverage_weight": 1.0,
+    "crossfire_weight": 3.0,
+    "trade_weight": 4.0
+  },
+  "recon": {
+    "deadline": 30,
+    "gap_ticks": 4,
+    "scout_cast_tick": 29,
+    "waypoint_radius": 0.1,
+    "waypoints": {"A": [16, 4], "Mid": [20, 21], "B": [7, 23]},
+    "secondary_waypoints": {"A": [15, 3], "Mid": [20, 21], "B": [7, 23]},
+    "aims": {"A": [8, 3], "Mid": [8, 21], "B": [5, 39]},
+    "secondary_aims": {"A": [8, 7], "Mid": [8, 21], "B": [5, 39]}
+  },
+  "entry": {
+    "trade_radius": 4.0,
+    "contact_radius": 8.0,
+    "minimum_support": 1,
+    "maximum_detour": 2,
+    "minimum_plant_support": 4,
+    "plant_support_radius": 8.0,
+    "require_utility": true,
+    "staging_distance": 10,
+    "sighting_ttl": 20,
+    "flash_before_contact_radius": 10.0
+  },
+  "profiles": {
+    "TYG": {"preset": "Touyama Gaming", "preserve_v1": true, "preferred_site": "A", "allow_solo_bait": true},
+    "OMG": {"preset": "Omoko Gaming", "preferred_site": "A", "post_plant_hold": true, "allow_solo_bait": false},
+    "GG": {"preset": "Gorigons", "preferred_site": "A", "post_plant_hold": true, "allow_solo_bait": false},
+    "SPS": {"preset": "SUPES", "post_plant_hold": true, "allow_solo_bait": false},
+    "FRC": {"preset": "Furina Classic", "confirm_defenders": 2, "allow_solo_bait": false},
+    "FNC": {"preset": "Fnatic2023", "avoid_defenders": 4, "allow_solo_bait": false},
+    "unknown": {"allow_solo_bait": false},
+    "observed_mid_heavy": {"post_plant_hold": true, "allow_solo_bait": false}
+  }
+}

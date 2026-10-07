@@ -69,6 +69,7 @@ move_character)と同じく「移動できずその場に留まる」。この�
 "spike_holder_default"} を含むdict形式で保存する。
 """
 
+
 import argparse
 import os
 import random
@@ -85,6 +86,10 @@ import torch.optim as optim
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster,
+)
 
 from map_data import NEW_MAZE_STR
 from character_stats_gc import CHARACTER_TABLE as GC_STATS_TABLE
@@ -833,7 +838,7 @@ class EscortEnv:
             fake_features = fake_wait_support_features(self, current_char, chars, cache)
             obs.extend(fake_features.tolist())
 
-        return np.array(obs, dtype=np.float32)
+        return append_enemy_roster(obs, roster=[f"escort_enemy_{j}" for j in range(self.n_enemies)])
 
     def _obs_dim(self):
         # _get_obs() の要素数と一致させる
@@ -842,8 +847,8 @@ class EscortEnv:
         if hasattr(self, "positioning_version") and self.positioning_version >= 12:
             from navigation_intent_gc import FAKE_WAIT_SUPPORT_DIM
 
-            return base_dim + FAKE_WAIT_SUPPORT_DIM
-        return base_dim
+            return base_dim + FAKE_WAIT_SUPPORT_DIM + ENEMY_ROSTER_DIM
+        return base_dim + ENEMY_ROSTER_DIM
 
     # ------------------------------------------------------------------
     # アビリティ処理
@@ -1510,6 +1515,7 @@ def main():
         return {
             "model_state_dict": policy_net.state_dict(),
             "obs_dim": obs_dim,
+            **ROSTER_METADATA,
             "n_actions": n_actions,
             "episode": episode,
             "success_rate": success_rate,

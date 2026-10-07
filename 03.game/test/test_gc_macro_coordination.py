@@ -790,7 +790,7 @@ class MacroCoordinationTests(unittest.TestCase):
 
     def test_existing_checkpoint_loads_on_cpu(self):
         controller = runtime.LearningAttackerMacroGCController(device="cpu", verbose=False)
-        self.assertEqual(controller.env.build_observation().shape, (training.OBS_DIM,))
+        self.assertEqual(controller.env.build_observation().shape, (training.ROSTER_OBS_DIM,))
 
     def test_defender_recon_waits_for_attacker_arrival_window(self):
         controller = defender_opening.LearningDefenderOpeningMacroGCRuntime.__new__(
@@ -826,7 +826,7 @@ class MacroCoordinationTests(unittest.TestCase):
             env._apply_strategy_assignments(strategy, initial=True)
             for _ in range(8):
                 obs, reward, done, _ = env.step(training.STRATEGY_TO_INDEX[strategy])
-                self.assertEqual(obs.shape, (training.OBS_DIM,))
+                self.assertEqual(obs.shape, (training.ROSTER_OBS_DIM,))
                 self.assertTrue(np.isfinite(obs).all())
                 self.assertTrue(np.isfinite(reward))
                 if done:

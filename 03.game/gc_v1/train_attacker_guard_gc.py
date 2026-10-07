@@ -32,6 +32,7 @@ character_stats_gc.py / game_core.py / map_data.py は定数専用
 --------------------------------------------------------------------------
 """
 
+
 import os
 import sys
 import random
@@ -46,6 +47,10 @@ import torch.optim as optim
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster, expand_roster_state,
+)
 
 from map_data import NEW_MAZE_STR
 from map_data_guard_gc import NEW_MAZE_STR as GUARD_MAZE_STR
@@ -93,6 +98,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CARDINAL = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 34
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ROLES = ["FLASH", "SMOKE", "RECON", "HUNT"]  # 参考用(gc側ロールはステータス表から決定)
 
@@ -673,7 +679,7 @@ class GuardMemory:
 
 
 class AttackerGuardDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -825,7 +831,7 @@ def build_observation(
 
     obs[33] = (pattern_marker - 4) / 5.0 if pattern_marker else 0.0
 
-    return obs
+    return append_enemy_roster(obs, roster=defenders)
 
 
 def decode_action(action_idx):
@@ -1463,7 +1469,7 @@ def train(
     policy_net = AttackerGuardDuelingDQN().to(DEVICE)
     if init_model is not None:
         checkpoint = torch.load(init_model, map_location=DEVICE, weights_only=False)
-        policy_net.load_state_dict(checkpoint.get("model_state_dict", checkpoint))
+        policy_net.load_state_dict(expand_roster_state(policy_net, checkpoint.get("model_state_dict", checkpoint)))
         if int(checkpoint.get("positioning_version", 0)) == 0:
             with torch.no_grad():
                 policy_net.feature[0].weight[:, 33].zero_()
@@ -1540,7 +1546,8 @@ def train(
             evaluation = evaluate_guard(sys.modules[__name__], policy_net, eval_episodes)
             checkpoint = {"model_state_dict": policy_net.state_dict(),
                           "positioning_version": POSITIONING_VERSION,
-                          "obs_dim": OBS_DIM, "n_actions": ACTION_DIM,
+                          "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA, "n_actions": ACTION_DIM,
                           "episode": episode, "evaluation": evaluation}
             torch.save(checkpoint, latest_path)
             score = (evaluation["win_rate"], evaluation["arrival_rate"], evaluation["avg_reward"])

@@ -38,6 +38,7 @@ character_stats_gc.py / game_core.py の定数・データだけを参照する�
 """
 
 from __future__ import annotations
+
 from itertools import permutations
 
 import math
@@ -62,6 +63,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster,
+)
 
 from map_data import NEW_MAZE_STR
 from map_data_macro_gc import (
@@ -3377,7 +3382,11 @@ class MacroEnv:
         arr = np.asarray(obs, dtype=np.float32)
         if arr.shape != (68,):
             raise RuntimeError(f"Macro OBS_DIM mismatch: {arr.shape}")
-        return arr
+        return append_enemy_roster(
+            arr, game_state=getattr(self, "public_roster_state", None),
+            game=getattr(self, "public_roster_game", None),
+            roster=None if hasattr(self, "public_roster_state") else self.defenders,
+        )
 
     def _remembered_enemy_info_detail(self, side):
         """v21: return (confidence, enemy_count, source)."""
@@ -4827,10 +4836,11 @@ class MacroEnv:
 # ============================================================================
 
 OBS_DIM = 68
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 
 
 class MacroDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, n_actions=N_ACTIONS, hidden=HIDDEN):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, n_actions=N_ACTIONS, hidden=HIDDEN):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -5478,7 +5488,8 @@ def evaluate(model, episodes=EVAL_EPISODES, forced_curriculum_mode="FREE"):
 def checkpoint_dict(model, episode, eval_result=None):
     return {
         "model_state_dict": model.state_dict(),
-        "obs_dim": OBS_DIM,
+        "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA,
         "n_actions": N_ACTIONS,
         "strategies": list(STRATEGIES),
         "episode": int(episode),

@@ -20,6 +20,7 @@ import time
 import numpy as np
 import torch
 
+
 from train_attacker_carry_gc_real import (
     ROOT,
     Pending,
@@ -27,6 +28,10 @@ from train_attacker_carry_gc_real import (
     expanded_state,
     optimize,
     runtime,
+)
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, base_checkpoint_dim,
 )
 import learning_attacker_escort_gc as escort_runtime
 import learning_attacker_guard_gc as guard_runtime
@@ -107,12 +112,23 @@ FAKE_WAIT_SUPPORT_DESIRED_RADIUS = 2
 
 
 def expand_policy_state(checkpoint, obs_dim, action_dim=None):
-    state = (
-        expanded_state(checkpoint)
-        if "model_state_dict" in checkpoint
-        else dict(checkpoint)
-    )
-    state = dict(state)
+    roster_columns = {}
+    if checkpoint.get("enemy_roster_version"):
+        source = checkpoint.get("model_state_dict", checkpoint)
+        base_checkpoint_dim(checkpoint, source["feature.0.weight"].shape[1])
+        base_state = dict(source)
+        for key in ("feature.0.weight", "facing_feature.0.weight"):
+            if key in source:
+                roster_columns[key] = source[key][:, -ENEMY_ROSTER_DIM:].clone()
+                base_state[key] = source[key][:, :-ENEMY_ROSTER_DIM].clone()
+        checkpoint = {**checkpoint, "model_state_dict": base_state,
+                      "enemy_roster_version": 0}
+    state = dict(checkpoint.get("model_state_dict", checkpoint))
+    # The legacy 29-feature Carry migration also corrects its old movement
+    # flag. Other phases retain their own action counts and facing heads.
+    if (state["feature.0.weight"].shape[1] == runtime.OBS_DIM
+            and action_dim == runtime.ACTION_DIM):
+        state = expanded_state({"model_state_dict": state})
     weights = state["feature.0.weight"]
     if weights.shape[1] > obs_dim:
         raise ValueError(
@@ -180,6 +196,10 @@ def expand_policy_state(checkpoint, obs_dim, action_dim=None):
                     facing_output_weight[:, facing_hidden:]
                 )
                 state["facing_output.weight"] = extended_facing
+    for key, columns in roster_columns.items():
+        if state[key].shape[1] < columns.shape[1] + 21:
+            raise ValueError("Target input has no room for the enemy roster")
+        state[key][:, -ENEMY_ROSTER_DIM:] = columns
     return state
 
 
@@ -3455,13 +3475,13 @@ def train(args):
     hashes = {p: hashlib.sha256(s.read_bytes()).hexdigest() for p, s in sources.items()}
     policies = {
         "carry": runtime.AttackerCarryDuelingDQN(
-            obs_dim=runtime.ORB_OBS_DIM, action_dim=runtime.ACTION_DIM
+            obs_dim=runtime.ROSTER_OBS_DIM, action_dim=runtime.ACTION_DIM
         ),
         "escort": escort_runtime.DuelingQNetwork(
-            escort_runtime.ORB_OBS_DIM, escort_runtime.N_ACTIONS
+            escort_runtime.ROSTER_OBS_DIM, escort_runtime.N_ACTIONS
         ),
         "guard": guard_runtime.AttackerGuardDuelingDQN(
-            obs_dim=guard_runtime.ORB_OBS_DIM,
+            obs_dim=guard_runtime.ROSTER_OBS_DIM,
             action_dim=guard_runtime.ACTION_DIM,
         ),
     }
@@ -3615,6 +3635,7 @@ def train(args):
         payload.update(
             model_state_dict=policies[phase].state_dict(),
             obs_dim=policies[phase].feature[0].in_features,
+            **ROSTER_METADATA,
             n_actions=policies[phase].advantage_head[-1].out_features,
             positioning_version=VERSIONS[phase],
             episode=episode,

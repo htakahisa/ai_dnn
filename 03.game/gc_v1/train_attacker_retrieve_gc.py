@@ -37,6 +37,7 @@ character_stats_gc.py / game_core.py は定数専用ファイルとして参照�
 (train_attacker_carry.py以降と同一方針)。
 """
 
+
 import random
 import sys
 from collections import deque, namedtuple
@@ -50,6 +51,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster,
+)
 
 from map_data import NEW_MAZE_STR
 from character_stats_gc import CHARACTER_TABLE as GC_STATS_TABLE
@@ -294,7 +299,8 @@ class RetrieveEnv:
     詰まった側が単に「先に入った方を待つ」だけで自然に解消される
     という想定。"""
 
-    OBS_DIM = 21
+    BASE_OBS_DIM = 21
+    OBS_DIM = BASE_OBS_DIM + ENEMY_ROSTER_DIM
     # [0-1]座標 [2-5]壁 [6-9]隣接BFS距離 [10]自己BFS距離
     # [11-14]ロールonehot [15]アビリティ残チャージ
     # [16]視認中敵有無 [17-18]視認中敵相対方向 [19]敵blind [20]敵reveal
@@ -327,6 +333,7 @@ class RetrieveEnv:
 
         # 敵スタブ
         self.enemy_alive = random.random() < ENEMY_SPAWN_PROB
+        self.enemy_roster = ["retrieve_enemy"] if self.enemy_alive else []
         self.enemy_pos = None
         self.enemy_hp = MAX_HP
         self.enemy_blind = 0
@@ -414,9 +421,9 @@ class RetrieveEnv:
         ]
         obs_arr = np.array(obs, dtype=np.float32)
         assert (
-            obs_arr.shape[0] == self.OBS_DIM
+            obs_arr.shape[0] == self.BASE_OBS_DIM
         ), f"観測次元がOBS_DIM({self.OBS_DIM})と不一致: {obs_arr.shape[0]}"
-        return obs_arr
+        return append_enemy_roster(obs_arr, roster=self.enemy_roster)
 
     def _action_mask_for(self, unit):
         """壁・占有マスへの移動 / チャージ0でのABILITYは禁止する。
@@ -671,6 +678,7 @@ def _save_checkpoint(policy_net, path, episode, success_rate):
         {
             "model_state_dict": policy_net.state_dict(),
             "obs_dim": RetrieveEnv.OBS_DIM,
+            **ROSTER_METADATA,
             "n_actions": N_ACTIONS,
             "episode": episode,
             "success_rate": success_rate,

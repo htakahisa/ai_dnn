@@ -756,7 +756,7 @@ class RealCurriculumTests(unittest.TestCase):
             )
             self.assertEqual(
                 rebuilt[phase].feature[0].in_features,
-                policies[phase].feature[0].in_features,
+                policies[phase].feature[0].in_features + curriculum.ENEMY_ROSTER_DIM,
             )
 
     def test_checkpoint_evaluator_accepts_escort_support_observations(self):
@@ -776,9 +776,9 @@ class RealCurriculumTests(unittest.TestCase):
         }
         rebuilt = checkpoint_evaluator.build_policies(checkpoints)
         self.assertEqual(rebuilt["escort"].feature[0].in_features,
-                         rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+                         rt.FAKE_WAIT_SUPPORT_OBS_DIM + curriculum.ENEMY_ROSTER_DIM)
         self.assertEqual(tuple(rebuilt["escort"](
-            torch.zeros(1, rt.FAKE_WAIT_SUPPORT_OBS_DIM)
+            torch.zeros(1, rt.FAKE_WAIT_SUPPORT_OBS_DIM + curriculum.ENEMY_ROSTER_DIM)
         ).shape), (1, rt.N_ACTIONS))
 
     def test_navigation_loop_does_not_repeat_progress_reward(self):

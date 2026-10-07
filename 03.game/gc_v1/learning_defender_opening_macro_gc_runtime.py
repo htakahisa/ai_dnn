@@ -26,6 +26,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, base_checkpoint_dim, expand_roster_state,
+)
+
 from game_core import RECON_REVEAL_SIZE, RECON_SPEED_CELLS_PER_TICK
 from learning_defender_opening_macro_gc import (
     ABILITY_ORDER,
@@ -70,7 +74,7 @@ class OpeningSelectionQNet(nn.Module):
 class OpeningExecutionQNet(nn.Module):
     """Same architecture as train_defender_opening_macro_gc.py."""
 
-    def __init__(self, obs_dim=OBS_DIM, action_dim=EXEC_ACTION_DIM):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=EXEC_ACTION_DIM):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim, 192),
@@ -156,7 +160,7 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
             weights_only=False,
         )
 
-        if int(checkpoint.get("obs_dim", -1)) != OBS_DIM:
+        if base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", -1)) != OBS_DIM:
             raise ValueError(
                 f"Opening Macro OBS_DIM mismatch: "
                 f"checkpoint={checkpoint.get('obs_dim')} runtime={OBS_DIM}"
@@ -187,19 +191,19 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
             )
 
         self.selection_net = OpeningSelectionQNet(
-            OBS_DIM,
+            OBS_DIM + ENEMY_ROSTER_DIM,
             self.action_dims,
         ).to(self.device)
         self.execution_net = OpeningExecutionQNet(
-            OBS_DIM,
+            OBS_DIM + ENEMY_ROSTER_DIM,
             EXEC_ACTION_DIM,
         ).to(self.device)
 
         self.selection_net.load_state_dict(
-            checkpoint["selection_state_dict"]
+            expand_roster_state(self.selection_net, checkpoint["selection_state_dict"])
         )
         self.execution_net.load_state_dict(
-            checkpoint["execution_state_dict"]
+            expand_roster_state(self.execution_net, checkpoint["execution_state_dict"])
         )
 
         self.selection_net.eval()

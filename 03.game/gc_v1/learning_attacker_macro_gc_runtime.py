@@ -6,7 +6,8 @@ train_attacker_macro_gc_v28.py.
 
 Design:
 - Macro DQN chooses team strategy every 3 battle ticks.
-- MacroEnv from the training file is reused for the exact 68-dim observation,
+- MacroEnv from the training file is reused for the same observation (68 base
+  features plus the shared public opponent-roster suffix),
   action mask, strategy assignments, Split/Fake/Rotate option state, and v28
   Rotate Opportunity logic.
 - Real game positions/alive/spike state are synchronized into the shadow env.
@@ -27,6 +28,11 @@ import os
 
 import numpy as np
 import torch
+
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, base_checkpoint_dim, expand_roster_state,
+)
 
 from game_core import PLANT_REQUIRED_TICKS
 from positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
@@ -333,7 +339,7 @@ class LearningAttackerMacroGCController:
             weights_only=False,
         )
 
-        obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
+        obs_dim = base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", OBS_DIM))
         n_actions = int(checkpoint.get("n_actions", N_ACTIONS))
         if obs_dim != OBS_DIM or n_actions != N_ACTIONS:
             raise ValueError(
@@ -347,9 +353,9 @@ class LearningAttackerMacroGCController:
                 "Macro checkpoint strategy order does not match runtime v28."
             )
 
-        self.model = MacroDuelingDQN(obs_dim, n_actions).to(self.device)
+        self.model = MacroDuelingDQN(obs_dim + ENEMY_ROSTER_DIM, n_actions).to(self.device)
         state = checkpoint.get("model_state_dict", checkpoint)
-        self.model.load_state_dict(state)
+        self.model.load_state_dict(expand_roster_state(self.model, state))
         self.model.eval()
 
         self.env = MacroEnv()
@@ -1446,6 +1452,8 @@ class LearningAttackerMacroGCController:
             return
 
         self._last_real_tick = tick_id
+        self.env.public_roster_state = game_state
+        self.env.public_roster_game = self.game
         self._sync_attackers(game_state)
 
         self.env.tick = min(

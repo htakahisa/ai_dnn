@@ -13,7 +13,8 @@ def build_policies(checkpoints):
     def saved_obs_dim(phase):
         checkpoint = checkpoints[phase]
         state = checkpoint.get("model_state_dict", checkpoint)
-        return int(state["feature.0.weight"].shape[1])
+        width = int(state["feature.0.weight"].shape[1])
+        return trainer.base_checkpoint_dim(checkpoint, width) + trainer.ENEMY_ROSTER_DIM
 
     def saved_action_dim(phase):
         checkpoint = checkpoints[phase]

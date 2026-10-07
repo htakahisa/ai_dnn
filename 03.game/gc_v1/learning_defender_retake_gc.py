@@ -34,11 +34,16 @@ character_stats_gc.py 側の定義に基づき、run_game.py の既存エンジ�
 (重み共有Dueling DQN)。
 """
 
+
 from collections import deque
 
 import numpy as np
 import torch
 import torch.nn as nn
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
 
 from game_core import (
     BLIND_DURATION_TICKS,
@@ -103,6 +108,7 @@ RETAKE_UTILITY_RECENT_INDEX = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
 RETAKE_LANE_TARGET_INDEX = RETAKE_UTILITY_RECENT_INDEX + 1
 RETAKE_UTILITY_CONTEXT_INDEX = RETAKE_LANE_TARGET_INDEX + 2
 OBS_DIM = RETAKE_UTILITY_CONTEXT_INDEX + RETAKE_UTILITY_CONTEXT_DIM
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 
@@ -129,7 +135,7 @@ DEFAULT_MODEL_PATH = (
 # Dueling DQN (gc_v1/train_defender_retake.py と同一構造)
 # ---------------------------------------------------------------------------
 class DefenderRetakeDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, n_actions=N_ACTIONS, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, n_actions=N_ACTIONS, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -325,7 +331,7 @@ class LearningDefenderRetakeGCController:
                 model_path, map_location=DEVICE, weights_only=False
             )
             state_dict = checkpoint.get("model_state_dict", checkpoint)
-            self.model_obs_dim = int(state_dict["feature.0.weight"].shape[1])
+            self.model_obs_dim = base_checkpoint_dim(checkpoint, state_dict["feature.0.weight"].shape[1])
             self.model_action_dim = int(state_dict["adv_head.2.weight"].shape[0])
             if self.model_action_dim not in (LEGACY_N_ACTIONS, N_ACTIONS):
                 raise ValueError(
@@ -333,9 +339,9 @@ class LearningDefenderRetakeGCController:
                     f"{self.model_action_dim}"
                 )
             self.model = DefenderRetakeDuelingDQN(
-                obs_dim=self.model_obs_dim, n_actions=self.model_action_dim
+                obs_dim=self.model_obs_dim + ENEMY_ROSTER_DIM, n_actions=self.model_action_dim
             ).to(DEVICE)
-            incompatible = self.model.load_state_dict(state_dict, strict=False)
+            incompatible = self.model.load_state_dict(expand_roster_state(self.model, state_dict), strict=False)
             missing = [
                 key for key in incompatible.missing_keys
                 if not key.startswith(("facing_feature.", "facing_output."))
@@ -591,7 +597,7 @@ class LearningDefenderRetakeGCController:
             utility
         )
 
-        return obs
+        return append_enemy_roster(obs, game_state=game_state, game=getattr(self, "game", None), chars=chars, viewer_team=char.team)
 
     # -- 行動マスク ---------------------------------------------------------
     # train_defender_retake.py の action_mask() と同一ロジック。
@@ -648,7 +654,8 @@ class LearningDefenderRetakeGCController:
             return None
         with torch.no_grad():
             obs_t = torch.as_tensor(
-                obs[:self.model_obs_dim], dtype=torch.float32, device=DEVICE
+                np.concatenate((obs[:self.model_obs_dim], obs[-ENEMY_ROSTER_DIM:])),
+                dtype=torch.float32, device=DEVICE
             ).unsqueeze(0)
             values = self.model.facing_values(
                 obs_t, torch.tensor([action_idx], device=DEVICE)
@@ -930,7 +937,7 @@ class LearningDefenderRetakeGCController:
             available_orbs=game_state.get("available_orbs", ()),
         )
 
-        model_obs = obs[:self.model_obs_dim]
+        model_obs = np.concatenate((obs[:self.model_obs_dim], obs[-ENEMY_ROSTER_DIM:]))
         model_mask = mask[:self.model_action_dim]
         obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
         mask_t = torch.from_numpy(model_mask).to(DEVICE)

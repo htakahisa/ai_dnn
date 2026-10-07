@@ -1,0 +1,7 @@
+# Runtime logs, including rotated logs.
+*.log
+*.log.*
+
+# Generated evaluation results and logs.
+/eval_logs/
+logs/

@@ -32,6 +32,10 @@ REVISION = "guard_reposition_v1"
 FAR_DISTANCE = 12
 
 
+from gc_v1.roster_observation_gc import (
+    ROSTER_METADATA, base_checkpoint_dim, expand_roster_state,
+)
+
 def route_action(grid, start, goal, chars, name, mask):
     """Occupancy-aware path label; a detour may increase static BFS distance."""
     start, goal = tuple(start), tuple(goal)
@@ -326,15 +330,15 @@ def load_policies(sources):
     checkpoints = {p: torch.load(path, map_location="cpu", weights_only=False) for p, path in sources.items()}
     policies = {
         "carry": curriculum.runtime.AttackerCarryDuelingDQN(
-            obs_dim=curriculum.runtime.ORB_OBS_DIM, action_dim=curriculum.runtime.ACTION_DIM),
+            obs_dim=curriculum.runtime.ROSTER_OBS_DIM, action_dim=curriculum.runtime.ACTION_DIM),
         "escort": curriculum.escort_runtime.DuelingQNetwork(
-            curriculum.escort_runtime.ORB_OBS_DIM, curriculum.escort_runtime.N_ACTIONS),
-        "guard": guard.AttackerGuardDuelingDQN(obs_dim=guard.ORB_OBS_DIM, action_dim=guard.ACTION_DIM),
+            curriculum.escort_runtime.ROSTER_OBS_DIM, curriculum.escort_runtime.N_ACTIONS),
+        "guard": guard.AttackerGuardDuelingDQN(obs_dim=guard.ROSTER_OBS_DIM, action_dim=guard.ACTION_DIM),
     }
     for phase, policy in policies.items():
-        # All three deployed checkpoints currently have these exact dimensions.
-        # Refuse a fallback or an architecture migration in a Guard-only run.
-        policy.load_state_dict(checkpoints[phase]["model_state_dict"], strict=True)
+        # Only the public-roster input extension is allowed here; all existing
+        # action and hidden-layer dimensions must match exactly.
+        policy.load_state_dict(expand_roster_state(policy, checkpoints[phase]["model_state_dict"]), strict=True)
         policy.eval()
         if phase != "guard":
             for parameter in policy.parameters():
@@ -344,7 +348,7 @@ def load_policies(sources):
 
 def load_guard_checkpoint(path):
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
-    if (int(checkpoint.get("obs_dim", 0)) != guard.ORB_OBS_DIM
+    if (base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", 0)) != guard.ORB_OBS_DIM
             or int(checkpoint.get("n_actions", 0)) != guard.ACTION_DIM
             or int(checkpoint.get("positioning_version", 0)) != 5):
         raise ValueError(f"Incompatible Guard continuation checkpoint: {path}")
@@ -408,7 +412,8 @@ def train(args):
         check_frozen()
         payload = dict(checkpoints["guard"])
         payload.update(model_state_dict=policies["guard"].state_dict(),
-                       obs_dim=guard.ORB_OBS_DIM, n_actions=guard.ACTION_DIM, positioning_version=5,
+                       obs_dim=guard.ROSTER_OBS_DIM, **ROSTER_METADATA,
+                       n_actions=guard.ACTION_DIM, positioning_version=5,
                        episode=episode, source_episode=checkpoints["guard"].get("episode"),
                        training_environment="actual_engine_guard_reposition_five_opponents",
                        training_revision=REVISION, evaluation=metrics,
@@ -429,7 +434,7 @@ def train(args):
         if path is None:
             continue
         checkpoint = load_guard_checkpoint(path)
-        policies["guard"].load_state_dict(checkpoint["model_state_dict"], strict=True)
+        policies["guard"].load_state_dict(expand_roster_state(policies["guard"], checkpoint["model_state_dict"]), strict=True)
         metrics = evaluate(session, args.eval_seeds, args.eval_episodes)
         check_frozen()
         score = selection_score(metrics, baseline, args.regression_tolerance)
@@ -444,9 +449,9 @@ def train(args):
         print(f"[REVALIDATE {label}] episode={candidate_episode} "
               f"far={metrics['far_arrival_rate']:.3f} safe={bool(score[0])}", flush=True)
     if args.warm_start_guard is not None:
-        policies["guard"].load_state_dict(load_guard_checkpoint(args.warm_start_guard)["model_state_dict"], strict=True)
+        policies["guard"].load_state_dict(expand_roster_state(policies["guard"], load_guard_checkpoint(args.warm_start_guard)["model_state_dict"]), strict=True)
     else:
-        policies["guard"].load_state_dict(checkpoints["guard"]["model_state_dict"], strict=True)
+        policies["guard"].load_state_dict(expand_roster_state(policies["guard"], checkpoints["guard"]["model_state_dict"]), strict=True)
     target.load_state_dict(policies["guard"].state_dict())
     history = []
     started = time.monotonic()
@@ -501,7 +506,7 @@ def train(args):
     check_frozen()
     # Holdout seeds were not used in selection. Compare the unchanged source
     # against the evaluation winner, with identical scenarios and opponents.
-    policies["guard"].load_state_dict(checkpoints["guard"]["model_state_dict"])
+    policies["guard"].load_state_dict(expand_roster_state(policies["guard"], checkpoints["guard"]["model_state_dict"]))
     holdout_baseline = evaluate(session, args.holdout_seeds, args.eval_episodes)
     policies["guard"].load_state_dict(best_state)
     holdout_candidate = evaluate(session, args.holdout_seeds, args.eval_episodes)

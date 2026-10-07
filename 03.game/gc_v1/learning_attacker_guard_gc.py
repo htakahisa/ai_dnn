@@ -53,11 +53,17 @@ OBS_DIM=34: train_attacker_guard.py と完全に一致させること。
 (重み共有Dueling DQN)。
 """
 
+
 from collections import deque
 
 import numpy as np
 import torch
 import torch.nn as nn
+
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
 
 from game_core import (
     BLIND_DURATION_TICKS,
@@ -91,6 +97,7 @@ MOVES = [(0, 0)] + CARDINAL  # stay, up, down, left, right
 OBS_DIM = 34
 ULTIMATE_CONTEXT_OBS_DIM = 38  # v4: ready/combat/objective/urgency cast context.
 ORB_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + 4
+ROSTER_OBS_DIM = ORB_OBS_DIM + ENEMY_ROSTER_DIM
 LEGACY_ACTION_DIM = 10  # move_idx(0-4) * 2 + use_ability_flag(0/1)
 ACTION_DIM = 11
 COLLECT_ORB_ACTION_INDEX = 11
@@ -111,7 +118,7 @@ DEFAULT_MODEL_PATH = (
 # Dueling DQN (gc_v1/train_attacker_guard.py と同一構造)
 # ---------------------------------------------------------------------------
 class AttackerGuardDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -393,7 +400,7 @@ class LearningAttackerGuardGCController:
             self.positioning_version = int(checkpoint.get("positioning_version", 0))
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             action_dim = int(checkpoint.get("n_actions", LEGACY_ACTION_DIM))
-            obs_dim = int(checkpoint.get("obs_dim", OBS_DIM))
+            obs_dim = base_checkpoint_dim(checkpoint, checkpoint.get("obs_dim", OBS_DIM))
             expected_actions = ACTION_DIM if self.positioning_version >= 5 else (11 if self.positioning_version >= 3 else LEGACY_ACTION_DIM)
             expected_obs_dim = (ORB_OBS_DIM if self.positioning_version >= 5 else
                                 ULTIMATE_CONTEXT_OBS_DIM
@@ -407,9 +414,9 @@ class LearningAttackerGuardGCController:
                     f"guard observation count mismatch: {obs_dim} != {expected_obs_dim}"
                 )
             self.model = AttackerGuardDuelingDQN(
-                obs_dim=obs_dim, action_dim=action_dim
+                obs_dim=obs_dim + ENEMY_ROSTER_DIM, action_dim=action_dim
             ).to(DEVICE)
-            self.model.load_state_dict(state_dict)
+            self.model.load_state_dict(expand_roster_state(self.model, state_dict))
             if verbose:
                 print(f"[LearningAttackerGuardGCController] loaded: {model_path}")
         except Exception as exc:
@@ -768,7 +775,7 @@ class LearningAttackerGuardGCController:
                 char, game_state.get("available_orbs", ())
             )
 
-        return obs, visible_enemies
+        return append_enemy_roster(obs, game_state=game_state, game=getattr(self, "game", None), chars=chars, viewer_team=char.team), visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     # train_attacker_guard.py の build_action_mask() と同一ロジック。

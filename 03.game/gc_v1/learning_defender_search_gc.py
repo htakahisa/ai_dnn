@@ -31,6 +31,7 @@ OBS_DIM=36: train_defender_search.py と完全に一致させること。
 (重み共有Dueling DQN)。
 """
 
+
 from collections import deque
 
 import random
@@ -40,6 +41,10 @@ import torch
 import torch.nn as nn
 
 from pathlib import Path
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
 
 from game_core import (
     BLIND_DURATION_TICKS,
@@ -113,6 +118,7 @@ LEGACY_FACING_OBS_DIM = BASE_OBS_DIM + len(FACING_DIRS)
 ULTIMATE_CONTEXT_OBS_DIM = BASE_OBS_DIM + 4
 ORB_CONTEXT_OBS_DIM = ULTIMATE_CONTEXT_OBS_DIM + ORB_CONTEXT_DIM
 OBS_DIM = ORB_CONTEXT_OBS_DIM + len(FACING_DIRS)
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 BASE_ACTION_DIM = 10
 LEGACY_COMPOSITE_ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)
 ACTION_ULTIMATE = BASE_ACTION_DIM
@@ -142,7 +148,7 @@ DEFAULT_MODEL_PATH = next(
 # Dueling DQN (gc_v1/train_defender_search.py と同一構造)
 # ---------------------------------------------------------------------------
 class DefenderSearchDuelingDQN(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, action_dim=ACTION_DIM, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=ACTION_DIM, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -534,7 +540,7 @@ class LearningDefenderSearchGCController:
                 model_path, map_location=DEVICE, weights_only=False
             )
             state_dict = checkpoint.get("model_state_dict", checkpoint)
-            old_obs = int(state_dict["feature.0.weight"].shape[1])
+            old_obs = base_checkpoint_dim(checkpoint, state_dict["feature.0.weight"].shape[1])
             old_actions = int(state_dict["advantage_head.2.weight"].shape[0])
             if old_actions == BASE_ACTION_DIM:
                 self.model_mode = "flat"
@@ -549,9 +555,9 @@ class LearningDefenderSearchGCController:
                 )
             self.legacy_model = self.model_mode == "flat"
             self.model = DefenderSearchDuelingDQN(
-                obs_dim=old_obs, action_dim=old_actions
+                obs_dim=old_obs + ENEMY_ROSTER_DIM, action_dim=old_actions
             ).to(DEVICE)
-            incompatible = self.model.load_state_dict(state_dict, strict=False)
+            incompatible = self.model.load_state_dict(expand_roster_state(self.model, state_dict), strict=False)
             missing = [
                 key for key in incompatible.missing_keys
                 if not key.startswith(("facing_feature.", "facing_output."))
@@ -934,7 +940,7 @@ class LearningDefenderSearchGCController:
             getattr(char, "facing", "S"),
         )
 
-        return obs, visible_enemies
+        return append_enemy_roster(obs, game_state=game_state, game=getattr(self, "game", None), chars=chars, viewer_team=char.team), visible_enemies
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(
@@ -1148,11 +1154,11 @@ class LearningDefenderSearchGCController:
                 )
 
         if self.model_mode == "flat":
-            model_obs = obs[:BASE_OBS_DIM]
+            model_obs = np.concatenate((obs[:BASE_OBS_DIM], obs[-ENEMY_ROSTER_DIM:]))
             model_mask = mask[:BASE_ACTION_DIM]
         elif self.model_mode == "composite":
             model_obs = np.concatenate(
-                (obs[:BASE_OBS_DIM], obs[ORB_CONTEXT_OBS_DIM:OBS_DIM])
+                (obs[:BASE_OBS_DIM], obs[ORB_CONTEXT_OBS_DIM:OBS_DIM], obs[-ENEMY_ROSTER_DIM:])
             )
             model_mask = np.repeat(mask[:BASE_ACTION_DIM], len(FACING_DIRS))
         else:

@@ -62,6 +62,7 @@ CONTROLLER_OPTIONS = {
     "Toru AI v3.1": "toru_ai_v3.1",
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
+    "Ghost Champions v2": "ghost_champions_v2",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
@@ -3084,6 +3085,7 @@ class CompetitionApp:
             ("Toru AI v3.1", "toru_ai_v3.1"),
             ("Omoko Gaming v1", "omoko_gaming_v1"),
             ("Ghost Champions v1", "ghost_champions_v1"),
+            ("Ghost Champions v2", "ghost_champions_v2"),
             ("ロジック（デフォルト）", "default"),
         ]
         ai_names = [name for name, key in available_ais]

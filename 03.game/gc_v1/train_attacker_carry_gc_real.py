@@ -41,6 +41,10 @@ from positioning_gc import (
 VERSION = 3
 
 
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, base_checkpoint_dim, expand_roster_state,
+)
+
 def extract_team_metrics(players, side):
     team_players = [p for p in players.values() if p.get("side") == side]
     if not team_players:
@@ -264,6 +268,13 @@ def generate_inference_input(series_data, output_dir=None):
 
 def expanded_state(checkpoint):
     state = dict(checkpoint["model_state_dict"])
+    roster_columns = {}
+    if checkpoint.get("enemy_roster_version"):
+        base_checkpoint_dim(checkpoint, state["feature.0.weight"].shape[1])
+        for key in ("feature.0.weight", "facing_feature.0.weight"):
+            if key in state:
+                roster_columns[key] = state[key][:, -ENEMY_ROSTER_DIM:].clone()
+                state[key] = state[key][:, :-ENEMY_ROSTER_DIM].clone()
     # Both the action trunk and the facing trunk consume the observation.
     # Expanding only ``feature.0`` leaves ``facing_feature.0`` at 29 inputs
     # and makes the 31-input warm-start model impossible to load.
@@ -330,6 +341,8 @@ def expanded_state(checkpoint):
             )
             expanded_facing[:, :expected_old_width] = facing_weight
             state[key] = expanded_facing
+    for key, columns in roster_columns.items():
+        state[key] = torch.cat((state[key], columns), dim=1)
     return state
 
 
@@ -533,7 +546,7 @@ class RealCarrySession:
                 self.pending.pop(char.name)
                 self.consume(
                     pending,
-                    np.zeros(runtime.REAL_OBS_DIM, dtype=np.float32),
+                    np.zeros(runtime.REAL_OBS_DIM + ENEMY_ROSTER_DIM, dtype=np.float32),
                     np.ones(runtime.ACTION_DIM, dtype=bool),
                     True,
                 )
@@ -594,8 +607,8 @@ def train(args):
     torch.manual_seed(args.seed)
     checkpoint = torch.load(args.init_model, map_location="cpu", weights_only=False)
     source_hash = hashlib.sha256(args.init_model.read_bytes()).hexdigest()
-    policy = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM)
-    incompatible = policy.load_state_dict(expanded_state(checkpoint), strict=False)
+    policy = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM + ENEMY_ROSTER_DIM)
+    incompatible = policy.load_state_dict(expand_roster_state(policy, expanded_state(checkpoint)), strict=False)
     missing = [
         key for key in incompatible.missing_keys
         if not key.startswith(("facing_head.", "facing_feature.", "facing_output."))
@@ -605,7 +618,7 @@ def train(args):
             f"Carry checkpoint keys mismatch: missing={missing}, "
             f"unexpected={list(incompatible.unexpected_keys)}"
         )
-    target = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM)
+    target = runtime.AttackerCarryDuelingDQN(obs_dim=runtime.REAL_OBS_DIM + ENEMY_ROSTER_DIM)
     target.load_state_dict(policy.state_dict())
     optimizer = torch.optim.Adam(policy.parameters(), lr=args.lr)
     replay = deque(maxlen=100_000)
@@ -642,7 +655,8 @@ def train(args):
         payload = dict(checkpoint)
         payload.update(
             model_state_dict=policy.state_dict(),
-            obs_dim=runtime.REAL_OBS_DIM,
+            obs_dim=runtime.REAL_OBS_DIM + ENEMY_ROSTER_DIM,
+            **ROSTER_METADATA,
             n_actions=runtime.ACTION_DIM,
             positioning_version=VERSION,
             episode=episode,

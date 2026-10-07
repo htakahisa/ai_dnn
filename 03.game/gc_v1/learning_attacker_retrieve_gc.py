@@ -71,11 +71,17 @@ RetrieveEnv._build_obs() と要素・並び順を完全一致させている:
 (重み共有Dueling DQN)。
 """
 
+
 from collections import deque
 
 import numpy as np
 import torch
 import torch.nn as nn
+
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, expand_roster_state,
+)
 
 from character_stats_gc import (
     CHARACTER_TABLE as GC_STATS_TABLE,
@@ -92,6 +98,7 @@ CARDINAL = [
 ]  # up, down, left, right (行動ID 0-3と対応)
 
 OBS_DIM = 21
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 N_ACTIONS = 6
 ACTION_ABILITY = 5
 
@@ -107,7 +114,7 @@ DEFAULT_MODEL_PATH = (
 # 属性名 self.value / self.advantage も state_dict 互換のため一致させる)
 # ---------------------------------------------------------------------------
 class DuelingQNet(nn.Module):
-    def __init__(self, obs_dim=OBS_DIM, n_actions=N_ACTIONS, hidden=128):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, n_actions=N_ACTIONS, hidden=128):
         super().__init__()
         self.feature = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -214,7 +221,7 @@ class LearningAttackerRetrieveGCController:
     def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DuelingQNet(OBS_DIM, N_ACTIONS).to(DEVICE)
+        self.model = DuelingQNet(ROSTER_OBS_DIM, N_ACTIONS).to(DEVICE)
 
         try:
             checkpoint = torch.load(model_path, map_location=DEVICE)
@@ -234,7 +241,7 @@ class LearningAttackerRetrieveGCController:
                     print(
                         f"[LearningAttackerRetrieveGCController] loaded (raw state_dict): {model_path}"
                     )
-            self.model.load_state_dict(state_dict)
+            self.model.load_state_dict(expand_roster_state(self.model, state_dict))
         except Exception as exc:
             print(
                 f"[LOAD ERROR] attacker retrieve(gc) model '{model_path}' の読込に失敗: {exc}"
@@ -263,7 +270,7 @@ class LearningAttackerRetrieveGCController:
     # -- 観測構築 ----------------------------------------------------------
     # train_attacker_retrieve.py の RetrieveEnv._build_obs() と要素・並び順を
     # 完全一致させること。
-    def _build_observation(self, char, grid, chars, visible_enemies):
+    def _build_observation(self, char, grid, chars, visible_enemies, *, game_state=None):
         height, width = grid.shape
         r, c = int(char.pos[0]), int(char.pos[1])
 
@@ -326,7 +333,9 @@ class LearningAttackerRetrieveGCController:
                 else 0.0
             )
 
-        return obs
+        return append_enemy_roster(obs, game_state=game_state,
+                                   game=getattr(self, "game", None), chars=chars,
+                                   viewer_team=char.team)
 
     # -- 行動マスク ---------------------------------------------------------
     def _action_mask(self, char, grid, chars):
@@ -385,7 +394,7 @@ class LearningAttackerRetrieveGCController:
 
         # 全員が対称に「スパイクへの最短距離を縮める」ことを学習したモデル
         # なので、呼ばれたキャラは役割区分なくそのままモデルの判断に従う。
-        obs = self._build_observation(char, grid, chars, visible_enemies)
+        obs = self._build_observation(char, grid, chars, visible_enemies, game_state=game_state)
         mask = self._action_mask(char, grid, chars)
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)

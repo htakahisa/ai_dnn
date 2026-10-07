@@ -62,6 +62,10 @@ except Exception:  # 学習済みモデル未導入でもルール/デバッグ�
     torch = None
     nn = None
 
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, append_enemy_roster, base_checkpoint_dim, expand_roster_state,
+)
+
 from defender_opening_ability_patterns_gc import (
     OPENING_ABILITY_PATTERNS,
     validate_opening_ability_patterns,
@@ -92,12 +96,14 @@ PRESERVE_COMBAT = True
 # RL observation:
 # team/global 16 + ability slot 3 * 10 = 46
 OBS_DIM = 46
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 
 # 実行フェーズの行動
 EXEC_WAIT = 0
 EXECUTE = 1
 EXEC_CANCEL = 2
 EXEC_ACTION_DIM = 3
+
 
 
 @dataclass
@@ -128,7 +134,7 @@ class OpeningMacroQNet(nn.Module if nn is not None else object):
     (e.g. Smoke + Recon) to coexist in one round.
     """
 
-    def __init__(self, obs_dim=OBS_DIM, action_dim=EXEC_ACTION_DIM):
+    def __init__(self, obs_dim=OBS_DIM + ENEMY_ROSTER_DIM, action_dim=EXEC_ACTION_DIM):
         if nn is None:
             raise RuntimeError("PyTorch is required to construct OpeningMacroQNet")
         super().__init__()
@@ -311,11 +317,11 @@ class LearningDefenderOpeningMacroGCController:
 
         payload = torch.load(path, map_location="cpu", weights_only=False)
         state = payload.get("model_state_dict", payload)
-        obs_dim = int(payload.get("obs_dim", OBS_DIM)) if isinstance(payload, dict) else OBS_DIM
+        obs_dim = base_checkpoint_dim(payload, payload.get("obs_dim", OBS_DIM)) if isinstance(payload, dict) else OBS_DIM
         action_dim = int(payload.get("action_dim", EXEC_ACTION_DIM)) if isinstance(payload, dict) else EXEC_ACTION_DIM
 
-        self.model = OpeningMacroQNet(obs_dim=obs_dim, action_dim=action_dim)
-        self.model.load_state_dict(state)
+        self.model = OpeningMacroQNet(obs_dim=obs_dim + ENEMY_ROSTER_DIM, action_dim=action_dim)
+        self.model.load_state_dict(expand_roster_state(self.model, state))
         self.model.eval()
         self.device = torch.device("cpu")
         self.model.to(self.device)
@@ -538,7 +544,7 @@ class LearningDefenderOpeningMacroGCController:
         if obs.shape != (OBS_DIM,):
             raise RuntimeError(f"Opening Macro obs mismatch: {obs.shape} != {(OBS_DIM,)}")
         self._last_obs = obs
-        return obs
+        return append_enemy_roster(obs, game_state=game_state, game=getattr(self, "game", None), chars=chars, viewer_team="D")
 
     # ------------------------------------------------------------------
     # Policy decisions

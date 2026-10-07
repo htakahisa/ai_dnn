@@ -16,6 +16,7 @@ BFS距離マップ(壁を考慮した実際の経路距離)に基づいて計算
 battle_logic.py 等をimportしない)も維持している。
 """
 
+
 import random
 import sys
 import os
@@ -33,6 +34,10 @@ import torch.nn.functional as F
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gc_v1.roster_observation_gc import (
+    ENEMY_ROSTER_DIM, ROSTER_METADATA, append_enemy_roster,
+)
 
 from map_data import NEW_MAZE_STR
 
@@ -540,6 +545,7 @@ RETAKE_UTILITY_RECENT_INDEX = LEGACY_OBS_DIM + RETAKE_COORDINATION_DIM
 RETAKE_LANE_TARGET_INDEX = RETAKE_UTILITY_RECENT_INDEX + 1
 RETAKE_UTILITY_CONTEXT_INDEX = RETAKE_LANE_TARGET_INDEX + 2
 OBS_DIM = RETAKE_UTILITY_CONTEXT_INDEX + RETAKE_UTILITY_CONTEXT_DIM
+ROSTER_OBS_DIM = OBS_DIM + ENEMY_ROSTER_DIM
 LEGACY_N_ACTIONS = 7
 N_ACTIONS = 9
 MOVE_DELTAS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1), 4: (0, 0)}
@@ -913,7 +919,7 @@ class RetakeEnv:
         expanded[RETAKE_UTILITY_CONTEXT_INDEX:OBS_DIM] = retake_utility_features(
             utility
         )
-        return expanded
+        return append_enemy_roster(expanded, roster=self.attackers(), viewer_team="D")
 
     # -- 1Tick進行 ---------------------------------------------------------
     def step_tick(self, defender_actions):
@@ -2089,7 +2095,8 @@ def checkpoint_payload(net, episode, metrics=None, protected_obs_dim=None):
     payload = {
         "model_state_dict": net.state_dict(),
         "episode": int(episode),
-        "obs_dim": OBS_DIM,
+        "obs_dim": ROSTER_OBS_DIM,
+        **ROSTER_METADATA,
         "n_actions": N_ACTIONS,
         "facing_head_version": FACING_HEAD_VERSION,
         "training_revision": TRAINING_REVISION,
