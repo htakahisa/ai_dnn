@@ -115,19 +115,26 @@ class RetakeTests(unittest.TestCase):
         self.controller.ability_distances["SMOKE"] = 1
         self.assertFalse(build_inputs(self.controller, self.char, self.state)[1][action])
 
-    def test_flash_full_wall_los_and_two_targets(self):
+    def test_flash_requires_actual_fixed_point_impact(self):
         self.char.ability_name, self.char.flash_charges = "FLASH", 1
         self.char.pos = [7, 3]
         self.controller.ability_distances["FLASH"] = 20
         _, mask, context = build_inputs(self.controller, self.char, self.state)
         self.assertTrue(mask[78])
-        self.assertTrue(mask[86])
+        # The second marker has LOS but no aim that bursts on it here.
+        self.assertFalse(mask[86])
+        from abilities_los import AbilityLosMixin
+        from grid_lines import line_cells
+        game = SimpleNamespace(grid=self.scenario.grid, height=self.scenario.grid.shape[0],
+                               width=self.scenario.grid.shape[1], _line_cells=line_cells)
         for target_index, point in enumerate(context["ability_targets"]):
             action = (5 + 3 + target_index) * 8 + 6
             if mask[action]:
                 self.assertIsNotNone(point)
-                from concon_v1.co1_retake_common import wall_clear
-                self.assertTrue(wall_clear(self.scenario.grid, tuple(self.char.pos), point))
+                path = AbilityLosMixin._projectile_path(game, tuple(self.char.pos), point)
+                from game_core import FLASH_MAX_FLIGHT_TICKS, FLASH_SPEED_CELLS_PER_TICK
+                impact = path[min(len(path) - 1, FLASH_MAX_FLIGHT_TICKS * FLASH_SPEED_CELLS_PER_TICK)]
+                self.assertEqual(impact, context["ability_effect_points"][target_index])
         # Both markers are blocked from this source; a partial projectile path
         # through the first cell must not be accepted as full target LOS.
         self.char.pos = [12, 6]
@@ -151,7 +158,7 @@ class RetakeTests(unittest.TestCase):
         self.assertFalse(build_inputs(self.controller, self.char, self.state)[1][64:88].any())
         self.controller.ability_distances["FLASH"] = 2
         self.assertTrue(build_inputs(self.controller, self.char, self.state)[1][64:88].any())
-        self.char.pos = [12, 3]
+        self.char.pos = [12, 2]
         self.char.ability_name, self.char.recon_charges = "RECON", 1
         self.assertFalse(build_inputs(self.controller, self.char, self.state)[1][88:112].any())
         self.controller.ability_distances["RECON"] = 2

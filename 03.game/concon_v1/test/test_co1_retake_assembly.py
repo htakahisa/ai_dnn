@@ -81,6 +81,63 @@ class AssemblyTests(unittest.TestCase):
         self.assertFalse(plan["waiting"])
         self.assertTrue(plan["urgent"])
 
+    def test_release_at_other_A_cells_in_the_assigned_entrance(self):
+        planner = self.planner()
+        allies = [actor("one", (4, 8)), actor("two", (4, 12))]
+        planner.assigned = {"one": (2, 8), "two": (2, 12)}
+        plan = planner.update(allies, (3, 20), 55, 1)
+        self.assertFalse(plan["waiting"])
+        self.assertEqual(plan["near"], 2)
+        self.assertEqual(planner.reached, set(planner.assigned.items()))
+
+    def test_diagonal_IQ_error_does_not_delay_release(self):
+        planner = self.planner()
+        allies = [actor("one", (1, 7)), actor("two", (5, 13))]
+        planner.assigned = {"one": (2, 8), "two": (4, 12)}
+        self.assertFalse(planner.update(allies, (3, 20), 55, 1)["waiting"])
+
+    def test_still_waits_for_teammate_two_straight_steps_from_entrance(self):
+        planner = self.planner()
+        allies = [actor("one", (3, 8)), actor("two", (3, 14))]
+        planner.assigned = {"one": (3, 8), "two": (3, 12)}
+        plan = planner.update(allies, (3, 20), 55, 1)
+        self.assertTrue(plan["waiting"])
+        self.assertNotIn("two", planner.ready)
+
+    def test_wrong_entrance_does_not_count_as_arrival(self):
+        planner = self.planner()
+        allies = [actor("one", (3, 8)), actor("two", (4, 8))]
+        planner.assigned = {"one": (3, 8), "two": (3, 12)}
+        self.assertTrue(planner.update(allies, (3, 20), 55, 1)["waiting"])
+        self.assertNotIn("two", planner.ready)
+
+    def test_nearby_cell_across_wall_does_not_count_as_arrival(self):
+        grid = np.zeros((7, 25), dtype=int)
+        grid[2, 9] = grid[3, 8] = 1
+        groups = (((2, 8),), ((3, 12),))
+        scenario = SimpleNamespace(grid=grid, rally_groups=groups,
+                                   rally_points=tuple(p for group in groups for p in group))
+        planner = RetakeAssembly(scenario)
+        allies = [actor("one", (3, 9)), actor("two", (3, 12))]
+        planner.assigned = {"one": (2, 8), "two": (3, 12)}
+        self.assertTrue(planner.update(allies, (3, 20), 55, 1)["waiting"])
+        self.assertNotIn("one", planner.ready)
+
+    def test_real_maps_release_at_any_cell_of_the_assigned_entrance(self):
+        for site in ("L", "R"):
+            scenario = get_scenario(site)
+            for version in (1, 2):
+                for group in scenario.rally_groups:
+                    for goal in group:
+                        for position in group:
+                            with self.subTest(site=site, version=version, goal=goal, position=position):
+                                planner = RetakeAssembly(scenario, version=version)
+                                allies = [actor("one", position), actor("two", position)]
+                                planner.assigned = {"one": goal, "two": goal}
+                                plan = planner.update(allies, (7, 3) if site == "L" else (7, 38), 55, 1)
+                                self.assertFalse(plan["waiting"])
+                                self.assertEqual(plan["near"], 2)
+
     def test_release_snapshot_is_shared_within_the_tick(self):
         planner = self.planner()
         allies = [actor("one", (0, 0)), actor("two", (0, 1))]
@@ -118,6 +175,19 @@ class AssemblyTests(unittest.TestCase):
         chars[0].pos = [12, 3]
         state.update(battle_tick=2, detonate_timer=9)
         self.assertTrue(build_inputs(controller, chars[0], state)[1][40:ULTIMATE_ACTION].any())
+
+    def test_release_switches_goal_to_spike_without_returning_to_assigned_A(self):
+        controller, chars, state = self.controller_state()
+        for group, members in zip(controller.scenario.rally_groups, (chars[:3], chars[3:])):
+            for index, char in enumerate(members):
+                controller.assembly.assigned[char.name] = group[index]
+                char.pos = list(group[-1 - index])
+        self.assertTrue(any(controller.assembly.routes[p][tuple(char.pos)] > 1
+                            for char in chars for p in [controller.assembly.assigned[char.name]]))
+        for char in chars:
+            _, _, context = build_inputs(controller, char, state)
+            self.assertFalse(context["waiting"])
+            self.assertEqual(context["goal"], state["planted_pos"])
 
     def test_learned_foundation_supports_A_goals_and_wait_without_defuse(self):
         controller, chars, state = self.controller_state()
@@ -177,7 +247,7 @@ class AssemblyTests(unittest.TestCase):
 
     def test_left_A_transfer_uses_southern_route_without_entering_site_lanes(self):
         scenario = get_scenario("L")
-        front, routes = assembly_navigation(scenario)
+        front, routes = assembly_navigation(scenario, version=2)
         for goal in scenario.rally_groups[1]:
             position = (11, 16)
             route = [position]
@@ -197,6 +267,7 @@ class AssemblyTests(unittest.TestCase):
 
     def test_site_entry_is_masked_during_assembly_and_enabled_on_launch(self):
         controller, chars, state = self.controller_state()
+        controller.assembly = RetakeAssembly(controller.scenario, version=2)
         char = chars[0]
         char.pos = [10, 16]
         _, mask, context = build_inputs(controller, char, state)
@@ -210,7 +281,7 @@ class AssemblyTests(unittest.TestCase):
 
     def test_actor_in_site_side_pocket_can_retreat_to_A(self):
         scenario = get_scenario("L")
-        front, routes = assembly_navigation(scenario)
+        front, routes = assembly_navigation(scenario, version=2)
         position, goal = (12, 12), (11, 16)
         self.assertTrue(front[position])
         self.assertGreater(routes[goal][position], 0)
@@ -231,12 +302,47 @@ class AssemblyTests(unittest.TestCase):
             position = destination
         self.assertEqual(position, goal)
 
-    def test_older_unrestricted_assembly_checkpoint_requires_new_foundation(self):
+    def test_restricted_assembly_checkpoint_is_rejected_for_version_one_training(self):
         controller, _, _ = self.controller_state()
         checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
-        checkpoint["coordination_version"] = 1
+        checkpoint["coordination_version"] = 2
         with self.assertRaisesRegex(ValueError, "coordination_version"):
             validate_checkpoint(checkpoint, controller.scenario, 6)
+
+    def test_default_foundation_and_battle_use_unrestricted_routes(self):
+        from concon_v1.co1_attacker_common import bfs_distance_map
+        controller, chars, state = self.controller_state()
+        scenario = controller.scenario
+        front, routes = assembly_navigation(scenario)
+        self.assertEqual(controller.assembly.version, 1)
+        self.assertFalse(front.any())
+        indices, targets = training_targets(scenario)
+        width, height = scenario.grid.shape[1], scenario.grid.shape[0]
+        goals = navigation_cells(scenario)
+        for goal, distances in routes.items():
+            np.testing.assert_array_equal(distances, bfs_distance_map(scenario.grid, goal))
+            position = (11, 16)
+            index = goals.index(goal) * height * width + position[0] * width + position[1]
+            row = np.flatnonzero(indices == index)
+            self.assertEqual(len(row), 1)
+            np.testing.assert_array_equal(targets[row[0]], teacher_values(
+                scenario.grid, goal, position, assembly=True))
+        chars[0].pos = [10, 16]
+        _, mask, context = build_inputs(controller, chars[0], state)
+        self.assertTrue(context["waiting"])
+        self.assertTrue(mask[:8].any())
+        checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
+        self.assertEqual(checkpoint["coordination_version"], 1)
+        validate_checkpoint(checkpoint, scenario, 6)
+
+    def test_version_two_checkpoint_keeps_its_routes_for_inference(self):
+        controller, _, _ = self.controller_state()
+        checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
+        checkpoint["coordination_version"] = 2
+        with patch("concon_v1.co1_learn_defender_retake.torch.load", return_value=checkpoint):
+            saved = ConconDefenderRetakeController("L")
+        self.assertEqual(saved.assembly.version, 2)
+        self.assertTrue(saved.assembly.front.any())
 
     def test_legacy_inference_preserves_weights_and_unrestricted_routes_after_reset(self):
         controller, chars, state = self.controller_state()

@@ -9,6 +9,7 @@ from concon_v1.co1_learn_defender_search import ConconDefenderSearchController
 from concon_v1.co1_retake_scenarios import get_scenario, validate_checkpoint, normalize_ability_distances
 from concon_v1.co1_retake_common import RetakeDQN, build_inputs, decode_action, GORIGONS
 from concon_v1.co1_retake_coordination import RetakeAssembly
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 
 
 class ConconDefenderRetakeController(BaseController):
@@ -16,7 +17,7 @@ class ConconDefenderRetakeController(BaseController):
         super().__init__()
         self.scenario = get_scenario(map_name)
         self.model_path, self.checkpoint_episode = None, None
-        self.coordination_version = 2
+        self.coordination_version = COORDINATION_VERSION
         if model is None:
             path = Path(model_path) if model_path is not None else self.scenario.model_path()
             checkpoint = torch.load(path, map_location="cpu", weights_only=False)

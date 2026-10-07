@@ -13,6 +13,7 @@ from torch import nn
 from game_core import FACING_DIRECTIONS, DEFUSE_REQUIRED_TICKS
 from grid_lines import line_cells
 from concon_v1.co1_retake_navigation import assembly_step_allowed
+from concon_v1.co1_retake_projectiles import projectile_aim
 from concon_v1.co1_attacker_common import bfs_distance_map, GORIGONS
 from concon_v1.co1_guard_common import (
     build_inputs as guard_inputs, clear_shot, aim_alignment, MOVES, ABILITIES,
@@ -161,8 +162,12 @@ def build_inputs(controller, char, state):
     points = scenario.points.get(ability, ())
     distances = {point: bfs_distance_map(scenario.grid, point) for point in points}
     limit = controller.ability_distances.get(ability, 0)
-    valid = [point for point in points if 0 <= distances[point][position] <= limit
-             and (ability == "SMOKE" or (point != position and wall_clear(scenario.grid, position, point)))]
+    candidate_points = [point for point in points if 0 <= distances[point][position] <= limit
+                        and (ability == "SMOKE" or
+                             (point != position and wall_clear(scenario.grid, position, point)))]
+    aims = {point: (point if ability == "SMOKE" else
+                    projectile_aim(scenario.grid, position, point, ability)) for point in candidate_points}
+    valid = [point for point in candidate_points if aims[point] is not None]
     aim = min(valid or points, key=lambda p: (distances[p][position], p)) if points else tactical["goal"]
     utility_target = aim if valid else None
     ordered_targets = sorted(valid, key=lambda p: (distances[p][position], p))
@@ -190,8 +195,8 @@ def build_inputs(controller, char, state):
                     mask[index * 8:(index + 1) * 8] = True
     targets = (context["spike"], utility_target, context["targets"][2])
     ability_targets = (context["spike"] if ability == "SMOKE" else None,
-                       ordered_targets[0] if ordered_targets else None,
-                       ordered_targets[1] if len(ordered_targets) > 1 else None)
+                       aims[ordered_targets[0]] if ordered_targets else None,
+                       aims[ordered_targets[1]] if len(ordered_targets) > 1 else None)
     for index, name in enumerate(ABILITIES):
         if ability != name or getattr(char, name.lower() + "_charges", 0) <= 0:
             continue
@@ -199,8 +204,11 @@ def build_inputs(controller, char, state):
             target = ability_targets[target_index]
             if target is None or (target_index == 0 and name != "SMOKE"):
                 continue
-            distance = bfs_distance_map(scenario.grid, target)[position]
-            if 0 <= distance <= controller.ability_distances[name] and (name == "SMOKE" or wall_clear(scenario.grid, position, target)):
+            # Range applies to the marked effect cell, not the direction aim.
+            # Projectile slots were verified against actual impact geometry.
+            distance = (bfs_distance_map(scenario.grid, target)[position] if name == "SMOKE"
+                        else distances[ordered_targets[target_index - 1]][position])
+            if 0 <= distance <= controller.ability_distances[name]:
                 mask[(5 + index * 3 + target_index) * 8 + FACING_DIRECTIONS.index(char.facing)] = True
     # Existing engine-specific ultimate legality is retained. Targeted ults
     # use the disclosed enemy slot only; direction-based ults require disclosure.
@@ -247,6 +255,9 @@ def build_inputs(controller, char, state):
     observation = np.concatenate((base[:size], marker_maps.ravel(), base[size:], np.asarray(extras, dtype=np.float32)))
     context.update(tactical, targets=targets, ultimate_actions=ultimates,
                    ability_targets=ability_targets,
+                   ability_effect_points=(spike if ability == "SMOKE" else None,
+                                          ordered_targets[0] if ordered_targets else None,
+                                          ordered_targets[1] if len(ordered_targets) > 1 else None),
                    grid=scenario.grid,
                    reward_distances=(controller.assembly.routes[tactical["goal"]] if tactical["waiting"]
                                      and tactical["goal"] in controller.assembly.routes

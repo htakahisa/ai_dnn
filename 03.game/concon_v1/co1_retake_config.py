@@ -1,5 +1,7 @@
 """Shared site-specific ability limits for base and battle training."""
 
+COORDINATION_VERSION = 1  # Use unrestricted shortest routes while assembling.
+
 DEFAULT_FLASH_DISTANCE_L = 6
 DEFAULT_RECON_DISTANCE_L = 11
 DEFAULT_SMOKE_DISTANCE_L = 16

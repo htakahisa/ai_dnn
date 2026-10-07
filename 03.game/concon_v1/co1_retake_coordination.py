@@ -5,6 +5,7 @@ import numpy as np
 
 from concon_v1.co1_attacker_common import bfs_distance_map
 from concon_v1.co1_retake_navigation import assembly_navigation
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 from game_core import DEFUSE_REQUIRED_TICKS
 
 COMBAT_RESERVE = 3
@@ -12,11 +13,11 @@ FORWARD_SLACK = 3
 
 
 class RetakeAssembly:
-    def __init__(self, scenario, version=2):
+    def __init__(self, scenario, version=COORDINATION_VERSION):
         self.scenario = scenario
         self.version = version
         if version == 2:
-            self.front, self.routes = assembly_navigation(scenario)
+            self.front, self.routes = assembly_navigation(scenario, version=2)
         elif version == 1:
             # Inference of old battle checkpoints must keep the unrestricted
             # A distances used to learn their frozen foundation values.
@@ -61,9 +62,16 @@ class RetakeAssembly:
                 self.assigned[ally.name] = point
                 occupied.add(point)
         eta = {name: int(self.routes[p][tuple(alive[name].pos)]) for name, p in self.assigned.items()}
-        # Arrival is latched so +/-1 IQ errors cannot toggle team readiness.
-        for name, distance in eta.items():
-            if 0 <= distance <= 1:
+        # A marks an entrance area, not a mandatory individual stopping cell.
+        # IQ can move an ally estimate one row AND one column away from A:
+        # accept that diagonal only when it is also reachable in two steps.
+        # Keep the route check so nearby cells across a wall do not count.
+        # Arrival remains latched across estimates and optional advances.
+        for name, point in self.assigned.items():
+            position = tuple(alive[name].pos)
+            entrance = groups[group_of[point]]
+            if any(max(abs(position[0] - p[0]), abs(position[1] - p[1])) <= 1
+                   and 0 <= self.routes[p][position] <= 2 for p in entrance):
                 self.ready.add(name)
                 self.reached.add((name, self.assigned[name]))
                 self.visited.add((name, group_of[self.assigned[name]]))

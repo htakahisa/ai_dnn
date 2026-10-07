@@ -19,13 +19,17 @@ from season_training_ui import SeasonTrainingMixin
 from season_pair_familiarity_ui import SeasonPairFamiliarityMixin
 from season_player_stats import player_combat_power, player_duel_power
 from season_salary import SalaryMode
+from season_profiles import SeasonProfiles
+from season_profiles_ui import choose_season_profile
+from season_strongest_ranking_ui import SeasonStrongestRankingWindow
 
 
 class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonStarterMixin, SeasonRatingMixin, SeasonMonthlyMixin, SeasonTrainingMixin, SeasonPairFamiliarityMixin):
-    def __init__(self, root, store, state):
+    def __init__(self, root, store, state, profiles=None):
         self.root = root
         self.store = store
         self.state = state
+        self.profiles = profiles
         root.title("リアルタイムシーズン")
         root.geometry("1120x800")
         root.minsize(960, 800)
@@ -205,6 +209,8 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         ttk.Label(navigation, text="ホーム", font=("Yu Gothic UI", 14)).pack(side="left")
         ttk.Entry(navigation, textvariable=self.club_name, width=24).pack(side="left", padx=8)
         ttk.Button(navigation, text="チーム名を変更", command=self.rename_club).pack(side="left")
+        if self.profiles is not None:
+            ttk.Button(navigation, text="チームのロード・作成・削除", command=self.manage_profiles).pack(side="left", padx=8)
         ttk.Button(navigation, text="レーティング・スポンサー", command=lambda: self.show_screen("ratings")).pack(side="right")
         ttk.Button(navigation, text="月次イベント", command=lambda: self.show_screen("monthly")).pack(side="right", padx=8)
         self._build_calendar_home(host)
@@ -237,6 +243,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         ttk.Label(pair_navigation, text="シーズンの所属チーム", font=("Yu Gothic UI", 13, "bold")).pack(side="left")
         ttk.Button(pair_navigation, text="名コンビ TOP20", command=self.show_pair_ranking).pack(side="right")
         ttk.Button(pair_navigation, text="選択チームの練度", command=self.show_selected_team_pairs).pack(side="right", padx=8)
+        ttk.Button(pair_navigation, text="最強ランキング", command=self.show_strongest_ranking).pack(side="right")
         table = ttk.Frame(host)
         table.pack(fill="both", expand=True)
         self.home_teams = ttk.Treeview(table, columns=("kind", "name", "rating", "multiplier", "players"), show="headings", selectmode="browse", height=6)
@@ -800,12 +807,45 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
         self.preset_name.set(self.state.preset_name)
         return True
 
+    def show_strongest_ranking(self):
+        window = getattr(self, "_strongest_window", None)
+        if window is not None and window.winfo_exists():
+            window.lift()
+            window.focus_set()
+            return window
+        self._strongest_window = SeasonStrongestRankingWindow(self.root, self.store, self.state.team_name)
+        return self._strongest_window
+
+    def manage_profiles(self):
+        if self.match_running:
+            self.status.set("試合終了後にチームを切り替えてください。")
+            return
+        if self.current_screen == "editor" and not self.save_preset_name():
+            return
+        selected = choose_season_profile(self.root, self.profiles, self.store.path)
+        if selected is None:
+            return
+        store, state = selected
+        for after_id in (self._scrim_after_id, self._competition_after_id):
+            if after_id is not None:
+                self.root.after_cancel(after_id)
+        # Rebuild every screen and close detail windows so no callback retains
+        # the previous team's state or prepared match settings.
+        for child in self.root.winfo_children():
+            child.destroy()
+        self.__init__(self.root, store, state, self.profiles)
+
     def rename_club(self):
         if self.match_running:
             self.status.set("試合終了後にチーム名を変更してください。")
             return
         try:
             candidate = self.state.with_team_name(self.club_name.get())
+            if getattr(self, "profiles", None) is not None and any(
+                profile.path != self.store.path and profile.name.casefold() == candidate.team_name.casefold()
+                for profile in self.profiles.list()
+            ):
+                raise SeasonSaveError("同じ名前のチームが既にあります。")
         except SeasonSaveError as exc:
             self.status.set(str(exc))
             return
@@ -838,15 +878,23 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="リアルタイムシーズンのホーム・チーム編成・試合前の準備")
-    parser.add_argument("--save-file", default=DEFAULT_SAVE_PATH, help="セーブファイルのパス")
+    parser.add_argument("--save-file", help="セーブファイルを直接指定（省略時はチーム選択画面）")
     parser.add_argument("--import-season-teams", action="store_true", help="専用ファイルの他チーム所属設定をセーブに反映")
     parser.add_argument("--import-competitions", action="store_true", help="カレンダー・未登録の大会設定をセーブに反映")
     args = parser.parse_args(argv)
     root = tk.Tk()
     root.withdraw()
-    store = SeasonStore(args.save_file)
+    profiles = SeasonProfiles()
+    store = SeasonStore(args.save_file or DEFAULT_SAVE_PATH)
     try:
-        state = store.load_or_create()
+        if args.save_file:
+            state = store.load_or_create()
+        else:
+            selected = choose_season_profile(root, profiles)
+            if selected is None:
+                root.destroy()
+                return 0
+            store, state = selected
         if args.import_season_teams:
             state = store.import_season_teams(state)
         if args.import_competitions:
@@ -855,7 +903,7 @@ def main(argv=None):
         messagebox.showerror("セーブデータを開けません", f"{exc}\n\n保存先: {store.path}\n既存のセーブデータは保持されています。", parent=root)
         root.destroy()
         return 1
-    RealtimeSeasonApp(root, store, state)
+    RealtimeSeasonApp(root, store, state, profiles)
     root.deiconify()
     root.mainloop()
     return 0

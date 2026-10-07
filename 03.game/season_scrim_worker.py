@@ -68,14 +68,23 @@ def _play_scrim(request):
         own_score, opponent_score = game.attacker_wins, game.defender_wins
     else:
         own_score, opponent_score = game.defender_wins, game.attacker_wins
+    exported = game.analytics_tracker.export_stats() if game.analytics_tracker is not None else {}
+    player_stats = {}
+    for name, stats in game.match_stats.items():
+        extra = exported.get("players", {}).get(str(name), {})
+        player_stats[str(name)] = {
+            "kills": int(stats.get("kills", 0)), "deaths": int(stats.get("deaths", 0)),
+            "role": extra.get("role", ""),
+            **{field: extra.get(field) for field in ("assists", "covers", "one_v_one_won", "one_v_one_lost")},
+        }
     return {
         "status": "completed" if game.match_over else "cancelled",
         "own_team": own["name"], "opponent_team": opponent["name"],
         "own_score": int(own_score), "opponent_score": int(opponent_score),
         "winner": (own["name"] if own_score > opponent_score else opponent["name"]) if game.match_over else None,
         "seed": request["seed"],
-        "player_stats": {str(name): {"kills": int(stats.get("kills", 0)), "deaths": int(stats.get("deaths", 0))}
-                         for name, stats in game.match_stats.items()},
+        "player_stats": player_stats,
+        "round_records": exported.get("round_records", []),
     }
 
 

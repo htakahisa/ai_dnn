@@ -7,6 +7,7 @@ from pathlib import Path
 import hashlib
 
 import numpy as np
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 
 from concon_v1.co1_attacker_scenarios import GAME_MAZE_STR, parse_game_grid
 
@@ -110,7 +111,7 @@ def make_checkpoint(model, site, episode, ability_distance, search_path, opponen
     return dict(policy_type="concon_defender_retake_v1", map_name=site, scenario_signature=scenario.signature,
                 obs_dim=observation_dim(scenario), n_actions=ACTION_DIM, training_roster=list(GORIGONS.players),
                 ability_distances=normalize_site_ability_distances(ability_distance)[site], episode=episode, retake_transitions=samples,
-                reward_version=2, coordination_version=2, phase_scope="real_plant_to_round_end", defender_perception="production_iq",
+                reward_version=2, coordination_version=COORDINATION_VERSION, phase_scope="real_plant_to_round_end", defender_perception="production_iq",
                 foundation_version=1 if model.foundation else 0,
                 foundation_evaluation=getattr(model, "foundation_evaluation", None),
                 search_checkpoint=str(search_path), opponents=list(opponents),
@@ -122,9 +123,9 @@ def validate_checkpoint(checkpoint, scenario, ability_distance, *, allow_legacy_
     expected = dict(policy_type="concon_defender_retake_v1", map_name=scenario.map_name,
                     scenario_signature=scenario.signature,
                     obs_dim=observation_dim(scenario), n_actions=ACTION_DIM,
-                    training_roster=list(GORIGONS.players), reward_version=2, coordination_version=2)
+                    training_roster=list(GORIGONS.players), reward_version=2, coordination_version=COORDINATION_VERSION)
     for key, value in expected.items():
-        if key == "coordination_version" and allow_legacy_coordination and checkpoint.get(key) == 1:
+        if key == "coordination_version" and allow_legacy_coordination and checkpoint.get(key) in (1, 2):
             continue
         if checkpoint.get(key) != value:
             raise ValueError(f"retake checkpoint mismatch: {key}")

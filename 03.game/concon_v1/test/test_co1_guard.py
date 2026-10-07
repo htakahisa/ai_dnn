@@ -147,7 +147,7 @@ class GuardContractTests(unittest.TestCase):
         state = {"grid": controller.scenario.grid, "chars": [char],
                  "is_planted": True, "planted_pos": (8, 3), "battle_tick": 0}
         obs, mask, context = controller.policy_inputs(char, state)
-        self.assertFalse(mask[:40].any())
+        self.assertTrue(mask[:40].any())
         recon_start = (5 + 2 * 3) * 8
         self.assertEqual(mask[recon_start:recon_start + 8].sum(), 1)
         recon = recon_start + 2  # current E facing on an ability tick
@@ -158,7 +158,6 @@ class GuardContractTests(unittest.TestCase):
             for parameter in controller.model.parameters():
                 parameter.zero_()
             controller.model.head[-1].bias[WAIT_ACTION + 6] = 100
-        char.recon_charges = 0
         destination, payload = controller.decide_move(char, state)
         self.assertEqual(destination, char.pos)
         self.assertEqual(payload["facing"], "W")

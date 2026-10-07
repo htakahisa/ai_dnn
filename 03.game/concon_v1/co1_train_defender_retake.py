@@ -27,6 +27,7 @@ from concon_v1.co1_retake_config import DEFAULT_ABILITY_DISTANCES, add_ability_a
 from concon_v1.co1_retake_logging import print_summary, print_retry_progress, print_evaluation_summary, format_elapsed_time
 from concon_v1.co1_retake_training_schedule import iter_training_windows
 from concon_v1.co1_retake_case_training import RetakeCaseDataset, iter_case_training_windows
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 
 # 引数なしで実行する場合の学習条件。
 DEFAULT_CASE_EPOCHS = 10  # USE_COLLECTED_CASES=True: データ件数×周回数。 500 データ件数 x 10 周回数 = 5000 episodes.
@@ -283,7 +284,7 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
         paths[site] = directory
     env = DefenderRetakeEnv(models, search_model, seed, opponents, ability_distance)
     epsilon_settings = dict(start=epsilon_start, end=epsilon_end, decay_ratio=epsilon_decay_ratio)
-    print(f"Defender retake: additional_episodes={episodes} checkpoint_interval={checkpoint_interval} "
+    print(f"Defender retake: coordination_version={COORDINATION_VERSION} additional_episodes={episodes} checkpoint_interval={checkpoint_interval} "
           f"retakes_per_team_per_window={checkpoint_interval // len(opponents)} "
           f"site_distribution={'balanced_cases' if dataset is not None else 'natural'} force_save={force_save}", flush=True)
     if dataset is not None:

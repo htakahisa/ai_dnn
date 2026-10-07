@@ -15,6 +15,7 @@ from concon_v1.co1_retake_common import RetakeDQN
 from concon_v1.co1_retake_scenarios import get_scenario, normalize_site_ability_distances, make_checkpoint
 from concon_v1.co1_retake_foundation import learn_foundation, evaluate_foundation
 from concon_v1.co1_retake_start_positions import validate_starts
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 
 DEFAULT_FOUNDATION_STEPS = 250
 DEFAULT_FOUNDATION_TRIALS = 20
@@ -28,7 +29,7 @@ def train_foundation(steps=DEFAULT_FOUNDATION_STEPS, trials=DEFAULT_FOUNDATION_T
     distances = normalize_site_ability_distances(ability_distance)
     torch.manual_seed(seed)
     starts = validate_starts()
-    print(f"Retake foundation: updates={steps} evaluation_trials_per_site={trials}", flush=True)
+    print(f"Retake foundation: coordination_version={COORDINATION_VERSION} updates={steps} evaluation_trials_per_site={trials}", flush=True)
     for slot, cells in starts.items():
         print(f"  search post {slot}: start_cells={cells}", flush=True)
     models, checkpoints = {}, {}

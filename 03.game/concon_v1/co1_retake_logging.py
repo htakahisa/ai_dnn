@@ -31,19 +31,20 @@ def print_summary(summary, heading):
         excluded += skipped
         time_expired += expired
         defender_eliminated += eliminated
-        print(f"  {opponent}: defender wins {fraction_text(wins, count)} | losses={count - wins} "
-              f"| L={left['defuses']}/{left['retakes']} R={right['defuses']}/{right['retakes']} "
+        print(f"  {opponent}: defender wins {fraction_text(wins, count)} "
+              f"| {GREEN}L={left['defuses']}/{left['retakes']} R={right['defuses']}/{right['retakes']}{RESET} "
+              f"| losses={count - wins} "
               f"| time_expired={expired} defender_eliminated={eliminated}", flush=True)
-        print(f"    {GREEN}retake_rate={fraction_text(count, played)} "
-              f"| defuse_rate={fraction_text(wins, count)} | excluded={skipped}{RESET}", flush=True)
-    print(f"  {GREEN}Overall: retake_rate={fraction_text(retakes, attempts)} "
+        print(f"    retake_rate={fraction_text(count, played)} "
+              f"| defuse_rate={fraction_text(wins, count)} | excluded={skipped}", flush=True)
+    print(f"  Overall: retake_rate={fraction_text(retakes, attempts)} "
           f"| defuse_rate={fraction_text(defuses, retakes)} | excluded={excluded} "
-          f"| time_expired={time_expired} defender_eliminated={defender_eliminated}{RESET}", flush=True)
+          f"| time_expired={time_expired} defender_eliminated={defender_eliminated}", flush=True)
     for site in ("L", "R"):
         metric = summary[site]
-        print(f"  {GREEN}{site} site: retakes={metric['retakes']} "
-              f"| mean_defuse_rate={rate_text(metric['mean_defuse_rate'])} "
-              f"| min_team_defuse_rate={rate_text(metric['min_defuse_rate'])}{RESET}", flush=True)
+        print(f"  {site} site: retakes={metric['retakes']} "
+              f"| {YELLOW}mean_defuse_rate={rate_text(metric['mean_defuse_rate'])}{RESET} "
+              f"| min_team_defuse_rate={rate_text(metric['min_defuse_rate'])}", flush=True)
         print(f"    moving_fire={metric['moving_fire_rate']:.1%} "
               f"| smoke_defuse_decisions={metric['smoke_defuse_decisions']} "
               f"| time_expired={metric.get('time_expired', 0)} defender_eliminated={metric.get('defender_eliminated', 0)}", flush=True)

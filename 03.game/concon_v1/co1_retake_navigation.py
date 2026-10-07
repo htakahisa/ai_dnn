@@ -1,4 +1,4 @@
-"""Assembly routes stay behind A; actors already ahead may retreat to A."""
+"""Versioned assembly routes: unrestricted v1 and rear-only approaches in v2."""
 
 from collections import deque
 from functools import lru_cache
@@ -6,11 +6,17 @@ from functools import lru_cache
 import numpy as np
 
 from concon_v1.co1_attacker_common import bfs_distance_map
+from concon_v1.co1_retake_config import COORDINATION_VERSION
 
 STEPS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
 
-def assembly_navigation(scenario):
+def assembly_navigation(scenario, version=COORDINATION_VERSION):
+    if version == 1:
+        return (np.zeros(scenario.grid.shape, dtype=bool),
+                {point: bfs_distance_map(scenario.grid, point) for point in scenario.rally_points})
+    if version != 2:
+        raise ValueError(f"unsupported retake coordination version: {version}")
     return _navigation(scenario.grid.shape, scenario.grid.astype(np.int32).tobytes(),
                        getattr(scenario, "map_name", None), tuple(scenario.rally_points))
 
