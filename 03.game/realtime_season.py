@@ -13,35 +13,35 @@ from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from character_stats import CharacterStats, all_characters, get_by_name
 from realtime_season_config import DEFAULT_TEAM_AI
-from season_ratings import (
+from season.season_ratings import (
     DEFAULT_TEAM_RATING,
     SeasonRating,
     expected_score,
     series_ratings,
 )
-from season_monthly_events import MonthlyEvent, process_monthly_events
-from season_transfers import (
+from season.season_monthly_events import MonthlyEvent, process_monthly_events
+from season.season_transfers import (
     TransferOffer,
     resolve_club_memberships,
     with_randomized_clubs,
 )
-from season_world_levels import (
+from season.season_world_levels import (
     WorldLevel,
     WorldLevelError,
     scale_enemy_player,
     validate_world_level,
     world_level_for_rank,
 )
-from season_training import MAX_TRAINING_LEVEL, training_terms
-from season_scouting import remaining as scout_remaining, validate_uses
-from season_loyalty import (
+from season.season_training import MAX_TRAINING_LEVEL, training_terms
+from season.season_scouting import remaining as scout_remaining, validate_uses
+from season.season_loyalty import (
     loyalty_for, remember_loyalties, validate_loyalties, validate_contract_memory,
     signing_loyalty, contract_refused, CONTRACT_LOYALTY, BENCHED_LOYALTY_LOSS,
 )
-from season_history import cash_item, export_history, record_state, validate_history
+from season.season_history import cash_item, export_history, record_state, validate_history
 from functools import cached_property
 import realtime_season_pair_familiarity as pair_settings
-from season_pair_familiarity import (
+from season.season_pair_familiarity import (
     advance_pair_days,
     decode_pair_days,
     encode_pair_days,
@@ -56,13 +56,13 @@ from season_pair_familiarity import (
     validate_news,
 )
 import realtime_season_rival_economy as rival_settings
-from season_rival_economy import (
+from season.season_rival_economy import (
     can_sign,
     monthly_settlement,
     offer_terms,
     signed_contract,
 )
-from season_salary import (
+from season.season_salary import (
     SalaryMode,
     SalaryRecord,
     SalarySettings,
@@ -72,7 +72,7 @@ from season_salary import (
     log_salary_change,
     clamp_change,
 )
-from season_competitions import (
+from season.season_competitions import (
     CompetitionError,
     CompetitionTeam,
     SeriesScore,
@@ -804,7 +804,7 @@ class SeasonState:
         state = state._with_match_loyalty(
             left_id, right_id, left_wins > right_wins, _continued_contracts, participants
         )
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         state = settle_contract_endings(state, _continued_contracts)
         state.validate()
         return state._record_history("レート更新")
@@ -1253,7 +1253,7 @@ class SeasonState:
         )
         candidate = candidate._with_tournament_world_level()
         if updated.completed:
-            from season_monthly_events import settle_deferred_contracts
+            from season.season_monthly_events import settle_deferred_contracts
 
             candidate = settle_deferred_contracts(
                 candidate, continued_contracts, event_id
@@ -1643,7 +1643,7 @@ class SeasonState:
             ),
         )
         candidate = candidate.with_resolved_transfer_offers()
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         candidate = settle_contract_endings(candidate)
         candidate.validate()
         return candidate
@@ -1737,7 +1737,7 @@ class SeasonState:
                     for p in t.players
                 }
                 if not any(p.name in reserved for p in club.players[:ROSTER_SIZE]):
-                    from season_monthly_events import player_strength
+                    from season.season_monthly_events import player_strength
 
                     order = {name: i for i, name in enumerate(club.regular_members)}
                     acquired = set(club.acquired_members) | (
@@ -1988,7 +1988,7 @@ class SeasonState:
                 candidate, money=candidate.money - payroll + income, game_month=index
             )
         candidate = replace(candidate, game_date=day.isoformat())
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         candidate = settle_contract_endings(candidate)
         if new_month:
             candidate = candidate._record_history(
@@ -2002,7 +2002,7 @@ class SeasonState:
         candidate = advance_pair_days(candidate)
         candidate = replace(daily_news(candidate, self), pair_news_deferred=False)
         if new_month:
-            from season_pair_familiarity import history_metrics
+            from season.season_pair_familiarity import history_metrics
 
             candidate = replace(
                 candidate,
@@ -3763,7 +3763,7 @@ class SeasonStore:
                 )
             if data["version"] < 19:
                 # Start the rival economy now; never replay past income or prizes.
-                from season_rival_economy import signing_terms, transfer_cost
+                from season.season_rival_economy import signing_terms, transfer_cost
 
                 offers = []
                 for offer in state.transfer_offers:

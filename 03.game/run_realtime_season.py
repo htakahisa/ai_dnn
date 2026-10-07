@@ -8,20 +8,20 @@ from tkinter import messagebox, ttk
 
 from realtime_season import DEFAULT_SAVE_PATH, EXPIRED_ROSTER_WARNING, ROSTER_SIZE, SeasonSaveError, SeasonStore
 from realtime_season_config import DEFAULT_TEAM_AI
-from season_training import MAX_TRAINING_LEVEL
-from season_scrim import ScrimJob, ai_options, build_scrim_request
-from season_management_ui import SeasonManagementMixin
-from season_competition_ui import SeasonCompetitionMixin
-from season_starter_ui import SeasonStarterMixin
-from season_rating_ui import SeasonRatingMixin
-from season_monthly_ui import SeasonMonthlyMixin
-from season_training_ui import SeasonTrainingMixin
-from season_pair_familiarity_ui import SeasonPairFamiliarityMixin
-from season_player_stats import player_combat_power, player_duel_power
-from season_salary import SalaryMode
-from season_profiles import SeasonProfiles
-from season_profiles_ui import choose_season_profile
-from season_strongest_ranking_ui import SeasonStrongestRankingWindow
+from season.season_training import MAX_TRAINING_LEVEL
+from season.season_scrim import ScrimJob, ai_options, build_scrim_request
+from season.season_management_ui import SeasonManagementMixin
+from season.season_competition_ui import SeasonCompetitionMixin
+from season.season_starter_ui import SeasonStarterMixin
+from season.season_rating_ui import SeasonRatingMixin
+from season.season_monthly_ui import SeasonMonthlyMixin
+from season.season_training_ui import SeasonTrainingMixin
+from season.season_pair_familiarity_ui import SeasonPairFamiliarityMixin
+from season.season_player_stats import player_combat_power, player_duel_power
+from season.season_salary import SalaryMode
+from season.season_profiles import SeasonProfiles
+from season.season_profiles_ui import choose_season_profile
+from season.season_strongest_ranking_ui import SeasonStrongestRankingWindow
 
 
 class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonStarterMixin, SeasonRatingMixin, SeasonMonthlyMixin, SeasonTrainingMixin, SeasonPairFamiliarityMixin):
@@ -601,7 +601,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
             self.preset_name.set(self.state.preset_name)
 
     def refresh(self):
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         settled = settle_contract_endings(self.state)
         if settled != self.state:
             if self.commit(settled, "契約終了・再契約猶予の状況を更新しました。"):
@@ -698,7 +698,7 @@ class RealtimeSeasonApp(SeasonManagementMixin, SeasonCompetitionMixin, SeasonSta
 
     def commit(self, candidate, message):
         try:
-            from season_contract_endings import settle_contract_endings
+            from season.season_contract_endings import settle_contract_endings
             candidate = settle_contract_endings(candidate)
             expired = candidate.unplayable_roster
             if expired:

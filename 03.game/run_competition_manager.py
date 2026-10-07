@@ -472,7 +472,7 @@ def save_json(prefix: str, data: dict[str, Any]) -> Path:
     # 大きくなる。ファイルへ直接書き出してピークを抑える。
     with path.open("w", encoding="utf-8") as stream:
         json.dump(data, stream, ensure_ascii=False, indent=2)
-    from season_salary import invalidate_salary_cache
+    from season.season_salary import invalidate_salary_cache
     invalidate_salary_cache()
     return path
 
