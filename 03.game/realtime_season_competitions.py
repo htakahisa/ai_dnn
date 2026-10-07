@@ -104,7 +104,7 @@ TOURNAMENTS = [
         "id": "lohen",
         "enemy_multiplier": 1.4,
         "name": "ローエン杯",
-        "start_date": "06-30",
+        "start_date": "06-20",
         "visible_from": "06-01",
         "team_count": 8,
         "format": "double_elimination",
