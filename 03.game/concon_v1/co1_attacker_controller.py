@@ -91,7 +91,7 @@ class ConconAttackerController(BaseController):
 
 
 class ConconRoundAttackerController(BaseController):
-    """Choose one complete attack scenario independently for each round.
+    """Try each attack twice, then favor scenarios with the best win rate.
 
     Frozen models are loaded once. Route, utility and retrieval state belong
     to the selected scenario; all five attackers share that selection.
@@ -99,13 +99,21 @@ class ConconRoundAttackerController(BaseController):
     """
 
     def __init__(self, map_names=("A1", "A2", "A3"), seed=None,
-                 postplant_factories=None):
+                 postplant_factories=None, exploration_rate=0.1):
         super().__init__()
         names = (map_names,) if isinstance(map_names, str) else tuple(map_names)
         if not names or len(set(names)) != len(names):
             raise ValueError("attacker map candidates must be non-empty and unique")
+        if not 0 <= exploration_rate <= 1:
+            raise ValueError("exploration_rate must be between zero and one")
         self.rng = random.Random(seed)
         self.map_names = names
+        self.exploration_rate = exploration_rate
+        self.rounds_started = 0
+        self.map_wins = dict.fromkeys(names, 0)
+        self.map_rounds = dict.fromkeys(names, 0)
+        self._round_start_score = None
+        self._round_start_swap = 0
         self.controllers = {}
         for name in names:
             scenario = get_scenario(name)
@@ -136,13 +144,55 @@ class ConconRoundAttackerController(BaseController):
             self.current_controller.set_game(game)
 
     def reset_round(self):
-        self.current_map_name = self.rng.choice(self.map_names)
+        # Fallback for runtimes that do not call the round-end hook.
+        self.record_opponent_round_end()
+        score = self._score()
+        if score == (0, 0) and any(self.map_rounds.values()):
+            self.rounds_started = 0
+            self.map_wins = dict.fromkeys(self.map_names, 0)
+            self.map_rounds = dict.fromkeys(self.map_names, 0)
+        if self.rounds_started < 2 * len(self.map_names):
+            self.current_map_name = self.map_names[self.rounds_started % len(self.map_names)]
+        else:
+            rates = {name: self.map_wins[name] / self.map_rounds[name]
+                     if self.map_rounds[name] else 0.0 for name in self.map_names}
+            best_rate = max(rates.values())
+            best = tuple(name for name in self.map_names if rates[name] == best_rate)
+            others = tuple(name for name in self.map_names if name not in best)
+            candidates = others if others and self.rng.random() < self.exploration_rate else best
+            self.current_map_name = self.rng.choice(candidates)
+        self.rounds_started += 1
+        self._round_start_score = score
+        self._round_start_swap = getattr(getattr(self, "game", None), "_side_swap_count", 0)
         self.current_controller = self.controllers[self.current_map_name]
         self.current_controller.postplant_controller = None
         if getattr(self, "game", None) is not None:
             self.current_controller.set_game(self.game)
         self.current_controller.reset_round()
         self._postplant_selected = False
+
+    def _score(self):
+        game = getattr(self, "game", None)
+        score = (getattr(game, "attacker_wins", None), getattr(game, "defender_wins", None))
+        return score if all(isinstance(value, int) for value in score) else None
+
+    def record_opponent_round_end(self):
+        """Called by the game's existing round-end hook, before side swaps."""
+        score = self._score()
+        start = self._round_start_score
+        if score is None or start is None:
+            return
+        swap = getattr(getattr(self, "game", None), "_side_swap_count", 0)
+        if swap != self._round_start_swap:
+            # Never attribute defensive rounds to the last attack scenario.
+            self._round_start_score = None
+            return
+        delta = (score[0] - start[0], score[1] - start[1])
+        if delta not in ((1, 0), (0, 1)):
+            return
+        self.map_rounds[self.current_map_name] += 1
+        self.map_wins[self.current_map_name] += delta[0]
+        self._round_start_score = None
 
     def decide_move(self, char, game_state):
         # Also support runtimes that first bind/act before calling reset_round.
