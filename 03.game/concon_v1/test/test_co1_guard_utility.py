@@ -125,6 +125,20 @@ class GuardUtilityTests(unittest.TestCase):
             self.assertEqual(char.ultimate_points, char.ultimate_cost)
             self.assertLess(env.pending[env.indices[char.name]]["action"], 40)
 
+    def test_actual_tick_records_quiet_resource_spending(self):
+        env = self.environment()
+        for char in env.attackers:
+            if char.ability_name in ABILITIES:
+                setattr(char, char.ability_name.lower() + "_charges", 1)
+        self.prefer(env.model, slice(40, ULTIMATE_ACTION))
+        env.step(epsilon=0.0)
+        quiet = [(action, ctx) for action, ctx in env.decisions.values()
+                 if not ctx['tap'] and not ctx['fireable']]
+        casts = sum(action >= 40 for action, _ in quiet)
+        self.assertGreater(casts, 0)
+        self.assertEqual(env.metrics['quiet_utility_decisions'], casts)
+        self.assertEqual(env.metrics['quiet_decisions'], len(quiet))
+
 
 if __name__ == "__main__":
     unittest.main()

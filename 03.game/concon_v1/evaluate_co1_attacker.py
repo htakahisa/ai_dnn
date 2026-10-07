@@ -20,23 +20,13 @@ if str(ROOT) not in sys.path:
 from party_presets import get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from concon_v1.co1_attacker_controller import ConconAttackerController
-from concon_v1.co1_battle_training import _run_from_project_root
+from concon_v1.co1_battle_training import OPPONENTS, _run_from_project_root
 from concon_v1.co1_learn_attacker import DEFAULT_MODEL_PATH
 
 from concon_v1.co1_attacker_scenarios import SCENARIOS, get_scenario, validate_checkpoint_scenario
 
 
 DEFAULT_ROUNDS = 36
-
-OPPONENTS = {
-    "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
-    "touyama_v2": ("touyama_gaming_v2", "Touyama Gaming"),
-    "fnatic_v3": ("fnatic_v3", "Fnatic2023"),
-    "gc_v1": ("gc_v1", "Ghost Champions"),
-    # Toru AI is a controller, with no dedicated roster preset.
-    "toru_ai_v3.1": ("toru_ai_v3.1", "Team Elites"),
-}
-
 
 class LimitedRoundBattle(VisualFPSBattle):
     def move_character(self, char):

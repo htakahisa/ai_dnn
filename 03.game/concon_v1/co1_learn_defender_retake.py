@@ -23,7 +23,7 @@ class ConconDefenderRetakeController(BaseController):
             checkpoint = torch.load(path, map_location="cpu", weights_only=False)
             if ability_distance is None:
                 ability_distance = checkpoint.get("ability_distances", checkpoint.get("ability_distance", 6))
-            validate_checkpoint(checkpoint, self.scenario, ability_distance, allow_legacy_coordination=True)
+            validate_checkpoint(checkpoint, self.scenario, ability_distance)
             self.coordination_version = checkpoint["coordination_version"]
             model = RetakeDQN(self.scenario, foundation=checkpoint.get("foundation_version") == 1)
             model.load_state_dict(checkpoint["model_state_dict"])

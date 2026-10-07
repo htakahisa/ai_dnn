@@ -153,6 +153,7 @@ class RetakeTests(unittest.TestCase):
         self.assertTrue(build_inputs(self.controller, self.char, self.state)[1][ULTIMATE_ACTION:DEFUSE_ACTION].any())
 
     def test_independent_ability_limits_and_unrestricted_ultimate_distance(self):
+        self.char.pos = [6, 1]  # Two BFS steps from the updated FLASH marker.
         self.controller.ability_distances = dict(FLASH=1, RECON=1, SMOKE=8)
         self.char.ability_name, self.char.flash_charges = "FLASH", 1
         self.assertFalse(build_inputs(self.controller, self.char, self.state)[1][64:88].any())
@@ -405,13 +406,13 @@ class RetakeTests(unittest.TestCase):
         with contextlib.redirect_stdout(output):
             print_summary(summarize(records, ["one"]), "Training summary:")
         text = output.getvalue()
-        self.assertIn("one: defender wins 1/2 (50.0%) | losses=1 | L=1/1 R=0/1", text)
+        self.assertIn(f"one: defender wins 1/2 (50.0%) | {GREEN}L=1/1 R=0/1{RESET} | losses=1", text)
         self.assertIn("retake_rate=2/4 (50.0%)", text)
         self.assertIn("defuse_rate=1/2 (50.0%) | excluded=2", text)
         self.assertNotIn("2/8", text)  # site summaries share the round denominator
         highlights = [line.strip() for line in text.splitlines() if GREEN in line]
-        self.assertEqual(len(highlights), 4)
-        self.assertTrue(all(line.startswith(GREEN) and line.endswith(RESET) for line in highlights))
+        self.assertEqual(len(highlights), 1)
+        self.assertTrue(all(f"{GREEN}L=" in line and f"R=0/1{RESET}" in line for line in highlights))
 
     def test_console_log_handles_missing_retakes_and_retry_progress(self):
         record = dict(opponent="one", planted=False, site=None, defused=False)
@@ -461,6 +462,24 @@ class RetakeTests(unittest.TestCase):
         transitions, _, _ = env.step()
         self.assertFalse(transitions)
         self.assertTrue(all(pending is None for pending in env.retake_pending))
+
+    def test_frc_reset_cycles_attack_plans_before_first_tick(self):
+        from concon_v1.co1_defender_scenario import get_scenario as search_scenario
+        from concon_v1.co1_defender_search_common import DefenderSearchBattleDQN
+        models = {site: RetakeDQN(get_scenario(site)) for site in ("L", "R")}
+        env = DefenderRetakeEnv(models, DefenderSearchBattleDQN(search_scenario()),
+                                opponents=["frc_v1", "omoko_v1"])
+        sites = []
+        for expected_round in (1, 2, 3, 4, 5, 1):
+            env.reset(opponent="omoko_v1")
+            self.assertEqual(env.game.current_round, 1)
+            env.reset(opponent="frc_v1")
+            self.assertEqual(env.game.current_round, expected_round)
+            controller = env.game.attacker_controller
+            controller.prepare_team_tick()
+            self.assertEqual(controller.snapshot.round_number, expected_round)
+            sites.append(controller.actor._navigation_site)
+        self.assertEqual(sites, [1, 0, 1, 0, 1, 1])
 
     def test_engine_defuse_action_and_postplant_terminal_credit(self):
         from concon_v1.co1_defender_scenario import get_scenario as search_scenario

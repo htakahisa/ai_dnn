@@ -49,7 +49,7 @@ DEFAULT_EVAL_ROUNDS = 20  # 探索なし評価の各相手teamとの試合数
 EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
-FORCE_SAVE = True  # Keep numbered debug models at every checkpoint interval.
+FORCE_SAVE = False  # Keep numbered debug models at every checkpoint interval.
 
 
 def epsilon_by_episode(episode, total_episodes=DEFAULT_EPISODES):
@@ -602,6 +602,7 @@ def train(episodes=DEFAULT_EPISODES, save_dir=None, seed=0,
 
 
 def main():
+    from concon_v1.co1_battle_training import OPPONENTS
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default="A1")
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
@@ -612,9 +613,7 @@ def main():
     parser.add_argument("--force-save", action="store_true", default=FORCE_SAVE,
                         help="keep numbered debug models at every checkpoint interval regardless of epsilon")
     parser.add_argument("--mode", choices=("battle", "route"), default="battle")
-    parser.add_argument("--opponents", nargs="+", choices=(
-        "omoko_v1", "touyama_v2", "fnatic_v3", "gc_v1", "toru_ai_v3.1",
-    ))
+    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS)
     args = parser.parse_args()
     if args.eval_rounds < 1:
         parser.error("--eval-rounds must be positive")

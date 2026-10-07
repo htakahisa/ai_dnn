@@ -28,7 +28,7 @@ GAMMA = .99
 
 
 def observation_dim(scenario):
-    return MAP_CHANNELS * scenario.grid.size + FEATURE_DIM + EXTRA_FEATURES
+    return MAP_CHANNELS * scenario.grid.size + FEATURE_DIM + EXTRA_FEATURES + bool(scenario.entry_points)
 
 
 class RetakeDQN(nn.Module):
@@ -39,16 +39,23 @@ class RetakeDQN(nn.Module):
         self.encoder = nn.Sequential(nn.Conv2d(MAP_CHANNELS, 16, 3, padding=1), nn.ReLU(),
                                      nn.Conv2d(16, 32, 3, stride=2, padding=1), nn.ReLU(),
                                      nn.AdaptiveAvgPool2d((4, 6)), nn.Flatten())
-        self.head = nn.Sequential(nn.Linear(768 + FEATURE_DIM + EXTRA_FEATURES, 256), nn.ReLU(),
+        self.head = nn.Sequential(nn.Linear(768 + FEATURE_DIM + EXTRA_FEATURES + bool(scenario.entry_points), 256), nn.ReLU(),
                                   nn.Linear(256, ACTION_DIM))
         self.foundation = foundation
         if foundation:
             from concon_v1.co1_retake_foundation import navigation_cells
             cells = navigation_cells(scenario)
             lookup = torch.full((self.height * self.width,), -1, dtype=torch.long)
+            entry_lookup = lookup.clone()
+            entry_count = sum(len(points) for _, points in scenario.entry_points)
             for index, (r, c) in enumerate(cells):
-                lookup[r * self.width + c] = index
+                if entry_count and index >= len(cells) - entry_count:
+                    entry_lookup[r * self.width + c] = index
+                else:
+                    lookup[r * self.width + c] = index
             self.register_buffer("foundation_plant_lookup", lookup)
+            if entry_count:
+                self.register_buffer("foundation_entry_lookup", entry_lookup)
             # Six learned operations: four moves, wait, defuse. Facing retains
             # the perception-dependent network, as do combat and utility.
             self.foundation_values = nn.Embedding(len(cells) * self.height * self.width, 6)
@@ -78,6 +85,9 @@ class RetakeDQN(nn.Module):
         spike_row = (features[:, 2] * self.height).round().long().clamp(0, self.height - 1)
         spike_col = (features[:, 3] * self.width).round().long().clamp(0, self.width - 1)
         plants = self.foundation_plant_lookup[spike_row * self.width + spike_col]
+        if hasattr(self, "foundation_entry_lookup"):
+            plants = torch.where(features[:, -1] > 0,
+                                 self.foundation_entry_lookup[spike_row * self.width + spike_col], plants)
         indices = plants.clamp(min=0) * self.height * self.width + row * self.width + col
         # Enemy memory elsewhere does not mean this actor is firing. Feature
         # 16 is the existing clear-shot target flag from production perception.
@@ -145,10 +155,26 @@ def coordination(char, state, controller=None):
     use_entrance = (via is not None and (char.name, staging) not in planner.reached and via[position] > 1
                     and via[position] + distances[staging] + DEFUSE_REQUIRED_TICKS + 3 < remaining)
     goal = staging if waiting or (len(allies) > 1 and use_entrance) else spike
+    entry = None
+    if planner.version == 3 and hasattr(planner.scenario, "entries_for"):
+        entries = planner.scenario.entries_for(staging)
+        if position in entries:
+            planner.entered.add(char.name)
+        if not waiting and char.name in planner.entered:
+            goal = spike
+        if not waiting and entries and char.name not in planner.entered and len(allies) > 1:
+            routes = {point: bfs_distance_map(grid, point) for point in entries}
+            reachable = [point for point in entries if routes[point][position] >= 0 and distances[point] >= 0]
+            if reachable:
+                candidate = min(reachable, key=lambda p: (routes[p][position] + distances[p], p))
+                if routes[candidate][position] + distances[candidate] + DEFUSE_REQUIRED_TICKS + 3 < remaining:
+                    entry, goal = candidate, candidate
+                else:
+                    goal = spike
     fireable = [enemy for enemy in known if clear_shot(char, enemy, chars, grid, smoke)]
     neutralized = bool(fireable) and all(getattr(enemy, "blind_remaining", 0) > 0
                                       or getattr(enemy, "stun_remaining", 0) > 0 for enemy in fireable)
-    return dict(goal=goal, staging=staging, waiting=waiting, safe=safe(position),
+    return dict(goal=goal, entry=entry, staging=staging, waiting=waiting, safe=safe(position),
                 urgent=plan["urgent"], remaining=remaining,
                 distances=distances, eligible=len(plan["eligible"]), near=plan["near"], allies=allies,
                 safe_at=safe, known=known, neutralized=neutralized,
@@ -252,6 +278,8 @@ def build_inputs(controller, char, state):
                getattr(char, "ultimate_points", 0) / max(1, cost),
                float(tap_info.get(char.name, (0, 1))[0]) / DEFUSE_REQUIRED_TICKS,
                float(tactical["smoke_defuse"]), float(tactical["neutralized"])]
+    if scenario.entry_points:
+        extras.append(float(tactical["entry"] is not None))
     observation = np.concatenate((base[:size], marker_maps.ravel(), base[size:], np.asarray(extras, dtype=np.float32)))
     context.update(tactical, targets=targets, ultimate_actions=ultimates,
                    ability_targets=ability_targets,

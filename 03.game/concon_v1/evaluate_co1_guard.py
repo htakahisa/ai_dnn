@@ -24,6 +24,7 @@ from concon_v1.co1_guard_positioning import positioning_evaluation, formation_ev
 
 def behavior_summary(details):
     pairs = {
+        "quiet_utility_rate": ("quiet_utility_decisions", "quiet_decisions"),
         "quiet_leave_goal_rate": ("quiet_leave_goal_decisions", "quiet_at_goal_decisions"),
         "quiet_reversal_rate": ("quiet_reversals", "quiet_decisions"),
         "quiet_bad_facing_rate": ("quiet_bad_facing_decisions", "quiet_decisions"),
@@ -132,6 +133,7 @@ def print_summary(result):
         print(f"  leave_goal={counts['quiet_leave_goal_rate']:.1%} "
               f"reversals={counts['quiet_reversal_rate']:.1%} "
               f"quiet_bad_facing={counts['quiet_bad_facing_rate']:.1%} "
+              f"quiet_utility={counts['quiet_utility_rate']:.1%} "
               f"moving_fire={counts['moving_fire_rate']:.1%} "
               f"bad_fire_facing={counts['bad_fire_facing_rate']:.1%}", flush=True)
         for mode, mode_counts in counts["by_start_mode"].items():

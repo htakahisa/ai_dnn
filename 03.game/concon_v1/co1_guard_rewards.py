@@ -2,10 +2,11 @@
 
 from concon_v1.co1_guard_common import aim_alignment
 
-REWARD_VERSION = 2
+REWARD_VERSION = 3
 GAMMA = 0.99
 DEATH_PENALTY = 0.5
 ROUND_REWARD = 10.0
+QUIET_UTILITY_COST = 0.08
 
 
 def decision_reward(action, context, position, facing, new_distance):
@@ -35,6 +36,12 @@ def decision_reward(action, context, position, facing, new_distance):
             reward -= 0.03
         return reward
 
+    # Spending a resource used to earn the same holding bonus as waiting,
+    # and even avoided the off-post waiting penalty. Charge quiet casts while
+    # leaving contact/defuse responses above unchanged. Outcomes can still
+    # justify proactive utility; every executable cast remains a candidate.
+    if operation >= 5:
+        reward -= QUIET_UTILITY_COST
     reward += 0.02 * aim_alignment(position, context["aim"], facing)
     if not stationary:
         reward -= 0.02
@@ -42,6 +49,6 @@ def decision_reward(action, context, position, facing, new_distance):
             reward -= 0.06
     elif position == context["goal"]:
         reward += 0.04
-    elif operation < 5 and context["can_move"]:
+    elif context["can_move"]:
         reward -= 0.03
     return reward

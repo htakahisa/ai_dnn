@@ -13,7 +13,7 @@ import numpy as np
 
 from concon_v1.co1_guard_rewards import decision_reward, GAMMA, DEATH_PENALTY, ROUND_REWARD
 from concon_v1.co1_guard_battle_training import GuardBattleEnv
-from concon_v1.co1_guard_common import WAIT_ACTION, ACTION_DIM, observation_dim
+from concon_v1.co1_guard_common import WAIT_ACTION, ACTION_DIM, ULTIMATE_ACTION, observation_dim
 from concon_v1.co1_guard_scenarios import get_scenario
 from concon_v1.co1_train_guard import qualifies_as_best
 from concon_v1.evaluate_co1_guard import behavior_summary
@@ -28,6 +28,28 @@ def context(**changes):
 
 
 class GuardRewardTests(unittest.TestCase):
+    def test_quiet_casts_cost_more_than_waiting_on_and_off_post(self):
+        for ctx in (context(), context(position=(2, 1), distance_goal=1),
+                    context(position=(2, 1), distance_goal=1, can_move=False)):
+            for action in range(40, ACTION_DIM, 8):
+                with self.subTest(ctx=ctx, action=action):
+                    wait = decision_reward(WAIT_ACTION, ctx, ctx['position'], 'E', ctx['distance_goal'])
+                    cast = decision_reward(action, ctx, ctx['position'], 'E', ctx['distance_goal'])
+                    self.assertLess(cast, wait)
+                    self.assertLess(cast, 0)
+
+    def test_quiet_return_is_better_than_spending_utility_to_stall(self):
+        ctx = context(position=(2, 1), distance_goal=1)
+        returning = decision_reward(24, ctx, (2, 2), 'E', 0)
+        for action in (40, 64, 88, ULTIMATE_ACTION):
+            self.assertGreater(returning, decision_reward(action, ctx, (2, 1), 'E', 1))
+
+    def test_contact_and_tap_casts_do_not_receive_quiet_cost(self):
+        for ctx in (context(fireable=True, target=(2, 4)), context(tap=True)):
+            rewards = [decision_reward(action, ctx, (2, 2), 'E', 0)
+                       for action in (40, 64, 88, ULTIMATE_ACTION)]
+            self.assertTrue(all(reward > 0 for reward in rewards))
+
     def test_leaving_and_returning_is_worse_than_holding(self):
         for facing in ("E", "NE", "W"):
             with self.subTest(facing=facing):
@@ -127,7 +149,16 @@ class GuardBehaviorEvaluationTests(unittest.TestCase):
         self.assertEqual(summary['quiet_leave_goal_rate'], .2)
         self.assertEqual(summary['quiet_reversal_rate'], .1)
         self.assertEqual(summary['moving_fire_rate'], 0)
+        self.assertEqual(summary['quiet_utility_rate'], 0)
         self.assertEqual(behavior_summary([])['behavior_error'], 0)
+
+    def test_quiet_utility_rate_counts_casts_and_affects_behavior_error(self):
+        summary = behavior_summary([
+            {'quiet_decisions': 10, 'quiet_utility_decisions': 2},
+            {'quiet_decisions': 30, 'quiet_utility_decisions': 6},
+        ])
+        self.assertEqual(summary['quiet_utility_rate'], .2)
+        self.assertGreater(summary['behavior_error'], 0)
 
     def test_equal_win_rates_prefer_stable_behavior(self):
         stable = {'mean_win_rate': .6, 'min_team_win_rate': .4,

@@ -25,6 +25,7 @@ OPPONENTS = {
     "fnatic_v3": ("fnatic_v3", "Fnatic2023"),
     "gc_v1": ("gc_v1", "Ghost Champions"),
     "toru_ai_v3.1": ("toru_ai_v3.1", "Team Elites"),
+    "frc_v1": ("frc_v1", "Furina Classic"),
 }
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PLANT_SUCCESS_REWARD = 10.0

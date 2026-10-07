@@ -7,6 +7,7 @@ from concon_v1.co1_defender_scenario import get_scenario
 from concon_v1.co1_learn_defender_search import ConconDefenderSearchController
 from concon_v1.co1_learn_defender_retake import ConconDefenderRetakeController
 from concon_v1.co1_retake_scenarios import get_scenario as retake_scenario, plant_site
+from concon_v1.co1_retake_models import game_opponent, runtime_model_path
 
 
 class ConconDefenderController(BaseController):
@@ -14,6 +15,8 @@ class ConconDefenderController(BaseController):
         super().__init__()
         self.default_controller = DefaultDefenderController()
         self.retake_controllers = {}
+        self._explicit_retake_paths = retake_model_paths is not None
+        self._loaded_retake_paths = {}
         paths = ({site: retake_scenario(site).model_path("best") for site in ("L", "R")}
                  if retake_model_paths is None else retake_model_paths)
         if set(paths) != {"L", "R"}:
@@ -44,9 +47,13 @@ class ConconDefenderController(BaseController):
             return self.search_controller.decide_move(char, game_state)
         if game_state.get("is_planted") and game_state.get("planted_pos") is not None:
             site = plant_site(game_state["planted_pos"], game_state["grid"])
-            path = self.retake_model_paths[site]
+            path = (self.retake_model_paths[site] if self._explicit_retake_paths else
+                    runtime_model_path(site, game_opponent(getattr(self, "game", None))).resolve())
+            if self._loaded_retake_paths.get(site) != path:
+                self.retake_controllers.pop(site, None)
             if site not in self.retake_controllers and path.is_file():
                 self.retake_controllers[site] = ConconDefenderRetakeController(site, model_path=path)
+                self._loaded_retake_paths[site] = path
                 if hasattr(self, "game"):
                     self.retake_controllers[site].set_game(self.game)
             if site in self.retake_controllers:

@@ -26,8 +26,8 @@ from concon_v1.co1_defender_controller import ConconDefenderController
 from concon_v1.co1_learn_defender_search import ConconDefenderSearchController
 from concon_v1.co1_retake_cases import CASE_VERSION, case_metadata, save_case, _atomic_write
 
-# 収集件数: 各AI・各サイトの件数。既定の5チーム × 左右2サイトで合計500件。
-# 100に変更すると、既定の対象では合計1000件。コマンド引数を指定した場合は引数を優先。
+# 収集件数: 各AI・各サイトの件数。既定の6チーム × 左右2サイトで合計600件。
+# 100に変更すると、既定の対象では合計1200件。コマンド引数を指定した場合は引数を優先。
 DEFAULT_CASES_PER_SITE = 50
 DEFAULT_MAX_ATTEMPTS_PER_TEAM = 1000
 # 実際の試合上限: setup 20 tick + 設置前ラウンド 100 tick = 120 tick。
@@ -114,8 +114,15 @@ def collect(cases_per_site=DEFAULT_CASES_PER_SITE, opponents=None, sites=("L", "
     config = dict(version=CASE_VERSION, seed=seed, opponents=list(opponents), sites=list(sites),
                   search_model_sha256=hashlib.sha256(search.model_path.read_bytes()).hexdigest(),
                   map_sha256=hashlib.sha256(GAME_MAZE_STR.encode()).hexdigest())
-    if resume and json.loads(config_path.read_text(encoding="utf-8"))["provenance"] != config:
-        raise ValueError("resume roster/sites/seed/search weights/map differ from this dataset")
+    if resume:
+        previous = json.loads(config_path.read_text(encoding="utf-8"))["provenance"]
+        # A run may collect only a subset or add opponents to the same dataset.
+        # All cases must still share the same search policy and game settings.
+        previous_settings = {key: value for key, value in previous.items() if key != "opponents"}
+        current_settings = {key: value for key, value in config.items() if key != "opponents"}
+        if previous_settings != current_settings:
+            raise ValueError("resume sites/seed/search weights/map differ from this dataset")
+        config["opponents"] = list(dict.fromkeys([*previous["opponents"], *opponents]))
     directory.mkdir(parents=True, exist_ok=True)
     info = dict(provenance=config, search_model=str(search.model_path),
                 cases_per_site=cases_per_site, capture_boundary="end_of_first_plant_tick_before_retake_decisions")
@@ -146,9 +153,15 @@ def collect(cases_per_site=DEFAULT_CASES_PER_SITE, opponents=None, sites=("L", "
             np.random.seed(round_seed)
             torch.manual_seed(round_seed)
             game = create_game(opponent, search.model, round_seed)
+            if opponent == "frc_v1":
+                # FRC chooses its five production attack plans by round number.
+                # Fresh one-round games would otherwise repeat only plan 1.
+                game.current_round = (attempt - 1) % 5 + 1
             ticks, usable = run_to_plant(game, max_ticks)
             row = dict(opponent=opponent, attempt=attempt, round_seed=round_seed,
                        ticks=ticks, planted=bool(game.is_planted), saved=False)
+            if opponent == "frc_v1":
+                row["opponent_attack_round"] = game.current_round
             if usable:
                 metadata = case_metadata(game, opponent)
                 site = metadata["site"]
@@ -189,7 +202,8 @@ def main(argv=None):
                         help="total attempts per team, including resumed attempts")
     parser.add_argument("--max-ticks", type=int, default=DEFAULT_MAX_TICKS,
                         help=f"maximum setup/search ticks in one attempt (default {DEFAULT_MAX_TICKS}: setup + round duration)")
-    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--resume", action="store_true",
+                        help="append missing cases or new opponents to a compatible existing dataset")
     args = parser.parse_args(argv)
     torch.set_num_threads(1)
     return 0 if collect(args.cases_per_site, args.opponents, args.sites, args.output_dir,

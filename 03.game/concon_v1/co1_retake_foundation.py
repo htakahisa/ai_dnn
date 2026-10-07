@@ -35,7 +35,11 @@ def perceived_plant_cells(scenario):
 
 
 def navigation_cells(scenario):
-    return perceived_plant_cells(scenario) + sorted(set(scenario.rally_points) - set(perceived_plant_cells(scenario)))
+    plants = perceived_plant_cells(scenario)
+    # Entry goals have their own lookup even if IQ can report the same cell as
+    # a planted spike: navigating to an entry must not teach defusing there.
+    entries = [point for _, points in scenario.entry_points for point in points]
+    return plants + sorted(set(scenario.rally_points) - set(plants)) + entries
 
 
 def teacher_values(grid, spike, position, assembly=False, distances=None, front=None):
@@ -63,11 +67,14 @@ def training_targets(scenario, seed=0):
     height, width = scenario.grid.shape
     plants = set(perceived_plant_cells(scenario))
     front, rally_routes = assembly_navigation(scenario)
-    for plant_index, spike in enumerate(navigation_cells(scenario)):
-        assembly = spike not in plants
+    cells = navigation_cells(scenario)
+    entry_count = sum(len(points) for _, points in scenario.entry_points)
+    for plant_index, spike in enumerate(cells):
+        entry = bool(entry_count and plant_index >= len(cells) - entry_count)
+        assembly = not entry and spike not in plants
         distances = rally_routes[spike] if assembly else bfs_distance_map(scenario.grid, spike)
         covered = np.zeros(scenario.grid.shape, dtype=bool)
-        if spike not in plants:
+        if assembly or entry:
             # Any teammate may be assigned any A, including an optional advance
             # from another entrance. Cover every reachable approach cell.
             covered |= distances >= 0
@@ -85,7 +92,7 @@ def training_targets(scenario, seed=0):
         rng.shuffle(positions)
         for position in positions:
             indices.append(plant_index * height * width + position[0] * width + position[1])
-            targets.append(teacher_values(scenario.grid, spike, position, assembly=assembly,
+            targets.append(teacher_values(scenario.grid, spike, position, assembly=assembly or entry,
                                           distances=distances, front=front if assembly else None))
     return np.asarray(indices, dtype=np.int64), np.asarray(targets, dtype=np.float32)
 
