@@ -1,0 +1,1 @@
+{"steps": 128, "rounds": 0, "stage": "match", "side": "D", "effects": "all", "seed": 779, "teacher_steps": 32, "imitation_weight": 0.03, "imitation_loss": 22.428836822509766, "loss": 0.7009465098381042, "mean_reward": -0.002609375, "elapsed_seconds": 8.48, "outcomes": []}
