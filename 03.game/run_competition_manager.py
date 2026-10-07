@@ -57,7 +57,6 @@ CONTROLLER_OPTIONS = {
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
     "FRC v1（学習モデル）": "frc_v1",
-    "FRC v1（基礎ルール）": "frc_v1_baseline",
     "Fnatic v2": "fnatic_2",
     "Fnatic v1": "fnatic_v1",
     "Toru AI v3.1": "toru_ai_v3.1",
