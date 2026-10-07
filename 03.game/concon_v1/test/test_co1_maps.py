@@ -78,7 +78,7 @@ class MapSelectionTests(unittest.TestCase):
                 _load_scenario.cache_clear()
 
     def test_training_cli_passes_single_dash_map_to_training(self):
-        for map_name in ("A1", "A2"):
+        for map_name in ("A1", "A2", "A3", "A4"):
             with self.subTest(map_name=map_name), patch.object(sys, "argv", [
                 "co1_train_attacker.py", "-map", map_name, "--episodes", "123",
             ]), patch.object(training, "train") as train:

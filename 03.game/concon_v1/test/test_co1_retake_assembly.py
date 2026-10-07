@@ -55,6 +55,7 @@ class AssemblyTests(unittest.TestCase):
 
     def test_forward_advance_keeps_followers_goals_and_does_not_delay_release(self):
         planner = self.planner()
+        planner = RetakeAssembly(planner.scenario, version=1)
         allies = [actor(str(i), pos) for i, pos in enumerate(((3, 8), (0, 8), (0, 7), (0, 12), (0, 13)))]
         planner.assigned = dict(zip((a.name for a in allies), ((3, 8), (2, 8), (4, 8), (2, 12), (3, 12))))
         original = dict(planner.assigned)
@@ -176,7 +177,7 @@ class AssemblyTests(unittest.TestCase):
         state.update(battle_tick=2, detonate_timer=9)
         self.assertTrue(build_inputs(controller, chars[0], state)[1][40:ULTIMATE_ACTION].any())
 
-    def test_release_switches_goal_to_spike_without_returning_to_assigned_A(self):
+    def test_release_switches_goal_to_corresponding_entry(self):
         controller, chars, state = self.controller_state()
         for group, members in zip(controller.scenario.rally_groups, (chars[:3], chars[3:])):
             for index, char in enumerate(members):
@@ -187,7 +188,7 @@ class AssemblyTests(unittest.TestCase):
         for char in chars:
             _, _, context = build_inputs(controller, char, state)
             self.assertFalse(context["waiting"])
-            self.assertEqual(context["goal"], state["planted_pos"])
+            self.assertIn(context["goal"], controller.scenario.entries_for(controller.assembly.assigned[char.name]))
 
     def test_learned_foundation_supports_A_goals_and_wait_without_defuse(self):
         controller, chars, state = self.controller_state()
@@ -314,7 +315,7 @@ class AssemblyTests(unittest.TestCase):
         controller, chars, state = self.controller_state()
         scenario = controller.scenario
         front, routes = assembly_navigation(scenario)
-        self.assertEqual(controller.assembly.version, 1)
+        self.assertEqual(controller.assembly.version, 3)
         self.assertFalse(front.any())
         indices, targets = training_targets(scenario)
         width, height = scenario.grid.shape[1], scenario.grid.shape[0]
@@ -332,34 +333,17 @@ class AssemblyTests(unittest.TestCase):
         self.assertTrue(context["waiting"])
         self.assertTrue(mask[:8].any())
         checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
-        self.assertEqual(checkpoint["coordination_version"], 1)
+        self.assertEqual(checkpoint["coordination_version"], 3)
         validate_checkpoint(checkpoint, scenario, 6)
 
-    def test_version_two_checkpoint_keeps_its_routes_for_inference(self):
+    def test_old_coordination_checkpoints_are_rejected_for_inference(self):
         controller, _, _ = self.controller_state()
-        checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
-        checkpoint["coordination_version"] = 2
-        with patch("concon_v1.co1_learn_defender_retake.torch.load", return_value=checkpoint):
-            saved = ConconDefenderRetakeController("L")
-        self.assertEqual(saved.assembly.version, 2)
-        self.assertTrue(saved.assembly.front.any())
-
-    def test_legacy_inference_preserves_weights_and_unrestricted_routes_after_reset(self):
-        controller, chars, state = self.controller_state()
-        checkpoint = make_checkpoint(controller.model, "L", 0, 100, "unused", [], 0)
-        checkpoint["coordination_version"] = 1
-        with patch("concon_v1.co1_learn_defender_retake.torch.load", return_value=checkpoint):
-            legacy = ConconDefenderRetakeController("L")
-        for key, value in legacy.model.state_dict().items():
-            torch.testing.assert_close(value, checkpoint["model_state_dict"][key])
-        chars[0].pos = [10, 16]
-        _, mask, context = build_inputs(legacy, chars[0], state)
-        self.assertTrue(context["waiting"])
-        self.assertTrue(mask[:8].any())
-        self.assertEqual(legacy.coordination_version, 1)
-        legacy.reset_round()
-        self.assertEqual(legacy.assembly.version, 1)
-        self.assertFalse(legacy.assembly.front.any())
+        for version in (1, 2):
+            checkpoint = make_checkpoint(controller.model, "L", 0, 6, "unused", [], 0)
+            checkpoint["coordination_version"] = version
+            with patch("concon_v1.co1_learn_defender_retake.torch.load", return_value=checkpoint):
+                with self.assertRaisesRegex(ValueError, "coordination_version"):
+                    ConconDefenderRetakeController("L")
 
     def test_legacy_inference_still_rejects_wrong_observations_and_unknown_versions(self):
         controller, _, _ = self.controller_state()
@@ -369,7 +353,7 @@ class AssemblyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "obs_dim"):
             validate_checkpoint(checkpoint, controller.scenario, 6, allow_legacy_coordination=True)
         checkpoint["obs_dim"] += 1
-        checkpoint["coordination_version"] = 3
+        checkpoint["coordination_version"] = 4
         with self.assertRaisesRegex(ValueError, "coordination_version"):
             validate_checkpoint(checkpoint, controller.scenario, 6, allow_legacy_coordination=True)
 

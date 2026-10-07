@@ -13,8 +13,8 @@ from map_data import NEW_MAZE_STR as GAME_MAZE_STR
 
 # 通常対戦・大会では各ラウンドで独立にランダム選択（連続選択も可）。
 # 単一指定 "A2" も可。各モデルの best がなければ latest を使用します。
-# CONCON_ATTACKER_MAP = ("A1", "A2", "A3")
-CONCON_ATTACKER_MAP = ("A1", "A2", "A3")
+# CONCON_ATTACKER_MAP = ("A2")
+CONCON_ATTACKER_MAP = ("A1", "A2", "A3", "A4")
 
 # プラント後モデルの追加口。サイトごとに引数なしのコントローラ factory を
 # 指定します（例: "left": (LeftPostplantController,)）。空なら標準動作。
@@ -51,9 +51,9 @@ class ScenarioSettings:
 SCENARIOS = {
     "A1": ScenarioSettings(
         map_module="co1_map_attacker_A1", plant_side="left", waypoint_order="abcd",
-        smoke_trigger_bfs_distance=6,
-        flash_trigger_bfs_distance=6,
-        recon_trigger_bfs_distance=6,
+        smoke_trigger_bfs_distance=10,
+        flash_trigger_bfs_distance=7,
+        recon_trigger_bfs_distance=7,
     ),
     "A2": ScenarioSettings(
         map_module="co1_map_attacker_A2", plant_side="right", waypoint_order="abcde",
@@ -65,9 +65,16 @@ SCENARIOS = {
     "A3": ScenarioSettings(
         map_module="co1_map_attacker_A3", plant_side="right", waypoint_order="abcd",
         max_candidate_bfs_distance=25,
-        smoke_trigger_bfs_distance=15,
+        smoke_trigger_bfs_distance=19,
         flash_trigger_bfs_distance=5,
-        recon_trigger_bfs_distance=6,
+        recon_trigger_bfs_distance=20,
+    ),
+    "A4": ScenarioSettings(
+        map_module="co1_map_attacker_A4", plant_side="left", waypoint_order="abcde",
+        max_candidate_bfs_distance=15,
+        smoke_trigger_bfs_distance=12,
+        flash_trigger_bfs_distance=6,
+        recon_trigger_bfs_distance=8,
     ),
 }
 

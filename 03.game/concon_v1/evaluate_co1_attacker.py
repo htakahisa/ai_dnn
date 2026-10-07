@@ -20,23 +20,13 @@ if str(ROOT) not in sys.path:
 from party_presets import get_preset
 from run_game import VisualFPSBattle, _build_team_ai
 from concon_v1.co1_attacker_controller import ConconAttackerController
-from concon_v1.co1_battle_training import _run_from_project_root
+from concon_v1.co1_battle_training import OPPONENTS, _run_from_project_root
 from concon_v1.co1_learn_attacker import DEFAULT_MODEL_PATH
 
 from concon_v1.co1_attacker_scenarios import SCENARIOS, get_scenario, validate_checkpoint_scenario
 
 
 DEFAULT_ROUNDS = 36
-
-OPPONENTS = {
-    "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
-    "touyama_v2": ("touyama_gaming_v2", "Touyama Gaming"),
-    "fnatic_v3": ("fnatic_v3", "Fnatic2023"),
-    "gc_v1": ("gc_v1", "Ghost Champions"),
-    # Toru AI is a controller, with no dedicated roster preset.
-    "toru_ai_v3.1": ("toru_ai_v3.1", "Team Elites"),
-}
-
 
 class LimitedRoundBattle(VisualFPSBattle):
     def move_character(self, char):
@@ -163,9 +153,19 @@ def summarize_spike_drops(round_results):
     }
 
 
+def summarize_attack_success(round_results):
+    """A plant remains a success even if the subsequent retake wins."""
+    plants = sum(bool(record["planted"]) for record in round_results)
+    eliminations = sum(not record["planted"] and record["end_reason"] == "defender_eliminated"
+                       for record in round_results)
+    successes = plants + eliminations
+    return dict(attack_successes=successes, preplant_defender_eliminations=eliminations,
+                attack_success_rate=successes / len(round_results) if round_results else 0.)
+
+
 @_run_from_project_root
 def evaluate(opponent, rounds=3, seed=0, model_path=None,
-             frozen_checkpoint=None, map_name="A1"):
+             frozen_checkpoint=None, map_name="A1", on_trial=None):
     scenario = get_scenario(map_name)
     model_path = scenario.model_path if model_path is None else Path(model_path)
     if opponent not in OPPONENTS:
@@ -224,6 +224,8 @@ def evaluate(opponent, rounds=3, seed=0, model_path=None,
         if len(game.round_results) != 1:
             raise RuntimeError("evaluation game did not finish exactly one round")
         results.append({**game.round_results[0], "trial": trial})
+        if on_trial is not None:
+            on_trial(trial, rounds)
     plant_count = sum(r["planted"] for r in results)
     plant_results = [r for r in results if r["attacker_alive_at_plant"] is not None]
     no_plant_results = [r for r in results if not r["planted"]]
@@ -242,6 +244,7 @@ def evaluate(opponent, rounds=3, seed=0, model_path=None,
         "attacker_wins": sum(r["winner"] == "A" for r in results),
         "plants": plant_count,
         "plant_success_rate": plant_count / len(results) if results else 0.0,
+        **summarize_attack_success(results),
         "avg_attacker_alive_at_plant": (
             sum(r["attacker_alive_at_plant"] for r in plant_results) / len(plant_results)
             if plant_results else None

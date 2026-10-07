@@ -17,6 +17,7 @@ import numpy as np
 import torch
 
 from concon_v1 import co1_train_attacker as training
+from concon_v1.co1_battle_training import OPPONENTS
 from concon_v1.co1_attacker_common import (
     ACTION_PLANT, ACTION_WAIT, CARDINAL_MOVES, GORIGONS, SPIKE_CARRIER_INDEX,
     SharedRouteDQN, _choose_action, bfs_distance_map,
@@ -27,7 +28,7 @@ from concon_v1.co1_attacker_scenarios import (
 from game_core import ROUND_DURATION_TICKS
 
 ACTION_NAMES = ("UP", "DOWN", "LEFT", "RIGHT", "WAIT", "PLANT")
-OPPONENT_NAMES = ("omoko_v1", "touyama_v2", "fnatic_v3", "gc_v1", "toru_ai_v3.1")
+OPPONENT_NAMES = tuple(OPPONENTS)
 
 
 def waypoint_checks(scenario):

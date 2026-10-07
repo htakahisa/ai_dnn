@@ -1,4 +1,4 @@
-"""Versioned assembly routes: unrestricted v1 and rear-only approaches in v2."""
+"""Assembly geometry; paired entry coordination keeps unrestricted approaches."""
 
 from collections import deque
 from functools import lru_cache
@@ -12,7 +12,7 @@ STEPS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
 
 def assembly_navigation(scenario, version=COORDINATION_VERSION):
-    if version == 1:
+    if version in (1, 3):
         return (np.zeros(scenario.grid.shape, dtype=bool),
                 {point: bfs_distance_map(scenario.grid, point) for point in scenario.rally_points})
     if version != 2:

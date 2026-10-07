@@ -67,10 +67,16 @@ class DefenderRetakeEnv(DefenderSearchEnv):
         if set(models) != {"L", "R"}:
             raise ValueError("retake requires both site models and a positive ability distance")
         self.models, self.ability_distances = models, normalize_site_ability_distances(ability_distance)
+        self.frc_attack_attempts = 0
 
     @_run_from_project_root
     def reset(self, start_mode="round", opponent=None):
         result = super().reset(start_mode, opponent)
+        if self.opponent == "frc_v1":
+            # Fresh one-round games otherwise repeat FRC's first attack plan.
+            # Advance on every attempt, including rounds excluded from retakes.
+            self.game.current_round = self.frc_attack_attempts % 5 + 1
+            self.frc_attack_attempts += 1
         # Replace the recording search controller with frozen production search.
         self.controller = ConconDefenderSearchController(model=self.model)
         self.retakes = {site: TrainingRetakeController(self, site) for site in ("L", "R")}

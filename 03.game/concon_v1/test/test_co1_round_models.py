@@ -1,17 +1,24 @@
 import unittest
+from pathlib import Path
+import sys
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from concon_v1.co1_attacker_controller import (
     ConconAttackerController, ConconRoundAttackerController,
 )
+from concon_v1.co1_battle_training import _run_from_project_root
 
 
 class RoundModelTests(unittest.TestCase):
     def build(self, names=("A1", "A2", "A3"), **kwargs):
         def scenario(name):
             return SimpleNamespace(
-                model_path=SimpleNamespace(is_file=lambda: True),
+                model_path=Mock(is_file=Mock(return_value=True), read_bytes=Mock(return_value=b"test-model")),
             )
 
         with patch("concon_v1.co1_attacker_controller.get_scenario", side_effect=scenario), \
@@ -19,19 +26,55 @@ class RoundModelTests(unittest.TestCase):
                       side_effect=lambda **kw: Mock(map_name=kw["map_name"])):
             return ConconRoundAttackerController(map_names=names, seed=7, **kwargs)
 
-    def test_selection_is_shared_and_allows_consecutive_same_model(self):
-        controller = self.build()
-        with patch.object(controller.rng, "choice", side_effect=["A2", "A2", "A3"]) as choice:
-            for expected in ("A2", "A2", "A3"):
+    def test_each_round_randomly_selects_and_shares_one_map(self):
+        from concon_v1.co1_attacker_scenarios import CONCON_ATTACKER_MAP
+        names = ("A1", "A2", "A3", "A4")
+        self.assertEqual(CONCON_ATTACKER_MAP, names)
+        controller = self.build(names)
+        selected = ("A4", "A4", "A1", "A3", "A2", "A4", "A2", "A1", "A3", "A3")
+        with patch.object(controller.rng, "choice", side_effect=selected) as choice:
+            for expected in selected:
                 controller.reset_round()
+                self.assertEqual(controller.current_map_name, expected)
                 for _ in range(5):
                     controller.decide_move(Mock(), {})
+                choice.assert_called_with(names)
+            self.assertEqual(choice.call_count, len(selected))
+        self.assertEqual(controller.controllers["A4"].reset_round.call_count, 3)
+        self.assertEqual(controller.controllers["A4"].decide_move.call_count, 15)
+
+    def test_score_and_side_swap_do_not_change_selection_candidates(self):
+        names = ("A1", "A2", "A3", "A4")
+        controller = self.build(names)
+        game = SimpleNamespace(attacker_wins=0, defender_wins=0, _side_swap_count=0)
+        controller.set_game(game)
+        with patch.object(controller.rng, "choice", return_value="A4") as choice:
+            for i in range(12):
+                game.attacker_wins = i
+                game._side_swap_count = i // 6
+                controller.reset_round()
+                self.assertEqual(controller.current_map_name, "A4")
+                choice.assert_called_with(names)
+        self.assertEqual(choice.call_count, 12)
+
+    @_run_from_project_root
+    def test_game_starts_each_round_with_random_selection(self):
+        from run_game import VisualFPSBattle, _build_team_ai
+        from map_data import NEW_MAZE_STR
+
+        controller = self.build(("A1", "A2", "A3", "A4"))
+        team = _build_team_ai("default")
+        team.attacker_factory = lambda: controller
+        with patch.object(controller.rng, "choice", side_effect=("A4", "A4", "A2")) as choice:
+            game = VisualFPSBattle(NEW_MAZE_STR, team, _build_team_ai("default"), headless=True)
+            game.special_round_banner = None
+            self.assertEqual(controller.current_map_name, "A4")
+            for expected in ("A4", "A2"):
+                game.round_over = True
+                game.attacker_wins += 1
+                game.check_match_winner()
                 self.assertEqual(controller.current_map_name, expected)
             self.assertEqual(choice.call_count, 3)
-            self.assertTrue(all(call.args[0] == ("A1", "A2", "A3")
-                                for call in choice.call_args_list))
-        self.assertEqual(controller.controllers["A2"].reset_round.call_count, 2)
-        self.assertEqual(controller.controllers["A2"].decide_move.call_count, 10)
 
     def test_single_string_and_game_rebinding(self):
         controller = self.build("A1")

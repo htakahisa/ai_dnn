@@ -1,6 +1,7 @@
 """Readable console summaries; structured checkpoint/JSONL data stays plain."""
 
 GREEN = "\033[32m"
+YELLOW = "\033[33m"
 RESET = "\033[0m"
 
 
@@ -31,8 +32,8 @@ def print_summary(summary, heading):
         excluded += skipped
         time_expired += expired
         defender_eliminated += eliminated
-        print(f"  {opponent}: defender wins {fraction_text(wins, count)} "
-              f"| {GREEN}L={left['defuses']}/{left['retakes']} R={right['defuses']}/{right['retakes']}{RESET} "
+        print(f"  {opponent}: {GREEN}defender wins {fraction_text(wins, count)} "
+              f"| L={left['defuses']}/{left['retakes']} R={right['defuses']}/{right['retakes']}{RESET} "
               f"| losses={count - wins} "
               f"| time_expired={expired} defender_eliminated={eliminated}", flush=True)
         print(f"    retake_rate={fraction_text(count, played)} "
@@ -76,13 +77,13 @@ def _print_model_summary(summary, phase):
             total_excluded += excluded
             print(f"  {opponent}: defender wins {fraction_text(wins, retakes)} | losses={retakes - wins} "
                   f"| time_expired={counts.get('time_expired', 0)} defender_eliminated={counts.get('defender_eliminated', 0)}", flush=True)
-            print(f"    {GREEN}retake_rate={fraction_text(retakes, counts['rounds'])} "
-                  f"| defuse_rate={fraction_text(wins, retakes)} | excluded={excluded} (other_site={other}{extra}){RESET}", flush=True)
-        print(f"  {GREEN}{site} overall: retake_rate={fraction_text(metric['retakes'], total_rounds)} "
-              f"| defuse_rate={fraction_text(total_defuses, metric['retakes'])} "
+            print(f"    {GREEN}defuse_rate={fraction_text(wins, retakes)}{RESET} "
+                  f"| retake_rate={fraction_text(retakes, counts['rounds'])} | excluded={excluded} (other_site={other}{extra})", flush=True)
+        print(f"  {GREEN}{site} overall: defuse_rate={fraction_text(total_defuses, metric['retakes'])}{RESET}"
+              f"| retake_rate={fraction_text(metric['retakes'], total_rounds)}  "
               f"| mean_defuse_rate={rate_text(metric['mean_defuse_rate'])} "
               f"| min_team_defuse_rate={rate_text(metric['min_defuse_rate'])} "
-              f"| excluded={total_excluded}{RESET}", flush=True)
+              f"| excluded={total_excluded}", flush=True)
         print(f"    moving_fire={metric['moving_fire_rate']:.1%} "
               f"| smoke_defuse_decisions={metric['smoke_defuse_decisions']} "
               f"| time_expired={metric.get('time_expired', 0)} defender_eliminated={metric.get('defender_eliminated', 0)}", flush=True)

@@ -39,7 +39,7 @@ class RetakeCaseTests(unittest.TestCase):
         game.detonate_timer = 54
         return game
 
-    def test_all_five_opponents_restore_and_continue_with_iq(self):
+    def test_all_opponents_restore_and_continue_with_iq(self):
         for opponent in OPPONENTS:
             with self.subTest(opponent=opponent), tempfile.TemporaryDirectory() as temporary:
                 game = self.fixture(opponent)
@@ -58,7 +58,11 @@ class RetakeCaseTests(unittest.TestCase):
                 self.assertEqual(restored_metadata, metadata)
                 self.assertEqual([(c.name, c.pos, c.hp, c.facing) for c in restored.chars], original_states)
                 self.assertIsInstance(restored.defender_controller, IQAwareController)
-                self.assertIs(restored.attacker_controller.real_game, restored)
+                if getattr(restored.attacker_controller, "handles_team_perception", False):
+                    self.assertIs(restored.attacker_controller.game, restored)
+                else:
+                    self.assertIsInstance(restored.attacker_controller, IQAwareController)
+                    self.assertIs(restored.attacker_controller.real_game, restored)
                 self.assertIs(restored.defender_controller.real_game, restored)
                 restored_defender = next(c for c in restored.chars if c.name == defender.name)
                 self.assertIn(id(restored_defender), restored.current_defender_team_ai.perception_engine._defuse_touched_viewers)
@@ -193,6 +197,79 @@ class RetakeCaseTests(unittest.TestCase):
                     collect(1, ["omoko_v1"], output_dir=dataset)
                 with self.assertRaises(ValueError):
                     collect(1, ["omoko_v1"], output_dir=dataset, seed=1, resume=True)
+
+    def test_resume_adds_frc_without_replacing_existing_cases(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            checkpoint = directory / "search.pt"
+            checkpoint.write_bytes(b"fixed search weights")
+            search = type("Search", (), {})()
+            search.model_path, search.model = checkpoint, self.model
+            dataset = directory / "dataset"
+            games = {opponent: self.fixture(opponent) for opponent in ("omoko_v1", "frc_v1")}
+            with patch("concon_v1.co1_collect_defender_retake.ConconDefenderSearchController", return_value=search), \
+                    patch("concon_v1.co1_collect_defender_retake.create_game", side_effect=lambda opponent, *_: games[opponent]) as create, \
+                    patch("concon_v1.co1_collect_defender_retake.run_to_plant", return_value=(20, True)), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(collect(1, ["omoko_v1"], sites=("L",), output_dir=dataset))
+                old_index = (dataset / "cases.jsonl").read_bytes()
+                old_files = {path.name: path.read_bytes() for path in dataset.glob("*.case.gz")}
+                create.reset_mock()
+                self.assertTrue(collect(1, ["frc_v1"], sites=("L",), output_dir=dataset, resume=True))
+                self.assertEqual(create.call_count, 1)
+                self.assertEqual(create.call_args.args[0], "frc_v1")
+                new_index = (dataset / "cases.jsonl").read_bytes()
+                self.assertTrue(new_index.startswith(old_index))
+                self.assertEqual(len(new_index.splitlines()), 2)
+                for name, contents in old_files.items():
+                    self.assertEqual((dataset / name).read_bytes(), contents)
+                config = json.loads((dataset / "collection.json").read_text(encoding="utf-8"))
+                self.assertEqual(config["provenance"]["opponents"], ["omoko_v1", "frc_v1"])
+                create.reset_mock()
+                self.assertTrue(collect(1, ["frc_v1"], sites=("L",), output_dir=dataset, resume=True))
+                create.assert_not_called()
+                self.assertEqual((dataset / "cases.jsonl").read_bytes(), new_index)
+                checkpoint.write_bytes(b"changed search weights")
+                with self.assertRaisesRegex(ValueError, "search weights"):
+                    collect(1, ["frc_v1"], sites=("L",), output_dir=dataset, resume=True)
+                self.assertEqual((dataset / "cases.jsonl").read_bytes(), new_index)
+
+    def test_frc_collection_cycles_production_attack_plans(self):
+        from frc_v1.baseline import plant_sites
+        for round_number in range(1, 6):
+            with self.subTest(round_number=round_number):
+                game = create_game("frc_v1", self.model, 17)
+                game.current_round = round_number
+                game.attacker_controller.prepare_team_tick()
+                controller = game.attacker_controller
+                self.assertEqual(controller.snapshot.round_number, round_number)
+                site_index = controller.actor._navigation_site
+                cells = plant_sites(controller.snapshot.grid)[site_index]
+                expected_left = round_number in (1, 3, 5)
+                self.assertTrue(all((col < len(game.grid[0]) // 2) == expected_left for _, col in cells))
+
+    def test_frc_collection_resume_keeps_rotating_after_missing_plants(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            checkpoint = directory / "search.pt"
+            checkpoint.write_bytes(b"fixed search weights")
+            search = type("Search", (), {})()
+            search.model_path, search.model = checkpoint, self.model
+            dataset = directory / "dataset"
+            game = self.fixture("frc_v1")
+            rounds = []
+            def rollout(game, _ticks):
+                rounds.append(game.current_round)
+                return 120, False
+            with patch("concon_v1.co1_collect_defender_retake.ConconDefenderSearchController", return_value=search), \
+                    patch("concon_v1.co1_collect_defender_retake.create_game", return_value=game), \
+                    patch("concon_v1.co1_collect_defender_retake.run_to_plant", side_effect=rollout), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertFalse(collect(1, ["frc_v1"], output_dir=dataset, max_attempts_per_team=3))
+                self.assertFalse(collect(1, ["frc_v1"], output_dir=dataset, max_attempts_per_team=7, resume=True))
+            self.assertEqual(rounds, [1, 2, 3, 4, 5, 1, 2])
+            records = [json.loads(line) for line in (dataset / "rounds.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([row["opponent_attack_round"] for row in records], rounds)
 
     def test_rollout_stops_on_first_plant_tick_and_respects_limit(self):
         class GameFixture:

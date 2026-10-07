@@ -782,7 +782,7 @@ class SearchTests(unittest.TestCase):
                 self.assertLessEqual(max(totals) - min(totals), 1)
                 self.assertEqual(schedule, balanced_opponent_schedule(opponents, count, random.Random(19)))
                 if count == 50:
-                    self.assertEqual(totals, [10] * 5)
+                    self.assertEqual(sum(totals), 50)
 
     def test_training_balances_each_summary_window_and_final_partial_window(self):
         module = "concon_v1.co1_defender_search_battle_training"
@@ -807,9 +807,14 @@ class SearchTests(unittest.TestCase):
                 train_battle(episodes=112, save_dir=directory, resume=resume,
                              checkpoint_interval=50)
             for begin in (0, 50):
-                self.assertEqual(Counter(selected[begin:begin + 50]), {name: 10 for name in OPPONENTS})
+                counts = Counter(selected[begin:begin + 50])
+                totals = [counts[name] for name in OPPONENTS]
+                self.assertEqual(sum(totals), 50)
+                self.assertLessEqual(max(totals) - min(totals), 1)
             final_counts = Counter(selected[100:])
-            self.assertEqual(sorted(final_counts.values()), [2, 2, 2, 3, 3])
+            final_totals = [final_counts[name] for name in OPPONENTS]
+            self.assertEqual(sum(final_totals), 12)
+            self.assertLessEqual(max(final_totals) - min(final_totals), 1)
             self.assertEqual(output.getvalue().count("Training summary:"), 3)
             evaluate_mock.assert_not_called()
             latest = torch.load(directory / self.scenario.battle_model_path("latest").name,

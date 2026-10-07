@@ -1,6 +1,6 @@
 """Shared site-specific ability limits for base and battle training."""
 
-COORDINATION_VERSION = 1  # Use unrestricted shortest routes while assembling.
+COORDINATION_VERSION = 3  # Keep the a -> A / b -> B route after assembly.
 
 DEFAULT_FLASH_DISTANCE_L = 6
 DEFAULT_RECON_DISTANCE_L = 11

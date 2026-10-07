@@ -2,10 +2,13 @@
 
 ## 通常対戦・大会のモデル切り替え
 
-`co1_attacker_scenarios.py` の `CONCON_ATTACKER_MAP = "A1"` を
-`"A2"` または `"A3"` に変更します。`run_game.py` と
-`run_competition_manager.py` はこの設定を共通で参照します。
-選択したモデルの `best` を使用し、ファイルがなければ `latest` を使用します。
+`co1_attacker_scenarios.py` の `CONCON_ATTACKER_MAP = ("A1", "A2", "A3", "A4")` が
+通常対戦・大会の攻撃候補です。各攻撃ラウンドで独立に、4候補から均等な確率
+（各25%）でランダムに選びます。同じマップを連続して選ぶこともあります。
+ラウンド中は5人全員が同じ選択を共有します。
+単一モデルに固定する場合は `CONCON_ATTACKER_MAP = "A1"` などに変更します。
+各候補の `best` を使用し、ファイルがなければ `latest` を使用します。
+この選択処理は推論側の `ConconRoundAttackerController` が担当し、再学習は不要です。
 変更後はゲーム・大会のプロセスを再起動してください。
 学習・評価スクリプトのマップ選択は、引き続き `-map` で指定します。
 
@@ -74,8 +77,10 @@ R の追加や発動距離の変更後は、その設定で再学習してくだ
 ```powershell
 python co1_train_attacker.py -map A1
 python co1_train_attacker.py -map A2
+python co1_train_attacker.py -map A4
 python evaluate_co1_attacker.py -map A1
 python evaluate_co1_attacker.py -map A2
+python evaluate_co1_attacker.py -map A4
 ```
 
 既存の `--episodes`、`--seed`、`--mode`、`--opponents`、`--eval-rounds` などは
@@ -85,6 +90,11 @@ python evaluate_co1_attacker.py -map A2
 | --- | --- | --- | --- |
 | A1 | `co1_map_attacker_A1.py` | 左側 | `data/attacker_A1_data/` |
 | A2 | `co1_map_attacker_A2.py` | 右側 | `data/attacker_A2_data/` |
+| A3 | `co1_map_attacker_A3.py` | 右側 | `data/attacker_A3_data/` |
+| A4 | `co1_map_attacker_A4.py` | 左側 | `data/attacker_A4_data/` |
+
+A4は `a → b → c → d → e → 設置` の順に進みます。SMOKE・FLASH・RECONの発動BFS距離は、
+`co1_attacker_scenarios.py` の `SCENARIOS["A4"]` で設定し、初期値はすべて6です。
 
 ファイル名は `co1_attacker_A1_best.pt` / `co1_attacker_A1_latest.pt` など、
 指定したマップ名になります。評価はそのマップの `best` を読み込みます。

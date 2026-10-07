@@ -230,11 +230,8 @@ class ConconAttackerRouteController:
         position = tuple(map(int, char.pos))
         planting = char.has_spike and route.at_plant_stage and position == route.goal
         if not planting and not game_state.get("defender_setup_active"):
+            # Reserve smoke for marked points; flash and recon can also support contact.
             contact_options = {"allow_smoke": False} if self.scenario.smoke_points else {}
-            if self.scenario.flash_points:
-                contact_options["allow_flash"] = False
-            if self.scenario.recon_points:
-                contact_options["allow_recon"] = False
             contact = preplant_contact_action(
                 char, game_state, getattr(self, "game", None), route.goal,
                 self._last_enemy_seen_tick, self._enemy_was_visible,

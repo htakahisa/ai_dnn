@@ -18,9 +18,8 @@ class RetakeAssembly:
         self.version = version
         if version == 2:
             self.front, self.routes = assembly_navigation(scenario, version=2)
-        elif version == 1:
-            # Inference of old battle checkpoints must keep the unrestricted
-            # A distances used to learn their frozen foundation values.
+        elif version in (1, 3):
+            # Paired entry coordination uses ordinary assembly distances.
             self.front = np.zeros(scenario.grid.shape, dtype=bool)
             self.routes = {point: bfs_distance_map(scenario.grid, point) for point in scenario.rally_points}
         else:
@@ -33,6 +32,7 @@ class RetakeAssembly:
         self.ready = set()
         self.reached = set()
         self.launched = False
+        self.entered = set()
         self.tick = None
         self.snapshot = None
 
@@ -83,7 +83,7 @@ class RetakeAssembly:
         deadline = any(spike_routes[self.assigned[name]] >= budget for name in eligible)
         if len(allies) <= 1 or at_site or not eligible or ready or deadline:
             self.launched = True
-        if not self.launched:
+        if not self.launched and self.version != 3:
             # Commit at most once to each entrance. Followers retain their A;
             # nobody chases a moving leader's newly selected assembly point.
             for name in sorted(eligible & self.ready):

@@ -1,4 +1,4 @@
-"""Real postplant rollouts with production IQ perception and five opponent AIs."""
+"""Real postplant rollouts with production IQ perception and dedicated opponent AIs."""
 
 import contextlib
 import io
@@ -95,7 +95,7 @@ class GuardBattleEnv:
         self.metrics = {"tap_ticks": 0, "blocked_tap_decisions": 0,
                         "approach_decisions": 0, "recon_on_tap": 0,
                         "stationary_fire_decisions": 0, "two_tick_fire_decisions": 0,
-                        "quiet_decisions": 0, "quiet_at_goal_decisions": 0,
+                        "quiet_decisions": 0, "quiet_utility_decisions": 0, "quiet_at_goal_decisions": 0,
                         "quiet_leave_goal_decisions": 0, "quiet_reversals": 0,
                         "quiet_bad_facing_decisions": 0, "fireable_decisions": 0,
                         "moving_fire_decisions": 0, "bad_fire_facing_decisions": 0}
@@ -259,6 +259,7 @@ class GuardBattleEnv:
                         self.metrics["two_tick_fire_decisions"] += 1
             else:
                 self.metrics["quiet_decisions"] += 1
+                self.metrics["quiet_utility_decisions"] += int(operation >= 5)
                 self.metrics["quiet_bad_facing_decisions"] += int(
                     aim_alignment(position, context["aim"], facing) <= 0)
                 if context["position"] == context["goal"]:
