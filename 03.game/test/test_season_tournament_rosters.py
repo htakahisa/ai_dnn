@@ -9,6 +9,7 @@ import realtime_season_competitions as calendar
 from realtime_season import SeasonSaveError
 from run_realtime_season import RealtimeSeasonApp
 from season.season_competitions import SeriesScore, next_match
+from season.season_competition_ui import CURRENT_ROSTER
 from season.season_series import build_series_request
 from season.season_scrim import ScrimJob
 from season.season_tournament_rosters import friend_player
@@ -95,8 +96,73 @@ class TournamentRosterTests(unittest.TestCase):
         self.store.save(state)
         self.assertEqual(self.store.load_or_create(), state)
 
+    def test_entry_with_expired_preset_members_fills_only_unplayable_slots(self):
+        with patch.object(calendar, "TOURNAMENTS", [definition(start_date="2026-02-03")]):
+            state = self.state().with_preset_settings(igl="Leo", carrier="Leo", ai="fnatic_v3")
+        state = state.advance_days(31)
+        self.assertFalse(state.can_play("Leo"))
+        contracts, money, date = state.contracts, state.money, state.date
+        entered = state.with_tournament_entry("cup", state.selected_team_id)
+        team = entered.tournament_team("cup")
+        self.assertEqual(tuple(p.name for p in team.players), (*OWN[1:], "友達"))
+        self.assertEqual(team.ai, "fnatic_v3")
+        self.assertIn(team.igl, OWN[1:])
+        self.assertEqual(team.carrier, OWN[1])
+        self.assertEqual((entered.contracts, entered.money, entered.date), (contracts, money, date))
+        self.assertFalse(entered.can_play("Leo"))
+        self.store.save(entered)
+        self.assertEqual(self.store.load_or_create(), entered)
+        self.assertTrue(finish(entered.advance_days(2)).tournament("cup").completed)
+
+    def test_draft_entry_with_zero_to_four_players_survives_reload_and_finishes(self):
+        for count in (0, 1, 4):
+            with self.subTest(count=count):
+                state = replace(self.state(), teams=(), selected_team_id=None,
+                                editing_team_id=None).with_roster(OWN[:count])
+                entered = state.with_tournament_entry("cup")
+                team = entered.tournament_team("cup")
+                self.assertEqual(team.players[:count], tuple(state.player(n) for n in OWN[:count]))
+                self.assertEqual(team.players[count:], tuple(friend_player(n) for n in range(1, 6 - count)))
+                self.assertEqual(entered.teams, ())
+                self.assertEqual((entered.contracts, entered.money, entered.date),
+                                 (state.contracts, state.money, state.date))
+                self.store.save(entered)
+                loaded = self.store.load_or_create()
+                self.assertEqual(loaded, entered)
+                self.assertTrue(finish(loaded.advance_days(28)).tournament("cup").completed)
+
+    def test_saved_preset_with_no_active_players_enters_with_five_friends(self):
+        with patch.object(calendar, "TOURNAMENTS", [definition(start_date="2026-02-03")]):
+            state = self.state()
+        state = replace(state, contracts=tuple(
+            replace(c, kind="short", duration_months=1, team_loyalty=50) for c in state.contracts))
+        state = state.advance_days(31)
+        self.assertFalse(any(state.can_play(p.name) for p in state.owned_players))
+        entered = state.with_tournament_entry("cup", state.selected_team_id)
+        self.assertEqual(entered.tournament_team("cup").players,
+                         tuple(friend_player(n) for n in range(1, 6)))
+        self.store.save(entered)
+        self.assertEqual(self.store.load_or_create(), entered)
+        self.assertTrue(finish(entered.advance_days(2)).tournament("cup").completed)
+
+    def test_ui_can_register_an_incomplete_draft_without_saved_presets(self):
+        state = replace(self.state(), teams=(), selected_team_id=None,
+                        editing_team_id=None).with_roster(OWN[:2])
+        app = self.app(state)
+        self.assertEqual(app.competition_team.get(), CURRENT_ROSTER)
+        app.competition_enter_button.invoke()
+        self.assertIsNotNone(app.state.tournament("cup"))
+        self.assertIn("友達3", app.competition_roster_summary.get())
+        updated = app.state.with_roster(OWN[1:2]).with_preset_settings(ai="fnatic_v3")
+        app.commit(updated, "Draft changed")
+        app.competition_roster_preset_button.invoke()
+        team = app.state.tournament_team("cup")
+        self.assertEqual(tuple(p.name for p in team.players), (OWN[1], "友達", "友達2", "友達3", "友達4"))
+        self.assertEqual(team.ai, "fnatic_v3")
+        self.assertEqual(self.store.load_or_create(), app.state)
+
     def test_five_friends_complete_a_real_tournament_series(self):
-        state = self.entered().with_tournament_roster("cup", ()).advance_days(28)
+        state = self.state().with_new_team().with_tournament_entry("cup").advance_days(28)
         request = build_series_request(state, "cup", render=False, tick_time_ms=15)
         job = ScrimJob(request, self.store.path.parent / "friend_match")
         try:

@@ -34,7 +34,18 @@ def tournament_team(state, event_id, names=None, *, ai=None, igl=None, carrier=N
     opponents = {p.name for t in run.entrants if t.id != run.own_team_id for p in t.players}
     if any(p.name in opponents for p in players):
         raise SeasonSaveError("この大会で他チームから出場する選手は選択できません。")
-    occupied = opponents | {p.name for p in state.owned_players}
+    team = replace(own, players=tuple(players), ai=own.ai if ai is None else ai,
+                   igl=own.igl if igl is None else igl,
+                   carrier=own.carrier if carrier is None else carrier)
+    return complete_tournament_team(state, team, opponents)
+
+
+def complete_tournament_team(state, team, opponents):
+    """Fill an entry or an edited lineup without creating owned players or contracts."""
+    from realtime_season import ROSTER_SIZE
+
+    players = list(team.players)
+    occupied = set(opponents) | {p.name for p in state.owned_players}
     number = 1
     while len(players) < ROSTER_SIZE:
         friend = friend_player(number)
@@ -43,11 +54,9 @@ def tournament_team(state, event_id, names=None, *, ai=None, igl=None, carrier=N
             players.append(friend)
             occupied.add(friend.name)
     members = {p.name for p in players}
-    leader = igl if igl is not None else own.igl
-    holder = carrier if carrier is not None else own.carrier
-    return replace(own, players=tuple(players), ai=own.ai if ai is None else ai,
-                   igl=leader if leader in members else max(players, key=lambda p: p.iq).name,
-                   carrier=holder if holder in members else players[0].name)
+    return replace(team, players=tuple(players),
+                   igl=team.igl if team.igl in members else max(players, key=lambda p: p.iq).name,
+                   carrier=team.carrier if team.carrier in members else players[0].name)
 
 
 def replace_tournament_team(state, event_id, team):

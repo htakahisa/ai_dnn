@@ -12,6 +12,7 @@ from season.season_ratings import expected_score
 
 
 STAGES = {"upper": "Upper", "lower": "Lower", "lower_final": "Lower Final", "grand_final": "Grand Final"}
+CURRENT_ROSTER = "現在編集中の編成（不足枠は友達）"
 
 
 class SeasonCompetitionMixin:
@@ -61,7 +62,7 @@ class SeasonCompetitionMixin:
         self.competition_decline_button.pack(side="left", padx=8)
         self.competition_entry_cancel_button = ttk.Button(entry, text="参加をキャンセル", command=self.cancel_competition_entry)
         self.competition_entry_cancel_button.pack(side="left", padx=8)
-        ttk.Label(host, text="自分のAI・IGL・キャリアーは参加する編成プリセットの設定を使います。相手は所属設定を使います。",
+        ttk.Label(host, text="自分のAI・IGL・キャリアーは参加する編成の設定を使います。出場可能な選手が5人未満でも、不足枠を「友達」で補って参加できます。",
                   wraplength=900).pack(anchor="w", pady=(0, 8))
         ttk.Label(host, textvariable=self.competition_roster_summary, wraplength=950,
                   font=("Yu Gothic UI", 10, "bold")).pack(anchor="w", pady=(0, 6))
@@ -87,7 +88,7 @@ class SeasonCompetitionMixin:
         roster_actions.pack(fill="x", pady=(8, 0))
         self.competition_roster_apply_button = ttk.Button(roster_actions, text="選択した選手で出場", command=self.apply_competition_roster)
         self.competition_roster_apply_button.pack(side="left")
-        self.competition_roster_preset_button = ttk.Button(roster_actions, text="上で選んだ編成プリセットを適用", command=self.apply_competition_preset)
+        self.competition_roster_preset_button = ttk.Button(roster_actions, text="上で選んだ編成を適用", command=self.apply_competition_preset)
         self.competition_roster_preset_button.pack(side="left", padx=8)
         result_tab = ttk.Frame(self.competition_tabs)
         self.competition_tabs.add(result_tab, text="結果・順位")
@@ -163,9 +164,10 @@ class SeasonCompetitionMixin:
                 f"{event.start_date} ～ {end_date}", count, entry, status))
         if selected and self.competition_list.exists(selected[0]):
             self.competition_list.selection_set(selected[0])
-        self.competition_team_menu.configure(values=[team.name for team in self.state.teams])
-        if self.competition_team.get() not in [t.name for t in self.state.teams]:
-            self.competition_team.set(self.state.selected_team.name if self.state.selected_team else (self.state.teams[0].name if self.state.teams else ""))
+        choices = [team.name for team in self.state.teams] + [CURRENT_ROSTER]
+        self.competition_team_menu.configure(values=choices)
+        if self.competition_team.get() not in choices:
+            self.competition_team.set(self.state.selected_team.name if self.state.selected_team else (self.state.teams[0].name if self.state.teams else CURRENT_ROSTER))
         self.preview_competition()
 
     def selected_competition(self):
@@ -197,7 +199,7 @@ class SeasonCompetitionMixin:
             editable = not run.completed and not self.match_running and not player_eliminated(event, run)
             if editable:
                 self.competition_roster_apply_button.configure(state="normal")
-                self.competition_roster_preset_button.configure(state="normal" if self.state.teams else "disabled")
+                self.competition_roster_preset_button.configure(state="normal")
                 opponents = {p.name for t in run.entrants if t.id != run.own_team_id for p in t.players}
                 for player in self.state.owned_players:
                     if self.state.can_play(player.name) and player.name not in opponents:
@@ -264,7 +266,8 @@ class SeasonCompetitionMixin:
         event = self.selected_competition()
         if event is None or self.match_running:
             return
-        own = next((t for t in self.state.teams if t.name == self.competition_team.get()), None)
+        own = (None if self.competition_team.get() == CURRENT_ROSTER else
+               next((t for t in self.state.teams if t.name == self.competition_team.get()), None))
         try:
             candidate = self.state.with_tournament_entry(event.id, own.id if own else None)
         except ValueError as exc:
@@ -305,6 +308,10 @@ class SeasonCompetitionMixin:
         self._apply_competition_roster(self.competition_roster_players.selection())
 
     def apply_competition_preset(self):
+        if self.competition_team.get() == CURRENT_ROSTER:
+            self._apply_competition_roster(tuple(n for n in self.state.roster if self.state.can_play(n)),
+                ai=self.state.preset_ai, igl=self.state.preset_igl, carrier=self.state.preset_carrier)
+            return
         preset = next((t for t in self.state.teams if t.name == self.competition_team.get()), None)
         if preset:
             self._apply_competition_roster(tuple(n for n in preset.roster if self.state.can_play(n)),

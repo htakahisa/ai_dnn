@@ -55,7 +55,8 @@ def record_next(state, event_id="cup", *, left_wins=True):
 
 class SeasonCompetitionTest(unittest.TestCase):
     def setUp(self):
-        fixture = {name: replace(p, monthly_salary=100_000, loyalty=5) for name, p in character_stats.CHARACTER_TABLE.items()}
+        fixture = {name: replace(p, monthly_salary=100_000, loyalty=5, debut_chapter=1)
+                   for name, p in character_stats.CHARACTER_TABLE.items()}
         context = patch.dict(character_stats.CHARACTER_TABLE, fixture)
         context.start()
         self.addCleanup(context.stop)
@@ -115,11 +116,10 @@ class SeasonCompetitionTest(unittest.TestCase):
         with self.assertRaises(SeasonSaveError):
             state.with_declined_tournament("cup")
 
-    def test_registration_checks_roster_contracts_and_rival_count(self):
-        state = new_season()
-        with self.assertRaises(SeasonSaveError):
-            state.with_tournament_entry("cup")
+    def test_registration_checks_preset_and_rival_count(self):
         state = self.state()
+        with self.assertRaises(SeasonSaveError):
+            state.with_tournament_entry("cup", "missing-preset")
         reduced = replace(state, opponent_teams=state.opponent_teams[:2]).with_tournament_entry("cup", state.selected_team_id)
         self.assertEqual(len(reduced.tournament("cup").entrants), 3)
         free_player = state.lft_players[0].name
