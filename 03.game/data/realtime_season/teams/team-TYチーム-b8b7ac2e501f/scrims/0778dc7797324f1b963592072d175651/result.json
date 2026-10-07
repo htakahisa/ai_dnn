@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "own_team": "TYチーム",
+  "opponent_team": "Evil Geniuses",
+  "own_score": 13,
+  "opponent_score": 8,
+  "winner": "TYチーム",
+  "seed": 1799026315,
+  "player_stats": {
+    "valyn": {
+      "kills": 4,
+      "deaths": 10
+    },
+    "icy": {
+      "kills": 15,
+      "deaths": 10
+    },
+    "Zekken": {
+      "kills": 13,
+      "deaths": 12
+    },
+    "kaajak": {
+      "kills": 16,
+      "deaths": 11
+    },
+    "SiuFatBB": {
+      "kills": 11,
+      "deaths": 11
+    },
+    "Xdll": {
+      "kills": 19,
+      "deaths": 6
+    },
+    "Ethan": {
+      "kills": 10,
+      "deaths": 13
+    },
+    "jawgemo": {
+      "kills": 14,
+      "deaths": 10
+    },
+    "keiko": {
+      "kills": 6,
+      "deaths": 16
+    },
+    "Meiy": {
+      "kills": 5,
+      "deaths": 14
+    }
+  }
+}

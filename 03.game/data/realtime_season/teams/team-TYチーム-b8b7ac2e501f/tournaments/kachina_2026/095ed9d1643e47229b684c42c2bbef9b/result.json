@@ -1,0 +1,4 @@
+{
+  "status": "error",
+  "message": "FRC learned checkpoint missing: C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\frc_v1\\runs\\tactics_finetune_20260930\\D_policy.pt. Train it first or select FRC v1（基礎ルール）."
+}

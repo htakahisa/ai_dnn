@@ -10,7 +10,7 @@ from concon_v1.co1_attacker_common import ACTION_WAIT, SharedRouteDQN, _choose_a
 from concon_v1.co1_train_attacker import (
     RouteEnv, _optimize, epsilon_by_episode, training_epsilon_by_episode,
 )
-from concon_v1.co1_training_rewards import avoidable_wait_penalty
+from concon_v1.co1_attacker_rewards import avoidable_wait_penalty
 
 
 class IdleLearningTests(unittest.TestCase):

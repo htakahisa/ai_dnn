@@ -17,6 +17,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any, Callable
 from series_data_validation import series_export_skip_reason
+from strongest_ranking import load_rankings
 
 import numpy as np
 import tkinter as tk
@@ -471,7 +472,7 @@ def save_json(prefix: str, data: dict[str, Any]) -> Path:
     # 大きくなる。ファイルへ直接書き出してピークを抑える。
     with path.open("w", encoding="utf-8") as stream:
         json.dump(data, stream, ensure_ascii=False, indent=2)
-    from season_salary import invalidate_salary_cache
+    from season.season_salary import invalidate_salary_cache
     invalidate_salary_cache()
     return path
 
@@ -2645,6 +2646,15 @@ class CompetitionApp:
         self.visual_bracket_cards: dict[str, dict[str, Any]] = {}
 
         self._build_common_settings()
+        self.main_pane = tk.PanedWindow(
+            self.root,
+            orient="vertical",
+            sashrelief="raised",
+            sashwidth=10,
+            showhandle=True,
+            opaqueresize=True,
+        )
+        self.main_pane.pack(fill="both", expand=True, padx=12, pady=(6, 12))
         self._build_notebook()
         self._build_results()
         self.root.after(100, self._poll_events)
@@ -4309,19 +4319,21 @@ class CompetitionApp:
         return "\n".join(lines) + "\n"
 
     def _build_notebook(self) -> None:
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill="both", expand=False, padx=12, pady=6)
+        self.notebook = ttk.Notebook(self.main_pane)
+        self.main_pane.add(self.notebook, height=360, minsize=220, stretch="never")
 
         self.series_tab = tk.Frame(self.notebook)
         self.swiss_tab = tk.Frame(self.notebook)
         self.league_tab = tk.Frame(self.notebook)
         self.player_power_tab = tk.Frame(self.notebook)
         self.team_power_tab = tk.Frame(self.notebook)
+        self.strongest_ranking_tab = tk.Frame(self.notebook)
         self.notebook.add(self.series_tab, text="単独シリーズ")
         self.notebook.add(self.swiss_tab, text="ダブルエリミネーション")
         self.notebook.add(self.league_tab, text="総当たりリーグ")
         self.notebook.add(self.player_power_tab, text="選手戦闘力")
         self.notebook.add(self.team_power_tab, text="チーム戦闘力")
+        self.notebook.add(self.strongest_ranking_tab, text="最強ランキング")
 
         self.team1_var = tk.StringVar(value=self.names[0])
         self.team2_var = tk.StringVar(value=self.names[1])
@@ -4475,6 +4487,148 @@ class CompetitionApp:
 
         self._build_team_power_tab()
         self._build_player_power_tab()
+        self._build_strongest_ranking_tab()
+
+    def _build_strongest_ranking_tab(self) -> None:
+        self.strongest_ranking_rows = []
+        self.strongest_ranking_loaded = False
+        self.strongest_ranking_loading = False
+        self.strongest_ranking_errors = []
+        self.strongest_ranking_summary = ""
+        self.strongest_role_var = tk.StringVar(value="すべて")
+        self.strongest_status_var = tk.StringVar(value="タブを開くと保存済みの試合を集計します")
+        toolbar = tk.Frame(self.strongest_ranking_tab)
+        toolbar.pack(fill="x", padx=10, pady=(8, 4))
+        tk.Label(toolbar, text="ロール").pack(side="left")
+        self.strongest_role_box = ttk.Combobox(
+            toolbar, textvariable=self.strongest_role_var, values=("すべて",),
+            state="readonly", width=18,
+        )
+        self.strongest_role_box.pack(side="left", padx=8)
+        self.strongest_role_box.bind("<<ComboboxSelected>>", lambda _event: self._render_strongest_ranking())
+        tk.Button(toolbar, text="検索", command=self._render_strongest_ranking).pack(side="left")
+        self.strongest_refresh_button = tk.Button(
+            toolbar, text="記録を再読み込み", command=self._refresh_strongest_ranking,
+        )
+        self.strongest_refresh_button.pack(side="right")
+        self.strongest_errors_button = tk.Button(
+            toolbar, text="読込エラー詳細", state="disabled",
+            command=lambda: messagebox.showwarning(
+                "記録の読込エラー", "\n".join(self.strongest_ranking_errors), parent=self.root,
+            ),
+        )
+        self.strongest_errors_button.pack(side="right", padx=8)
+        tk.Label(self.strongest_ranking_tab, textvariable=self.strongest_status_var, anchor="w").pack(fill="x", padx=10)
+        frame = tk.Frame(self.strongest_ranking_tab)
+        frame.pack(fill="both", expand=True, padx=10, pady=(4, 8))
+        columns = ("no", "name", "team", "role", "maps", "kd", "kda", "kills_per_round", "covers", "mvps", "one_v_one")
+        headings = ("No.", "選手名", "所属チーム", "ロール", "出場マップ数", "K/D", "K/D/A", "1ラウンド平均Kill", "カバー数", "MVP回数", "1v1 (WinRate)")
+        tree = self.strongest_ranking_tree = ttk.Treeview(frame, columns=columns, show="headings", height=24)
+        self._configure_team_power_sorting(tree, dict(zip(columns[1:], headings[1:])))
+        self.team_power_sort_states[tree] = ("kd", True)
+        tree.heading("no", text="No.")
+        for column in columns:
+            width = 55 if column == "no" else 180 if column == "team" else 150 if column in {"name", "kills_per_round", "one_v_one"} else 125
+            tree.column(column, width=width, minwidth=width, stretch=False,
+                        anchor="w" if column in {"name", "team", "role"} else "center")
+        vertical = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        horizontal = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_strongest_ranking_tab, add="+")
+
+    def _on_strongest_ranking_tab(self, _event: Any = None) -> None:
+        if self.notebook.select() == str(self.strongest_ranking_tab) and not self.strongest_ranking_loaded:
+            self._refresh_strongest_ranking()
+
+    def _refresh_strongest_ranking(self) -> None:
+        if self.strongest_ranking_loading:
+            return
+        self.strongest_ranking_loading = True
+        self.strongest_refresh_button.config(state="disabled")
+        self.strongest_status_var.set("保存済みの試合を集計中…")
+        messages = queue.Queue()
+
+        def work() -> None:
+            try:
+                result = load_rankings(progress=lambda status: messages.put(("progress", status)))
+                messages.put(("done", result))
+            except Exception as exc:
+                messages.put(("error", str(exc)))
+
+        def poll() -> None:
+            while not messages.empty():
+                kind, value = messages.get_nowait()
+                if kind == "progress":
+                    self.strongest_status_var.set(value)
+                    continue
+                self.strongest_ranking_loading = False
+                self.strongest_refresh_button.config(state="normal")
+                if kind == "error":
+                    self.strongest_status_var.set(f"集計エラー: {value}")
+                    return
+                self.strongest_ranking_loaded = True
+                self.strongest_ranking_rows = value["rows"]
+                self.strongest_ranking_errors = value["errors"]
+                self.strongest_errors_button.config(state="normal" if value["errors"] else "disabled")
+                self.strongest_ranking_summary = (
+                    f'{value["maps"]}マップ / 新規・更新 {value["read_files"]}ファイル / '
+                    f'保存済み {value["cached_files"]}ファイル'
+                    + (f' / 読込エラー {len(value["errors"])}件' if value["errors"] else "")
+                )
+                roles = ["すべて", *sorted({row["role"] for row in value["rows"]})]
+                self.strongest_role_box.config(values=roles)
+                if self.strongest_role_var.get() not in roles:
+                    self.strongest_role_var.set("すべて")
+                self._render_strongest_ranking()
+                return
+            self.root.after(100, poll)
+
+        threading.Thread(target=work, daemon=True).start()
+        self.root.after(100, poll)
+
+    def _render_strongest_ranking(self) -> None:
+        tree = self.strongest_ranking_tree
+        tree.delete(*tree.get_children())
+        sort_values = self.team_power_sort_values[tree]
+        sort_values.clear()
+        role = self.strongest_role_var.get()
+
+        def count(value: Any) -> str:
+            return "—" if value is None else str(value)
+
+        for row in self.strongest_ranking_rows:
+            if role != "すべて" and row["role"] != role:
+                continue
+            kda = tuple(row[key] for key in ("kills", "deaths", "assists"))
+            duel = tuple(row[key] for key in ("one_v_one_won", "one_v_one_lost"))
+            duel_winrate = duel[0] / sum(duel) if all(v is not None for v in duel) and sum(duel) else None
+            values = (
+                "", row["name"], row["team"], row["role"], row["maps"],
+                "—" if row["kd"] is None else "∞" if math.isinf(row["kd"]) else f'{row["kd"]:.2f}',
+                " / ".join(map(count, kda)),
+                "—" if row["kills_per_round"] is None else f'{row["kills_per_round"]:.3f}',
+                count(row["covers"]), count(row["mvps"]),
+                "—" if duel_winrate is None else f"{duel_winrate:.1%}",
+            )
+            item = tree.insert("", "end", values=values)
+            sort_values[item] = {
+                **row, "name": row["name"].casefold(), "team": row["team"].casefold(),
+                "role": row["role"].casefold(),
+                "kda": (kda[0], -kda[1], kda[2]) if all(v is not None for v in kda) else None,
+                "one_v_one": duel_winrate,
+            }
+        self._restore_team_power_sort(tree)
+        self._renumber_power_rows(tree)
+        if not self.strongest_ranking_loading:
+            self.strongest_status_var.set(
+                f"表示 {len(sort_values)} / {len(self.strongest_ranking_rows)}選手 — {self.strongest_ranking_summary}"
+                " / ロールは最多出場 / 記録不足は —"
+            )
 
     def import_round_robin_qualifiers(self) -> None:
         if self.worker is not None and self.worker.is_alive():
@@ -4798,8 +4952,10 @@ class CompetitionApp:
         )
 
     def _build_results(self) -> None:
-        status_bar = tk.Frame(self.root)
-        status_bar.pack(fill="x", padx=12, pady=(2, 4))
+        self.results_container = tk.Frame(self.main_pane)
+        self.main_pane.add(self.results_container, minsize=180, stretch="always")
+        status_bar = tk.Frame(self.results_container)
+        status_bar.pack(fill="x", pady=(2, 4))
         tk.Label(
             status_bar,
             textvariable=self.status_var,
@@ -4814,17 +4970,17 @@ class CompetitionApp:
         ).pack(side="right")
 
         frame = tk.LabelFrame(
-            self.root,
+            self.results_container,
             text="進行・結果（左：テキスト / 右：図）",
             padx=8,
             pady=8,
         )
-        frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        frame.pack(fill="both", expand=True)
 
         toolbar = tk.Frame(frame)
         toolbar.pack(fill="x", pady=(0, 4))
         tk.Label(
-            toolbar, text="中央の仕切りをドラッグして図の幅を変更できます。",
+            toolbar, text="上下の仕切りで参加チーム欄の高さ、中央の仕切りで図の幅を変更できます。",
             anchor="w",
         ).pack(side="left")
         self.visual_window_button = tk.Button(

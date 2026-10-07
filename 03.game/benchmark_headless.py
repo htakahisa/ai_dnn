@@ -55,7 +55,7 @@ def main(argv=None):
     with contextlib.redirect_stdout(io.StringIO()):
         import torch
         import run_game
-        from season_scrim_worker import play_scrim
+        from season.season_scrim_worker import play_scrim
     imports = time.perf_counter() - started
     if args.torch_threads is not None:
         torch.set_num_threads(args.torch_threads)

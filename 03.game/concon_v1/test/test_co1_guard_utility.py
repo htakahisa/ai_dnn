@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 import torch
 
 from concon_v1.co1_guard_battle_training import GuardBattleEnv
-from concon_v1.co1_guard_common import ABILITIES, LEGACY_ACTION_DIM, ULTIMATE_ACTION
+from concon_v1.co1_guard_common import ABILITIES, LEGACY_ACTION_DIM, ULTIMATE_ACTION, WAIT_ACTION
 from concon_v1.co1_learn_guard import ConconGuardController
 from concon_v1.co1_train_guard import make_checkpoint, OPPONENTS, START_MODES
 
@@ -33,6 +33,12 @@ class GuardUtilityTests(unittest.TestCase):
         return dict(grid=env.game.grid, chars=env.attackers, is_planted=True,
                     planted_pos=env.game.planted_pos, battle_tick=0, detonate_timer=50)
 
+    def prefer(self, model, actions):
+        with torch.no_grad():
+            for parameter in model.parameters():
+                parameter.zero_()
+            model.head[-1].bias[actions] = 100
+
     def test_each_ability_executes_without_additional_training(self):
         for site in ("L", "R"):
             for ability in ABILITIES:
@@ -43,7 +49,8 @@ class GuardUtilityTests(unittest.TestCase):
                     setattr(char, attribute, 1)
                     state = self.state(env)
                     _, mask, _ = env.controller.policy_inputs(char, state)
-                    self.assertFalse(mask[:40].any())
+                    self.assertTrue(mask[:40].any())
+                    self.prefer(env.model, slice(40, ULTIMATE_ACTION))
                     _, payload = env.controller.decide_move(char, state)
                     self.assertEqual(payload["ability"], ability)
                     self.assertTrue(env.game.execute_ai_ability(char, payload))
@@ -60,6 +67,8 @@ class GuardUtilityTests(unittest.TestCase):
                     state = self.state(env)
                     _, mask, _ = env.controller.policy_inputs(char, state)
                     self.assertTrue(mask[ULTIMATE_ACTION:].any())
+                    self.assertTrue(mask[:40].any())
+                    self.prefer(env.model, slice(ULTIMATE_ACTION, None))
                     _, payload = env.controller.decide_move(char, state)
                     self.assertEqual(payload["ultimate"], char.ultimate_name)
                     self.assertTrue(env.game.execute_ai_ultimate(char, payload))
@@ -71,16 +80,14 @@ class GuardUtilityTests(unittest.TestCase):
         char.recon_charges = 1
         char.ultimate_points = char.ultimate_cost
         _, mask, _ = env.controller.policy_inputs(char, self.state(env))
-        self.assertFalse(mask[:40].any())
+        self.assertTrue(mask[:40].any())
         self.assertTrue(mask[40:ULTIMATE_ACTION].any())
         self.assertTrue(mask[ULTIMATE_ACTION:].any())
-        with torch.no_grad():
-            for parameter in env.model.parameters():
-                parameter.zero_()
-            env.model.head[-1].bias[ULTIMATE_ACTION:] = 100
+        self.prefer(env.model, slice(ULTIMATE_ACTION, None))
         _, payload = env.controller.decide_move(char, self.state(env))
         self.assertEqual(payload["ultimate"], "MONITOR")
         env.game.execute_ai_ultimate(char, payload)
+        self.prefer(env.model, slice(40, ULTIMATE_ACTION))
         _, payload = env.controller.decide_move(char, self.state(env))
         self.assertEqual(payload["ability"], "RECON")
 
@@ -98,21 +105,25 @@ class GuardUtilityTests(unittest.TestCase):
             self.assertTrue(torch.equal(value, loaded[:LEGACY_ACTION_DIM] if key.startswith("head.2.") else loaded))
         char = env.attackers[2]
         char.ultimate_points = char.ultimate_cost
+        self.prefer(controller.model, slice(ULTIMATE_ACTION, None))
         _, payload = controller.decide_move(char, self.state(env))
         self.assertEqual(payload["ultimate"], "MONITOR")
 
-    def test_actual_tick_casts_with_full_exploration_and_records_learning(self):
+    def test_actual_tick_can_wait_with_resources_ready_and_records_learning(self):
         env = self.environment()
         for char in env.attackers:
             if char.ability_name in ABILITIES:
                 setattr(char, char.ability_name.lower() + "_charges", 1)
-        env.step(epsilon=1.0)
+            char.ultimate_points = char.ultimate_cost
+        self.prefer(env.model, slice(WAIT_ACTION, WAIT_ACTION + 8))
+        env.step(epsilon=0.0)
         self.assertEqual(len(env.decisions), 5)
         for char in env.attackers:
             if char.ability_name not in ABILITIES:  # HUNT is a passive on-kill heal.
                 continue
-            self.assertEqual(getattr(char, char.ability_name.lower() + "_charges"), 0)
-            self.assertGreaterEqual(env.pending[env.indices[char.name]]["action"], 40)
+            self.assertEqual(getattr(char, char.ability_name.lower() + "_charges"), 1)
+            self.assertEqual(char.ultimate_points, char.ultimate_cost)
+            self.assertLess(env.pending[env.indices[char.name]]["action"], 40)
 
 
 if __name__ == "__main__":

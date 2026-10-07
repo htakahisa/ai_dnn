@@ -12,22 +12,22 @@ import tempfile
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from character_stats import CharacterStats, all_characters, get_by_name
-from season_player_stats import SeasonPlayerStats, season_player
-from season_leagues import configured_leagues, validate_chapter, validate_debut_chapter
+from season.season_player_stats import SeasonPlayerStats, season_player
+from season.season_leagues import configured_leagues, validate_chapter, validate_debut_chapter
 from realtime_season_config import DEFAULT_TEAM_AI
-from season_ratings import (
+from season.season_ratings import (
     DEFAULT_TEAM_RATING,
     SeasonRating,
     expected_score,
     series_ratings,
 )
-from season_monthly_events import MonthlyEvent, process_monthly_events
-from season_transfers import (
+from season.season_monthly_events import MonthlyEvent, process_monthly_events
+from season.season_transfers import (
     TransferOffer,
     resolve_club_memberships,
     with_randomized_clubs,
 )
-from season_world_levels import (
+from season.season_world_levels import (
     WorldLevel,
     WorldLevelError,
     scale_enemy_player,
@@ -35,16 +35,16 @@ from season_world_levels import (
     world_level_for_rating,
     world_level_from_save,
 )
-from season_training import MAX_TRAINING_LEVEL, training_terms
-from season_scouting import remaining as scout_remaining, validate_uses
-from season_loyalty import (
+from season.season_training import MAX_TRAINING_LEVEL, training_terms
+from season.season_scouting import remaining as scout_remaining, validate_uses
+from season.season_loyalty import (
     loyalty_for, remember_loyalties, validate_loyalties, validate_contract_memory,
     signing_loyalty, contract_refused, CONTRACT_LOYALTY, BENCHED_LOYALTY_LOSS,
 )
-from season_history import cash_item, export_history, record_state, validate_history
+from season.season_history import cash_item, export_history, record_state, validate_history
 from functools import cached_property
 import realtime_season_pair_familiarity as pair_settings
-from season_pair_familiarity import (
+from season.season_pair_familiarity import (
     advance_pair_days,
     decode_pair_days,
     encode_pair_days,
@@ -59,13 +59,13 @@ from season_pair_familiarity import (
     validate_news,
 )
 import realtime_season_rival_economy as rival_settings
-from season_rival_economy import (
+from season.season_rival_economy import (
     can_sign,
     monthly_settlement,
     offer_terms,
     signed_contract,
 )
-from season_salary import (
+from season.season_salary import (
     SalaryMode,
     SalaryRecord,
     SalarySettings,
@@ -75,7 +75,7 @@ from season_salary import (
     log_salary_change,
     clamp_change,
 )
-from season_competitions import (
+from season.season_competitions import (
     CompetitionError,
     CompetitionTeam,
     SeriesScore,
@@ -417,7 +417,7 @@ class SeasonState:
     chapter_started_on: str | None = None
 
     def with_chapter(self, chapter):
-        from season_chapter_progression import enter_chapter
+        from season.season_chapter_progression import enter_chapter
 
         return enter_chapter(self, chapter)
 
@@ -846,7 +846,7 @@ class SeasonState:
         state = state._with_match_loyalty(
             left_id, right_id, left_wins > right_wins, _continued_contracts, participants
         )
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         state = settle_contract_endings(state, _continued_contracts)
         state.validate()
         return state._record_history("レート更新")
@@ -1244,11 +1244,11 @@ class SeasonState:
         return candidate._record_history("大会参加キャンセル")
 
     def tournament_team(self, event_id):
-        from season_tournament_rosters import tournament_team
+        from season.season_tournament_rosters import tournament_team
         return tournament_team(self, event_id)
 
     def with_tournament_roster(self, event_id, names, *, ai=None, igl=None, carrier=None, preset_id=None):
-        from season_tournament_rosters import tournament_team, replace_tournament_team
+        from season.season_tournament_rosters import tournament_team, replace_tournament_team
         run = self.tournament(event_id)
         if run is None or run.completed:
             raise SeasonSaveError("進行中または参加登録済みの大会を選択してください。")
@@ -1258,13 +1258,13 @@ class SeasonState:
             candidate = replace(candidate, tournaments=tuple(
                 replace(r, preset_id=preset_id) if r.tournament_id == event_id else r
                 for r in candidate.tournaments))
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         candidate = settle_contract_endings(candidate)
         candidate.validate()
         return candidate._record_history("大会出場ロスター変更")
 
     def with_prepared_tournament_roster(self, event_id):
-        from season_tournament_rosters import replace_tournament_team
+        from season.season_tournament_rosters import replace_tournament_team
         run = self.tournament(event_id)
         if run is None or run.completed or run.own_team_id is None:
             return self
@@ -1331,7 +1331,7 @@ class SeasonState:
             ),
         )
         if updated.completed:
-            from season_chapter_progression import unlock_after_championship
+            from season.season_chapter_progression import unlock_after_championship
 
             candidate = unlock_after_championship(candidate)
         candidate.validate()
@@ -1350,7 +1350,7 @@ class SeasonState:
         )
         candidate = candidate._with_tournament_world_level()
         if updated.completed:
-            from season_monthly_events import settle_deferred_contracts
+            from season.season_monthly_events import settle_deferred_contracts
 
             candidate = settle_deferred_contracts(
                 candidate, continued_contracts, event_id
@@ -1746,7 +1746,7 @@ class SeasonState:
             ),
         )
         candidate = candidate.with_resolved_transfer_offers()
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         candidate = settle_contract_endings(candidate)
         candidate.validate()
         return candidate
@@ -1840,7 +1840,7 @@ class SeasonState:
                     for p in t.players
                 }
                 if not any(p.name in reserved for p in club.players[:ROSTER_SIZE]):
-                    from season_monthly_events import player_strength
+                    from season.season_monthly_events import player_strength
 
                     order = {name: i for i, name in enumerate(club.regular_members)}
                     acquired = set(club.acquired_members) | (
@@ -1959,7 +1959,7 @@ class SeasonState:
         """Keep entry open on the start date until leaving it; play NPC series daily."""
         if self.starter_selection_pending:
             return self
-        from season_chapter_progression import without_prearrival_tournaments
+        from season.season_chapter_progression import without_prearrival_tournaments
 
         candidate = without_prearrival_tournaments(self)
         definitions = extend_annual_calendar(
@@ -2100,7 +2100,7 @@ class SeasonState:
                 monthly_salary_due={},
             )
         candidate = replace(candidate, game_date=day.isoformat())
-        from season_contract_endings import settle_contract_endings
+        from season.season_contract_endings import settle_contract_endings
         candidate = settle_contract_endings(candidate)
         if new_month:
             candidate = candidate._record_history(
@@ -2114,7 +2114,7 @@ class SeasonState:
         candidate = advance_pair_days(candidate)
         candidate = replace(daily_news(candidate, self), pair_news_deferred=False)
         if new_month:
-            from season_pair_familiarity import history_metrics
+            from season.season_pair_familiarity import history_metrics
 
             candidate = replace(
                 candidate,
@@ -2401,7 +2401,7 @@ class SeasonState:
     def validate(self):
         try:
             validate_chapter(self.chapter)
-            from season_chapter_progression import validate_progression
+            from season.season_chapter_progression import validate_progression
 
             validate_progression(self)
         except ValueError as exc:
@@ -3795,7 +3795,7 @@ class SeasonStore:
                     SalaryRecord(**row) for row in data["salary_records"]
                 )
                 salary_month = data["salary_updated_month"]
-            from season_chapter_progression import environment_from_save
+            from season.season_chapter_progression import environment_from_save
 
             state = SeasonState(
                 team_name=data["team_name"],
@@ -3963,7 +3963,7 @@ class SeasonStore:
                 )
             if data["version"] < 19:
                 # Start the rival economy now; never replay past income or prizes.
-                from season_rival_economy import signing_terms, transfer_cost
+                from season.season_rival_economy import signing_terms, transfer_cost
 
                 offers = []
                 for offer in state.transfer_offers:
@@ -4029,7 +4029,7 @@ class SeasonStore:
                                           or not isinstance(data.get("chapter_environments"), list)):
                 raise SeasonSaveError("章の解禁・引継ぎデータが不正です。")
             if "chapter_started_on" not in data:
-                from season_chapter_progression import saved_chapter_start, without_prearrival_tournaments
+                from season.season_chapter_progression import saved_chapter_start, without_prearrival_tournaments
 
                 state = replace(state, chapter_started_on=saved_chapter_start(state, state.chapter),
                                 chapter_environments=tuple(
@@ -4047,7 +4047,7 @@ class SeasonStore:
                     and c.starts_on(state.start_date) < state.date
                     and c.ends_on(state.start_date) > month_start
                 })
-            from season_chapter_progression import unlock_after_championship
+            from season.season_chapter_progression import unlock_after_championship
 
             state = unlock_after_championship(state)
             if "team_loyalties" not in data or "contract_signings" not in data:

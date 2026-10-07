@@ -82,7 +82,7 @@ def make_checkpoint(model, scenario, episode, opponents, start_modes):
             "n_actions": ACTION_DIM, "training_roster": list(GORIGONS.players),
             "attacker_perception": "production_iq", "episode": episode,
             "reward_version": REWARD_VERSION,
-            "utility_policy": "available_first_abilities_and_ultimates",
+            "utility_policy": "learned_movement_wait_abilities_and_ultimates",
             "positioning_version": POSITIONING_VERSION if model.navigation else None,
             "positioning_training": getattr(model, "positioning_training", None),
             "battle_training_run": getattr(model, "battle_training_run", None),

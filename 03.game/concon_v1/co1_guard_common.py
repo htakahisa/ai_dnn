@@ -298,10 +298,8 @@ def build_inputs(controller, char, state):
                     payload["target"] = destination
                 mask[action] = True
                 ultimate_actions[action] = payload
-    # Abilities and ultimates share one priority. The model chooses the cast,
-    # target and direction; after resources are spent, learned movement resumes.
-    if mask[40:].any():
-        mask[:40] = False
+    # Keep movement and waiting available alongside casts so the model learns
+    # when to spend resources instead of exhausting them on phase entry.
     context = {
         "position": position, "goal": goal, "aim": aim, "spike": spike,
         "distance_goal": distance_goal, "distance_spike": distance_spike,

@@ -1,0 +1,1079 @@
+{"opponent": "omoko_v1", "attempt": 1, "round_seed": 87799530, "ticks": 104, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 1, "round_seed": 923693166, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 1, "round_seed": 283330919, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 1, "round_seed": 3457198728, "ticks": 55, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 1, "round_seed": 2813348069, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 2, "round_seed": 600999880, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 2, "round_seed": 2017736868, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 2, "round_seed": 2889474203, "ticks": 79, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 2, "round_seed": 3609903947, "ticks": 58, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 2, "round_seed": 3412156023, "ticks": 60, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 3, "round_seed": 1325472479, "ticks": 55, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 3, "round_seed": 570741657, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 3, "round_seed": 2780869565, "ticks": 49, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 3, "round_seed": 4185877557, "ticks": 98, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 3, "round_seed": 463478623, "ticks": 68, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 4, "round_seed": 1328749375, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 4, "round_seed": 1405469154, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 4, "round_seed": 3373305214, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 4, "round_seed": 796619380, "ticks": 94, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 4, "round_seed": 1675122086, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 5, "round_seed": 3581240582, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 5, "round_seed": 2587832285, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 5, "round_seed": 2595893151, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 5, "round_seed": 2808281199, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 5, "round_seed": 1257739025, "ticks": 47, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 6, "round_seed": 1916956689, "ticks": 73, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 6, "round_seed": 3941442615, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 6, "round_seed": 851389384, "ticks": 64, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 6, "round_seed": 797444213, "ticks": 59, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 6, "round_seed": 334068875, "ticks": 46, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 7, "round_seed": 909359417, "ticks": 59, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 7, "round_seed": 1886467341, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 7, "round_seed": 191157515, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 7, "round_seed": 2606953025, "ticks": 79, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 7, "round_seed": 2670985392, "ticks": 59, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 8, "round_seed": 293779782, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 8, "round_seed": 1117936264, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 8, "round_seed": 1412660990, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 8, "round_seed": 3485693561, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 8, "round_seed": 670079180, "ticks": 48, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 9, "round_seed": 2081943166, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 9, "round_seed": 307118101, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 9, "round_seed": 2671276788, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 9, "round_seed": 2769279231, "ticks": 61, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 9, "round_seed": 1409591445, "ticks": 46, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 10, "round_seed": 297048601, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 10, "round_seed": 2223953385, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 10, "round_seed": 2893672371, "ticks": 72, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 10, "round_seed": 788220233, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 10, "round_seed": 31540659, "ticks": 49, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 11, "round_seed": 3976172465, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 11, "round_seed": 2165671, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 11, "round_seed": 3179409624, "ticks": 69, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 11, "round_seed": 2817486926, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 11, "round_seed": 475647362, "ticks": 46, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 12, "round_seed": 2771246268, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 12, "round_seed": 900125743, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 12, "round_seed": 1973249678, "ticks": 65, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 12, "round_seed": 1362878841, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 12, "round_seed": 247783343, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 13, "round_seed": 1591132866, "ticks": 56, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 13, "round_seed": 4293185455, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 13, "round_seed": 1991861584, "ticks": 60, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 13, "round_seed": 3129931269, "ticks": 96, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 13, "round_seed": 364224673, "ticks": 52, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 14, "round_seed": 2562694804, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 14, "round_seed": 1411705420, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 14, "round_seed": 2210789569, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 14, "round_seed": 1960810495, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 14, "round_seed": 1782469622, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 15, "round_seed": 1036410435, "ticks": 35, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 15, "round_seed": 3777996581, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 15, "round_seed": 3550808688, "ticks": 96, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 15, "round_seed": 3808756790, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 15, "round_seed": 1456396279, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 16, "round_seed": 3884087459, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 16, "round_seed": 283394997, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 16, "round_seed": 47632439, "ticks": 73, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 16, "round_seed": 3504918204, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 16, "round_seed": 2191788192, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 17, "round_seed": 1394487136, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 17, "round_seed": 1452433019, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 17, "round_seed": 3973650330, "ticks": 54, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 17, "round_seed": 775953440, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 17, "round_seed": 2947052668, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 18, "round_seed": 2207963618, "ticks": 84, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 18, "round_seed": 2745148317, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 18, "round_seed": 2918377957, "ticks": 95, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 18, "round_seed": 3021538367, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 18, "round_seed": 2088588170, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 19, "round_seed": 2286060143, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 19, "round_seed": 1123394034, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 19, "round_seed": 1878012793, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 19, "round_seed": 250197658, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 19, "round_seed": 2094302205, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 20, "round_seed": 4274566988, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 20, "round_seed": 2554838986, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 20, "round_seed": 83078205, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 20, "round_seed": 1819666767, "ticks": 79, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 20, "round_seed": 1610646457, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 21, "round_seed": 2579074936, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 21, "round_seed": 1899322638, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 21, "round_seed": 864089977, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 21, "round_seed": 1153131928, "ticks": 58, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 21, "round_seed": 2519233784, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 22, "round_seed": 2539062808, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 22, "round_seed": 2750091898, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 22, "round_seed": 2235518724, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 22, "round_seed": 3066509114, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 22, "round_seed": 3182377929, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 23, "round_seed": 1085772477, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 23, "round_seed": 3340027111, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 23, "round_seed": 2483611293, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 23, "round_seed": 2957657157, "ticks": 57, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 23, "round_seed": 2252973123, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 24, "round_seed": 2523991284, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 24, "round_seed": 218087911, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 24, "round_seed": 3577034044, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 24, "round_seed": 2506988312, "ticks": 83, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 24, "round_seed": 3148174436, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 25, "round_seed": 489841012, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 25, "round_seed": 2228448318, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 25, "round_seed": 1444254469, "ticks": 64, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 25, "round_seed": 3924427364, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 25, "round_seed": 947162243, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 26, "round_seed": 2509112137, "ticks": 82, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 26, "round_seed": 3902301840, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 26, "round_seed": 1292242183, "ticks": 69, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 26, "round_seed": 2011245208, "ticks": 90, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 26, "round_seed": 3673944474, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 27, "round_seed": 4034354013, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 27, "round_seed": 2417666466, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 27, "round_seed": 1363210566, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 27, "round_seed": 2162542815, "ticks": 64, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 27, "round_seed": 4294407341, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 28, "round_seed": 636074950, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 28, "round_seed": 35183399, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 28, "round_seed": 531353828, "ticks": 65, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 28, "round_seed": 1508917793, "ticks": 80, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 28, "round_seed": 1433740465, "ticks": 71, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 29, "round_seed": 4080399707, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 29, "round_seed": 2338985390, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 29, "round_seed": 2231790710, "ticks": 65, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 29, "round_seed": 3405973527, "ticks": 69, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 29, "round_seed": 704259801, "ticks": 48, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 30, "round_seed": 2872751054, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 30, "round_seed": 3657746846, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 30, "round_seed": 2319910078, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 30, "round_seed": 3346917766, "ticks": 118, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 30, "round_seed": 3637311048, "ticks": 47, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 31, "round_seed": 1904795356, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 31, "round_seed": 1667690048, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 31, "round_seed": 1216513429, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 31, "round_seed": 2003181654, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 31, "round_seed": 1925877564, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 32, "round_seed": 1291426259, "ticks": 91, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 32, "round_seed": 3797391627, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 32, "round_seed": 215498817, "ticks": 63, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 32, "round_seed": 2970547253, "ticks": 63, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 32, "round_seed": 3537098767, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 33, "round_seed": 627216611, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 33, "round_seed": 1109627092, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 33, "round_seed": 1085860867, "ticks": 63, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 33, "round_seed": 1604881403, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 33, "round_seed": 778511385, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 34, "round_seed": 648670293, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 34, "round_seed": 2144579266, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 34, "round_seed": 2718125189, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 34, "round_seed": 821145881, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 34, "round_seed": 3097281367, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 35, "round_seed": 938206898, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 35, "round_seed": 1574022800, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 35, "round_seed": 4230159908, "ticks": 76, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 35, "round_seed": 3930821575, "ticks": 80, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 35, "round_seed": 1515349338, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 36, "round_seed": 262741673, "ticks": 100, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 36, "round_seed": 1471819856, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 36, "round_seed": 3886701930, "ticks": 74, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 36, "round_seed": 3273317065, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 36, "round_seed": 2048399714, "ticks": 65, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 37, "round_seed": 3139003030, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 37, "round_seed": 2850527281, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 37, "round_seed": 1235088795, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 37, "round_seed": 1420491953, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 37, "round_seed": 528805478, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 38, "round_seed": 727203305, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 38, "round_seed": 2006763367, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 38, "round_seed": 2626446599, "ticks": 80, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 38, "round_seed": 2507736409, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 38, "round_seed": 1472581218, "ticks": 75, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 39, "round_seed": 4236299407, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 39, "round_seed": 765302254, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 39, "round_seed": 1707899840, "ticks": 82, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 39, "round_seed": 2658985880, "ticks": 55, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 39, "round_seed": 2333924187, "ticks": 66, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 40, "round_seed": 2881719484, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 40, "round_seed": 989771299, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 40, "round_seed": 1956955058, "ticks": 63, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 40, "round_seed": 2641182747, "ticks": 102, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 40, "round_seed": 2241455315, "ticks": 63, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 41, "round_seed": 2447378273, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 41, "round_seed": 3427115448, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 41, "round_seed": 1454681639, "ticks": 77, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 41, "round_seed": 1002268126, "ticks": 62, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 41, "round_seed": 2208440281, "ticks": 46, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 42, "round_seed": 1018119133, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 42, "round_seed": 1796409307, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 42, "round_seed": 118590864, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 42, "round_seed": 3940841448, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 42, "round_seed": 2881021385, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 43, "round_seed": 2783045725, "ticks": 102, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 43, "round_seed": 2064615264, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 43, "round_seed": 1620040410, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 43, "round_seed": 2969362495, "ticks": 57, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 43, "round_seed": 1915381404, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 44, "round_seed": 3853972439, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 44, "round_seed": 3502889826, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 44, "round_seed": 1107393130, "ticks": 65, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 44, "round_seed": 609517004, "ticks": 80, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 44, "round_seed": 803825477, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 45, "round_seed": 2229929103, "ticks": 79, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 45, "round_seed": 1741741559, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 45, "round_seed": 3167003810, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 45, "round_seed": 621674437, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 45, "round_seed": 2174936713, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 46, "round_seed": 3999772390, "ticks": 83, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 46, "round_seed": 2580004694, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 46, "round_seed": 4164297884, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 46, "round_seed": 3992307302, "ticks": 88, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 46, "round_seed": 2105343102, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 47, "round_seed": 3614853872, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 47, "round_seed": 1564350653, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 47, "round_seed": 1899678932, "ticks": 80, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 47, "round_seed": 2169504105, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 47, "round_seed": 2361873338, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 48, "round_seed": 2685777208, "ticks": 77, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 48, "round_seed": 1278289758, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 48, "round_seed": 2088843897, "ticks": 65, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 48, "round_seed": 3937352084, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 48, "round_seed": 1042339640, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 49, "round_seed": 1625934567, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 49, "round_seed": 511811803, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 49, "round_seed": 1330248604, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 49, "round_seed": 839743219, "ticks": 56, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 49, "round_seed": 3312426340, "ticks": 48, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 50, "round_seed": 3443057762, "ticks": 78, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 50, "round_seed": 3652231842, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 50, "round_seed": 970376785, "ticks": 87, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 50, "round_seed": 29329967, "ticks": 54, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 50, "round_seed": 218663517, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 51, "round_seed": 498830283, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 51, "round_seed": 845551249, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 51, "round_seed": 3452178620, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 51, "round_seed": 305912484, "ticks": 81, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 51, "round_seed": 908762088, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 52, "round_seed": 3709699779, "ticks": 52, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 52, "round_seed": 1748061541, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 52, "round_seed": 1044318395, "ticks": 78, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 52, "round_seed": 1129239611, "ticks": 54, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 52, "round_seed": 3542255317, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 53, "round_seed": 7354522, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 53, "round_seed": 3358176221, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 53, "round_seed": 2085059013, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 53, "round_seed": 2452378633, "ticks": 79, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 53, "round_seed": 1844669986, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 54, "round_seed": 4134263341, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 54, "round_seed": 3686911120, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 54, "round_seed": 1479812103, "ticks": 78, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 54, "round_seed": 1262933169, "ticks": 58, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 54, "round_seed": 4204090196, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 55, "round_seed": 2378581549, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 55, "round_seed": 2948873740, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 55, "round_seed": 2690151812, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 55, "round_seed": 1564641903, "ticks": 57, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 55, "round_seed": 1971959734, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 56, "round_seed": 2042645811, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 56, "round_seed": 512192012, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 56, "round_seed": 4079778772, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 56, "round_seed": 3465248750, "ticks": 82, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 56, "round_seed": 1439664790, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 57, "round_seed": 1080292240, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 57, "round_seed": 1926783668, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 57, "round_seed": 1422770768, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 57, "round_seed": 2710879325, "ticks": 84, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 57, "round_seed": 759549650, "ticks": 68, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 58, "round_seed": 979720639, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 58, "round_seed": 3462867340, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 58, "round_seed": 2786377085, "ticks": 83, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 58, "round_seed": 3925533249, "ticks": 87, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 58, "round_seed": 3892571252, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 59, "round_seed": 2127339038, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 59, "round_seed": 216488226, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 59, "round_seed": 3286933796, "ticks": 87, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 59, "round_seed": 3011721851, "ticks": 100, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 59, "round_seed": 835164961, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 60, "round_seed": 3585738458, "ticks": 78, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 60, "round_seed": 47261963, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 60, "round_seed": 2592162409, "ticks": 59, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 60, "round_seed": 2215731584, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 60, "round_seed": 4211754699, "ticks": 72, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 61, "round_seed": 324086325, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 61, "round_seed": 2525443205, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 61, "round_seed": 2081965651, "ticks": 68, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 61, "round_seed": 962310736, "ticks": 88, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 61, "round_seed": 1790574916, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 62, "round_seed": 3722370095, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 62, "round_seed": 408237076, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 62, "round_seed": 1630527832, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 62, "round_seed": 2203070404, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 62, "round_seed": 3143037140, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 63, "round_seed": 209500483, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 63, "round_seed": 3877508019, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 63, "round_seed": 413322303, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 63, "round_seed": 2052368420, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 63, "round_seed": 2937907063, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 64, "round_seed": 2915678342, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 64, "round_seed": 1755411082, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 64, "round_seed": 4001262452, "ticks": 79, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 64, "round_seed": 4206711199, "ticks": 52, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 64, "round_seed": 941045360, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 65, "round_seed": 2770087328, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 65, "round_seed": 1819209487, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 65, "round_seed": 673593154, "ticks": 76, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 65, "round_seed": 3344890017, "ticks": 59, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 65, "round_seed": 284181497, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 66, "round_seed": 2882269887, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 66, "round_seed": 1561997620, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 66, "round_seed": 2958226775, "ticks": 94, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 66, "round_seed": 4207052174, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 66, "round_seed": 3708344154, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 67, "round_seed": 1857788266, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 67, "round_seed": 1631460705, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 67, "round_seed": 2185935154, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 67, "round_seed": 1666605531, "ticks": 60, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 67, "round_seed": 3629465872, "ticks": 42, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 68, "round_seed": 3660712421, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 68, "round_seed": 2690511124, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 68, "round_seed": 2868897811, "ticks": 83, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 68, "round_seed": 4097354994, "ticks": 80, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 68, "round_seed": 1471605538, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 69, "round_seed": 3387512994, "ticks": 59, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 69, "round_seed": 350935946, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 69, "round_seed": 3841373845, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 69, "round_seed": 861656991, "ticks": 67, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 69, "round_seed": 1522695980, "ticks": 62, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 70, "round_seed": 545059000, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 70, "round_seed": 2435330743, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 70, "round_seed": 2702617734, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 70, "round_seed": 3909888733, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 70, "round_seed": 2193218431, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 71, "round_seed": 2831233673, "ticks": 85, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 71, "round_seed": 1145636964, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 71, "round_seed": 692189284, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 71, "round_seed": 3702688028, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 71, "round_seed": 2167212040, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 72, "round_seed": 2439840474, "ticks": 59, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 72, "round_seed": 1783779738, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 72, "round_seed": 1789338298, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 72, "round_seed": 569104541, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 72, "round_seed": 1709531342, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 73, "round_seed": 1571068699, "ticks": 96, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 73, "round_seed": 2282953419, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 73, "round_seed": 4155982875, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 73, "round_seed": 2961757227, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 73, "round_seed": 1055580022, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 74, "round_seed": 244341216, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 74, "round_seed": 2509492670, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 74, "round_seed": 2662454178, "ticks": 72, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 74, "round_seed": 2952889329, "ticks": 92, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 74, "round_seed": 325715008, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 75, "round_seed": 1575108883, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 75, "round_seed": 1722965897, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 75, "round_seed": 4201726196, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 75, "round_seed": 1423417456, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 75, "round_seed": 2964118237, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 76, "round_seed": 1030776969, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 76, "round_seed": 3385680533, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 76, "round_seed": 3721415001, "ticks": 90, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 76, "round_seed": 693577697, "ticks": 79, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 76, "round_seed": 1329372086, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 77, "round_seed": 976771666, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 77, "round_seed": 3214607100, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 77, "round_seed": 1069542524, "ticks": 99, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 77, "round_seed": 2825125843, "ticks": 57, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 77, "round_seed": 496124269, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 78, "round_seed": 2041888765, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 78, "round_seed": 466395361, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 78, "round_seed": 124445177, "ticks": 69, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 78, "round_seed": 1506161932, "ticks": 56, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 78, "round_seed": 388637098, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 79, "round_seed": 3303719228, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 79, "round_seed": 3944674110, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 79, "round_seed": 983184140, "ticks": 85, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 79, "round_seed": 2628281502, "ticks": 49, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 79, "round_seed": 1646059472, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 80, "round_seed": 1857783646, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 80, "round_seed": 2704813412, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 80, "round_seed": 732890956, "ticks": 88, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 80, "round_seed": 3443727981, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 80, "round_seed": 3559946772, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 81, "round_seed": 121916961, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 81, "round_seed": 125161697, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 81, "round_seed": 1852565178, "ticks": 83, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 81, "round_seed": 2347546971, "ticks": 103, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 81, "round_seed": 2666699067, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 82, "round_seed": 3793568751, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 82, "round_seed": 901251973, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 82, "round_seed": 1801234312, "ticks": 103, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 82, "round_seed": 3069493782, "ticks": 100, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 82, "round_seed": 3337568064, "ticks": 70, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 83, "round_seed": 1533590218, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 83, "round_seed": 981835881, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 83, "round_seed": 4020009058, "ticks": 74, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 83, "round_seed": 414509887, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 83, "round_seed": 2684190378, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 84, "round_seed": 2873479977, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 84, "round_seed": 3591233643, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 84, "round_seed": 2037473732, "ticks": 71, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 84, "round_seed": 1207848978, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 84, "round_seed": 3436068090, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 85, "round_seed": 965517214, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 85, "round_seed": 2247183790, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 85, "round_seed": 2141216635, "ticks": 107, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 85, "round_seed": 3443748671, "ticks": 84, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 85, "round_seed": 1641590892, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 86, "round_seed": 3708674642, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 86, "round_seed": 2928219593, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 86, "round_seed": 4003793331, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 86, "round_seed": 3869671620, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 86, "round_seed": 4085024762, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 87, "round_seed": 1182500558, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 87, "round_seed": 1508322846, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 87, "round_seed": 874518344, "ticks": 59, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 87, "round_seed": 3354440280, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 87, "round_seed": 2899183377, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 88, "round_seed": 2780858241, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 88, "round_seed": 951036967, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 88, "round_seed": 4049669650, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "gc_v1", "attempt": 88, "round_seed": 2768445192, "ticks": 52, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 88, "round_seed": 2207788167, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 89, "round_seed": 1443221120, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 89, "round_seed": 3152984299, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 89, "round_seed": 1360898131, "ticks": 63, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 89, "round_seed": 693985700, "ticks": 83, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 89, "round_seed": 2249705853, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 90, "round_seed": 2901995139, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 90, "round_seed": 3103376954, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 90, "round_seed": 3828807389, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 90, "round_seed": 3606105773, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 90, "round_seed": 2043699483, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 91, "round_seed": 3601727991, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 91, "round_seed": 2651873621, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 91, "round_seed": 2754760571, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 91, "round_seed": 1006714935, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 91, "round_seed": 316142259, "ticks": 65, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 92, "round_seed": 1010312117, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 92, "round_seed": 4104512626, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 92, "round_seed": 827380814, "ticks": 80, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 92, "round_seed": 2008228600, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 92, "round_seed": 1401545857, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 93, "round_seed": 2783304737, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 93, "round_seed": 752756147, "ticks": 51, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 93, "round_seed": 2726431417, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 93, "round_seed": 466917404, "ticks": 61, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 93, "round_seed": 2249479898, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 94, "round_seed": 3373184154, "ticks": 56, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 94, "round_seed": 3384106346, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 94, "round_seed": 3424082527, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 94, "round_seed": 1774008211, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 94, "round_seed": 2293659802, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 95, "round_seed": 1541313841, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "touyama_v2", "attempt": 95, "round_seed": 3477304235, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 95, "round_seed": 2016641321, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 95, "round_seed": 2870217932, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 95, "round_seed": 3285024803, "ticks": 69, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 96, "round_seed": 3028974360, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 96, "round_seed": 2266634789, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 96, "round_seed": 1018050560, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 96, "round_seed": 3709482196, "ticks": 56, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 96, "round_seed": 3760229628, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 97, "round_seed": 2177936917, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 97, "round_seed": 1264924629, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 97, "round_seed": 1850302966, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 97, "round_seed": 2449641175, "ticks": 65, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 97, "round_seed": 94158917, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 98, "round_seed": 4233946306, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 98, "round_seed": 1848391211, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 98, "round_seed": 2894219678, "ticks": 97, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 98, "round_seed": 2402425121, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 98, "round_seed": 2256709106, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 99, "round_seed": 3464358615, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 99, "round_seed": 1567872068, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 99, "round_seed": 3025094956, "ticks": 82, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 99, "round_seed": 3245046442, "ticks": 90, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 99, "round_seed": 2515036776, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 100, "round_seed": 586273863, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "touyama_v2", "attempt": 100, "round_seed": 64223754, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 100, "round_seed": 562529327, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 100, "round_seed": 439112444, "ticks": 94, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 100, "round_seed": 703564994, "ticks": 73, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 101, "round_seed": 2498831054, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 101, "round_seed": 2432228382, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 101, "round_seed": 595527445, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 101, "round_seed": 1423237621, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 101, "round_seed": 3635076184, "ticks": 49, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 102, "round_seed": 3651811219, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "touyama_v2", "attempt": 102, "round_seed": 2707307202, "ticks": 50, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 102, "round_seed": 614624806, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 102, "round_seed": 1976873794, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 102, "round_seed": 3858889961, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 103, "round_seed": 638089666, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 103, "round_seed": 3701967100, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 103, "round_seed": 3660724419, "ticks": 106, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 103, "round_seed": 665056782, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 104, "round_seed": 4175684501, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 104, "round_seed": 2901024502, "ticks": 91, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 104, "round_seed": 324738061, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 104, "round_seed": 2504891398, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 105, "round_seed": 2286481849, "ticks": 61, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 105, "round_seed": 3228533130, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 105, "round_seed": 1759030594, "ticks": 94, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 105, "round_seed": 1242828770, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 106, "round_seed": 4242606993, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 106, "round_seed": 3318638252, "ticks": 72, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 106, "round_seed": 217408146, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 106, "round_seed": 3027870563, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 107, "round_seed": 837403851, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 107, "round_seed": 2356854101, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 107, "round_seed": 3213540603, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 107, "round_seed": 2472807259, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 108, "round_seed": 1804663602, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 108, "round_seed": 1425587058, "ticks": 68, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 108, "round_seed": 3602500835, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 108, "round_seed": 2562792123, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 109, "round_seed": 2749090190, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 109, "round_seed": 1163393818, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 109, "round_seed": 1484475019, "ticks": 56, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 109, "round_seed": 3316722948, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 110, "round_seed": 2261962952, "ticks": 86, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 110, "round_seed": 4061300691, "ticks": 77, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 110, "round_seed": 2766396287, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 110, "round_seed": 278362485, "ticks": 46, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 111, "round_seed": 920323042, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 111, "round_seed": 3272564113, "ticks": 87, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 111, "round_seed": 3683323781, "ticks": 77, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 111, "round_seed": 2448859205, "ticks": 50, "planted": true, "saved": true, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 112, "round_seed": 891427869, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 112, "round_seed": 2289901451, "ticks": 55, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 112, "round_seed": 2900780741, "ticks": 49, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 112, "round_seed": 296037309, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 113, "round_seed": 3830262029, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 113, "round_seed": 2694441153, "ticks": 72, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 113, "round_seed": 1818118985, "ticks": 60, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 113, "round_seed": 2559333236, "ticks": 52, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 114, "round_seed": 1423988661, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 114, "round_seed": 3514877329, "ticks": 54, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 114, "round_seed": 1658145881, "ticks": 81, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 114, "round_seed": 3596566159, "ticks": 63, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 115, "round_seed": 3888323867, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 115, "round_seed": 3239340783, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 115, "round_seed": 2353325957, "ticks": 90, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 115, "round_seed": 3088910382, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 116, "round_seed": 1321302744, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 116, "round_seed": 2656223691, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 116, "round_seed": 3404163068, "ticks": 65, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 116, "round_seed": 1031553815, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 117, "round_seed": 1648455777, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 117, "round_seed": 2346008181, "ticks": 60, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 117, "round_seed": 3807805758, "ticks": 57, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 117, "round_seed": 937253496, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 118, "round_seed": 320003738, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 118, "round_seed": 2849099216, "ticks": 63, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 118, "round_seed": 3802977805, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 118, "round_seed": 1577407428, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 119, "round_seed": 3785628380, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 119, "round_seed": 694215793, "ticks": 78, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 119, "round_seed": 3796121421, "ticks": 79, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 119, "round_seed": 262082043, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 120, "round_seed": 4189195196, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 120, "round_seed": 2307004903, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 120, "round_seed": 2481245967, "ticks": 83, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 120, "round_seed": 196115161, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 121, "round_seed": 768130898, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 121, "round_seed": 285171148, "ticks": 100, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 121, "round_seed": 3429312808, "ticks": 52, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 121, "round_seed": 3079709650, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 122, "round_seed": 2391762473, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 122, "round_seed": 903639317, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 122, "round_seed": 2401014334, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 122, "round_seed": 2109354733, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 123, "round_seed": 2954106054, "ticks": 70, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 123, "round_seed": 2330417190, "ticks": 97, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 123, "round_seed": 3105973282, "ticks": 54, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 123, "round_seed": 3720372787, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 124, "round_seed": 2893141693, "ticks": 67, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 124, "round_seed": 1959644887, "ticks": 74, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 124, "round_seed": 3951245894, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 124, "round_seed": 873523264, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 125, "round_seed": 1549611632, "ticks": 78, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 125, "round_seed": 1167517560, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 125, "round_seed": 3000511231, "ticks": 58, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 125, "round_seed": 3268873283, "ticks": 60, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 126, "round_seed": 2776092765, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 126, "round_seed": 2110183353, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 126, "round_seed": 3739032230, "ticks": 103, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 126, "round_seed": 3565708021, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 127, "round_seed": 1041938250, "ticks": 83, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 127, "round_seed": 1570935800, "ticks": 79, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 127, "round_seed": 2238403329, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 127, "round_seed": 1192186230, "ticks": 69, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 128, "round_seed": 2550606012, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 128, "round_seed": 2625395660, "ticks": 65, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 128, "round_seed": 4280077987, "ticks": 56, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 128, "round_seed": 3962809404, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 129, "round_seed": 909112367, "ticks": 81, "planted": true, "saved": false, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 129, "round_seed": 2508834865, "ticks": 68, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 129, "round_seed": 1642973968, "ticks": 78, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 129, "round_seed": 962723568, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 130, "round_seed": 2244112622, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 130, "round_seed": 3647782072, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 130, "round_seed": 3160894671, "ticks": 54, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 130, "round_seed": 3076423464, "ticks": 42, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 131, "round_seed": 1584819702, "ticks": 68, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 131, "round_seed": 686475242, "ticks": 89, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 131, "round_seed": 3979461809, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 131, "round_seed": 1247899998, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 132, "round_seed": 3350793075, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 132, "round_seed": 2322888496, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 132, "round_seed": 2890297846, "ticks": 68, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 132, "round_seed": 1132295389, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 133, "round_seed": 3352309096, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 133, "round_seed": 753002966, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 133, "round_seed": 620299091, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 133, "round_seed": 3928176743, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "omoko_v1", "attempt": 134, "round_seed": 3667168645, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 134, "round_seed": 3142707567, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 134, "round_seed": 4004501314, "ticks": 80, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 134, "round_seed": 3883282378, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 135, "round_seed": 3439637025, "ticks": 53, "planted": true, "saved": false, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 135, "round_seed": 4009109658, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 135, "round_seed": 1368794382, "ticks": 65, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 135, "round_seed": 1166536204, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 136, "round_seed": 3971913580, "ticks": 53, "planted": true, "saved": false, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 136, "round_seed": 2444813390, "ticks": 95, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 136, "round_seed": 786164225, "ticks": 69, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 136, "round_seed": 1415454041, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 137, "round_seed": 593990303, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 137, "round_seed": 3982051231, "ticks": 76, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 137, "round_seed": 2778856159, "ticks": 53, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 137, "round_seed": 2695429587, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "omoko_v1", "attempt": 138, "round_seed": 350488028, "ticks": 57, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 138, "round_seed": 3645344618, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 138, "round_seed": 3359095849, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 138, "round_seed": 54783187, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 139, "round_seed": 54445955, "ticks": 53, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 139, "round_seed": 964511500, "ticks": 82, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 139, "round_seed": 1156745442, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 139, "round_seed": 2308733936, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "omoko_v1", "attempt": 140, "round_seed": 1227327571, "ticks": 89, "planted": true, "saved": true, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 140, "round_seed": 1860597633, "ticks": 69, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 140, "round_seed": 4030346170, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 140, "round_seed": 2301356562, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 141, "round_seed": 1648259259, "ticks": 72, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 141, "round_seed": 1304475129, "ticks": 79, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 141, "round_seed": 1274482012, "ticks": 73, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 142, "round_seed": 881875949, "ticks": 63, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 142, "round_seed": 1902811078, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 142, "round_seed": 1035893809, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 143, "round_seed": 3849063079, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 143, "round_seed": 2404479698, "ticks": 85, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 143, "round_seed": 178212497, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 144, "round_seed": 50822064, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 144, "round_seed": 1589917152, "ticks": 54, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 144, "round_seed": 2516635784, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 145, "round_seed": 3979297550, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 145, "round_seed": 729212767, "ticks": 54, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 145, "round_seed": 19552881, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 146, "round_seed": 1786851717, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 146, "round_seed": 3594581761, "ticks": 60, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 146, "round_seed": 2233461902, "ticks": 63, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 147, "round_seed": 2319622149, "ticks": 104, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 147, "round_seed": 3120856596, "ticks": 77, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 147, "round_seed": 2155785554, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 148, "round_seed": 2405282923, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 148, "round_seed": 1631810118, "ticks": 78, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 148, "round_seed": 3825521073, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 149, "round_seed": 3840161001, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 149, "round_seed": 311200017, "ticks": 62, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 149, "round_seed": 2195691022, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 150, "round_seed": 2278579681, "ticks": 81, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 150, "round_seed": 961815078, "ticks": 82, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 150, "round_seed": 303997074, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 151, "round_seed": 2996386618, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 151, "round_seed": 4168323005, "ticks": 102, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 151, "round_seed": 462530732, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 152, "round_seed": 3953803648, "ticks": 75, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 152, "round_seed": 20007120, "ticks": 59, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 152, "round_seed": 548217712, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 153, "round_seed": 3795998837, "ticks": 76, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 153, "round_seed": 672295486, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 153, "round_seed": 4150089331, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 154, "round_seed": 1770549498, "ticks": 56, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 154, "round_seed": 3343197168, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 154, "round_seed": 292130615, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 155, "round_seed": 3154900606, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 155, "round_seed": 3475048091, "ticks": 57, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 155, "round_seed": 2646287460, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 156, "round_seed": 2657125506, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 156, "round_seed": 1736218438, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 156, "round_seed": 693457755, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 157, "round_seed": 407676602, "ticks": 107, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 157, "round_seed": 2301976666, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 157, "round_seed": 1118506528, "ticks": 49, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 158, "round_seed": 1453656415, "ticks": 56, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 158, "round_seed": 1595652468, "ticks": 98, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 158, "round_seed": 1260347673, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 159, "round_seed": 2354332228, "ticks": 80, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 159, "round_seed": 50741101, "ticks": 57, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 159, "round_seed": 1919853663, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 160, "round_seed": 2643709554, "ticks": 95, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 160, "round_seed": 561720213, "ticks": 61, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 160, "round_seed": 3248286816, "ticks": 47, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 161, "round_seed": 2110978309, "ticks": 73, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 161, "round_seed": 4263377815, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 161, "round_seed": 1301421435, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 162, "round_seed": 1492866544, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 162, "round_seed": 3862143496, "ticks": 52, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 162, "round_seed": 1020171920, "ticks": 49, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 163, "round_seed": 679380014, "ticks": 73, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 163, "round_seed": 3363479968, "ticks": 93, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 163, "round_seed": 3355721071, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 164, "round_seed": 3479827239, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 164, "round_seed": 2111137804, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 164, "round_seed": 1907679607, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 165, "round_seed": 2010464977, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 165, "round_seed": 17567016, "ticks": 71, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 165, "round_seed": 4277005507, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 166, "round_seed": 2366768166, "ticks": 71, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 166, "round_seed": 804618675, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 166, "round_seed": 732818654, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 167, "round_seed": 2933474282, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 167, "round_seed": 851270230, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 167, "round_seed": 3077861489, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 168, "round_seed": 3804070922, "ticks": 94, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 168, "round_seed": 1221166983, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 168, "round_seed": 878793163, "ticks": 49, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 169, "round_seed": 2609408986, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 169, "round_seed": 1403453635, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 169, "round_seed": 3962693417, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 170, "round_seed": 3136317762, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 170, "round_seed": 1952145332, "ticks": 84, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 170, "round_seed": 2737065424, "ticks": 54, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 171, "round_seed": 3248953998, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 171, "round_seed": 3300166452, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 171, "round_seed": 1297292641, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 172, "round_seed": 1414505820, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 172, "round_seed": 807883597, "ticks": 80, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 172, "round_seed": 591998259, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 173, "round_seed": 1449780325, "ticks": 71, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 173, "round_seed": 3422946650, "ticks": 100, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 173, "round_seed": 2030586109, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 174, "round_seed": 3476483581, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 174, "round_seed": 902301082, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 174, "round_seed": 195417590, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 175, "round_seed": 2419925181, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 175, "round_seed": 3395000899, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 175, "round_seed": 4180136554, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 176, "round_seed": 3944190439, "ticks": 67, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 176, "round_seed": 2111792194, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 176, "round_seed": 395929568, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 177, "round_seed": 3491014573, "ticks": 74, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 177, "round_seed": 3345893032, "ticks": 88, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 177, "round_seed": 3556193329, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 178, "round_seed": 4070166426, "ticks": 97, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 178, "round_seed": 1044488083, "ticks": 52, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 178, "round_seed": 3732225009, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 179, "round_seed": 779034723, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 179, "round_seed": 3240812225, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 179, "round_seed": 329439656, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 180, "round_seed": 4192897345, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 180, "round_seed": 2928278625, "ticks": 83, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 180, "round_seed": 916000318, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 181, "round_seed": 4011905498, "ticks": 82, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 181, "round_seed": 4028584717, "ticks": 60, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 181, "round_seed": 3132216648, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 182, "round_seed": 373317564, "ticks": 95, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 182, "round_seed": 512153076, "ticks": 63, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 182, "round_seed": 2737420187, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 183, "round_seed": 1212805034, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 183, "round_seed": 2870800290, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 183, "round_seed": 3982592717, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 184, "round_seed": 902435817, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 184, "round_seed": 2514529328, "ticks": 56, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 184, "round_seed": 2022714476, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 185, "round_seed": 3293936968, "ticks": 82, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 185, "round_seed": 3789248823, "ticks": 55, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 185, "round_seed": 2133273199, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 186, "round_seed": 1454420298, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 186, "round_seed": 124586083, "ticks": 73, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 186, "round_seed": 1334927158, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 187, "round_seed": 672296974, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 187, "round_seed": 1518530849, "ticks": 62, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 187, "round_seed": 4059318247, "ticks": 48, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 188, "round_seed": 855509110, "ticks": 68, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 188, "round_seed": 416808723, "ticks": 104, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 188, "round_seed": 2831801139, "ticks": 47, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 189, "round_seed": 3184802286, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 189, "round_seed": 3480066646, "ticks": 55, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 189, "round_seed": 3769886162, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 190, "round_seed": 902548044, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 190, "round_seed": 3922349293, "ticks": 97, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 190, "round_seed": 3035970107, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 191, "round_seed": 2610141024, "ticks": 58, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 191, "round_seed": 91259172, "ticks": 89, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 191, "round_seed": 1291391595, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 192, "round_seed": 333649533, "ticks": 67, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 192, "round_seed": 975802609, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 192, "round_seed": 1649422635, "ticks": 74, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 193, "round_seed": 925048670, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 193, "round_seed": 1375886033, "ticks": 78, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 193, "round_seed": 1507601206, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 194, "round_seed": 3100474875, "ticks": 87, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 194, "round_seed": 2625773071, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 194, "round_seed": 761854472, "ticks": 70, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 195, "round_seed": 2221404875, "ticks": 72, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 195, "round_seed": 2616595379, "ticks": 58, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 195, "round_seed": 4021425816, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 196, "round_seed": 1107259487, "ticks": 68, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 196, "round_seed": 3893000431, "ticks": 49, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 196, "round_seed": 2731116007, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 197, "round_seed": 3414665491, "ticks": 67, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 197, "round_seed": 3819564564, "ticks": 49, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 197, "round_seed": 3765656291, "ticks": 50, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 198, "round_seed": 3920914595, "ticks": 63, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 198, "round_seed": 1149529391, "ticks": 87, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 198, "round_seed": 99810781, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 199, "round_seed": 3144140026, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 199, "round_seed": 2331794273, "ticks": 56, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 199, "round_seed": 353034975, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 200, "round_seed": 500996560, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 200, "round_seed": 1314780578, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 200, "round_seed": 2726312091, "ticks": 48, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 201, "round_seed": 1511099045, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 201, "round_seed": 897865710, "ticks": 82, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 201, "round_seed": 2476896198, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 202, "round_seed": 180302431, "ticks": 103, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 202, "round_seed": 2295061819, "ticks": 54, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 202, "round_seed": 1601317332, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 203, "round_seed": 400760498, "ticks": 75, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 203, "round_seed": 2020575604, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 203, "round_seed": 3909045409, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 204, "round_seed": 2653244821, "ticks": 86, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 204, "round_seed": 3819959194, "ticks": 100, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 204, "round_seed": 1573911670, "ticks": 47, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 205, "round_seed": 2419541083, "ticks": 91, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 205, "round_seed": 4107391344, "ticks": 59, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 205, "round_seed": 1149153485, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 206, "round_seed": 2405391100, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 206, "round_seed": 493063451, "ticks": 68, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 206, "round_seed": 1954853856, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 207, "round_seed": 2405336861, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 207, "round_seed": 186296227, "ticks": 49, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 207, "round_seed": 730084622, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 208, "round_seed": 713469924, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 208, "round_seed": 2114226904, "ticks": 51, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 208, "round_seed": 4227883556, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 209, "round_seed": 3062271519, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "gc_v1", "attempt": 209, "round_seed": 983146774, "ticks": 73, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 209, "round_seed": 1078305037, "ticks": 69, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 210, "round_seed": 97122668, "ticks": 98, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 210, "round_seed": 1296513467, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 210, "round_seed": 934509601, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 211, "round_seed": 2458996805, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 211, "round_seed": 1318813492, "ticks": 56, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 211, "round_seed": 1964934340, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 212, "round_seed": 383378632, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 212, "round_seed": 3323279261, "ticks": 96, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 212, "round_seed": 3318599773, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 213, "round_seed": 1533839578, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 213, "round_seed": 72985407, "ticks": 64, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 213, "round_seed": 2178857974, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 214, "round_seed": 2995576591, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 214, "round_seed": 1247999086, "ticks": 78, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 214, "round_seed": 202327913, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 215, "round_seed": 852120355, "ticks": 67, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 215, "round_seed": 1701343463, "ticks": 52, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 215, "round_seed": 1388189029, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 216, "round_seed": 2303109866, "ticks": 98, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 216, "round_seed": 900896304, "ticks": 88, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 216, "round_seed": 3769341420, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 217, "round_seed": 899583988, "ticks": 82, "planted": false, "saved": false}
+{"opponent": "gc_v1", "attempt": 217, "round_seed": 2269848144, "ticks": 53, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 217, "round_seed": 518018866, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 218, "round_seed": 1941721035, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 218, "round_seed": 1842690609, "ticks": 82, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 218, "round_seed": 3055415698, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 219, "round_seed": 2286328202, "ticks": 64, "planted": true, "saved": false, "site": "L"}
+{"opponent": "gc_v1", "attempt": 219, "round_seed": 958470348, "ticks": 96, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 219, "round_seed": 1872963432, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 220, "round_seed": 2091945041, "ticks": 80, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 220, "round_seed": 1107025802, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 221, "round_seed": 2238683746, "ticks": 64, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 221, "round_seed": 3612767845, "ticks": 48, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 222, "round_seed": 2828091167, "ticks": 88, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 222, "round_seed": 3367728538, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 223, "round_seed": 1930385801, "ticks": 71, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 223, "round_seed": 226299456, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 224, "round_seed": 3924622608, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 224, "round_seed": 1673598470, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 225, "round_seed": 1044151313, "ticks": 77, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 225, "round_seed": 4247923341, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 226, "round_seed": 4104838475, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 226, "round_seed": 2378679470, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 227, "round_seed": 1658443741, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 227, "round_seed": 2616087146, "ticks": 68, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 228, "round_seed": 1053179805, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 228, "round_seed": 728115826, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 229, "round_seed": 2109742564, "ticks": 75, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 229, "round_seed": 3128440974, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 230, "round_seed": 1953318771, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 230, "round_seed": 1058476409, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 231, "round_seed": 3013563520, "ticks": 69, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 231, "round_seed": 685071200, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 232, "round_seed": 1532646003, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 232, "round_seed": 987863278, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 233, "round_seed": 4213612599, "ticks": 51, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 233, "round_seed": 1125518467, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 234, "round_seed": 343975882, "ticks": 75, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 234, "round_seed": 1801880451, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 235, "round_seed": 1337331105, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 235, "round_seed": 4076849934, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 236, "round_seed": 1239737135, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 236, "round_seed": 4029481253, "ticks": 62, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 237, "round_seed": 2385082056, "ticks": 76, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 237, "round_seed": 3561621996, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 238, "round_seed": 326641008, "ticks": 105, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 238, "round_seed": 4100614182, "ticks": 73, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 239, "round_seed": 3073996072, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 239, "round_seed": 1466683974, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 240, "round_seed": 293834962, "ticks": 74, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 240, "round_seed": 726940064, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 241, "round_seed": 294354557, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 241, "round_seed": 2384254886, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 242, "round_seed": 3786796914, "ticks": 63, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 242, "round_seed": 2219342027, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 243, "round_seed": 2657545649, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 243, "round_seed": 1509755030, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 244, "round_seed": 2235516114, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 244, "round_seed": 255809634, "ticks": 47, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 245, "round_seed": 2849084407, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 245, "round_seed": 2904966261, "ticks": 71, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 246, "round_seed": 3577825248, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 246, "round_seed": 1505327351, "ticks": 66, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 247, "round_seed": 2137144129, "ticks": 64, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 247, "round_seed": 3424224850, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 248, "round_seed": 4093335714, "ticks": 67, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 248, "round_seed": 728954776, "ticks": 70, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 249, "round_seed": 3385974572, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 249, "round_seed": 3180967197, "ticks": 46, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 250, "round_seed": 3956754483, "ticks": 61, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 250, "round_seed": 560036582, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 251, "round_seed": 509405515, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 251, "round_seed": 3733772339, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 252, "round_seed": 1255016041, "ticks": 70, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 252, "round_seed": 3029663476, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 253, "round_seed": 2685544108, "ticks": 82, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 253, "round_seed": 2827058101, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 254, "round_seed": 1001761881, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 254, "round_seed": 3468888264, "ticks": 34, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 255, "round_seed": 3475021581, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 255, "round_seed": 586552551, "ticks": 48, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 256, "round_seed": 295362491, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 256, "round_seed": 1177427444, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 257, "round_seed": 1991416606, "ticks": 67, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 257, "round_seed": 1250056134, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 258, "round_seed": 1365262845, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 258, "round_seed": 912036539, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 259, "round_seed": 2665489333, "ticks": 75, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 259, "round_seed": 3253256972, "ticks": 47, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 260, "round_seed": 3176154242, "ticks": 92, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 260, "round_seed": 808777611, "ticks": 47, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 261, "round_seed": 1281929780, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 261, "round_seed": 2884615002, "ticks": 35, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 262, "round_seed": 1804868125, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 262, "round_seed": 3259296620, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 263, "round_seed": 1230533296, "ticks": 103, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 263, "round_seed": 1532435593, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 264, "round_seed": 1748511180, "ticks": 83, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 264, "round_seed": 240956795, "ticks": 61, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 265, "round_seed": 844140790, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 265, "round_seed": 4027456448, "ticks": 37, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 266, "round_seed": 115849525, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 266, "round_seed": 23501373, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 267, "round_seed": 1513552950, "ticks": 74, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 267, "round_seed": 2425667225, "ticks": 47, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 268, "round_seed": 4010352444, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 268, "round_seed": 3641676143, "ticks": 47, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 269, "round_seed": 1635634316, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 269, "round_seed": 2653422841, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 270, "round_seed": 3054997151, "ticks": 75, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 270, "round_seed": 3280111134, "ticks": 80, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 271, "round_seed": 4049432132, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 271, "round_seed": 160688795, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 272, "round_seed": 2483989511, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 272, "round_seed": 1957329053, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 273, "round_seed": 3008439885, "ticks": 89, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 273, "round_seed": 622492388, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 274, "round_seed": 758479698, "ticks": 76, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 274, "round_seed": 458214438, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 275, "round_seed": 3444907266, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 275, "round_seed": 2680951021, "ticks": 72, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 276, "round_seed": 2769677646, "ticks": 79, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 276, "round_seed": 2958408840, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 277, "round_seed": 3509814780, "ticks": 43, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 277, "round_seed": 332038262, "ticks": 71, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 278, "round_seed": 1644764792, "ticks": 98, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 278, "round_seed": 2809531649, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 279, "round_seed": 2418935041, "ticks": 65, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 279, "round_seed": 1657456421, "ticks": 41, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 280, "round_seed": 2591189383, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 280, "round_seed": 2386111732, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 281, "round_seed": 463711003, "ticks": 74, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 281, "round_seed": 1777824013, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 282, "round_seed": 1228296632, "ticks": 81, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 282, "round_seed": 2888100265, "ticks": 70, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 283, "round_seed": 3421082696, "ticks": 47, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 283, "round_seed": 1983140097, "ticks": 52, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 284, "round_seed": 1616860050, "ticks": 70, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 284, "round_seed": 3682165827, "ticks": 63, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 285, "round_seed": 147863777, "ticks": 97, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 285, "round_seed": 1178501134, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 286, "round_seed": 504204132, "ticks": 53, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 286, "round_seed": 2314679302, "ticks": 70, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 287, "round_seed": 3789671511, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 287, "round_seed": 3414619365, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 288, "round_seed": 875026817, "ticks": 69, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 288, "round_seed": 3781098186, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "fnatic_v3", "attempt": 289, "round_seed": 179531755, "ticks": 82, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 289, "round_seed": 2141996153, "ticks": 75, "planted": true, "saved": true, "site": "L"}
+{"opponent": "fnatic_v3", "attempt": 290, "round_seed": 421149285, "ticks": 68, "planted": true, "saved": false, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 290, "round_seed": 229917149, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "fnatic_v3", "attempt": 291, "round_seed": 1627159113, "ticks": 87, "planted": true, "saved": true, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 291, "round_seed": 2658725768, "ticks": 36, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 292, "round_seed": 214816707, "ticks": 62, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 293, "round_seed": 1938989973, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 294, "round_seed": 1312175952, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 295, "round_seed": 526609256, "ticks": 46, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 296, "round_seed": 443007588, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 297, "round_seed": 1249391351, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 298, "round_seed": 3126196301, "ticks": 39, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 299, "round_seed": 4028250486, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 300, "round_seed": 1167797987, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 301, "round_seed": 1942200556, "ticks": 49, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 302, "round_seed": 3361033566, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 303, "round_seed": 4189623762, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 304, "round_seed": 478584511, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 305, "round_seed": 3513601380, "ticks": 73, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 306, "round_seed": 1128294558, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 307, "round_seed": 3131295494, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 308, "round_seed": 4163964253, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 309, "round_seed": 2314535026, "ticks": 42, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 310, "round_seed": 2918154817, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 311, "round_seed": 2843666871, "ticks": 47, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 312, "round_seed": 48727468, "ticks": 50, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 313, "round_seed": 3576025212, "ticks": 48, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 314, "round_seed": 1261336630, "ticks": 58, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 315, "round_seed": 1263116432, "ticks": 55, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 316, "round_seed": 3517039324, "ticks": 66, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 317, "round_seed": 1346952828, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 318, "round_seed": 303068986, "ticks": 120, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 319, "round_seed": 98466439, "ticks": 61, "planted": true, "saved": false, "site": "R"}
+{"opponent": "toru_ai_v3.1", "attempt": 320, "round_seed": 2735663704, "ticks": 44, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 321, "round_seed": 1323461690, "ticks": 47, "planted": true, "saved": true, "site": "L"}
+{"opponent": "toru_ai_v3.1", "attempt": 322, "round_seed": 2816861249, "ticks": 62, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 323, "round_seed": 4144742505, "ticks": 38, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 324, "round_seed": 694284329, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 325, "round_seed": 162681503, "ticks": 40, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 326, "round_seed": 3925907418, "ticks": 45, "planted": false, "saved": false}
+{"opponent": "toru_ai_v3.1", "attempt": 327, "round_seed": 3521419850, "ticks": 55, "planted": true, "saved": true, "site": "L"}
