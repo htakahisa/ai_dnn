@@ -1,0 +1,7 @@
+[
+  {"role":"left_scout", "watch":[11,17], "retreat":[10,18], "alternate":[11,17], "look":[14,17], "site":"L"},
+  {"role":"mid_scout", "watch":[13,23], "retreat":[12,22], "alternate":[13,23], "look":[15,23], "site":"L"},
+  {"role":"right_scout", "watch":[12,31], "retreat":[11,32], "alternate":[12,31], "look":[14,31], "site":"R"},
+  {"role":"left_anchor", "watch":[8,4], "retreat":[8,4], "alternate":[8,4], "look":[11,3], "site":"L"},
+  {"role":"right_anchor", "watch":[4,38], "retreat":[4,38], "alternate":[4,38], "look":[2,37], "site":"R"}
+]
