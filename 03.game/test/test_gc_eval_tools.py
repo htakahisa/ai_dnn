@@ -11,6 +11,20 @@ SPEC.loader.exec_module(eval_tools)
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_periodic_schedule_can_finish_without_claiming_a_formal_sample(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)
+            for index in range(2):
+                (output/f"series_FRC_{index:03d}.json").touch()
+            schedule=dict(opponents=["FRC"],series_count=2,minimum_attack_rounds=1)
+            results={"Furina Classic":{"n":40}}
+            periodic=eval_tools.evaluation_status(schedule,results,output)
+            self.assertTrue(periodic["complete"])
+            self.assertFalse(periodic["milestone_sample_complete"])
+            self.assertEqual(periodic["opponents_below_100_attack_rounds"],["Furina Classic"])
+            self.assertFalse(eval_tools.evaluation_status(dict(schedule,minimum_attack_rounds=100),results,output)["complete"])
+            self.assertFalse(eval_tools.evaluation_status(dict(schedule,series_count=3),results,output)["complete"])
+
     def test_runtime_snapshot_keeps_the_original_definitions(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)/"source"

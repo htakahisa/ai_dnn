@@ -35,7 +35,8 @@ class ResidualPolicy(nn.Module):
     def load(cls,path):
         payload=torch.load(path,map_location="cpu",weights_only=True)
         if payload.get("schema_hash")!=SCHEMA_HASH or tuple(payload.get("actions",()))!=ACTIONS:
-            raise ValueError("GC v2 residual checkpoint observation/action schema mismatch; recollect BC data")
+            raise ValueError("GC v2 residual checkpoint schema mismatch (player ability/status inputs require v4); "
+                             "recollect BC in a new run. For legacy viewing only, use tools/upgrade_observation_checkpoint.py")
         # Loading an optional model must not consume the match RNG stream.
         with torch.random.fork_rng(devices=[]):
             model=cls(payload["hidden"])

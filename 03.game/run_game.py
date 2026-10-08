@@ -432,6 +432,8 @@ class VisualFPSBattle(
                     "max_shield_hp": float(getattr(char, "max_shield_hp", 0)),
                     "heal_sparkle": int(getattr(char, "heal_sparkle_remaining", 0)),
                     "life_contract": int(getattr(char, "life_contract_remaining", 0)),
+                    "ability_seal": int(getattr(char, "ability_seal_remaining", 0)),
+                    "fate_loom_root": int(getattr(char, "fate_loom_remaining", 0)),
                     "alive": bool(getattr(char, "is_alive", False)),
                     "facing": str(getattr(char, "facing", "")),
                     "has_spike": bool(getattr(char, "has_spike", False)),

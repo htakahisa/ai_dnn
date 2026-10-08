@@ -6,11 +6,13 @@ Enemy axis counts are recent sightings, not an omniscient setup count.
 from __future__ import annotations
 from collections import Counter
 import math
+import random
 import numpy as np
 from grid_paths import distance_map
 from grid_lines import line_cells
 from gc_v1.gc_facing import facing_towards
 from .config import active_flags
+from .hazards import PublicHazards
 from .geometry import (CARDINAL, angle_at, axis_for, los, nearest_floor,
                        projectile_path, recon_aim, route, valid, watch_cells)
 
@@ -28,16 +30,19 @@ class AttackerTactics:
     def __init__(self, config, stage="entry"):
         from party_presets import get_preset
         self.config, self.stage = config, stage
-        self.roster_profiles = {}
-        for name, profile in config["profiles"].items():
-            if profile.get("preset"):
-                preset = get_preset(profile["preset"])
-                self.roster_profiles[tuple(sorted(map(str, preset.players)))] = name
+        # Labels are observation metadata; they never select tactical settings.
+        self.roster_labels = {}
+        for name in ("Touyama Gaming", "Omoko Gaming", "Furina Classic",
+                     "Fnatic2023", "Gorigons", "SUPES"):
+            preset = get_preset(name)
+            self.roster_labels[tuple(sorted(map(str, preset.players)))] = preset.short_name
         # Validate the stage even before the first live decision.
-        active_flags(config, stage, {})
+        active_flags(config, stage)
         self.reset_round()
 
     def reset_round(self):
+        self.hazards = PublicHazards()
+        self.hazard_escape = {}
         self.opponent = "unknown"
         self.sightings = {}
         self.own_positions = {}
@@ -52,10 +57,16 @@ class AttackerTactics:
         self.recon_ready_tick = 0
         self.utility_used = False
         self.plant_attempt = None
+        self.plant_commit = None
         self.spike = None
         self.hold_assignments = {}
         self.assignment_key = None
         self.selected_site = None
+        self.initial_site = None
+        self.opening_strategy = None
+        self.split_players = set()
+        self.split_progress = {}
+        self.opening_roles_assigned = False
         self.target_plant_pos = None
         self.site_selection_active = False
         self.site_reason = "not_selected"
@@ -64,14 +75,15 @@ class AttackerTactics:
         self.events = []
 
     def observe(self, char, state):
+        self.hazards.update(state)
         self.tick = int(state.get("battle_tick", 0))
         grid = state["grid"]
         self.own_positions[str(char.name)] = (pos(char), self.tick)
         roster = state.get("enemy_roster", ())
         names = tuple(sorted(str(e.get("base_name") or e.get("name")) for e in roster))
-        if names in self.roster_profiles:
-            self.opponent = self.roster_profiles[names]
-        if self.config["profiles"][self.opponent].get("complete_site_survey") and not self.scout_assignments:
+        if names in self.roster_labels:
+            self.opponent = self.roster_labels[names]
+        if self.config["team_tactics"]["complete_site_survey"] and not self.scout_assignments:
             seekers=sorted(str(c.name) for c in state.get("chars",())
                            if c.team==char.team and getattr(c,"ability_name",None)=="RECON")
             self.scout_assignments={name:index for index,name in enumerate(seekers)}
@@ -111,8 +123,35 @@ class AttackerTactics:
         self.pending_surveys = [s for s in self.pending_surveys if self.tick < s["ready_tick"]]
         if self.opponent in ("unknown", "observed_mid_heavy") and counts["Mid"] >= 2:
             self.opponent = "observed_mid_heavy"
-        profile = self.config["profiles"][self.opponent]
-        return profile, active_flags(self.config, self.stage, profile)
+        return self.config["team_tactics"], active_flags(self.config, self.stage)
+
+    def dodge(self, char, state):
+        self.hazard_escape.pop(str(char.name),None)
+        if state.get("defender_setup_active"):
+            return None
+        # A flash alone should not cancel an almost finished plant. Damaging
+        # area warnings can interrupt it; the ordinary plant commitment stays.
+        if getattr(char,"plant_timer",0)>0 and max(self.hazards.channels(pos(char))[:2])<.8:
+            return None
+        destination=self.hazards.escape(char,self.occupied(char,state))
+        if destination is None:
+            return None
+        self.hazard_escape[str(char.name)]=self.tick
+        return self.move_action(char,destination)
+
+    def avoid_entry(self, char, state, result):
+        destination=result[0] if isinstance(result,tuple) else result
+        current=pos(char)
+        if (not char.is_alive or state.get("defender_setup_active") or not self.hazards.effects
+                or tuple(destination)==current or self.hazards.risk(destination)<.35
+                or self.hazards.risk(destination)<=self.hazards.risk(current)):
+            return result
+        occupied=self.occupied(char,state)
+        choices=[current,*[(current[0]+dr,current[1]+dc) for dr,dc in CARDINAL]]
+        choices=[p for p in choices if valid(state["grid"],p) and p not in occupied]
+        safe=min(choices,key=lambda p:(self.hazards.risk(p),math.dist(p,destination)))
+        self.hazard_escape[str(char.name)]=self.tick
+        return self.move_action(char,safe)
 
     def allies(self, char, state):
         return sorted((c for c in state.get("chars", ()) if c.team == char.team and c.is_alive),
@@ -144,6 +183,11 @@ class AttackerTactics:
         return direct
 
     def scout_axis(self, char, allies):
+        if self.opening_strategy in ("RUSH","SPLIT"):
+            if (self.opening_strategy=="SPLIT" and str(char.name) in self.split_players
+                    and self.recon_sequences[str(char.name)]==0):
+                return "Mid"
+            return self.selected_site or self.initial_site or "A"
         seekers = [c for c in allies if getattr(c,"ability_name",None)=="RECON"]
         index = self.scout_assignments.get(str(char.name))
         if index is None:
@@ -151,10 +195,7 @@ class AttackerTactics:
         return "A" if index%2==0 else ("Mid" if self.recon_sequences[str(char.name)]==0 else "B")
 
     def recon_config(self):
-        cfg=dict(self.config["recon"])
-        for key,value in self.config["profiles"][self.opponent].get("recon",{}).items():
-            cfg[key]={**cfg[key],**value} if isinstance(value,dict) else value
-        return cfg
+        return self.config["recon"]
 
     def scout_waypoint(self, char, state, allies):
         axis = self.scout_axis(char,allies)
@@ -216,6 +257,7 @@ class AttackerTactics:
         return (list(destination), {"facing": facing}) if facing else (list(destination), "MOVE")
 
     def remember_result(self, char, result):
+        self.hazards.note_action(char,result,self.tick)
         if isinstance(result, tuple) and len(result) > 1 and result[1] == "PLANT":
             self.plant_attempt = (pos(char), self.tick)
 
@@ -325,7 +367,7 @@ class AttackerTactics:
         for ally in self.allies(char,state):
             if str(ally.name)==str(char.name):
                 continue
-            cap = min(DANCE_MAX_HP,getattr(ally,"max_hp",DANCE_MAX_HP)) if getattr(ally,"contract_max_hp_lost",0)>0 else DANCE_MAX_HP
+            cap = min(DANCE_MAX_HP,getattr(ally,"max_hp",DANCE_MAX_HP)) if (getattr(ally,"contract_max_hp_lost",0)>0 or getattr(ally,"fate_max_hp_lost",0)>0) else DANCE_MAX_HP
             missing = cap-getattr(ally,"hp",cap)
             if missing>=self.config["support"]["dance_min_missing_hp"]:
                 wounded.append((missing,str(ally.name)))
@@ -431,85 +473,188 @@ class AttackerTactics:
             ready_tick=self.tick+math.ceil((len(path)-1)/RECON_SPEED_CELLS_PER_TICK))
         return list(char.pos), {"ability":"RECON", "target":aim}
 
-    def choose_site(self, profile):
+    def choose_opening(self):
+        if self.opening_strategy is None:
+            weights=self.config["opening"]["weights"]
+            self.opening_strategy=random.choices(tuple(weights),weights=tuple(weights.values()),k=1)[0]
+        return self.opening_strategy
+
+    def assign_opening_roles(self, holder, allies):
+        if self.opening_roles_assigned:
+            return
+        self.opening_roles_assigned=True
+        if self.opening_strategy!="SPLIT":
+            return
+        seekers=[c for c in allies if getattr(c,"ability_name",None)=="RECON" and c is not holder]
+        if not seekers:
+            return
+        flank=seekers[-1]
+        escort=next((c for c in allies if str(c.name)==self.scout_supports.get(str(flank.name))
+                     and c is not holder),None)
+        if escort is None:
+            escort=next((c for c in allies if c is not holder and c not in seekers),None)
+        # A split requires a pair; never send an unsupported solo player.
+        if escort is not None:
+            self.split_players={str(flank.name),str(escort.name)}
+
+    def split_move(self, char, state, target):
+        name=str(char.name)
+        if name not in self.split_players:
+            return None
+        allies=self.allies(char,state)
+        partners=[c for c in allies if str(c.name) in self.split_players and str(c.name)!=name]
+        if not partners:
+            return None  # Rejoin the carrier if the flank partner is lost.
+        points=[nearest_floor(state["grid"],self.config["opening"]["split_waypoint"]),
+                nearest_floor(state["grid"],self.config["opening"]["split_entries"][self.selected_site])]
+        progress=self.split_progress.get(name,0)
+        while progress<len(points) and pos(char)==points[progress]:
+            progress+=1
+        self.split_progress[name]=progress
+        if progress>=len(points):
+            return None
+        if not any(math.dist(self.ally_position(c),pos(char))<=self.config["entry"]["trade_radius"]
+                   for c in partners):
+            partner=min(partners,key=lambda c:math.dist(self.ally_position(c),pos(char)))
+            # Catch up to a partner already ahead; otherwise wait for them.
+            own_path=route(state["grid"],pos(char),[points[progress]])
+            partner_point=self.ally_position(partner)
+            if partner_point not in own_path[1:]:
+                return self.move_action(char,pos(char),partner_point)
+        path=self.preplant_route(char,state,[points[progress]])
+        # An escort must yield the single waypoint cell to its partner.
+        if len(path)>1 and path[1] in self.occupied(char,state):
+            return self.wait_carrier(char,state,target,partners)
+        return self.move_action(char,path[min(1,len(path)-1)],target)
+
+    def choose_site(self, available=("A", "B")):
+        """Share one initial draw per round, then compare observed sites."""
+        if not available:
+            return None
+        self.choose_opening()
+        if self.initial_site is None:
+            self.initial_site = random.choice(available)
+        if self.selected_site not in available:
+            self.selected_site = self.initial_site if self.initial_site in available else available[0]
+            self.site_reason = "initial_random" if len(available)>1 else "only_reachable_site"
         counts = self.observed_defenders_by_axis
-        if profile.get("preferred_site"):
-            self.selected_site = profile["preferred_site"]
-            self.site_reason = "profile_preference"
-        elif profile.get("confirm_defenders") is not None:
-            choices = [axis for axis in ("A","B") if counts[axis] == profile["confirm_defenders"]
-                       and self.max_observed_defenders_by_axis[axis] <= profile["confirm_defenders"]]
-            if choices:
-                self.selected_site = min(choices, key=lambda s:(counts[s], s))
-                self.site_reason = "observed_two_defenders"
-            elif self.selected_site and max(counts[self.selected_site],self.max_observed_defenders_by_axis[self.selected_site]) > profile["confirm_defenders"]:
-                self.selected_site = None
-                self.site_reason = "observation_invalidated"
-            elif self.selected_site is None and profile.get("complete_site_survey"):
-                self.site_reason = "awaiting_two_defenders"
-            # No unconfirmed rush after a timeout: retain the information gate.
-        elif any(counts.values()) or len(self.surveyed_axes) >= 2:
-            limit = profile.get("avoid_defenders", float("inf"))
-            choices = [s for s in ("A","B") if max(counts[s],self.max_observed_defenders_by_axis[s]) < limit
-                       and (not profile.get("avoid_defenders") or counts[s] > 0 or s in self.surveyed_axes)]
-            if choices:
-                self.selected_site = min(choices, key=lambda s:(counts[s], s))
-                self.site_reason = "recent_sighting_lower_bound"
-            elif profile.get("avoid_defenders"):
-                self.selected_site = None
-                self.site_reason = "no_observed_safe_site"
-        elif not profile.get("avoid_defenders"):
-            self.selected_site = "A"
-            self.site_reason = "unconfirmed_default"
+        # An unseen site is unknown, rather than an observed empty site.
+        if len(available)>1 and all(counts[s]>0 or s in self.surveyed_axes for s in available):
+            least = min(counts[s] for s in available)
+            if counts[self.selected_site] > least:
+                self.selected_site = next(s for s in available if counts[s]==least)
+            self.site_reason = "observed_lower_count" if len({counts[s] for s in available})>1 else "equal_keep"
         return self.selected_site
 
-    def preplant(self, char, state, profile, flags):
+    def objective_action(self, char, state, holder, cells, distances):
+        """Commit to a legal plant using public danger, cover and remaining time."""
+        from game_core import PLANT_REQUIRED_TICKS
+        holder_pos=self.ally_position(holder)
+        cfg=self.config["entry"]
+        name=str(holder.name)
+        if self.plant_commit and self.plant_commit["holder"]!=name:
+            self.plant_commit=None
+        reason=None
+        plant_target=holder_pos
+        if getattr(holder,"plant_timer",0)>0 and holder_pos in cells:
+            reason="continue_plant"
+        elif holder_pos in cells:
+            threats=[c for c in self.enemies(holder,state) if los(
+                state["grid"],holder_pos,pos(c),state.get("smoke_cells",()),self.occupied(holder,state))]
+            allies=self.allies(holder,state)
+            enemy_alive=sum(c.is_alive for c in state.get("chars",()) if c.team!=holder.team)
+            support=sum(str(c.name)!=name and math.dist(self.ally_position(c),holder_pos)
+                        <=cfg["plant_support_radius"] for c in allies)
+            if not threats:
+                reason="plant_no_observed_threat"
+                # With ample time, allow only a short, unobstructed adjustment
+                # to the existing hold position. Never wait there for the team.
+                if len(allies)<=enemy_alive:
+                    side="A" if holder_pos[1]<state["grid"].shape[1]/2 else "B"
+                    local=[p for p in cells if (p[1]<state["grid"].shape[1]/2)==(side=="A")]
+                    preferred=min(local,key=lambda p:(math.dist(p,self.config["plant_targets"][side]),distances[p],p))
+                    path=route(state["grid"],holder_pos,[preferred],self.occupied(holder,state))
+                    if (1<len(path)<=cfg["plant_reposition_ticks"]+1
+                            and all(p in cells for p in path)
+                            and state.get("round_timer",float("inf"))>
+                                len(path)-1+PLANT_REQUIRED_TICKS+cfg["plant_deadline_margin"]):
+                        plant_target=preferred
+                        reason="plant_nearby_position"
+            elif len(allies)>enemy_alive and support>=cfg["minimum_plant_support"]:
+                reason="plant_advantage_with_cover"
+        nearest=min(cells,key=lambda p:(distances[p],p))
+        if reason:
+            self.plant_commit=dict(holder=name,target=plant_target,reason=reason)
+        elif (state.get("round_timer",float("inf"))
+              <=distances[nearest]+PLANT_REQUIRED_TICKS+cfg["plant_deadline_margin"]):
+            self.plant_commit=dict(holder=name,target=nearest,reason="plant_deadline")
+        if self.plant_commit is None:
+            return None
+        target=self.plant_commit["target"]
+        if target not in cells:
+            target=self.plant_commit["target"]=nearest
+        if self.plant_commit["reason"]=="plant_nearby_position" and holder_pos in cells:
+            adjustment=route(state["grid"],holder_pos,[target],self.occupied(holder,state))
+            if target!=holder_pos and (len(adjustment)==1
+                    or len(adjustment)>cfg["plant_reposition_ticks"]+1
+                    or not all(p in cells for p in adjustment)):
+                target=self.plant_commit["target"]=holder_pos
+                self.plant_commit["reason"]="plant_position_blocked"
+        # Once committed, a new sighting cannot send the carrier across the map.
+        self.selected_site="A" if target[1]<state["grid"].shape[1]/2 else "B"
+        self.target_plant_pos=target
+        self.site_reason=self.plant_commit["reason"]
+        if str(char.name)!=name:
+            return None
+        if pos(char) in cells and (self.plant_commit["reason"]!="plant_nearby_position" or pos(char)==target):
+            self.plant_commit["target"]=pos(char)
+            self.target_plant_pos=pos(char)
+            return list(char.pos),"PLANT"
+        path=self.preplant_route(char,state,[target])
+        return self.move_action(char,path[min(1,len(path)-1)],target)
+
+    def preplant(self, char, state, settings, flags):
+        if state.get("defender_setup_active"):
+            return None
         self.site_selection_active = True
         allies = self.allies(char,state)
         holder = next((c for c in allies if getattr(c,"has_spike",False)),None)
         if holder is None:
+            self.plant_commit=None
             return None  # Existing uninterrupted dropped-spike recovery.
+        grid = state["grid"]
+        holder_pos = self.ally_position(holder)
+        distances = distance_map(grid, holder_pos)
+        cells = [tuple(map(int,p)) for p in np.argwhere(grid == 2) if distances[tuple(p)]>=0]
+        available = tuple(s for s in ("A","B") if any(
+            (p[1]<grid.shape[1]/2)==(s=="A") for p in cells))
+        if not available:
+            return None
+        objective=self.objective_action(char,state,holder,cells,distances)
+        if objective is not None:
+            return objective
         heal = self._heal(char,state)
         if heal:
             return heal
-        grid = state["grid"]
-        awaiting_recon = (profile.get("confirm_defenders") is not None and flags["early_recon"]
-            and ((self.tick <= self.config["recon"]["deadline"] and any(
-                getattr(c,"ability_name",None)=="RECON" and getattr(c,"recon_charges",0)>0 for c in allies))
-                or self.tick < self.recon_ready_tick))
-        if awaiting_recon:
-            self.selected_site,self.site_reason = None,"awaiting_recon_completion"
-            site = None
+        committed=self.plant_commit is not None
+        if committed:
+            site=self.selected_site
         else:
-            site = self.choose_site(profile)
-        side = site or "A"
-        plantable = [tuple(map(int,p)) for p in np.argwhere(grid == 2)
-                     if (p[1] < grid.shape[1]/2) == (side == "A")]
-        if not plantable:
-            return None
-        holder_pos = self.ally_position(holder)
-        distances = distance_map(grid, holder_pos)
-        reachable = [p for p in plantable if distances[p] >= 0]
-        if not reachable:
-            return None
+            site = self.choose_site(available)
+        self.choose_opening()
+        self.assign_opening_roles(holder,allies)
+        side = site
+        plantable = [p for p in cells if (p[1]<grid.shape[1]/2)==(side=="A")]
         anchor = self.config["plant_targets"][side]
-        target = min(reachable,key=lambda p:(math.dist(p,anchor),distances[p],p))
-        self.target_plant_pos = target if site else None
-        if (str(char.name) == str(holder.name) and site and pos(char) in plantable
-                and (pos(char)==target or getattr(char,"plant_timer",0)>0)):
-            cfg = self.config["entry"]
-            if flags["entry_discipline"] and not getattr(char,"plant_timer",0):
-                supports = sum(str(c.name) != str(char.name)
-                    and math.dist(self.ally_position(c),pos(char)) <= cfg["plant_support_radius"]
-                    for c in allies)
-                if supports < min(cfg["minimum_plant_support"],len(allies)-1):
-                    return self.wait_carrier(char,state,target,allies)
-            return list(char.pos), "PLANT"
+        target = (self.plant_commit["target"] if committed else
+                  min(plantable,key=lambda p:(math.dist(p,anchor),distances[p],p)))
+        self.target_plant_pos = target
         enemies = self.enemies(char,state)
         in_los = [c for c in enemies if los(grid,pos(char),pos(c),state.get("smoke_cells",()),self.occupied(char,state))]
-        if flags["early_recon"] and profile.get("complete_site_survey"):
+        scouting=self.opening_strategy=="DEFAULT" and not committed
+        if flags["early_recon"] and scouting and settings["complete_site_survey"]:
             cast=self.recon(char,state,scouting=True,
-                discipline=flags["entry_discipline"] and not profile.get("allow_solo_bait",False))
+                discipline=flags["entry_discipline"])
             if cast:
                 return cast
         if in_los:
@@ -524,17 +669,23 @@ class AttackerTactics:
                 return flash
             nearest = min(in_los,key=lambda c:(math.dist(pos(char),pos(c)),str(c.name)))
             return self.move_action(char,pos(char),pos(nearest))
-        if flags["early_recon"]:
-            cast = self.recon(char,state,scouting=True,
-                discipline=flags["entry_discipline"] and not profile.get("allow_solo_bait",False))
+        near_entry=len(route(grid,pos(char),[target]))-1<=self.config["opening"]["utility_distance"]
+        split_ready=self.split_progress.get(str(char.name),0)>0
+        if flags["early_recon"] and (scouting or near_entry or split_ready):
+            cast = self.recon(char,state,scouting=scouting,
+                discipline=flags["entry_discipline"])
             if cast:
                 return cast
+        if self.opening_strategy=="SPLIT" and not committed:
+            flank_move=self.split_move(char,state,target)
+            if flank_move is not None:
+                return flank_move
         # Pair an escort with each seeker while they scout their own side.
-        scouts = [c for c in allies if getattr(c,"ability_name",None) == "RECON"
+        scouts = [c for c in allies if scouting and getattr(c,"ability_name",None) == "RECON"
                   and getattr(c,"recon_charges",0) > 0
                   and self.tick <= self.config["recon"]["scout_cast_tick"]]
         supports = [c for c in allies if c not in scouts and str(c.name) != str(holder.name)]
-        if profile.get("complete_site_survey"):
+        if settings["complete_site_survey"]:
             pairs=[(scout,next((c for c in supports if str(c.name)==self.scout_supports.get(str(scout.name))),None))
                    for scout in scouts]
         else:
@@ -551,11 +702,7 @@ class AttackerTactics:
         cfg = self.config["entry"]
         if str(char.name) == str(holder.name):
             path = self.preplant_route(char,state,[target])
-            if site is None:
-                # Advance only to staging while recon has not confirmed a site.
-                if len(path)-1 <= cfg["staging_distance"]:
-                    return self.wait_carrier(char,state,target,allies)
-            if flags["entry_discipline"] and not profile.get("allow_solo_bait",False):
+            if flags["entry_discipline"]:
                 nearby = sum(math.dist(self.ally_position(c),pos(char)) <= cfg["trade_radius"]
                              for c in allies if str(c.name) != str(char.name))
                 if nearby < min(cfg["minimum_support"],len(allies)-1):
@@ -565,21 +712,21 @@ class AttackerTactics:
                     return self.wait_carrier(char,state,target,allies)
             return self.move_action(char,path[min(1,len(path)-1)],target)
         # Escort the carrier in distinct adjacent cells; never leave a solo bait.
-        if site and profile.get("carrier_route_priority"):
+        if settings["carrier_route_priority"]:
             clearing=self.clear_carrier_route(char,state,holder,target,allies)
             if clearing is not None:
                 return clearing
         goals = self.escort_goals(state,holder_pos,target)
-        if site and profile.get("carrier_route_priority"):
+        if settings["carrier_route_priority"]:
             reserved=route(grid,holder_pos,[target])[1:4]
             path=self.preplant_route(char,state,goals,reserved)
         else:
             path = self.preplant_route(char,state,goals)
         return self.move_action(char,path[min(1,len(path)-1)],target)
 
-    def discipline(self, char, state, profile, result):
-        """Entry flag also works when the independent profile flag is disabled."""
-        if profile.get("allow_solo_bait") or state.get("is_planted"):
+    def discipline(self, char, state, result):
+        """Apply the same entry discipline with or without site selection."""
+        if state.get("is_planted"):
             return result
         allies = self.allies(char,state)
         cfg = self.config["entry"]
@@ -597,10 +744,17 @@ class AttackerTactics:
         return result
 
     def snapshot(self):
-        return dict(schema_version=1, opponent=self.opponent,
+        return dict(schema_version=2, opponent=self.opponent,
+            public_effects=[dict(kind=e.kind,phase=e.phase,position=e.position,cells=e.cells,
+                                 direction=e.direction) for e in self.hazards.effects],
+            hazard_escape=sorted(name for name,tick in self.hazard_escape.items() if tick==getattr(self,"tick",0)),
+            opening_strategy=self.opening_strategy, split_players=sorted(self.split_players),
+            split_progress=dict(self.split_progress),
+            plant_commit=({**self.plant_commit,"target":list(self.plant_commit["target"])}
+                          if self.plant_commit else None),
             observed_defenders_by_axis=dict(self.observed_defenders_by_axis),
             max_observed_defenders_by_axis=dict(self.max_observed_defenders_by_axis),
-            selected_site=self.selected_site, site_reason=self.site_reason,
+            initial_site=self.initial_site, selected_site=self.selected_site, site_reason=self.site_reason,
             site_selection_active=self.site_selection_active,
             target_plant_pos=list(self.target_plant_pos) if self.target_plant_pos is not None else None,
             surveyed_axes=sorted(self.surveyed_axes),

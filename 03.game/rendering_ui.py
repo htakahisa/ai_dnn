@@ -116,7 +116,7 @@ class RenderingUIMixin:
         return True
 
     def _selected_ultimate_ready(self, selected):
-        return selected.ultimate_points >= selected.ultimate_cost and (
+        return getattr(selected, "ability_seal_remaining", 0) <= 0 and selected.ultimate_points >= selected.ultimate_cost and (
             (not selected.is_alive and self._serenade_has_living_teams(selected))
             if selected.ultimate_name == "SERENADE" else selected.is_alive)
     def _handle_team_panel_click(self, x, y):
@@ -186,7 +186,8 @@ class RenderingUIMixin:
             return
 
         # 選択中キャラクターは、ロールに対応したアビリティ一つだけ使用できる。
-        if selected and selected.is_alive and selected.ability_name in ("SMOKE", "FLASH", "RECON", "RAMP", "DANCE", "ASH"):
+        if (selected and selected.is_alive and getattr(selected, "ability_seal_remaining", 0) <= 0
+                and selected.ability_name in ("SMOKE", "FLASH", "RECON", "RAMP", "DANCE", "ASH")):
             ability_name = selected.ability_name
             panel = self._ability_button_bounds(ability_name)
             if panel and panel[0] <= event.x <= panel[2] and panel[1] <= event.y <= panel[3]:
@@ -267,7 +268,8 @@ class RenderingUIMixin:
                     self._try_dance_target(target)
                 return
             owner = next((ch for ch in self.chars if ch.name == owner_name and ch.is_alive), None)
-            if owner and owner.team == team and owner.ability_name == ability_name and self.grid[r, c] != 1:
+            if (owner and owner.team == team and owner.ability_name == ability_name
+                    and getattr(owner, "ability_seal_remaining", 0) <= 0 and self.grid[r, c] != 1):
                 if ability_name == "SMOKE" and owner.smoke_charges > 0:
                     cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
                              if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
@@ -1016,6 +1018,10 @@ class RenderingUIMixin:
                 self.canvas.create_text(cx, cy, text="✦", fill="#fff7c2", font=("Arial", 9, "bold"))
             if getattr(char, "electric_remaining", 0) > 0:
                 self._draw_neon_bolt(x1, row*self.cell_size)
+            if getattr(char, "ability_seal_remaining", 0) > 0:
+                self.canvas.create_text(cx, cy-6, text="封", fill="#e4a6ff", font=("Arial", 8, "bold"))
+            if getattr(char, "fate_loom_remaining", 0) > 0:
+                self.canvas.create_text(cx, cy+6, text="縛", fill="#ffcf80", font=("Arial", 8, "bold"))
             if self._is_revealed(char):
                 self.canvas.create_rectangle(x1+3, row*self.cell_size+3, x1+self.cell_size-3, (row+1)*self.cell_size-3,
                                              outline="#7de3f2", width=2, dash=(4, 2))
@@ -1099,7 +1105,9 @@ class RenderingUIMixin:
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill="#151c27",
                                             outline=accent if armed or ability_name == "HUNT" else "#536273", width=2)
                 icon_cx, icon_cy = x1 + 42, (y1 + y2) / 2
-                self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy, selected.is_alive and charges > 0)
+                sealed = getattr(selected, "ability_seal_remaining", 0)
+                self._draw_compact_ability_icon(ability_name, icon_cx, icon_cy,
+                                                selected.is_alive and charges > 0 and not sealed)
 
                 text_cx = (x1 + 70 + x2) / 2
                 if ability_name == "HUNT":
@@ -1118,6 +1126,8 @@ class RenderingUIMixin:
                                 else ("マスを選択" if armed else f"クリックして{label}を構える"))
                     if ability_name == "ASH":
                         help_text = "半径8マス以内を選択" if armed else "クリックしてAshを構える"
+                if sealed and ability_name != "HUNT":
+                    help_text = f"摩耗の呪い：残り{sealed}tick 発動不可"
                 self.canvas.create_text(text_cx, y1+22, text=state,
                                         fill=accent if charges else "#777", font=("Arial", 10, "bold"))
                 self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
@@ -1150,6 +1160,8 @@ class RenderingUIMixin:
                         else ("クリックして発動" if ready else
                               "死亡後に発動可能" if ultimate_name == "SERENADE" and selected.is_alive else "ポイント不足")
                     )
+                    if sealed:
+                        ult_help = f"摩耗の呪い：残り{sealed}tick 発動不可"
                     self.canvas.create_text(
                         (ux1 + ux2) / 2, uy1 + 48,
                         text=ult_help, fill="white", font=("Arial", 8),

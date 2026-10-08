@@ -34,7 +34,7 @@ SEASON_TEAMS = [
         "players": ["Less", "Aspas", "trent", "keiko", "F0rsakeN", "Verno"],
         "igl": "trent",
         "carrier": "trent",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -44,7 +44,7 @@ SEASON_TEAMS = [
         "players": ["Mako", "stax", "Buzz", "Rb", "Zest"],
         "igl": "stax",
         "carrier": "Buzz",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -54,7 +54,7 @@ SEASON_TEAMS = [
         "players": ["Sayonara", "Lar0k", "Derke", "marteen", "something", "Loita"],
         "igl": "Sayonara",
         "carrier": "Derke",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -64,7 +64,7 @@ SEASON_TEAMS = [
         "players": ["Rosé", "Lar0k", "Loita", "Crewn", "lovers rock", "CHICHOO"],
         "igl": "Rosé",
         "carrier": "Loita",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -74,7 +74,7 @@ SEASON_TEAMS = [
         "players": ["Brawk", "jawgemo", "Flashback", "Sato", "valyn", "Katarina"],
         "igl": "valyn",
         "carrier": "Brawk",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -84,7 +84,7 @@ SEASON_TEAMS = [
         "players": ["Meiy", "Jinggg", "d4v41", "kaajak", "Wo0t", "vo0kashu"],
         "igl": "kaajak",
         "carrier": "Wo0t",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 1,  # 登場章。この章だけに登場します。
@@ -94,7 +94,7 @@ SEASON_TEAMS = [
         "players": ["primmie", "HYUNMIN", "Flashback", "d4v41", "nAts", "IbarakiNinja"],
         "igl": "nAts",
         "carrier": "d4v41",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -104,7 +104,7 @@ SEASON_TEAMS = [
         "players": ["icy", "SiuFatBB", "t3xture", "Asuna", "Zekken"],
         "igl": "SiuFatBB",
         "carrier": "t3xture",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -114,7 +114,7 @@ SEASON_TEAMS = [
         "players": ["Tortlilyan", "まーやまくん", "おもこ", "Demon1", "Aspas"],
         "igl": "Tortlilyan",
         "carrier": "おもこ",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -124,7 +124,7 @@ SEASON_TEAMS = [
         "players": ["Nanasaki", "Canezerra", "WoohyuN", "Zest", "Meteor", "yay"],
         "igl": "Nanasaki",
         "carrier": "Nanasaki",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -134,7 +134,7 @@ SEASON_TEAMS = [
         "players": ["leaf", "nAts", "Lar0k", "Chronicle", "Sayonara"],
         "igl": "nAts",
         "carrier": "Sayonara",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -144,7 +144,7 @@ SEASON_TEAMS = [
         "players": ["alecks", "mindfreak", "Wo0t", "something", "eggsterr"],
         "igl": "mindfreak",
         "carrier": "Wo0t",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -154,7 +154,7 @@ SEASON_TEAMS = [
         "players": ["FNS", "crashies", "cNed", "soulcas", "trexx", "Boaster"],
         "igl": "FNS",
         "carrier": "crashies",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 2,  # 登場章。この章だけに登場します。
@@ -164,7 +164,7 @@ SEASON_TEAMS = [
         "players": ["Laz", "SugarZ3ro", "Meiy", "Dep", "IbarakiNinja"],
         "igl": "SugarZ3ro",
         "carrier": "IbarakiNinja",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 3,  # 登場章。この章だけに登場します。
@@ -174,7 +174,7 @@ SEASON_TEAMS = [
         "players": ["Boostio", "Ethan", "jawgemo", "C0M", "Demon1", "s0m"],
         "igl": "Boostio",
         "carrier": "Ethan",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 3,  # 登場章。この章だけに登場します。
@@ -235,7 +235,7 @@ SEASON_TEAMS = [
         "debut_chapter": 3,  # 登場章。この章だけに登場します。
         "name": "Omoko Gaming",
         "initial_rating": 1750.0,
-        "transfer_multiplier": 95.0,
+        "transfer_multiplier": 145.0,
         "players": [
             "ねこさん",
             "とりさん",
@@ -258,27 +258,27 @@ SEASON_TEAMS = [
         "players": ["ごりまる", "ごんごん", "ごんた", "くんた", "くりまる"],
         "igl": "ごりまる",
         "carrier": "ごんた",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 4,  # 登場章。この章だけに登場します。
         "name": "SUPES",
         "initial_rating": 1700.0,
-        "transfer_multiplier": 200.0,
+        "transfer_multiplier": 100.0,
         "players": ["A-Train", "Deep", "Homelander", "Stormfront", "Blacknoir"],
         "igl": "Homelander",
         "carrier": "A-Train",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 4,  # 登場章。この章だけに登場します。
         "name": "Carnal Lust Syndicate",
         "initial_rating": 1450.0,
         "transfer_multiplier": 100.0,
-        "players": ["koldamenta", "Rossy", "CHICHOO", "Smoggy", "SereNa"],
+        "players": ["koldamenta", "Rossy", "CHICHOO", "Smoggy", "SereNa", "Lysoar"],
         "igl": "SereNa",
         "carrier": "Rossy",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
     },
     {
         "debut_chapter": 4,  # 登場章。この章だけに登場します。
@@ -296,6 +296,23 @@ SEASON_TEAMS = [
         ],
         "igl": "Furina",
         "carrier": "Kr1stal",
-        "ai": "toru_ai_v3.1",
+        "ai": "toru_ai_v4.0",
+    },
+    {
+        "debut_chapter": 4,  # 登場章。この章だけに登場します。
+        "name": "SereNade",
+        "initial_rating": 1900.0,
+        "transfer_multiplier": 100.0,
+        "players": [
+            "まーやまくん",
+            "Retloff",
+            "Mazino",
+            "tex",
+            "Cryocells",
+            "Brawk",
+        ],
+        "igl": "Retloff",
+        "carrier": "まーやまくん",
+        "ai": "toru_ai_v4.0",
     },
 ]

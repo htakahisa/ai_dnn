@@ -9,6 +9,8 @@ def shield_stats_text(player, *, compact=False):
         f"シールド: {player.shield_hp:g}HP",
         f"シールドピアサー: {'あり' if player.shield_piercer else 'なし'}",
         f"シールドクラッシュ: {player.shield_crash:g}HP",
+        f"摩耗の呪い: {getattr(player, 'erosion_curse', 0):g}tick",
+        f"運命の織機: {getattr(player, 'fate_loom', 0):g}tick",
     )
     return (" / " if compact else "\n").join(fields)
 

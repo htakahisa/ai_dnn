@@ -5,7 +5,7 @@ import torch
 from ..controller import GhostChampionsV2AttackerController
 from .observation import ObservationEncoder,proposal_kind,OBSERVATION_SCHEMA
 from .policy import ResidualPolicy
-from .actions import ACTIONS,candidates,commit_recon
+from .actions import ACTIONS,candidates,commit_recon,constrain_proposal
 
 
 class LearnedAttackerController(GhostChampionsV2AttackerController):
@@ -31,7 +31,6 @@ class LearnedAttackerController(GhostChampionsV2AttackerController):
         proposal=super().decide_move(char,state)
         if state.get("defender_setup_active") or not char.is_alive:
             return proposal
-        kind=proposal_kind(proposal,char.pos)
         command=proposal[1] if isinstance(proposal,tuple) and len(proposal)>1 else None
         request=self.tactics.last_recon_request.get(name)
         generated=(isinstance(command,dict) and command.get("ability")=="RECON"
@@ -44,6 +43,10 @@ class LearnedAttackerController(GhostChampionsV2AttackerController):
                 self.tactics.last_cast.pop(name,None)
             else:
                 self.tactics.last_cast[name]=old_cast
+        permitted=constrain_proposal(char,state,proposal)
+        generated=generated and permitted is proposal
+        proposal=permitted
+        kind=proposal_kind(proposal,char.pos)
         obs=self.encoder.encode(char,state,self.tactics,proposal)
         choices,mask=candidates(char,state,self.tactics,proposal)
         if self.policy is None:

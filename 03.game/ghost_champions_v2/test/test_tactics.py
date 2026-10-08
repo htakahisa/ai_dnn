@@ -1,5 +1,6 @@
 import copy
 import math
+import random
 from pathlib import Path
 import sys
 from types import SimpleNamespace as NS
@@ -29,13 +30,13 @@ class TacticsTests(unittest.TestCase):
     def setUp(self):
         self.config=load_config()
         self.policy=AttackerTactics(self.config)
+        self.policy.opening_strategy="DEFAULT"
 
-    def test_frc_changes_preserve_other_profiles_and_global_parameters(self):
-        previous=load_config(Path(__file__).resolve().parents[1]/"configs/pre_frc_fix.json")
-        current=copy.deepcopy(self.config)
-        del previous["profiles"]["FRC"]
-        del current["profiles"]["FRC"]
-        self.assertEqual(current,previous)
+    def test_config_rejects_opponent_specific_settings(self):
+        self.assertNotIn("profiles",self.config)
+        legacy=copy.deepcopy(self.config)
+        legacy["profiles"]={"OMG":{"preferred_site":"A"}}
+        with self.assertRaises(ValueError): validate_config(legacy)
 
     def test_frc_carrier_queue_clears_the_narrow_corridor_without_a_solo_move(self):
         from map_data import NEW_MAZE_STR
@@ -64,11 +65,11 @@ class TacticsTests(unittest.TestCase):
         self.assertLess(len(route(grid,tuple(holder.pos),[(7,40)])),before-10)
 
     def test_config_and_stage_ablation_respect_global_disable(self):
-        self.assertFalse(active_flags(self.config,"hold",{})["early_recon"])
-        self.assertTrue(active_flags(self.config,"recon",{})["early_recon"])
+        self.assertFalse(active_flags(self.config,"hold")["early_recon"])
+        self.assertTrue(active_flags(self.config,"recon")["early_recon"])
+        self.assertEqual(active_flags(self.config,"sites"),active_flags(self.config,"profiles"))
         self.config["flags"]["post_plant_hold"]=False
-        self.assertFalse(active_flags(self.config,"entry",{"post_plant_hold":True})["post_plant_hold"])
-        self.assertFalse(any(active_flags(self.config,"entry",{"preserve_v1":True}).values()))
+        self.assertFalse(active_flags(self.config,"entry")["post_plant_hold"])
         self.config["hold"]["radius"]=99
         with self.assertRaises(ValueError): validate_config(self.config)
 
@@ -172,17 +173,120 @@ class TacticsTests(unittest.TestCase):
         self.assertEqual(self.policy.recon(char,s)[1]["ability"],"RECON")
         self.assertEqual(self.policy.last_recon_request["seeker"]["axis"],"A")
 
-    def test_frc_site_gate_and_fnatic_four_player_avoidance(self):
-        profile=self.config["profiles"]["FRC"]
-        self.assertIsNone(self.policy.choose_site(profile))
+    def test_initial_site_is_shared_within_a_round_and_varies_between_rounds(self):
+        rng=random.getstate()
+        try:
+            draws=set()
+            for seed in range(20):
+                random.seed(seed)
+                self.policy.reset_round()
+                first=self.policy.choose_site()
+                draws.add(first)
+                self.assertEqual(self.policy.initial_site,first)
+                for _ in range(10): self.assertEqual(self.policy.choose_site(),first)
+            self.assertEqual(draws,{"A","B"})
+        finally:
+            random.setstate(rng)
+
+    def test_opening_lottery_is_shared_per_round_and_respects_common_weights(self):
+        rng=random.getstate()
+        try:
+            random.seed(1234)
+            draws=set()
+            for _ in range(40):
+                self.policy.reset_round()
+                selected=self.policy.choose_opening()
+                draws.add(selected)
+                for _ in range(5): self.assertEqual(self.policy.choose_opening(),selected)
+            self.assertEqual(draws,{"DEFAULT","RUSH","SPLIT"})
+            self.config["opening"]["weights"]={"DEFAULT":0,"RUSH":1,"SPLIT":0}
+            for _ in range(10):
+                self.policy.reset_round()
+                self.assertEqual(self.policy.choose_opening(),"RUSH")
+            self.config["opening"]["weights"]["RUSH"]=0
+            with self.assertRaises(ValueError): validate_config(self.config)
+        finally:
+            random.setstate(rng)
+
+    def test_opening_changes_scout_target_and_split_path(self):
+        grid=np.zeros((26,44),int)
+        grid[8,3]=grid[7,40]=2
+        holder=unit("carrier",(20,18),spike=True)
+        first=unit("a",(20,19),ability="RECON")
+        flank=unit("b",(20,21),ability="RECON")
+        left=unit("left",(20,17))
+        right=unit("right",(21,21))
+        s=state([holder,first,flank,left,right],planted=False,grid=grid)
+        results={}
+        for strategy in ("DEFAULT","RUSH","SPLIT"):
+            self.policy.reset_round()
+            self.policy.opening_strategy=strategy
+            self.policy.initial_site=self.policy.selected_site="A"
+            settings,flags=self.policy.observe(flank,s)
+            results[strategy]=self.policy.preplant(flank,s,settings,flags)
+            if strategy=="RUSH":
+                self.assertEqual(self.policy.scout_axis(flank,self.policy.allies(flank,s)),"A")
+            if strategy=="SPLIT":
+                self.assertEqual(self.policy.split_players,{"b","right"})
+                self.assertEqual(results[strategy][0],[19,21])
+                right.is_alive=False
+                self.assertIsNone(self.policy.split_move(flank,s,(8,3)))
+                right.is_alive=True
+        self.assertEqual(results["DEFAULT"][1]["ability"],"RECON")
+        self.assertEqual(results["RUSH"][1],"MOVE")
+        self.assertNotEqual(results["RUSH"][0],results["SPLIT"][0])
+
+    def test_setup_does_not_draw_opening_or_site(self):
+        grid=np.zeros((26,44),int)
+        grid[8,3]=grid[7,40]=2
+        holder=unit("carrier",(20,18),spike=True)
+        self.policy.reset_round()
+        s=state([holder],planted=False,grid=grid,tick=0)
+        s["defender_setup_active"]=True
+        settings,flags=self.policy.observe(holder,s)
+        self.assertIsNone(self.policy.preplant(holder,s,settings,flags))
+        self.assertIsNone(self.policy.opening_strategy)
+        self.assertIsNone(self.policy.initial_site)
+
+    def test_site_selection_uses_observations_and_keeps_ties(self):
+        self.policy.initial_site=self.policy.selected_site="B"
+        self.assertEqual(self.policy.choose_site(),"B")
         self.policy.observed_defenders_by_axis={"A":2,"Mid":0,"B":3}
-        self.assertEqual(self.policy.choose_site(profile),"A")
+        self.assertEqual(self.policy.choose_site(),"A")
         self.policy.observed_defenders_by_axis={"A":4,"Mid":0,"B":1}
-        self.assertEqual(self.policy.choose_site(self.config["profiles"]["FNC"]),"B")
+        self.assertEqual(self.policy.choose_site(),"B")
+        self.policy.selected_site="A"
         self.policy.observed_defenders_by_axis={"A":4,"Mid":1,"B":0}
-        self.assertIsNone(self.policy.choose_site(self.config["profiles"]["FNC"]))
+        self.assertEqual(self.policy.choose_site(),"A")  # B is still unknown.
         self.policy.surveyed_axes.add("B")
-        self.assertEqual(self.policy.choose_site(self.config["profiles"]["FNC"]),"B")
+        self.assertEqual(self.policy.choose_site(),"B")
+        self.policy.observed_defenders_by_axis={"A":2,"Mid":0,"B":2}
+        self.assertEqual(self.policy.choose_site(),"B")
+
+    def test_roster_changes_do_not_change_tactical_settings_or_actions(self):
+        from party_presets import get_preset
+        grid=np.zeros((26,44),int)
+        grid[8,3]=grid[7,40]=2
+        carrier=unit("carrier",(20,18),spike=True)
+        support=unit("support",(20,19))
+        s=state([carrier,support,unit("seen-a",(7,2),"D"),
+                 unit("seen-b1",(7,40),"D"),unit("seen-b2",(8,40),"D")],
+                planted=False,grid=grid,tick=40)
+        results=[]
+        labels=[]
+        for name in ("Touyama Gaming","Omoko Gaming","Furina Classic","Fnatic2023","Gorigons","SUPES"):
+            self.policy.reset_round()
+            self.policy.opening_strategy="DEFAULT"
+            self.policy.initial_site=self.policy.selected_site="B"
+            self.policy.utility_used=True
+            s["enemy_roster"]=[dict(base_name=n) for n in get_preset(name).players]
+            settings,flags=self.policy.observe(carrier,s)
+            labels.append(self.policy.opponent)
+            results.append((settings,flags,self.policy.recon_config(),
+                            self.policy.preplant(carrier,s,settings,flags),self.policy.selected_site))
+        self.assertEqual(set(labels),{"TYG","OMG","FRC","FNC","GG","SPS"})
+        self.assertTrue(all(result==results[0] for result in results))
+        self.assertEqual(results[0][-1],"A")
 
     def test_smoke_never_shields_the_spike_or_assigned_fire_lines(self):
         char=unit("smoker",(10,12),ability="SMOKE")
@@ -192,7 +296,7 @@ class TacticsTests(unittest.TestCase):
         self.policy._assign_hold(char,s,(10,10))
         self.assertIsNone(self.policy._smoke(char,s,(10,10),[enemy]))
 
-    def test_expired_third_defender_does_not_turn_a_crowded_site_into_two(self):
+    def test_expired_sightings_keep_peak_counts_for_model_observation(self):
         char=unit("a",(10,10))
         enemies=[unit(str(i),(i+1,2),"D") for i in range(3)]
         s=state([char,*enemies],planted=False)
@@ -201,9 +305,23 @@ class TacticsTests(unittest.TestCase):
         s.update(chars=[char,*enemies[:2]],battle_tick=30)
         self.policy.observe(char,s)
         self.assertEqual(self.policy.observed_defenders_by_axis["A"],2)
-        self.assertIsNone(self.policy.choose_site(self.config["profiles"]["FRC"]))
+        self.assertEqual(self.policy.max_observed_defenders_by_axis["A"],3)
         self.policy.reset_round()
         self.assertEqual(self.policy.max_observed_defenders_by_axis["A"],0)
+
+    def test_new_sightings_do_not_redirect_an_active_plant(self):
+        grid=np.zeros((26,44),int)
+        grid[8,3]=grid[7,40]=2
+        carrier=unit("carrier",(7,40),spike=True)
+        carrier.plant_timer=1
+        s=state([carrier],planted=False,grid=grid)
+        settings,flags=self.policy.observe(carrier,s)
+        self.policy.selected_site="B"
+        self.policy.observed_defenders_by_axis={"A":1,"Mid":0,"B":4}
+        result=self.policy.preplant(carrier,s,settings,flags)
+        self.assertEqual(result[1],"PLANT")
+        self.assertEqual(self.policy.selected_site,"B")
+        self.assertEqual(self.policy.target_plant_pos,(7,40))
 
     def test_frc_scout_keeps_b_assignment_when_a_scout_dies(self):
         from party_presets import get_preset
@@ -232,7 +350,7 @@ class TacticsTests(unittest.TestCase):
         s["enemy_roster"]=[dict(base_name=n) for n in get_preset("Furina Classic").players]
         profile,flags=self.policy.observe(second,s)
         self.policy.recon_sequences["b"]=1
-        self.policy.config["profiles"]["FRC"]["recon"]["secondary_waypoints"]["B"]=[7,23]
+        self.policy.config["recon"]["secondary_waypoints"]["B"]=[7,23]
         action=self.policy.preplant(second,s,profile,flags)
         self.assertEqual(action[0],[7,23])
         self.assertEqual(action[1],"MOVE")
@@ -281,14 +399,19 @@ class TacticsTests(unittest.TestCase):
         action=self.policy.recon(seeker,s,scouting=True)
         self.assertEqual(action[0],[7,23])
         self.assertNotIsInstance(action[1],dict)
-        seeker.pos=action[0]
-        s["battle_tick"]=11
-        self.policy.observe(seeker,s)
-        action=self.policy.recon(seeker,s,scouting=True)
+        for tick in range(11,24):
+            seeker.pos=action[0]
+            s["battle_tick"]=tick
+            self.policy.observe(seeker,s)
+            action=self.policy.recon(seeker,s,scouting=True)
+            if isinstance(action[1],dict):
+                break
         self.assertEqual(action[1]["ability"],"RECON")
+        self.assertLessEqual(math.dist(seeker.pos,self.config["recon"]["secondary_waypoints"]["B"]),
+                             self.config["recon"]["waypoint_radius"])
         impact=projectile_path(grid,tuple(seeker.pos),action[1]["target"])[-1]
         self.assertTrue(all(max(abs(impact[i]-p[i]) for i in (0,1))<=4
-                            for p in ((7,38),(3,39))))
+                            for p in ((7,38),(2,40))))
 
     def test_smoke_alone_does_not_satisfy_flash_or_recon_before_entry(self):
         char=unit("smoker",(10,12),ability="SMOKE")
@@ -345,17 +468,73 @@ class TacticsTests(unittest.TestCase):
         self.assertEqual(len(path),5)
         self.assertEqual(path[1],(3,2))  # IQ adapter/engine wait until it clears.
 
-    def test_plant_cohort_wait_does_not_interrupt_an_active_plant(self):
+    def test_safe_legal_plant_does_not_wait_for_distant_teammates_or_fixed_anchor(self):
         grid=np.zeros((21,21),int)
-        grid[2,2]=2
-        carrier=unit("carrier",(2,2),spike=True)
+        grid[2,2]=grid[2,3]=2
+        self.config["plant_targets"]["A"]=[2,2]
+        carrier=unit("carrier",(2,3),spike=True)
         s=state([carrier,unit("friend",(18,18))],planted=False,grid=grid)
-        profile=self.config["profiles"]["OMG"]
-        flags=active_flags(self.config,"entry",profile)
+        profile=self.config["team_tactics"]
+        flags=active_flags(self.config,"entry")
         self.policy.observe(carrier,s)
-        self.assertNotEqual(self.policy.preplant(carrier,s,profile,flags)[1],"PLANT")
+        self.assertEqual(self.policy.preplant(carrier,s,profile,flags)[1],"PLANT")
+        self.assertEqual(self.policy.target_plant_pos,(2,3))
         carrier.plant_timer=1
         self.assertEqual(self.policy.preplant(carrier,s,profile,flags)[1],"PLANT")
+
+    def test_favorable_plant_needs_cover_instead_of_the_whole_team(self):
+        grid=np.zeros((21,21),int)
+        grid[2,3]=2
+        carrier=unit("carrier",(2,3),spike=True)
+        chars=[carrier,unit("cover",(1,3)),*(unit(str(i),(18,i)) for i in range(3)),
+               *(unit("enemy"+str(i),(5,6+i),"D") for i in range(3))]
+        s=state(chars,planted=False,grid=grid)
+        settings,flags=self.policy.observe(carrier,s)
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[1],"PLANT")
+        self.assertEqual(self.policy.plant_commit["reason"],"plant_advantage_with_cover")
+
+    def test_urgent_plant_overrides_contact_utility_and_distant_site_choice(self):
+        grid=np.zeros((21,21),int)
+        grid[2,2]=grid[2,18]=2
+        carrier=unit("carrier",(2,4),spike=True)
+        s=state([carrier,unit("distant",(18,18)),unit("threat",(5,4),"D")],
+                planted=False,grid=grid,tick=94)
+        s["round_timer"]=6
+        settings,flags=self.policy.observe(carrier,s)
+        self.policy.initial_site=self.policy.selected_site="B"
+        action=self.policy.preplant(carrier,s,settings,flags)
+        self.assertEqual(action[0],[2,3])
+        self.assertEqual(self.policy.selected_site,"A")
+        self.assertEqual(self.policy.plant_commit["reason"],"plant_deadline")
+        carrier.pos=[2,2]
+        s["battle_tick"]+=1
+        self.policy.observe(carrier,s)
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[1],"PLANT")
+
+    def test_short_plant_position_adjustment_stops_when_time_is_low_or_route_blocked(self):
+        grid=np.zeros((21,21),int)
+        grid[2,2:5]=2
+        self.config["plant_targets"]["A"]=[2,2]
+        carrier=unit("carrier",(2,4),spike=True)
+        hidden=unit("hidden",(-1,-1),"D",known=False)
+        s=state([carrier,hidden],planted=False,grid=grid)
+        s["round_timer"]=50
+        settings,flags=self.policy.observe(carrier,s)
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[0],[2,3])
+        self.assertEqual(self.policy.plant_commit["reason"],"plant_nearby_position")
+        s["chars"].append(unit("blocker",(2,3),"D"))
+        self.policy.observe(carrier,s)
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[1],"PLANT")
+        self.assertEqual(self.policy.plant_commit["reason"],"plant_position_blocked")
+        s["chars"].pop()
+        s["round_timer"]=4
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[1],"PLANT")
+        self.policy.reset_round()
+        s.update(round_timer=50,chars=[carrier,hidden,unit("blocking",(2,3),"D",known=True)])
+        settings,flags=self.policy.observe(carrier,s)
+        # A known enemy directly blocks adjustment; the deadline still forces a plant.
+        s["round_timer"]=4
+        self.assertEqual(self.policy.preplant(carrier,s,settings,flags)[1],"PLANT")
 
     def test_directional_recon_matches_actual_engine_through_walls(self):
         from abilities_los import AbilityLosMixin

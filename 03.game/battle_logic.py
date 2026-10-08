@@ -11,10 +11,11 @@ import json
 from analytics.combat_tracker import CombatTracker
 
 from controllers import UserInputController
-from iq_perception import build_team_position_view
+from iq_perception import build_team_position_view, enemy_position_known
 from roster_utils import roster_information
 from game_core import (
     absorb_shield_damage,
+    apply_on_hp_damage,
     TICK_TIME,
     validate_tick_time_ms,
     PLANT_REQUIRED_TICKS,
@@ -533,6 +534,16 @@ class BattleLogicMixin(MatchPlaybackMixin):
             "ultimate_cost": int(char.ultimate_cost),
             "ultimate_name": char.ultimate_name,
             "orb_collect_timer": int(char.orb_collect_timer),
+            "ally_escape_portals": [
+                {"owner": portal.get("owner"), "remaining_ticks": portal.get("remaining_ticks", 0)}
+                for portal in getattr(self, "escape_portals", ())
+                if any(ally.name == portal.get("owner") and ally.team == char.team for ally in self.chars)
+            ],
+            "visible_escape_channel_owners": [
+                portal.get("owner") for portal in getattr(self, "escape_portals", ())
+                if any(ally.name == portal.get("owner")
+                       and enemy_position_known(self, char.team, ally) for ally in self.chars)
+            ],
             **roster_information(self.chars, char.team),
         }
 
@@ -793,7 +804,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
         if explicit_facing in FACING_VECTORS and not char.facing_forced_this_tick:
             char.facing = explicit_facing
 
-        if self._ramp_blocks_movement(char):
+        if getattr(char, "fate_loom_remaining", 0) > 0 or self._ramp_blocks_movement(char):
             self._finalize_movement_transition_state(char)
             return
 
@@ -858,7 +869,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     if step_limit is not None:
                         extra_steps = min(extra_steps, max(0, int(step_limit) - 1))
                 for _ in range(extra_steps):
-                    if self._ramp_blocks_movement(char):
+                    if getattr(char, "fate_loom_remaining", 0) > 0 or self._ramp_blocks_movement(char):
                         break
                     prev = tuple(char.pos)
                     cand_r, cand_c = prev[0] + dr, prev[1] + dc
@@ -1430,8 +1441,9 @@ class BattleLogicMixin(MatchPlaybackMixin):
                         target.iron_will_charges -= 1
                         target.hp = 1
                         target.iron_will_triggered_this_tick = True
-                    else:
-                        self._kill_character(shooter, target)
+                apply_on_hp_damage(target, shooter, pre_damage_hp, self.battle_tick)
+                if target.hp <= 0 and not getattr(target, "is_ultimate_drone", False):
+                    self._kill_character(shooter, target)
 
         self.monitor_drones = [
             drone for drone in getattr(self, "monitor_drones", []) if drone.is_alive
@@ -1439,6 +1451,17 @@ class BattleLogicMixin(MatchPlaybackMixin):
 
         self.last_shots = executed_shots
         self.last_shot = executed_shots[-1] if executed_shots else None
+
+    def _advance_on_hit_effects(self):
+        # Damage happens after the action phase. Keep N full following action
+        # phases blocked, and keep seals active through their final battle phase.
+        for char in self.chars:
+            for remaining, applied in (
+                ("ability_seal_remaining", "ability_seal_applied_tick"),
+                ("fate_loom_remaining", "fate_loom_applied_tick"),
+            ):
+                if getattr(char, applied, None) != self.battle_tick:
+                    setattr(char, remaining, max(0, getattr(char, remaining, 0) - 1))
 
     def _resolve_defuse_completion(self):
         """射撃後に解除完了を確定する。生存している解除者だけが完了できる。"""
@@ -1537,6 +1560,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
 
         # 射撃を解決してから解除完了を判定する。
         self._resolve_defuse_completion()
+        self._advance_on_hit_effects()
 
         alive_A = any(c.is_alive for c in self.chars if c.team == "A")
         alive_D = any(c.is_alive for c in self.chars if c.team == "D")

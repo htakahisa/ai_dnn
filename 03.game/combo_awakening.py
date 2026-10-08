@@ -31,6 +31,8 @@ _AWAKENING_SNAPSHOT_KEYS = (
     "max_shield_hp",
     "shield_piercer",
     "shield_crash",
+    "erosion_curse",
+    "fate_loom",
     "role",
     "ability_name",
     "hunter_active",
@@ -48,13 +50,14 @@ _AWAKENING_SNAPSHOT_KEYS = (
 def _snapshot_character_awakening_state(char):
     snapshot = {key: getattr(char, key, None) for key in _AWAKENING_SNAPSHOT_KEYS}
     snapshot["_contract_max_hp_lost"] = getattr(char, "contract_max_hp_lost", 0)
+    snapshot["_fate_max_hp_lost"] = getattr(char, "fate_max_hp_lost", 0)
     return snapshot
 
 
 def _restore_character_awakening_state(char, snapshot):
     old_shield_max = getattr(char, "max_shield_hp", None)
     for key, value in snapshot.items():
-        if key == "_contract_max_hp_lost":
+        if key in ("_contract_max_hp_lost", "_fate_max_hp_lost"):
             continue
         setattr(char, key, value)
     restored_shield_max = getattr(char, "max_shield_hp", None)
@@ -62,7 +65,10 @@ def _restore_character_awakening_state(char, snapshot):
         char.shield_hp = max(
             0, min(restored_shield_max, char.shield_hp + restored_shield_max - old_shield_max)
         )
-    lost_since_snapshot = max(0, getattr(char, "contract_max_hp_lost", 0) - snapshot.get("_contract_max_hp_lost", 0))
+    lost_since_snapshot = sum(
+        max(0, getattr(char, key, 0) - snapshot.get("_" + key, 0))
+        for key in ("contract_max_hp_lost", "fate_max_hp_lost")
+    )
     if lost_since_snapshot:
         char.max_hp = max(0, char.max_hp - lost_since_snapshot)
         char.hp = min(char.hp, char.max_hp)
@@ -726,7 +732,7 @@ class ComboAwakeningMixin:
         キャラ自身のアビリティとは別枠でその場にスモークを焚く。
         1ラウンドにつき1度だけ発動する。"""
         active = getattr(shooter, "active_awakenings", None)
-        if not active or not shooter.is_alive:
+        if not active or not shooter.is_alive or getattr(shooter, "fate_loom_remaining", 0) > 0:
             return
 
         used_names = getattr(shooter, "_leap_awakenings_used", None)

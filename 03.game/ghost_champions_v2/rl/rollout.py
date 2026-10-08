@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import numpy as np
 import torch
+from ..hazards import PublicHazards, avoidance_reward
 
 ROOT=Path(__file__).resolve().parents[2]
 OPPONENTS={"TYG":("Touyama Gaming","touyama_gaming_v2"),"OMG":("Omoko Gaming","omoko_gaming_v1"),
@@ -83,9 +84,9 @@ class Recorder:
         self.by_agent[name].append(row)
         self.latest[name]=row
 
-    def reward(self,reward,gamma,terminal):
-        for row in self.latest.values():
-            row["reward"]+=gamma**row["age"]*reward
+    def reward(self,reward,gamma,terminal,individual=None):
+        for name,row in self.latest.items():
+            row["reward"]+=gamma**row["age"]*(reward+(individual or {}).get(name,0.))
             row["age"]+=1
             row["discount"]=0. if terminal else gamma**row["age"]
 
@@ -100,7 +101,8 @@ class Recorder:
         return self.rows
 
 
-def play_round(code,seed,*,policy=None,mode="teacher",gamma=.99,step=0,decay_steps=300_000,recon_reward=.02,gae_lambda=.95):
+def play_round(code,seed,*,policy=None,mode="teacher",gamma=.99,step=0,decay_steps=300_000,recon_reward=.02,gae_lambda=.95,
+               hazard_shaping_weight=.05,hazard_hit_penalty=.03):
     from .controller import LearnedAttackerController
     recorder=Recorder()
     with engine_directory():
@@ -136,13 +138,45 @@ def play_round(code,seed,*,policy=None,mode="teacher",gamma=.99,step=0,decay_ste
             # terms telescope. Anneal it between complete training rounds.
             coef=shaping_coefficient(step,decay_steps)
             terminal=False
+            from public_effects import PublicEffectReader
+            effect_sensor=PublicEffectReader()
+            reward_hazards=PublicHazards()
+            hazard_exposed_ticks=hazard_status_hits=0
+            def hazard_snapshot():
+                hazards=reward_hazards
+                hazards.casts=dict(game.attacker_controller.inner.tactics.hazards.casts)
+                hazards.update(dict(grid=game.grid,chars=game.chars,smoke_cells=game._smoke_cells(),battle_tick=game.battle_tick,
+                                    public_effects=effect_sensor.read_visible(game,"A")))
+                return hazards
+            def status(char):
+                return (int(getattr(char,"blind_remaining",0)),int(getattr(char,"life_contract_remaining",0)))
             for _ in range(1000):
                 setup=game.defender_setup_phase.active
+                if not setup:
+                    hazards_before=hazard_snapshot()
+                    agents_before={str(c.name):(hazards_before.risk(c.pos),status(c),
+                                   {e.kind for e in hazards_before.effects if e.handle not in hazards_before.known_own})
+                                   for c in game.chars if c.team=="A" and c.is_alive}
                 before=potential(sum(c.is_alive for c in game.chars if c.team=="A"),
                                  sum(c.is_alive for c in game.chars if c.team=="D"),game.is_planted)
                 game._simulate_tick()
                 terminal=game.round_over or game.current_round!=1 or game.match_over
                 if not setup:
+                    hazards_after=hazard_snapshot()
+                    individual={}
+                    for char in game.chars:
+                        name=str(char.name)
+                        if name not in agents_before:
+                            continue
+                        before_risk,before_status,visible_kinds=agents_before[name]
+                        kinds=visible_kinds if before_risk>0 else set()
+                        hazard_exposed_ticks+=int(before_risk>=.35)
+                        penalty=avoidance_reward(before_status,status(char),0.,0.,gamma=gamma,terminal=terminal,
+                                                 weight=0.,hit_weight=1.,kinds=kinds)
+                        hazard_status_hits+=int(penalty<0)
+                        individual[name]=coef*avoidance_reward(before_status,status(char),before_risk,
+                            hazards_after.risk(char.pos),gamma=gamma,terminal=terminal or not char.is_alive,
+                            weight=hazard_shaping_weight,hit_weight=hazard_hit_penalty,kinds=kinds)
                     after=potential(sum(c.is_alive for c in game.chars if c.team=="A"),
                                     sum(c.is_alive for c in game.chars if c.team=="D"),game.is_planted,terminal)
                     novel=set()
@@ -161,7 +195,7 @@ def play_round(code,seed,*,policy=None,mode="teacher",gamma=.99,step=0,decay_ste
                     if terminal and record is None:
                         raise RuntimeError("Terminal training round has no analytics result")
                     env=(1. if record and record["winner"]=="attacker" else -1.) if terminal else 0.
-                    recorder.reward(env+coef*(gamma*after-before)+coef*recon_reward*new,gamma,terminal)
+                    recorder.reward(env+coef*(gamma*after-before)+coef*recon_reward*new,gamma,terminal,individual)
                 if terminal:
                     break
             if not terminal:
@@ -170,6 +204,7 @@ def play_round(code,seed,*,policy=None,mode="teacher",gamma=.99,step=0,decay_ste
             stats=dict(opponent=code,seed=seed,winner=record["winner"],reason=record["reason"],
                        planted=record["planted"],decisions=len(recorder.rows),recon_new=len(seen_recon),
                        recon_rewarded_new=rewarded_recon,opponent_modules=len(frozen_modules),
+                       hazard_exposed_ticks=hazard_exposed_ticks,hazard_status_hits=hazard_status_hits,
                        opponent_model_digest=opponent_digest,round_records=len(game.analytics_tracker.round_records))
             if module_digest(frozen_modules)!=opponent_digest:
                 raise RuntimeError("Frozen opponent model changed during a training round")

@@ -180,6 +180,8 @@ def play_job(job):
 def _play_job(job):
     code, index, controller, output, base_seed, stage = job
     os.environ["GC_V2_STAGE"] = stage
+    if os.environ.get("GC_OPPONENT_SNAPSHOT"):
+        sys.path.insert(0,str(Path(os.environ["GC_OPPONENT_SNAPSHOT"]).resolve()))
     if os.environ.get("GC_RUNTIME_SNAPSHOT"):
         sys.path.insert(0,str(Path(os.environ["GC_RUNTIME_SNAPSHOT"]).resolve()))
     import torch
@@ -203,6 +205,21 @@ def _play_job(job):
     return str(path), round(time.monotonic()-started, 1)
 
 
+def evaluation_status(schedule, results, output):
+    missing = [f"{code}/{i}" for code in schedule["opponents"] for i in range(schedule["series_count"])
+               if not (output/f"series_{code}_{i:03d}.json").exists()]
+    minimum = schedule.get("minimum_attack_rounds", 100)
+    below_100 = [OPPONENTS[code][0] for code in schedule["opponents"]
+                 if results.get(OPPONENTS[code][0], {}).get("n", 0) < 100]
+    insufficient = [OPPONENTS[code][0] for code in schedule["opponents"]
+                    if results.get(OPPONENTS[code][0], {}).get("n", 0) < minimum]
+    return dict(scheduled_series=len(schedule["opponents"])*schedule["series_count"],
+                missing_series=missing, opponents_below_100_attack_rounds=below_100,
+                minimum_attack_rounds=minimum, opponents_below_minimum_attack_rounds=insufficient,
+                milestone_sample_complete=not missing and not below_100,
+                complete=not missing and not insufficient)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--controller", choices=("ghost_champions_v1", "ghost_champions_v2", "v1", "v2"), default="ghost_champions_v1")
@@ -213,7 +230,7 @@ def main():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--base-seed", type=int, default=20261007)
     p.add_argument("--workers", type=int, default=1)
-    p.add_argument("--stage", choices=("baseline", "hold", "recon", "profiles", "entry"), default="entry")
+    p.add_argument("--stage", choices=("baseline", "hold", "recon", "sites", "profiles", "entry"), default="entry")
     p.add_argument("--baseline", type=Path)
     p.add_argument("--config", type=Path, help="Optional GC v2 config; recorded in the evaluation manifest")
     p.add_argument("--runtime-snapshot",type=Path,help="Immutable local copy of character/combo/map definitions")
@@ -226,6 +243,8 @@ def main():
     runtime_root=runtime_snapshot(snapshot) if snapshot else ROOT
     if snapshot:
         os.environ["GC_RUNTIME_SNAPSHOT"]=str(runtime_root)
+    if os.environ.get("GC_OPPONENT_SNAPSHOT"):
+        sys.path.insert(0,str(Path(os.environ["GC_OPPONENT_SNAPSHOT"]).resolve()))
     if args.minimum_attack_rounds < 1:
         p.error("minimum attack rounds must be positive")
     if args.series_count < 1 or args.workers < 1:
@@ -243,6 +262,11 @@ def main():
                                       for name in RUNTIME_FILES}
     if snapshot:
         manifest["runtime_snapshot"]=str(runtime_root)
+    if os.environ.get("GC_OPPONENT_SNAPSHOT"):
+        opponent_root=Path(os.environ["GC_OPPONENT_SNAPSHOT"]).resolve()
+        manifest["opponent_snapshot"]=str(opponent_root)
+        manifest["opponent_snapshot_hashes"]={str(p.relative_to(opponent_root)):hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(opponent_root.rglob("*")) if p.is_file() and p.suffix in (".py",".pt",".pth")}
     if args.baseline and (args.baseline/"manifest.json").exists():
         old_runtime=baseline_manifest.get("runtime_data_hashes")
         if old_runtime is not None and old_runtime!=manifest["runtime_data_hashes"] and not args.summarize_only:
@@ -281,6 +305,10 @@ def main():
         if any(hashlib.sha256((runtime_root/name).read_bytes()).hexdigest()!=digest
                for name,digest in manifest["runtime_data_hashes"].items()):
             p.error("runtime character/combo/map data changed during evaluation; saved results cannot be combined")
+        if os.environ.get("GC_OPPONENT_SNAPSHOT") and any(not (opponent_root/name).is_file()
+                or hashlib.sha256((opponent_root/name).read_bytes()).hexdigest()!=digest
+                for name,digest in manifest["opponent_snapshot_hashes"].items()):
+            p.error("opponent snapshot changed during evaluation")
     paths = sorted(args.output.glob("series_*.json"))
     results = summarize(paths)
     baseline = matched_baseline(paths,args.baseline) if args.baseline else None
@@ -289,22 +317,12 @@ def main():
     (args.output/"summary.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     report = markdown(results, baseline)
     schedule = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else manifest
-    missing = [f"{code}/{i}" for code in schedule["opponents"] for i in range(schedule["series_count"])
-               if not (args.output/f"series_{code}_{i:03d}.json").exists()]
-    minimum = schedule.get("minimum_attack_rounds", 100)
-    below_100 = [OPPONENTS[code][0] for code in schedule["opponents"]
-                 if results.get(OPPONENTS[code][0], {}).get("n", 0) < 100]
-    insufficient = [OPPONENTS[code][0] for code in schedule["opponents"]
-                    if results.get(OPPONENTS[code][0], {}).get("n", 0) < minimum]
-    status = dict(scheduled_series=len(schedule["opponents"])*schedule["series_count"],
-                  missing_series=missing, opponents_below_100_attack_rounds=below_100,
-                  minimum_attack_rounds=minimum, opponents_below_minimum_attack_rounds=insufficient,
-                  milestone_sample_complete=not missing and not below_100,
-                  complete=not missing and not insufficient)
+    status = evaluation_status(schedule, results, args.output)
+    missing, below_100 = status["missing_series"], status["opponents_below_100_attack_rounds"]
     (args.output/"status.json").write_text(json.dumps(status, indent=2), encoding="utf-8")
     report = (f"Evaluation schedule complete: {status['complete']}. "
               f"Formal sample complete: {status['milestone_sample_complete']}. "
-              f"Missing series: {len(missing)}; opponents below 100 attacker rounds: {len(insufficient)}.\n\n"
+              f"Missing series: {len(missing)}; opponents below 100 attacker rounds: {len(below_100)}.\n\n"
               + ("Baseline uses matching opponent/series indices and the same seed schedule.\n\n" if baseline is not None else "")
               + report)
     (args.output/"comparison.md").write_text(report, encoding="utf-8")

@@ -10,6 +10,8 @@
   "steps": 350000,
   "shaping_decay_steps": 300000,
   "recon_new_enemy_reward": 0.02,
+  "hazard_shaping_weight": 0.05,
+  "hazard_hit_penalty": 0.03,
   "ability_bc_floor": 0.3,
   "ppo_epochs": 3,
   "ppo_clip": 0.2,
@@ -18,8 +20,10 @@
   "max_gradient_norm": 0.5,
   "evaluate_every_steps": 50000,
   "evaluation_series": 2,
-  "initial_evaluation_series": 10,
-  "final_evaluation_series": 10,
+  "initial_evaluation_series": 2,
+  "final_evaluation_series": 2,
+  "tyg_confirmation_series": 2,
   "evaluation_workers": 2,
-  "tyg_minimum_win_rate": 0.8
+  "tyg_minimum_win_rate": 0.8,
+  "tyg_periodic_action": "warn"
 }

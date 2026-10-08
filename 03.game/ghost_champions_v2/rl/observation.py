@@ -5,14 +5,20 @@ import numpy as np
 from gc_v1.roster_observation_gc import enemy_roster_features, ENEMY_ROSTER_DIM
 from gc_v1.gc_facing import FACING_DIRS
 from game_core import SPIKE_DETONATION_TICKS,ROUND_DURATION_TICKS,FLASH_BLIND_TICKS
+from ..hazards import HAZARD_BLOCKS
+from .unit_observation import UNIT_BLOCKS, UNIT_FIELDS, SELF_FIELDS, BASE_STATS, LIVE_STATS, player_abilities_status, self_capabilities
 
 OPPONENTS=("TYG","OMG","FRC","FNC","GG","SPS","unknown","observed_mid_heavy")
 ABILITIES=("RECON","FLASH","SMOKE","DANCE","ASH","HUNT","UNKNOWN")
-BLOCKS=(("opponent",8),("observed_axes",6),("surveyed_axes",3),("spike",8),
+LEGACY_V2_BLOCKS=(("opponent",8),("observed_axes",6),("surveyed_axes",3),("spike",8),
         ("self",8),("ability",7),("proposal",10),("local_map",49),
         ("units",70),("public_defuse",2),("self_status",12),("enemy_roster",ENEMY_ROSTER_DIM))
+LEGACY_V3_BLOCKS=LEGACY_V2_BLOCKS+HAZARD_BLOCKS
+BLOCKS=LEGACY_V3_BLOCKS+UNIT_BLOCKS
 OBS_DIM=sum(n for _,n in BLOCKS)
-OBSERVATION_SCHEMA=dict(version=2,dim=OBS_DIM,blocks=BLOCKS,enemy_roster_version=1)
+OBSERVATION_SCHEMA=dict(version=4,dim=OBS_DIM,blocks=BLOCKS,enemy_roster_version=1,public_effect_version=1,
+                       unit_status_version=1,unit_status_fields=UNIT_FIELDS,self_capability_fields=SELF_FIELDS,
+                       unit_base_scales=BASE_STATS,unit_live_scales=LIVE_STATS)
 SCHEMA_HASH=hashlib.sha256(json.dumps(OBSERVATION_SCHEMA,sort_keys=True).encode()).hexdigest()
 
 
@@ -96,7 +102,8 @@ class ObservationEncoder:
                 bool(getattr(char,"moved_last_tick",False)),getattr(char,"shield_hp",0)/100]
         obs=np.concatenate([opponent,observed,[a in tactics.surveyed_axes for a in ("A","Mid","B")],
                             spike,own,role,intent,local,units,public_defuse_features(state),status,
-                            enemy_roster_features(game_state=state)]).astype(np.float32)
+                            enemy_roster_features(game_state=state),tactics.hazards.features(char),
+                            player_abilities_status(char,state),self_capabilities(char,state)]).astype(np.float32)
         if obs.shape!=(OBS_DIM,) or not np.isfinite(obs).all():
             raise ValueError("Invalid GC v2 RL observation")
         return obs

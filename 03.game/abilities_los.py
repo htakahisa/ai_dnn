@@ -5,6 +5,7 @@ from grid_lines import line_cells
 
 from game_core import (
     absorb_shield_damage,
+    apply_on_hp_damage,
     FLASH_SPEED_CELLS_PER_TICK,
     FLASH_MAX_FLIGHT_TICKS,
     RECON_SPEED_CELLS_PER_TICK,
@@ -97,7 +98,7 @@ class AbilityLosMixin:
         ESCAPE and NEON additionally require a cell in ``target``.
         RAID and TUNNEL can set ``facing`` for the direction of the cast.
         """
-        if not isinstance(ultimate_action, dict):
+        if getattr(owner, "ability_seal_remaining", 0) > 0 or not isinstance(ultimate_action, dict):
             return False
 
         ultimate_name = str(ultimate_action.get("ultimate", "")).upper()
@@ -136,7 +137,8 @@ class AbilityLosMixin:
             })
             self._spend_ultimate(owner)
             return True
-        if ultimate_name in ("RAID", "ESCAPE") and self._ramp_blocks_movement(owner):
+        if ultimate_name in ("RAID", "ESCAPE") and (
+                getattr(owner, "fate_loom_remaining", 0) > 0 or self._ramp_blocks_movement(owner)):
             return False
 
         if ultimate_name == "NEON":
@@ -199,7 +201,7 @@ class AbilityLosMixin:
                 self._update_occupancy_after_move(previous, destination)
                 traversed.append(destination)
                 self._trigger_cell_effects(owner)
-                if self._ramp_blocks_movement(owner):
+                if getattr(owner, "fate_loom_remaining", 0) > 0 or self._ramp_blocks_movement(owner):
                     break
             if not hasattr(self, "ultimate_trails"):
                 self.ultimate_trails = []
@@ -351,11 +353,13 @@ class AbilityLosMixin:
             if not char.is_alive or getattr(char, "life_contract_remaining", 0) <= 0:
                 continue
             old_max = char.max_hp
+            previous_hp = char.hp
             owner = owners.get(char.life_contract_owner)
             hp_damage = absorb_shield_damage(char, CONTRACT_DAMAGE_PER_TICK, owner)
             char.max_hp = max(0, old_max - hp_damage)
             char.contract_max_hp_lost = getattr(char, "contract_max_hp_lost", 0) + old_max - char.max_hp
             char.hp = max(0, min(char.max_hp, char.hp - hp_damage))
+            apply_on_hp_damage(char, owner, previous_hp, self.battle_tick)
             char.life_contract_remaining -= 1
             tracker = getattr(self, "analytics_tracker", None)
             if tracker is not None and owner is not None:
@@ -474,14 +478,16 @@ class AbilityLosMixin:
                     tracker = getattr(self, "analytics_tracker", None)
                     if tracker is not None:
                         tracker.record_contribution(owner, char, self.battle_tick, "damage")
+                    previous_hp = char.hp
                     # Respect the same once-per-round lethal-hit passive as gunfire.
                     if char.hp <= damage and char.hp >= char.max_hp and getattr(char, "iron_will_charges", 0) > 0:
                         char.iron_will_charges -= 1
                         char.hp = 1
                     else:
                         char.hp = max(0, char.hp - damage)
-                        if char.hp <= 0 and owner is not None:
-                            self._kill_character(owner, char)
+                    apply_on_hp_damage(char, owner, previous_hp, self.battle_tick)
+                    if char.hp <= 0 and owner is not None:
+                        self._kill_character(owner, char)
             burst["remaining_ticks"] = remaining - 1
             remaining_bursts.append(burst)
         self.neon_bursts = remaining_bursts
@@ -543,7 +549,8 @@ class AbilityLosMixin:
                 remaining_portals.append(portal)
                 continue
 
-            if getattr(owner, "electric_remaining", 0) > 0:
+            if (getattr(owner, "electric_remaining", 0) > 0
+                    or getattr(owner, "fate_loom_remaining", 0) > 0):
                 remaining_portals.append(portal)
                 continue
 
@@ -659,7 +666,8 @@ class AbilityLosMixin:
 
     def execute_ai_ability(self, owner, ability_action):
         """AIコントローラーから受け取ったアビリティ要求を実行する。"""
-        if not owner.is_alive or not isinstance(ability_action, dict):
+        if (not owner.is_alive or getattr(owner, "ability_seal_remaining", 0) > 0
+                or not isinstance(ability_action, dict)):
             return False
 
         ability_name = str(ability_action.get("ability", "")).upper()
@@ -675,7 +683,10 @@ class AbilityLosMixin:
                            and ((target_name is not None and ally.name == target_name)
                                 or (target_name is None and isinstance(target_cell, (list, tuple))
                                     and len(target_cell) == 2 and tuple(ally.pos) == tuple(target_cell)))), None)
-            heal_cap = min(DANCE_MAX_HP, target.max_hp) if target is not None and getattr(target, "contract_max_hp_lost", 0) > 0 else DANCE_MAX_HP
+            reduced_max = target is not None and (
+                getattr(target, "contract_max_hp_lost", 0) > 0
+                or getattr(target, "fate_max_hp_lost", 0) > 0)
+            heal_cap = min(DANCE_MAX_HP, target.max_hp) if reduced_max else DANCE_MAX_HP
             if target is None or target.hp >= heal_cap:
                 return False
             target.hp = min(heal_cap, target.hp + DANCE_HEAL_HP)

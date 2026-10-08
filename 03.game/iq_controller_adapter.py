@@ -12,6 +12,7 @@ class IQAwareController:
         self.perception_engine = perception_engine or IQPerceptionEngine()
         self.real_game = None
         self.viewer_team = viewer_team
+        self._public_effect_reader = None
 
     @property
     def inner_controller(self):
@@ -27,6 +28,8 @@ class IQAwareController:
 
     def reset_round(self):
         self.perception_engine.clear_cache()
+        if self._public_effect_reader is not None:
+            self._public_effect_reader.reset()
         if hasattr(self.inner, "reset_round"):
             self.inner.reset_round()
 
@@ -73,6 +76,11 @@ class IQAwareController:
             game_state=game_state,
             game_view=view,
         )
+        if getattr(self.inner, "requires_public_effects", False):
+            from public_effects import PublicEffectReader
+            if self._public_effect_reader is None:
+                self._public_effect_reader = PublicEffectReader()
+            perceived_state["public_effects"] = self._public_effect_reader.read_visible(self.real_game, char.team)
         if hasattr(self.inner, "set_game"):
             self.inner.set_game(view)
         result = self.inner.decide_move(perceived_char, perceived_state)

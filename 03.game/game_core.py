@@ -312,6 +312,39 @@ def _normalize_shield_hp(value):
     return int(value) if value.is_integer() else value
 
 
+def _normalize_effect_ticks(value):
+    """Positive fractional settings last at least one whole tick."""
+    return math.ceil(_normalize_shield_hp(value))
+
+
+def apply_on_hp_damage(target, attacker, previous_hp, tick):
+    """Apply attack traits only after shields and lethal-hit survival resolve.
+
+    Repeated hits refresh the remaining duration without shortening a stronger
+    effect. Max-HP loss persists for the rest of this round, including healing
+    and awakening expiration; it is based on actual HP lost, not raw damage.
+    """
+    hp_lost = max(0, previous_hp - target.hp)
+    if (hp_lost <= 0 or attacker is None or target.team == attacker.team
+            or getattr(target, "is_ultimate_drone", False)):
+        return hp_lost
+    for stat, remaining, applied in (
+        ("erosion_curse", "ability_seal_remaining", "ability_seal_applied_tick"),
+        ("fate_loom", "fate_loom_remaining", "fate_loom_applied_tick"),
+    ):
+        duration = _normalize_effect_ticks(getattr(attacker, stat, 0))
+        if duration <= 0:
+            continue
+        setattr(target, remaining, max(getattr(target, remaining, 0), duration))
+        setattr(target, applied, tick)
+        if stat == "fate_loom":
+            old_max = target.max_hp
+            target.max_hp = max(0, old_max - hp_lost)
+            target.fate_max_hp_lost = getattr(target, "fate_max_hp_lost", 0) + old_max - target.max_hp
+            target.hp = min(target.hp, target.max_hp)
+    return hp_lost
+
+
 def absorb_shield_damage(character, damage, attacker=None):
     """攻撃者の貫通・追加シールド削りを適用し、本体へのダメージを返す。"""
     damage = max(0, damage)
@@ -342,6 +375,8 @@ def get_character_combat_stats(name):
         "shield_hp": 0.0,
         "shield_piercer": False,
         "shield_crash": 0.0,
+        "erosion_curse": 0,
+        "fate_loom": 0,
     }
     if _character_stats is None:
         return defaults
@@ -457,6 +492,12 @@ def get_character_combat_stats(name):
         "shield_piercer": raw.get("shield_piercer", defaults["shield_piercer"]) is True,
         "shield_crash": _normalize_shield_hp(
             pick_number(("shield_crash", "シールドクラッシュ"), defaults["shield_crash"])
+        ),
+        "erosion_curse": _normalize_effect_ticks(
+            pick_number(("erosion_curse", "摩耗の呪い"), defaults["erosion_curse"])
+        ),
+        "fate_loom": _normalize_effect_ticks(
+            pick_number(("fate_loom", "運命の織機"), defaults["fate_loom"])
         ),
     }
 
@@ -586,6 +627,8 @@ class Character:
         self.shield_hp = self.max_shield_hp
         self.shield_piercer = stats.get("shield_piercer", False)
         self.shield_crash = _normalize_shield_hp(stats.get("shield_crash", 0))
+        self.erosion_curse = _normalize_effect_ticks(stats.get("erosion_curse", 0))
+        self.fate_loom = _normalize_effect_ticks(stats.get("fate_loom", 0))
         self.shield_abilities_enabled = bool(shield_abilities_enabled)
         if not self.shield_abilities_enabled:
             self.max_shield_hp = self.shield_hp = self.shield_crash = 0
@@ -673,6 +716,11 @@ class Character:
         self.life_contract_remaining = 0
         self.life_contract_owner = None
         self.contract_max_hp_lost = 0
+        self.fate_max_hp_lost = 0
+        self.ability_seal_remaining = 0
+        self.ability_seal_applied_tick = None
+        self.fate_loom_remaining = 0
+        self.fate_loom_applied_tick = None
         self.serenade_reveal_pending = 0
         self.electric_remaining = 0
         self.electric_applied_tick = None
@@ -786,6 +834,10 @@ def _canonical_combo_stat_key(key):
         "メンタル": "mental",
         "move_steps": "move_steps_per_tick",
         "move_steps_per_tick": "move_steps_per_tick",
+        "erosion_curse": "erosion_curse",
+        "摩耗の呪い": "erosion_curse",
+        "fate_loom": "fate_loom",
+        "運命の織機": "fate_loom",
         "移動マス数": "move_steps_per_tick",
     }
     return aliases.get(normalized) or shield_stat_key(normalized)
@@ -856,6 +908,8 @@ def _apply_combo_bonus(character, stat_key, value):
             setattr(character, attr, max(0.0, updated))
         else:
             setattr(character, attr, max(0.0, min(1.0, updated)))
+    elif attr in ("erosion_curse", "fate_loom"):
+        setattr(character, attr, _normalize_effect_ticks(getattr(character, attr, 0) + amount))
     elif attr == "reaction":
         character.reaction = max(0.0, character.reaction + amount)
     elif attr == "iq":

@@ -21,6 +21,7 @@ class PrivateInfoController:
         self.inner = inner
         self.real_game = None
         self.viewer_team = viewer_team
+        self._public_effect_reader = None
 
     def __getattr__(self, name):
         return getattr(self.inner, name)
@@ -31,6 +32,8 @@ class PrivateInfoController:
             self.inner.set_game(build_team_position_view(game, self.viewer_team))
 
     def reset_round(self):
+        if self._public_effect_reader is not None:
+            self._public_effect_reader.reset()
         if hasattr(self.inner, "reset_round"):
             self.inner.reset_round()
 
@@ -41,6 +44,11 @@ class PrivateInfoController:
         private_game = build_team_position_view(self.real_game, char.team)
         state = dict(game_state)
         state["chars"] = private_game.chars
+        if getattr(self.inner, "requires_public_effects", False):
+            from public_effects import PublicEffectReader
+            if self._public_effect_reader is None:
+                self._public_effect_reader = PublicEffectReader()
+            state["public_effects"] = self._public_effect_reader.read_visible(self.real_game,char.team)
         if not bool(getattr(self.real_game, "is_planted", False)):
             state["spotted_info"] = {
                 "spotted": 0.0,

@@ -14,6 +14,8 @@ A_SITE_CELLS = frozenset(tuple(map(int, p)) for p in
 
 def forced_attack_site(game):
     owner = getattr(game, "real_game", game)
+    if getattr(owner,"gc_opponent_site_overrides",True) is False:
+        return None
     roster = getattr(owner, "defender_roster", None)
     if roster is None:
         # Include dead players: casualties must not change team identity.

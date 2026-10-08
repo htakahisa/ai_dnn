@@ -5,7 +5,7 @@ cast targets or simulation countdowns. The opaque handle identifies a displayed
 object across frames; it does not identify its caster.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import math
 
 
@@ -44,6 +44,51 @@ class PublicEffectReader:
         self._handles = {}
         self._objects = {}
         self._serial = 0
+
+    def read_visible(self, game, team):
+        """Team vision clips display geometry, including projectile history.
+
+        Affiliation and simulation timers are deliberately unavailable. A
+        partially seen area does not disclose its unseen centre or outline.
+        """
+        from grid_visibility import visible_cells
+        effects = self.read(game)
+        if not effects:
+            return ()
+        directions = dict(N=(-1, 0), NE=(-1, 1), E=(0, 1), SE=(1, 1),
+                          S=(1, 0), SW=(1, -1), W=(0, -1), NW=(-1, -1))
+        viewers = [(tuple(c.pos), directions.get(getattr(c, "facing", "N"), (-1, 0)))
+                   for c in game.chars if c.team == team and c.is_alive
+                   and not getattr(c, "blind_remaining", 0)]
+        smoke = {p for raw in getattr(game, "smokes", ()) for p in displayed_area_cells(raw)}
+        visible = visible_cells(game.grid, viewers, smoke)
+        result = []
+        for effect in effects:
+            if not effect.drawn_this_frame:
+                continue
+            position = effect.position if effect.position in visible else None
+            cells = tuple(p for p in effect.cells if p in visible)
+            if effect.phase == "flight":
+                if position is None:
+                    continue
+                # Only the contiguous visible end of the trail supports a
+                # direction estimate; no inference from an unseen caster.
+                tail = []
+                for point in reversed(effect.trail):
+                    if point not in visible:
+                        break
+                    tail.append(point)
+                trail = tuple(reversed(tail))
+                direction = (0., 0.)
+                if len(trail) > 1:
+                    dr, dc = trail[-1][0]-trail[0][0], trail[-1][1]-trail[0][1]
+                    length = math.hypot(dr, dc)
+                    if length:
+                        direction = (dr/length, dc/length)
+                result.append(replace(effect, trail=trail, direction=direction))
+            elif position is not None or cells:
+                result.append(replace(effect, position=position, cells=cells))
+        return tuple(result)
 
     def read(self, game):
         effects, present = [], set()

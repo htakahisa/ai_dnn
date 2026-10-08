@@ -283,6 +283,8 @@ def player_from_save(row, *, legacy_loyalty=False):
         row.setdefault("shield_hp", catalog.shield_hp)
         row.setdefault("shield_piercer", catalog.shield_piercer)
         row.setdefault("shield_crash", catalog.shield_crash)
+        row.setdefault("erosion_curse", catalog.erosion_curse)
+        row.setdefault("fate_loom", catalog.fate_loom)
     return SeasonPlayerStats(**row)
 
 

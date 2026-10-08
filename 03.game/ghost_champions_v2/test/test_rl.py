@@ -2,6 +2,7 @@ import contextlib
 import copy
 import io
 import json
+import os
 import random
 from pathlib import Path
 import sys
@@ -56,8 +57,8 @@ class RLTests(unittest.TestCase):
         for name,size in BLOCKS:
             blocks[name]=slice(offset,offset+size)
             offset+=size
-        self.assertEqual(OBS_DIM,448)
-        self.assertEqual(OBSERVATION_SCHEMA["version"],2)
+        self.assertEqual(OBS_DIM,811+dict(BLOCKS)["player_abilities_status"]+dict(BLOCKS)["self_capabilities"])
+        self.assertEqual(OBSERVATION_SCHEMA["version"],4)
         np.testing.assert_allclose(before[blocks["public_defuse"]],[0,0])
         np.testing.assert_allclose(after[blocks["public_defuse"]],[.2,.5])
         self.assertFalse(np.array_equal(before[blocks["self_status"]],after[blocks["self_status"]]))
@@ -77,7 +78,7 @@ class RLTests(unittest.TestCase):
 
     def test_resume_checks_pending_guardrail_before_another_training_round(self):
         config=json.loads((Path(__file__).resolve().parents[1]/"rl/training_config.json").read_text())
-        config.update(steps=20,evaluate_every_steps=10)
+        config.update(steps=20,evaluate_every_steps=10,tyg_confirmation_series=10,tyg_periodic_action="stop")
         policy=ResidualPolicy()
         optimizer=torch.optim.Adam(policy.parameters(),lr=config["learning_rate"])
         good=dict.fromkeys(("TYG","OMG","FRC","FNC","GG","SPS"),.9)
@@ -122,6 +123,163 @@ class RLTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             training.validate_evaluation_change(parent,config,dict(frozen,**{"policy.py":"changed"}))
 
+    def test_restored_opponent_snapshot_must_match_the_original_hashes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            snapshot=Path(folder).resolve()
+            original=str(training.ROOT/"concon_v1/controller.py")
+            copied=str(snapshot/"concon_v1/controller.py")
+            parent=dict(schema_hash=SCHEMA_HASH,verification=False,config=dict(evaluation_series=10),
+                        frozen_inputs={original:"original"})
+            with patch.dict(os.environ,GC_OPPONENT_SNAPSHOT=str(snapshot)):
+                training.validate_evaluation_change(parent,dict(evaluation_series=2),{copied:"original"})
+                with self.assertRaises(ValueError):
+                    training.validate_evaluation_change(parent,dict(evaluation_series=2),{copied:"new model"})
+
+    def test_periodic_and_final_respect_counts_and_formal_sample(self):
+        for series,confirm in ((s,c) for s in (2,10) for c in (False,True)):
+            with self.subTest(series=series,confirm=confirm),tempfile.TemporaryDirectory() as folder:
+                config=json.loads((Path(__file__).resolve().parents[1]/"rl/training_config.json").read_text())
+                config.update(steps=11,evaluate_every_steps=10,initial_evaluation_series=series,
+                              final_evaluation_series=series,tyg_confirmation_series=series,tyg_periodic_action="stop")
+                root=Path(folder)
+                data_dir=root/"data/periodic"
+                data_dir.mkdir(parents=True)
+                np.savez_compressed(data_dir/"demonstrations.npz",obs=np.zeros((1,OBS_DIM),np.float32),
+                    mask=np.ones((1,ACTION_DIM),np.bool_),teacher=np.array([0]),validation=np.array([False]))
+                (data_dir/"demonstrations.json").write_text(json.dumps(dict(schema_hash=SCHEMA_HASH,frozen_inputs={})))
+                policy=ResidualPolicy()
+                optimizer=torch.optim.Adam(policy.parameters(),lr=config["learning_rate"])
+                good=dict.fromkeys(("TYG","OMG","FRC","FNC","GG","SPS"),.9)
+                policy.save(data_dir/"bc.pt")
+                policy.save(data_dir/"latest.pt",step=10,episode=1,rates=good,last_evaluated_step=0,
+                    optimizer_state_dict=optimizer.state_dict(),numpy_rng=np.random.default_rng(1).bit_generator.state,
+                    python_rng=random.getstate(),torch_rng=torch.get_rng_state())
+                screening=dict(complete=True,milestone_sample_complete=False,opponents_below_100_attack_rounds=list(good))
+                results=[(good,{"complete":True}),(dict(good,TYG=.7) if confirm else good,screening)]
+                if confirm:
+                    results.append(({"TYG":.85},{"complete":True}))
+                results.append((good,{"complete":True,"milestone_sample_complete":series>=10}))
+                guardrail_metadata=[]
+                original_save=ResidualPolicy.save
+                def record_save(model,path,**metadata):
+                    if Path(path).name=="last_passed_guardrail.pt":
+                        guardrail_metadata.append(metadata)
+                    return original_save(model,path,**metadata)
+                with patch.object(training,"AI_ROOT",root),patch.object(training,"fingerprint",return_value={}), \
+                     patch.object(training,"evaluate",side_effect=results) as evaluation, \
+                     patch.object(training,"play_round",return_value=([{}],{"winner":"attacker"})) as rollout, \
+                     patch.object(training,"optimize_ppo",return_value=.1),patch.object(ResidualPolicy,"save",new=record_save):
+                    training.train("periodic",config,root/"snapshot",resume=True)
+                rollout.assert_called_once()
+                calls=evaluation.call_args_list
+                self.assertEqual(calls[0].kwargs,dict(series_count=series,minimum_attack_rounds=100 if series>=10 else 1))
+                self.assertEqual(calls[1].kwargs,dict(series_count=2,minimum_attack_rounds=1))
+                if confirm:
+                    self.assertEqual(calls[2].kwargs,dict(series_count=series,opponents=["TYG"],minimum_attack_rounds=100 if series>=10 else 1))
+                self.assertEqual(calls[-1].kwargs,dict(series_count=series,minimum_attack_rounds=100 if series>=10 else 1))
+                self.assertEqual([metadata["verified"] for metadata in guardrail_metadata],[False,series>=10])
+                self.assertTrue(json.loads((root/"logs/periodic/status.json").read_text())["complete"])
+
+    def test_periodic_warning_continues_without_confirmation_and_final_target_is_separate(self):
+        for final_rate,final_complete in ((.5,True),(.9,True),(.9,False)):
+            with self.subTest(final_rate=final_rate,final_complete=final_complete),tempfile.TemporaryDirectory() as folder:
+                config=json.loads((training.AI_ROOT/"rl/training_config.json").read_text())
+                config.update(steps=11,evaluate_every_steps=10,tyg_periodic_action="warn")
+                root=Path(folder)
+                data_dir=root/"data/warnings"
+                data_dir.mkdir(parents=True)
+                np.savez_compressed(data_dir/"demonstrations.npz",obs=np.zeros((1,OBS_DIM),np.float32),
+                    mask=np.ones((1,ACTION_DIM),np.bool_),teacher=np.array([0]),validation=np.array([False]))
+                (data_dir/"demonstrations.json").write_text(json.dumps(dict(schema_hash=SCHEMA_HASH,frozen_inputs={})))
+                policy=ResidualPolicy(hidden=16)
+                optimizer=torch.optim.Adam(policy.parameters(),lr=config["learning_rate"])
+                good=dict.fromkeys(("TYG","OMG","FRC","FNC","GG","SPS"),.9)
+                policy.save(data_dir/"bc.pt")
+                policy.save(data_dir/"latest.pt",step=10,episode=1,rates=good,last_evaluated_step=0,
+                    optimizer_state_dict=optimizer.state_dict(),numpy_rng=np.random.default_rng(1).bit_generator.state,
+                    python_rng=random.getstate(),torch_rng=torch.get_rng_state())
+                results=[(good,{"complete":True}),(dict(good,TYG=.5),{"complete":True}),
+                         (dict(good,TYG=final_rate),{"complete":final_complete,"milestone_sample_complete":False})]
+                with patch.object(training,"AI_ROOT",root),patch.object(training,"fingerprint",return_value={}), \
+                     patch.object(training,"evaluate",side_effect=results) as evaluation, \
+                     patch.object(training,"play_round",return_value=([{}],{"winner":"attacker"})) as rollout, \
+                     patch.object(training,"optimize_ppo",return_value=.1),contextlib.redirect_stdout(io.StringIO()):
+                    training.train("warnings",config,root/"snapshot",resume=True)
+                rollout.assert_called_once()
+                self.assertEqual(evaluation.call_count,3)  # Initial, pending periodic, final; no TYG confirmation.
+                self.assertTrue(all("opponents" not in call.kwargs for call in evaluation.call_args_list))
+                status=json.loads((root/"logs/warnings/status.json").read_text())
+                self.assertEqual(status["complete"],final_complete)
+                warnings=[json.loads(line) for line in (root/"logs/warnings/warnings.jsonl").read_text().splitlines()]
+                self.assertEqual(warnings,[dict(step=10,warning="TYG_below_target",attack_rate=.5,target=.8)])
+                _,latest=ResidualPolicy.load(data_dir/"latest.pt")
+                self.assertFalse(latest["verified"])
+                if final_complete:
+                    self.assertTrue(status["training_complete"])
+                    self.assertEqual(status["final_target_met"],final_rate>=.8)
+                    self.assertEqual(status["last_evaluated_step"],11)
+                    self.assertEqual((data_dir/"last_passed_guardrail.pt").exists(),final_rate>=.8)
+                else:
+                    self.assertEqual(status["stop_reason"],"insufficient_evaluation_sample")
+                    self.assertEqual(latest["last_evaluated_step"],10)
+
+    def test_bc_only_continuation_accepts_partial_initial_but_checks_reused_files(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            data_dir=root/"data/new"
+            data_dir.mkdir(parents=True)
+            bc=data_dir/"bc.pt"
+            bc.write_bytes(b"saved BC")
+            evaluation=root/"logs/new/evaluation_bc"
+            evaluation.mkdir(parents=True)
+            series=evaluation/"series_TYG_000.json"
+            series.write_text("{}")
+            parent=dict(schema_hash=SCHEMA_HASH,verification=False,config=dict(evaluation_series=10),frozen_inputs={})
+            continuation=dict(parent_manifest=parent,artifact_hashes={"bc.pt":hashlib.sha256(bc.read_bytes()).hexdigest()},
+                initial_evaluation=None,reused_initial_evaluation=dict(folder=str(evaluation),
+                    hashes={series.name:hashlib.sha256(series.read_bytes()).hexdigest()}))
+            (data_dir/"continuation.json").write_text(json.dumps(continuation))
+            self.assertEqual(training.load_continuation(data_dir,dict(evaluation_series=2),{}),continuation)
+            series.write_text('{"changed":true}')
+            with self.assertRaisesRegex(ValueError,"Reused initial evaluation differs"):
+                training.load_continuation(data_dir,dict(evaluation_series=2),{})
+
+    def test_partial_evaluation_reuses_only_requested_series_and_rejects_policy_changes(self):
+        import hashlib
+        import ghost_champions_v2.tools.fork_evaluation_run as fork
+        from tools.run_eval import RUNTIME_FILES
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            source,target=root/"old",root/"new"
+            source.mkdir()
+            snapshot=root/"runtime"
+            snapshot.mkdir()
+            for name in RUNTIME_FILES:
+                (snapshot/name).write_text("frozen")
+            checkpoint=root/"bc.pt"
+            checkpoint.write_bytes(b"weights")
+            policy=root/"policy.py"
+            policy.write_text("same policy")
+            manifest=dict(controller="ghost_champions_v2",stage="entry",base_seed=20261007,python=sys.version,
+                          opponents=["TYG"],series_count=10,source_hashes={"policy.py":fork.digest(policy)},
+                          runtime_snapshot=str(snapshot),runtime_data_hashes={n:fork.digest(snapshot/n) for n in RUNTIME_FILES},
+                          residual_checkpoint=dict(path="original",sha256=fork.digest(checkpoint)))
+            (source/"manifest.json").write_text(json.dumps(manifest))
+            for i in range(5):
+                (source/f"series_TYG_{i:03d}.json").write_text(json.dumps(dict(index=i)))
+            with patch.object(fork,"ROOT",root):
+                reuse=fork.reuse_initial_series(source,target,checkpoint,2)
+                self.assertEqual(len(reuse["hashes"]),2)
+                self.assertEqual(len(list(source.glob("series_*.json"))),5)
+                self.assertEqual(len(list(target.glob("series_*.json"))),2)
+                new=json.loads((target/"manifest.json").read_text())
+                self.assertEqual(new["series_count"],2)
+                self.assertEqual(new["minimum_attack_rounds"],1)
+                policy.write_text("different policy")
+                with self.assertRaisesRegex(ValueError,"policy source changed"):
+                    fork.reuse_initial_series(source,root/"bad",checkpoint,2)
+
     def test_opponent_counts_and_plant_elapsed_are_model_inputs(self):
         encoder=ObservationEncoder()
         first=encoder.encode(self.char,self.state,self.tactics,self.proposal)
@@ -149,14 +307,35 @@ class RLTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ResidualPolicy.load(path)
 
-    def test_active_plant_and_tyg_have_only_the_rule_action(self):
+    def test_active_plant_is_locked_but_opponent_does_not_restrict_actions(self):
         self.char.plant_timer=1
         _,mask=candidates(self.char,self.state,self.tactics,([10,10],"PLANT"))
         self.assertEqual(np.flatnonzero(mask).tolist(),[3])
         self.char.plant_timer=0
         self.tactics.opponent="TYG"
         _,mask=candidates(self.char,self.state,self.tactics,self.proposal)
+        self.assertGreater(mask.sum(),1)
+        for opponent in ("OMG","FRC","FNC","GG","SPS","unknown"):
+            self.tactics.opponent=opponent
+            _,other=candidates(self.char,self.state,self.tactics,self.proposal)
+            np.testing.assert_array_equal(mask,other)
+
+    def test_plant_start_and_deadline_movement_cannot_be_replaced_by_model(self):
+        self.char.has_spike=True
+        self.state["grid"][10,10]=2
+        _,mask=candidates(self.char,self.state,self.tactics,([10,10],"PLANT"))
+        self.assertEqual(np.flatnonzero(mask).tolist(),[3])
+        self.tactics.plant_commit=dict(holder="self",target=(10,10),reason="plant_deadline")
+        _,mask=candidates(self.char,self.state,self.tactics,self.proposal)
         self.assertEqual(np.flatnonzero(mask).tolist(),[0])
+        self.tactics.plant_commit["holder"]="another"
+        _,mask=candidates(self.char,self.state,self.tactics,self.proposal)
+        self.assertGreater(mask.sum(),1)
+        self.tactics.plant_commit["holder"]="self"
+        self.char.has_spike=False
+        self.state.update(is_planted=True,planted_pos=(10,10))
+        _,mask=candidates(self.char,self.state,self.tactics,self.proposal)
+        self.assertGreater(mask.sum(),1)
 
     def test_potential_telescopes_and_vanishes_at_terminal(self):
         gamma=.99

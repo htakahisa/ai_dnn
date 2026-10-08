@@ -6,9 +6,9 @@ import os
 from pathlib import Path
 
 DEFAULT_CONFIG = Path(__file__).with_name("gc_profiles.json")
-STAGES = ("baseline", "hold", "recon", "profiles", "entry")
+STAGES = ("baseline", "hold", "recon", "sites", "entry")
 FLAG_STAGE = dict(post_plant_hold="hold", early_recon="recon",
-                  opponent_profiles="profiles", entry_discipline="entry")
+                  site_selection="sites", entry_discipline="entry")
 
 
 def load_config(path=None):
@@ -19,8 +19,24 @@ def load_config(path=None):
 
 
 def validate_config(data):
-    if data.get("schema_version") != 1:
+    if data.get("schema_version") != 2:
         raise ValueError("Unsupported GC v2 config schema")
+    if "profiles" in data:
+        raise ValueError("Opponent-specific tactical profiles are no longer supported")
+    opening=data["opening"]
+    weights=opening["weights"]
+    if set(weights)!={"DEFAULT","RUSH","SPLIT"} or any(
+            isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or v<0
+            for v in weights.values()) or sum(weights.values())<=0:
+        raise ValueError("Opening weights must cover DEFAULT/RUSH/SPLIT and have a positive total")
+    if (isinstance(opening["utility_distance"],bool) or not isinstance(opening["utility_distance"],(int,float))
+            or not math.isfinite(opening["utility_distance"]) or opening["utility_distance"]<=0):
+        raise ValueError("Opening utility distance must be finite and positive")
+    for point in (opening["split_waypoint"],*opening["split_entries"].values()):
+        if len(point)!=2 or any(type(v) is not int or v<0 for v in point):
+            raise ValueError("Invalid opening waypoint")
+    if set(opening["split_entries"])!={"A","B"}:
+        raise ValueError("Split entries must cover A and B")
     for flag in FLAG_STAGE:
         if not isinstance(data["flags"][flag], bool):
             raise ValueError(f"{flag} must be boolean")
@@ -45,28 +61,16 @@ def validate_config(data):
         point = data["plant_targets"][axis]
         if len(point) != 2 or any(not isinstance(v,int) for v in point):
             raise ValueError(f"Invalid plant target {axis}")
-    for name,profile in data["profiles"].items():
-        for flag in ("complete_site_survey","carrier_route_priority"):
-            if flag in profile and not isinstance(profile[flag],bool):
-                raise ValueError(f"Invalid {name}.{flag}")
-        for group,values in profile.get("recon",{}).items():
-            if group not in ("waypoints","aims","secondary_waypoints","secondary_aims") or not isinstance(values,dict):
-                raise ValueError(f"Invalid {name}.recon.{group}")
-            for axis,point in values.items():
-                if axis not in ("A","Mid","B") or len(point)!=2 or any(not isinstance(v,int) for v in point):
-                    raise ValueError(f"Invalid {name}.recon.{group}.{axis}")
+    for flag in ("complete_site_survey","carrier_route_priority"):
+        if not isinstance(data["team_tactics"][flag],bool):
+            raise ValueError(f"Invalid team_tactics.{flag}")
 
 
-def active_flags(config, stage, profile):
+def active_flags(config, stage):
+    stage="sites" if stage=="profiles" else stage  # Historical evaluation-stage alias.
     if stage not in STAGES:
         raise ValueError(f"Unknown GC v2 evaluation stage: {stage}")
     flags = copy.deepcopy(config["flags"])
     for name, introduced in FLAG_STAGE.items():
         flags[name] = (flags[name] and STAGES.index(stage) >= STAGES.index(introduced))
-    # Profiles cannot silently re-enable an ablated/global-disabled feature.
-    for name in flags:
-        if name in profile:
-            flags[name] = flags[name] and bool(profile[name])
-    if profile.get("preserve_v1"):
-        flags = dict.fromkeys(flags, False)
     return flags

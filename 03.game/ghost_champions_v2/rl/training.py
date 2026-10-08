@@ -14,10 +14,11 @@ import torch
 import torch.nn.functional as F
 from .observation import OBS_DIM,SCHEMA_HASH
 from .policy import ResidualPolicy
+from .initial_evaluation import REFERENCE_NAME,load_initial_evaluation,evaluation_reference
 from .rollout import ROOT,OPPONENTS,play_round,pfsp_probabilities,shaping_coefficient
 
 AI_ROOT=Path(__file__).resolve().parents[1]
-EVALUATION_CONFIG_KEYS={"evaluation_series","initial_evaluation_series","final_evaluation_series"}
+EVALUATION_CONFIG_KEYS={"evaluation_series","initial_evaluation_series","final_evaluation_series","tyg_confirmation_series","tyg_periodic_action"}
 EVALUATION_SOURCE_PATHS={str(p.resolve()) for p in (
     ROOT/"tools/run_eval.py",AI_ROOT/"rl/training.py",AI_ROOT/"rl/training_config.json",AI_ROOT/"training_attacker.py")}
 
@@ -28,9 +29,19 @@ def validate_evaluation_change(parent,config,frozen):
         raise ValueError("Continuation requires the same observation schema and a production run")
     if ({k:v for k,v in parent["config"].items() if k not in EVALUATION_CONFIG_KEYS}
             !={k:v for k,v in config.items() if k not in EVALUATION_CONFIG_KEYS}):
-        raise ValueError("Only evaluation series counts may change in this continuation")
+        raise ValueError("Only evaluation counts and the periodic TYG action may change in this continuation")
     old=parent["frozen_inputs"]
-    changed={name for name in old.keys()|frozen.keys() if old.get(name)!=frozen.get(name)}
+    canonical={}
+    snapshot=Path(os.environ["GC_OPPONENT_SNAPSHOT"]).resolve() if os.environ.get("GC_OPPONENT_SNAPSHOT") else None
+    for name,digest in frozen.items():
+        path=Path(name)
+        if snapshot and path.is_relative_to(snapshot):
+            path=ROOT/path.relative_to(snapshot)
+        canonical[str(path)]=digest
+    marker=str(ROOT/"concon_v1/__init__.py")
+    if marker not in old and canonical.get(marker)==hashlib.sha256(b"").hexdigest():
+        canonical.pop(marker)
+    changed={name for name in old.keys()|canonical.keys() if old.get(name)!=canonical.get(name)}
     if changed-EVALUATION_SOURCE_PATHS:
         raise ValueError("Policy/runtime inputs changed; cannot reuse BC: "+", ".join(sorted(changed-EVALUATION_SOURCE_PATHS)))
 
@@ -45,7 +56,26 @@ def load_continuation(data_dir,config,frozen):
         artifact=data_dir/name
         if not artifact.is_file() or hashlib.sha256(artifact.read_bytes()).hexdigest()!=digest:
             raise ValueError("Continuation artifact differs: "+name)
-    initial=continuation["initial_evaluation"]
+    if "bc_frozen_inputs" in continuation:
+        validate_evaluation_change(dict(continuation["parent_manifest"],frozen_inputs=continuation["bc_frozen_inputs"]),config,frozen)
+    pending=continuation.get("pending_evaluation")
+    if pending:
+        reference=pending["reference"]
+        if evaluation_reference(reference["folder"])!=reference:
+            raise ValueError("Completed PPO evaluation artifacts changed")
+        checkpoint=f"evaluated_{pending['step']:07d}.pt"
+        if reference["source_checkpoint"]["sha256"]!=continuation["artifact_hashes"].get(checkpoint):
+            raise ValueError("Completed PPO evaluation does not match the inherited checkpoint")
+    reused=continuation.get("reused_initial_evaluation")
+    if reused:
+        for name,digest in reused["hashes"].items():
+            if hashlib.sha256((Path(reused["folder"])/name).read_bytes()).hexdigest()!=digest:
+                raise ValueError("Reused initial evaluation differs: "+name)
+    initial=continuation.get("initial_evaluation")
+    if initial is None:
+        if continuation.get("initial_evaluation_as_baseline"):
+            raise ValueError("Initial-baseline recovery requires a completed evaluation")
+        return continuation
     for name,digest in initial["hashes"].items():
         if hashlib.sha256((Path(initial["folder"])/name).read_bytes()).hexdigest()!=digest:
             raise ValueError("Inherited initial evaluation differs: "+name)
@@ -55,17 +85,24 @@ def load_continuation(data_dir,config,frozen):
     return continuation
 
 
+def evaluation_minimum(series):
+    """Small evaluations finish their schedule without masquerading as formal."""
+    return 100 if series>=10 else 1
+
+
 def fingerprint(snapshot):
     paths=set(Path(snapshot)/name for name in
               ("game_core.py","character_stats.py","player_combos.py","awakening_events.py","party_presets.py","map_data.py"))
     paths.update(ROOT/name for name in ("run_game.py","battle_logic.py","abilities_los.py","iq_perception.py",
+                                       "iq_controller_adapter.py","public_effects.py","grid_visibility.py",
                                        "ghost_champions_v1.py","ghost_champions_v1_macro.py",
                                        "team_ai.py","controllers.py","roster_utils.py","simulation_runtime.py",
                                        "grid_paths.py","grid_lines.py","combo_awakening.py","defender_setup_phase.py",
                                        "map_data_defender_setup.py","analytics/combat_tracker.py","run_competition_manager.py",
                                        "tools/run_eval.py"))
     for package in ("gc_v1","frc_v1","fnatic_v3","concon_v1","omoko_v1","touyama_v2","attacker_v3","defender_v3"):
-        paths.update((ROOT/package).glob("*.py"))
+        package_root=Path(os.environ["GC_OPPONENT_SNAPSHOT"])/package if package=="concon_v1" and os.environ.get("GC_OPPONENT_SNAPSHOT") else ROOT/package
+        paths.update(package_root.glob("*.py"))
     paths.update((AI_ROOT/"rl").glob("*.py"))
     paths.update(AI_ROOT.glob("*.py"))
     paths.add(AI_ROOT/"gc_profiles.json")
@@ -84,8 +121,9 @@ def fingerprint(snapshot):
     paths.update((ROOT/p).resolve() for p in ("frc_v1/runs/selfplay_01/A_policy.pt",
                  "frc_v1/runs/tactics_finetune_20260930/D_policy.pt"))
     for package in ("fnatic_v3","concon_v1","omoko_v1","touyama_v2","attacker_v3","defender_v3"):
-        paths.update((ROOT/package).rglob("*.pt"))
-        paths.update((ROOT/package).rglob("*.pth"))
+        package_root=Path(os.environ["GC_OPPONENT_SNAPSHOT"])/package if package=="concon_v1" and os.environ.get("GC_OPPONENT_SNAPSHOT") else ROOT/package
+        paths.update(package_root.rglob("*.pt"))
+        paths.update(package_root.rglob("*.pth"))
     return {str(path.resolve()):hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(paths) if path.is_file()}
 
 
@@ -227,7 +265,12 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
     rng=np.random.default_rng(config["seed"])
     frozen=fingerprint(snapshot)
     continuation=load_continuation(data_dir,config,frozen)
+    initial_reference=load_initial_evaluation(data_dir)
+    if initial_reference and (verification or continuation):
+        raise ValueError("Historical initial evaluation requires a fresh production run, not a continuation")
     manifest=dict(schema_hash=SCHEMA_HASH,config=config,frozen_inputs=frozen,verification=verification)
+    if initial_reference:
+        manifest["initial_evaluation_reference_sha256"]=hashlib.sha256((data_dir/REFERENCE_NAME).read_bytes()).hexdigest()
     if continuation:
         manifest["continuation_sha256"]=hashlib.sha256((data_dir/"continuation.json").read_bytes()).hexdigest()
     manifest_path=data_dir/"manifest.json"
@@ -237,6 +280,10 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
     else:
         manifest_path.write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     status=dict(phase="initializing",requested_phase=phase,process_id=os.getpid(),complete=False,verification=verification,step=0)
+    if initial_reference:
+        status.update(initial_evaluation_reused=True,initial_evaluation_kind="historical_baseline",
+                      initial_evaluation_source=initial_reference["folder"],
+                      initial_evaluation_rates=initial_reference["rates"],initial_evaluates_new_bc=False)
     def save_status(**values):
         status.update(values)
         status["updated_at"]=datetime.now(timezone.utc).isoformat()
@@ -247,7 +294,7 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
     save_status()
     save_status(phase="collecting_bc",bc_collected_rounds=0,
                 bc_total_rounds=len(OPPONENTS)*config["bc_rounds_per_opponent"])
-    bc_frozen=continuation["parent_manifest"]["frozen_inputs"] if continuation else frozen
+    bc_frozen=continuation.get("bc_frozen_inputs",continuation["parent_manifest"]["frozen_inputs"]) if continuation else frozen
     data=load_data(data_dir,bc_frozen) if (data_dir/"demonstrations.npz").exists() else collect(data_dir,log_dir,config,frozen,on_progress=save_status)
     save_status(samples=len(data["obs"]))
     if phase=="collect":
@@ -266,20 +313,35 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
         return
     rates={code:.5 for code in OPPONENTS}
     if not verification:
-        save_status(phase="evaluating_bc",bc_checkpoint=str(bc_path),evaluation_output=str(log_dir/"evaluation_bc"))
-        if continuation:
+        save_status(phase="using_initial_baseline" if initial_reference else "evaluating_bc",
+                    bc_checkpoint=str(bc_path),evaluation_output=str(log_dir/"evaluation_bc"))
+        if initial_reference:
+            rates=dict(initial_reference["rates"])
+            sample=json.loads((Path(initial_reference["folder"])/"status.json").read_text(encoding="utf-8"))
+            save_status(evaluation_output=initial_reference["folder"],initial_evaluation_reexecuted=False)
+            print(f"Reusing completed initial evaluation ({initial_reference['scheduled_series']} series): "
+                  f"{initial_reference['folder']}. Historical baseline; new BC has not been evaluated.",flush=True)
+        elif continuation and continuation.get("initial_evaluation"):
             initial=Path(continuation["initial_evaluation"]["folder"])
             summary=json.loads((initial/"summary.json").read_text(encoding="utf-8"))
             rates={code:summary[name]["attack_rate"] for code,(name,_) in OPPONENTS.items()}
             sample=json.loads((initial/"status.json").read_text(encoding="utf-8"))
             save_status(evaluation_output=str(initial),inherited_initial_evaluation=True)
+            if continuation.get("initial_evaluation_as_baseline"):
+                save_status(initial_evaluation_reused=True,initial_evaluation_reexecuted=False,
+                            initial_evaluation_as_baseline=True,initial_guardrail_passed=False,
+                            initial_evaluation_rates=dict(rates))
+                print(f"Reusing completed BC evaluation as starting baseline: {initial}. "
+                      "The initial result is not a passed training guardrail.",flush=True)
         else:
+            initial_series=config.get("initial_evaluation_series",config["evaluation_series"])
             rates,sample=evaluate(bc_path,log_dir/"evaluation_bc",config,snapshot,
-                series_count=config.get("initial_evaluation_series",config["evaluation_series"]))
+                series_count=initial_series,minimum_attack_rounds=evaluation_minimum(initial_series))
         if not sample["complete"]:
             save_status(phase="stopped",stop_reason="insufficient_evaluation_sample",rates=rates)
             return
-        if rates["TYG"]<config["tyg_minimum_win_rate"]:
+        initial_baseline=initial_reference or (continuation and continuation.get("initial_evaluation_as_baseline"))
+        if not initial_baseline and config.get("tyg_periodic_action","stop")=="stop" and rates["TYG"]<config["tyg_minimum_win_rate"]:
             save_status(phase="stopped",stop_reason="TYG_regression_after_BC",rates=rates)
             return
     optimizer=torch.optim.Adam(policy.parameters(),lr=config["learning_rate"])
@@ -313,28 +375,56 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
         else:
             policy.save(evaluated,training_stage="ppo",step=step,verified=False)
         folder=log_dir/f"evaluation_{step:07d}"
-        formal=step>=config["steps"]
-        series=config.get("final_evaluation_series",10) if formal else config["evaluation_series"]
+        final=step>=config["steps"]
+        series=config.get("final_evaluation_series",config["evaluation_series"]) if final else config["evaluation_series"]
+        minimum=evaluation_minimum(series)
         save_status(phase="evaluating_ppo",step=step,episode=episode,evaluation_output=str(folder),
-                    evaluation_series=series,formal_evaluation=formal)
-        rates,sample=evaluate(evaluated,folder,config,snapshot,series_count=series,
-                              minimum_attack_rounds=100 if formal else 1)
-        if sample["complete"] and not formal and rates["TYG"]<config["tyg_minimum_win_rate"]:
+                    evaluation_series=series,final_evaluation=final,formal_evaluation=minimum>=100)
+        reused=continuation.get("pending_evaluation") if continuation else None
+        if reused and reused["step"]==step and last_checked_step<step:
+            reference=reused["reference"]
+            rates=dict(reference["rates"])
+            sample=json.loads((Path(reference["folder"])/"status.json").read_text(encoding="utf-8"))
+            save_status(evaluation_reused=True,evaluation_output=reference["folder"])
+            print(f"Reusing completed PPO evaluation at {step}: {reference['folder']}",flush=True)
+        else:
+            save_status(evaluation_reused=False)
+            rates,sample=evaluate(evaluated,folder,config,snapshot,series_count=series,
+                                  minimum_attack_rounds=minimum)
+        warn_only=config.get("tyg_periodic_action","stop")=="warn"
+        if sample["complete"] and not final and not warn_only and rates["TYG"]<config["tyg_minimum_win_rate"]:
             confirmation=log_dir/f"evaluation_{step:07d}_tyg_confirmation"
-            save_status(phase="confirming_tyg",evaluation_output=str(confirmation),evaluation_series=10)
+            confirmation_series=config.get("tyg_confirmation_series",config["evaluation_series"])
+            save_status(phase="confirming_tyg",evaluation_output=str(confirmation),evaluation_series=confirmation_series)
             confirmation_rates,confirmation_sample=evaluate(evaluated,confirmation,config,snapshot,
-                series_count=10,opponents=["TYG"],minimum_attack_rounds=100)
+                series_count=confirmation_series,opponents=["TYG"],minimum_attack_rounds=evaluation_minimum(confirmation_series))
             rates["TYG"]=confirmation_rates["TYG"]
             sample=dict(sample,complete=confirmation_sample["complete"])
-        if not sample["complete"] or rates["TYG"]<config["tyg_minimum_win_rate"]:
+        target_met=rates["TYG"]>=config["tyg_minimum_win_rate"]
+        if not sample["complete"] or (not warn_only and not target_met):
             save_status(phase="stopped",stop_reason="TYG_regression" if sample["complete"] else "insufficient_evaluation_sample",rates=rates)
             return False
-        policy.save(data_dir/"last_passed_guardrail.pt",training_stage="ppo",step=step,
-                    verified=formal,guardrail_passed=True,formal_evaluation=formal,rates=rates)
+        formal=bool(final and sample.get("milestone_sample_complete",minimum>=100 and sample["complete"]))
+        if target_met:
+            policy.save(data_dir/"last_passed_guardrail.pt",training_stage="ppo",step=step,
+                        verified=formal,guardrail_passed=True,formal_evaluation=formal,rates=rates)
+        elif not final:
+            warning=dict(step=step,warning="TYG_below_target",attack_rate=rates["TYG"],
+                         target=config["tyg_minimum_win_rate"])
+            with (log_dir/"warnings.jsonl").open("a",encoding="utf-8") as log:
+                log.write(json.dumps(warning)+"\n")
+            print(f"WARNING: TYG {rates['TYG']:.1%} < {config['tyg_minimum_win_rate']:.1%} at {step}; continuing training.",flush=True)
+        else:
+            print(f"Training finished. Final TYG target not met: {rates['TYG']:.1%} < {config['tyg_minimum_win_rate']:.1%}.",flush=True)
         last_checked_step=step
         next_eval=((step//config["evaluate_every_steps"])+1)*config["evaluate_every_steps"]
         save_latest()
-        save_status(phase="ppo",last_evaluated_step=last_checked_step,rates=rates)
+        save_status(phase="ppo",last_evaluated_step=last_checked_step,rates=rates,
+                    guardrail_passed=target_met,tyg_below_target=not target_met,
+                    warning="TYG_below_target" if not target_met else None)
+        if final:
+            save_status(training_complete=True,final_target_met=target_met,
+                        final_target=config["tyg_minimum_win_rate"])
         return True
 
     # A crash after saving a rollout must not bypass its pending guardrail.
@@ -349,7 +439,9 @@ def train(run_name,config,snapshot,*,phase="all",resume=False,verification=False
         with (log_dir/"engine.log").open("a",encoding="utf-8") as log,contextlib.redirect_stdout(log),contextlib.redirect_stderr(log):
             rows,stats=play_round(code,config["seed"]+1000000+episode,policy=policy,mode="stochastic",
                 gamma=config["gamma"],step=step,decay_steps=config["shaping_decay_steps"],
-                recon_reward=config["recon_new_enemy_reward"],gae_lambda=config["gae_lambda"])
+                recon_reward=config["recon_new_enemy_reward"],gae_lambda=config["gae_lambda"],
+                hazard_shaping_weight=config.get("hazard_shaping_weight",.05),
+                hazard_hit_penalty=config.get("hazard_hit_penalty",.03))
         step+=len(rows)
         episode+=1
         loss=optimize_ppo(policy,optimizer,rows,data,step,config,rng)

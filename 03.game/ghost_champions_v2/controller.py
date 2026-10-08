@@ -7,6 +7,7 @@ from .tactics import AttackerTactics
 
 
 class GhostChampionsV2AttackerController(GhostChampionsV1AttackerController):
+    requires_public_effects = True
     def __init__(self, greedy=True, config=None, config_path=None, stage=None):
         self.config = copy.deepcopy(config) if config is not None else load_config(config_path)
         validate_config(self.config)
@@ -20,24 +21,34 @@ class GhostChampionsV2AttackerController(GhostChampionsV1AttackerController):
         super().reset_round()
         self.tactics.reset_round()
 
+    def set_game(self, game):
+        # Disable the inherited roster-based A restriction for v2 only.
+        owner=getattr(game,"real_game",game)
+        owner.gc_opponent_site_overrides=False
+        super().set_game(game)
+
     @property
     def observed_defenders_by_axis(self):
         return dict(self.tactics.observed_defenders_by_axis)
 
     def decide_move(self, char, game_state):
-        profile, flags = self.tactics.observe(char,game_state)
-        result = None
+        settings, flags = self.tactics.observe(char,game_state)
+        result = self.tactics.dodge(char,game_state) if char.is_alive else None
+        if result is not None:
+            self.tactics.remember_result(char,result)
+            return result
         if char.is_alive and game_state.get("is_planted") and flags["post_plant_hold"]:
             result = self.tactics.postplant(char,game_state)
-        elif char.is_alive and not game_state.get("is_planted") and flags["opponent_profiles"]:
-            result = self.tactics.preplant(char,game_state,profile,flags)
+        elif char.is_alive and not game_state.get("is_planted") and flags["site_selection"]:
+            result = self.tactics.preplant(char,game_state,settings,flags)
         if result is None:
             result = super().decide_move(char,game_state)
             if (flags["early_recon"] and not game_state.get("is_planted")
                     and not (isinstance(result,tuple) and len(result)>1 and result[1] == "PLANT")):
                 result = self.tactics.recon(char,game_state) or result
             if flags["entry_discipline"]:
-                result = self.tactics.discipline(char,game_state,profile,result)
+                result = self.tactics.discipline(char,game_state,result)
+        result = self.tactics.avoid_entry(char,game_state,result)
         self.tactics.remember_result(char,result)
         return result
 

@@ -18,6 +18,8 @@ STAT_LABELS = {
     "shield_hp": "シールド",
     "shield_piercer": "シールドピアサー",
     "shield_crash": "シールドクラッシュ",
+    "erosion_curse": "摩耗の呪い",
+    "fate_loom": "運命の織機",
 }
 
 CONDITION_LABELS = {
@@ -51,6 +53,8 @@ def format_stat_bonus(stat_name, value):
             return f"{label}を{_number_text(max(0, amount))}HPに設定"
         return f"{label} {amount:+g}HP"
     label = STAT_LABELS.get(stat_name, stat_name)
+    if stat_name in ("erosion_curse", "fate_loom", "摩耗の呪い", "運命の織機"):
+        return f"{label} {float(value):+g}tick"
 
     if stat_name in ("condition_bonus", "調子補正"):
         return f"調子補正 {float(value) * 100:+g}ポイント"
