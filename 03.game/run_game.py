@@ -160,6 +160,14 @@ def _build_team_ai(key):
             ),
         )
 
+    if normalized in {"toru_ai_v4", "toru ai v4"}:
+        from toruAI_v4.tv4_game_controller import ToruV4GameDefenderController
+        return DualRoleTeamAI(
+            name="Toru AI v4",
+            attacker_factory=DefaultAttackerController,
+            defender_factory=ToruV4GameDefenderController,
+        )
+
     if normalized == "toru_ai_v3.1":
         return DualRoleTeamAI(
             name="Toru AI v3.1",
