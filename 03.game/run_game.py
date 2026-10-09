@@ -86,7 +86,9 @@ FRC_V1_ATTACKER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs"
 FRC_V1_DEFENDER_CHECKPOINT = Path(__file__).resolve().parent / "frc_v1" / "runs" / "tactics_finetune_20260930" / "D_policy.pt"
 
 
-def _build_team_ai(key):
+def _build_team_ai(key, *, device=None):
+    """Build a team with an optional inference device override."""
+    device = device if device is not None else match_inference_device()
     normalized = str(key or "default").strip().lower()
 
     if normalized in {"concon_v1", "concon_attacker_a1"}:
@@ -110,9 +112,9 @@ def _build_team_ai(key):
         return DualRoleTeamAI(
             name="FRC v1" + (" (baseline)" if mode == "baseline" else ""),
             attacker_factory=lambda: FrcAttackerController(
-                mode=mode, checkpoint=FRC_V1_ATTACKER_CHECKPOINT if mode == "learned" else None, inference_only=True),
+                mode=mode, checkpoint=FRC_V1_ATTACKER_CHECKPOINT if mode == "learned" else None, inference_only=True, device=device),
             defender_factory=lambda: FrcDefenderController(
-                mode=mode, checkpoint=FRC_V1_DEFENDER_CHECKPOINT if mode == "learned" else None, inference_only=True),
+                mode=mode, checkpoint=FRC_V1_DEFENDER_CHECKPOINT if mode == "learned" else None, inference_only=True, device=device),
         )
 
     if normalized in {"fnatic_v3", "fnatic v3"}:
@@ -165,18 +167,18 @@ def _build_team_ai(key):
         )
 
     if normalized in {"toru_ai_v4", "toru ai v4"}:
-        from toruAI_v4.tv4_game_controller import ToruV4GameDefenderController
+        from toruAI_v4.tv4_game_controller import ToruV4GameDefenderController, ToruV4GameAttackerController
         return DualRoleTeamAI(
             name="Toru AI v4",
-            attacker_factory=DefaultAttackerController,
+            attacker_factory=ToruV4GameAttackerController,
             defender_factory=ToruV4GameDefenderController,
         )
 
     if normalized == "toru_ai_v3.1":
         return DualRoleTeamAI(
             name="Toru AI v3.1",
-            attacker_factory=lambda: MultiRoleAttackerController(device=match_inference_device()),
-            defender_factory=lambda: MultiRoleDefenderController(device=match_inference_device()),
+            attacker_factory=lambda: MultiRoleAttackerController(device=device),
+            defender_factory=lambda: MultiRoleDefenderController(device=device),
         )
 
     if normalized == "touyama_gaming_v1":
@@ -189,15 +191,15 @@ def _build_team_ai(key):
     if normalized == "touyama_gaming_v2":
         return DualRoleTeamAI(
             name="Touyama Gaming v2",
-            attacker_factory=lambda: Tv2TouyamaAttackerController(),
-            defender_factory=lambda: Tv2TouyamaDefenderController(),
+            attacker_factory=lambda: Tv2TouyamaAttackerController(device=device),
+            defender_factory=lambda: Tv2TouyamaDefenderController(device=device),
         )
 
     if normalized == "omoko_gaming_v1":
         return DualRoleTeamAI(
             name="Omoko Gaming v1",
-            attacker_factory=lambda: Ov1AttackerController(),
-            defender_factory=lambda: Ov1DefenderController(),
+            attacker_factory=lambda: Ov1AttackerController(device=device),
+            defender_factory=lambda: Ov1DefenderController(device=device),
         )
     
     # if normalized == "omoko_gaming_v1_r":
@@ -216,10 +218,10 @@ def _build_team_ai(key):
         return DualRoleTeamAI(
             name="Ghost Champions v1",
             attacker_factory=lambda: GhostChampionsV1AttackerController(
-                greedy=True,
+                greedy=True, device=device,
             ),
             defender_factory=lambda: GhostChampionsV1DefenderController(
-                greedy=True,
+                greedy=True, device=device,
             ),
         )
 

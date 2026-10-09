@@ -16,7 +16,7 @@ from frc_v1.perception import FrcPerceptionBuilder, Sighting
 from toruAI_v4.tv4_scenario import Scenario
 from toruAI_v4.tv4_observer import FeatureHistory, ObserverController
 from toruAI_v4.tv4_model import SiteModel, DecisionGate, optimize
-from toruAI_v4.tv4_train_analysis import summarize, preplant_counts, best_rank, evaluate_seeds, consider_best, parser, BEST_RULE
+from toruAI_v4.tv4_train_defender_analysis import summarize, preplant_counts, best_rank, evaluate_seeds, consider_best, parser, BEST_RULE, analysis_config
 from toruAI_v4.tv4_model import VERSION
 
 
@@ -166,7 +166,7 @@ class SitePredictionTests(unittest.TestCase):
         log = Mock()
         args = parser().parse_args([])
         identity = dict(opponent="fnatic_v3", phase="eval", set=10, trained_rounds=120, replay_rounds=20)
-        with patch("toruAI_v4.tv4_train_analysis.play_block", side_effect=[(r, []) for r in groups]) as play:
+        with patch("toruAI_v4.tv4_train_defender_analysis.play_block", side_effect=[(r, []) for r in groups]) as play:
             metrics = evaluate_seeds("fnatic_v3", self.scenario, Mock(), args, identity, [100, 200, 300], log)
         self.assertEqual(metrics["rounds"], 36)
         self.assertEqual(metrics["evaluation_seeds"], [100, 200, 300])
@@ -177,7 +177,7 @@ class SitePredictionTests(unittest.TestCase):
 
     def test_legacy_best_is_compared_on_common_seeds_and_cached_without_mutation(self):
         args = parser().parse_args([])
-        config = {k: getattr(args, k) for k in ("seed", "threshold", "confirm_ticks", "rotate", "peek_ticks", "hide_ticks", "defender_preset")}
+        config = analysis_config(args)
         saved = dict(version=VERSION, opponent="fnatic_v3", scenario=self.scenario.signature,
                      fields=["x"], config=config, selection_rule="old_single_seed", evaluation_seed=100,
                      evaluation=dict(correct_all_plants=.1, accuracy=.1, mean_correct_lead=10))
@@ -189,7 +189,7 @@ class SitePredictionTests(unittest.TestCase):
         path.exists.return_value = True
         path.stat.return_value = SimpleNamespace(st_mtime_ns=1, st_size=2)
         cache = {}
-        with patch("toruAI_v4.tv4_train_analysis.torch.load", return_value=saved), patch("toruAI_v4.tv4_train_analysis.torch.save") as save:
+        with patch("toruAI_v4.tv4_train_defender_analysis.torch.load", return_value=saved), patch("toruAI_v4.tv4_train_defender_analysis.torch.save") as save:
             for _ in range(2):
                 self.assertFalse(consider_best(path, model, candidate, "fnatic_v3", self.scenario,
                                  ["x"], args, [100, 200, 300], logger, reevaluate=reevaluate, cache=cache))
@@ -204,14 +204,43 @@ class SitePredictionTests(unittest.TestCase):
         self.assertEqual(saved["evaluation"]["accuracy"], .1)
 
     def test_analysis_output_defaults_are_fixed_directories(self):
-        from toruAI_v4.tv4_train_analysis import HERE
+        from toruAI_v4.tv4_train_defender_analysis import HERE
         args = parser().parse_args([])
-        self.assertEqual(args.data_dir, HERE / "data" / "analysis")
-        self.assertEqual(args.log_dir, HERE / "logs" / "analysis")
+        self.assertEqual(args.data_dir, HERE / "data" / "defender_analysis")
+        self.assertEqual(args.log_dir, HERE / "logs" / "defender_analysis")
+
+    def test_own_capabilities_change_features_without_player_name_dependence(self):
+        snapshot = FrcPerceptionBuilder("D").build(world(self.scenario))
+        history = FeatureHistory(self.scenario)
+        original = history.encode(snapshot, [])
+        renamed = replace(snapshot, allies=tuple(replace(a, name="renamed_" + str(a.slot)) for a in snapshot.allies))
+        np.testing.assert_array_equal(original, FeatureHistory(self.scenario).encode(renamed, []))
+        changed = replace(snapshot, allies=(replace(snapshot.allies[0], ability_name="ASH", accuracy=.123),) + snapshot.allies[1:])
+        features = FeatureHistory(self.scenario).encode(changed, [])
+        self.assertNotEqual(original[history.fields.index("ally_0_accuracy")], features[history.fields.index("ally_0_accuracy")])
+        self.assertEqual(features[history.fields.index("ally_0_ability_ASH")], 1.)
+
+    def test_new_conditions_replace_baseline_only_for_explicit_fresh_training(self):
+        args = parser().parse_args([])
+        saved = dict(version=VERSION, opponent="fnatic_v3", scenario=self.scenario.signature,
+                     fields=["x"], config={"defender_preset": "Gorigons"})
+        metrics = dict(phase="eval", plants=36, evaluation_seeds=[100, 200, 300],
+                       correct_all_plants=.7, accuracy=.7, mean_correct_lead=30, trained_rounds=120)
+        path = Mock()
+        path.exists.return_value = True
+        with patch("toruAI_v4.tv4_train_defender_analysis.torch.load", return_value=saved), \
+             patch("toruAI_v4.tv4_train_defender_analysis.torch.save") as save:
+            with self.assertRaisesRegex(ValueError, "conditions differ"):
+                consider_best(path, Mock(), metrics, "fnatic_v3", self.scenario, ["x"], args,
+                              [100, 200, 300], Mock())
+            save.assert_not_called()
+            self.assertTrue(consider_best(path, Mock(), metrics, "fnatic_v3", self.scenario, ["x"], args,
+                                         [100, 200, 300], Mock(), allow_new_conditions=True))
+            self.assertEqual(save.call_args.args[0]["completed_sets"], 10)
 
     def test_renamed_analysis_best_compares_existing_legacy_file(self):
         args = parser().parse_args([])
-        config = {k: getattr(args, k) for k in ("seed", "threshold", "confirm_ticks", "rotate", "peek_ticks", "hide_ticks", "defender_preset")}
+        config = analysis_config(args)
         metrics = dict(phase="eval", plants=36, evaluation_seeds=[100, 200, 300],
                        correct_all_plants=.9, accuracy=.9, mean_correct_lead=30, trained_rounds=120)
         saved = dict(version=VERSION, opponent="fnatic_v3", scenario=self.scenario.signature,
@@ -220,8 +249,8 @@ class SitePredictionTests(unittest.TestCase):
         path, legacy = Mock(), Mock()
         path.exists.return_value = False
         legacy.exists.return_value = True
-        with patch("toruAI_v4.tv4_train_analysis.torch.load", return_value=saved) as load, \
-             patch("toruAI_v4.tv4_train_analysis.torch.save") as save:
+        with patch("toruAI_v4.tv4_train_defender_analysis.torch.load", return_value=saved) as load, \
+             patch("toruAI_v4.tv4_train_defender_analysis.torch.save") as save:
             self.assertFalse(consider_best(path, Mock(), {**metrics, "accuracy": .8, "correct_all_plants": .8},
                                           "fnatic_v3", self.scenario, ["x"], args, [100, 200, 300], Mock(), previous_path=legacy))
             self.assertEqual(load.call_args.args[0], legacy)

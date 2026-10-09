@@ -15,15 +15,38 @@ ABILITIES = ("SMOKE", "FLASH", "RECON")
 TARGET_COUNT = 3  # planted spike, assigned facing point, known enemy
 LEGACY_ACTION_DIM = (len(MOVES) + len(ABILITIES) * TARGET_COUNT) * 8
 ULTIMATE_ACTION = LEGACY_ACTION_DIM
-ACTION_DIM = LEGACY_ACTION_DIM + TARGET_COUNT * 8
+PRE_COUNTER_ACTION_DIM = LEGACY_ACTION_DIM + TARGET_COUNT * 8
+SELF_SMOKE_ACTION = PRE_COUNTER_ACTION_DIM
+ACTION_DIM = SELF_SMOKE_ACTION + 8
 WAIT_ACTION = 4 * 8
 MAP_CHANNELS = 6
-FEATURE_DIM = 34 + 5 * 15 + 5 * 16
+LEGACY_FEATURE_DIM = 34 + 5 * 15 + 5 * 16
+STATUS_FIELDS = ("blind_remaining", "reveal_remaining", "electric_remaining",
+                 "life_contract_remaining", "movement_disabled_remaining")
+FEATURE_DIM = LEGACY_FEATURE_DIM + len(STATUS_FIELDS) + 5 + 2
 MEMORY_TICKS = 12
 
 
 def observation_dim(scenario):
     return MAP_CHANNELS * scenario.grid.size + FEATURE_DIM
+
+
+def compatible_observation_dims(scenario):
+    return (observation_dim(scenario), MAP_CHANNELS * scenario.grid.size + LEGACY_FEATURE_DIM)
+
+
+def threat_exposure(position, threats, grid, smoke, revealed=False):
+    """Conservative firing lanes from IQ-disclosed positions and recent memory."""
+    count = 0
+    for source, through_smoke in threats:
+        cells = line_cells(position, source)
+        if any(grid[cell] == 1 for cell in cells):
+            continue
+        if (len(cells) > 2 and not revealed and not through_smoke
+                and any(cell in smoke for cell in cells)):
+            continue
+        count += 1
+    return float(count)
 
 
 def facing_onehot(direction):
@@ -96,7 +119,8 @@ class GuardDQN(nn.Module):
             occupied = ((maps[:, 3] - maps[:, 2]).flatten(1).gather(1, other_posts) > 0)
             occupancy = (occupied.long() * torch.tensor([1, 2, 4, 8], device=observations.device)).sum(1)
             indices = (slots * self.height * self.width + rows * self.width + cols) * 16 + occupancy
-            quiet = (features[:, 12] == 0) & (features[:, 16] == 0)
+            quiet = ((features[:, 12] == 0) & (features[:, 16] == 0)
+                     & (features[:, -1] == 0))
             navigation_moves = self.navigation_values(indices)
             ally_features = features[:, 34:109].reshape(-1, 5, 15)
             self_indices = ((ally_features[:, :, 1:3] - features[:, None, :2]).square().sum(2)
@@ -119,16 +143,24 @@ class GuardDQN(nn.Module):
 def load_guard_weights(model, state, *, strict=True):
     """Expand old checkpoints without changing any existing learned outputs."""
     state = dict(state)
+    previous = state["head.0.weight"]
+    if previous.shape[1] == model.head[0].in_features - (FEATURE_DIM - LEGACY_FEATURE_DIM):
+        state["head.0.weight"] = torch.cat((previous, previous.new_zeros(
+            previous.shape[0], FEATURE_DIM - LEGACY_FEATURE_DIM)), dim=1)
     if state["head.2.bias"].shape[0] == LEGACY_ACTION_DIM:
         for key in ("head.2.weight", "head.2.bias"):
             previous = state[key]
             # Until trained, ultimates start with the corresponding WAIT values.
             state[key] = torch.cat((previous, previous[32:40].repeat(
                 (TARGET_COUNT,) + (1,) * (previous.ndim - 1))), dim=0)
+    if state["head.2.bias"].shape[0] == PRE_COUNTER_ACTION_DIM:
+        for key in ("head.2.weight", "head.2.bias"):
+            previous = state[key]
+            state[key] = torch.cat((previous, previous[32:40]), dim=0)
     return model.load_state_dict(state, strict=strict)
 
 
-def build_inputs(controller, char, state):
+def build_inputs(controller, char, state, *, counter_features=True):
     scenario = controller.scenario
     grid = np.asarray(state["grid"])
     height, width = grid.shape
@@ -143,6 +175,10 @@ def build_inputs(controller, char, state):
     tap_info = state.get("defender_defuse_info") or {}
     tap_progress = max((float(value[0]) / max(1, float(value[1]))
                         for value in tap_info.values()), default=0.0)
+    tap_remaining = min((max(0.0, float(required) - float(progress))
+                         for progress, required in tap_info.values() if progress > 0), default=10.0)
+    statuses = [max(0.0, float(getattr(char, field, 0))) for field in STATUS_FIELDS]
+    impaired = any(statuses[:4])  # Smoke alone does not call for evasion.
     known = [other for other in chars if other.team != char.team
              and getattr(other, "is_alive", True) and getattr(other, "position_known", True)
              and 0 <= other.pos[0] < height and 0 <= other.pos[1] < width]
@@ -159,7 +195,20 @@ def build_inputs(controller, char, state):
     target = fireable[0] if fireable else None
     known.sort(key=lambda enemy: (-float(tap_info.get(enemy.name, (0, 1))[0]),
                                  math.dist(position, enemy.pos), enemy.name))
-    targets = (spike, aim, tuple(known[0].pos) if known else None)
+    remembered = sorted(controller.sightings.values(),
+                        key=lambda item: (-item[1], math.dist(position, item[0])))
+    targets = (spike, aim, tuple(known[0].pos) if known else
+               remembered[0][0] if counter_features and remembered else None)
+    smoke_vision = {enemy.name: bool(getattr(enemy, "sees_through_smoke", False)) for enemy in known}
+    dead = {other.name for other in chars if not getattr(other, "is_alive", True)}
+    threats = [(pos, smoke_vision.get(name, False))
+               for name, (pos, _) in controller.sightings.items() if name not in dead]
+    exposures = {}
+    for dr, dc in MOVES:
+        cell = (position[0] + dr, position[1] + dc)
+        r, c = cell
+        exposures[cell] = (threat_exposure(cell, threats, grid, smoke, statuses[1] > 0 or statuses[2] > 0)
+                           if 0 <= r < height and 0 <= c < width and grid[r, c] != 1 else float(len(threats)))
     stopped = controller.stationary_ticks(char, tick)
     distance_goal = int(bfs_distance_map(grid, goal)[position])
     spike_in_bounds = 0 <= spike[0] < height and 0 <= spike[1] < width
@@ -224,6 +273,9 @@ def build_inputs(controller, char, state):
                         + [float(getattr(enemy, "reveal_remaining", 0) > 0) if disclosed else 0.0,
                            float(tap_info.get(enemy.name, (0, 1))[0]) > 0,
                            (tick - memory[1]) / MEMORY_TICKS if memory else 1.0])
+    features.extend([min(value, 10) / 10 for value in statuses]
+                    + [exposures[(position[0] + dr, position[1] + dc)] / 5 for dr, dc in MOVES]
+                    + [min(tap_remaining, 10) / 10, float(impaired)])
     observation = np.concatenate((maps.ravel(), np.asarray(features, dtype=np.float32)))
     if len(observation) != observation_dim(scenario):
         raise RuntimeError("guard feature dimension changed")
@@ -261,6 +313,8 @@ def build_inputs(controller, char, state):
             # ability ticks retain the current facing. Do not offer fictitious turns.
             mask[start + FACING_DIRECTIONS.index(char.facing)] = True
     ultimate_actions = {}
+    if getattr(char, "ability_name", "") == "SMOKE" and getattr(char, "smoke_charges", 0) > 0:
+        mask[SELF_SMOKE_ACTION + FACING_DIRECTIONS.index(char.facing)] = True
     name = str(getattr(char, "ultimate_name", "")).upper()
     cost = getattr(char, "ultimate_cost", 0)
     game = getattr(controller, "game", None)
@@ -311,11 +365,22 @@ def build_inputs(controller, char, state):
                         and (position[0] + dr, position[1] + dc) not in occupied
                         for dr, dc in MOVES[:4]),
         "ultimate_actions": ultimate_actions,
+        "impaired": impaired, "blind": statuses[0] > 0,
+        "revealed": statuses[1] > 0 or statuses[2] > 0,
+        "exposures": exposures, "tap_remaining": tap_remaining,
     }
+    if not counter_features:
+        # Defender retake shares the original guard encoder. Keep its saved
+        # observations/action indices unchanged when extending attacker guard.
+        observation = observation[:MAP_CHANNELS * scenario.grid.size + LEGACY_FEATURE_DIM]
+        mask = mask[:PRE_COUNTER_ACTION_DIM]
     return observation, mask, context
 
 
 def decode_action(action, position, targets, ultimate_actions=None):
+    if int(action) >= SELF_SMOKE_ACTION:
+        return list(position), {"ability": "SMOKE", "target": position,
+                                "facing": FACING_DIRECTIONS[int(action) % 8]}
     if int(action) >= ULTIMATE_ACTION:
         return list(position), ultimate_actions[int(action)]
     operation, facing_index = divmod(int(action), 8)

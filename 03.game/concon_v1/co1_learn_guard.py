@@ -10,7 +10,8 @@ import torch
 from controllers import BaseController
 from concon_v1.co1_guard_scenarios import get_scenario, validate_checkpoint
 from concon_v1.co1_guard_common import (
-    GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, load_guard_weights, observation_dim, build_inputs, decode_action, GORIGONS,
+    GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, PRE_COUNTER_ACTION_DIM, compatible_observation_dims,
+    load_guard_weights, observation_dim, build_inputs, decode_action, GORIGONS,
 )
 
 
@@ -30,8 +31,8 @@ class ConconGuardController(BaseController):
             self.checkpoint_episode = checkpoint.get("episode")
             self.positioning_version = checkpoint.get("positioning_version")
             validate_checkpoint(checkpoint, self.scenario)
-            if (checkpoint.get("obs_dim") != observation_dim(self.scenario)
-                    or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, ACTION_DIM)
+            if (checkpoint.get("obs_dim") not in compatible_observation_dims(self.scenario)
+                    or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, PRE_COUNTER_ACTION_DIM, ACTION_DIM)
                     or tuple(checkpoint.get("training_roster", ())) != GORIGONS.players):
                 raise ValueError("guard checkpoint dimensions/roster do not match")
             with torch.random.fork_rng(devices=[]):

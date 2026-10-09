@@ -1,4 +1,4 @@
-"""Train six separate site predictors from real 12-round defender matches."""
+"""Train opponent-specific plant-site predictors from 12-round defender matches."""
 from pathlib import Path
 import sys
 
@@ -9,6 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import argparse
+import copy
 from collections import deque
 import contextlib
 import csv
@@ -24,14 +25,53 @@ import torch
 from toruAI_v4.tv4_scenario import OPPONENTS, Scenario
 from toruAI_v4.tv4_observer import FeatureHistory, ObserverController
 from toruAI_v4.tv4_model import VERSION, SiteModel, optimize
+from toruAI_v4.tv4_attacker_rosters import eligible_attacker_presets
 
 
 
 # 学習設定：相手AIごとの追加セット数。1セット = 12ラウンド。
 # 通常はこちらを編集して実行してください。--sets は一時的な上書き用です。
 TRAINING_SETS = 30
+MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 EVALUATION_INTERVAL = 10
 EVALUATION_SEED_COUNT = 3  # 各seedで12ラウンド。合計36ラウンド。
+TRAINING_PRESETS = ("Gorigons", "EG2023", "Vision Strikers", "Furina Classic", "Fnatic2023",
+                    "Touyama Gaming", "Omoko Gaming", "Ghost Champions", "Team Elites")
+EVALUATION_PRESETS = ("Eine Kleine", "SUPES", "BBL")
+TARGET_OPPONENTS = tuple(OPPONENTS)
+RANDOM_SEED = 42
+RESUME_TRAINING = False
+DATA_DIRECTORY = HERE / "data" / "defender_analysis"
+LOG_DIRECTORY = HERE / "logs" / "defender_analysis"
+PREDICTION_THRESHOLD = .8
+CONFIRM_TICKS = 3
+PEEK_TICKS = 4
+HIDE_TICKS = 4
+ROTATE = False
+OPTIMIZER_UPDATES = 100
+BATCH_SIZE = 64
+REPLAY_ROUNDS = 600
+LEARNING_RATE = .001
+POSTS_FILE = None
+EVALUATION_ONLY = False
+TRACE_TICKS = False
+DETAILED_LOGS = False
+MAX_ROUND_STEPS = 400
+TORCH_THREADS = 1
+
+
+def analysis_config(args):
+    config = {k: getattr(args, k) for k in
+              ("seed", "threshold", "confirm_ticks", "rotate", "peek_ticks", "hide_ticks")}
+    config.update(train_presets=list(args.train_presets), eval_presets=list(args.eval_presets),
+                  roster_scope="multiple_training_and_disjoint_holdout_rosters")
+    return config
+
+
+def roster_args(args, preset):
+    selected = copy.copy(args)
+    selected.defender_preset = preset
+    return selected
 
 @contextlib.contextmanager
 def legacy_root():
@@ -129,7 +169,7 @@ def play_block(opponent, scenario, model, args, seed, on_round, engine_log):
             observer = ObserverController(scenario, model, threshold=args.threshold, confirm=args.confirm_ticks,
                                           rotate=args.rotate, peek_ticks=args.peek_ticks, hide_ticks=args.hide_ticks)
             ai = DualRoleTeamAI("Toru v4 observer", DefaultAttackerController, lambda: observer)
-            game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[opponent][0]), ai,
+            game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[opponent][0], device="cpu"), ai,
                 headless=True, attacker_roster=list(attackers.players), defender_roster=list(defenders.players),
                 spike_holder_name=attackers.spike_holder, defender_spike_holder_name=defenders.spike_holder,
                 attacker_igl_name=attackers.igl, defender_igl_name=defenders.igl,
@@ -281,11 +321,12 @@ class RunLog:
 
 def save_checkpoint(path, model, optimizer, replay, completed, opponent, scenario, fields, args, rng, train_rounds, training_plan=None):
     path.parent.mkdir(parents=True, exist_ok=True)
-    config = {k: getattr(args, k) for k in ("seed", "threshold", "confirm_ticks", "rotate", "peek_ticks", "hide_ticks", "defender_preset")}
+    config = analysis_config(args)
     state = {"version": VERSION, "opponent": opponent, "scenario": scenario.signature, "fields": fields,
              "config": config, "model": model.state_dict(), "optimizer": optimizer.state_dict(), "completed_sets": completed,
              "train_rounds": train_rounds, "rng": json.dumps(rng.bit_generator.state),
              "training_plan": training_plan,
+             "evaluation_schedule": {"interval": args.eval_every, "unit": "sets", "seed_count": args.eval_seeds},
              "replay": [{"features": torch.from_numpy(r["features"]), "label": r["label"]} for r in replay]}
     temporary = path.with_suffix(".tmp")
     torch.save(state, temporary)
@@ -309,27 +350,30 @@ def best_rank(metrics):
 def evaluate_seeds(opponent, scenario, model, args, identity, seeds, log):
     results, seed_results = [], []
     started = time.perf_counter()
-    for seed in seeds:
-        seed_identity = {**{k: v for k, v in identity.items() if k != "replay_rounds"}, "seed": seed}
+    presets = eligible_attacker_presets(args.eval_presets, opponent)
+    for index, seed in enumerate(seeds):
+        preset = presets[index % len(presets)]
+        seed_identity = {**{k: v for k, v in identity.items() if k != "replay_rounds"}, "seed": seed, "preset": preset}
         callback = lambda r, f, e: log.record_round(seed_identity, r, f, e, args.trace_ticks)
-        rounds, _ = play_block(opponent, scenario, model, args, seed, callback,
+        rounds, _ = play_block(opponent, scenario, model, roster_args(args, preset), seed, callback,
                                log.directory / "engine.log" if args.detailed_logs else None)
         metrics = summarize(rounds)
-        seed_results.append({"seed": seed, **metrics})
+        seed_results.append({"seed": seed, "preset": preset, **metrics})
         results.extend(rounds)
         log.logger.info("%s (seed=%d)", format_summary({**seed_identity, **metrics}), seed)
     # Pool rounds rather than averaging percentages from unequal plant counts.
     return {**identity, "seed": seeds[0], **summarize(results), "evaluation_seeds": list(seeds),
-            "seed_results": seed_results, "loss": None, "replay_rounds": identity["replay_rounds"],
+            "seed_results": seed_results, "roster_plan": [{"seed": s["seed"], "preset": s["preset"]} for s in seed_results],
+            "loss": None, "replay_rounds": identity["replay_rounds"],
             "seconds": time.perf_counter() - started}
 
 
 def consider_best(path, model, evaluation, opponent, scenario, fields, args, seeds, logger,
-                  reevaluate=None, cache=None, previous_path=None):
+                  reevaluate=None, cache=None, previous_path=None, allow_new_conditions=False):
     if not evaluation["plants"]:
         logger.info("[%s][best] 更新なし: 評価でプラントがなく比較できません", opponent)
         return False
-    config = {k: getattr(args, k) for k in ("seed", "threshold", "confirm_ticks", "rotate", "peek_ticks", "hide_ticks", "defender_preset")}
+    config = analysis_config(args)
     identity = {"version": VERSION, "opponent": opponent, "scenario": scenario.signature,
                 "fields": fields, "config": config}
     old = None
@@ -337,7 +381,10 @@ def consider_best(path, model, evaluation, opponent, scenario, fields, args, see
     if reference_path is not None and reference_path.exists():
         old = torch.load(reference_path, map_location="cpu", weights_only=True)
         if any(old.get(k) != value for k, value in identity.items()):
-            raise ValueError(f"Best checkpoint evaluation conditions differ: {path}")
+            if not allow_new_conditions:
+                raise ValueError(f"Best checkpoint evaluation conditions differ: {path}")
+            logger.info("[%s][best] 新規学習で条件が変わったため、旧条件の評価値は比較に使いません", opponent)
+            old = None
     if evaluation.get("evaluation_seeds") != list(seeds) or evaluation["phase"] != "eval":
         raise ValueError("Best selection requires the common independent evaluation seed group")
     previous = old["evaluation"] if old is not None else None
@@ -363,6 +410,7 @@ def consider_best(path, model, evaluation, opponent, scenario, fields, args, see
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
     torch.save({**identity, "evaluation_seeds": list(seeds), "selection_rule": BEST_RULE,
+                "evaluation_schedule": {"interval": args.eval_every, "unit": "sets", "seed_count": args.eval_seeds},
                 "model": model.state_dict(), "completed_sets": evaluation["trained_rounds"] // 12,
                 "train_rounds": evaluation["trained_rounds"], "evaluation": evaluation}, temporary)
     temporary.replace(path)
@@ -394,31 +442,34 @@ def format_summary(row):
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--opponents", nargs="+", choices=tuple(OPPONENTS), default=list(OPPONENTS))
+    p.add_argument("--max-workers", type=int, default=MAX_PARALLEL_WORKERS)
+    p.add_argument("--opponents", nargs="+", choices=tuple(OPPONENTS), default=list(TARGET_OPPONENTS))
     p.add_argument("--sets", type=int, default=TRAINING_SETS,
                    help="Override TRAINING_SETS (additional 12-round sets per opponent)")
-    p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--defender-preset", default="Gorigons")
-    p.add_argument("--posts", type=Path, help="JSON with five watch/retreat/alternate/look posts")
-    p.add_argument("--threshold", type=float, default=.8)
-    p.add_argument("--confirm-ticks", type=int, default=3)
-    p.add_argument("--peek-ticks", type=int, default=4)
-    p.add_argument("--hide-ticks", type=int, default=4)
-    p.add_argument("--rotate", action="store_true", help="Move anchors/mid scout according to the prediction")
-    p.add_argument("--updates", type=int, default=100, help="Optimizer updates after each 12-round set")
-    p.add_argument("--batch-size", type=int, default=64)
-    p.add_argument("--replay-rounds", type=int, default=600)
-    p.add_argument("--learning-rate", type=float, default=.001)
+    p.add_argument("--seed", type=int, default=RANDOM_SEED)
+    p.add_argument("--train-presets", nargs="+", default=list(TRAINING_PRESETS))
+    p.add_argument("--eval-presets", nargs="+", default=list(EVALUATION_PRESETS))
+    p.add_argument("--posts", type=Path, default=POSTS_FILE, help="JSON with five watch/retreat/alternate/look posts")
+    p.add_argument("--threshold", type=float, default=PREDICTION_THRESHOLD)
+    p.add_argument("--confirm-ticks", type=int, default=CONFIRM_TICKS)
+    p.add_argument("--peek-ticks", type=int, default=PEEK_TICKS)
+    p.add_argument("--hide-ticks", type=int, default=HIDE_TICKS)
+    p.add_argument("--rotate", action=argparse.BooleanOptionalAction, default=ROTATE, help="Move anchors/mid scout according to the prediction")
+    p.add_argument("--updates", type=int, default=OPTIMIZER_UPDATES, help="Optimizer updates after each 12-round set")
+    p.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    p.add_argument("--replay-rounds", type=int, default=REPLAY_ROUNDS)
+    p.add_argument("--learning-rate", type=float, default=LEARNING_RATE)
     p.add_argument("--eval-every", type=int, default=EVALUATION_INTERVAL, help="Multi-seed evaluation every N sets; final set always evaluated (0 disables intermediate evaluations)")
     p.add_argument("--eval-seeds", type=int, default=EVALUATION_SEED_COUNT, help="Number of common evaluation seeds, 12 rounds each")
-    p.add_argument("--eval-only", action="store_true", help="Evaluate resumed models without updating weights or replay")
-    p.add_argument("--resume", type=Path, help="Existing data run directory with opponent/latest.pt")
-    p.add_argument("--data-dir", type=Path, default=HERE / "data" / "analysis", help="Analysis training output directory")
-    p.add_argument("--log-dir", type=Path, default=HERE / "logs" / "analysis", help="Analysis logs; training.log is overwritten at startup")
-    p.add_argument("--trace-ticks", action="store_true", help="Also save per-tick probabilities and sightings")
-    p.add_argument("--detailed-logs", action="store_true", help="Save CSV/JSON summaries, events and engine debug logs (default: training.log only)")
-    p.add_argument("--max-round-steps", type=int, default=400)
-    p.add_argument("--torch-threads", type=int, default=1)
+    p.add_argument("--eval-only", action="store_true", default=EVALUATION_ONLY, help="Evaluate resumed models without updating weights or replay")
+    p.add_argument("--resume", type=Path, default=DATA_DIRECTORY if RESUME_TRAINING else None, help="Existing data run directory with opponent/latest.pt")
+    p.add_argument("--fresh", dest="resume", action="store_const", const=None)
+    p.add_argument("--data-dir", type=Path, default=DATA_DIRECTORY, help="Analysis training output directory")
+    p.add_argument("--log-dir", type=Path, default=LOG_DIRECTORY, help="Analysis logs; training.log is overwritten at startup")
+    p.add_argument("--trace-ticks", action="store_true", default=TRACE_TICKS, help="Also save per-tick probabilities and sightings")
+    p.add_argument("--detailed-logs", action="store_true", default=DETAILED_LOGS, help="Save CSV/JSON summaries, events and engine debug logs (default: training.log only)")
+    p.add_argument("--max-round-steps", type=int, default=MAX_ROUND_STEPS)
+    p.add_argument("--torch-threads", type=int, default=TORCH_THREADS)
     p.add_argument("--describe", action="store_true", help="Print posts and feature schema without starting battles")
     return p
 
@@ -433,11 +484,20 @@ def main(argv=None):
         raise ValueError("--eval-only requires --resume")
     if len(set(args.opponents)) != len(args.opponents):
         raise ValueError("Duplicate opponents are not allowed")
+    if set(args.train_presets) & set(args.eval_presets):
+        raise ValueError("Training and holdout evaluation rosters must be disjoint")
+    for opponent in args.opponents:
+        eligible_attacker_presets(args.train_presets, opponent)
+        eligible_attacker_presets(args.eval_presets, opponent)
     scenario = Scenario(args.posts.resolve() if args.posts else None)
     fields = FeatureHistory(scenario).fields
     if args.describe:
         print(json.dumps({"scenario": scenario.metadata(), "features": fields, "feature_count": len(fields)}, ensure_ascii=False, indent=2))
         return
+    from toruAI_v4.tv4_training_parallel import run_opponent_workers
+    status = run_opponent_workers(__file__, argv, args.opponents, args.max_workers, log_dir=args.log_dir)
+    if status is not None:
+        return status
     torch.set_num_threads(args.torch_threads)
     data_dir = args.data_dir.resolve()
     resume_dir = args.resume.resolve() if args.resume else None
@@ -461,8 +521,10 @@ def main(argv=None):
             rng = np.random.default_rng(args.seed + list(OPPONENTS).index(opponent))
             completed = train_rounds = 0
             checkpoint = data_dir / opponent / "latest.pt"
-            best_path = BEST_DIRECTORY / opponent / "analysis_best.pt"
-            previous_best_path = BEST_DIRECTORY / opponent / "best.pt"
+            best_path = BEST_DIRECTORY / opponent / "defender_analysis_best.pt"
+            previous_best_path = next((BEST_DIRECTORY / opponent / name
+                                       for name in ("analysis_best.pt", "best.pt")
+                                       if (BEST_DIRECTORY / opponent / name).is_file()), None)
             fixed_eval_seed = args.seed + 900_000_000 + list(OPPONENTS).index(opponent) * 1_000_000
             common_seeds = [fixed_eval_seed + i * 100 for i in range(args.eval_seeds)]
             best_cache = {}
@@ -470,7 +532,7 @@ def main(argv=None):
                 checkpoint.parent.mkdir(parents=True, exist_ok=True)
             if args.resume:
                 state = torch.load(resume_dir / opponent / "latest.pt", map_location="cpu", weights_only=True)
-                config = {k: getattr(args, k) for k in state["config"]}
+                config = analysis_config(args)
                 if (state["version"] != VERSION or state["opponent"] != opponent or state["scenario"] != scenario.signature
                         or state["fields"] != fields or state["config"] != config):
                     raise ValueError(f"Checkpoint schema/config mismatch: {checkpoint}")
@@ -499,6 +561,13 @@ def main(argv=None):
                                       "sets_this_run": args.sets, "start_completed_sets": training_plan["start_completed_sets"],
                                       "replay_rounds": len(replay)}
                 return evaluate_seeds(opponent, scenario, reference, args, reference_identity, common_seeds, log)
+            if args.eval_only:
+                identity = dict(opponent=opponent, phase="eval", set=completed, trained_rounds=train_rounds,
+                                replay_rounds=len(replay), sets_this_run=0, start_completed_sets=completed)
+                summary[opponent] = evaluate_seeds(opponent, scenario, model, args, identity, common_seeds, log)
+                log.logger.info("%s", format_summary(summary[opponent]))
+                log.write_summary(summary, checkpoint, best_path)
+                continue
             for additional in range(1, args.sets + 1):
                 set_number = completed + 1 if not args.eval_only else completed + additional
                 phase = "eval" if args.eval_only else "train_preupdate"
@@ -507,9 +576,13 @@ def main(argv=None):
                 identity = {"opponent": opponent, "phase": phase, "set": set_number, "seed": seed,
                             "trained_rounds": train_rounds, "sets_this_run": args.sets,
                             "start_completed_sets": training_plan["start_completed_sets"]}
+                presets = eligible_attacker_presets(args.train_presets, opponent)
+                preset = presets[completed % len(presets)]
+                identity["preset"] = preset
+                log.logger.info("[%s][学習 set=%d] 味方編成=%s", opponent, set_number, preset)
                 started = time.perf_counter()
                 callback = lambda r, f, e: log.record_round(identity, r, f, e, args.trace_ticks)
-                results, samples = play_block(opponent, scenario, model, args, seed, callback,
+                results, samples = play_block(opponent, scenario, model, roster_args(args, preset), seed, callback,
                                               log_dir / "engine.log" if args.detailed_logs else None)
                 metrics = summarize(results)
                 loss = None
@@ -523,6 +596,7 @@ def main(argv=None):
                     arrays["labels"] = np.asarray([r["label"] for r in samples], dtype=np.int8)
                     arrays["round_numbers"] = np.asarray([r["round"] for r in samples], dtype=np.int8)
                     arrays["plant_ticks"] = np.asarray([r["plant_tick"] for r in samples], dtype=np.int16)
+                    arrays["preset"] = np.asarray(preset)
                     np.savez_compressed(checkpoint.parent / f"set_{completed:06d}.npz", **arrays)
                     save_checkpoint(checkpoint, model, optimizer, replay, completed, opponent, scenario, fields, args, rng, train_rounds,
                                     training_plan=training_plan)
@@ -543,7 +617,8 @@ def main(argv=None):
                     log.csv("sets.csv", evaluation)
                     log.logger.info("%s", format_summary(evaluation))
                     consider_best(best_path, model, evaluation, opponent, scenario, fields, args, common_seeds,
-                                  log.logger, reevaluate=reevaluate_best, cache=best_cache, previous_path=previous_best_path)
+                                  log.logger, reevaluate=reevaluate_best, cache=best_cache, previous_path=previous_best_path,
+                                  allow_new_conditions=not args.resume)
                     summary[opponent] = evaluation
                 log.write_summary(summary, checkpoint, best_path)
     except KeyboardInterrupt:

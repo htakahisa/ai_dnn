@@ -15,8 +15,8 @@ from party_presets import all_preset_names, get_default_ai_display, get_preset
 MAX_ROSTER = 5
 
 TEAM_AI_OPTIONS = {
-    "Toru AI v3.1": "toru_ai_v3.1",
     "Toru AI v4": "toru_ai_v4",
+    "Toru AI v3.1": "toru_ai_v3.1",
     "ConCon v1": "concon_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",

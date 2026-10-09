@@ -11,9 +11,12 @@ from concon_v1.co1_retake_cases import CASE_VERSION
 
 
 class RetakeCaseDataset:
-    def __init__(self, directory, opponents, seed=0):
+    def __init__(self, directory, opponents, seed=0, sites=("L", "R")):
         self.directory = Path(directory).resolve()
         self.opponents = tuple(opponents)
+        self.sites = tuple(sites)
+        if not self.sites or len(set(self.sites)) != len(self.sites) or any(site not in ("L", "R") for site in self.sites):
+            raise ValueError("select distinct dataset sites: L or R")
         config = json.loads((self.directory / "collection.json").read_text(encoding="utf-8"))
         self.provenance = config["provenance"]
         if self.provenance["version"] != CASE_VERSION:
@@ -32,6 +35,8 @@ class RetakeCaseDataset:
                 row = json.loads(line)
                 if row["opponent"] not in self.opponents:
                     continue
+                if row["site"] in ("L", "R") and row["site"] not in self.sites:
+                    continue
                 filename = row["file"]
                 path = (self.directory / filename).resolve()
                 if path.parent != self.directory or not path.is_file() or filename in seen:
@@ -40,7 +45,7 @@ class RetakeCaseDataset:
                     raise ValueError(f"invalid retake case metadata: {filename}")
                 seen.add(filename)
                 groups[row["opponent"], row["site"]].append(row)
-        keys = [(opponent, site) for opponent in self.opponents for site in ("L", "R")]
+        keys = [(opponent, site) for opponent in self.opponents for site in self.sites]
         missing = [key for key in keys if not groups[key]]
         if missing:
             raise ValueError(f"collect at least one case for every requested opponent/site; missing={missing}")
@@ -75,7 +80,7 @@ class RetakeCaseDataset:
 def iter_case_training_windows(env, dataset, episodes, checkpoint_interval, rng, epsilon_fn, on_step=None):
     group_count = len(dataset.groups)
     if min(episodes, checkpoint_interval) < 1 or episodes % group_count or checkpoint_interval % group_count:
-        raise ValueError("case episodes and checkpoint interval must be divisible by opponent count * 2 sites")
+        raise ValueError("case episodes and checkpoint interval must be divisible by opponent count * selected site count")
     site_completed = dict(L=0, R=0)
     cases = dataset.iter_cases(rng)
     for episode in range(1, episodes + 1):

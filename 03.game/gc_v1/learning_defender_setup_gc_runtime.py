@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from gc_v1.roster_observation_gc import (
@@ -284,9 +285,7 @@ class LearningDefenderSetupGCRuntime:
         if not self.model_path.is_file():
             raise FileNotFoundError(self.model_path)
 
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = torch.device(device)
+        self.device = resolve_inference_device(device, default="auto")
 
         checkpoint = torch.load(
             self.model_path,

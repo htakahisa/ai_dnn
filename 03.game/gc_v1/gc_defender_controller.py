@@ -38,13 +38,14 @@ class GCDefenderController(BaseController):
         search_model_path="data/defender_search_gc_data/dqn_defender_search_gc_best_by_eval.pt",
         retake_model_path="data/defender_retake_gc_data/dqn_defender_retake_gc_best_by_eval.pt",
         greedy=True,
+        device=None,
     ):
         super().__init__()
         self.search_controller = LearningDefenderSearchGCController(
-            model_path=search_model_path, greedy=greedy
+            model_path=search_model_path, greedy=greedy, device=device
         )
         self.retake_controller = LearningDefenderRetakeGCController(
-            model_path=retake_model_path, greedy=greedy
+            model_path=retake_model_path, greedy=greedy, device=device
         )
 
     def _build_or_fallback(self, model_path, param_name):

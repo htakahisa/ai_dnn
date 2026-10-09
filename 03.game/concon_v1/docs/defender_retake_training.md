@@ -56,13 +56,35 @@ python co1_train_defender_retake.py --no-resume
 
 ## 定数を変更して実行する場合
 
+`co1_train_defender_retake_base.py` と `co1_train_defender_retake.py` の冒頭に、それぞれ `TRAIN_LEFT_SITE`・`TRAIN_RIGHT_SITE` があります。初期値は両方 `True` です。左だけなら次のように設定します。右だけなら値を逆にします。両方 `False` は設定エラーになります。
+
+```python
+TRAIN_LEFT_SITE = True
+TRAIN_RIGHT_SITE = False
+```
+
+両スクリプトの設定は独立しています。基礎モデルも左だけ作り直す場合は両方のスクリプトを変更し、実戦学習だけを左に絞る場合は `co1_train_defender_retake.py` だけ変更してください。対象外サイトのモデル・チェックポイントは保存しません。`RESUME_TRAINING = True` の場合も、対象サイトの latest と optimizer だけを読み込みます。
+
+作業ディレクトリは `03.game/concon_v1/`、通常実行はオプションなしです。
+
+```powershell
+# 03.game から移動
+Set-Location concon_v1
+python co1_train_defender_retake_base.py
+python co1_train_defender_retake.py
+```
+
+データ学習では、選んだサイトのケースだけで件数をそろえ、「選択ケース数 × `DEFAULT_CASE_EPOCHS`」回学習します。対象外サイトのケース・基礎モデル・latest は不要です。episode数と保存間隔は「相手数 × 選択サイト数」の倍数にします。通常対戦からの学習では対象サイトのリテイクだけを回数に数え、評価も対象サイトの件数を満たすまで対戦します。対象外サイトに設置された通常対戦では既存の共通 best を推論に使用するため、そのサイトの有効な共通 best が必要です。対象サイトに設置しない相手を選ぶと、学習・評価の必要回数に到達しません。
+
 `co1_train_defender_retake.py` 冒頭の設定を変更し、`python co1_train_defender_retake.py` だけで実行できます。現在は収集データを使用し、基礎モデルから10周新しく学習する設定です。
 
 | 定数 | 現在値 | 学習条件 |
 | --- | --- | --- |
 | `USE_COLLECTED_CASES` | `True` | 保存した設置直後から学習。`False`ならsetup/searchから対戦 |
 | `CASES_DIR` | `data/defender_retake_cases` の絶対パス | 収集データの読込先 |
-| `RESUME_TRAINING` | `False` | foundationから新規開始。`True`なら左右のlatestとoptimizerを引き継ぐ |
+| `TRAIN_LEFT_SITE` / `TRAIN_RIGHT_SITE` | `True` / `True` | 左・右の学習と保存を個別に有効化（両スクリプトに設定あり） |
+| `RESUME_TRAINING` | `False` | foundationから新規開始。`True`なら対象サイトのlatestとoptimizerを引き継ぐ |
+| `COMPARE_PREVIOUS_BEST` | `True` | 前回bestを同じ条件で再評価し、改善時だけbestを更新。`False`なら今回の学習内だけでbestを選択 |
 | `DEFAULT_CASE_EPOCHS` | `10` | データ学習の周回数。使用データ500件なら追加5000 episode |
 | `DEFAULT_EPISODES` | `2400`（各チーム400回） | `USE_COLLECTED_CASES=False`の場合の追加episode数。データ学習では使わない |
 | `CHECKPOINT_INTERVAL` | `120`（各チーム20回） | 追加120 episodeごとに評価・保存 |
@@ -85,7 +107,7 @@ python co1_train_defender_retake_base.py
 python co1_train_defender_retake.py --episodes 1000 --no-resume
 ```
 
-リテイク学習スクリプトは左右のモデルを同時に管理し、実際にプラントされたサイトのモデルだけに経験を追加します。実戦学習では、サイトや生存人数を人工的に変更する開始モードはありません。基礎学習とリテイク学習は、それぞれ専用スクリプトから起動します。
+リテイク学習スクリプトはフラグで有効にしたモデルを管理し、実際にプラントされた対象サイトのモデルだけに経験を追加します。実戦学習では、サイトや生存人数を人工的に変更する開始モードはありません。基礎学習とリテイク学習は、それぞれ専用スクリプトから起動します。
 
 ## 収集データからの学習
 
@@ -249,7 +271,9 @@ python co1_train_defender_retake.py --resume-dir data/retake_run --save-dir data
 
 学習ログの `episode` は左右合計の学習回数です。`training_episodes` に左右それぞれの内訳を保存します。保存モデルの `episode_counting` は `team_balanced_retake` です。
 
-best は学習実行ごとに選択し、平均解除率、対戦相手別の最低解除率、通常の敵への移動射撃率の順で比較します。相手別の評価件数は `evaluation` に保存します。`retake_training_log.jsonl` は設置前の除外試合も含みます。`--force-save` を指定すると保存間隔ごとに番号付き重みを追加します。
+`co1_train_defender_retake.py` 冒頭の `COMPARE_PREVIOUS_BEST = True`（既定）では、今回最初の評価時に保存先の前回bestを読み込み、今回と同じ相手・評価件数・search・アビリティ距離設定・seed・epsilon=0で再評価します。過去のチェックポイントに記録された評価値だけでは比較しません。平均解除率、対戦相手別の最低解除率、通常の敵への移動射撃率（低い方を優先）の順で比較し、同点・悪化なら既存bestを保持します。改善したモデルを採用した後も、それを上回った場合だけ更新します。前回bestの読み込みに失敗したサイトでは、理由を表示して比較対象から外し、今回の有効な評価結果でbestを上書きします。その後は今回の学習内で成績が改善した場合だけ更新します。前回bestを読み込めても評価リテイクが0件のサイトでは、既存bestを保持します。前回bestがないサイトでは今回の学習内から選びます。比較対象は選択サイトの保存先で、相手専用学習ならその相手の専用bestです。latestと指定時の番号付きチェックポイントはbestの採否に関係なく保存します。
+
+従来の「今回の学習内だけでbestを選ぶ」動作にする場合は、冒頭の `COMPARE_PREVIOUS_BEST = False` に変更し、作業ディレクトリ `03.game/concon_v1/` で `python co1_train_defender_retake.py` を実行します。一時的な上書きには `--compare-previous-best` / `--no-compare-previous-best` も使用できます。評価は有限の対戦結果による比較です。相手別の評価件数は `evaluation` に保存します。`retake_training_log.jsonl` は設置前の除外試合も含みます。`--force-save` を指定すると保存間隔ごとに番号付き重みを追加します。
 
 通常の試合では `ConconDefenderController` が既定の保存先の左右 best を設置後に読み込みます。独自の `--save-dir` に保存した重みを単独で読み込む場合は `ConconDefenderRetakeController(model_path=...)` を使います。
 

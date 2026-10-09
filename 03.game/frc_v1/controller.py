@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from simulation_runtime import resolve_inference_device
 
 from frc_v1.perception import FrcPerceptionBuilder
 from frc_v1.memory import FrcMemory
@@ -22,7 +23,7 @@ class ActionLog:
 class FrcController:
     handles_team_perception = True
 
-    def __init__(self, side, *, actor=None, mode="learned", checkpoint=None, effects_mode=None, inference_only=False):
+    def __init__(self, side, *, actor=None, mode="learned", checkpoint=None, effects_mode=None, inference_only=False, device=None):
         self.side = side
         self.mode = mode
         self.sensor = FrcPerceptionBuilder(side)
@@ -37,7 +38,7 @@ class FrcController:
             elif mode == "learned":
                 from frc_v1.model import FrcPolicy
                 checkpoint = Path(checkpoint) if checkpoint else Path(__file__).parent / "checkpoints" / f"{side}_policy.pt"
-                self.actor = FrcPolicy.load(checkpoint, side=side)
+                self.actor = FrcPolicy.load(checkpoint, side=side, device=resolve_inference_device(device, default="cpu"))
                 self.actor.collect_statistics = not inference_only
             else:
                 raise ValueError("FRC mode must be learned or baseline")

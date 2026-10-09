@@ -41,6 +41,7 @@ class Scenario(AbilityLosMixin):
         rows = [s.strip() for s in AT_MAP_STR.splitlines()
                 if s.strip() and set(s.strip()) <= set("012345abcdefghijklmn")]
         self.grid = np.array([[int(c) for c in r] for r in NEW_MAZE_STR.strip().splitlines()])
+        self.height, self.width = self.grid.shape
         if len(rows) != len(self.grid) or any(len(r) != self.grid.shape[1] for r in rows):
             raise ValueError("Branch overlay size differs from the production map")
         self.branches = {}
@@ -69,7 +70,7 @@ class Scenario(AbilityLosMixin):
         # Rally overlays supply geometry only; uppercase utility markers are ignored.
         from toruAI_v4.tv4_map_retake_L import MAZE_STR as LEFT_RALLY
         from toruAI_v4.tv4_map_retake_R import MAZE_STR as RIGHT_RALLY
-        self.rally_points, self.rally_dist, self.retake_entries = {}, {}, {}
+        self.rally_points, self.rally_dist, self.retake_entries, self.retake_utility = {}, {}, {}, {}
         for side, overlay in (("L", LEFT_RALLY), ("R", RIGHT_RALLY)):
             lines = overlay.strip().splitlines()
             if len(lines) != len(self.grid) or any(len(line) != self.grid.shape[1] for line in lines):
@@ -86,6 +87,9 @@ class Scenario(AbilityLosMixin):
             self.retake_entries[side] = {marker.lower(): tuple((r, c) for r, line in enumerate(lines)
                                          for c, value in enumerate(line) if value == marker)
                                          for marker in ("A", "B", "C") if marker in overlay}
+            self.retake_utility[side] = {kind: tuple((r, c) for r, line in enumerate(lines)
+                                                   for c, value in enumerate(line) if value == marker)
+                                         for kind, marker in (("FLASH", "F"), ("RECON", "R"), ("SMOKE", "S"))}
             maps = [distance_map(self.grid, p) for p in points]
             self.rally_dist[side] = np.minimum.reduce([np.where(m >= 0, m, np.inf) for m in maps])
         self.posts = self.default_posts() if config is None else self.read_posts(config)

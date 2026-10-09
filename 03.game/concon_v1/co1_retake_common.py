@@ -17,7 +17,8 @@ from concon_v1.co1_retake_projectiles import projectile_aim
 from concon_v1.co1_attacker_common import bfs_distance_map, GORIGONS
 from concon_v1.co1_guard_common import (
     build_inputs as guard_inputs, clear_shot, aim_alignment, MOVES, ABILITIES,
-    FEATURE_DIM, ACTION_DIM as GUARD_ACTION_DIM, ULTIMATE_ACTION, decode_action as guard_decode,
+    LEGACY_FEATURE_DIM as FEATURE_DIM, PRE_COUNTER_ACTION_DIM as GUARD_ACTION_DIM,
+    ULTIMATE_ACTION, decode_action as guard_decode,
 )
 
 DEFUSE_ACTION = GUARD_ACTION_DIM
@@ -202,7 +203,7 @@ def build_inputs(controller, char, state):
     proxy = SimpleNamespace(scenario=proxy_scenario, assignments=controller.assignments,
                             sightings=controller.sightings, stationary_ticks=controller.stationary_ticks,
                             game=getattr(controller, "game", None))
-    base, guard_mask, context = guard_inputs(proxy, char, state)
+    base, guard_mask, context = guard_inputs(proxy, char, state, counter_features=False)
     mask = np.zeros(ACTION_DIM, dtype=bool)
     # Recreate legal movement: guard's mandatory ability priority is unsuitable
     # for defusing or waiting for teammates.

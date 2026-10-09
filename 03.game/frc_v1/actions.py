@@ -78,7 +78,7 @@ def build_masks(snapshot):
         if snapshot.phase == "setup":
             continue
         kinds[a.slot, 5] = snapshot.side == "A" and a.has_spike and not snapshot.is_planted and grid[r, c] == 2
-        active_defuser = next((v.slot for v in snapshot.allies if v.defuse_progress > 0), None)
+        active_defuser = next((v.slot for v in snapshot.allies if v.alive and v.defuse_progress > 0), None)
         kinds[a.slot, 6] = (snapshot.side == "D" and snapshot.is_planted and snapshot.spike_planted is not None
             and max(abs(r - snapshot.spike_planted[0]), abs(c - snapshot.spike_planted[1])) <= 1
             and active_defuser in (None, a.slot))

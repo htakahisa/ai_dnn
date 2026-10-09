@@ -75,6 +75,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from tv2_character_stats_touyama import (
@@ -218,13 +219,14 @@ class LearningAttackerRetrieveTouyamaController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE_LOG):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE_LOG, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DuelingQNet(OBS_DIM, ACTION_DIM).to(DEVICE)
+        self.model = DuelingQNet(OBS_DIM, ACTION_DIM).to(self.device)
 
         try:
-            checkpoint = torch.load(model_path, map_location=DEVICE)
+            checkpoint = torch.load(model_path, map_location=self.device)
             if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
                 state_dict = checkpoint["model_state_dict"]
                 if verbose:
@@ -429,8 +431,8 @@ class LearningAttackerRetrieveTouyamaController:
         obs = self._build_observation(char, grid, chars, visible_enemies, self._team_sighting)
         mask = self._action_mask(char, grid, chars)
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

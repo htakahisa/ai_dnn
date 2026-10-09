@@ -1,4 +1,4 @@
-"""Train new roster-independent Toru v4 search/retake policies in the real engine."""
+"""Train Toru v4 defender search policies; also provides shared retake helpers."""
 from pathlib import Path
 import sys
 HERE = Path(__file__).resolve().parent
@@ -18,7 +18,7 @@ import numpy as np
 import torch
 
 from toruAI_v4.tv4_scenario import Scenario, OPPONENTS
-from toruAI_v4.tv4_train_analysis import legacy_root, seed_all, relocate_debug_logs
+from toruAI_v4.tv4_train_defender_analysis import legacy_root, seed_all, relocate_debug_logs
 from toruAI_v4.tv4_defender_policy import DefenderDQN, OBS_DIM, ACTION_DIM, learn_dqn
 from toruAI_v4.tv4_defender_controller import (
     ToruV4DefenderController, load_analyses, load_policy, policy_metadata, normalize_policy_schema, DEFENDER_BEST,
@@ -26,12 +26,26 @@ from toruAI_v4.tv4_defender_controller import (
 
 # 各相手モデルの1セット = その相手との12ラウンド。味方編成はセットごとに変える。
 TRAINING_SETS = 100
-EVALUATION_INTERVAL = 10
+MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
+
+TRAINING_OPPONENTS = tuple(OPPONENTS)
+TRAINING_PHASE = "search"
+TRAINING_MODE = "fresh"
+RANDOM_SEED = 42
+DATA_DIRECTORY = HERE / "data" / "defender"
+BEST_DIRECTORY = DEFENDER_BEST
+LOG_DIRECTORY = HERE / "logs" / "defender"
+EVALUATION_INTERVAL = 1  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 EVALUATION_SEED_COUNT = 3
 PLANT_ADVANTAGE_REWARD = .10  # 味方生存人数 - 相手生存人数
 RETAKE_COMBAT_RESERVE_TICKS = 20
 RETAKE_SAFETY_MARGIN_TICKS = 5
-SEARCH_EVALUATION_SCOPE = f"preplant_rally_abc_v1_combat{RETAKE_COMBAT_RESERVE_TICKS}_margin{RETAKE_SAFETY_MARGIN_TICKS}"
+ROTATION_PROGRESS_REWARD = .08  # 遠いキャラの早めの寄りを追加評価
+ROTATION_DELAY_PENALTY = .02  # 非交戦時に遠くで足踏みすると減点
+ROTATION_URGENCY_CAP = 2.
+SEARCH_EVALUATION_SCOPE = (f"preplant_rally_abc_v2_early_rotation_combat{RETAKE_COMBAT_RESERVE_TICKS}"
+                           f"_margin{RETAKE_SAFETY_MARGIN_TICKS}_progress{ROTATION_PROGRESS_REWARD}"
+                           f"_delay{ROTATION_DELAY_PENALTY}_cap{ROTATION_URGENCY_CAP}")
 TRAINING_PRESETS = ("Gorigons", "EG2023", "Vision Strikers", "Furina Classic", "Fnatic2023",
                     "Touyama Gaming", "Omoko Gaming", "Ghost Champions", "Team Elites")
 # 学習では使わない編成で評価。各seedで違う編成を選ぶ。
@@ -83,6 +97,27 @@ def retake_arrival_readiness(distances, remaining_ticks):
                 plant_travel_budget=budget, plant_arrival_penalty=penalty)
 
 
+def early_rotation_reward(inputs, origin, position, *, damage=0., kills=0):
+    """Reward early travel more for distant players, except during combat.
+
+    Use the goal and public prediction captured when the action was selected;
+    a prediction change on the next tick must not reverse this action's reward.
+    """
+    from game_core import DEFUSE_REQUIRED_TICKS, SPIKE_DETONATION_TICKS
+    if inputs.rotation_confidence < .65 or inputs.combat_contact or damage > 0 or kills > 0:
+        return 0.
+    before = float(inputs.distances[tuple(origin)])
+    after = float(inputs.distances[tuple(position)])
+    if before <= 0 or after < 0 or not np.isfinite(before + after):
+        return 0.
+    budget = max(1., SPIKE_DETONATION_TICKS - DEFUSE_REQUIRED_TICKS
+                 - RETAKE_COMBAT_RESERVE_TICKS - RETAKE_SAFETY_MARGIN_TICKS)
+    urgency = min(ROTATION_URGENCY_CAP, before / budget)
+    progress = float(np.clip(before - after, -1., 1.))
+    return urgency * (ROTATION_PROGRESS_REWARD * progress
+                      - ROTATION_DELAY_PENALTY * float(progress <= 0))
+
+
 def retained_resources(chars, initial):
     total = sum(initial.values())
     if not total:
@@ -93,7 +128,9 @@ def retained_resources(chars, initial):
 
 
 def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, seed, *,
-            training=False, epsilon=0., teacher_probability=0., logger=None, round_callback=None, log_context=""):
+            training=False, epsilon=0., teacher_probability=0., logger=None, round_callback=None, log_context="",
+            plant_callback=None, initial_case=None, case_tensor_cache=None, retake_combat_enabled=True, retake_deadline_enabled=True,
+            legacy_dead_defuser_mask=False):
     """Twelve real consecutive rounds. No teleporting to fabricated plant states."""
     from party_presets import get_preset
     from controllers import DefaultAttackerController
@@ -112,37 +149,92 @@ def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, se
         controller.stop_at_plant = phase == "search"
         controller.epsilon, controller.teacher_probability = epsilon, teacher_probability
         ai = DualRoleTeamAI("Toru AI v4", DefaultAttackerController, lambda: controller)
-        game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[opponent][0]), ai, headless=True,
-            attacker_roster=list(enemy.players), defender_roster=list(own.players),
-            spike_holder_name=enemy.spike_holder, defender_spike_holder_name=own.spike_holder,
-            attacker_igl_name=enemy.igl, defender_igl_name=own.igl, disable_side_swap=True,
-            attacker_team_name=enemy.name, defender_team_name=own.name)
+        if initial_case is None:
+            game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[opponent][0], device="cpu"), ai, headless=True,
+                attacker_roster=list(enemy.players), defender_roster=list(own.players),
+                spike_holder_name=enemy.spike_holder, defender_spike_holder_name=own.spike_holder,
+                attacker_igl_name=enemy.igl, defender_igl_name=own.igl, disable_side_swap=True,
+                attacker_team_name=enemy.name, defender_team_name=own.name)
+        else:
+            from concon_v1.co1_retake_cases import load_case
+            game, metadata = load_case(initial_case, restore_rng=False, device="cpu", tensor_cache=case_tensor_cache)
+            if metadata.get("opponent") != opponent or metadata.get("preset") != preset_name:
+                raise ValueError("Retake case opponent/preset mismatch")
+            # Keep the existing wrapper, sensor history and full attacker state.
+            controller = game.defender_controller
+            while not isinstance(controller, ToruV4DefenderController):
+                controller = vars(controller).get("inner")
+                if controller is None:
+                    raise ValueError("Case does not contain a Toru v4 defender")
+            controller.search, controller.retake, controller.analyses = search, retake, analyses
+            from toruAI_v4.tv4_defender_policy import PolicyEncoder, staging_positions
+            from toruAI_v4.tv4_retake_coordination import RetakeAssembly
+            controller.scenario = controller.history.scenario = scenario
+            controller.encoder, controller.staging = PolicyEncoder(scenario), staging_positions(scenario)
+            from toruAI_v4.tv4_retake_combat import RetakeEncoder, LegacyRetakeEncoder
+            controller.retake_encoder = RetakeEncoder(scenario)
+            controller.legacy_retake_encoder = LegacyRetakeEncoder(scenario)
+            controller.assembly = RetakeAssembly(scenario)
+            controller.training, controller.learning_phase = training, phase
+            controller.epsilon, controller.teacher_probability = epsilon, teacher_probability
+            controller.stop_at_plant = False
+            controller.cache = controller.goal_key = None
+            controller.game = game
+            controller.rng = np.random.default_rng(seed + 19)
+        controller.retake_combat_enabled = retake_combat_enabled
+        controller.retake_deadline_enabled = retake_deadline_enabled
+        controller.legacy_dead_defuser_mask = legacy_dead_defuser_mask
         game.stop_after_round, game.analytics_tracker = True, None
         game._record_replay_frame = lambda: None
         relocate_debug_logs(game.attacker_controller, None)
-        for round_no in range(1, 13):
+        round_count = 1 if initial_case is not None else 12
+        for round_no in range(1, round_count + 1):
             last_indices = {}
-            planted = search_closed = False
+            utility_indices = {}
+            from toruAI_v4.tv4_attacker_combat_audit import CombatAudit
+            audit = CombatAudit("D") if phase == "retake" else None
+            from toruAI_v4.tv4_retake_progress_audit import RetakeProgressAudit
+            progress_audit = RetakeProgressAudit(scenario) if audit else None
+            retake_damage = 0.
+            planted, search_closed = bool(game.is_planted), False
             plant_d = plant_a = plant_distance = None
             plant_reserve = None
             arrival = {}
             initial_charges = {str(c.name): int(getattr(c, c.ability_name.lower() + "_charges", 0))
                                for c in game.chars if c.team == "D"}
+            if planted:
+                alive = [c for c in game.chars if c.team == "D" and c.is_alive]
+                plant_d, plant_a = len(alive), sum(c.is_alive for c in game.chars if c.team == "A")
+                distance = scenario.rally_dist[scenario.site_of(game.planted_pos)]
+                plant_distance = float(np.mean([distance[tuple(c.pos)] for c in alive]))
+                arrival = retake_arrival_readiness([distance[tuple(c.pos)] for c in alive], game.detonate_timer)
+                plant_reserve = retained_resources(alive, initial_charges)
             skill_uses = 0
             reward_sum, steps, retake_steps = 0., 0, 0
             score_before = game.defender_wins
             while not game.round_over and not game.match_over:
                 controller.decisions = {}
+                decision_tick = None
+                if audit and game.is_planted:
+                    controller.prepare_team_tick()
+                    decision_tick = controller.snapshot.tick
+                    audit.before(controller.snapshot, controller.actions, controller.history.tracks)
+                    progress_audit.before(controller.snapshot, controller.inputs, controller.plans, controller.assembly.launched)
                 hp = {str(c.name): c.hp for c in game.chars if c.team == "D"}
                 kills = {str(c.name): c.round_kills for c in game.chars if c.team == "D"}
                 previously_seen = set(controller.history.tracks)
                 enemy_hp_before = sum(c.hp for c in game.chars if c.team == "A" and c.is_alive)
                 game.step_tick()
+                if audit:
+                    audit.after(game)
+                    progress_audit.after(game)
                 steps += 1
                 if steps > 400:
                     raise RuntimeError(f"Round watchdog exceeded: {opponent} R{round_no}")
                 retake_steps += int(planted)
                 current = {str(c.name): c for c in game.chars if c.team == "D"}
+                if decision_tick is not None:
+                    retake_damage += sum(max(0., max(0., hp[n])-max(0., c.hp)) for n, c in current.items())
                 enemy_damage = max(0., enemy_hp_before - sum(c.hp for c in game.chars if c.team == "A" and c.is_alive))
                 terminal = game.round_over or game.match_over or (phase == "search" and game.is_planted)
                 if not terminal:
@@ -164,21 +256,51 @@ def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, se
                                 reward -= .08  # Last charge can be used, but has a retake opportunity cost.
                     reward -= 1.5 * int(not char.is_alive)
                     if phase == "retake":
-                        reward += .12 * max(0, char.defuse_timer - before.defuse_progress)
+                        from toruAI_v4.tv4_retake_combat import deadline_action_reward
+                        if progress_audit.field is None:
+                            from toruAI_v4.tv4_retake_progress_audit import defuse_distances
+                            progress_audit.field = defuse_distances(scenario, game.planted_pos)
+                        reward += deadline_action_reward(inputs, before, char, inputs.actions[action],
+                                                        progress_audit.field, defused=game.is_defused)
+                        from toruAI_v4.tv4_retake_combat import STOPPED_HIT_REWARD
+                        reward += STOPPED_HIT_REWARD * sum(s['hit'] and not s['shooter'].moved_this_tick
+                            for s in getattr(game, 'last_shots', ()) if s['shooter'] is char)
+                        from toruAI_v4.tv4_retake_combat import UNCONTESTED_DEFUSER_IDLE_PENALTY, LEGACY_RETAKE_OBS_DIM
+                        if (len(inputs.observation) == LEGACY_RETAKE_OBS_DIM and inputs.observation[-1]
+                                and controller.assembly.launched and not inputs.combat_contact
+                                and inputs.actions[action].kind == 'STAY' and not before.defuse_progress):
+                            reward -= UNCONTESTED_DEFUSER_IDLE_PENALTY
                     else:
+                        reward += early_rotation_reward(inputs, before.position, char.pos, damage=damage,
+                                                        kills=char.round_kills - kills[name])
                         reward += .01 * sum(s.enemy_id not in previously_seen
                                           for s in controller.snapshot.sightings)
                     next_inputs = controller.inputs.get(name)
                     done = terminal or not char.is_alive or (phase == "search" and game.is_planted)
-                    next_obs = next_inputs.observation if next_inputs is not None and not done else np.zeros(OBS_DIM, np.float32)
+                    next_obs = next_inputs.observation if next_inputs is not None and not done else np.zeros_like(inputs.observation)
                     next_mask = next_inputs.mask.copy() if next_inputs is not None and not done else np.ones(ACTION_DIM, bool)
                     transitions.append([inputs.observation.astype(np.float16), action, reward,
                                         next_obs.astype(np.float16), next_mask, float(done),
                                         scenario.site_of(game.planted_pos) if action_phase == "retake" else None])
+                    if phase == "retake":
+                        transitions[-1].extend([inputs.teacher, inputs.mask.copy()])
+                        chosen = inputs.actions[action]
+                        if chosen.kind == "ABILITY" and before.ability_name in ('FLASH', 'RECON', 'SMOKE', 'ASH'):
+                            utility_indices[decision_tick, name, before.ability_name] = len(transitions)-1
                     last_indices[name] = len(transitions) - 1
                     reward_sum += reward
+                if audit:
+                    from toruAI_v4.tv4_retake_combat import effect_credit
+                    for effect in audit.utilities:
+                        key = effect['tick'], effect['name'], effect['ability']
+                        if effect['resolved'] and key in utility_indices:
+                            credit = effect_credit(effect)
+                            transitions[utility_indices.pop(key)][2] += credit
+                            reward_sum += credit
                 if game.is_planted and not planted:
                     planted = True
+                    if plant_callback is not None:
+                        plant_callback(game, opponent, preset_name, round_no)
                     alive = [c for c in game.chars if c.team == "D" and c.is_alive]
                     plant_d = len(alive)
                     plant_a = sum(c.is_alive for c in game.chars if c.team == "A")
@@ -215,12 +337,17 @@ def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, se
             else:
                 readiness += .5 if won else -1.
             if phase == "retake" or not search_closed:
-                terminal_reward = (4. if won else -4.) if phase == "retake" else (3. if won else -3.)
-                for index in last_indices.values():
-                    transitions[index][2] += terminal_reward
-                    transitions[index][5] = 1.
-                    reward_sum += terminal_reward
-            record = dict(opponent=opponent, preset=preset_name, round=round_no, won=won,
+                if phase == "retake":
+                    from toruAI_v4.tv4_retake_combat import apply_retake_outcome
+                    reward_sum += apply_retake_outcome(transitions, last_indices,
+                        {n: c.is_alive for n, c in current.items()}, won)
+                else:
+                    terminal_reward = 3. if won else -3.
+                    for index in last_indices.values():
+                        transitions[index][2] += terminal_reward
+                        transitions[index][5] = 1.
+                        reward_sum += terminal_reward
+            record = dict(opponent=opponent, preset=preset_name, round=round_no, won=won, seed=seed, log_context=log_context,
                           scope="search" if phase == "search" else "retake",
                           planted=planted, defused=bool(game.is_defused), plant_defenders=plant_d,
                           plant_attackers=plant_a, plant_distance=plant_distance,
@@ -232,9 +359,19 @@ def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, se
                           plant_resource_retention=plant_reserve, skill_uses=skill_uses,
                           search_survivors=search_survivors, search_resource_retention=search_reserve, search_readiness=readiness,
                           transitions=len(last_indices))
+            if audit:
+                record.update(combat_diagnostics=audit.report(), retake_damage=retake_damage,
+                    defuse_diagnostics=progress_audit.report(),
+                    remaining_hp=sum(max(0., c.hp) for c in current.values() if c.is_alive),
+                    retake_end_reason='defused' if game.is_defused else 'exploded' if game.is_planted and game.detonate_timer <= 0
+                        else 'defender_eliminated' if not any(c.is_alive for c in current.values()) else 'round_end')
             rounds.append(record)
             record.update(arrival)
             if logger:
+                if audit:
+                    logger.info("[retake][戦闘診断] 相手AI=%s R%02d 終了=%s 被害HP=%.1f 残りHP=%.1f counts=%s",
+                        opponent, round_no, record['retake_end_reason'], retake_damage, record['remaining_hp'],
+                        json.dumps(record['combat_diagnostics']['counts'], ensure_ascii=False))
                 logger.info("[%s][%s][%s] 相手AI=%s %s=%s R%02d %s plant=%s alive_at_plant=D%s/A%s 人数差=%s distance=%s reserve=%s skills=%d reward=%.2f",
                     phase, "学習" if training else "評価", log_context, opponent,
                     "学習編成" if training else "評価編成", preset_name, round_no,
@@ -250,13 +387,25 @@ def rollout(opponent, preset_name, scenario, search, retake, analyses, phase, se
                                 RETAKE_SAFETY_MARGIN_TICKS, arrival["plant_arrival_penalty"])
             if round_callback:
                 round_callback(record)
-            if round_no < 12:
+            if round_no < round_count:
                 game.current_round += 1
                 game.init_round()
     return rounds, transitions
 
 
 def summarize_defender(rounds):
+    from collections import Counter
+    combat_counts, end_reasons, defuse_counts = Counter(), Counter(), Counter()
+    for r in rounds:
+        combat_counts.update(r.get('combat_diagnostics', {}).get('counts', {}))
+        diagnostics = r.get('defuse_diagnostics')
+        if diagnostics:
+            defuse_counts.update(diagnostics['counts'])
+            if r.get('retake_end_reason') == 'exploded':
+                defuse_counts['exploded_without_start'] += int(diagnostics['first_start_remaining'] is None)
+                defuse_counts['exploded_without_arrival'] += int(diagnostics['first_in_range_remaining'] is None)
+        if r.get('retake_end_reason'):
+            end_reasons[r['retake_end_reason']] += 1
     planted = [r for r in rounds if r["planted"]]
     finished = [r for r in rounds if r["won"] is not None]
     retakes = [r for r in planted if r.get("scope") != "search"]
@@ -264,6 +413,8 @@ def summarize_defender(rounds):
         values = [r[key] for r in rows if r.get(key) is not None]
         return float(np.mean(values)) if values else None
     return dict(rounds=len(rounds), plants=len(planted), completed_rounds=len(finished),
+                combat_counts=dict(combat_counts), retake_end_reasons=dict(end_reasons), defuse_counts=dict(defuse_counts),
+                mean_retake_damage=average(retakes, 'retake_damage'), mean_remaining_hp=average(retakes, 'remaining_hp'),
                 scope="search" if rounds and all(r.get("scope") == "search" for r in rounds) else "retake",
                 wins=sum(bool(r["won"]) for r in finished),
                 win_rate=sum(bool(r["won"]) for r in finished) / len(finished) if finished else None,
@@ -308,7 +459,10 @@ def evaluation_summary(metrics):
             f"スキル温存率={rate('mean_resource_retention')} 平均使用回数={number('mean_skill_uses', '回')}\n"
             f"  全生存者が余裕を持って参加可能={rate('all_ready_rate')} 平均遅延人数={number('mean_plant_late_count', '人', 2)} "
             f"最小余裕の平均={number('mean_plant_min_margin', 'tick')}\n"
-            f"  search準備スコア={number('mean_search_readiness', digits=3)}")
+            f"  search準備スコア={number('mean_search_readiness', digits=3)}" +
+            (f"\n  解除診断: 未開始の爆発={metrics.get('defuse_counts', {}).get('exploded_without_start', 0)} "
+             f"範囲未到達の爆発={metrics.get('defuse_counts', {}).get('exploded_without_arrival', 0)} "
+             f"中断={metrics.get('defuse_counts', {}).get('interruptions', 0)}" if metrics.get('scope') == 'retake' else ''))
 
 
 def evaluate(plan, scenario, search, retake, analyses, phase, logger, log_context=""):
@@ -339,25 +493,39 @@ def atomic_save(path, state):
 
 
 def parse_arguments(argv=None):
+    phase_parser = argparse.ArgumentParser(add_help=False)
+    phase_parser.add_argument("--phase", choices=("search", "retake"), default=TRAINING_PHASE)
+    selected_phase, _ = phase_parser.parse_known_args(argv)
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--phase", choices=("search", "retake"), default="search")
+    p.add_argument("--max-workers", type=int, default=MAX_PARALLEL_WORKERS)
+    p.add_argument("--phase", choices=("search", "retake"), default=TRAINING_PHASE)
     p.add_argument("--sets", type=int, default=TRAINING_SETS)
-    p.add_argument("--opponents", nargs="+", choices=tuple(OPPONENTS), default=list(OPPONENTS))
+    p.add_argument("--opponents", nargs="+", choices=tuple(OPPONENTS), default=list(TRAINING_OPPONENTS))
     p.add_argument("--train-presets", nargs="+", default=list(TRAINING_PRESETS))
     p.add_argument("--eval-presets", nargs="+", default=list(EVALUATION_PRESETS))
     p.add_argument("--eval-every", type=int, default=EVALUATION_INTERVAL)
     p.add_argument("--eval-seeds", type=int, default=EVALUATION_SEED_COUNT)
     p.add_argument("--updates", type=int, default=UPDATES_PER_BLOCK)
     p.add_argument("--batch-size", type=int, default=BATCH_SIZE)
-    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--seed", type=int, default=RANDOM_SEED)
     mode = p.add_mutually_exclusive_group()
-    mode.add_argument("--resume", action="store_true", help="Resume latest checkpoint; default starts a new training run")
-    mode.add_argument("--fresh", action="store_true", help="Start a new training run (same as the default)")
-    mode.add_argument("--eval-only", action="store_true")
-    p.add_argument("--data-dir", type=Path, default=HERE / "data" / "defender")
-    p.add_argument("--best-dir", type=Path, default=DEFENDER_BEST)
-    p.add_argument("--log-dir", type=Path, default=HERE / "logs" / "defender")
-    return p.parse_args(argv)
+    mode.add_argument("--resume", dest="run_mode", action="store_const", const="resume", help="Resume latest checkpoint")
+    mode.add_argument("--fresh", dest="run_mode", action="store_const", const="fresh", help="Start a new training run")
+    mode.add_argument("--eval-only", dest="run_mode", action="store_const", const="eval")
+    p.set_defaults(run_mode=TRAINING_MODE)
+    p.add_argument("--data-dir", type=Path, default=DATA_DIRECTORY)
+    p.add_argument("--best-dir", type=Path, default=BEST_DIRECTORY)
+    p.add_argument("--log-dir", type=Path, default=LOG_DIRECTORY)
+    p.add_argument("--cases-dir", type=Path, help="Train retakes from collected plant states; one set visits every case")
+    p.add_argument("--search-dir", type=Path, help="Frozen search model directory (defaults to --best-dir)")
+    if selected_phase.phase == "retake":
+        from toruAI_v4.tv4_train_retake import training_defaults
+        p.set_defaults(**training_defaults())
+    args = p.parse_args(argv)
+    if args.run_mode not in ("fresh", "resume", "eval"):
+        p.error('TRAINING_MODE must be "fresh", "resume", or "eval"')
+    args.resume, args.fresh, args.eval_only = args.run_mode == "resume", args.run_mode == "fresh", args.run_mode == "eval"
+    return args
 
 
 def main(argv=None):
@@ -367,10 +535,17 @@ def main(argv=None):
     if len(set(args.opponents)) != len(args.opponents):
         raise ValueError("Duplicate opponents")
     scenario = Scenario()
+    if set(args.train_presets) & set(args.eval_presets):
+        raise ValueError("Training and holdout evaluation rosters must be disjoint")
     for opponent in args.opponents:
         eligible_presets(args.train_presets, opponent)
         eligible_presets(args.eval_presets, opponent)
     analyses, hashes = load_analyses(scenario, args.opponents)
+    from toruAI_v4.tv4_training_parallel import run_opponent_workers
+    status = run_opponent_workers(__file__, argv, args.opponents, args.max_workers,
+                                  log_dir=args.log_dir if args.phase == "retake" else None)
+    if status is not None:
+        return status
     if args.phase == "retake":
         from toruAI_v4.tv4_train_retake import train_retake
         return train_retake(args, scenario, analyses, hashes)
@@ -418,7 +593,7 @@ def train_search_opponent(args, scenario, analyses, hashes):
             if saved.get("training_objective") == SEARCH_EVALUATION_SCOPE and saved.get("rally_geometry") == schema["staging"]:
                 replay.extend([t[0].numpy(), t[1], t[2], t[3].numpy(), t[4].numpy(), t[5]] for t in saved["replay"])
             else:
-                logger.info("合流地点の新報酬に切替: 重み・完了セット数は継続、旧報酬のreplayは引き継ぎません")
+                logger.info("searchの新報酬に切替: 重み・完了セット数は継続、旧報酬のreplayは引き継ぎません")
             rng.bit_generator.state = json.loads(saved["rng"])
         if args.eval_only:
             model, saved = load_policy(best, args.phase, scenario)
@@ -436,7 +611,10 @@ def train_search_opponent(args, scenario, analyses, hashes):
                     "評価のみ" if args.eval_only else "再開" if args.resume else "新規", args.phase, opponent, args.sets, completed, target_sets)
         logger.info("学習編成=%s 評価編成=%s 評価=%dラウンド(%dseed/相手)", args.train_presets, args.eval_presets, len(plan) * 12, args.eval_seeds)
         logger.info("ログ=%s latest=%s best=%s", log_dir / "training.log", latest, best)
+        logger.info("best選定: 評価間隔=%dセット、各回同じ編成・seedで比較", args.eval_every)
         logger.info("合流地点=L/Rマップのa・b・c 到着基準=起爆残りtick-突入交戦%d-解除6-余裕%d", RETAKE_COMBAT_RESERVE_TICKS, RETAKE_SAFETY_MARGIN_TICKS)
+        logger.info("早めの寄り: 距離/到着予算で重み付け(上限%.1f) 前進加点=%.3f 足踏み減点=%.3f 交戦時は追加報酬なし",
+                    ROTATION_URGENCY_CAP, ROTATION_PROGRESS_REWARD, ROTATION_DELAY_PENALTY)
         for additional in range(1, (1 if args.eval_only else args.sets) + 1):
             if not args.eval_only:
                 set_no = completed + 1
@@ -471,8 +649,10 @@ def train_search_opponent(args, scenario, analyses, hashes):
                     if comparison is None and best.exists():
                         previous_model, previous = load_policy(best, args.phase, scenario)
                         if any(previous.get(k) != value for k, value in contract.items()):
-                            raise ValueError("Best comparison conditions changed")
-                        if previous.get("evaluation_plan") == plan and previous.get("evaluation_scope") == SEARCH_EVALUATION_SCOPE and previous.get("rally_geometry") == schema["staging"]:
+                            if args.resume:
+                                raise ValueError("Best comparison conditions changed")
+                            logger.info("[best] 新規学習で前段モデル・編成等の条件が変わったため、旧評価値は比較に使いません")
+                        elif previous.get("evaluation_plan") == plan and previous.get("evaluation_scope") == SEARCH_EVALUATION_SCOPE and previous.get("rally_geometry") == schema["staging"]:
                             comparison = previous["evaluation"]
                         else:
                             comparison = evaluate(plan, scenario, previous_model if args.phase == "search" else search,
@@ -495,4 +675,4 @@ def train_search_opponent(args, scenario, analyses, hashes):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

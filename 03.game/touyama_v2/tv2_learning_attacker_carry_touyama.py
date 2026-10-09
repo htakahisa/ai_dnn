@@ -36,6 +36,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 # ---------------------------------------------------------------------------
@@ -238,10 +239,7 @@ class LearningAttackerCarryTouyamaController:
         self.epsilon = epsilon
         self.debug = debug
 
-        if device == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device(device)
+        self.device = resolve_inference_device(device)
 
         if not model_path or not os.path.isfile(model_path):
             raise FileNotFoundError(f"Carryモデルが見つかりません: {model_path}")
