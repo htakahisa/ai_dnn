@@ -138,7 +138,7 @@ class RenderingUIMixin:
 
         chars = [ch for ch in self.chars if ch.team == team][:5]
         row_h = 108
-        card_h = 100
+        card_h = 104
 
         for index, character in enumerate(chars):
             y1 = 48 + index * row_h
@@ -507,7 +507,7 @@ class RenderingUIMixin:
 
         chars = [c for c in self.chars if c.team == team][:5]
         row_h = 108
-        card_h = 100
+        card_h = 104
 
         for i, char in enumerate(chars):
             y = 48 + i * row_h
@@ -566,12 +566,12 @@ class RenderingUIMixin:
             power_text = str(math.floor(char.combat_power))
 
             self.canvas.create_text(
-                x0 + 18, y + 49,
+                x0 + 18, y + 47,
                 text=f"命中精度 {accuracy_pct}%   判断力(IQ) {iq_text}",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
             self.canvas.create_text(
-                x0 + 18, y + 63,
+                x0 + 18, y + 59,
                 text=f"キャラコン(回避) {dodge_pct}%   HS {hs_pct}%",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
@@ -583,21 +583,28 @@ class RenderingUIMixin:
             )
 
             self.canvas.create_text(
-                x0 + 18, y + 77,
+                x0 + 18, y + 71,
                 text=f"反応速度 {reaction_text}",
                 anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
             self.canvas.create_text(
-                x0 + panel_w / 2, y + 77,
+                x0 + panel_w / 2, y + 71,
                 text=f"調子 {condition_text}",
                 anchor="center", fill=condition_color,
                 font=("Arial", 7, "bold")
             )
             self.canvas.create_text(
-                x0 + panel_w - 18, y + 77,
+                x0 + panel_w - 18, y + 71,
                 text=f"総合戦闘力 {power_text}",
                 anchor="e", fill="#f5c76b" if char.is_alive else "#777b83",
                 font=("Arial", 8, "bold")
+            )
+
+            self.canvas.create_text(
+                x0 + 18, y + 83,
+                text=(f"摩耗の呪い {getattr(char, 'erosion_curse', 0):g}tick   "
+                      f"運命の織機 {getattr(char, 'fate_loom', 0):g}tick"),
+                anchor="w", fill=muted, font=("Arial", 7, "bold")
             )
 
             # ロールに対応するアビリティ
@@ -612,11 +619,11 @@ class RenderingUIMixin:
                 "HUNT": 1,
             }[ability]
             available = char.is_alive and (charges > 0 or ability == "HUNT")
-            self._draw_compact_ability_icon(ability, x0 + 27, y + 91, available)
+            self._draw_compact_ability_icon(ability, x0 + 27, y + 95, available)
             label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP", "RAMP": "Lamp", "DANCE": "DANCE", "ASH": "ASH"}[ability]
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
             self.canvas.create_text(
-                x0 + 43, y + 91,
+                x0 + 43, y + 95,
                 text=(
                     f"{label} {status}  |  ULT "
                     f"{char.ultimate_points}/{char.ultimate_cost}"

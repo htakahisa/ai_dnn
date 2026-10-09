@@ -1,5 +1,35 @@
 # GC v2の攻撃側の学習
 
+## 2026-10-09: 大会管理画面の編集で停止した学習を復旧
+
+`attacker_rl_unitstatus_20261008_recovered` は100,104判断・284ラウンドと、
+その時点の定期評価を保存済み。TYG 45.3%の警告後に停止した原因は、
+`run_competition_manager.py` の編集を検出したことだった。
+
+学習開始時のSHA256と一致する大会管理コードをGit履歴から復元し、
+`data/runtime_fixed_20261008_unitstatus/run_competition_manager.py` に固定する。
+現在の作業用ファイルは変更しない。学習と評価workerは同じ固定コピーを読み込み、
+学習manifestと評価manifestにコピーのハッシュを記録する。
+固定コピーの変更は引き続きエラーとなる。
+
+準備コマンド（作業ディレクトリ: `ghost_champions_v2/`、学習は起動しない）:
+
+```powershell
+Set-Location D:\git\ai_dnn\03.game\ghost_champions_v2
+py tools/fork_evaluation_run.py --source attacker_rl_unitstatus_20261008_recovered --run attacker_rl_unitstatus_20261009_recovered --freeze-competition-manager
+```
+
+準備済みrunの再開:
+
+```powershell
+py training_attacker.py --run attacker_rl_unitstatus_20261009_recovered --evaluation-workers 1 --phase rl --resume
+```
+
+BC・optimizer・乱数状態と完了済み評価を引き継ぐ。
+100,104判断の評価は繰り返さず、次は150,000判断到達後に定期評価する。
+この固定コピーを使用するrunでは、作業用 `run_competition_manager.py` の編集は
+学習へ反映されない。他の固定対象ソース・モデル・データの変更検知は維持する。
+
 ## 2026-10-08: 途中の80%未達を警告に変更して50,064ステップから続ける
 
 `tyg_periodic_action` の既定設定を `warn` に変更した。途中評価のTYG勝率が80%未満でも、
@@ -360,6 +390,32 @@ PFSPは相手勝率 `p` に対して `(1-p)^2` に比例する。
 `last_passed_guardrail.pt` は定期評価の通過時にも保存するが、`verified=false`・`guardrail_passed=true`。
 正式な最終評価の通過時のみ `verified=true` にする。これは全目標達成を意味しない。
 新しいcheckpointは自動的に対戦画面の標準モデルへ切り替えない。
+
+## 学習中の `run_game.py` 変更からの復旧
+
+固定入力の変更を検出すると学習を停止する。`--resume` でも入力の一致が必要になる。
+モデルは `data/<run>/latest.pt` の保存済みラウンドから再開できる。
+
+`run_game.py` の変更が、GCおよび学習相手が使わない新しいAI選択肢の追加だけの場合は、
+次のコマンドで別runへ引き継げる。作業ディレクトリは `ghost_champions_v2/`。
+
+```powershell
+Set-Location D:\git\ai_dnn\03.game\ghost_champions_v2
+py tools/fork_evaluation_run.py --source attacker_rl_unitstatus_20261008_continue --run attacker_rl_unitstatus_20261008_recovered --allow-unused-team-additions
+py training_attacker.py --run attacker_rl_unitstatus_20261008_recovered --evaluation-workers 1 --phase rl --resume
+```
+
+1行目のPythonコマンドは準備だけを行い、学習を開始しない。
+変更前のファイルをGit履歴からSHA256で照合して取得し、構文比較により
+`_build_team_ai` に未使用の選択肢だけが追加されたことを検査する。
+ゲーム本体・既存AI・学習対象の選択肢などの変更は拒否する。
+元runのmanifestと教師データのハッシュは維持し、変更前ソースを互換性の証拠として
+新runの `continuation.json` に保存する。新runでも現在の入力を固定して変更を監視する。
+準備後のソース編集は新runの再開も停止させるため、学習で参照するファイルの編集は避ける。
+
+2026-10-08の復旧対象は68,043判断・188ラウンドのcheckpoint。
+教師データ42,210判断、BC、optimizer、乱数状態を引き継ぐ。
+初期評価と50,064判断時の完了済み評価は再実行せず、次は100,000判断到達後に定期評価する。
 
 ## 実行方法
 

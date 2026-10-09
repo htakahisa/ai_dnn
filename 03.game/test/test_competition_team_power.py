@@ -12,12 +12,13 @@ class TeamPowerTests(unittest.TestCase):
         stats = dict(
             hs_rate=0.8, accuracy=0.9, dodge_rate=0.8, reaction=100,
             iq=190, influence=7, form_variance=3, mental=18, role="フラッシュ",
+            erosion_curse=3, fate_loom=2,
         )
         combos = [
             dict(name="first", players=("a", "b"),
                  bonuses={"hs_rate": 0.4, "accuracy": 0.3, "mental": 5,
-                          "form_variance": -5, "iq": 50},
-                 player_bonuses={"a": {"reaction": 20}}, renames={"a": "renamed"}),
+                          "form_variance": -5, "iq": 50, "erosion_curse": -10, "fate_loom": .1},
+                 player_bonuses={"a": {"reaction": 20, "摩耗の呪い": 4}}, renames={"a": "renamed"}),
             dict(name="second", players=("renamed", "c"), bonuses={"dodge_rate": 0.5}),
             dict(name="inactive", players=("a", "missing"), bonuses={"iq": 100}),
         ]
@@ -34,8 +35,10 @@ class TeamPowerTests(unittest.TestCase):
         for key, value in dict(
             hs_rate=0.4, accuracy=0.3, mental=5, form_variance=-5,
             iq=50, reaction=20, dodge_rate=0.5,
+            erosion_curse=-10, fate_loom=.1,
         ).items():
             game_core._apply_combo_bonus(expected, key, value)
+        game_core._apply_combo_bonus(expected, "摩耗の呪い", 4)
         for key in stats:
             self.assertEqual(first["after"][key], getattr(expected, key))
         self.assertAlmostEqual(
@@ -86,6 +89,10 @@ class TeamPowerTests(unittest.TestCase):
             first = report["players"][0]
             self.assertEqual(rows[0][1], f'{first["after"]["hs_rate"] * 100:.1f}% ({first["base"]["hs_rate"] * 100:.1f}%)')
             self.assertEqual(rows[0][-1], f'{first["combo_power"]:.1f} ({first["base_power"]:.1f})')
+            first_item = app.team_power_players_tree.get_children()[0]
+            for key in ("erosion_curse", "fate_loom"):
+                self.assertEqual(app.team_power_players_tree.set(first_item, key),
+                                 f'{first["after"][key]:g} ({first["base"][key]:g})')
         with patch.object(manager, "reload_game_data") as reload_data:
             app.team_power_refresh_button.invoke()
             reload_data.assert_called_once_with()
@@ -139,6 +146,8 @@ class TeamPowerTests(unittest.TestCase):
             row = next(r for r in app.team_power_reports[team]["players"] if r["name"] == name)
             self.assertEqual(tree.set(item, "power"), f'{row["combo_power"]:.1f} ({row["base_power"]:.1f})')
             self.assertEqual(tree.set(item, "mental"), f'{row["after"]["mental"]:g} ({row["base"]["mental"]:g})')
+            for key in ("erosion_curse", "fate_loom"):
+                self.assertEqual(tree.set(item, key), f'{row["after"][key]:g} ({row["base"][key]:g})')
         self.assertFalse(tree.heading("no", "command"))
         for column in tree["columns"][1:]:
             for descending in (True, False):

@@ -260,6 +260,9 @@ def main():
         manifest["minimum_attack_rounds"] = args.minimum_attack_rounds
     manifest["runtime_data_hashes"]={name:hashlib.sha256((runtime_root/name).read_bytes()).hexdigest()
                                       for name in RUNTIME_FILES}
+    manager_source=runtime_root/"run_competition_manager.py"
+    if snapshot and manager_source.is_file():
+        manifest["runtime_source_hashes"]={"run_competition_manager.py":hashlib.sha256(manager_source.read_bytes()).hexdigest()}
     if snapshot:
         manifest["runtime_snapshot"]=str(runtime_root)
     if os.environ.get("GC_OPPONENT_SNAPSHOT"):
@@ -305,6 +308,9 @@ def main():
         if any(hashlib.sha256((runtime_root/name).read_bytes()).hexdigest()!=digest
                for name,digest in manifest["runtime_data_hashes"].items()):
             p.error("runtime character/combo/map data changed during evaluation; saved results cannot be combined")
+        if any(not (runtime_root/name).is_file() or hashlib.sha256((runtime_root/name).read_bytes()).hexdigest()!=digest
+               for name,digest in manifest.get("runtime_source_hashes",{}).items()):
+            p.error("runtime source snapshot changed during evaluation")
         if os.environ.get("GC_OPPONENT_SNAPSHOT") and any(not (opponent_root/name).is_file()
                 or hashlib.sha256((opponent_root/name).read_bytes()).hexdigest()!=digest
                 for name,digest in manifest["opponent_snapshot_hashes"].items()):

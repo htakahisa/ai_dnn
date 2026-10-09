@@ -19,13 +19,14 @@ from ghost_champions_v1_macro import (GhostChampionsV1AttackerController,
 
 
 class RuntimeTests(unittest.TestCase):
-    def test_registration_keeps_existing_defender_and_adds_both_selectors(self):
+    def test_registration_uses_defender_macro_and_both_selectors(self):
+        from ghost_champions_v2.defender_macro_v1.controller import GhostChampionsV2DefenderController
         from run_game import _build_team_ai
         from roster_select import TEAM_AI_OPTIONS
         from run_competition_manager import CONTROLLER_OPTIONS
         team=_build_team_ai("ghost_champions_v2")
         self.assertIs(team.attacker_factory,GhostChampionsV2AttackerController)
-        self.assertIs(team.defender_factory,GhostChampionsV1DefenderController)
+        self.assertIs(team.defender_factory,GhostChampionsV2DefenderController)
         self.assertEqual(TEAM_AI_OPTIONS["Ghost Champions v2"],"ghost_champions_v2")
         self.assertEqual(CONTROLLER_OPTIONS["Ghost Champions v2"],"ghost_champions_v2")
 

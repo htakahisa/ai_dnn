@@ -727,6 +727,24 @@ COMBOS = [
         },
         "renames": {},
     },
+    {
+        "name": "Neverness",
+        "players": ("skuba", "Brawk"),
+        "player_bonuses": {
+            "skuba": {"dodge_rate": 0.15},
+            "Brawk": {"shield_piercer": True},
+        },
+        "renames": {},
+    },
+    {
+        "name": "To everness",
+        "players": ("skuba", "Brawk"),
+        "player_bonuses": {
+            "skuba": {"dodge_rate": 0.15},
+            "Brawk": {"shield_piercer": True},
+        },
+        "renames": {},
+    },
 ]
 
 

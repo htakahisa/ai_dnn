@@ -99,7 +99,8 @@ class PlayerDetailsScreenTest(SeasonEconomyScreenTest):
     def test_all_stat_fields_use_saved_player_and_match_editor_power(self):
         app = self.app
         changed = replace(app.state.player("Leo"), iq=400, hit_pct=.91, influence=157, mental=9,
-                          form_variance=3, shield_hp=44.5, shield_piercer=True, shield_crash=21.25)
+                          form_variance=3, shield_hp=44.5, shield_piercer=True, shield_crash=21.25,
+                          erosion_curse=7, fate_loom=3)
         state = replace(app.state, owned_players=tuple(changed if p.name == "Leo" else p for p in app.state.owned_players))
         app.commit(state, "Saved abilities")
         app.show_screen("scout")
@@ -109,7 +110,7 @@ class PlayerDetailsScreenTest(SeasonEconomyScreenTest):
         details = app.scout_details.get()
         for label in ("Leo", changed.role, "HS率", "命中率", "回避率", "反応", "IQ", "影響力",
                       "メンタル", "調子の波", "基本月給", "忠誠心", "チームへの忠誠",
-                      "シールド", "シールドピアサー", "シールドクラッシュ"):
+                      "シールド", "シールドピアサー", "シールドクラッシュ", "摩耗の呪い", "運命の織機"):
             self.assertIn(label, details)
         self.assertIn("IQ: 400", details)
         self.assertIn("影響力: 157", details)
@@ -117,14 +118,16 @@ class PlayerDetailsScreenTest(SeasonEconomyScreenTest):
         app.show_editor()
         app.players.selection_set("0")
         app.select_player()
-        for shield_value in ("シールド: 44.5HP", "シールドピアサー: あり", "シールドクラッシュ: 21.25HP"):
+        trait_values = ("シールド: 44.5HP", "シールドピアサー: あり", "シールドクラッシュ: 21.25HP",
+                        "摩耗の呪い: 7tick", "運命の織機: 3tick")
+        for shield_value in trait_values:
             self.assertIn(shield_value, details)
             self.assertIn(shield_value, app.details.get())
             self.assertIn(shield_value, app.player_details_view.text.get("1.0", "end"))
         for kind in ("research", "aim_lab"):
             app.training_players[kind].selection_set("Leo")
             app.refresh_training_offer(kind)
-            for shield_value in ("シールド: 44.5HP", "シールドピアサー: あり", "シールドクラッシュ: 21.25HP"):
+            for shield_value in trait_values:
                 self.assertIn(shield_value, app.training_summaries[kind].get())
         for power in (f"総合戦闘力: {player_combat_power(changed):.2f}",
                       f"撃ち合い戦闘力: {player_duel_power(changed):.2f}"):

@@ -20,6 +20,27 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def freeze_competition_manager(parent,snapshot):
+    """Restore exactly the recorded manager into the existing runtime snapshot."""
+    from ghost_champions_v2.tools.registry_compatibility import git_source
+    original=ROOT/"run_competition_manager.py"
+    target=snapshot/"run_competition_manager.py"
+    expected=parent["frozen_inputs"].get(str(target.resolve())) or parent["frozen_inputs"].get(str(original.resolve()))
+    if not expected:
+        raise ValueError("Parent does not record the competition manager")
+    if target.exists():
+        if digest(target)!=expected:
+            raise ValueError("Existing competition manager snapshot differs from parent")
+    else:
+        source=git_source(ROOT,original,expected).encode("utf-8")
+        if hashlib.sha256(source).hexdigest()!=expected:
+            raise ValueError("Restored competition manager does not match parent")
+        # Never replace an existing snapshot or the editable workspace file.
+        with target.open("xb") as output:
+            output.write(source)
+    return dict(path=str(target.resolve()),sha256=expected,original_path=str(original.resolve()))
+
+
 def reuse_initial_series(source,target,checkpoint,series):
     """Reuse matching completed series while keeping the old evaluation intact."""
     from ghost_champions_v2.rl.training import EVALUATION_SOURCE_PATHS,evaluation_minimum
@@ -66,6 +87,10 @@ def main():
     parser.add_argument("--source",required=True)
     parser.add_argument("--run",required=True)
     parser.add_argument("--opponent-snapshot",type=Path)
+    parser.add_argument("--allow-unused-team-additions",action="store_true",
+                        help="Prove run_game.py only gained factory branches unused by GC and its opponents")
+    parser.add_argument("--freeze-competition-manager",action="store_true",
+                        help="Restore the exact parent competition manager in its runtime snapshot")
     parser.add_argument("--reuse-completed-initial",action="store_true",
                         help="Reuse completed BC evaluation as a starting baseline, even below the training target")
     parser.add_argument("--reuse-completed-evaluation",action="store_true",
@@ -89,20 +114,29 @@ def main():
         args.opponent_snapshot=args.opponent_snapshot.resolve()
         os.environ["GC_OPPONENT_SNAPSHOT"]=str(args.opponent_snapshot)
         sys.path.insert(1,str(args.opponent_snapshot))
+    manager_snapshot=freeze_competition_manager(parent,snapshot) if args.freeze_competition_manager else None
     from ghost_champions_v2.rl.training import fingerprint,validate_evaluation_change,load_continuation
     from ghost_champions_v2.rl.policy import ResidualPolicy
     from ghost_champions_v2.rl.initial_evaluation import evaluation_reference
     config=json.loads((AI_ROOT/"rl/training_config.json").read_text(encoding="utf-8"))
     config["evaluation_workers"]=parent["config"]["evaluation_workers"]
     frozen=fingerprint(snapshot)
-    validate_evaluation_change(parent,config,frozen)
+    bc_frozen=json.loads((source/"demonstrations.json").read_text(encoding="utf-8"))["frozen_inputs"]
+    compatibility=None
+    if args.allow_unused_team_additions:
+        from ghost_champions_v2.tools.registry_compatibility import build_registry_proof
+        from ghost_champions_v2.rl.rollout import OPPONENTS
+        compatibility=build_registry_proof(ROOT,[parent,dict(frozen_inputs=bc_frozen)],frozen,
+                                          {"ghost_champions_v2",*(key for _,key in OPPONENTS.values())})
+    elif (source/"continuation.json").exists():
+        compatibility=json.loads((source/"continuation.json").read_text(encoding="utf-8")).get("runtime_compatibility")
+    validate_evaluation_change(parent,config,frozen,runtime_compatibility=compatibility)
     parent_continuation=None
     if (source/"continuation.json").exists():
         if digest(source/"continuation.json")!=parent.get("continuation_sha256"):
             parser.error("parent continuation metadata changed")
-        parent_continuation=load_continuation(source,parent["config"],frozen)
-    bc_frozen=json.loads((source/"demonstrations.json").read_text(encoding="utf-8"))["frozen_inputs"]
-    validate_evaluation_change(dict(parent,frozen_inputs=bc_frozen),config,frozen)
+        parent_continuation=load_continuation(source,parent["config"],frozen,runtime_compatibility=compatibility)
+    validate_evaluation_change(dict(parent,frozen_inputs=bc_frozen),config,frozen,runtime_compatibility=compatibility)
     bc_only=not (source/"latest.pt").is_file()
     if args.reuse_completed_initial and not bc_only:
         parser.error("initial-baseline recovery is only for runs that have not started PPO")
@@ -158,6 +192,12 @@ def main():
                 if args.reuse_completed_initial else "User requested evaluation orchestration changes"),
         artifact_hashes={name:digest(target/name) for name in copies},
         initial_evaluation=initial_evaluation,runtime_snapshot=str(snapshot),bc_frozen_inputs=bc_frozen)
+    if compatibility:
+        continuation["runtime_compatibility"]=compatibility
+        continuation["reason"]="Continue saved PPO after proving only unused team factory branches were added"
+    if manager_snapshot:
+        continuation["competition_manager_snapshot"]=manager_snapshot
+        continuation["reason"]="Continue saved PPO with the exact frozen competition manager restored from Git"
     if initial_as_baseline:
         continuation["initial_evaluation_as_baseline"]=True
     if pending_evaluation:

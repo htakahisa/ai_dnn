@@ -2453,6 +2453,10 @@ def _combo_stat_key(stat_key: Any) -> str | None:
         "condition_variance": "form_variance",
         "consistency": "form_variance",
         "調子の波": "form_variance",
+        "erosion_curse": "erosion_curse",
+        "摩耗の呪い": "erosion_curse",
+        "fate_loom": "fate_loom",
+        "運命の織機": "fate_loom",
     }
     return aliases.get(normalized)
 
@@ -2483,6 +2487,8 @@ def _apply_combo_bonus_to_stats(
             stats[key] = max(0.0, min(1.0, updated))
     elif key in {"reaction", "iq"}:
         stats[key] = max(0.0, float(stats[key]) + amount)
+    elif key in {"erosion_curse", "fate_loom"}:
+        stats[key] = math.ceil(max(0.0, float(stats[key]) + amount))
     elif key in {"mental", "form_variance"}:
         cap = 20.0 if key == "mental" else 10.0
         stats[key] = max(0.0, min(cap, float(stats[key]) + amount))
@@ -2513,6 +2519,8 @@ def build_team_combo_power_report(team_name: str) -> dict[str, Any]:
             "influence": float(raw.get("influence", 0.0)),
             "form_variance": float(raw.get("form_variance", 0.0)),
             "mental": float(raw.get("mental", 5.0)),
+            "erosion_curse": float(raw.get("erosion_curse", 0)),
+            "fate_loom": float(raw.get("fate_loom", 0)),
             "role": str(raw.get("role", "")),
         }
         base_stats[name] = dict(row)
@@ -4696,11 +4704,11 @@ class CompetitionApp:
         frame.pack(fill="both", expand=True, padx=10, pady=(4, 8))
         columns = (
             "no", "name", "team", "hs_rate", "accuracy", "dodge_rate", "reaction", "iq",
-            "influence", "form_variance", "mental", "role", "power",
+            "influence", "form_variance", "mental", "erosion_curse", "fate_loom", "role", "power",
         )
         headings = (
             "No.", "名前", "チーム名", "HS率", "命中率", "回避率", "反射速度", "IQ",
-            "影響力", "調子の波", "メンタル", "ロール", "戦闘力",
+            "影響力", "調子の波", "メンタル", "摩耗の呪い (tick)", "運命の織機 (tick)", "ロール", "戦闘力",
         )
         self.player_power_tree = ttk.Treeview(
             frame, columns=columns, show="headings", height=24,
@@ -4733,7 +4741,7 @@ class CompetitionApp:
         sort_values.clear()
         stat_keys = (
             "hs_rate", "accuracy", "dodge_rate", "reaction", "iq", "influence",
-            "form_variance", "mental", "role",
+            "form_variance", "mental", "erosion_curse", "fate_loom", "role",
         )
         selected_items = []
         for team_name, report in self.team_power_reports.items():
@@ -4812,11 +4820,11 @@ class CompetitionApp:
         players.pack(fill="x", padx=10, pady=4)
         columns = (
             "name", "hs_rate", "accuracy", "dodge_rate", "reaction", "iq",
-            "influence", "form_variance", "mental", "role", "power",
+            "influence", "form_variance", "mental", "erosion_curse", "fate_loom", "role", "power",
         )
         headings = (
             "名前", "HS率", "命中率", "回避率", "反射速度", "IQ",
-            "影響力", "調子の波", "メンタル", "ロール", "戦闘力",
+            "影響力", "調子の波", "メンタル", "摩耗の呪い (tick)", "運命の織機 (tick)", "ロール", "戦闘力",
         )
         self.team_power_players_tree = ttk.Treeview(
             players, columns=columns, show="headings", height=5,
@@ -4929,7 +4937,7 @@ class CompetitionApp:
         self.team_power_detail_var.set(f"{team_name} — 選手ステータス")
         stat_keys = (
             "hs_rate", "accuracy", "dodge_rate", "reaction", "iq", "influence",
-            "form_variance", "mental", "role",
+            "form_variance", "mental", "erosion_curse", "fate_loom", "role",
         )
         for row in report["players"]:
             values = [row["name"]]

@@ -1,11 +1,11 @@
-"""Ghost Champions v2: configurable attacker tactics, unchanged v1 defender."""
+"""Ghost Champions v2: attacker tactics and defender attack-site macro."""
 
 
 def build_team_ai():
     import os
     from functools import partial
     from team_ai import DualRoleTeamAI
-    from ghost_champions_v1_macro import GhostChampionsV1DefenderController
+    from .defender_macro_v1.controller import GhostChampionsV2DefenderController
     from .controller import GhostChampionsV2AttackerController
     attacker_factory=GhostChampionsV2AttackerController
     if os.environ.get("GC_V2_RL_CHECKPOINT"):
@@ -14,5 +14,5 @@ def build_team_ai():
     return DualRoleTeamAI(
         name="Ghost Champions v2",
         attacker_factory=attacker_factory,
-        defender_factory=GhostChampionsV1DefenderController,
+        defender_factory=GhostChampionsV2DefenderController,
     )

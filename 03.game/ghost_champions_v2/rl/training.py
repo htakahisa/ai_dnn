@@ -20,44 +20,62 @@ from .rollout import ROOT,OPPONENTS,play_round,pfsp_probabilities,shaping_coeffi
 AI_ROOT=Path(__file__).resolve().parents[1]
 EVALUATION_CONFIG_KEYS={"evaluation_series","initial_evaluation_series","final_evaluation_series","tyg_confirmation_series","tyg_periodic_action"}
 EVALUATION_SOURCE_PATHS={str(p.resolve()) for p in (
-    ROOT/"tools/run_eval.py",AI_ROOT/"rl/training.py",AI_ROOT/"rl/training_config.json",AI_ROOT/"training_attacker.py")}
+    ROOT/"tools/run_eval.py",AI_ROOT/"rl/training.py",AI_ROOT/"rl/training_config.json",AI_ROOT/"training_attacker.py",
+    AI_ROOT/"tools/registry_compatibility.py")}
 
 
-def validate_evaluation_change(parent,config,frozen):
+def validate_evaluation_change(parent,config,frozen,*,runtime_compatibility=None):
     """Permit only evaluation orchestration changes when continuing old data."""
     if parent["schema_hash"]!=SCHEMA_HASH or parent["verification"]:
         raise ValueError("Continuation requires the same observation schema and a production run")
     if ({k:v for k,v in parent["config"].items() if k not in EVALUATION_CONFIG_KEYS}
             !={k:v for k,v in config.items() if k not in EVALUATION_CONFIG_KEYS}):
         raise ValueError("Only evaluation counts and the periodic TYG action may change in this continuation")
-    old=parent["frozen_inputs"]
-    canonical={}
     snapshot=Path(os.environ["GC_OPPONENT_SNAPSHOT"]).resolve() if os.environ.get("GC_OPPONENT_SNAPSHOT") else None
-    for name,digest in frozen.items():
-        path=Path(name)
-        if snapshot and path.is_relative_to(snapshot):
-            path=ROOT/path.relative_to(snapshot)
-        canonical[str(path)]=digest
+    runtime=Path(os.environ["GC_RUNTIME_SNAPSHOT"]).resolve() if os.environ.get("GC_RUNTIME_SNAPSHOT") else None
+    def canonicalize(inputs):
+        result={}
+        for name,digest in inputs.items():
+            path=Path(name)
+            if snapshot and path.is_relative_to(snapshot):
+                path=ROOT/path.relative_to(snapshot)
+            if runtime and path==runtime/"run_competition_manager.py":
+                path=ROOT/"run_competition_manager.py"
+            key=str(path)
+            if key in result and result[key]!=digest:
+                raise ValueError("Conflicting frozen input copies: "+key)
+            result[key]=digest
+        return result
+    old=canonicalize(parent["frozen_inputs"])
+    canonical=canonicalize(frozen)
     marker=str(ROOT/"concon_v1/__init__.py")
     if marker not in old and canonical.get(marker)==hashlib.sha256(b"").hexdigest():
         canonical.pop(marker)
     changed={name for name in old.keys()|canonical.keys() if old.get(name)!=canonical.get(name)}
+    registry=str((ROOT/"run_game.py").resolve())
+    if registry in changed and runtime_compatibility:
+        from ..tools.registry_compatibility import registry_change_allowed
+        active={"ghost_champions_v2",*(key for _,key in OPPONENTS.values())}
+        if registry_change_allowed(runtime_compatibility,registry,old.get(registry),canonical.get(registry),active):
+            changed.remove(registry)
     if changed-EVALUATION_SOURCE_PATHS:
         raise ValueError("Policy/runtime inputs changed; cannot reuse BC: "+", ".join(sorted(changed-EVALUATION_SOURCE_PATHS)))
 
 
-def load_continuation(data_dir,config,frozen):
+def load_continuation(data_dir,config,frozen,*,runtime_compatibility=None):
     path=data_dir/"continuation.json"
     if not path.exists():
         return None
     continuation=json.loads(path.read_text(encoding="utf-8"))
-    validate_evaluation_change(continuation["parent_manifest"],config,frozen)
+    compatibility=runtime_compatibility or continuation.get("runtime_compatibility")
+    validate_evaluation_change(continuation["parent_manifest"],config,frozen,runtime_compatibility=compatibility)
     for name,digest in continuation["artifact_hashes"].items():
         artifact=data_dir/name
         if not artifact.is_file() or hashlib.sha256(artifact.read_bytes()).hexdigest()!=digest:
             raise ValueError("Continuation artifact differs: "+name)
     if "bc_frozen_inputs" in continuation:
-        validate_evaluation_change(dict(continuation["parent_manifest"],frozen_inputs=continuation["bc_frozen_inputs"]),config,frozen)
+        validate_evaluation_change(dict(continuation["parent_manifest"],frozen_inputs=continuation["bc_frozen_inputs"]),config,frozen,
+                                   runtime_compatibility=compatibility)
     pending=continuation.get("pending_evaluation")
     if pending:
         reference=pending["reference"]
@@ -100,12 +118,17 @@ def fingerprint(snapshot):
                                        "grid_paths.py","grid_lines.py","combo_awakening.py","defender_setup_phase.py",
                                        "map_data_defender_setup.py","analytics/combat_tracker.py","run_competition_manager.py",
                                        "tools/run_eval.py"))
+    manager=Path(snapshot)/"run_competition_manager.py"
+    if manager.is_file():
+        paths.discard(ROOT/"run_competition_manager.py")
+        paths.add(manager)
     for package in ("gc_v1","frc_v1","fnatic_v3","concon_v1","omoko_v1","touyama_v2","attacker_v3","defender_v3"):
         package_root=Path(os.environ["GC_OPPONENT_SNAPSHOT"])/package if package=="concon_v1" and os.environ.get("GC_OPPONENT_SNAPSHOT") else ROOT/package
         paths.update(package_root.glob("*.py"))
     paths.update((AI_ROOT/"rl").glob("*.py"))
     paths.update(AI_ROOT.glob("*.py"))
     paths.add(AI_ROOT/"gc_profiles.json")
+    paths.add(AI_ROOT/"tools/registry_compatibility.py")
     if os.environ.get("GC_V2_CONFIG"):
         paths.add(Path(os.environ["GC_V2_CONFIG"]))
     from ghost_champions_v1 import CARRY,ESCORT,RETRIEVE,GUARD,SEARCH,RETAKE

@@ -37,7 +37,7 @@ def build_match(checkpoint,opponent,*,seed,tick_ms=150,opening="random",attack_o
     from map_data import NEW_MAZE_STR
     from run_game import VisualFPSBattle,_build_team_ai
     from team_ai import DualRoleTeamAI
-    from ghost_champions_v1_macro import GhostChampionsV1DefenderController
+    from ghost_champions_v2.defender_macro_v1.controller import GhostChampionsV2DefenderController
     from ghost_champions_v2.config import load_config
     from ghost_champions_v2.rl.controller import LearnedAttackerController
     policy=None
@@ -60,7 +60,7 @@ def build_match(checkpoint,opponent,*,seed,tick_ms=150,opening="random",attack_o
     team=DualRoleTeamAI(name="Ghost Champions v2",
         attacker_factory=partial(LearnedAttackerController,checkpoint=str(checkpoint),policy=policy,
                                  config=config,stage="entry",mode="greedy"),
-        defender_factory=GhostChampionsV1DefenderController)
+        defender_factory=GhostChampionsV2DefenderController)
     return VisualFPSBattle(NEW_MAZE_STR,team,_build_team_ai(enemy.default_ai),headless=headless,
         attacker_roster=list(gc.players),defender_roster=list(enemy.players),
         spike_holder_name=gc.spike_holder,defender_spike_holder_name=enemy.spike_holder,
@@ -147,7 +147,9 @@ def main():
                 elif game.current_attacker_team_ai is game.initial_attacker_team_ai:
                     text=f"Round {game.current_round}  GC攻撃・初動抽選待ち"
                 else:
-                    text=f"Round {game.current_round}  GC防衛"
+                    defender=game.defender_controller
+                    from ghost_champions_v2.defender_macro_v1.status import format_defender_status
+                    text=f"Round {game.current_round}  GC防衛  " + format_defender_status(defender.defender_snapshot())
                 caption.set(text)
                 game.root.after(150,update_caption)
             if not args.autoplay:
