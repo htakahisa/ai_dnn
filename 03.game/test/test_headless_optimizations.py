@@ -15,7 +15,7 @@ from frc_v1.model import FrcPolicy
 from frc_v1.memory import FrcMemory
 from frc_v1.observation import FrcObservationEncoder
 from grid_paths import _distance, _distance_map, distance_map, walking_distance
-from grid_lines import _line_cells as cached_line, line_cells
+from grid_lines import _line_cells as cached_line, line_cells, iter_line_cells
 from grid_visibility import _clear_mask, _rays, visible_cells
 from simulation_runtime import cpu_inference, match_inference_device
 from test_frc_v1 import make_game, observe
@@ -26,6 +26,42 @@ class Geometry(AbilityLosMixin):
 
 
 class VisibilityOptimizationTests(unittest.TestCase):
+    def test_projectile_paths_preserve_all_directions_and_stop_at_walls(self):
+        rng = np.random.default_rng(713)
+        game = Geometry()
+        game.height, game.width = 7, 9
+        for _ in range(3):
+            game.grid = (rng.random((game.height, game.width)) < .2).astype(np.int32)
+            for start in ((0, 0), (3, 4), (6, 8)):
+                for r in range(game.height):
+                    for c in range(game.width):
+                        scale = max(game.height, game.width) * 3
+                        far = (start[0] + (r - start[0]) * scale,
+                               start[1] + (c - start[1]) * scale)
+                        expected = [start]
+                        for rr, cc in line_cells(start, far)[1:]:
+                            if not (0 <= rr < game.height and 0 <= cc < game.width):
+                                break
+                            if game.grid[rr, cc] == 1:
+                                break
+                            expected.append((rr, cc))
+                        self.assertEqual(game._projectile_path(start, (r, c)), expected)
+
+    def test_projectile_only_generates_cells_until_first_wall(self):
+        game = Geometry()
+        game.height, game.width = 26, 44
+        game.grid = np.zeros((game.height, game.width), np.int32)
+        game.grid[10, 12] = 1
+        generated = []
+        def counted(start, end):
+            for cell in iter_line_cells(start, end):
+                generated.append(cell)
+                yield cell
+        with patch("abilities_los.iter_line_cells", side_effect=counted):
+            self.assertEqual(game._projectile_path((10, 10), (10, 40)),
+                             [(10, 10), (10, 11)])
+        self.assertEqual(generated, [(10, 10), (10, 11), (10, 12)])
+
     def test_geometry_cache_preserves_directed_ties_and_mutable_return_values(self):
         self.assertEqual(line_cells((0, 0), (1, 2)), [(0, 0), (1, 1), (1, 2)])
         self.assertEqual(line_cells((1, 2), (0, 0)), [(1, 2), (0, 1), (0, 0)])

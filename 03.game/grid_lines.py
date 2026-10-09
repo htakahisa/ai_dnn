@@ -9,16 +9,20 @@ def line_cells(start, end):
 
 @lru_cache(maxsize=4096)
 def _line_cells(start, end):
+    return tuple(iter_line_cells(start, end))
+
+
+def iter_line_cells(start, end):
+    """Yield the same directed Bresenham cells, allowing callers to stop early."""
     y0, x0 = start
     y1, x1 = end
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
     sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
     error = dx + dy
-    cells = []
     while True:
-        cells.append((y0, x0))
+        yield y0, x0
         if x0 == x1 and y0 == y1:
-            return tuple(cells)
+            return
         twice = 2 * error
         if twice >= dy:
             error += dy
