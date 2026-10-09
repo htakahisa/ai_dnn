@@ -63,6 +63,10 @@ _mixer_ready = False
 DEBUG_FORCE_ACE_EFFECT = False
 DEBUG_ACE_CHARACTER_NAME = "Tortlilyan"  # 確認したいキャラ名指定
 
+# 高速移動で折り返した場合、この回数の移動判断を1マスに制限する。
+FAST_MOVE_SLOW_TICKS = 4
+FAST_MOVE_HISTORY_TICKS = 6
+
 
 def _load_ace_effects():
     try:
@@ -419,12 +423,79 @@ class BattleLogicMixin(MatchPlaybackMixin):
         char.forced_facing_next_tick = None
         if locked_facing is not None:
             char.facing = locked_facing
+        old_pos = tuple(char.pos)
+        char._navigation_step_limit = None
         try:
             return self._move_character_with_rule_facing(char, locked_facing)
         finally:
+            if int(getattr(char, "move_steps_per_tick", 1)) > 1:
+                new_pos = tuple(char.pos)
+                char._fast_move_last_transition = (old_pos, new_pos)
+                recent = getattr(char, "_fast_move_recent_positions", [])
+                char._fast_move_recent_positions = (
+                    recent + [old_pos]
+                )[-FAST_MOVE_HISTORY_TICKS:]
             if locked_facing is not None:
                 char.facing = locked_facing
                 char.facing_forced_this_tick = True
+
+    def _fast_move_extra_steps(self, char, old_pos, direction):
+        """折り返しを検出して、目標の前後を高速で往復するのを防ぐ。"""
+        steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+        if not steps or abs(direction[0]) + abs(direction[1]) != 1:
+            return 0
+        previous = getattr(char, "_fast_move_last_transition", None)
+        slow_ticks = int(getattr(char, "_fast_move_slow_ticks", 0))
+        if previous is not None:
+            start, end = previous
+            if end != old_pos:
+                # テレポートなどで位置が変わった場合は履歴を引き継がない。
+                slow_ticks = 0
+                char._fast_move_recent_positions = []
+            elif ((end[0] - start[0]) * direction[0]
+                  + (end[1] - start[1]) * direction[1]) < 0:
+                slow_ticks = FAST_MOVE_SLOW_TICKS
+        landing = (old_pos[0] + (steps + 1) * direction[0],
+                   old_pos[1] + (steps + 1) * direction[1])
+        if landing in getattr(char, "_fast_move_recent_positions", []):
+            slow_ticks = FAST_MOVE_SLOW_TICKS
+        char._fast_move_slow_ticks = max(0, slow_ticks - 1)
+        if slow_ticks:
+            return 0
+        limit = getattr(char, "_navigation_step_limit", None)
+        return min(steps, max(0, int(limit) - 1)) if limit is not None else steps
+
+    def _fast_move_should_stop(self, char, previous, direction):
+        """曲がれる地点や操作が必要な地点を追加移動で通り越さない。"""
+        current = tuple(char.pos)
+        if current in getattr(self, "available_orbs", set()):
+            return True
+        if char.team == "A" and not self.is_planted:
+            if self.spike_pos is not None and current == tuple(self.spike_pos):
+                return True
+            if char.has_spike and (
+                self.grid[current] == 2
+                or (self.target_plant_pos is not None
+                    and current == tuple(self.target_plant_pos))
+            ):
+                return True
+        if char.team == "D" and self.is_planted and self.planted_pos is not None:
+            if max(abs(current[i] - self.planted_pos[i]) for i in (0, 1)) <= 1:
+                return True
+
+        # 進行方向の横に新たな通路が開く地点で止まる。広場や直線では
+        # 横の通行可否が変わらないため、従来の高速移動を維持できる。
+        dr, dc = direction
+        def walkable(pos):
+            r, c = pos
+            return (0 <= r < self.height and 0 <= c < self.width
+                    and self.grid[r, c] != 1)
+        for sr, sc in ((-dc, dr), (dc, -dr)):
+            before = (previous[0] + sr, previous[1] + sc)
+            after = (current[0] + sr, current[1] + sc)
+            if walkable(after) and not walkable(before):
+                return True
+        return False
 
     def _move_character_with_rule_facing(self, char, locked_facing):
         self._trigger_cell_effects(char)
@@ -836,14 +907,16 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 char.pos = [nr, nc]
                 self._trigger_cell_effects(char)
 
-                # 覚醒等でmove_steps_per_tickが2以上のキャラは、
-                # コントローラーが選んだ1手の方向へそのまま延長して進む。
-                extra_steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+                # 通常の1手を実行した後、安全な直線部分だけ高速移動する。
+                extra_steps = self._fast_move_extra_steps(char, old_pos, (dr, dc))
                 if action_type == "MOVE" and isinstance(ability_payload, dict):
                     step_limit = ability_payload.get("move_step_limit")
                     if step_limit is not None:
                         extra_steps = min(extra_steps, max(0, int(step_limit) - 1))
+                previous = old_pos
                 for _ in range(extra_steps):
+                    if self._fast_move_should_stop(char, previous, (dr, dc)):
+                        break
                     if self._ramp_blocks_movement(char):
                         break
                     prev = tuple(char.pos)
@@ -858,6 +931,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     self._update_occupancy_after_move(prev, (cand_r, cand_c))
                     char.pos = [cand_r, cand_c]
                     self._trigger_cell_effects(char)
+                    previous = prev
 
         char.moved_this_tick = tuple(char.pos) != old_pos
         self._finalize_movement_transition_state(char)
