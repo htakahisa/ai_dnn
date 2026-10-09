@@ -9,6 +9,7 @@ from torch import nn
 from frc_v1.actions import FrcAction, KINDS, MOVE_STEPS, target_required, validate_action
 from frc_v1 import FACING
 from grid_paths import distance_map
+from grid_lines import line_cells
 from toruAI_v4.tv4_observer import facing
 from toruAI_v4.tv4_defender_policy import PolicyEncoder, OBS_DIM as BASE_OBS_DIM, ACTION_DIM, MOVEMENTS
 from toruAI_v4.tv4_learn_attacker_plant import learn_plant
@@ -18,6 +19,32 @@ OBS_DIM = BASE_OBS_DIM + 38
 DISABLED_DEFUSE_ACTION = ACTION_DIM - 2
 GAMMA = .98
 GUARD_MAX_DISTANCE = 8
+
+
+def guard_fire_line(scenario, origin, target, smoke_cells):
+    """Match the engine's public smoke rule, including adjacent shots."""
+    cells = line_cells(origin, target)
+    return scenario.clear(origin, target) and (len(cells) <= 2 or not set(cells).intersection(smoke_cells))
+
+
+def guard_defuse_cells(scenario, plant):
+    return tuple(p for p, _ in scenario.local(plant, 2)
+                 if max(abs(p[0] - plant[0]), abs(p[1] - plant[1])) <= 1)
+
+
+def guard_smoke_pressure(scenario, snapshot, ally):
+    zone = guard_defuse_cells(scenario, snapshot.spike_planted)
+    # Seeing one nearby enemy does not mean the whole smoked defuse zone is
+    # covered. Keep closing during a public defuse notification, including
+    # when an adjacent enemy becomes visible before reaching the spike.
+    if not snapshot.defuse_notified and any(
+            s.position in zone and guard_fire_line(scenario, ally.position, s.position, snapshot.smoke_cells)
+            for s in snapshot.sightings):
+        return False
+    return bool(set(zone).intersection(snapshot.smoke_cells)) or (bool(snapshot.smoke_cells) and any(
+        scenario.clear(ally.position, p)
+        and not guard_fire_line(scenario, ally.position, p, snapshot.smoke_cells)
+        for p in zone))
 
 
 class GuardDQN(nn.Module):
@@ -111,6 +138,7 @@ class GuardInputs:
     threats: tuple
     teammates: tuple
     blind: bool
+    defuse_pressure: bool = False
 
 
 class GuardEncoder:
@@ -216,7 +244,10 @@ class GuardEncoder:
                 choices = [47]  # Native RAMP places a trap at the caster's current tile.
         elif ally.ability_name == "DANCE":
             choices = [40 + i for i, a in enumerate(allies) if a.alive and a.hp < .8 * a.max_hp]
-        teacher = next((i for i in choices if legal[i]), teacher)
+        # Reaching the smoked spike takes priority over repeated support casts.
+        if not ((ally.blind == 0 or snapshot.defuse_notified) and guard_smoke_pressure(self.scenario, snapshot, ally)
+                and base.distances[ally.position] > 0):
+            teacher = next((i for i in choices if legal[i]), teacher)
         return GuardInputs(observation, legal, tuple(actions), teacher, base.distances, goal,
                            threats, teammates, bool(ally.blind > 0))
 

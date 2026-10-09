@@ -48,6 +48,8 @@ ABILITY_USE_PENALTY = .01
 DELAY_REWARD = .02
 BLIND_COVER_REWARD = .05
 CROSSFIRE_REWARD = .02
+DEFUSE_APPROACH_REWARD = .1
+DEFUSE_STALL_PENALTY = .05
 
 import argparse
 from collections import deque
@@ -73,7 +75,8 @@ def rewards_config():
         "reserve": RESOURCE_REWARD, "tick": TICK_PENALTY, "progress": PROGRESS_REWARD,
         "damage": DAMAGE_PENALTY, "death": DEATH_PENALTY, "kill": KILL_REWARD,
         "team_damage": TEAM_DAMAGE_REWARD, "ability_use": ABILITY_USE_PENALTY,
-        "delay": DELAY_REWARD, "blind_cover": BLIND_COVER_REWARD, "crossfire": CROSSFIRE_REWARD}
+        "delay": DELAY_REWARD, "blind_cover": BLIND_COVER_REWARD, "crossfire": CROSSFIRE_REWARD,
+        "defuse_approach": DEFUSE_APPROACH_REWARD, "defuse_stall": DEFUSE_STALL_PENALTY}
 
 
 def load_dataset(directory, opponents, scenario):

@@ -761,19 +761,71 @@ class RenderingUIMixin:
         )
 
 
-    def draw(self):
-        if self.headless:
-            return
-        self.canvas.delete("all")
-        self._draw_team_panel("A", 0, "ATTACKERS", "#c0392b")
-        self._draw_team_panel("D", self.map_offset_x + self.map_pixel_width, "DEFENDERS", "#27ae60")
+    def _draw_cached_canvas_layer(self, tag, signature, renderer, *args):
+        """Retain unchanged geometry, while restoring its original draw order."""
+        if not hasattr(self, "_canvas_layer_cache"):
+            self._canvas_layer_cache = {}
+        key = (self.canvas, self.cell_size, self.map_offset_x, signature)
+        if self._canvas_layer_cache.get(tag) != key:
+            self.canvas.delete(tag)
+            renderer(("render_cached", tag), *args)
+            self.canvas.move(tag, 0, COMBO_BANNER_HEIGHT)
+            self._canvas_layer_cache[tag] = key
+        self.canvas.tag_raise(tag)
 
+    def _create_map_layer(self, tags):
         color_map = {"0":"white", "1":"#34495e", "2":"#fff9c4", "3":"#ffcccc", "4":"#ccffcc", "5":"white"}
         for r in range(self.height):
             for c in range(self.width):
                 x1 = self._map_x(c * self.cell_size)
                 color = color_map.get(str(self.grid[r, c]), "white")
-                self.canvas.create_rectangle(x1, r*self.cell_size, x1+self.cell_size, (r+1)*self.cell_size, fill=color, outline="#eee")
+                self.canvas.create_rectangle(x1, r*self.cell_size, x1+self.cell_size, (r+1)*self.cell_size, fill=color, outline="#eee", tags=tags)
+
+    def _create_smoke_layer(self, tags, visible_cells):
+        for cells in visible_cells:
+            for sr, sc in cells:
+                x1 = self._map_x(sc*self.cell_size)
+                y1 = sr*self.cell_size
+                pad = max(2, self.cell_size // 10)
+                self.canvas.create_oval(
+                    x1-pad, y1-pad, x1+self.cell_size+pad, y1+self.cell_size+pad,
+                    fill="#d97706", outline="#f59e0b", width=1, stipple="gray50", tags=tags
+                )
+                # 小さな煙の塊をずらして重ねる
+                offsets = [
+                    (-0.18, -0.12, 0.72), (0.20, -0.18, 0.66),
+                    (-0.10, 0.22, 0.68), (0.24, 0.20, 0.62),
+                ]
+                for ox, oy, scale in offsets:
+                    size = self.cell_size * scale
+                    cx = x1 + self.cell_size * (0.5 + ox)
+                    cy = y1 + self.cell_size * (0.5 + oy)
+                    self.canvas.create_oval(
+                        cx-size/2, cy-size/2, cx+size/2, cy+size/2,
+                        fill="#f59e0b", outline="", stipple="gray50", tags=tags
+                    )
+
+    def _create_recon_layer(self, tags, visible_cells):
+        for cells in visible_cells:
+            for rr, cc in cells:
+                x1 = self._map_x(cc * self.cell_size)
+                y1 = rr * self.cell_size
+                self.canvas.create_rectangle(x1, y1, x1+self.cell_size, y1+self.cell_size,
+                                             fill="#6ed7e8", outline="", stipple="gray50", tags=tags)
+
+
+    def draw(self):
+        if self.headless:
+            return
+        self.canvas.delete("!render_cached")
+        self._draw_team_panel("A", 0, "ATTACKERS", "#c0392b")
+        self._draw_team_panel("D", self.map_offset_x + self.map_pixel_width, "DEFENDERS", "#27ae60")
+
+        self._draw_cached_canvas_layer(
+            "render_map", (self.height, self.width, self.grid.tobytes()),
+            self._create_map_layer,
+        )
+        self.canvas.tag_lower("render_map")
 
         # Ult orb spawn tiles stay walkable; only uncollected round orbs are drawn.
         for orb_row, orb_col in getattr(self, "available_orbs", set()):
@@ -828,31 +880,13 @@ class RenderingUIMixin:
 
         # 煙らしく見えるように、半透明風の円を重ねて雲状に描画する。
         # Tkinter CanvasはRGBA非対応なのでstippleを使う。
-        for smoke_index, smoke in enumerate(self.smokes):
-            warning = smoke["remaining_ticks"] <= 3
-            if warning and self.battle_tick % 2 == 0:
-                continue
-            for sr, sc in smoke["cells"]:
-                x1 = self._map_x(sc*self.cell_size)
-                y1 = sr*self.cell_size
-                pad = max(2, self.cell_size // 10)
-                self.canvas.create_oval(
-                    x1-pad, y1-pad, x1+self.cell_size+pad, y1+self.cell_size+pad,
-                    fill="#d97706", outline="#f59e0b", width=1, stipple="gray50"
-                )
-                # 小さな煙の塊をずらして重ねる
-                offsets = [
-                    (-0.18, -0.12, 0.72), (0.20, -0.18, 0.66),
-                    (-0.10, 0.22, 0.68), (0.24, 0.20, 0.62),
-                ]
-                for ox, oy, scale in offsets:
-                    size = self.cell_size * scale
-                    cx = x1 + self.cell_size * (0.5 + ox)
-                    cy = y1 + self.cell_size * (0.5 + oy)
-                    self.canvas.create_oval(
-                        cx-size/2, cy-size/2, cx+size/2, cy+size/2,
-                        fill="#f59e0b", outline="", stipple="gray50"
-                    )
+        smoke_cells = tuple(
+            tuple(sorted(smoke["cells"])) for smoke in self.smokes
+            if smoke["remaining_ticks"] > 3 or self.battle_tick % 2 != 0
+        )
+        self._draw_cached_canvas_layer(
+            "render_smoke", smoke_cells, self._create_smoke_layer, smoke_cells,
+        )
 
         if not self.is_planted and self.target_plant_pos:
             tr, tc = self.target_plant_pos
@@ -914,12 +948,10 @@ class RenderingUIMixin:
             self.canvas.create_polygon(cx-7, cy+3, cx+5, cy-5, cx+8, cy-2, cx-4, cy+6,
                                        fill="#9eeaf4", outline="#2aa9bd")
 
-        for burst in self.recon_bursts:
-            for rr, cc in displayed_area_cells(burst):
-                x1 = self._map_x(cc * self.cell_size)
-                y1 = rr * self.cell_size
-                self.canvas.create_rectangle(x1, y1, x1+self.cell_size, y1+self.cell_size,
-                                             fill="#6ed7e8", outline="", stipple="gray50")
+        recon_cells = tuple(displayed_area_cells(burst) for burst in self.recon_bursts)
+        self._draw_cached_canvas_layer(
+            "render_recon", recon_cells, self._create_recon_layer, recon_cells,
+        )
 
         for burst in self.flash_bursts:
             rr, cc = burst["pos"]
@@ -1203,7 +1235,7 @@ class RenderingUIMixin:
             self._draw_special_round_banner()
 
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
-        self.canvas.move("all", 0, COMBO_BANNER_HEIGHT)
+        self.canvas.move("!render_cached", 0, COMBO_BANNER_HEIGHT)
         self._draw_combo_announcement_banner()
 
 

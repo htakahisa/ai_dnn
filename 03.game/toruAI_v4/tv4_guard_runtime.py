@@ -24,7 +24,8 @@ CASE_FORMAT = "toru_v4_attacker_guard_cases_v1"
 DEFAULT_REWARDS = {"win": 8., "loss": -8., "survivor": .1, "reserve": .05, "tick": .003,
                    "progress": .02, "damage": .006, "death": 1., "kill": .1,
                    "team_damage": .001, "ability_use": .01, "delay": .02,
-                   "blind_cover": .05, "crossfire": .02}
+                   "blind_cover": .05, "crossfire": .02,
+                   "defuse_approach": .1, "defuse_stall": .05}
 
 
 def read_checkpoint(path):
@@ -117,6 +118,7 @@ def play_round(game, controller, opponent, rewards, max_steps, capture=None):
         charges = {str(getattr(c, "base_name", c.name)): int(getattr(c, c.ability_name.lower() + "_charges", 0)) for c in own}
         enemy_hp = sum(max(0., c.hp) for c in enemy if c.is_alive)
         bomb_before = float(game.detonate_timer)
+        defuse_notified = guard_before is not None and guard_before.snapshot.defuse_notified
         game.step_tick()
         steps += 1
         if steps > max_steps:
@@ -147,9 +149,13 @@ def play_round(game, controller, opponent, rewards, max_steps, capture=None):
             reward += rewards["kill"] * (char.round_kills - kills[name]) + rewards["team_damage"] * min(200., enemy_damage)
             reward -= rewards["death"] * int(not char.is_alive)
             reward -= rewards["ability_use"] * int(inputs.actions[chosen].kind in ("ABILITY", "ULTIMATE"))
-            if not game.is_defused:
+            if not game.is_defused and not defuse_notified:
                 reward += rewards["delay"] * max(0., min(1., bomb_before - game.detonate_timer))
-            if inputs.blind and inputs.threats:
+            if inputs.defuse_pressure and old > 0:
+                reward += rewards.get("defuse_approach", .1) * progress
+                if progress <= 0 and before.movement_disabled == 0:
+                    reward -= rewards.get("defuse_stall", .05)
+            if inputs.blind and inputs.threats and not inputs.defuse_pressure:
                 exposed_before = sum(controller.scenario.clear(before.position, t) for t in inputs.threats)
                 exposed_after = sum(controller.scenario.clear(tuple(char.pos), t) for t in inputs.threats)
                 reward += rewards["blind_cover"] * float(np.clip(exposed_before - exposed_after, -1, 1))

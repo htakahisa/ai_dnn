@@ -20,6 +20,7 @@ from team_ai import DualRoleTeamAI
 from public_effects import DisplayEffect
 from frc_v1.perception import FrcPerceptionBuilder, Sighting
 from frc_v1.actions import build_masks, validate_action
+from grid_paths import distance_map
 from concon_v1.co1_retake_cases import save_case, load_case, case_metadata
 from toruAI_v4.test.test_tv4_attacker_analysis import world
 from toruAI_v4.tv4_learn_attacker_analysis import AttackerEncoder, AttackerAnalysisModel
@@ -27,6 +28,7 @@ from toruAI_v4.tv4_learn_attacker_plant import PlantDQN
 from toruAI_v4.tv4_learn_attacker_guard import (
     GuardDQN, GuardEncoder, OBS_DIM, ACTION_DIM, DISABLED_DEFUSE_ACTION,
     guard_schema, learn_guard, load_guard, crossfire_score,
+    guard_fire_line, guard_defuse_cells,
 )
 from toruAI_v4.tv4_attacker_guard_controller import ToruV4AttackerGuardController, ToruV4AttackerPlantGuardController
 from toruAI_v4.tv4_guard_runtime import CASE_FORMAT, summarize_guard, guard_best_rank
@@ -116,6 +118,173 @@ class GuardTests(unittest.TestCase):
         opposite = crossfire_score(game, (22, 23), (teammate,), (target,))
         same = crossfire_score(game, (22, 18), (teammate,), (target,))
         self.assertGreater(opposite, same)
+
+    def smoke_world(self):
+        game = planted_world()
+        zone = guard_defuse_cells(game, game.planted_pos)
+        smoke = {p for p, _ in game.local(game.planted_pos, 4)}
+        game._smoke_cells = lambda: smoke
+        game.active_defuser_name = game.chars[5].name
+        for char in game.chars[1:5]:
+            char.is_alive = False
+        game.chars[0].pos = list(next(p for p, d in game.local(game.planted_pos, 4) if d == 4))
+        return game, zone
+
+    def test_smoke_defuse_overrides_camping_policy_and_reaches_firing_range(self):
+        game, zone = self.smoke_world()
+        model = GuardDQN()
+        with torch.no_grad():
+            for parameter in model.parameters():
+                parameter.zero_()
+            model.net[-1].bias[0] = 100.  # Strong preference to stay forever.
+            model.net[-1].bias[40] = 90.  # Then prefer casting utility.
+        controller = ToruV4AttackerGuardController(game, model)
+        controller.set_game(game)
+        field = distance_map(game.grid, game.planted_pos)
+        for _ in range(4):
+            old = field[tuple(game.chars[0].pos)]
+            controller.prepare_team_tick()
+            chosen, inputs, ally = next(iter(controller.plans.values()))
+            validate_action(controller.snapshot, build_masks(controller.snapshot), ally.slot, inputs.actions[chosen])
+            self.assertTrue(inputs.defuse_pressure)
+            self.assertNotIn(inputs.actions[chosen].kind, ("STAY", "ABILITY", "ULTIMATE"))
+            game.chars[0].pos = list(controller.actions[ally.name][0])
+            self.assertLess(field[tuple(game.chars[0].pos)], old)
+            game.battle_tick += 1
+        self.assertEqual(tuple(game.chars[0].pos), game.planted_pos)
+        self.assertTrue(all(guard_fire_line(game, game.planted_pos, p, game._smoke_cells()) for p in zone))
+
+    def test_smoke_prepositions_teacher_before_notification_and_respects_disable(self):
+        game, _ = self.smoke_world()
+        game.active_defuser_name = None
+        controller = ToruV4AttackerGuardController(game, None)
+        controller.set_game(game)
+        controller.prepare_team_tick()
+        chosen, inputs, _ = next(iter(controller.plans.values()))
+        self.assertEqual(inputs.goal, game.planted_pos)
+        self.assertNotIn(inputs.actions[chosen].kind, ("STAY", "ABILITY", "ULTIMATE"))
+        snapshot = replace(controller.snapshot, defuse_notified=True,
+                           allies=(replace(controller.snapshot.allies[0], movement_disabled=2, blind=10),)
+                           + controller.snapshot.allies[1:])
+        controller.sensor = SimpleNamespace(build=lambda game: snapshot)
+        controller.cache = None
+        controller.prepare_team_tick()
+        chosen, inputs, _ = next(iter(controller.plans.values()))
+        self.assertEqual(inputs.actions[chosen].kind, "STAY")
+
+    def test_visible_nearby_enemy_does_not_cancel_smoke_defuse_approach(self):
+        game, zone = self.smoke_world()
+        origin = next(p for p in game.neighbors(game.planted_pos)
+                      if p in zone)
+        game.chars[0].pos = list(origin)
+        snapshot = FrcPerceptionBuilder("A").build(game)
+        # A nearby sighting used to switch off the approach override even
+        # though other defuse cells were still hidden by smoke.
+        nearby_enemy = next(p for p in zone if p not in (origin, game.planted_pos)
+                            and guard_fire_line(game, origin, p, game._smoke_cells()))
+        snapshot = replace(snapshot, sightings=(Sighting(0, nearby_enemy, "normal"),))
+        model = GuardDQN()
+        with torch.no_grad():
+            for parameter in model.parameters():
+                parameter.zero_()
+            model.net[-1].bias[0] = 100.
+        controller = ToruV4AttackerGuardController(game, model,
+            sensor=SimpleNamespace(build=lambda game: snapshot))
+        controller.set_game(game)
+        controller.prepare_team_tick()
+        chosen, inputs, ally = next(iter(controller.plans.values()))
+        self.assertTrue(inputs.defuse_pressure)
+        self.assertEqual(inputs.goal, game.planted_pos)
+        self.assertEqual(tuple(controller.actions[ally.name][0]), game.planted_pos)
+        self.assertNotEqual(inputs.actions[chosen].kind, "STAY")
+        validate_action(snapshot, build_masks(snapshot), ally.slot, inputs.actions[chosen])
+
+    def test_opposite_side_of_spike_requires_closing_then_aiming_at_enemy(self):
+        game, _ = self.smoke_world()
+        plant, origin, target = next(
+            (p, (p[0], p[1] - 1), (p[0], p[1] + 1))
+            for p in game.sites["L"]
+            if (p[0], p[1] - 1) in set(game.neighbors(p))
+            and (p[0], p[1] + 1) in set(game.neighbors(p)))
+        game.planted_pos = plant
+        game._smoke_cells = lambda: {plant, origin, target}
+        game.chars[0].pos = list(origin)
+        game.chars[5].pos = list(target)
+        model = GuardDQN()
+        with torch.no_grad():
+            for parameter in model.parameters():
+                parameter.zero_()
+            model.net[-1].bias[0] = 100.
+        controller = ToruV4AttackerGuardController(game, model)
+        controller.set_game(game)
+        controller.prepare_team_tick()
+        self.assertFalse(guard_fire_line(game, origin, target, game._smoke_cells()))
+        self.assertEqual(tuple(controller.actions[game.chars[0].name][0]), plant)
+        game.chars[0].pos = list(plant)
+        game.battle_tick += 1
+        snapshot = FrcPerceptionBuilder("A").build(game)
+        snapshot = replace(snapshot, sightings=(Sighting(0, target, "normal"),))
+        controller.sensor = SimpleNamespace(build=lambda game: snapshot)
+        controller.prepare_team_tick()
+        chosen, inputs, ally = next(iter(controller.plans.values()))
+        self.assertEqual(inputs.actions[chosen].kind, "STAY")
+        self.assertEqual(inputs.actions[chosen].facing, "E")
+        self.assertTrue(guard_fire_line(game, plant, target, game._smoke_cells()))
+        validate_action(snapshot, build_masks(snapshot), ally.slot, inputs.actions[chosen])
+        # Check the same positions and selected facing against real shooting,
+        # rather than stopping at the controller's proposed action.
+        from test.test_ultimate_system import UltimateTestGame
+        from game_core import SHOOT_INTERVAL_TICKS
+        engine = UltimateTestGame()
+        engine.grid = game.grid.copy()
+        attacker, defuser = game.chars[0], game.chars[5]
+        engine.chars = [attacker, defuser]
+        engine.smokes = [{"cells": {origin, plant, target}, "remaining_ticks": 10}]
+        engine.is_planted, engine.planted_pos = True, plant
+        engine.battle_tick = SHOOT_INTERVAL_TICKS
+        defuser.defuse_timer = 1
+        attacker.pos = list(origin)
+        self.assertFalse(engine.check_shot_line_of_sight(attacker, defuser))
+        attacker.pos = list(plant)
+        attacker.facing = inputs.actions[chosen].facing
+        self.assertTrue(engine.check_shot_line_of_sight(attacker, defuser))
+        with patch("battle_logic.random.random", return_value=0.):
+            engine._resolve_all_shots()
+        self.assertTrue(any(shot["shooter"] is attacker and shot["target"] is defuser
+                            for shot in engine.last_shots))
+
+    def test_blinded_smoke_defuse_closes_then_sweeps_instead_of_counterflash(self):
+        game, _ = self.smoke_world()
+        game.chars[0].blind_remaining = 10
+        model = GuardDQN()
+        with torch.no_grad():
+            for parameter in model.parameters():
+                parameter.zero_()
+            model.net[-1].bias[40] = 100.
+        controller = ToruV4AttackerGuardController(game, model)
+        controller.set_game(game)
+        facings = set()
+        for tick in range(8):
+            snapshot = FrcPerceptionBuilder("A").build(game)
+            snapshot = replace(snapshot, allies=(replace(snapshot.allies[0],
+                               ability_name="FLASH", charges=1, blind=10),) + snapshot.allies[1:])
+            controller.sensor = SimpleNamespace(build=lambda game: snapshot)
+            controller.prepare_team_tick()
+            chosen, inputs, ally = next(iter(controller.plans.values()))
+            self.assertTrue(inputs.blind)
+            self.assertTrue(inputs.defuse_pressure)
+            self.assertEqual(inputs.goal, game.planted_pos)
+            validate_action(snapshot, build_masks(snapshot), ally.slot, inputs.actions[chosen])
+            if tick < 4:
+                self.assertNotIn(inputs.actions[chosen].kind, ("STAY", "ABILITY", "ULTIMATE"))
+            else:
+                self.assertEqual(inputs.actions[chosen].kind, "STAY")
+                facings.add(inputs.actions[chosen].facing)
+            self.assertEqual(inputs.teacher, chosen)
+            game.chars[0].pos = list(controller.actions[ally.name][0])
+            game.battle_tick += 1
+        self.assertEqual(tuple(game.chars[0].pos), game.planted_pos)
+        self.assertGreater(len(facings), 1)
 
     def test_all_manual_ability_types_have_delay_demonstrations(self):
         game = planted_world()
