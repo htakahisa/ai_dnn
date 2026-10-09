@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from controllers import BaseController, DefaultAttackerController, DefaultDefenderController
 
+GUARD_DEBUG_LOG_ENABLED = False
+
 ROOT = Path(__file__).resolve().parent
 GC_DIR = ROOT / "gc_v1"
 if str(GC_DIR) not in sys.path:
@@ -52,7 +54,7 @@ class GhostChampionsV1AttackerController(BaseController):
         self.carry = _load("learning_attacker_carry_gc",("LearningAttackerCarryGCController","LearningAttackerCarryController"),CARRY,greedy,device=device)
         self.escort = _load("learning_attacker_escort_gc",("LearningAttackerEscortGCController","LearningAttackerEscortController"),ESCORT,greedy,device=device)
         self.retrieve = _load("learning_attacker_retrieve_gc",("LearningAttackerRetrieveGCController","LearningAttackerRetrieveTouyamaController"),RETRIEVE,greedy,device=device)
-        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=True,device=device)
+        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=GUARD_DEBUG_LOG_ENABLED,device=device)
         self.site_ability_used_by_team = False
         self.spike_recovery = SpikeRecoveryCoordinator()
         print(f"[GC v1][A] carry={self.carry is not None} escort={self.escort is not None} retrieve={self.retrieve is not None} guard={self.guard is not None}")

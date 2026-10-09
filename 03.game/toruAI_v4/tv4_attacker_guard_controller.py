@@ -7,7 +7,12 @@ from frc_v1.perception import FrcPerceptionBuilder
 from grid_paths import distance_map
 from toruAI_v4.tv4_observer import FeatureHistory
 from toruAI_v4.tv4_attacker_plant_controller import ToruV4AttackerPlantController
-from toruAI_v4.tv4_learn_attacker_guard import GuardEncoder, guard_positions, MOVEMENTS
+from toruAI_v4.tv4_learn_attacker_guard import (
+    GuardEncoder, guard_positions, MOVEMENTS, guard_defuse_cells,
+    guard_fire_line, guard_smoke_pressure,
+)
+from toruAI_v4.tv4_observer import facing
+from frc_v1 import FACING
 
 
 class ToruV4AttackerGuardController:
@@ -55,13 +60,15 @@ class ToruV4AttackerGuardController:
         self.inputs, self.actions, self.plans = {}, {}, {}
         masks = build_masks(snapshot)
         reserved = set()
+        assigned_close = set()
         names = {a.slot: a.name for a in snapshot.allies}
         plant_distances = distance_map(self.scenario.grid, snapshot.spike_planted)
         for ally in sorted((a for a in snapshot.allies if a.alive), key=lambda a: (a.position, a.ability_name, a.slot)):
             if ally.slot not in self.goals:
                 self.goals.update(guard_positions(self.scenario, snapshot))
             goal = self.goals[ally.slot]
-            if ally.blind > 0:
+            smoke_pressure = guard_smoke_pressure(self.scenario, snapshot, ally)
+            if ally.blind > 0 and not (smoke_pressure and snapshot.defuse_notified):
                 live = {e.enemy_id for e in snapshot.enemies if e.alive}
                 threats = [p for i, (p, tick, _) in self.history.tracks.items()
                            if i in live and snapshot.tick - tick <= 15]
@@ -80,6 +87,18 @@ class ToruV4AttackerGuardController:
                           if d > 0 and self.scenario.clear(p, snapshot.spike_planted)]
                 if nearby:
                     goal = min(nearby, key=lambda p: (distance_map(self.scenario.grid, p)[ally.position], p))
+            # Pre-position when smoke covers the spike; do not wait for a six-tick defuse.
+            if smoke_pressure and (ally.blind == 0 or snapshot.defuse_notified):
+                zone = guard_defuse_cells(self.scenario, snapshot.spike_planted)
+                occupied = {a.position for a in snapshot.allies if a.alive and a.slot != ally.slot}
+                close = [p for p in zone if p not in occupied and p not in assigned_close
+                         and distance_map(self.scenario.grid, p)[ally.position] >= 0]
+                if close:
+                    goal = min(close, key=lambda p: (
+                        p != snapshot.spike_planted,
+                        -sum(guard_fire_line(self.scenario, p, t, snapshot.smoke_cells) for t in zone),
+                        distance_map(self.scenario.grid, p)[ally.position], p))
+                    assigned_close.add(goal)
             inputs = self.encoder.encode(snapshot, ally, goal, self.history.tracks, masks,
                 self.start_tick, self.start_timer, self.initial_alive, self.initial_enemy_alive,
                 self.initial_charges.get(ally.name, 0), self.ramp_attempted)
@@ -93,6 +112,45 @@ class ToruV4AttackerGuardController:
                     inputs.mask[i] = False
                 elif plant_distances[ally.position] <= 10 and plant_distances[p] > 10:
                     inputs.mask[i] = False  # No unrelated map excursion while guarding.
+            # During a smoke defuse, the learned policy must close the gap instead of
+            # camping or spending ticks on unrelated utility. Respect native movement masks.
+            if smoke_pressure and snapshot.defuse_notified:
+                inputs.defuse_pressure = True
+                old = inputs.distances[ally.position]
+                advancing = []
+                for i in np.flatnonzero(inputs.mask[:40]):
+                    dr, dc = MOVE_STEPS.get(MOVEMENTS[i // 8], (0, 0))
+                    p = ally.position[0] + dr, ally.position[1] + dc
+                    if 0 <= inputs.distances[p] < old:
+                        direction = ally.facing if ally.forced_facing else facing(p, snapshot.spike_planted)
+                        if FACING[i % 8] == direction:
+                            advancing.append(i)
+                if advancing:
+                    inputs.mask[:] = False
+                    inputs.mask[advancing] = True
+                    inputs.teacher = int(advancing[0])  # Every candidate closes by one walking step.
+                elif old == 0:
+                    # The defuser's cell is private, especially while blinded. Sweep
+                    # public defuse cells while staying in adjacent shooting range.
+                    directions = {facing(ally.position, p) for p in
+                                  guard_defuse_cells(self.scenario, snapshot.spike_planted)
+                                  if p != ally.position and guard_fire_line(
+                                      self.scenario, ally.position, p, snapshot.smoke_cells)}
+                    shots = [i for i in np.flatnonzero(inputs.mask[:8])
+                             if ally.forced_facing or FACING[i] in directions]
+                    if shots:
+                        visible_directions = {facing(ally.position, s.position)
+                            for s in snapshot.sightings
+                            if s.position != ally.position and s.position in
+                            guard_defuse_cells(self.scenario, snapshot.spike_planted)
+                            and guard_fire_line(self.scenario, ally.position,
+                                                s.position, snapshot.smoke_cells)}
+                        aimed = [i for i in shots if FACING[i] in visible_directions]
+                        candidates = aimed or shots
+                        chosen_facing = int(candidates[snapshot.tick % len(candidates)])
+                        inputs.mask[:] = False
+                        inputs.mask[chosen_facing] = True
+                        inputs.teacher = chosen_facing
             if not inputs.mask[inputs.teacher]:
                 candidates = np.flatnonzero(inputs.mask[:40])
                 def rank(i):
