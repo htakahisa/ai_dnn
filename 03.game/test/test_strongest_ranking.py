@@ -58,13 +58,17 @@ class RankingTests(unittest.TestCase):
             exported.write_text(json.dumps({"rounds": [{"matches": [first]}]}), encoding="utf-8")
             result = load_rankings(base)
             self.assertEqual((result["maps"], result["read_files"]), (1, 2))
-            with patch("strongest_ranking.summarize_record", side_effect=AssertionError("cached file parsed")):
+            self.assertFalse(result["ranking_cached"])
+            with patch("strongest_ranking.summarize_record", side_effect=AssertionError("cached file parsed")), \
+                    patch("strongest_ranking.aggregate_summaries", side_effect=AssertionError("cached ranking recalculated")):
                 cached = load_rankings(base)
+            self.assertTrue(cached["ranking_cached"])
             self.assertEqual(cached["rows"], result["rows"])
             self.assertEqual((cached["read_files"], cached["cached_files"]), (0, 2))
             second = sample_map(2)
             original.write_text(json.dumps({"maps": [sample_map(), second]}), encoding="utf-8")
             updated = load_rankings(base)
+            self.assertFalse(updated["ranking_cached"])
             self.assertEqual((updated["maps"], updated["read_files"], updated["cached_files"]), (2, 1, 1))
             original.unlink()
             self.assertEqual(load_rankings(base)["maps"], 1)
@@ -74,6 +78,24 @@ class RankingTests(unittest.TestCase):
             self.assertEqual(len(failed["errors"]), 1)
             exported.write_text(json.dumps(first), encoding="utf-8")
             self.assertEqual(load_rankings(base)["maps"], 1)
+
+    def test_final_ranking_cache_invalidates_on_addition_and_version_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            self.assertEqual(load_rankings(base)["maps"], 0)
+            self.assertTrue(load_rankings(base)["ranking_cached"])
+            competitions = base / "competition_results"
+            competitions.mkdir()
+            (competitions / "series.json").write_text(
+                json.dumps({"maps": [sample_map()]}), encoding="utf-8")
+            added = load_rankings(base)
+            self.assertEqual(added["maps"], 1)
+            self.assertFalse(added["ranking_cached"])
+            self.assertTrue(load_rankings(base)["ranking_cached"])
+            with patch("strongest_ranking.CACHE_VERSION", 2):
+                updated = load_rankings(base)
+            self.assertFalse(updated["ranking_cached"])
+            self.assertEqual(updated["read_files"], 1)
 
 
 class RankingUITests(unittest.TestCase):

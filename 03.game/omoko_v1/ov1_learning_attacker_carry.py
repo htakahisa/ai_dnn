@@ -36,6 +36,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
@@ -302,10 +303,7 @@ class Ov1LearningAttackerCarryController:
         self.epsilon = epsilon
         self.debug = debug
 
-        if device == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device(device)
+        self.device = resolve_inference_device(device)
 
         if not model_path or not os.path.isfile(model_path):
             raise FileNotFoundError(f"Carryモデルが見つかりません: {model_path}")
@@ -404,6 +402,11 @@ class Ov1LearningAttackerCarryController:
             self._real_game = game
         self.game = game
         grid = game.grid
+        # Per-character perception views call set_game repeatedly. Only the
+        # game reference changes; static geometry needs rebuilding on map changes.
+        geometry_key = (grid.shape, grid.dtype.str, grid.tobytes())
+        if getattr(self, "_geometry_key", None) == geometry_key:
+            return
 
         self._plant_cells = [
             (r, c)
@@ -441,6 +444,7 @@ class Ov1LearningAttackerCarryController:
             for cell in self.priority_cells:
                 site_key = "left" if cell[1] < width // 2 else "right"
                 self._priority_cells_by_site[site_key].append(cell)
+        self._geometry_key = geometry_key
 
     def reset_round(self):
         # フェーズ切り替え(retrieve→carry復帰など)で同一ラウンド内に

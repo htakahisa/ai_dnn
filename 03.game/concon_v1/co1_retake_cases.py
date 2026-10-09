@@ -98,13 +98,15 @@ class CasePickler(cloudpickle.CloudPickler):
 
 
 class CaseUnpickler(pickle.Unpickler):
-    def __init__(self, handle, tensor_dir, tensor_cache=None):
+    def __init__(self, handle, tensor_dir, tensor_cache=None, *, device=None):
         super().__init__(handle)
         self.tensor_dir, self.tensors = Path(tensor_dir), {}
         self.tensor_cache = tensor_cache
+        self.device = torch.device(device) if device is not None else None
 
     def persistent_load(self, token):
         kind, key, index, device = token
+        device = str(self.device) if self.device is not None else device
         if kind != "tensor" or len(key) != 64 or any(c not in "0123456789abcdef" for c in key):
             raise ValueError("invalid case tensor reference")
         if index not in self.tensors:
@@ -208,25 +210,58 @@ def save_case(path, game, metadata):
     _atomic_write(path, write)
 
 
-def load_case(path, *, restore_rng=True, tensor_cache=None):
+def load_case(path, *, restore_rng=True, tensor_cache=None, device=None):
     """Return (game, metadata) without init_round/reset_round or model reloads.
 
     A future learner can replace the defender controller after loading while
     leaving the attacker's controller and both teams' perception state intact.
     Set restore_rng=False when the learner owns randomness across samples.
+    Pass device="cpu" to override saved tensors and controller device fields.
     """
-    return _load_case(Path(path).resolve(), restore_rng=restore_rng, tensor_cache=tensor_cache)
+    return _load_case(Path(path).resolve(), restore_rng=restore_rng, tensor_cache=tensor_cache, device=device)
+
+
+def _restore_inference_device(game, device=None):
+    """Update controller metadata, including cases saved before device arguments."""
+    device = torch.device(device) if device is not None else None
+    pending, seen = [game], set()
+    while pending:
+        obj = pending.pop()
+        if id(obj) in seen:
+            continue
+        seen.add(id(obj))
+        if isinstance(obj, (torch.Tensor, np.ndarray, type)):
+            continue
+        if isinstance(obj, dict):
+            pending.extend(obj.values())
+        elif isinstance(obj, (tuple, list, set)):
+            pending.extend(obj)
+        elif hasattr(obj, "__dict__"):
+            fields = vars(obj)
+            # Old controllers used a module-level DEVICE instead of self.device.
+            model = next((fields[name] for name in ("model", "policy_net")
+                          if isinstance(fields.get(name), torch.nn.Module)), None)
+            if device is not None and ("device" in fields or model is not None):
+                obj.device = device
+            elif "device" not in fields and model is not None:
+                parameter = next(model.parameters(), None)
+                if parameter is not None:
+                    obj.device = parameter.device
+            if device is not None and "_requested_device" in fields:
+                obj._requested_device = device
+            pending.extend(fields.values())
 
 
 @_run_from_project_root
-def _load_case(path, *, restore_rng, tensor_cache):
+def _load_case(path, *, restore_rng, tensor_cache, device=None):
     # Opponent imports contain legacy paths relative to the game's root. Resolve
     # the user's case path first, then perform imports/deserialization there.
     with gzip.open(path, "rb") as handle:
-        payload = CaseUnpickler(handle, path.parent / "tensors", tensor_cache).load()
+        payload = CaseUnpickler(handle, path.parent / "tensors", tensor_cache, device=device).load()
     if payload.get("version") != CASE_VERSION:
         raise ValueError("unsupported retake case version")
     game = payload["game"]
+    _restore_inference_device(game, device)
     identities = {old: id(obj) for old, obj in payload["identity_objects"]}
     for team in (game.current_attacker_team_ai, game.current_defender_team_ai):
         engine = team.perception_engine
@@ -238,6 +273,6 @@ def _load_case(path, *, restore_rng, tensor_cache):
         random.setstate(payload["random_state"])
         np.random.set_state(payload["numpy_state"])
         torch.set_rng_state(payload["torch_state"])
-        if payload["cuda_states"]:
+        if payload["cuda_states"] and (device is None or torch.device(device).type == "cuda"):
             torch.cuda.set_rng_state_all(payload["cuda_states"])
     return game, payload["metadata"]

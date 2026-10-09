@@ -151,6 +151,7 @@ class GuardPostplantPriorityTests(unittest.TestCase):
         from unittest.mock import Mock
         controller = LearningAttackerGuardGCController.__new__(
             LearningAttackerGuardGCController)
+        controller.device = torch.device("cpu")
         controller.verbose = False
         controller._ensure_spike_dist_map = Mock()
         controller._ensure_guard_assignment = Mock()

@@ -48,6 +48,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from simulation_runtime import resolve_inference_device
 from collections import deque
 import math
 import random
@@ -289,6 +290,7 @@ class LearningDefenderOpeningMacroGCController:
         greedy: bool = True,
         verbose: bool = False,
         seed: int | None = None,
+        device=None,
     ):
         self.model_path = str(model_path) if model_path else None
         self.greedy = bool(greedy)
@@ -302,6 +304,7 @@ class LearningDefenderOpeningMacroGCController:
             raise ValueError("Invalid opening ability patterns: " + "; ".join(warnings))
 
         self.device = None
+        self._requested_device = device
         self.model = None
         if self.model_path:
             self._load_model(self.model_path)
@@ -315,7 +318,8 @@ class LearningDefenderOpeningMacroGCController:
         if not path.exists():
             raise FileNotFoundError(path)
 
-        payload = torch.load(path, map_location="cpu", weights_only=False)
+        self.device = resolve_inference_device(self._requested_device, default="cpu")
+        payload = torch.load(path, map_location=self.device, weights_only=False)
         state = payload.get("model_state_dict", payload)
         obs_dim = base_checkpoint_dim(payload, payload.get("obs_dim", OBS_DIM)) if isinstance(payload, dict) else OBS_DIM
         action_dim = int(payload.get("action_dim", EXEC_ACTION_DIM)) if isinstance(payload, dict) else EXEC_ACTION_DIM
@@ -323,7 +327,6 @@ class LearningDefenderOpeningMacroGCController:
         self.model = OpeningMacroQNet(obs_dim=obs_dim + ENEMY_ROSTER_DIM, action_dim=action_dim)
         self.model.load_state_dict(expand_roster_state(self.model, state))
         self.model.eval()
-        self.device = torch.device("cpu")
         self.model.to(self.device)
 
     def set_game(self, game):

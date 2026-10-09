@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 from frc_v1.perception import FrcPerceptionBuilder
+from frc_v1 import ABILITIES, ULTIMATES
 from game_core import FACING_VECTORS
 from toruAI_v4.tv4_model import DecisionGate
 
@@ -23,6 +24,11 @@ class FeatureHistory:
                         "spike_last_row", "spike_last_column", "spike_last_seen_age",
                         "spike_disappeared", "spike_disappeared_age", "spike_left_distance", "spike_right_distance"]
         self.fields += [f"spike_last_branch_{name}" for name in scenario.names]
+        self.ally_capability_fields = ("max_hp", "accuracy", "hs_rate", "dodge", "reaction", "iq",
+                                       "charges", "ultimate_points", "ultimate_cost")
+        self.fields += [f"ally_{i}_{f}" for i in range(5) for f in
+                        self.ally_capability_fields + tuple("ability_" + n for n in ABILITIES)
+                        + tuple("ultimate_" + n for n in ULTIMATES)]
 
     def reset(self):
         self.tracks, self.branch_ticks = {}, {}
@@ -89,6 +95,13 @@ class FeatureHistory:
                    float(self.spike_removed_tick is not None), min(1., (tick - self.spike_removed_tick) / 100)
                    if self.spike_removed_tick is not None else 1., *distances]
         values += [float(region == j) for j in range(len(self.scenario.names))]
+        # Own capabilities are public; player names never identify learned slots.
+        for ally in snapshot.allies:
+            values += [ally.max_hp / 100, ally.accuracy, ally.hs_rate, ally.dodge,
+                       ally.reaction / 200, ally.effective_iq / 200, ally.charges / 10,
+                       ally.points / 10, ally.cost / 10]
+            values += [float(ally.ability_name == n) for n in ABILITIES]
+            values += [float(ally.ultimate_name == n) for n in ULTIMATES]
         features = np.asarray(values, dtype=np.float32)
         if len(features) != len(self.fields) or not np.isfinite(features).all():
             raise ValueError("Invalid public observation feature vector")

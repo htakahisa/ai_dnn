@@ -5,6 +5,7 @@ from collections import deque
 import copy
 import json
 import math
+import pickle
 from pathlib import Path
 import random
 import sys
@@ -33,7 +34,10 @@ from concon_v1.co1_retake_models import opponent_directory
 # 引数なしで実行する場合の学習条件。
 DEFAULT_CASE_EPOCHS = 10  # USE_COLLECTED_CASES=True: データ件数×周回数。 600 データ件数 x 10 周回数 = 6000 episodes.
 USE_COLLECTED_CASES = True  # True: 保存した設置直後から学習 / False: setup・searchから対戦。
-RESUME_TRAINING = False  # True: 左右のlatest・optimizerを再開 / False: 基礎モデルから開始。
+RESUME_TRAINING = False  # True: 対象サイトのlatest・optimizerを再開 / False: 基礎モデルから開始。
+TRAIN_LEFT_SITE = True  # 左サイトを学習・保存する。
+TRAIN_RIGHT_SITE = False  # 右サイトを学習・保存する。
+COMPARE_PREVIOUS_BEST = True  # True: 前回bestを再評価し、改善した場合だけbestを上書きする。
 
 
 CASES_DIR = Path(__file__).resolve().parent / "data" / "defender_retake_cases"
@@ -133,6 +137,71 @@ def load_training_model(site, directory, distances, resume_directory=None, devic
     return model, checkpoint
 
 
+def load_previous_best(site, path, distances, device, model_opponent):
+    """Load the saved policy unchanged, without adding a new foundation."""
+    scenario = get_scenario(site)
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    validate_checkpoint(checkpoint, scenario, distances)
+    if checkpoint.get("model_opponent") != model_opponent:
+        raise ValueError("previous best belongs to a different model target")
+    # Network construction must not advance the training RNG stream.
+    with torch.random.fork_rng(devices=[]):
+        model = RetakeDQN(scenario, foundation=checkpoint.get("foundation_version") == 1).to(device)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.foundation_evaluation = checkpoint.get("foundation_evaluation")
+    return model.eval().requires_grad_(False)
+
+
+def evaluation_score(metric):
+    if not metric["retakes"] or metric["mean_defuse_rate"] is None or metric["min_defuse_rate"] is None:
+        return None
+    return metric["mean_defuse_rate"], metric["min_defuse_rate"], -metric["moving_fire_rate"]
+
+
+def evaluate_for_comparison(models, search_model, rounds, seed, opponents, distances):
+    """Repeat evaluation seeds without changing the training RNG streams."""
+    python_state, numpy_state = random.getstate(), np.random.get_state()
+    try:
+        with torch.random.fork_rng():
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            return evaluate(models, search_model, rounds, seed, opponents, distances)
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+
+
+def previous_best_scores(models, paths, search_model, rounds, seed, opponents,
+                         distances, device, model_opponent):
+    scores = {site: None for site in models}
+    protected = set()
+    previous_models = dict(models)
+    loaded = set()
+    for site in models:
+        path = paths[site] / get_scenario(site).model_path("best").name
+        if not path.is_file():
+            print(f"  {site} previous best: absent; select best within this run", flush=True)
+            continue
+        try:
+            previous_models[site] = load_previous_best(site, path, distances[site], device, model_opponent)
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError, EOFError, pickle.UnpicklingError) as error:
+            print(f"  {site} previous best: cannot load {path}: {error}; select best within this run", flush=True)
+        else:
+            loaded.add(site)
+    if loaded:
+        print("Evaluating previous best with the current opponents, rounds and seed", flush=True)
+        metrics = evaluate_for_comparison(previous_models, search_model, rounds, seed, opponents, distances)
+        for site in loaded:
+            scores[site] = evaluation_score(metrics[site])
+            if scores[site] is None:
+                protected.add(site)
+                print(f"  {site} previous best: no evaluation retakes; preserving existing best", flush=True)
+            else:
+                print(f"  {site} previous best: comparison_score={scores[site]}", flush=True)
+    return scores, protected
+
+
 def summarize(records, opponents, counted_only=False):
     result = {}
     for site in ("L", "R"):
@@ -219,14 +288,16 @@ def evaluate(models, search_model, rounds=DEFAULT_EVAL_ROUNDS, seed=0, opponents
         rounds = CHECKPOINT_INTERVAL // len(opponents)
     if rounds < 1:
         raise ValueError("evaluation rounds must be positive")
-    print(f"Evaluating retake: total_retakes_per_opponent={rounds} site_distribution=natural epsilon=0.000", flush=True)
+    selected_site = next(iter(models)) if len(models) == 1 else None
+    print(f"Evaluating retake: total_retakes_per_opponent={rounds} training_sites={','.join(models)} epsilon=0.000", flush=True)
     env = DefenderRetakeEnv(models, search_model, seed, opponents, ability_distance)
     records = []
     for opponent in opponents:
-        records.extend(iter_retake_rounds(env, opponent, rounds))
+        records.extend(iter_retake_rounds(env, opponent, rounds, site=selected_site))
     result = summarize(records, opponents)
     for site in ("L", "R"):
-        result[site].update(evaluation_scope="natural_site_distribution", required_retakes_per_opponent=rounds)
+        result[site].update(evaluation_scope="selected_site" if selected_site else "natural_site_distribution",
+                            required_retakes_per_opponent=rounds if selected_site is None or site == selected_site else 0)
     return result
 
 
@@ -235,8 +306,16 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
           checkpoint_interval=CHECKPOINT_INTERVAL, ability_distance=DEFAULT_ABILITY_DISTANCES,
           device="cpu", force_save=FORCE_SAVE, resume=False, epsilon_start=EPSILON_START,
           epsilon_end=EPSILON_END, epsilon_decay_ratio=EPSILON_DECAY_RATIO,
-          cases_dir=None, case_epochs=None, model_opponent=None):
+          cases_dir=None, case_epochs=None, model_opponent=None, sites=None,
+          compare_previous_best=None):
     started_at = time.perf_counter()
+    compare_previous_best = COMPARE_PREVIOUS_BEST if compare_previous_best is None else compare_previous_best
+    if sites is None:
+        sites = tuple(site for site, enabled in (("L", TRAIN_LEFT_SITE), ("R", TRAIN_RIGHT_SITE)) if enabled)
+    else:
+        sites = tuple(sites)
+    if not sites or len(set(sites)) != len(sites) or any(site not in ("L", "R") for site in sites):
+        raise ValueError("enable at least one distinct training site: L or R")
     validate_epsilon_settings(epsilon_start, epsilon_end, epsilon_decay_ratio)
     ability_distance = normalize_site_ability_distances(ability_distance)
     if checkpoint_interval < 1 or (eval_rounds is not None and eval_rounds < 1):
@@ -253,14 +332,14 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
         save_dir = dedicated_directory
     if case_epochs is not None and (cases_dir is None or episodes is not None or case_epochs < 1):
         raise ValueError("case epochs require --cases-dir, a positive count, and no explicit episodes")
-    dataset = RetakeCaseDataset(cases_dir, opponents, seed) if cases_dir is not None else None
+    dataset = RetakeCaseDataset(cases_dir, opponents, seed, sites=sites) if cases_dir is not None else None
     if episodes is None:
         episodes = (dataset.size * (DEFAULT_CASE_EPOCHS if case_epochs is None else case_epochs)
                     if dataset is not None else DEFAULT_EPISODES)
     if episodes < 1:
         raise ValueError("episodes must be positive")
     if dataset is not None and (episodes % len(dataset.groups) or checkpoint_interval % len(dataset.groups)):
-        raise ValueError("case episodes and checkpoint interval must be divisible by opponent count * 2 sites")
+        raise ValueError("case episodes and checkpoint interval must be divisible by opponent count * selected site count")
     if episodes % len(opponents) or checkpoint_interval % len(opponents):
         raise ValueError("episodes and checkpoint interval must be divisible by opponent count for equal team quotas")
     if eval_rounds is None:
@@ -275,7 +354,7 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
     if dataset is not None:
         dataset.validate_search(search_path)
     models, targets, optimizers, replays, samples, updates, starts, paths = {}, {}, {}, {}, {}, {}, {}, {}
-    for site in ("L", "R"):
+    for site in sites:
         scenario = get_scenario(site)
         starts[site], samples[site] = 0, 0
         directory = Path(save_dir) if save_dir is not None else scenario.save_dir
@@ -306,6 +385,7 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
     env = DefenderRetakeEnv(models, search_model, seed, opponents, ability_distance)
     epsilon_settings = dict(start=epsilon_start, end=epsilon_end, decay_ratio=epsilon_decay_ratio)
     print(f"Defender retake: coordination_version={COORDINATION_VERSION} additional_episodes={episodes} checkpoint_interval={checkpoint_interval} "
+          f"training_sites={','.join(sites)} compare_previous_best={compare_previous_best} "
           f"retakes_per_team_per_window={checkpoint_interval // len(opponents)} "
           f"site_distribution={'balanced_cases' if dataset is not None else 'natural'} force_save={force_save}", flush=True)
     if dataset is not None:
@@ -319,10 +399,12 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
     print(f"  epsilon: start={epsilon_start:.3f} end={epsilon_end:.3f} decay_ratio={epsilon_decay_ratio:.3f}", flush=True)
     print(f"  foundation preservation: loss_weight={FOUNDATION_LOSS_WEIGHT:g} margin={FOUNDATION_MARGIN:g} "
           "enabled_outside_firing_contact_including_assembly=True", flush=True)
-    for site in ("L", "R"):
+    for site in sites:
         limits = ability_distance[site]
         print(f"  {site} site ability BFS distance: flash={limits['FLASH']} recon={limits['RECON']} smoke={limits['SMOKE']}", flush=True)
     best = {site: None for site in models}
+    protected_best = set()
+    previous_best_checked = False
     log_directories = (set(paths.values()) if model_opponent is None
                        else {opponent_directory(model_opponent, "logs")})
     for directory in log_directories:
@@ -331,6 +413,7 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
     attempts = 0
 
     def learn_step(transitions, ticks):
+        transitions = [(site, transition) for site, transition in transitions if site in models]
         for site, transition in transitions:
             replays[site].append(transition)
             samples[site] += 1
@@ -349,7 +432,8 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
     epsilon_fn = lambda episode: epsilon_by_episode(episode, episodes, epsilon_start, epsilon_end, epsilon_decay_ratio)
     if dataset is None:
         schedule = iter_training_windows(env, opponents, episodes, checkpoint_interval, random.Random(seed),
-            epsilon_fn, on_step=learn_step, on_progress=quota_progress)
+            epsilon_fn, on_step=learn_step, on_progress=quota_progress,
+            **({"sites": sites} if set(sites) != {"L", "R"} else {}))
     else:
         schedule = iter_case_training_windows(env, dataset, episodes, checkpoint_interval, random.Random(seed),
             epsilon_fn, on_step=learn_step)
@@ -380,7 +464,11 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
         evaluation_seconds = None
         if epsilon <= EVAL_START_EPSILON:
             evaluation_started_at = time.perf_counter()
-            evaluation = evaluate(models, search_model, eval_rounds, seed + 7919, opponents, ability_distance)
+            if compare_previous_best and not previous_best_checked:
+                best, protected_best = previous_best_scores(models, paths, search_model, eval_rounds,
+                    seed + 7919, opponents, ability_distance, device, model_opponent)
+                previous_best_checked = True
+            evaluation = evaluate_for_comparison(models, search_model, eval_rounds, seed + 7919, opponents, ability_distance)
             evaluation_seconds = time.perf_counter() - evaluation_started_at
             print_evaluation_summary(evaluation)
             print(f"Evaluation timing: evaluation_time={format_elapsed_time(evaluation_seconds)} "
@@ -394,6 +482,8 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
                                          search_path, opponents, samples[site])
             checkpoint.update(optimizer_state_dict=optimizers[site].state_dict(),
                               model_opponent=model_opponent,
+                              training_sites=list(sites),
+                              compare_previous_best=compare_previous_best,
                               evaluation=evaluation[site] if evaluation is not None else None,
                               evaluation_status="completed" if evaluation is not None else "waiting_for_epsilon",
                               eval_start_epsilon=EVAL_START_EPSILON,
@@ -420,14 +510,20 @@ def train(episodes=None, seed=0, save_dir=None, search_model_path=None,
             if not metric["retakes"]:
                 print(f"  {site} best: skipped (no evaluation retakes)", flush=True)
                 continue
-            score = metric["mean_defuse_rate"], metric["min_defuse_rate"], -metric["moving_fire_rate"]
+            if site in protected_best:
+                print(f"  {site} best: kept (previous best could not be compared)", flush=True)
+                continue
+            score = evaluation_score(metric)
+            if score is None:
+                print(f"  {site} best: skipped (no comparable evaluation score)", flush=True)
+                continue
             if samples[site] and (best[site] is None or score > best[site]):
                 best[site] = score
                 torch.save(checkpoint, paths[site] / scenario.model_path().name)
                 print(f"  {site} best: updated; {paths[site] / scenario.model_path().name}", flush=True)
             else:
                 print(f"  {site} best: kept" if samples[site] else f"  {site} best: skipped (no training transitions)", flush=True)
-        for site in ("L", "R"):
+        for site in sites:
             print(f"Saved {site} latest: {(paths[site] / get_scenario(site).model_path('latest').name).resolve()}", flush=True)
         window_started_at = time.perf_counter()
     print(f"Training complete: episodes={episodes} "
@@ -439,7 +535,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     duration = parser.add_mutually_exclusive_group()
     duration.add_argument("--episodes", type=int,
-                          help=f"additional retakes across both sites; default {DEFAULT_EPISODES} for live rounds, dataset size * case epochs for cases")
+                          help=f"additional retakes across selected sites; default {DEFAULT_EPISODES} for live rounds, dataset size * case epochs for cases")
     duration.add_argument("--case-epochs", type=int,
                           help=f"passes over selected cases, requires --cases-dir (default {DEFAULT_CASE_EPOCHS})")
     parser.add_argument("--cases-dir", type=Path, default=CASES_DIR if USE_COLLECTED_CASES else None,
@@ -450,10 +546,10 @@ def main(argv=None):
                         help="fraction of counted retakes used to decay epsilon")
     parser.add_argument("--search-model", type=Path)
     resuming = parser.add_mutually_exclusive_group()
-    resuming.add_argument("--resume-dir", type=Path, help="directory containing both L/R latest checkpoints")
+    resuming.add_argument("--resume-dir", type=Path, help="directory containing selected sites' latest checkpoints")
     resuming.add_argument("--resume", action=argparse.BooleanOptionalAction, default=RESUME_TRAINING,
-                          help="resume both sites from their save directories; default follows RESUME_TRAINING")
-    parser.add_argument("--save-dir", type=Path, help="save both site checkpoints together; default: separate site data directories")
+                          help="resume selected sites from their save directories; default follows RESUME_TRAINING")
+    parser.add_argument("--save-dir", type=Path, help="save selected site checkpoints together; default: separate site data directories")
     roster = parser.add_mutually_exclusive_group()
     roster.add_argument("--opponent", choices=OPPONENTS, help="train and save a model dedicated to this opponent")
     roster.add_argument("--opponents", nargs="+", choices=OPPONENTS,
@@ -462,11 +558,13 @@ def main(argv=None):
     parser.add_argument("--checkpoint-interval", type=int, default=CHECKPOINT_INTERVAL,
                         help=f"total retakes per balanced training window (default {CHECKPOINT_INTERVAL})")
     parser.add_argument("--eval-rounds", type=int, default=DEFAULT_EVAL_ROUNDS,
-                        help="retakes per opponent in evaluation; default: checkpoint interval / opponent count; sites follow natural plants")
+                        help="retakes per opponent in evaluation; default: checkpoint interval / opponent count; count selected sites only")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--force-save", action=argparse.BooleanOptionalAction, default=FORCE_SAVE,
                         help="keep numbered checkpoints at each interval (disable with --no-force-save)")
+    parser.add_argument("--compare-previous-best", action=argparse.BooleanOptionalAction, default=COMPARE_PREVIOUS_BEST,
+                        help="compare existing best before overwriting; default follows COMPARE_PREVIOUS_BEST")
     args = parser.parse_args(argv)
     if args.case_epochs is not None and args.cases_dir is None:
         parser.error("--case-epochs requires --cases-dir")
@@ -480,7 +578,7 @@ def main(argv=None):
           device=args.device, force_save=args.force_save, resume=args.resume,
           epsilon_start=args.epsilon_start, epsilon_end=args.epsilon_end,
           epsilon_decay_ratio=args.epsilon_decay_ratio, cases_dir=args.cases_dir, case_epochs=args.case_epochs,
-          model_opponent=model_opponent)
+          model_opponent=model_opponent, compare_previous_best=args.compare_previous_best)
 
 
 if __name__ == "__main__":

@@ -58,6 +58,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 try:
     from .gc_facing import FACING_DIRS, append_facing_onehot
@@ -266,7 +267,7 @@ class LearningAttackerEscortGCController:
         max_ticks=90,
         verbose=False,
     ):
-        self.device = device or torch.device("cpu")
+        self.device = resolve_inference_device(device, default="cpu")
         self.greedy = greedy
         self.epsilon = epsilon
         self.max_ticks = max_ticks

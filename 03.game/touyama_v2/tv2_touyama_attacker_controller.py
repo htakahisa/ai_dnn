@@ -33,12 +33,13 @@ class Tv2TouyamaAttackerController(BaseController):
         retrieve_model_path="touyama_v2/data/attacker_retrieve_touyama_data/dqn_attacker_retrieve_touyama_best_by_eval.pt",
         guard_model_path="touyama_v2/data/attacker_guard_touyama_data/dqn_attacker_guard_touyama_best_by_eval.pt",
         greedy=False,
+        device=None,
     ):
         super().__init__()
-        self.carry_controller = LearningAttackerCarryTouyamaController(model_path=carry_model_path, greedy=greedy)
-        self.escort_controller = LearningAttackerEscortTouyamaController(model_path=escort_model_path, greedy=greedy)
-        self.retrieve_controller = LearningAttackerRetrieveTouyamaController(model_path=retrieve_model_path, greedy=greedy)
-        self.guard_controller = LearningAttackerGuardTouyamaController(model_path=guard_model_path, greedy=greedy)
+        self.carry_controller = LearningAttackerCarryTouyamaController(model_path=carry_model_path, greedy=greedy, device=device)
+        self.escort_controller = LearningAttackerEscortTouyamaController(model_path=escort_model_path, greedy=greedy, device=device)
+        self.retrieve_controller = LearningAttackerRetrieveTouyamaController(model_path=retrieve_model_path, greedy=greedy, device=device)
+        self.guard_controller = LearningAttackerGuardTouyamaController(model_path=guard_model_path, greedy=greedy, device=device)
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。

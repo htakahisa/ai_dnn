@@ -89,16 +89,17 @@ def aggregate_summaries(summaries):
 
 
 def load_rankings(base_dir=Path("."), progress=None):
-    """Read only new/changed files; retain small per-file summaries in SQLite."""
+    """Cache per-file summaries and the final ranking; read only changed records."""
     base_dir = Path(base_dir)
     cache = base_dir / "data" / "strongest_ranking.sqlite3"
     cache.parent.mkdir(parents=True, exist_ok=True)
     sources = sorted((base_dir / "series_data").glob("*/*_original.json"))
     sources += sorted((base_dir / "competition_results").glob("*.json"))
     errors, read_count, cached_count = [], 0, 0
-    maps = {}
+    summaries, signatures = [], []
     with sqlite3.connect(cache) as db:
         db.execute("CREATE TABLE IF NOT EXISTS sources (path TEXT PRIMARY KEY, mtime INTEGER, size INTEGER, version INTEGER, summary TEXT)")
+        db.execute("CREATE TABLE IF NOT EXISTS ranking (id INTEGER PRIMARY KEY, signature TEXT, result TEXT)")
         existing = {row[0]: row[1:] for row in db.execute("SELECT path, mtime, size, version, summary FROM sources")}
         seen = set()
         for index, path in enumerate(sources):
@@ -109,9 +110,10 @@ def load_rankings(base_dir=Path("."), progress=None):
             try:
                 stat = path.stat()
                 signature = (stat.st_mtime_ns, stat.st_size, CACHE_VERSION)
+                signatures.append((relative, *signature))
                 old = existing.get(relative)
                 if old and old[:3] == signature:
-                    summary = json.loads(old[3])
+                    summary_text = old[3]
                     cached_count += 1
                 else:
                     with path.open(encoding="utf-8-sig") as stream:
@@ -119,17 +121,35 @@ def load_rankings(base_dir=Path("."), progress=None):
                     after = path.stat()
                     if (after.st_mtime_ns, after.st_size) != signature[:2]:
                         raise ValueError("読み込み中にファイルが更新されました。再読み込みしてください")
+                    summary_text = json.dumps(summary, ensure_ascii=False)
                     db.execute("INSERT OR REPLACE INTO sources VALUES (?, ?, ?, ?, ?)",
-                               (relative, *signature, json.dumps(summary, ensure_ascii=False)))
+                               (relative, *signature, summary_text))
                     read_count += 1
-                for game in summary:
-                    # Prefer detailed originals; competition exports supplement missing maps.
-                    maps.setdefault(game["id"], game)
+                summaries.append(summary_text)
             except (OSError, ValueError, TypeError, KeyError) as exc:
                 errors.append(f"{relative}: {exc}")
         for removed in existing.keys() - seen:
             db.execute("DELETE FROM sources WHERE path = ?", (removed,))
+        signature_text = json.dumps(signatures, ensure_ascii=False)
+        saved = db.execute("SELECT signature, result FROM ranking WHERE id = 1").fetchone()
+        ranking_cached = not errors and saved is not None and saved[0] == signature_text
+        if ranking_cached:
+            ranking = json.loads(saved[1])
+        else:
+            if progress:
+                progress("選手ランキングを集計中…")
+            maps = {}
+            for summary_text in summaries:
+                for game in json.loads(summary_text):
+                    # Prefer detailed originals; competition exports supplement missing maps.
+                    maps.setdefault(game["id"], game)
+            ranking = {"rows": aggregate_summaries(maps.values()), "maps": len(maps)}
+            if not errors:
+                db.execute("INSERT OR REPLACE INTO ranking VALUES (1, ?, ?)",
+                           (signature_text, json.dumps(ranking, ensure_ascii=False)))
+            else:
+                db.execute("DELETE FROM ranking WHERE id = 1")
     return {
-        "rows": aggregate_summaries(maps.values()), "maps": len(maps),
+        **ranking, "ranking_cached": ranking_cached,
         "read_files": read_count, "cached_files": cached_count, "errors": errors,
     }

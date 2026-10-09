@@ -65,15 +65,44 @@ python co1_train_guard.py -map L --resume data/guard_L_data/co1_guard_L_best.pt 
 
 ## 学習と評価
 
-```powershell
-python co1_train_guard.py -map L
-python co1_train_guard.py -map R
+`co1_train_guard.py` 冒頭の左右フラグで学習対象を選びます。
 
+```python
+TRAIN_LEFT_SITE = True
+TRAIN_RIGHT_SITE = True
+```
+
+両方 `True` なら L、R の順でそれぞれ `DEFAULT_EPISODES` 回学習します。
+左だけなら `TRAIN_RIGHT_SITE = False`、右だけなら `TRAIN_LEFT_SITE = False` にします。
+両方 `False` は設定エラーです。回数・評価回数なども同じスクリプト冒頭の定数を変更します。
+作業ディレクトリは `03.game/concon_v1/`、通常実行は次のとおりです。
+
+```powershell
+Set-Location concon_v1
+python co1_train_guard.py
+```
+
+`-map L` / `-map R` は一時的に片側だけを実行する上書きとして残しています。
+左右の保存先は既定では `data/guard_L_data/` と `data/guard_R_data/` です。
+左右両方で保存先を指定した場合は、その下に `guard_L_data/` と `guard_R_data/` を作り、ログも分けます。
+左右を再開する場合は `DEFAULT_RESUME_BY_MAP` に各サイトのチェックポイントを設定します。
+
+```python
+DEFAULT_RESUME_BY_MAP = {
+    "L": Path("data/guard_L_data/co1_guard_L_best.pt"),
+    "R": Path("data/guard_R_data/co1_guard_R_best.pt"),
+}
+```
+
+各値が `None` なら新規学習です。単独サイトでは `DEFAULT_RESUME` / `--resume` が優先します。
+左右両方に単一の再開モデルは指定できません。
+
+```powershell
 python evaluate_co1_guard.py -map L --rounds 36 --output data/guard_L_eval.json
 python evaluate_co1_guard.py -map R --rounds 36 --output data/guard_R_eval.json
 ```
 
-既定の対戦相手は attacker A1/A2/A3 と同じ5チームです。
+既定の対戦相手は attacker A1/A2/A3 と同じ6チームです。
 
 | 指定名 | 対戦チーム |
 | --- | --- |
@@ -82,10 +111,16 @@ python evaluate_co1_guard.py -map R --rounds 36 --output data/guard_R_eval.json
 | `fnatic_v3` | Fnatic2023 |
 | `gc_v1` | Ghost Champions |
 | `toru_ai_v3.1` | Team Elites |
+| `frc_v1` | Furina Classic |
 
-学習は既定で3000エピソード、50エピソードごとにチェックポイントを保存します。
+学習は既定で各サイト1000エピソード、50エピソードごとにチェックポイントを保存します。
+対戦相手は全チームと1試合ずつ戦う巡回方式で、巡回ごとに順番をシャッフルします。
+学習開始からの累計試合数の差は常に最大1試合です。6チームなら6試合ごとに同数になります。
+1000試合のようにチーム数で割り切れない回数では、端数の分だけ1試合の差が残ります。
+50試合ごとの表示は区間内の集計で、巡回をまたぐため完全には揃いません。累計のチーム別試合数も表示します。
+開始状態もカリキュラムの各段階で、チームごとに使用回数の少ない状態から選び、状態間の回数差を最大1に抑えます。
 探索率が下限0.05に達してから、探索なしで各チーム36試合を評価します。
-`best` の更新には、5チームの平均勝率と最も低いチーム別勝率が両方とも以前以上であることを要求します。
+`best` の更新には、6チームの平均勝率と最も低いチーム別勝率が両方とも以前以上であることを要求します。
 配置・停止の検証を通過したモデル同士で比較します。両方の勝率が同じ場合は、配置点からの離脱・往復・不適切な facing・移動射撃の割合を平均した `behavior_error` が以前以下の場合だけ更新します。
 既存の `best` がある場合は、同じ評価条件で再評価して比較します。
 
@@ -95,7 +130,7 @@ python co1_train_guard.py -map R --save-dir data/guard_R_trial
 python evaluate_co1_guard.py -map R --model data/guard_R_trial/co1_guard_R_best.pt
 ```
 
-`--opponents` にチーム指定を並べると対象を絞れます。指定しなければ5チームすべてを使います。
+`--opponents` にチーム指定を並べると対象を絞れます。指定しなければ6チームすべてを使います。
 `--seed`、`--checkpoint-interval`、`--device cpu|cuda` も指定できます。
 `--resume` は重みを引き継ぐ追加学習です。optimizer、リプレイ、探索率のスケジュールは新しく始まります。
 
@@ -110,11 +145,13 @@ carry モデルによる設置前の戦闘は実行しません。生存人数�
 | `hold` | attacker は割り当てられた防御点に配置され、対応する大文字の方向を向く。defender はサイトからBFS距離8〜20マスで開始。 |
 | `transition` | attacker はスパイクからBFS距離2〜6マスに配置され、防御点への移動も学ぶ。defender は距離8〜20マスで開始。 |
 | `smoke` | attacker は距離2〜6マスで開始。スパイク周囲のスモークと、解除を1tick進めたdefenderを設定し、解除阻止を学ぶ。 |
+| `pressure` | attacker は距離2〜6マス、defenderは距離2〜8マス。attackerにフラッシュ・リコン・電撃のいずれかが残る状態から開始し、退避とカウンター使用を学ぶ。 |
+| `pressure_tap` | スモーク内の解除が1〜4tick進み、attackerに被効果が残る状態から開始。退避と解除阻止の判断を学ぶ。 |
 
-既定では前半20%が `hold`、次の20%が `hold` / `transition`、残り60%が3状態の混合です。
+既定では前半20%が `hold`、次の20%が `hold` / `transition`、残り60%が5状態の混合です。
 `smoke` の開始スモークは開始前に使用されたものを表す合成状態です。敵AIに毎回スモーク使用や解除継続を強制しません。
-評価では3状態を順番に使い、チーム別・開始状態別に勝率、解除率、終了理由を出力します。
-`--rounds 36` は各チーム合計36試合（各開始状態12試合）です。
+評価では5状態を順番に使い、チーム別・開始状態別に勝率、解除率、終了理由を出力します。
+`--rounds 36` は各チーム合計36試合です。5状態へ順番に割り当てます。
 
 ```powershell
 # スモーク内解除の場面を重点的に追加学習する例
@@ -122,7 +159,7 @@ python co1_train_guard.py -map L --resume data/guard_L_data/co1_guard_L_best.pt 
 python evaluate_co1_guard.py -map L --model data/guard_L_smoke_trial/co1_guard_L_best.pt --start-modes smoke
 ```
 
-学習モードを絞っても、`best` の選出は3状態すべての評価で行います。
+学習モードを絞っても、`best` の選出は5状態すべての評価で行います。
 評価結果は設置後状態に対する成績です。設置前からのラウンド全体の勝率とは別です。
 
 ## 配置と行動
@@ -146,7 +183,31 @@ python evaluate_co1_guard.py -map L --model data/guard_L_smoke_trial/co1_guard_L
 評価出力には、解除通知も射撃可能な敵もない状態での `leave_goal` / `reversals` / `quiet_bad_facing` と、交戦中の `moving_fire` / `bad_fire_facing` を表示します。分母となる判断数も JSON に保存します。
 地形の通行不可・占有・アビリティ残数は行動マスクで扱います。解除通知によって移動やReconを強制するマスクは使いません。
 被射撃によって facing が固定される tick は、ゲーム側で実行できない旋回だけをマスクします。移動先の選択肢は維持します。
-現在の行動にはウルト使用を含めていません。
+現在の行動にはウルト使用も含めます。
+
+### 被効果中の退避とカウンター（報酬バージョン4）
+
+guard の入力には自身のフラッシュ、リコン、電撃、命の契約、移動阻害の残り時間と、上下左右・現在地からの敵射線数を追加しています。射線はIQ知覚で共有された敵位置と12tick以内の記憶から算出し、未発見の敵座標は参照しません。遮蔽の判断は壁を優先し、自身がリコン・電撃で露見している場合はスモークを安全な遮蔽として扱いません。スモークに入っているだけでは退避状態になりません。
+
+被効果中は通常の配置維持・交戦停止の補助報酬を外し、敵射線が減る移動を評価します。射線上で移動可能なのに待機する行動は減点し、カウンター使用には平常時の消費コストを適用しません。モデルには自己位置へのSMOKEと、直前に共有された敵位置へのアビリティ使用を残しています。使用そのものへの成功加点はなく、実際のダメージ・死亡・勝敗から使用の有効性を学びます。
+
+解除の残り時間が自身のスパイクまでのBFS距離+2tick以下になる場合は、退避の射線減少報酬を外し、解除阻止の接近・照準を評価します。移動・停止・アビリティを強制する推論処理は追加していません。被効果中の退避は追加学習で習得する行動であり、旧モデルのままで必ず逃げるという仕様ではありません。ゲームでは通常の毎tickの移動を使い、移動速度の追加変更は行いません。
+
+`pressure` / `pressure_tap` は被効果直後を表す合成開始状態です。効果前に通常のIQ知覚で見えた敵だけを記憶し、その後は本番のIQ知覚・敵AI・射撃・効果時間で進めます。評価には被効果中の判断数 `impaired`、射線上の待機数 `exposed_wait`、射線が減った移動数 `cover_moves`、アビリティ・ウルトを選んだ数 `counter_utility` を表示します。
+
+旧112/136行動・旧観測のチェックポイントは既存の重みを保持して読み込めます。追加入力の重みは0から始めます。defender retake が共有する旧観測と行動番号は維持しています。
+
+通常の追加学習では、`co1_train_guard.py` 冒頭の `TRAIN_LEFT_SITE`、`TRAIN_RIGHT_SITE`、`DEFAULT_RESUME_BY_MAP`、`DEFAULT_EPISODES`、`DEFAULT_OPPONENTS`、`DEFAULT_SAVE_DIR`、`DEFAULT_DEVICE` を変更します。片側だけ再開する場合は `DEFAULT_RESUME` でも指定できます。相手の既定値は上記6AI、開始状態の既定値は5状態を含むカリキュラムです。
+
+作業ディレクトリは `03.game/concon_v1/` です。通常の実行コマンドはオプションなしです。
+
+```powershell
+# 03.game から作業ディレクトリへ移動
+Set-Location concon_v1
+python co1_train_guard.py
+```
+
+評価設定は `evaluate_co1_guard.py` 冒頭の `DEFAULT_MAP`、`DEFAULT_MODEL`、`DEFAULT_ROUNDS`、`DEFAULT_OPPONENTS`、`DEFAULT_OUTPUT` を変更し、同じ作業ディレクトリで `python evaluate_co1_guard.py` を実行します。学習はユーザーが手動で実行します。
 
 ### 報酬修正後の再学習
 
@@ -218,4 +279,4 @@ CONCON_ATTACKER_POSTPLANT_MODELS = {
 python -m unittest discover -s test -p test_co1_guard.py -q
 ```
 
-配置の維持、敵情報の非開示、スモーク／Recon射線、停止tick、モデル互換性、5チーム×左右サイトの通常ゲーム処理、評価時のRNG保持を確認します。
+配置の維持、敵情報の非開示、スモーク／Recon射線、停止tick、モデル互換性、6チーム×左右サイトの通常ゲーム処理、評価時のRNG保持を確認します。

@@ -51,6 +51,7 @@ from tournament_bracket_ui import BracketRenderer, bind_bracket_scroll
 from simulation_runtime import cpu_inference
 
 CONTROLLER_OPTIONS = {
+    "Toru AI v4": "toru_ai_v4",
     "Toru AI v3.1": "toru_ai_v3.1",
     "ConCon v1": "concon_v1",
     "Touyama Gaming v2": "touyama_gaming_v2",
@@ -68,7 +69,7 @@ CONTROLLER_OPTIONS = {
     "ユーザー操作": "user",
 }
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
-DEFAULT_CONTROLLER_DISPLAY = next(iter(TEAM_AI_OPTIONS))
+DEFAULT_CONTROLLER_DISPLAY = next(iter(CONTROLLER_OPTIONS))
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
@@ -3085,12 +3086,13 @@ class CompetitionApp:
 
         # 使用可能なAI一覧
         available_ais = [
+            ("Toru AI v4", "toru_ai_v4"),
+            ("Toru AI v3.1", "toru_ai_v3.1"),
             ("Touyama Gaming v2", "touyama_gaming_v2"),
             ("Touyama Gaming v1", "touyama_gaming_v1"),
             ("Fnatic v3", "fnatic_v3"),
             ("Fnatic v2", "fnatic_v2"),
             ("Fnatic v1", "fnatic_v1"),
-            ("Toru AI v3.1", "toru_ai_v3.1"),
             ("Omoko Gaming v1", "omoko_gaming_v1"),
             ("Ghost Champions v1", "ghost_champions_v1"),
             ("Ghost Champions v2", "ghost_champions_v2"),
@@ -3121,7 +3123,7 @@ class CompetitionApp:
         ttk.Label(ai_frame, text="攻撃側AI:").grid(
             row=0, column=0, padx=5, pady=5, sticky="w"
         )
-        attacker_ai_var = tk.StringVar(value="Touyama Gaming v2")
+        attacker_ai_var = tk.StringVar(value=ai_names[0])
         attacker_ai_combo = ttk.Combobox(
             ai_frame,
             textvariable=attacker_ai_var,
@@ -3141,7 +3143,7 @@ class CompetitionApp:
         ttk.Label(ai_frame, text="守備側AI:").grid(
             row=1, column=0, padx=5, pady=5, sticky="w"
         )
-        defender_ai_var = tk.StringVar(value="Touyama Gaming v2")
+        defender_ai_var = tk.StringVar(value=ai_names[0])
         defender_ai_combo = ttk.Combobox(
             ai_frame,
             textvariable=defender_ai_var,
@@ -3159,10 +3161,10 @@ class CompetitionApp:
 
         # ロスター選択。攻撃側と守備側は各AIの固定ロスターを別々に持つ。
         attacker_roster_var = tk.StringVar(
-            value=",".join(default_roster_for_ai("touyama_gaming_v2"))
+            value=",".join(default_roster_for_ai(ai_keys[attacker_ai_var.get()]))
         )
         defender_roster_var = tk.StringVar(
-            value=",".join(default_roster_for_ai("touyama_gaming_v2"))
+            value=",".join(default_roster_for_ai(ai_keys[defender_ai_var.get()]))
         )
         ttk.Label(ai_frame, text="攻撃側キャラクター(カンマ区切り):").grid(
             row=2, column=0, padx=5, pady=5, sticky="w"
@@ -4587,6 +4589,7 @@ class CompetitionApp:
                 self.strongest_ranking_summary = (
                     f'{value["maps"]}マップ / 新規・更新 {value["read_files"]}ファイル / '
                     f'保存済み {value["cached_files"]}ファイル'
+                    + (' / 集計済みランキングを使用' if value["ranking_cached"] else '')
                     + (f' / 読込エラー {len(value["errors"])}件' if value["errors"] else "")
                 )
                 roles = ["すべて", *sorted({row["role"] for row in value["rows"]})]

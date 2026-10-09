@@ -74,6 +74,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from character_stats import CHARACTER_TABLE as STATS_TABLE
@@ -244,13 +245,14 @@ class Ov1LearningAttackerRetrieveController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE_LOG):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE_LOG, device=None):
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DuelingQNet(OBS_DIM, ACTION_DIM).to(DEVICE)
+        self.device = resolve_inference_device(device)
+        self.model = DuelingQNet(OBS_DIM, ACTION_DIM).to(self.device)
 
         try:
-            checkpoint = torch.load(model_path, map_location=DEVICE)
+            checkpoint = torch.load(model_path, map_location=self.device)
             if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
                 state_dict = checkpoint["model_state_dict"]
                 if verbose:
@@ -492,8 +494,8 @@ class Ov1LearningAttackerRetrieveController:
         )
         mask = self._action_mask(char, grid, chars, available_orbs)
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

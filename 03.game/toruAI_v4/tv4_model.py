@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import nn
 
-VERSION = 2
+VERSION = 3  # Public allied capabilities and multiple-roster training.
 
 
 class SiteModel(nn.Module):

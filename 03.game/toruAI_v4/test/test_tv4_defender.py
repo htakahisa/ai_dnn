@@ -21,7 +21,8 @@ from toruAI_v4.tv4_defender_policy import (
     PolicyEncoder, DefenderDQN, ACTION_DIM, OBS_DIM, DEFUSE_ACTION, staging_positions, assign_goals, learn_dqn,
 )
 from toruAI_v4.tv4_defender_controller import ToruV4DefenderController
-from toruAI_v4.tv4_train_defender import eligible_presets, evaluation_plan, summarize_defender
+from toruAI_v4.tv4_train_defender_search import eligible_presets, evaluation_plan, summarize_defender
+from toruAI_v4.tv4_retake_combat import RETAKE_OBS_DIM
 
 
 class GenericDefenderTests(unittest.TestCase):
@@ -36,17 +37,18 @@ class GenericDefenderTests(unittest.TestCase):
         return snapshot, PolicyEncoder(self.scenario).encode(snapshot, snapshot.allies[0], goal, [.5, .5], {})
 
     def test_training_defaults_to_new_and_resume_requires_explicit_option(self):
-        from toruAI_v4.tv4_train_defender import parse_arguments, TRAINING_SETS
+        from toruAI_v4.tv4_train_defender_search import parse_arguments, TRAINING_SETS
+        from toruAI_v4.tv4_train_retake import TRAINING_SETS as RETAKE_SETS
         for phase in ("search", "retake"):
             args = parse_arguments(["--phase", phase])
             self.assertFalse(args.resume)
             self.assertFalse(args.eval_only)
-            self.assertEqual(args.sets, TRAINING_SETS)
+            self.assertEqual(args.sets, RETAKE_SETS if phase == "retake" else TRAINING_SETS)
             self.assertTrue(parse_arguments(["--phase", phase, "--resume"]).resume)
             self.assertFalse(parse_arguments(["--phase", phase, "--fresh"]).resume)
 
     def test_resume_cannot_be_combined_with_fresh_or_evaluation(self):
-        from toruAI_v4.tv4_train_defender import parse_arguments
+        from toruAI_v4.tv4_train_defender_search import parse_arguments
         import contextlib
         import io
         for option in ("--fresh", "--eval-only"):
@@ -54,7 +56,7 @@ class GenericDefenderTests(unittest.TestCase):
                 parse_arguments(["--resume", option])
 
     def test_search_training_routes_all_or_selected_opponents_independently(self):
-        from toruAI_v4 import tv4_train_defender as trainer
+        from toruAI_v4 import tv4_train_defender_search as trainer
         from toruAI_v4.tv4_scenario import OPPONENTS
         for options, selected in (([], list(OPPONENTS)),
                                   (["--opponents", "fnatic_v3", "touyama_v2"], ["fnatic_v3", "touyama_v2"])):
@@ -62,7 +64,7 @@ class GenericDefenderTests(unittest.TestCase):
             hashes = {opponent: opponent + "_hash" for opponent in selected}
             with patch.object(trainer, "load_analyses", return_value=(models, hashes)), \
                  patch.object(trainer, "train_search_opponent") as train:
-                trainer.main(options)
+                trainer.main([*options, "--max-workers", "1"])
             self.assertEqual(train.call_count, len(selected))
             for call, opponent in zip(train.call_args_list, selected):
                 args, scenario, analysis, signatures = call.args
@@ -70,6 +72,41 @@ class GenericDefenderTests(unittest.TestCase):
                 self.assertEqual(analysis, {opponent: models[opponent]})
                 self.assertEqual(signatures, {opponent: hashes[opponent]})
                 self.assertFalse(args.resume)
+
+    def test_search_evaluates_each_set_and_keeps_better_intermediate_model(self):
+        import contextlib
+        import io
+        import tempfile
+        from toruAI_v4 import tv4_train_defender_search as trainer
+        scores = (.3, .7, .2)
+        evaluated, saved = [], []
+        plan = [("gc_v1", "test_preset", 999)]
+
+        def evaluate(current_plan, *args):
+            evaluated.append(current_plan)
+            return dict(plants=1, by_opponent={}, mean_search_readiness=scores[len(evaluated) - 1],
+                        mean_search_survivors=4., mean_search_resources=1., mean_plant_distance=5.)
+
+        def save(path, state):
+            if path.name == "search_best.pt":
+                saved.append(state["completed_sets"])
+
+        with tempfile.TemporaryDirectory() as temp, contextlib.redirect_stderr(io.StringIO()):
+            args = trainer.parse_arguments([])
+            self.assertEqual(args.eval_every, 1)
+            args.opponents, args.sets = ["gc_v1"], 3
+            args.data_dir, args.best_dir, args.log_dir = (Path(temp) / name for name in ("data", "best", "logs"))
+            with patch.object(trainer, "eligible_presets", return_value=["test_preset"]), \
+                 patch.object(trainer, "evaluation_plan", return_value=plan), \
+                 patch.object(trainer, "rollout", return_value=([], [])), \
+                 patch.object(trainer, "learn_dqn", return_value=0.), \
+                 patch.object(trainer, "evaluate", side_effect=evaluate), \
+                 patch.object(trainer, "evaluation_summary", return_value="summary"), \
+                 patch.object(trainer, "atomic_save", side_effect=save):
+                trainer.train_search_opponent(args, self.scenario, {}, {"gc_v1": "analysis"})
+        self.assertEqual(len(evaluated), 3)
+        self.assertTrue(all(current is plan for current in evaluated))
+        self.assertEqual(saved, [1, 2])
 
     def test_deployment_rejects_shared_or_wrong_opponent_search(self):
         from toruAI_v4 import tv4_defender_controller as module
@@ -191,7 +228,7 @@ class GenericDefenderTests(unittest.TestCase):
         game = world(self.scenario)
         analysis = SiteModel(len(FeatureHistory(self.scenario).fields))
         policy = DefenderDQN(OBS_DIM)
-        c = ToruV4DefenderController("fnatic_v3", scenario=self.scenario, search=policy, retake=policy,
+        c = ToruV4DefenderController("fnatic_v3", scenario=self.scenario, search=policy, retake=DefenderDQN(RETAKE_OBS_DIM),
                                     analyses={"fnatic_v3": analysis})
         c.set_game(game)
         c.prepare_team_tick()
@@ -228,7 +265,7 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertEqual(c.decisions, {})
 
     def test_search_plants_are_not_counted_as_losses_or_retakes(self):
-        from toruAI_v4.tv4_train_defender import summarize_defender, evaluation_summary, PLANT_ADVANTAGE_REWARD
+        from toruAI_v4.tv4_train_defender_search import summarize_defender, evaluation_summary, PLANT_ADVANTAGE_REWARD
         record = dict(scope="search", planted=True, won=None, defused=False, plant_defenders=5,
                       plant_attackers=3, plant_advantage=2, plant_distance=8., retake_ticks=0,
                       plant_resource_retention=.8, skill_uses=1, search_survivors=5,
@@ -242,7 +279,7 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertGreater(PLANT_ADVANTAGE_REWARD * (5 - 3), PLANT_ADVANTAGE_REWARD * (5 - 5))
 
     def test_training_and_evaluation_teams_are_valid_against_each_opponent(self):
-        from toruAI_v4.tv4_train_defender import TRAINING_PRESETS, EVALUATION_PRESETS
+        from toruAI_v4.tv4_train_defender_search import TRAINING_PRESETS, EVALUATION_PRESETS
         from toruAI_v4.tv4_scenario import OPPONENTS
         self.assertFalse(set(TRAINING_PRESETS) & set(EVALUATION_PRESETS))
         plan = evaluation_plan(tuple(OPPONENTS), EVALUATION_PRESETS, 3, 42)
@@ -280,8 +317,8 @@ class GenericDefenderTests(unittest.TestCase):
     def test_retake_selects_left_or_right_network_using_the_actual_plant(self):
         game = world(self.scenario)
         game.is_planted, game.planted_pos = True, self.scenario.sites["L"][0]
-        left, right = DefenderDQN(OBS_DIM), DefenderDQN(OBS_DIM)
-        c = ToruV4DefenderController("fnatic_v3", scenario=self.scenario, search=left, retake={"L": left, "R": right},
+        left, right = DefenderDQN(RETAKE_OBS_DIM), DefenderDQN(RETAKE_OBS_DIM)
+        c = ToruV4DefenderController("fnatic_v3", scenario=self.scenario, search=DefenderDQN(OBS_DIM), retake={"L": left, "R": right},
                                     analyses={"fnatic_v3": SiteModel(len(FeatureHistory(self.scenario).fields))})
         c.set_game(game)
         with patch.object(left, "forward", wraps=left.forward) as l, patch.object(right, "forward", wraps=right.forward) as r:
@@ -303,7 +340,7 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertEqual(parts["R"], ([records[1]], [right]))
 
     def test_search_selection_balances_readiness_instead_of_forbidding_plants(self):
-        from toruAI_v4.tv4_train_defender import score_best
+        from toruAI_v4.tv4_train_defender_search import score_best
         camping = dict(mean_search_readiness=.5, mean_search_survivors=5., mean_search_resources=1., mean_plant_distance=35.)
         ready = dict(mean_search_readiness=.8, mean_search_survivors=4.5, mean_search_resources=.8, mean_plant_distance=8.)
         wiped = dict(mean_search_readiness=-1., mean_search_survivors=0., mean_search_resources=0., mean_plant_distance=None)
@@ -311,14 +348,14 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertLess(score_best(wiped, "search"), score_best(camping, "search"))
 
     def test_retake_margin_allows_relative_outlier_when_time_is_sufficient(self):
-        from toruAI_v4.tv4_train_defender import retake_arrival_readiness
+        from toruAI_v4.tv4_train_defender_search import retake_arrival_readiness
         result = retake_arrival_readiness([1, 1, 1, 1, 24], 55)
         self.assertTrue(result["plant_all_ready"])
         self.assertEqual(result["plant_min_margin"], 5.)
         self.assertEqual(result["plant_arrival_penalty"], 0.)
 
     def test_retake_margin_penalizes_one_late_player_despite_small_average(self):
-        from toruAI_v4.tv4_train_defender import retake_arrival_readiness
+        from toruAI_v4.tv4_train_defender_search import retake_arrival_readiness
         result = retake_arrival_readiness([1, 1, 1, 1, 35], 55)
         self.assertEqual(result["plant_late_count"], 1)
         self.assertEqual(result["plant_ready_count"], 4)
@@ -328,7 +365,7 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertEqual(retake_arrival_readiness([24], 54)["plant_late_count"], 1)
 
     def test_retake_margin_unreachable_and_empty_teams(self):
-        from toruAI_v4.tv4_train_defender import retake_arrival_readiness
+        from toruAI_v4.tv4_train_defender_search import retake_arrival_readiness
         for distance in [-1, float("inf")]:
             result = retake_arrival_readiness([distance], 55)
             self.assertEqual(result["plant_late_count"], 1)
@@ -338,12 +375,47 @@ class GenericDefenderTests(unittest.TestCase):
         self.assertIsNone(result["plant_min_margin"])
 
     def test_resource_retention_excludes_dead_players_and_caps_regeneration(self):
-        from toruAI_v4.tv4_train_defender import retained_resources
+        from toruAI_v4.tv4_train_defender_search import retained_resources
         a = SimpleNamespace(is_alive=True, ability_name="SMOKE", smoke_charges=3)
         self.assertEqual(retained_resources([a], {"a": 2}), 1.)
         a.is_alive = False
         self.assertEqual(retained_resources([a], {"a": 2}), 0.)
         self.assertIsNone(retained_resources([a], {"a": 0}))
+
+    def test_distant_players_have_more_incentive_to_rotate_and_less_to_wait(self):
+        from toruAI_v4.tv4_train_defender_search import early_rotation_reward
+        inputs = SimpleNamespace(distances=np.array([[4., 3., 32., 31., 0., -1.]]),
+                                 rotation_confidence=.8, combat_contact=False)
+        near_move = early_rotation_reward(inputs, (0, 0), (0, 1))
+        far_move = early_rotation_reward(inputs, (0, 2), (0, 3))
+        self.assertGreater(far_move, near_move)
+        self.assertGreater(near_move, 0.)
+        self.assertLess(early_rotation_reward(inputs, (0, 2), (0, 2)),
+                        early_rotation_reward(inputs, (0, 0), (0, 0)))
+        self.assertLess(early_rotation_reward(inputs, (0, 3), (0, 2)), 0.)
+        self.assertEqual(early_rotation_reward(inputs, (0, 4), (0, 4)), 0.)
+        self.assertEqual(early_rotation_reward(inputs, (0, 5), (0, 5)), 0.)
+
+    def test_rotation_pressure_stops_for_uncertainty_and_combat(self):
+        from toruAI_v4.tv4_train_defender_search import early_rotation_reward
+        inputs = SimpleNamespace(distances=np.array([[32., 31.]]),
+                                 rotation_confidence=.8, combat_contact=False)
+        for kwargs in ({"damage": 1.}, {"kills": 1}):
+            self.assertEqual(early_rotation_reward(inputs, (0, 0), (0, 0), **kwargs), 0.)
+        inputs.combat_contact = True
+        self.assertEqual(early_rotation_reward(inputs, (0, 0), (0, 0)), 0.)
+        inputs.combat_contact, inputs.rotation_confidence = False, .64
+        self.assertEqual(early_rotation_reward(inputs, (0, 0), (0, 1)), 0.)
+
+    def test_rotation_context_uses_public_snapshot_and_excludes_setup_and_retake(self):
+        snapshot, _ = self.inputs()
+        ally = snapshot.allies[0]
+        encoder = PolicyEncoder(self.scenario)
+        for phase, planted, expected in (("live", False, .8), ("setup", False, 0.), ("live", True, 0.)):
+            current = replace(snapshot, phase=phase, is_planted=planted,
+                              spike_planted=self.scenario.sites["L"][0] if planted else None)
+            inputs = encoder.encode(current, ally, self.scenario.posts[0].watch, [.8, .2], {})
+            self.assertEqual(inputs.rotation_confidence, expected)
 
 
 if __name__ == "__main__":
