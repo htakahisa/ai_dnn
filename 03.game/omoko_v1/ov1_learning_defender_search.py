@@ -34,6 +34,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import (
@@ -645,15 +646,16 @@ class Ov1LearningDefenderSearchController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DefenderSearchDuelingDQN().to(DEVICE)
+        self.model = DefenderSearchDuelingDQN().to(self.device)
         try:
             load_path = model_path
             if model_path == DEFAULT_MODEL_PATH and not Path(model_path).exists():
                 load_path = SITE_V2_MODEL_PATH
-            state_dict = torch.load(load_path, map_location=DEVICE)
+            state_dict = torch.load(load_path, map_location=self.device)
             first_weight = state_dict["feature.0.weight"]
             if first_weight.shape[1] == OBS_DIM - SITE_CONTEXT_DIM:
                 expanded = torch.zeros(
@@ -1326,8 +1328,8 @@ class Ov1LearningDefenderSearchController:
                 char, grid, chars, in_setup_phase=True, forced_facing=forced_facing,
             )
 
-            obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-            mask_t = torch.from_numpy(mask).to(DEVICE)
+            obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+            mask_t = torch.from_numpy(mask).to(self.device)
             with torch.no_grad():
                 q_values = self.model(obs_t).squeeze(0).clone()
                 q_values[~mask_t] = -1e9
@@ -1495,8 +1497,8 @@ class Ov1LearningDefenderSearchController:
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

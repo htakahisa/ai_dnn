@@ -9,7 +9,7 @@ import argparse
 from toruAI_v4.tv4_scenario import Scenario, OPPONENTS
 from toruAI_v4.tv4_defender_controller import DEFENDER_BEST
 from toruAI_v4.tv4_game_controller import ToruV4GameDefenderController
-from toruAI_v4.tv4_train_analysis import legacy_root, seed_all, relocate_debug_logs
+from toruAI_v4.tv4_train_defender_analysis import legacy_root, seed_all, relocate_debug_logs
 
 
 def main(argv=None):
@@ -33,7 +33,7 @@ def main(argv=None):
     with legacy_root(), cpu_inference(enabled=not args.render):
         from run_game import VisualFPSBattle, _build_team_ai
         seed_all(args.seed)
-        game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[args.opponent][0]), ai,
+        game = VisualFPSBattle(scenario.maze, _build_team_ai(OPPONENTS[args.opponent][0], device="cpu"), ai,
             headless=not args.render, attacker_roster=list(enemy.players), defender_roster=list(own.players),
             spike_holder_name=enemy.spike_holder, defender_spike_holder_name=own.spike_holder,
             attacker_igl_name=enemy.igl, defender_igl_name=own.igl,

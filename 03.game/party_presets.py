@@ -177,7 +177,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     "Gorigons": TeamPreset(
         name="Gorigons",
         default_ai="concon_v1",
-        short_name="GG",
+        short_name="GRG",
         players=("ごりまる", "ごんごん", "ごんた", "くんた", "くりまる"),
         igl="ごりまる",
         spike_holder="ごんた",

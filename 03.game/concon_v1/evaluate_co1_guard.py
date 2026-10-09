@@ -1,4 +1,4 @@
-"""Evaluate frozen guard weights against the same five teams as attacker routes."""
+"""Evaluate frozen guard weights against the same six teams as attacker routes."""
 
 import argparse
 from collections import Counter
@@ -16,10 +16,19 @@ if str(ROOT) not in sys.path:
 import numpy as np
 import torch
 
-from concon_v1.co1_guard_common import GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, load_guard_weights, observation_dim, GORIGONS
+from concon_v1.co1_guard_common import GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, PRE_COUNTER_ACTION_DIM, compatible_observation_dims, load_guard_weights, observation_dim, GORIGONS
 from concon_v1.co1_guard_scenarios import SCENARIOS, get_scenario, validate_checkpoint
 from concon_v1.co1_guard_battle_training import GuardBattleEnv, OPPONENTS, START_MODES
 from concon_v1.co1_guard_positioning import positioning_evaluation, formation_evaluation
+
+
+DEFAULT_MAP = "L"
+DEFAULT_ROUNDS = 36
+DEFAULT_SEED = 0
+DEFAULT_MODEL = None
+DEFAULT_OPPONENTS = tuple(OPPONENTS)
+DEFAULT_START_MODES = START_MODES
+DEFAULT_OUTPUT = None
 
 
 def behavior_summary(details):
@@ -35,7 +44,9 @@ def behavior_summary(details):
               for pair in pairs.values() for key in pair}
     rates = {rate: totals[numerator] / totals[denominator] if totals[denominator] else 0.0
              for rate, (numerator, denominator) in pairs.items()}
-    return {**totals, **rates, "behavior_error": sum(rates.values()) / len(rates)}
+    pressure_keys = ("impaired_decisions", "exposed_wait_decisions", "cover_moves", "counter_utility_decisions")
+    pressure = {key: sum(record.get(key, 0) for record in details) for key in pressure_keys}
+    return {**totals, **rates, **pressure, "behavior_error": sum(rates.values()) / len(rates)}
 
 
 def summarize(details):
@@ -67,8 +78,8 @@ def evaluate(map_name="L", rounds=36, seed=0, opponents=None, model_path=None,
                          else Path(model_path or scenario.model_path).read_bytes())
     checkpoint = torch.load(io.BytesIO(frozen_checkpoint), map_location="cpu", weights_only=False)
     validate_checkpoint(checkpoint, scenario)
-    if (checkpoint.get("obs_dim") != observation_dim(scenario)
-            or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, ACTION_DIM)
+    if (checkpoint.get("obs_dim") not in compatible_observation_dims(scenario)
+            or checkpoint.get("n_actions") not in (LEGACY_ACTION_DIM, PRE_COUNTER_ACTION_DIM, ACTION_DIM)
             or tuple(checkpoint.get("training_roster", ())) != GORIGONS.players):
         raise ValueError("guard checkpoint dimensions/roster do not match")
     python_state, numpy_state = random.getstate(), np.random.get_state()
@@ -136,6 +147,8 @@ def print_summary(result):
               f"quiet_utility={counts['quiet_utility_rate']:.1%} "
               f"moving_fire={counts['moving_fire_rate']:.1%} "
               f"bad_fire_facing={counts['bad_fire_facing_rate']:.1%}", flush=True)
+        print(f"  impaired={counts['impaired_decisions']} exposed_wait={counts['exposed_wait_decisions']} "
+              f"cover_moves={counts['cover_moves']} counter_utility={counts['counter_utility_decisions']}", flush=True)
         for mode, mode_counts in counts["by_start_mode"].items():
             if mode_counts["rounds"]:
                 print(f"  {mode}: wins={mode_counts['attacker_wins']}/{mode_counts['rounds']} "
@@ -144,13 +157,13 @@ def print_summary(result):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default="L")
-    parser.add_argument("--rounds", type=int, default=36, help="postplant games per opponent")
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--model", type=Path)
-    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=list(OPPONENTS))
-    parser.add_argument("--start-modes", nargs="+", choices=START_MODES, default=list(START_MODES))
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default=DEFAULT_MAP)
+    parser.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS, help="postplant games per opponent")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
+    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=list(DEFAULT_OPPONENTS))
+    parser.add_argument("--start-modes", nargs="+", choices=START_MODES, default=list(DEFAULT_START_MODES))
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")

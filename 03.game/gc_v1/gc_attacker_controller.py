@@ -33,12 +33,13 @@ class GCAttackerController(BaseController):
         retrieve_model_path="data/attacker_retrieve_gc_data/dqn_attacker_retrieve_gc_best_by_eval.pt",
         guard_model_path="data/attacker_guard_gc_data/dqn_attacker_guard_gc_best_by_eval.pt",
         greedy=False,
+        device=None,
     ):
         super().__init__()
-        self.carry_controller = LearningAttackerCarryGCController(model_path=carry_model_path, greedy=greedy)
-        self.escort_controller = LearningAttackerEscortGCController(model_path=escort_model_path, greedy=greedy)
-        self.retrieve_controller = LearningAttackerRetrieveGCController(model_path=retrieve_model_path, greedy=greedy)
-        self.guard_controller = LearningAttackerGuardGCController(model_path=guard_model_path, greedy=greedy)
+        self.carry_controller = LearningAttackerCarryGCController(model_path=carry_model_path, greedy=greedy, device=device)
+        self.escort_controller = LearningAttackerEscortGCController(model_path=escort_model_path, greedy=greedy, device=device)
+        self.retrieve_controller = LearningAttackerRetrieveGCController(model_path=retrieve_model_path, greedy=greedy, device=device)
+        self.guard_controller = LearningAttackerGuardGCController(model_path=guard_model_path, greedy=greedy, device=device)
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。

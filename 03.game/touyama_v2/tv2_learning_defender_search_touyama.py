@@ -35,6 +35,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import (
@@ -512,12 +513,13 @@ class LearningDefenderSearchTouyamaController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=VERBOSE, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DefenderSearchDuelingDQN().to(DEVICE)
+        self.model = DefenderSearchDuelingDQN().to(self.device)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            state_dict = torch.load(model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningDefenderSearchTouyamaController] loaded: {model_path}")
@@ -931,8 +933,8 @@ class LearningDefenderSearchTouyamaController:
                 forced_facing=forced_facing,
             )
 
-            obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-            mask_t = torch.from_numpy(mask).to(DEVICE)
+            obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+            mask_t = torch.from_numpy(mask).to(self.device)
             with torch.no_grad():
                 q_values = self.model(obs_t).squeeze(0).clone()
                 q_values[~mask_t] = -1e9
@@ -1042,8 +1044,8 @@ class LearningDefenderSearchTouyamaController:
                     f"spike_pos={self.team_memory.spike_pos}\n"
                 )
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

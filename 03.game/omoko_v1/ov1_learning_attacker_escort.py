@@ -58,6 +58,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
@@ -252,14 +253,15 @@ def _build_distance_map_walls_only(grid, source_cells):
     return dist
 
 
-def _bfs_next_step(grid, start, goal, blocked=()):
+def _bfs_next_step(grid, start, goal, blocked=(), *, dist_map=None):
     """Return one walkable step from start toward goal, if one exists."""
     start = tuple(map(int, start))
     goal = tuple(map(int, goal))
     if start == goal:
         return start
     blocked = {tuple(map(int, cell)) for cell in blocked}
-    dist_map = _build_distance_map_walls_only(grid, [goal])
+    if dist_map is None:
+        dist_map = _build_distance_map_walls_only(grid, [goal])
     r, c = start
     best = start
     best_dist = dist_map[r, c] if 0 <= r < grid.shape[0] and 0 <= c < grid.shape[1] else np.inf
@@ -363,7 +365,7 @@ class Ov1LearningAttackerEscortController:
         max_ticks=100,
         verbose=False,
     ):
-        self.device = device or torch.device("cpu")
+        self.device = resolve_inference_device(device, default="cpu")
         self.greedy = greedy
         self.epsilon = epsilon
         self.max_ticks = max_ticks
@@ -508,7 +510,7 @@ class Ov1LearningAttackerEscortController:
         return grid[r, c] == 1
 
     def _get_goal_dist_map(self, grid, goal):
-        key = (grid.tobytes(), tuple(goal))
+        key = (grid.shape, grid.dtype.str, grid.tobytes(), tuple(goal))
         cached = self._goal_dist_cache.get(key)
         if cached is None:
             cached = _build_distance_map_walls_only(grid, [tuple(goal)])
@@ -519,7 +521,7 @@ class Ov1LearningAttackerEscortController:
         """carry_posを起点とした壁のみBFS距離マップ(キャッシュ付き)。
         escort自身からキャリアーまでの距離・方向はチェビシェフ距離ではなく
         こちらを使う。"""
-        key = (grid.tobytes(), tuple(carry_pos))
+        key = (grid.shape, grid.dtype.str, grid.tobytes(), tuple(carry_pos))
         cached = self._carry_dist_cache.get(key)
         if cached is None:
             cached = _build_distance_map_walls_only(grid, [tuple(carry_pos)])
@@ -696,7 +698,7 @@ class Ov1LearningAttackerEscortController:
         safe_cell = self._find_escape_cell(grid, pos, chars, char.team)
         if safe_cell is None or safe_cell == pos:
             return None
-        dist_map = _build_distance_map_walls_only(grid, [safe_cell])
+        dist_map = self._get_goal_dist_map(grid, safe_cell)
         r, c = pos
         best_cell, best_dist = pos, dist_map[r, c]
         for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -955,7 +957,7 @@ class Ov1LearningAttackerEscortController:
 
         candidates = []
         for orb in sorted(available_orbs):
-            dist_map = _build_distance_map_walls_only(grid, [orb])
+            dist_map = self._get_goal_dist_map(grid, orb)
             distance = dist_map[pos[0], pos[1]]
             if np.isfinite(distance) and distance <= ESCORT_ORB_MAX_PATH_DISTANCE:
                 candidates.append((int(distance), tuple(orb)))
@@ -1076,7 +1078,8 @@ class Ov1LearningAttackerEscortController:
                     for other in chars
                     if other is not char and getattr(other, "is_alive", True)
                 }
-                orb_next = _bfs_next_step(grid, (r, c), orb_target, occupied)
+                orb_next = _bfs_next_step(grid, (r, c), orb_target, occupied,
+                                          dist_map=self._get_goal_dist_map(grid, orb_target))
                 if orb_next != (r, c):
                     return [int(orb_next[0]), int(orb_next[1])], {"facing": getattr(char, "facing", "N")}
             return [r, c], "COLLECT_ORB"
@@ -1109,7 +1112,8 @@ class Ov1LearningAttackerEscortController:
                     for other in chars
                     if other is not char and getattr(other, "is_alive", True)
                 }
-                orb_next = _bfs_next_step(grid, (r, c), orb_target, occupied)
+                orb_next = _bfs_next_step(grid, (r, c), orb_target, occupied,
+                                          dist_map=self._get_goal_dist_map(grid, orb_target))
                 if orb_next != (r, c):
                     st["last_delta"] = (
                         float(orb_next[0] - r), float(orb_next[1] - c)

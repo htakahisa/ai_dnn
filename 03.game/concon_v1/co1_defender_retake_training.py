@@ -57,6 +57,11 @@ class RetakeTrainingAdapter(ConconDefenderController):
     def decide_move(self, char, state):
         if state.get("is_planted"):
             site = plant_site(state["planted_pos"], self.search_controller.scenario.grid)
+            if site not in self.retakes:
+                # Unselected live sites use the existing production model only.
+                controller = ConconDefenderRetakeController(site)
+                controller.set_game(self.game)
+                self.retakes[site] = controller
             return self.retakes[site].decide_move(char, state)
         return self.search_controller.decide_move(char, state)
 
@@ -64,8 +69,8 @@ class RetakeTrainingAdapter(ConconDefenderController):
 class DefenderRetakeEnv(DefenderSearchEnv):
     def __init__(self, models, search_model, seed=0, opponents=None, ability_distance=6):
         super().__init__(search_model, seed=seed, opponents=opponents)
-        if set(models) != {"L", "R"}:
-            raise ValueError("retake requires both site models and a positive ability distance")
+        if not models or not set(models) <= {"L", "R"}:
+            raise ValueError("retake requires at least one L/R site model")
         self.models, self.ability_distances = models, normalize_site_ability_distances(ability_distance)
         self.frc_attack_attempts = 0
 
@@ -79,7 +84,7 @@ class DefenderRetakeEnv(DefenderSearchEnv):
             self.frc_attack_attempts += 1
         # Replace the recording search controller with frozen production search.
         self.controller = ConconDefenderSearchController(model=self.model)
-        self.retakes = {site: TrainingRetakeController(self, site) for site in ("L", "R")}
+        self.retakes = {site: TrainingRetakeController(self, site) for site in self.models}
         self.adapter = RetakeTrainingAdapter(self.controller, self.retakes)
         team_ai = self.game.current_defender_team_ai
         team_ai.defender_factory = lambda: self.adapter
@@ -109,6 +114,8 @@ class DefenderRetakeEnv(DefenderSearchEnv):
         if metadata["opponent"] not in self.opponents:
             raise ValueError("case opponent is outside the training roster")
         actual_site = plant_site(game.planted_pos, game.grid)
+        if actual_site not in self.models:
+            raise ValueError("case site is outside the selected training sites")
         if metadata["site"] != actual_site or not np.array_equal(game.grid, get_scenario(actual_site).grid):
             raise ValueError("case site or terrain differs from the training scenario")
         defenders = [char for char in game.chars if char.team == "D"]
@@ -128,7 +135,7 @@ class DefenderRetakeEnv(DefenderSearchEnv):
         # Search is not executed here. The current frozen search remains available
         # for the adapter; the attacker's controller and IQ memories are untouched.
         self.controller = ConconDefenderSearchController(model=self.model)
-        self.retakes = {site: TrainingRetakeController(self, site) for site in ("L", "R")}
+        self.retakes = {site: TrainingRetakeController(self, site) for site in self.models}
         self.adapter = RetakeTrainingAdapter(self.controller, self.retakes)
         team_ai.defender_factory = lambda: self.adapter
         team_ai._defender_controller = None

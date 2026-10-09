@@ -27,6 +27,7 @@ import os
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 
 from game_core import PLANT_REQUIRED_TICKS
 from positioning_gc import preferred_plant_cells, team_plant_target, set_team_plant_target
@@ -308,12 +309,7 @@ class LearningAttackerMacroGCController:
         self.verbose = bool(verbose)
         self.game = None
 
-        if device == "auto":
-            self.device = torch.device(
-                "cuda" if torch.cuda.is_available() else "cpu"
-            )
-        else:
-            self.device = torch.device(device)
+        self.device = resolve_inference_device(device)
 
         if model_path is None:
             model_path = _first_existing(DEFAULT_MODEL_CANDIDATES)

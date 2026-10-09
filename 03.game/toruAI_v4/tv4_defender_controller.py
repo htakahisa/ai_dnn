@@ -20,11 +20,15 @@ OPPONENT_NAMES = {"Ghost Champions v1": "gc_v1", "Touyama Gaming v2": "touyama_v
                   "Toru AI v3.1": "toru_ai_v3"}
 
 
-def policy_metadata(scenario):
-    return {"version": POLICY_VERSION, "board": scenario.grid.tolist(), "obs_dim": OBS_DIM,
+def policy_metadata(scenario, phase="search"):
+    metadata = {"version": POLICY_VERSION, "board": scenario.grid.tolist(), "obs_dim": OBS_DIM,
             "action_dim": ACTION_DIM, "staging": staging_positions(scenario),
             "search_objective": "survival_resources_readiness_plant_allowed_v1",
             "roster_scope": "arbitrary_five_shared_weights", "sensor": "frc_public_team_v1"}
+    if phase == "retake":
+        from toruAI_v4.tv4_retake_combat import retake_combat_schema, RETAKE_OBS_DIM
+        metadata = {**metadata, "obs_dim": RETAKE_OBS_DIM, "retake_combat": retake_combat_schema()}
+    return metadata
 
 
 def normalize_policy_schema(saved, scenario):
@@ -47,10 +51,14 @@ def normalize_policy_schema(saved, scenario):
 def load_policy(path, phase, scenario):
     saved = torch.load(path, map_location="cpu", weights_only=True)
     saved = normalize_policy_schema(saved, scenario)
-    if saved.get("phase") != phase or saved.get("schema") != policy_metadata(scenario):
+    if saved.get("phase") != phase or saved.get("schema") != policy_metadata(scenario, phase):
         raise ValueError(f"Generic defender checkpoint/schema mismatch: {path}")
+    if phase == "retake":
+        from toruAI_v4.tv4_retake_coordination import RETAKE_VERSION, retake_layout
+        if saved.get("retake_version") != RETAKE_VERSION or saved.get("retake_layout") != retake_layout(scenario):
+            raise ValueError(f"Retake coordination/utility map changed: {path}")
     with torch.random.fork_rng(devices=[]):
-        model = DefenderDQN(OBS_DIM)
+        model = DefenderDQN(policy_metadata(scenario, phase)["obs_dim"])
     model.load_state_dict(saved["model"])
     model.eval()
     return model, saved
@@ -61,12 +69,14 @@ def load_analyses(scenario, opponents, directory=None):
     fields = FeatureHistory(scenario).fields
     models, signatures = {}, {}
     for opponent in opponents:
-        path = directory / opponent / "analysis_best.pt"
+        path = directory / opponent / "defender_analysis_best.pt"
         if not path.is_file():
-            # Temporary compatibility until the user requests migration.
-            legacy = directory / opponent / "best.pt"
-            if legacy.is_file():
-                path = legacy
+            # Older exports remain readable; new training uses the role name.
+            for name in ("analysis_best.pt", "best.pt"):
+                legacy = directory / opponent / name
+                if legacy.is_file():
+                    path = legacy
+                    break
         if not path.is_file():
             raise FileNotFoundError(f"Site analysis best is required: {path}")
         # Freeze an exact file snapshot, including its public feature schema.
@@ -92,6 +102,9 @@ class ToruV4DefenderController:
                  search_path=None, retake_path=None, training=False, seed=0):
         self.scenario = scenario or Scenario()
         self.opponent, self.training = opponent, training
+        self.retake_combat_enabled = True  # False is reserved for diagnostic comparisons.
+        self.retake_deadline_enabled = True
+        self.legacy_dead_defuser_mask = False  # Diagnostic reproduction only.
         self.allow_bootstrap_retake = training
         self.staging = staging_positions(self.scenario)
         self.search = search
@@ -146,6 +159,11 @@ class ToruV4DefenderController:
                 self.retake[side] = model
 
     def reset_round(self):
+        from toruAI_v4.tv4_retake_coordination import RetakeAssembly
+        from toruAI_v4.tv4_retake_combat import RetakeEncoder, LegacyRetakeEncoder
+        self.assembly = RetakeAssembly(self.scenario)
+        self.retake_encoder = RetakeEncoder(self.scenario)
+        self.legacy_retake_encoder = LegacyRetakeEncoder(self.scenario)
         self.sensor.reset()
         self.history = FeatureHistory(self.scenario)
         self.probabilities = np.asarray([.5, .5], np.float32)
@@ -168,6 +186,8 @@ class ToruV4DefenderController:
         if not setup and not snapshot.is_planted:
             observation = self.history.encode(snapshot, self.previous_rounds)
             self.probabilities = self.analyses[self.opponent].probabilities(observation)
+        elif snapshot.is_planted:
+            self.history.encode(snapshot, self.previous_rounds)
         self.snapshot, self.cache = snapshot, key
         goal_site = (self.scenario.site_of(snapshot.spike_planted) if snapshot.is_planted else
                      ("L", "R")[int(np.argmax(self.probabilities))] if not setup and max(self.probabilities) >= .65 else "watch")
@@ -177,7 +197,18 @@ class ToruV4DefenderController:
             self.goal_cache = assign_goals(snapshot, self.scenario, self.probabilities, self.staging)
             self.goal_key = goal_key
         goals = self.goal_cache
+        if snapshot.is_planted:
+            goals = self.assembly.goals(snapshot)
+            if self.retake_deadline_enabled:
+                goals = self.retake_encoder.roles.goals(snapshot, goals, self.assembly.launched)
         masks = build_masks(snapshot)
+        if snapshot.is_planted and self.legacy_dead_defuser_mask:
+            from dataclasses import replace
+            masks = replace(masks, kind=masks.kind.copy())
+            active = next((a.slot for a in snapshot.allies if a.defuse_progress > 0), None)
+            for a in snapshot.allies:
+                if active not in (None, a.slot):
+                    masks.kind[a.slot, 6] = False
         self.inputs, self.actions, self.plans = {}, {}, {}
         phase = "retake" if snapshot.is_planted else "search"
         model = self.retake if snapshot.is_planted else self.search
@@ -188,7 +219,22 @@ class ToruV4DefenderController:
         for ally in sorted(snapshot.allies, key=lambda a: (a.position, a.ability_name)):
             if not ally.alive:
                 continue
-            inputs = self.encoder.encode(snapshot, ally, goals[ally.slot], self.probabilities, self.history.tracks, masks)
+            encoder = self.retake_encoder if snapshot.is_planted and self.retake_combat_enabled else self.encoder
+            if snapshot.is_planted and self.retake_combat_enabled and not self.retake_deadline_enabled:
+                encoder = self.legacy_retake_encoder
+            inputs = encoder.encode(snapshot, ally, goals[ally.slot], self.probabilities, self.history.tracks, masks)
+            if snapshot.is_planted and not self.assembly.launched and ally.slot in self.assembly.ready:
+                # Wait in the assigned rally area while retaining combat/utility.
+                for index in np.flatnonzero(inputs.mask[:40]):
+                    kind = MOVEMENTS[index // 8]
+                    dr, dc = MOVE_STEPS.get(kind, (0, 0))
+                    p = ally.position[0] + dr, ally.position[1] + dc
+                    if kind != "STAY" and (inputs.distances[p] < 0 or inputs.distances[p] > 2):
+                        inputs.mask[index] = False
+                if inputs.teacher < 40 and not inputs.combat_contact:
+                    stays = [i for i in np.flatnonzero(inputs.mask[:40]) if MOVEMENTS[i // 8] == "STAY"]
+                    if stays:
+                        inputs.teacher = int(min(stays, key=lambda i: inputs.actions[i].facing != inputs.actions[inputs.teacher].facing))
             for action in np.flatnonzero(inputs.mask[:40]):
                 kind = MOVEMENTS[action // 8]
                 dr, dc = MOVE_STEPS.get(kind, (0, 0))

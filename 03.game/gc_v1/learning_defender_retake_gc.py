@@ -38,6 +38,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import (
@@ -312,17 +313,18 @@ class LearningDefenderRetakeGCController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
         self.model_obs_dim = OBS_DIM
         self.model_action_dim = N_ACTIONS
         self.facing_head_enabled = False
         self.model_episode = None
-        self.model = DefenderRetakeDuelingDQN().to(DEVICE)
+        self.model = DefenderRetakeDuelingDQN().to(self.device)
         try:
             checkpoint = torch.load(
-                model_path, map_location=DEVICE, weights_only=False
+                model_path, map_location=self.device, weights_only=False
             )
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             self.model_obs_dim = int(state_dict["feature.0.weight"].shape[1])
@@ -334,7 +336,7 @@ class LearningDefenderRetakeGCController:
                 )
             self.model = DefenderRetakeDuelingDQN(
                 obs_dim=self.model_obs_dim, n_actions=self.model_action_dim
-            ).to(DEVICE)
+            ).to(self.device)
             incompatible = self.model.load_state_dict(state_dict, strict=False)
             missing = [
                 key for key in incompatible.missing_keys
@@ -648,10 +650,10 @@ class LearningDefenderRetakeGCController:
             return None
         with torch.no_grad():
             obs_t = torch.as_tensor(
-                obs[:self.model_obs_dim], dtype=torch.float32, device=DEVICE
+                obs[:self.model_obs_dim], dtype=torch.float32, device=self.device
             ).unsqueeze(0)
             values = self.model.facing_values(
-                obs_t, torch.tensor([action_idx], device=DEVICE)
+                obs_t, torch.tensor([action_idx], device=self.device)
             ).squeeze(0)
         return FACING_DIRS[int(values.argmax().item())]
 
@@ -932,8 +934,8 @@ class LearningDefenderRetakeGCController:
 
         model_obs = obs[:self.model_obs_dim]
         model_mask = mask[:self.model_action_dim]
-        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(model_mask).to(DEVICE)
+        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(model_mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

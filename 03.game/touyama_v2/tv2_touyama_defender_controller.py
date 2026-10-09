@@ -38,13 +38,14 @@ class Tv2TouyamaDefenderController(BaseController):
         search_model_path="touyama_v2/data/defender_search_touyama_data/dqn_defender_search_touyama_best_by_eval.pt",
         retake_model_path="touyama_v2/data/defender_retake_touyama_data/dqn_defender_retake_touyama_best_by_eval.pt",
         greedy=True,
+        device=None,
     ):
         super().__init__()
         self.search_controller = LearningDefenderSearchTouyamaController(
-            model_path=search_model_path, greedy=greedy
+            model_path=search_model_path, greedy=greedy, device=device
         )
         self.retake_controller = LearningDefenderRetakeTouyamaController(
-            model_path=retake_model_path, greedy=greedy
+            model_path=retake_model_path, greedy=greedy, device=device
         )
 
     def _build_or_fallback(self, model_path, param_name):

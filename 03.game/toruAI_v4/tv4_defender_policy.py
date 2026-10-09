@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from frc_v1 import FACING
-from frc_v1.actions import FrcAction, KINDS, MOVE_STEPS, build_masks, validate_action
+from frc_v1.actions import FrcAction, KINDS, MOVE_STEPS, build_masks, validate_action, target_required
 from grid_paths import distance_map
 from toruAI_v4.tv4_observer import facing
 
@@ -39,6 +39,8 @@ class Inputs:
     goal: tuple
     distances: np.ndarray
     teacher: int
+    rotation_confidence: float = 0.
+    combat_contact: bool = False
 
 
 def staging_positions(scenario):
@@ -175,14 +177,37 @@ class PolicyEncoder:
                 mask.append(bool(masks.kind[ally.slot, KINDS.index(kind)] and masks.facing[ally.slot, FACING.index(f)]))
         coordinates = [e[0] for e in known[:5]] + [None] * max(0, 5 - len(known))
         coordinates += [goal, snapshot.spike_planted or snapshot.spike_dropped, origin]
+        if snapshot.is_planted:
+            side = self.scenario.site_of(snapshot.spike_planted)
+            fixed = self.scenario.retake_utility[side].get(ally.ability_name, ())
+            if fixed:
+                points = sorted(fixed, key=lambda p: abs(p[0] - origin[0]) + abs(p[1] - origin[1]))
+                if ally.ability_name in ("FLASH", "RECON"):
+                    from concon_v1.co1_retake_projectiles import projectile_aim
+                    aims = [projectile_aim(self.scenario.grid, origin, p, ally.ability_name) for p in points]
+                    legal_aims = [p for p in aims if p is not None and masks.target[ally.slot, 0, p[0] * w + p[1]]]
+                    if legal_aims:
+                        coordinates[5] = legal_aims[0]
+                else:
+                    coordinates[5] = points[0]
+            else:
+                # Fill unused enemy slots with public site geometry. Damage,
+                # traps and movement skills can learn targets without lineups.
+                cells = sorted(self.scenario.local(snapshot.spike_planted, 4),
+                               key=lambda row: (row[1], row[0]))
+                candidates = [p for p, _ in cells if p != snapshot.spike_planted]
+                geometry_rank = next(i for i, a in enumerate(allies) if a.slot == ally.slot)
+                for index in range(5):
+                    if coordinates[index] is None and candidates:
+                        coordinates[index] = candidates[(snapshot.tick + geometry_rank + index) % len(candidates)]
         for kind in ("ABILITY", "ULTIMATE"):
             for index, pos in enumerate(coordinates):
                 if kind == "ABILITY" and ally.ability_name == "DANCE":
                     recipient = allies[index] if index < len(allies) else None
                     action = FrcAction(kind, direction, ally_slot=recipient.slot if recipient else None)
                 else:
-                    ultimate_no_target = kind == "ULTIMATE" and ally.ultimate_name in ("RAID", "MONITOR", "TUNNEL")
-                    action = FrcAction(kind, direction, None if ultimate_no_target else pos)
+                    no_target = kind == "ULTIMATE" and not target_required(ally.slot, kind, masks)
+                    action = FrcAction(kind, direction, None if no_target else pos)
                 try:
                     validate_action(snapshot, masks, ally.slot, action)
                     legal = pos is not None or (kind == "ABILITY" and ally.ability_name == "DANCE")
@@ -226,15 +251,25 @@ class PolicyEncoder:
                 healing = [i for i in range(5) if mask[40 + i] and allies[i].hp < .6 * allies[i].max_hp]
                 if healing:
                     teacher = 40 + min(healing, key=lambda i: allies[i].hp)
-        return Inputs(observation, mask, tuple(actions), goal, distances, teacher)
+        # Only public, currently observed enemies with a clear line to this
+        # player suppress rotation pressure; a teammate's distant fight does not.
+        combat_contact = any(self.scenario.clear(origin, pos) and pos not in smoke
+                             for pos in current.values())
+        rotation_confidence = float(max(probabilities)) if snapshot.phase != "setup" and not snapshot.is_planted else 0.
+        return Inputs(observation, mask, tuple(actions), goal, distances, teacher,
+                      rotation_confidence, combat_contact)
 
 
-def learn_dqn(model, target, optimizer, replay, rng, updates=100, batch_size=64):
+def learn_dqn(model, target, optimizer, replay, rng, updates=100, batch_size=64, demonstration_weight=0.,
+              mission_feature_index=None, mission_sample_fraction=.5, demonstration_kind_weight=0.):
     if len(replay) < batch_size:
         return None
     losses = []
+    mission = [t for t in replay if t[0][mission_feature_index] > .5] if mission_feature_index is not None else []
     for _ in range(updates):
-        batch = [replay[int(rng.integers(len(replay)))] for _ in range(batch_size)]
+        mission_count = int(batch_size*mission_sample_fraction) if mission else 0
+        batch = ([mission[int(rng.integers(len(mission)))] for _ in range(mission_count)] +
+                 [replay[int(rng.integers(len(replay)))] for _ in range(batch_size-mission_count)])
         obs = torch.tensor(np.stack([t[0] for t in batch]), dtype=torch.float32)
         actions = torch.tensor([t[1] for t in batch], dtype=torch.long)
         rewards = torch.tensor([t[2] for t in batch], dtype=torch.float32)
@@ -247,6 +282,18 @@ def learn_dqn(model, target, optimizer, replay, rng, updates=100, batch_size=64)
             expected = rewards + GAMMA * (1 - done) * future
         values = model(obs).gather(1, actions[:, None]).squeeze(1)
         loss = nn.functional.smooth_l1_loss(values, expected)
+        if demonstration_weight or demonstration_kind_weight:
+            teachers = torch.tensor([t[7] for t in batch], dtype=torch.long)
+            teacher_masks = torch.tensor(np.stack([t[8] for t in batch]), dtype=torch.bool)
+            demonstrated = model(obs).masked_fill(~teacher_masks, -1e9)
+            loss += demonstration_weight * nn.functional.cross_entropy(demonstrated, teachers)
+            if demonstration_kind_weight:
+                # Teach move/wait/utility/defuse first. Eight facing variants
+                # must not dilute the distinction between waiting and advancing.
+                groups = torch.stack([demonstrated[:, i:i+8].max(1).values for i in range(0, 56, 8)]
+                                     + [demonstrated[:, 56], demonstrated[:, 57]], dim=1)
+                kinds = torch.where(teachers < 56, teachers//8, teachers-49)
+                loss += demonstration_kind_weight * nn.functional.cross_entropy(groups, kinds)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), 5.)

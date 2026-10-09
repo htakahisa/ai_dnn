@@ -57,6 +57,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import (
@@ -383,13 +384,14 @@ class LearningAttackerGuardGCController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = AttackerGuardDuelingDQN().to(DEVICE)
+        self.model = AttackerGuardDuelingDQN().to(self.device)
         self.positioning_version = 0
         try:
-            checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
             self.positioning_version = int(checkpoint.get("positioning_version", 0))
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             action_dim = int(checkpoint.get("n_actions", LEGACY_ACTION_DIM))
@@ -408,7 +410,7 @@ class LearningAttackerGuardGCController:
                 )
             self.model = AttackerGuardDuelingDQN(
                 obs_dim=obs_dim, action_dim=action_dim
-            ).to(DEVICE)
+            ).to(self.device)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningAttackerGuardGCController] loaded: {model_path}")
@@ -819,7 +821,7 @@ class LearningAttackerGuardGCController:
 
     # -- メイン ----------------------------------------------------------
     def _select_action(self, obs, mask):
-        device = DEVICE
+        device = self.device
         with torch.no_grad():
             q = self.model(torch.from_numpy(obs).float().unsqueeze(0).to(device)).squeeze(0)
             q = q.masked_fill(~torch.from_numpy(mask).to(device), -1e9)
@@ -901,7 +903,7 @@ class LearningAttackerGuardGCController:
                 return list(char.pos), ultimate
 
         if self.verbose:
-            device = DEVICE
+            device = self.device
             with torch.no_grad():
                 q_values = self.model(torch.from_numpy(obs).float().unsqueeze(0).to(device)).squeeze(0)
                 q_values = q_values.masked_fill(~torch.from_numpy(mask).to(device), -1e9)

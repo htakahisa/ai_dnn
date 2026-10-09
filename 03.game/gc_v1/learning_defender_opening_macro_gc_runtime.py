@@ -24,6 +24,7 @@ import random
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import RECON_REVEAL_SIZE, RECON_SPEED_CELLS_PER_TICK
@@ -122,6 +123,7 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
         greedy: bool = True,
         verbose: bool = False,
         seed: int | None = None,
+        device=None,
     ):
         # Base class owns pattern parsing, BFS movement and emergency cancellation.
         super().__init__(
@@ -129,9 +131,10 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
             greedy=greedy,
             verbose=verbose,
             seed=seed,
+            device=device,
         )
 
-        self.device = torch.device("cpu")
+        self.device = resolve_inference_device(device, default="cpu")
         self.runtime_greedy = bool(greedy)
         self.rng = random.Random(seed)
 

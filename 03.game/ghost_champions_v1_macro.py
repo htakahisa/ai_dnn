@@ -53,10 +53,11 @@ except Exception as exc:
 class GhostChampionsV1AttackerController(_BaseGCAttacker):
     """Existing Carry/Escort/Retrieve/Guard + Attacker Macro coordinator."""
 
-    def __init__(self, greedy=True):
-        super().__init__(greedy=greedy)
+    def __init__(self, greedy=True, *, device=None):
+        super().__init__(greedy=greedy, device=device)
         try:
             self.macro_controller = LearningAttackerMacroGCController(
+                device=device,
                 greedy=True,
                 verbose=True,
             )
@@ -233,8 +234,8 @@ class GhostChampionsV1AttackerController(_BaseGCAttacker):
 class GhostChampionsV1DefenderController(_BaseGCDefender):
     """Setup -> Opening -> existing Search/Retake hierarchy."""
 
-    def __init__(self, greedy=True):
-        super().__init__(greedy=greedy)
+    def __init__(self, greedy=True, *, device=None):
+        super().__init__(greedy=greedy, device=device)
 
         self.game = None
         self.setup_planner = None
@@ -251,6 +252,7 @@ class GhostChampionsV1DefenderController(_BaseGCDefender):
         else:
             try:
                 self.setup_planner = LearningDefenderSetupGCRuntime(
+                    device=device,
                     verbose=True,
                 )
             except Exception as exc:
@@ -272,6 +274,7 @@ class GhostChampionsV1DefenderController(_BaseGCDefender):
             try:
                 self.opening_macro_controller = (
                     LearningDefenderOpeningMacroGCRuntime(
+                        device=device,
                         greedy=True,
                         verbose=True,
                     )

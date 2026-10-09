@@ -2,7 +2,7 @@
 
 from concon_v1.co1_guard_common import aim_alignment
 
-REWARD_VERSION = 3
+REWARD_VERSION = 4
 GAMMA = 0.99
 DEATH_PENALTY = 0.5
 ROUND_REWARD = 10.0
@@ -13,6 +13,31 @@ def decision_reward(action, context, position, facing, new_distance):
     stationary = position == context["position"]
     operation = action // 8
     reward = -0.005
+    if context.get("impaired", False):
+        # Emergency defuse contest takes precedence over cover shaping. Never
+        # make surviving elsewhere a substitute for winning the round.
+        urgent = (context["tap"] and context.get("tap_remaining", 10)
+                  <= max(0, context["distance_spike"]) + 2)
+        if urgent:
+            if context["fireable"] and not context.get("blind", False):
+                reward += 0.04 * aim_alignment(position, context["target"], facing)
+            elif context["distance_spike"] >= 0 and new_distance >= 0:
+                reward += 0.025 * (context["distance_spike"] - GAMMA * new_distance)
+            if stationary and operation < 5 and context["can_move"] and not context["fireable"]:
+                reward -= 0.03
+            return reward
+        exposures = context["exposures"]
+        before, after = exposures[context["position"]], exposures.get(position, exposures[context["position"]])
+        reward += 0.06 * (before - GAMMA * after)
+        if stationary and operation < 5 and before > 0 and context["can_move"]:
+            reward -= 0.04
+        # Casts remain alternatives to running. Self smoke is not rewarded as
+        # cover when recon reveals the actor; real damage/outcomes decide use.
+        if operation >= 5:
+            reward -= 0.01
+        if context["tap"] and context["distance_spike"] >= 0 and new_distance >= 0:
+            reward += 0.025 * (context["distance_spike"] - GAMMA * new_distance)
+        return reward
     if context["fireable"]:
         # Signed, continuous alignment distinguishes head-on aim from a
         # sideways shot and penalizes facing away. Moving still costs accuracy.

@@ -17,7 +17,7 @@ from concon_v1.co1_attacker_sighting import facing_towards
 from concon_v1.co1_attacker_scenarios import GAME_MAZE_STR
 from concon_v1.co1_guard_rewards import GAMMA, DEATH_PENALTY, ROUND_REWARD, decision_reward
 
-START_MODES = ("hold", "transition", "smoke")
+START_MODES = ("hold", "transition", "smoke", "pressure", "pressure_tap")
 
 
 class TrainingGuardController(ConconGuardController):
@@ -32,7 +32,8 @@ class TrainingGuardController(ConconGuardController):
         if self.env.forced_actions is not None:
             requested = self.env.forced_actions[index]
             action = int(requested) if mask[int(requested)] else WAIT_ACTION
-        elif (not (self.model.navigation and not context["tap"] and not context["fireable"] and not mask[40:].any())
+        elif (not (self.model.navigation and not context["tap"] and not context["fireable"]
+                   and not context.get("impaired", False) and not mask[40:].any())
               and self.env.action_rng.random() < self.env.epsilon):
             action = int(self.env.action_rng.choice(valid.tolist()))
         else:
@@ -68,14 +69,16 @@ class GuardBattleEnv:
         return self.rng.sample(candidates, count)
 
     @_run_from_project_root
-    def reset(self, start_mode=None, attacker_count=None, defender_count=None):
+    def reset(self, start_mode=None, attacker_count=None, defender_count=None, opponent=None):
         from controllers import DefaultDefenderController
         from party_presets import get_preset
         with contextlib.redirect_stdout(io.StringIO()):
             from run_game import VisualFPSBattle, _build_team_ai
         from team_ai import DualRoleTeamAI
         from game_core import SPIKE_DETONATION_TICKS
-        self.opponent = self.rng.choice(self.opponents)
+        if opponent is not None and opponent not in self.opponents:
+            raise ValueError("opponent must belong to the configured guard opponents")
+        self.opponent = opponent if opponent is not None else self.rng.choice(self.opponents)
         self.start_mode = start_mode or self.rng.choice(self.start_modes)
         if self.start_mode not in START_MODES:
             raise ValueError("unknown guard start mode")
@@ -98,7 +101,9 @@ class GuardBattleEnv:
                         "quiet_decisions": 0, "quiet_utility_decisions": 0, "quiet_at_goal_decisions": 0,
                         "quiet_leave_goal_decisions": 0, "quiet_reversals": 0,
                         "quiet_bad_facing_decisions": 0, "fireable_decisions": 0,
-                        "moving_fire_decisions": 0, "bad_fire_facing_decisions": 0}
+                        "moving_fire_decisions": 0, "bad_fire_facing_decisions": 0,
+                        "impaired_decisions": 0, "exposed_wait_decisions": 0,
+                        "cover_moves": 0, "counter_utility_decisions": 0}
         attacker_ai = DualRoleTeamAI(
             "ConCon guard", attacker_factory=lambda: TrainingGuardController(self),
             defender_factory=DefaultDefenderController, use_iq_perception=True,
@@ -162,7 +167,7 @@ class GuardBattleEnv:
             aim = self.scenario.facing_points[self.controller.assignments[char.name]]
             char.facing = facing_towards(position, aim) or "N"
         occupied = set(attacker_positions)
-        if self.start_mode == "smoke":
+        if self.start_mode in ("smoke", "pressure_tap"):
             # The defender model continues normally after this already-started tap.
             nearby = [(int(r), int(c)) for r, c in zip(*np.where(distance_map >= 0))
                       if max(abs(r - self.game.planted_pos[0]), abs(c - self.game.planted_pos[1])) <= 1
@@ -190,6 +195,29 @@ class GuardBattleEnv:
                 char.pos = list(position)
         for char in alive_defenders:
             char.facing = facing_towards(char.pos, self.game.planted_pos) or "S"
+        if self.start_mode in ("pressure", "pressure_tap"):
+            # Snapshots after enemy utility, with normal IQ and opponent AI
+            # thereafter. Include recon through smoke, where smoke is no cover.
+            if self.start_mode == "pressure":
+                positions = self._sample_cells(distance_map, 2, 8, len(alive_defenders), occupied)
+                for char, position in zip(alive_defenders, positions):
+                    char.pos = list(position)
+                    char.facing = facing_towards(position, self.game.planted_pos) or "S"
+            else:
+                alive_defenders[0].defuse_timer = self.rng.randint(1, 4)
+            perception = self.game.current_attacker_team_ai.perception_engine
+            perception.clear_cache()
+            # Preserve only what the team could perceive before the effect.
+            for viewer in alive_attackers:
+                view = perception.build_game_view(viewer=viewer, game=self.game)
+                for enemy in view.chars:
+                    if (enemy.team != viewer.team and enemy.is_alive and enemy.position_known
+                            and 0 <= enemy.pos[0] < self.game.height
+                            and 0 <= enemy.pos[1] < self.game.width):
+                        self.controller.sightings[enemy.name] = (tuple(enemy.pos), self.game.battle_tick)
+            effect = self.rng.choice(("blind_remaining", "reveal_remaining", "electric_remaining"))
+            for char in alive_attackers:
+                setattr(char, effect, self.rng.randint(2, 4))
         self.game.current_attacker_team_ai.perception_engine.clear_cache()
         self.game.current_defender_team_ai.perception_engine.clear_cache()
         return {"opponent": self.opponent, "start_mode": self.start_mode,
@@ -236,17 +264,25 @@ class GuardBattleEnv:
             position = tuple(char.pos)
             operation = action // 8
             facing = char.facing  # engine can override facing after incoming fire
-            goal = context["spike"] if context["tap"] and not context["fireable"] else context["goal"]
-            previous_distance = context["distance_spike"] if context["tap"] and not context["fireable"] else context["distance_goal"]
+            approach = context["tap"] and (not context["fireable"] or context.get("impaired", False))
+            goal = context["spike"] if approach else context["goal"]
+            previous_distance = context["distance_spike"] if approach else context["distance_goal"]
             new_distance = int(bfs_distance_map(self.scenario.grid, goal)[position])
             reward = decision_reward(action, context, position, facing, new_distance)
             reward += min(team_damage / 1000, 0.1)
             stationary = position == context["position"]
-            if context["tap"] and not context["fireable"]:
+            if context.get("impaired", False):
+                self.metrics["impaired_decisions"] += 1
+                self.metrics["counter_utility_decisions"] += int(operation >= 5)
+                before = context["exposures"][context["position"]]
+                after = context["exposures"].get(position, before)
+                self.metrics["cover_moves"] += int(not stationary and after < before)
+                self.metrics["exposed_wait_decisions"] += int(stationary and operation < 5 and before > 0)
+            elif context["tap"] and not context["fireable"]:
                 self.metrics["blocked_tap_decisions"] += 1
                 if not stationary and new_distance < previous_distance:
                     self.metrics["approach_decisions"] += 1
-                if operation >= 5 and (operation - 5) // 3 == 2:
+                if 88 <= action < 112:
                     self.metrics["recon_on_tap"] += 1
             elif context["fireable"]:
                 self.metrics["fireable_decisions"] += 1
@@ -271,7 +307,7 @@ class GuardBattleEnv:
                         and previous[1] == position and previous[2] == context["position"]):
                     self.metrics["quiet_reversals"] += 1
                 self._quiet_history[index] = (context["tick"], context["position"], position)
-            if context["tap"] or context["fireable"]:
+            if context["tap"] or context["fireable"] or context.get("impaired", False):
                 self._quiet_history.pop(index, None)
             rewards[index] = reward
         # Keep the final decision of a dead actor until the round ends. Otherwise

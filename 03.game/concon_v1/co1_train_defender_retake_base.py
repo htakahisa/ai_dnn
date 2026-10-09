@@ -20,10 +20,19 @@ from concon_v1.co1_retake_config import COORDINATION_VERSION
 DEFAULT_FOUNDATION_STEPS = 250
 DEFAULT_FOUNDATION_TRIALS = 20
 FOUNDATION_LEARNING_RATE = .1
+TRAIN_LEFT_SITE = True  # 左サイトの基礎モデルを学習・保存する。
+TRAIN_RIGHT_SITE = True  # 右サイトの基礎モデルを学習・保存する。
 
 
 def train_foundation(steps=DEFAULT_FOUNDATION_STEPS, trials=DEFAULT_FOUNDATION_TRIALS,
-                     seed=0, save_dir=None, ability_distance=DEFAULT_ABILITY_DISTANCES, device="cpu"):
+                     seed=0, save_dir=None, ability_distance=DEFAULT_ABILITY_DISTANCES, device="cpu",
+                     sites=None):
+    if sites is None:
+        sites = tuple(site for site, enabled in (("L", TRAIN_LEFT_SITE), ("R", TRAIN_RIGHT_SITE)) if enabled)
+    else:
+        sites = tuple(sites)
+    if not sites or len(set(sites)) != len(sites) or any(site not in ("L", "R") for site in sites):
+        raise ValueError("enable at least one distinct training site: L or R")
     if steps < 1 or trials < 5:
         raise ValueError("positive foundation steps and at least five evaluation trials are required")
     distances = normalize_site_ability_distances(ability_distance)
@@ -33,7 +42,8 @@ def train_foundation(steps=DEFAULT_FOUNDATION_STEPS, trials=DEFAULT_FOUNDATION_T
     for slot, cells in starts.items():
         print(f"  search post {slot}: start_cells={cells}", flush=True)
     models, checkpoints = {}, {}
-    for site in ("L", "R"):
+    print(f"  training_sites={','.join(sites)}", flush=True)
+    for site in sites:
         scenario = get_scenario(site)
         model = RetakeDQN(scenario, foundation=True).to(device)
         result = learn_foundation(model, scenario, steps, FOUNDATION_LEARNING_RATE, seed)

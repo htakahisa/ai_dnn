@@ -37,6 +37,7 @@ import random
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from pathlib import Path
@@ -519,7 +520,8 @@ class LearningDefenderSearchGCController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
         # Runtime game/view reference used for active smoke information.
@@ -528,10 +530,10 @@ class LearningDefenderSearchGCController:
         self.legacy_model = False
         self.facing_head_enabled = False
         self.model_episode = None
-        self.model = DefenderSearchDuelingDQN().to(DEVICE)
+        self.model = DefenderSearchDuelingDQN().to(self.device)
         try:
             checkpoint = torch.load(
-                model_path, map_location=DEVICE, weights_only=False
+                model_path, map_location=self.device, weights_only=False
             )
             state_dict = checkpoint.get("model_state_dict", checkpoint)
             old_obs = int(state_dict["feature.0.weight"].shape[1])
@@ -550,7 +552,7 @@ class LearningDefenderSearchGCController:
             self.legacy_model = self.model_mode == "flat"
             self.model = DefenderSearchDuelingDQN(
                 obs_dim=old_obs, action_dim=old_actions
-            ).to(DEVICE)
+            ).to(self.device)
             incompatible = self.model.load_state_dict(state_dict, strict=False)
             missing = [
                 key for key in incompatible.missing_keys
@@ -991,10 +993,10 @@ class LearningDefenderSearchGCController:
             return None
         with torch.no_grad():
             obs_t = torch.as_tensor(
-                obs, dtype=torch.float32, device=DEVICE
+                obs, dtype=torch.float32, device=self.device
             ).unsqueeze(0)
             values = self.model.facing_values(
-                obs_t, torch.tensor([action_idx], device=DEVICE)
+                obs_t, torch.tensor([action_idx], device=self.device)
             ).squeeze(0)
         return FACING_DIRS[int(values.argmax().item())]
 
@@ -1158,8 +1160,8 @@ class LearningDefenderSearchGCController:
         else:
             model_obs = obs
             model_mask = mask
-        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(model_mask).to(DEVICE)
+        obs_t = torch.from_numpy(model_obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(model_mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

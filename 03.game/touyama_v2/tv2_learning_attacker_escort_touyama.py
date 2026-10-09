@@ -58,6 +58,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 from tv2_character_stats_touyama import (
     CHARACTER_TABLE as TOUYAMA_STATS_TABLE,
@@ -260,7 +261,7 @@ class LearningAttackerEscortTouyamaController:
         max_ticks=100,
         verbose=False,
     ):
-        self.device = device or torch.device("cpu")
+        self.device = resolve_inference_device(device, default="cpu")
         self.greedy = greedy
         self.epsilon = epsilon
         self.max_ticks = max_ticks

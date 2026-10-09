@@ -6,6 +6,17 @@ from contextvars import ContextVar
 _cpu_match = ContextVar("cpu_match_inference", default=False)
 
 
+def resolve_inference_device(device=None, *, default="auto"):
+    """Explicit device wins; otherwise use the match override and model default."""
+    import torch
+    selected = device
+    if selected is None or str(selected) == "auto":
+        selected = match_inference_device() or default
+    if str(selected) == "auto":
+        selected = "cuda" if torch.cuda.is_available() else "cpu"
+    return torch.device(selected)
+
+
 def match_inference_device():
     """Override tiny per-character models only inside a headless match."""
     return "cpu" if _cpu_match.get() else None

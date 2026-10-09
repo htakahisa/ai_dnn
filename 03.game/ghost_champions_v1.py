@@ -46,13 +46,13 @@ def _load(module_name, class_names, model_paths, greedy=True, **controller_kwarg
         return None
 
 class GhostChampionsV1AttackerController(BaseController):
-    def __init__(self, greedy=True):
+    def __init__(self, greedy=True, *, device=None):
         super().__init__()
         self.fallback = DefaultAttackerController()
-        self.carry = _load("learning_attacker_carry_gc",("LearningAttackerCarryGCController","LearningAttackerCarryController"),CARRY,greedy)
-        self.escort = _load("learning_attacker_escort_gc",("LearningAttackerEscortGCController","LearningAttackerEscortController"),ESCORT,greedy)
-        self.retrieve = _load("learning_attacker_retrieve_gc",("LearningAttackerRetrieveGCController","LearningAttackerRetrieveTouyamaController"),RETRIEVE,greedy)
-        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=True)
+        self.carry = _load("learning_attacker_carry_gc",("LearningAttackerCarryGCController","LearningAttackerCarryController"),CARRY,greedy,device=device)
+        self.escort = _load("learning_attacker_escort_gc",("LearningAttackerEscortGCController","LearningAttackerEscortController"),ESCORT,greedy,device=device)
+        self.retrieve = _load("learning_attacker_retrieve_gc",("LearningAttackerRetrieveGCController","LearningAttackerRetrieveTouyamaController"),RETRIEVE,greedy,device=device)
+        self.guard = _load("learning_attacker_guard_gc",("LearningAttackerGuardGCController","LearningAttackerGuardTouyamaController"),GUARD,greedy,verbose=True,device=device)
         self.site_ability_used_by_team = False
         self.spike_recovery = SpikeRecoveryCoordinator()
         print(f"[GC v1][A] carry={self.carry is not None} escort={self.escort is not None} retrieve={self.retrieve is not None} guard={self.guard is not None}")
@@ -299,11 +299,11 @@ class GhostChampionsV1AttackerController(BaseController):
         return self._cover_result(char, game_state, result)
 
 class GhostChampionsV1DefenderController(BaseController):
-    def __init__(self, greedy=True):
+    def __init__(self, greedy=True, *, device=None):
         super().__init__()
         self.fallback = DefaultDefenderController()
-        self.search = _load("learning_defender_search_gc",("LearningDefenderSearchGCController","LearningDefenderSearchTouyamaController"),SEARCH,greedy)
-        self.retake = _load("learning_defender_retake_gc",("LearningDefenderRetakeGCController","LearningDefenderRetakeTouyamaController"),RETAKE,greedy)
+        self.search = _load("learning_defender_search_gc",("LearningDefenderSearchGCController","LearningDefenderSearchTouyamaController"),SEARCH,greedy,device=device)
+        self.retake = _load("learning_defender_retake_gc",("LearningDefenderRetakeGCController","LearningDefenderRetakeTouyamaController"),RETAKE,greedy,device=device)
         print(f"[GC v1][D] search={self.search is not None} retake={self.retake is not None}")
 
     def set_game(self, game):

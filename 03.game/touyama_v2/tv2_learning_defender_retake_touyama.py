@@ -37,6 +37,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from game_core import (
@@ -306,12 +307,13 @@ class LearningDefenderRetakeTouyamaController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DefenderRetakeDuelingDQN().to(DEVICE)
+        self.model = DefenderRetakeDuelingDQN().to(self.device)
         try:
-            state_dict = torch.load(model_path, map_location=DEVICE)
+            state_dict = torch.load(model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
             if verbose:
                 print(f"[LearningDefenderRetakeTouyamaController] loaded: {model_path}")
@@ -560,8 +562,8 @@ class LearningDefenderRetakeTouyamaController:
         obs = self._build_observation(char, game_state, chars, enemies, visible_enemies, detonate_timer)
         mask = self._action_mask(char, grid, chars)
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

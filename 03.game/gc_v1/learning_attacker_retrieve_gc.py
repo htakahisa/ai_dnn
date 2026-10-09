@@ -75,6 +75,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from character_stats_gc import (
@@ -211,13 +212,14 @@ class LearningAttackerRetrieveGCController:
     char オブジェクトをそのまま利用する(本ファイル側では再計算しない)。
     """
 
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, greedy=True, verbose=False, *, device=None):
+        self.device = resolve_inference_device(device)
         self.greedy = greedy
         self.verbose = verbose
-        self.model = DuelingQNet(OBS_DIM, N_ACTIONS).to(DEVICE)
+        self.model = DuelingQNet(OBS_DIM, N_ACTIONS).to(self.device)
 
         try:
-            checkpoint = torch.load(model_path, map_location=DEVICE)
+            checkpoint = torch.load(model_path, map_location=self.device)
             if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
                 state_dict = checkpoint["model_state_dict"]
                 if verbose:
@@ -388,8 +390,8 @@ class LearningAttackerRetrieveGCController:
         obs = self._build_observation(char, grid, chars, visible_enemies)
         mask = self._action_mask(char, grid, chars)
 
-        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(DEVICE)
-        mask_t = torch.from_numpy(mask).to(DEVICE)
+        obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        mask_t = torch.from_numpy(mask).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(obs_t).squeeze(0).clone()

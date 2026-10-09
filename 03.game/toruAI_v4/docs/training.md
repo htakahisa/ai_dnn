@@ -1,29 +1,31 @@
-# Toru AI v4：攻撃先予測の学習
+# Toru AI v4：defender の敵プラント先予測の学習
 
 実際のゲームエンジンで **12ラウンド×相手AI別** に対戦し、プラント前の公開観測から最終プラント先を予測します。学習するのはdefender側の予測モデルです。attackerのモデルは更新しません。
 
 ## 実行
 
+通常は `MAX_PARALLEL_WORKERS = 3` で相手AIごとに並列学習する。ログは `logs/defender_analysis/<相手AI>/training.log`。並列数と実行方法は [並列学習](parallel_training.md) を参照する。
+
 作業ディレクトリは `03.game/toruAI_v4/`。既存のゲームが動くPython環境（PyTorch、NumPyなど）を使用します。
 
-学習セット数は`tv4_train_analysis.py`上部の`TRAINING_SETS`で指定します。`--sets`を省略するとこの定数を使います。1セットは12ラウンドで、相手AIごとの**追加**セット数です。通常は定数を編集し、動作確認など一時的に変えるときだけ`--sets`を指定します。実際のセット数・開始位置・終了予定はログとlatestの`training_plan`に保存し、bestの評価結果にも今回の予定セット数と採用時のセット番号を残します。
+学習セット数は`tv4_train_defender_analysis.py`上部の`TRAINING_SETS`で指定します。`--sets`を省略するとこの定数を使います。1セットは12ラウンドで、相手AIごとの**追加**セット数です。通常は定数を編集し、動作確認など一時的に変えるときだけ`--sets`を指定します。実際のセット数・開始位置・終了予定はログとlatestの`training_plan`に保存し、bestの評価結果にも今回の予定セット数と採用時のセット番号を残します。
 
 ```powershell
 Set-Location C:\Users\ronet\MyProject\git\AI_dnn\03.game\toruAI_v4
 
 # 最初の確認：相手1種類、12ラウンド学習＋12ラウンド評価
-python tv4_train_analysis.py --opponents fnatic_v3 --sets 1 --eval-every 1
+python tv4_train_defender_analysis.py --opponents fnatic_v3 --sets 1 --eval-every 1
 
 # 6種類すべて：TRAINING_SETS回学習。10セットごとと最終セットに3seed×12ラウンドで評価
-python tv4_train_analysis.py
+python tv4_train_defender_analysis.py
 
 # 相手を指定
-python tv4_train_analysis.py --opponents gc_v1 touyama_v2
+python tv4_train_defender_analysis.py --opponents gc_v1 touyama_v2
 ```
 
 相手のキー：`gc_v1`, `touyama_v2`, `omoko_v1`, `fnatic_v3`, `frc_v1`, `toru_ai_v3`。
 最後のキーは既存ゲームの `toru_ai_v3.1`（attacker_v3）を呼びます。
-各AIは既存のパーティープリセットで出撃し、defenderは既定でGorigonsです。変更は `--defender-preset "プリセット名"`。敵味方で選手名が重複する編成は拒否します。
+相手AIは既存のパーティープリセットで出撃します。toru AI v4 の味方は固定しません。冒頭の `TRAINING_PRESETS` の複数編成をセットごとに切り替え、`EVALUATION_PRESETS` の学習に使わない編成で評価します。敵と選手名が重なる編成はその対戦から除外します。通常設定は `TARGET_OPPONENTS`、`RANDOM_SEED`、`RESUME_TRAINING`、`DATA_DIRECTORY`、`LOG_DIRECTORY` 等の名前付き定数を編集します。単一編成の旧モデルは、複数編成で学習済みとは扱いません。
 
 初回は未学習で左右50%です。確率80%以上が3tick続くまで `WAIT` になります。少量の動作確認だけで精度が保証されるものではありません。
 
@@ -46,10 +48,10 @@ python tv4_train_analysis.py --opponents gc_v1 touyama_v2
 
 ```powershell
 # 覗く／隠れる周期を調整
-python tv4_train_analysis.py --opponents fnatic_v3 --sets 20 --peek-ticks 3 --hide-ticks 5
+python tv4_train_defender_analysis.py --opponents fnatic_v3 --sets 20 --peek-ticks 3 --hide-ticks 5
 
 # 全マップ・5人の配置・特徴の名前を表示（対戦しない）
-python tv4_train_analysis.py --describe
+python tv4_train_defender_analysis.py --describe
 ```
 
 通常の射撃・命中・移動回避補正は既存エンジンのままです。敵の位置が射撃処理後に公開されるため、最初の接触時は被弾し得ます。射撃を禁止したり、移動中の回避率を追加したりしません。
@@ -76,18 +78,18 @@ python tv4_train_analysis.py --describe
 
 **既定のログはコンソールと同じ内容の`training.log`だけです。** 正解率・平均残りtick・味方／相手の平均生存人数・平均撃破と損失・保存先はここに表示します。CSV・JSON・別のサマリ・エンジンの大量のデバッグ出力は保存しません。
 
-保存先は固定の`logs/analysis/training.log`です。**起動時に上書き**し、前回分は追記しません。日付・セッションIDのディレクトリは作りません。詳細モードの出力も`logs/analysis/`以下です。`--log-dir`で変更できます。
+保存先は固定の`logs/defender_analysis/training.log`です。**起動時に上書き**し、前回分は追記しません。日付・セッションIDのディレクトリは作りません。詳細モードの出力も`logs/defender_analysis/`以下です。`--log-dir`で変更できます。
 
 詳細を保存したい場合だけ`--detailed-logs`を指定します。`--trace-ticks`は詳細ログも有効にしてtickごとの記録を追加します。以下の一覧でtraining.log以外のログファイルは詳細モードの出力です。
 
 ```text
 toruAI_v4/
-  data/analysis/<相手AI>/
+  data/defender_analysis/<相手AI>/
     latest.pt          # 重み・optimizer・replay・完了セット数・設定
     set_000001.npz     # プラントしたラウンドの特徴、ラベル、round番号、plant tick
   data/best/<相手AI>/
-    analysis_best.pt   # 解析モデル。改善時だけ上書き
-  logs/analysis/                     # 既定はtraining.logのみ。起動時に上書き
+    defender_analysis_best.pt   # 解析モデル。改善時だけ上書き
+  logs/defender_analysis/                     # 既定はtraining.logのみ。起動時に上書き
     training.log
     # 以下は--detailed-logs指定時のみ
     rounds.csv         # Excelで見られるラウンド別結果（UTF-8 BOM）
@@ -125,30 +127,30 @@ toruAI_v4/
 
 ## 再開と評価だけの実行
 
-**実戦で使う解析重みは`data/best/<相手AI>/analysis_best.pt`、学習の再開は`data/analysis/<相手AI>/latest.pt`です。** 学習データは`data/defender/`と並ぶ`data/analysis/`以下に保存し、日付ディレクトリは作りません。`--data-dir`で変更できます。旧日付ディレクトリを`--resume`に指定することもできますが、新しく保存するチェックポイントと学習データは`data/analysis/`へ出力します。既存ファイルの移動・改名は行いません。移行完了までは旧`best.pt`を読み込み、bestの比較にも使います。新しい`analysis_best.pt`が存在すればそちらを優先します。bestには推論用の重み、入力定義、設定、採用時の評価結果を保存します。
+**実戦で使う解析重みは`data/best/<相手AI>/defender_analysis_best.pt`、学習の再開は`data/defender_analysis/<相手AI>/latest.pt`です。** 学習データは`data/defender/`と並ぶ`data/defender_analysis/`以下に保存し、日付ディレクトリは作りません。`--data-dir`で変更できます。旧日付ディレクトリを`--resume`に指定することもできますが、新しく保存するチェックポイントと学習データは`data/defender_analysis/`へ出力します。今回の整理で、既存の`data/analysis/`・`logs/analysis/`をそれぞれ`defender_analysis/`へ移動し、`analysis_best.pt`を`defender_analysis_best.pt`へ改名しました。保存内容は変更していません。別の保存先に残る旧モデルも、新名 → `analysis_best.pt` → `best.pt`の順で読み込み、bestの比較にも使います。bestには推論用の重み、入力定義、設定、採用時の評価結果を保存します。
 
 bestの選択は、①未判断を含む全プラント試合での正解割合、②判断した試合の正解率、③正解時の平均残りtickの順に比較します。同点・悪化なら既存bestを維持します。生存人数は固定された移動ルールにも依存するため、この予測モデルの選択基準には入れずサマリで確認します。
 
-設定・入力定義の違うbestは比較せずエラーにします。評価seed群と集計結果はbestに保存します。以前の1seed方式のbestがある場合、次の学習で初めて比較するときにその重みを同じ3seedで再評価します。その結果は実行中にキャッシュするため、同じbestを毎回再評価しません。candidateが改善しなければ既存bestファイルは変更しません。
+再開時は設定・入力定義が一致することを要求します。新規学習で条件が変わった場合は、旧条件のbestの評価値を比較に使わず、今回の初回評価を基準に同じ保存先を更新します。同じ入力・条件の旧評価方式だけを引き継ぐ場合は、既存bestを共通seed群・編成で再評価します。評価seedと実際の編成の組、集計結果、採用セットをbestに保存します。同じ条件で同点・悪化なら既存bestを維持します。
 
 評価設定は`EVALUATION_INTERVAL = 10`と`EVALUATION_SEED_COUNT = 3`で変更できます。一時的な変更は`--eval-every`と`--eval-seeds`です。途中の評価頻度に関係なく最終セットでは必ず評価するため、`--eval-every 0`は途中評価のみ無効にします。旧bestの再評価が必要な初回比較だけ、追加で36ラウンドかかります。
 
-`--eval-only`は最新モデルを別seedの12ラウンドずつ評価し、best・latest・学習用replayを更新しません。既存bestは今のまま採用できます。コード変更だけでは既存モデルを評価し直したり上書きしたりしません。
+`--eval-only`は再開先のlatestを共通seed群・評価編成で一度評価し、best・latest・学習用replayを更新しません。`--sets`を評価回数には使いません。コード変更だけでは既存モデルを評価し直したり上書きしたりしません。
 
 ```powershell
 # 起動時に表示されるdataのパスを指定。追加でTRAINING_SETS回学習
-python tv4_train_analysis.py --resume data/analysis
+python tv4_train_defender_analysis.py --resume data/defender_analysis
 
 # fnaticだけ学習した実行を再開する場合は、同じ相手を指定
-python tv4_train_analysis.py --resume data/analysis --opponents fnatic_v3
+python tv4_train_defender_analysis.py --resume data/defender_analysis --opponents fnatic_v3
 
-# 重みを変えず、別seedの12ラウンドを10セット評価
-python tv4_train_analysis.py --resume data/analysis --opponents fnatic_v3 --eval-only --sets 10
+# 一時的な評価のみ。EVALUATION_SEED_COUNTで指定した共通seed群を評価
+python tv4_train_defender_analysis.py --resume data/defender_analysis --opponents fnatic_v3 --eval-only
 ```
 
 Ctrl+Cで終了した場合、完了済みの12ラウンドのチェックポイントから再開できます。途中セットは学習済みとして数えません。既存AIのロード警告やフォールバックを確認する場合は`--detailed-logs`でengine.logを保存してください。
 
-スパイク落下の特徴を加えた入力形式はversion 2です。追加前の動作確認用version 1モデルは再開できません。新しい実行を開始してください。
+現在の入力形式はversion 3です。味方の能力種類、射撃性能、最大HP、残り使用回数、ultの情報を公開snapshotから入力します。選手名は特徴に使いません。version 1/2や固定編成のモデルは今回の条件で再開せず、`RESUME_TRAINING = False`で新規学習してください。analysisを更新したら、依存するsearchとretake収集・学習も順に更新します。
 
 ## テスト
 

@@ -1,4 +1,4 @@
-"""Train one site/pattern guard model using the common postplant environment."""
+"""Train the selected guard sites using balanced postplant match schedules."""
 
 import argparse
 from collections import Counter, deque
@@ -23,14 +23,58 @@ from concon_v1.evaluate_co1_guard import evaluate, print_summary
 from concon_v1.co1_guard_rewards import REWARD_VERSION
 from concon_v1.co1_guard_positioning import POSITIONING_VERSION, DEFAULT_POSITIONING_STEPS, prepare_positioning
 
-DEFAULT_EPISODES = 1000
+DEFAULT_EPISODES = 2000
+TRAIN_LEFT_SITE = True  # Train and save the left site.
+TRAIN_RIGHT_SITE = True  # Train and save the right site.
+DEFAULT_SEED = 0
+DEFAULT_SAVE_DIR = None  # None uses the selected site's data/guard_*_data/.
+DEFAULT_RESUME = None  # e.g. Path("data/guard_L_data/co1_guard_L_best.pt")
+DEFAULT_RESUME_BY_MAP = {"L": None, "R": None}  # Resume paths when training both sites.
+DEFAULT_OPPONENTS = tuple(OPPONENTS)  # All six AIs.
+DEFAULT_START_MODES = None  # None uses the curriculum, including utility pressure.
+DEFAULT_DEVICE = "cpu"
+DEFAULT_POSITIONING_ONLY = False
+DEFAULT_RETRAIN_POSITIONING = False
 CHECKPOINT_INTERVAL = 50
-DEFAULT_EVAL_ROUNDS = 36
+DEFAULT_EVAL_ROUNDS = 100
 TARGET_UPDATE_INTERVAL = 1000
 EPSILON_START = 1.0
 EPSILON_END = 0.05
 EPSILON_DECAY_RATIO = 0.7
 FORCE_SAVE = False  # Keep numbered debug models at every checkpoint interval.
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RESET = "\033[0m"
+
+
+class BalancedTrainingSchedule:
+    """Visit every opponent once per shuffled cycle, balancing modes per team/phase."""
+
+    def __init__(self, opponents, seed):
+        self.opponents = tuple(dict.fromkeys(opponents))
+        if not self.opponents:
+            raise ValueError("select at least one opponent")
+        self.rng = random.Random(seed)
+        self.pending = []
+        self.modes = None
+        self.mode_counts = {}
+
+    def next_match(self, modes):
+        modes = tuple(dict.fromkeys(modes))
+        if not modes:
+            raise ValueError("select at least one start mode")
+        if modes != self.modes:
+            self.modes = modes
+            self.mode_counts = {team: Counter() for team in self.opponents}
+        if not self.pending:
+            self.pending = list(self.opponents)
+            self.rng.shuffle(self.pending)
+        opponent = self.pending.pop()
+        counts = self.mode_counts[opponent]
+        minimum = min(counts[mode] for mode in modes)
+        mode = self.rng.choice([mode for mode in modes if counts[mode] == minimum])
+        counts[mode] += 1
+        return opponent, mode
 
 
 def epsilon_by_episode(episode, total=DEFAULT_EPISODES):
@@ -114,7 +158,7 @@ def qualifies_as_best(candidate, current):
 def print_training_summary(records, map_name, opponents, recent):
     """Report the completed checkpoint interval, grouped by opponent team."""
     rate = sum(record["winner"] == "A" for record in recent) / len(recent)
-    print(f"episodes={records[0]['episode']}-{records[-1]['episode']} map={map_name} "
+    print(f"{GREEN}episodes={records[0]['episode']}-{records[-1]['episode']}{RESET} map={map_name} "
           f"rounds={len(records)} epsilon={records[-1]['epsilon']:.3f} "
           f"win100={rate:.3f}", flush=True)
     for opponent in opponents:
@@ -128,7 +172,7 @@ def print_training_summary(records, map_name, opponents, recent):
         avg_ticks = sum(record["ticks"] for record in team_records) / rounds
         modes = dict(Counter(record["start_mode"] for record in team_records))
         endings = dict(Counter(record["end_reason"] for record in team_records))
-        print(f"  {opponent}: guard wins {wins}/{rounds} ({wins / rounds:.1%}) "
+        print(f"  {YELLOW}{opponent}: guard wins {wins}/{rounds} ({wins / rounds:.1%}){RESET} "
               f"avg_reward={avg_reward:.2f} avg_ticks={avg_ticks:.2f} "
               f"modes={modes} end={endings}", flush=True)
 
@@ -145,7 +189,7 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
     if positioning_steps < 0:
         raise ValueError("positioning steps cannot be negative")
     scenario = get_scenario(map_name)
-    opponents = tuple(opponents or OPPONENTS)
+    opponents = tuple(dict.fromkeys(opponents or OPPONENTS))
     if any(opponent not in OPPONENTS for opponent in opponents):
         raise ValueError("unknown guard opponent")
     if start_modes is not None and (not start_modes or any(mode not in START_MODES for mode in start_modes)):
@@ -179,6 +223,7 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
     model.positioning_training = positioning_training
     model.battle_training_run = {"start_episode": first_episode,
                                 "requested_additional_episodes": 0 if positioning_only else episodes,
+                                "opponent_schedule": "shuffled_balanced_cycles",
                                 "seed": seed, "eval_rounds_per_opponent": eval_rounds}
     print(f"Positioning: {positioning_training} validation={positioning}", flush=True)
     print(f"Battle training: additional_episodes={0 if positioning_only else episodes} "
@@ -193,8 +238,10 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
     # Float16 storage bounds memory; the model and optimization use float32.
     replay = deque(maxlen=5000)
     env = GuardBattleEnv(seed, opponents, model=model, map_name=scenario)
+    schedule = BalancedTrainingSchedule(opponents, seed + 104729)
     recent = deque(maxlen=100)
     interval_records = []
+    opponent_counts = Counter()
     best_evaluation = None
     global_step = 0
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -221,7 +268,8 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
     for offset in range(1, episodes + 1):
         episode = first_episode + offset
         modes = tuple(start_modes) if start_modes is not None else curriculum_modes(offset, episodes)
-        initial = env.reset(start_mode=env.rng.choice(modes))
+        opponent, start_mode = schedule.next_match(modes)
+        initial = env.reset(start_mode=start_mode, opponent=opponent)
         epsilon = epsilon_by_episode(offset, episodes)
         reward_sum = 0.0
         while not env.done:
@@ -234,6 +282,7 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
             if global_step % TARGET_UPDATE_INTERVAL == 0:
                 target.load_state_dict(model.state_dict())
         result = env.result()
+        opponent_counts[result["opponent"]] += 1
         recent.append(result)
         record = {"episode": episode, "epsilon": epsilon, "reward": reward_sum,
                   "initial": initial, **result}
@@ -242,6 +291,8 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
         if offset % checkpoint_interval == 0 or offset == episodes:
             print_training_summary(interval_records, scenario.map_name, opponents, recent)
+            print(f"  training rounds this run by team: "
+                  f"{dict((team, opponent_counts[team]) for team in opponents)}", flush=True)
             interval_records.clear()
             checkpoint = make_checkpoint(model, scenario, episode, opponents, START_MODES)
             checkpoint["epsilon"] = epsilon
@@ -275,36 +326,53 @@ def train(episodes=DEFAULT_EPISODES, map_name="L", seed=0, save_dir=None, oppone
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default="L")
+    parser.add_argument("-map", "--map", dest="map_name", choices=SCENARIOS, default=None,
+                        help="temporarily train a single site, overriding the site flags")
+    parser.add_argument("--train-left-site", action=argparse.BooleanOptionalAction, default=TRAIN_LEFT_SITE)
+    parser.add_argument("--train-right-site", action=argparse.BooleanOptionalAction, default=TRAIN_RIGHT_SITE)
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES,
                         help="additional battle episodes in this run (also when resuming)")
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--save-dir", type=Path)
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--save-dir", type=Path, default=DEFAULT_SAVE_DIR)
     parser.add_argument("--eval-rounds", type=int, default=DEFAULT_EVAL_ROUNDS)
     parser.add_argument("--checkpoint-interval", type=int, default=CHECKPOINT_INTERVAL)
     parser.add_argument("--force-save", action=argparse.BooleanOptionalAction, default=FORCE_SAVE,
                         help="keep numbered debug models at every checkpoint interval regardless of epsilon")
-    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=list(OPPONENTS))
-    parser.add_argument("--start-modes", nargs="+", choices=START_MODES,
+    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=list(DEFAULT_OPPONENTS))
+    parser.add_argument("--start-modes", nargs="+", choices=START_MODES, default=DEFAULT_START_MODES,
                         help="override the default hold -> transition -> smoke curriculum")
-    parser.add_argument("--resume", type=Path, help="warm start weights; replay and optimizer start fresh")
-    parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
-    parser.add_argument("--positioning-only", action="store_true",
+    parser.add_argument("--resume", type=Path, default=DEFAULT_RESUME, help="warm start weights; replay and optimizer start fresh")
+    parser.add_argument("--device", default=DEFAULT_DEVICE, choices=("cpu", "cuda"))
+    parser.add_argument("--positioning-only", action="store_true", default=DEFAULT_POSITIONING_ONLY,
                         help="learn/validate positioning and evaluate/save it without battle optimization")
     parser.add_argument("--positioning-steps", type=int, default=DEFAULT_POSITIONING_STEPS,
                         help="supervised updates if positioning needs training; 0 requires a validated resume")
-    parser.add_argument("--retrain-positioning", action="store_true",
+    parser.add_argument("--retrain-positioning", action="store_true", default=DEFAULT_RETRAIN_POSITIONING,
                         help="train positioning again even if resumed positioning passes validation")
     args = parser.parse_args()
     if min(args.episodes, args.eval_rounds, args.checkpoint_interval) < 1:
         parser.error("episode/evaluation/checkpoint counts must be positive")
     if args.positioning_steps < 0:
         parser.error("positioning steps cannot be negative")
+    maps = ((args.map_name,) if args.map_name is not None else
+            tuple(site for site, enabled in (("L", args.train_left_site), ("R", args.train_right_site)) if enabled))
+    if not maps:
+        parser.error("enable TRAIN_LEFT_SITE or TRAIN_RIGHT_SITE")
+    if len(maps) > 1 and args.resume is not None:
+        parser.error("for both sites set DEFAULT_RESUME_BY_MAP; a single --resume cannot serve L and R")
+    resumes = {site: args.resume if args.resume is not None else DEFAULT_RESUME_BY_MAP[site] for site in maps}
+    if args.positioning_only and any(path is None for path in resumes.values()):
+        parser.error("positioning-only requires a resume checkpoint for every selected site")
     torch.set_num_threads(1)
-    train(args.episodes, args.map_name, args.seed, args.save_dir, args.opponents,
-          args.eval_rounds, args.checkpoint_interval, args.start_modes, args.resume, args.device,
-          args.positioning_only, args.positioning_steps, args.retrain_positioning,
-          force_save=args.force_save)
+    for site in maps:
+        save_dir = args.save_dir
+        if len(maps) > 1 and save_dir is not None:
+            save_dir = save_dir / f"guard_{site}_data"
+        print(f"Training guard site={site} episodes={args.episodes}", flush=True)
+        train(args.episodes, site, args.seed, save_dir, args.opponents,
+              args.eval_rounds, args.checkpoint_interval, args.start_modes, resumes[site], args.device,
+              args.positioning_only, args.positioning_steps, args.retrain_positioning,
+              force_save=args.force_save)
 
 
 if __name__ == "__main__":

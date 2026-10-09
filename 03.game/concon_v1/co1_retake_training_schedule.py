@@ -4,7 +4,10 @@ from collections import Counter
 
 
 def iter_training_windows(env, opponents, episodes, checkpoint_interval, rng, epsilon_fn,
-                          on_step=None, on_progress=None):
+                          on_step=None, on_progress=None, sites=("L", "R")):
+    sites = tuple(sites)
+    if not sites or len(set(sites)) != len(sites) or any(site not in ("L", "R") for site in sites):
+        raise ValueError("select distinct training sites: L or R")
     if not opponents or min(episodes, checkpoint_interval) < 1:
         raise ValueError("a nonempty roster and positive episode counts are required")
     if episodes % len(opponents) or checkpoint_interval % len(opponents):
@@ -33,11 +36,11 @@ def iter_training_windows(env, opponents, episodes, checkpoint_interval, rng, ep
                 transitions, _, _ = env.step(epsilon)
                 ticks += 1
                 if on_step is not None:
-                    on_step(transitions, ticks)
+                    on_step([(site, transition) for site, transition in transitions if site in sites], ticks)
             raw = env.result()
             site = raw.get("site")
             retake = bool(raw.get("planted") and not raw.get("excluded_from_retake", False))
-            counted = retake and site in site_completed
+            counted = retake and site in sites
             if counted:
                 counts[opponent] += 1
                 completed += 1
@@ -46,7 +49,8 @@ def iter_training_windows(env, opponents, episodes, checkpoint_interval, rng, ep
             team_attempts[opponent] += 1
             record = dict(raw, round=attempts, episode=completed,
                           training_episodes=dict(site_completed), epsilon=epsilon,
-                          counted_episode=counted, excluded_training_quota=False)
+                          counted_episode=counted, excluded_training_quota=False,
+                          excluded_unselected_site=retake and site not in sites)
             if not counted and team_attempts[opponent] % 10 == 0 and on_progress is not None:
                 on_progress(opponent, counts[opponent], quotas[opponent], team_attempts[opponent])
             boundary = end if all(counts[team] >= required for team, required in quotas.items()) else None

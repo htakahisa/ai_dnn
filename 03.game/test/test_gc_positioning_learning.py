@@ -155,6 +155,7 @@ class PositioningLearningTests(unittest.TestCase):
 
     def test_modern_guard_action_is_not_overwritten_by_route_or_spike_watch(self):
         ctrl = runtime.LearningAttackerGuardGCController.__new__(runtime.LearningAttackerGuardGCController)
+        ctrl.device = torch.device("cpu")
         ctrl.positioning_version = 1
         ctrl.verbose = False
         for name in ("_ensure_spike_dist_map", "_ensure_guard_assignment", "_maybe_advance_tick",
