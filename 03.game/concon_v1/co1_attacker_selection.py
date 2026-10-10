@@ -4,7 +4,14 @@ import json
 import math
 from pathlib import Path
 
-from concon_v1.co1_retake_models import OPPONENT_NAMES
+OPPONENT_NAMES = {
+    "Ghost Champions v1": "gc_v1",
+    "FRC v1": "frc_v1",
+    "Fnatic v3": "fnatic_v3",
+    "Touyama Gaming v2": "touyama_v2",
+    "Omoko Gaming v1": "omoko_v1",
+    "Toru AI v3.1": "toru_ai_v3.1",
+}
 
 SELECTION_PATH = Path(__file__).resolve().parent / "data" / "attacker_selection" / "opponent_routes.json"
 METRIC = "plant_or_preplant_defender_elimination"

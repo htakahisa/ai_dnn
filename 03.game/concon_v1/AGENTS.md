@@ -52,9 +52,9 @@ defender の場合は以下のphase があります
 ## 相手AIに応じたモデル運用方針（2026-10-08更新）
 
 ### 全体方針
-- concon_v1 は、相手AIごとの得意・不得意を評価し、相手に適したモデルを使用する。相手専用モデルを用意するフェーズでは、専用モデルがない場合に共通モデルを使用する。
+- attacker は相手AIごとの得意・不得意を評価し、既存A1〜A4を選択する。defender retake は全相手で共通の左右モデルを使用する。
 - 対象の相手AIは `gc_v1`、`frc_v1`、`fnatic_v3`、`touyama_v2`、`omoko_v1`、`toru_ai_v3.1` の6種類とする。
-- 現在は attacker の carry（A1〜A4）の相手別選択と、defender retake の相手専用モデルを整備する。attacker guard と defender search の改善は、その後に進める。
+- attacker の carry（A1〜A4）の相手別選択を維持する。defender retake の相手専用モデル・読込・学習処理は2026-10-10のユーザー指示で削除する。
 
 ### attacker：A1〜A4を相手別に振り分ける
 - attacker は既存のA1〜A4を各相手AIに対して評価し、「プラント成功、またはプラント前のdefender全滅」の成功率が80%以上のモデルを、その相手への採用候補とする。この指標は carry のモデル選択用であり、attacker 全体の目的は設置後の guard を含めた試合の勝利とする。
@@ -64,14 +64,12 @@ defender の場合は以下のphase があります
 - 現在の対応は既存のA1〜A4の振り分けであり、相手別に再学習した attacker 専用モデルの作成は今後の拡張とする。
 - 評価スクリプトは `evaluate_co1_attacker_selection.py`、評価結果・選択設定は `data/attacker_selection/opponent_routes.json` とする。実行する作業ディレクトリは `concon_v1/`、コマンドは `python evaluate_co1_attacker_selection.py --rounds 36`。詳細は [docs/attacker_selection.md](docs/attacker_selection.md) に記載する。
 
-### defender retake：相手専用モデルと共通モデルを使い分ける
-- defender retake は、既存の学習済みの左・右サイトモデルを共通モデルとして維持し、対象の相手AIごとに専用の左・右サイトモデルを学習・保存する。
-- 相手専用モデルの初回学習は共通の `best` を初期重みとし、保存済みの設置直後データから、指定した相手のデータだけを使用する。専用モデルは共通モデルと別の保存先で管理する。
-- 学習スクリプトは `co1_train_defender_retake.py` とする。相手指定なしの実行は共通モデルの学習、`--opponent <相手AI名>` または相手を1つ指定した `--opponents` は専用モデルの学習とする。専用モデルの継続学習は、同じ相手を指定して `--resume` を付ける。
-- 専用モデルは `data/defender_retake_opponents/<相手AI名>/`、専用ログは `logs/defender_retake_opponents/<相手AI名>/` に配置する。
-- 通常対戦では、defender は現在の攻撃側AIに対応する専用 `best` をサイトごとに優先して使用する。その相手・サイトの専用モデルがない場合や、相手が対象外の場合は、既存の共通 `best` を使用する。
+### defender retake：共通の左右モデルを使用する
+- defender retake は既存の共通の左・右サイトモデルだけを使用する。相手専用モデルの保存・読込・学習処理を追加しない。
+- 学習スクリプトは `co1_train_defender_retake.py`。設定は冒頭の名前付き定数で変更し、通常はオプションなしで実行する。`--opponents` は学習相手の一時上書きであり、1相手でも保存するモデルは共通モデル。
+- 保存先は従来の `data/defender_retake_L_data/` と `data/defender_retake_R_data/`。通常対戦は相手にかかわらず各サイトの共通bestを読む。
 - retake の評価・モデル選択はスパイクの解除率を基準とする。carry 用の80%条件は retake には適用しない。
-- 学習を実行する作業ディレクトリは `concon_v1/`。例：`python co1_train_defender_retake.py --opponent gc_v1`。学習はユーザーが手動で実行する。詳細は [docs/defender_retake_training.md](docs/defender_retake_training.md) に記載する。
+- 学習を実行する作業ディレクトリは `concon_v1/`。通常コマンドは `python co1_train_defender_retake.py`。学習はユーザーが手動で実行する。詳細は [docs/defender_retake_training.md](docs/defender_retake_training.md) に記載する。
 
 ## attacker の目的について -重大事項-
 1. attacker の目的は勝利すること。スパイクの設置から起爆までガードすること。および、敵の全滅による勝利が目的。スパイクの設置のみ、敵の全滅の、を目的にしたコードの修正を禁止する。敵全滅が確率的に高いのであれば敵全滅を目指し、スパイク設置の可能性が高いならスパイク設置を目指すものとする。
