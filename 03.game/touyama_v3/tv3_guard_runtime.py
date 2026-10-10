@@ -45,11 +45,16 @@ def load_sources(scenario, opponents, best_dir, analysis_dir):
         encoder = AttackerEncoder(scenario)
         if plant_state["opponent"] != opponent or analysis_state["opponent"] != opponent:
             raise ValueError(f"Source opponent mismatch: {opponent}")
-        if plant_state["schema"] != policy_schema(scenario) or json.dumps(analysis_state["schema"], sort_keys=True) != json.dumps(encoder.schema(), sort_keys=True):
-            raise ValueError(f"Source map/schema mismatch: {opponent}")
+        version = plant_state["schema"].get("version")
+        if version not in (9, 10):
+            raise ValueError(f"Source plant version unsupported: {opponent}, version={version}")
+        if json.dumps(plant_state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
+            raise ValueError(f"Source plant map/schema mismatch: {opponent}, version={version}")
+        if json.dumps(analysis_state["schema"], sort_keys=True) != json.dumps(encoder.schema(), sort_keys=True):
+            raise ValueError(f"Source analysis map/schema mismatch: {opponent}")
         if plant_state["analysis_hash"] != analysis_hash:
             raise ValueError(f"Plant and analysis best do not match: {opponent}")
-        plant = PlantDQN()
+        plant = PlantDQN(version)
         plant.load_state_dict(plant_state["model"])
         analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names))
         analysis.load_state_dict(analysis_state["model"])

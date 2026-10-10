@@ -104,6 +104,10 @@ def load_dataset(directory, opponents, scenario):
         grouped[opponent] = [row for row in rows if row["opponent"] == opponent]
         if len(grouped[opponent]) < summary["target_per_ai"]:
             raise ValueError(f"Missing guard cases: {opponent}")
+        if "target_per_site" in summary:
+            for site in summary["sites"]:
+                if sum(row["site"] == site for row in grouped[opponent]) < summary["target_per_site"]:
+                    raise ValueError(f"Missing guard cases: {opponent}/{site}")
         paths = manifest["source_paths"][opponent]
         source = load_sources(scenario, (opponent,), Path(paths["plant"]).parents[1], Path(paths["analysis"]).parents[1])[opponent]
         if not source["fixed_roster_training"]:

@@ -1505,28 +1505,28 @@
   ],
   "source_hashes": {
     "gc_v1": {
-      "plant": "3774db6b4c2e1ba2dc55329570c177d06dc6908ea8dc3ae057ed646eb0c97b09",
-      "analysis": "60401dcdc2d1990400d98492cac38bd258a682a6cf1d6da65b3256632f686d54"
+      "plant": "d689fd3a47200612ee098a29155e822be859cdc7f2742a7c8dc4da53e4235b01",
+      "analysis": "7c98b3014b1f1a328c93671d013fccea2e70f530264c870c40580ad974181f33"
     },
     "concon_v1": {
-      "plant": "906682f48c8c0cb5ee8910e8ff7726898157dca6a2d1441911a032368b549f88",
-      "analysis": "41680d61453e986daa760327b8b19f20c82cc29de3757fcac4b5e797e6f94652"
+      "plant": "f69e19c7c27dfba8499ed78373ee7b5d0110e671a6f8f672596473d50b2deb4e",
+      "analysis": "dffa366622ad78e15e24795e4db2074388f29e880c02f9f7e17281c480ac9bdc"
     },
     "omoko_v1": {
-      "plant": "f874c1cd058419dffb61638c079bfd4454b52f4c651bd6dee843741744943f8a",
-      "analysis": "15c5d375ff36c0370c994c5c00c500f7e53d89d789298089b03eb0da40ff53dc"
+      "plant": "5d913027f560aa0b9ffe2d281f594e9eb45b046a9d761504273c6d574c2dbf3f",
+      "analysis": "46d40614e7f1da5c59fedca7b9448cfa77348ae6b793c6944e59d9826b40acc8"
     },
     "fnatic_v3": {
-      "plant": "f50aa186b26f25fce40dbaddbb4b97d2e9d8b04e5c2177d5cf5a4878a8092e6f",
-      "analysis": "8e520089cf4a3df88a8b41522b9931b352728835a5ece3023f9935da6f5ecec2"
+      "plant": "106aded8ea93769386044b224177c4a0dd85f31d888120edda196f814bbc61e5",
+      "analysis": "14d45a3a0f655fb64826147373d9d5248eb0dd393d5809a12f74f3492533e8f7"
     },
     "frc_v1": {
-      "plant": "b4f6ed281ea0a1d6210ea238cb774bfe1f984911e00779d8f72743d91b83f19b",
-      "analysis": "ca4445ad82a8f885c11f627ea5f1206d4fe9ea26cfab41beade66bec429e355d"
+      "plant": "d1812e666afac4f992ed8102e1fe7c6f1433ebcffb16cb0254c8ce0a0fc5333c",
+      "analysis": "0f2641b1036339a1a17d8366a71541c650dc9194d5b4ab1a9347551beeb79e69"
     },
     "toru_ai_v4": {
-      "plant": "491d625255ec6dbff25ae3692489ba9ce07a24e65c36f4d29809846a6961c29a",
-      "analysis": "e8591de3be4ce441f3b13b61ce11874d39810e438647d6f54f95ecad805942c6"
+      "plant": "9f3b909eaa4710088cf5e39f5b71bea1534a02ebdb9867c8ebb6718c0c7c2fbe",
+      "analysis": "07d4df1843401f7149bd459782e3ec5ac80b3a08852ac967d493399364228671"
     }
   },
   "source_paths": {
@@ -1576,5 +1576,10 @@
     ]
   },
   "capture_boundary": "end_of_first_plant_tick_before_guard_actions",
-  "site_selection": "actual_analysis_plant_no_balancing"
+  "sites": [
+    "L",
+    "R"
+  ],
+  "site_selection": "targeted",
+  "sampling_version": "site_curriculum_v1"
 }

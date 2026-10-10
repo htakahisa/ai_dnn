@@ -138,6 +138,36 @@ class FireSupportTests(unittest.TestCase):
         self.assertTrue(result.mask[result.teacher])
         self.assertTrue(any(result.mask[:8]))  # Waiting remains a learned alternative.
 
+    def test_game_sources_use_saved_plant_version_and_reject_incompatible_dependencies(self):
+        import torch
+        from touyama_v3.tv3_guard_runtime import load_sources
+        from touyama_v3.tv3_learn_attacker_analysis import AttackerEncoder, AttackerAnalysisModel
+        encoder = AttackerEncoder(self.game)
+        analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(self.game.names))
+        analysis_state = {'schema': encoder.schema(), 'opponent': 'fnatic_v3',
+                          'model': analysis.state_dict(), 'trained_rounds': 1, 'completed_sets': 1}
+        for version in (9, 10):
+            with self.subTest(version=version):
+                plant = PlantDQN(version)
+                plant_state = {'schema': policy_schema(self.game, version), 'opponent': 'fnatic_v3',
+                               'analysis_hash': 'analysis-hash', 'model': plant.state_dict(),
+                               'config': {}, 'completed_sets': 1}
+                def read(path):
+                    return (analysis_state, 'analysis-hash') if path.name == 'attacker_analysis_best.pt' else (plant_state, 'plant-hash')
+                with patch('touyama_v3.tv3_guard_runtime.read_checkpoint', side_effect=read), \
+                     patch('touyama_v3.tv3_guard_runtime.source_presets', return_value=(('Touyama Gaming',), ('Touyama Gaming',))):
+                    loaded = load_sources(self.game, ('fnatic_v3',), 'unused', 'unused')['fnatic_v3']['plant']
+                    self.assertEqual(loaded.execution_version, version)
+                    x = torch.zeros((1, plant_state['schema']['obs_dim']))
+                    torch.testing.assert_close(plant(x), loaded(x), rtol=0, atol=0)
+                    plant_state['analysis_hash'] = 'different'
+                    with self.assertRaisesRegex(ValueError, 'Plant and analysis best'):
+                        load_sources(self.game, ('fnatic_v3',), 'unused', 'unused')
+                    plant_state['analysis_hash'] = 'analysis-hash'
+                    plant_state['schema']['scenario'] = 'different'
+                    with self.assertRaisesRegex(ValueError, 'Source plant map/schema'):
+                        load_sources(self.game, ('fnatic_v3',), 'unused', 'unused')
+
 
 if __name__=='__main__':
     unittest.main()

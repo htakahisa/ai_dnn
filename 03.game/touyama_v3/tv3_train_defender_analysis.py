@@ -34,12 +34,13 @@ from touyama_v3.tv3_attacker_rosters import eligible_attacker_presets
 TRAINING_SETS = 30
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 EVALUATION_INTERVAL = 10
+RESUME_TRAINING = False
+
 EVALUATION_SEED_COUNT = 3  # 各seedで12ラウンド。合計36ラウンド。
 TRAINING_PRESETS = ("Touyama Gaming",)
 EVALUATION_PRESETS = ("Touyama Gaming",)
 TARGET_OPPONENTS = tuple(OPPONENTS)
 RANDOM_SEED = 42
-RESUME_TRAINING = False
 DATA_DIRECTORY = HERE / "data" / "defender_analysis"
 LOG_DIRECTORY = HERE / "logs" / "defender_analysis"
 PREDICTION_THRESHOLD = .8

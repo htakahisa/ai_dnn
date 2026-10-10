@@ -325,8 +325,12 @@ py tv3_train_defender_search.py
 py tv3_collect_defender_retake.py
 py tv3_train_defender_retake.py
 
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_defender_all.ps1
+
 - Attacker
 py tv3_train_attacker_analysis.py
 py tv3_train_attacker_plant.py
 py tv3_collect_attacker_guard.py
 py tv3_train_attacker_guard.py
+
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_attacker_all.ps1

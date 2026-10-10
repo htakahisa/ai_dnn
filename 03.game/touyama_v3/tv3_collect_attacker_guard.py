@@ -1,4 +1,4 @@
-"""Collect 50 real postplant guard start cases per opponent, after plant training."""
+"""Collect real postplant guard start cases per opponent/site after plant training."""
 from pathlib import Path
 import sys
 HERE = Path(__file__).resolve().parent
@@ -6,7 +6,9 @@ if str(HERE.parent) not in sys.path:
     sys.path.insert(0, str(HERE.parent))
 
 # 通常はplant学習完了後、冒頭の定数を確認してオプションなしで実行。
-CASES_PER_AI = 50  # 左右合計。50セットではなく50件。
+CASES_PER_SITE = 50  # 各相手の各サイト。左右なら合計100件。
+TARGET_SITES = ("L", "R")
+SITE_SAMPLING = "targeted"  # 収集時だけ不足側の経路を指定。通常推論・評価は通常選択。
 TARGET_OPPONENTS = ("gc_v1", "concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4")
 PLANT_BEST_DIRECTORY = HERE / "data" / "best"
 ANALYSIS_BEST_DIRECTORY = HERE / "data" / "best"
@@ -14,7 +16,7 @@ OUTPUT_DIRECTORY = HERE / "data" / "attacker_guard_cases"
 LOG_DIRECTORY = HERE / "logs" / "attacker_guard_collection"
 RESUME_COLLECTION = False
 RANDOM_SEED = 42
-MAX_COLLECTION_BLOCKS = 50  # 相手ごとの累計12ラウンドブロック数の上限。
+MAX_COLLECTION_BLOCKS = 200  # 不得意な側の失敗も含む累計上限。左右の目標到達で早期終了。
 MAX_ROUND_STEPS = 400
 TORCH_THREADS = 1
 
@@ -30,6 +32,7 @@ from touyama_v3.tv3_collect_defender_retake import read_rows, append_row, reset_
 from touyama_v3.tv3_scenario import Scenario
 from touyama_v3.tv3_guard_runtime import CASE_FORMAT, load_sources, play_block
 from touyama_v3.tv3_learn_attacker_guard import guard_schema
+from touyama_v3.tv3_collect_site_sampling import SAMPLING_VERSION, pending_site, site_sampling
 
 
 def valid_guard_case(game):
@@ -38,13 +41,13 @@ def valid_guard_case(game):
         raise ValueError("Guard collection requires a surviving attacker")
 
 
-def collection_config(scenario, sources, seed):
+def collection_config(scenario, sources, seed, sites=TARGET_SITES, sampling=SITE_SAMPLING):
     return {"format": CASE_FORMAT, "schema": guard_schema(scenario), "seed": seed,
         "opponents": list(sources), "source_hashes": {k: v["hashes"] for k, v in sources.items()},
         "source_paths": {k: v["paths"] for k, v in sources.items()},
         "presets": {k: v["train_presets"] for k, v in sources.items()},
         "capture_boundary": "end_of_first_plant_tick_before_guard_actions",
-        "site_selection": "actual_analysis_plant_no_balancing"}
+        "sites": list(sites), "site_selection": sampling, "sampling_version": SAMPLING_VERSION}
 
 
 def validate_output(directory, protected=()):
@@ -63,7 +66,7 @@ def collect(args):
     if any(not source["fixed_roster_training"] for source in sources.values()):
         raise ValueError("Touyama guard collection requires the matching Touyama fixed-five plant best.")
     directory = validate_output(args.output_dir, (args.plant_dir, args.analysis_dir))
-    config = collection_config(scenario, sources, args.seed)
+    config = collection_config(scenario, sources, args.seed, args.sites, args.site_sampling)
     config_path = directory / "collection.json"
     if args.resume:
         if json.loads(config_path.read_text(encoding="utf-8")) != config:
@@ -90,34 +93,41 @@ def collect(args):
     for row in rows:
         if Path(row["file"]).name != row["file"] or not (directory / row["file"]).is_file():
             raise ValueError("Invalid or missing guard case file")
-        counts[row["opponent"]] += 1
+        counts[row["opponent"], row["site"]] += 1
         blocks[row["opponent"]] = max(blocks[row["opponent"]], row["block"])
     for row in read_rows(progress):
         blocks[row["opponent"]] = max(blocks[row["opponent"]], row["block"])
     try:
-        logger.info("plant学習完了後の収集。各AI合計%d件、左右の均等化なし。bestファイルのコピーは作りません。", args.cases)
+        logger.info("plant学習完了後の収集。各AI・各サイト%d件、収集サイト選択=%s。", args.cases, args.site_sampling)
         for opponent in args.opponents:
             source = sources[opponent]
             logger.info("[%s] plant採用set=%d analysis採用set=%d", opponent, source["plant_set"], source["analysis_set"])
-            while counts[opponent] < args.cases and blocks[opponent] < args.max_blocks:
+            while pending_site(counts, opponent, args.sites, args.cases) is not None and blocks[opponent] < args.max_blocks:
+                requested_site = pending_site(counts, opponent, args.sites, args.cases) if args.site_sampling == "targeted" else None
                 blocks[opponent] += 1
                 block = blocks[opponent]
                 preset = source["train_presets"][(block - 1) % len(source["train_presets"])]
                 seed = args.seed + args.opponents.index(opponent) * 1_000_000 + block * 100
                 def capture(game, controller, enemy):
-                    if counts[enemy] >= args.cases:
+                    side = scenario.site_of(game.planted_pos)
+                    if side not in args.sites or counts[enemy, side] >= args.cases:
                         return
+                    if requested_site is not None and side != requested_site:
+                        raise ValueError(f"Collection site selector failed: requested={requested_site}, actual={side}")
                     try:
                         valid_guard_case(game)
                     except ValueError:
                         return
-                    number = counts[enemy] + 1
-                    filename = f"{enemy}_{number:06d}.case.gz"
+                    number = counts[enemy, side] + 1
+                    filename = f"{enemy}_{side}_{number:06d}.case.gz"
+                    if (directory / filename).exists():
+                        raise FileExistsError(filename)
                     metadata = {**case_metadata(game, enemy), "format": CASE_FORMAT,
                         "source_hashes": source["hashes"], "preset": preset,
                         "plant_set": source["plant_set"], "analysis_set": source["analysis_set"],
                         "initial_charges": controller.guard.initial_charges,
-                        "block": block, "seed": seed, "round": game.current_round}
+                        "block": block, "seed": seed, "round": game.current_round,
+                        "requested_site": requested_site, "site_sampling": args.site_sampling}
                     for actor, char in zip(metadata["actors"], game.chars):
                         kind = char.ability_name.lower()
                         actor["charges"][kind] = int(getattr(char, kind + "_charges", 0))
@@ -126,15 +136,17 @@ def collect(args):
                            "sha256": hashlib.sha256((directory / filename).read_bytes()).hexdigest()}
                     append_row(index, row)
                     rows.append(row)
-                    counts[enemy] += 1
-                rounds, _ = play_block(opponent, scenario, source, None, seed, capture=capture, max_steps=args.max_round_steps,
-                                       preset_name=preset)
-                append_row(progress, {"opponent": opponent, "block": block, "seed": seed})
-                logger.info("[%s] block=%d 編成=%s 設置=%d/12 有効ケース=%d/%d", opponent, block, preset,
-                            sum(r["planted"] for r in rounds), counts[opponent], args.cases)
-        complete = all(counts[o] >= args.cases for o in args.opponents)
-        summary = {"complete": complete, "target_per_ai": args.cases,
-            "counts": {o: counts[o] for o in args.opponents},
+                    counts[enemy, side] += 1
+                with site_sampling(requested_site):
+                    rounds, _ = play_block(opponent, scenario, source, None, seed, capture=capture, max_steps=args.max_round_steps,
+                                           preset_name=preset)
+                append_row(progress, {"opponent": opponent, "block": block, "seed": seed, "requested_site": requested_site})
+                logger.info("[%s] block=%d 編成=%s 指定=%s 設置=%d/12 有効ケース=%s 各目標=%d", opponent, block, preset,
+                            requested_site, sum(r["planted"] for r in rounds), {s: counts[opponent, s] for s in args.sites}, args.cases)
+        complete = all(counts[o, s] >= args.cases for o in args.opponents for s in args.sites)
+        summary = {"complete": complete, "target_per_ai": args.cases * len(args.sites),
+            "target_per_site": args.cases, "sites": args.sites,
+            "counts": {o: sum(counts[o, s] for s in args.sites) for o in args.opponents},
             "by_site": {o: {s: sum(r["opponent"] == o and r["site"] == s for r in rows) for s in ("L", "R")} for o in args.opponents}}
         _atomic_write(summary_path, lambda p: p.write_text(json.dumps(summary, indent=2), encoding="utf-8"))
         logger.info("収集%s: %s", "完了" if complete else "不足あり（同条件でRESUME_COLLECTION=True）", json.dumps(summary))
@@ -147,7 +159,9 @@ def collect(args):
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--cases", type=int, default=CASES_PER_AI)
+    p.add_argument("--cases", type=int, default=CASES_PER_SITE, help="cases per AI/site")
+    p.add_argument("--sites", nargs="+", choices=("L", "R"), default=list(TARGET_SITES))
+    p.add_argument("--site-sampling", choices=("targeted", "natural"), default=SITE_SAMPLING)
     p.add_argument("--opponents", nargs="+", choices=TARGET_OPPONENTS, default=list(TARGET_OPPONENTS))
     p.add_argument("--plant-dir", type=Path, default=PLANT_BEST_DIRECTORY)
     p.add_argument("--analysis-dir", type=Path, default=ANALYSIS_BEST_DIRECTORY)
@@ -163,7 +177,7 @@ def parser():
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    if min(args.cases, args.max_blocks, args.max_round_steps, args.torch_threads) < 1 or len(args.opponents) != len(set(args.opponents)):
+    if min(args.cases, args.max_blocks, args.max_round_steps, args.torch_threads) < 1 or len(args.opponents) != len(set(args.opponents)) or len(args.sites) != len(set(args.sites)):
         raise ValueError("Positive counts and distinct opponents are required")
     return 0 if collect(args) else 2
 

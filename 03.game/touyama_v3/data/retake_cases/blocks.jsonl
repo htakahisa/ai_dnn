@@ -1,175 +1,91 @@
-{"opponent": "gc_v1", "block": 1, "preset": "Touyama Gaming", "seed": 142, "rounds": 12, "plants": 5}
-{"opponent": "gc_v1", "block": 2, "preset": "Touyama Gaming", "seed": 242, "rounds": 12, "plants": 2}
-{"opponent": "gc_v1", "block": 3, "preset": "Touyama Gaming", "seed": 342, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 4, "preset": "Touyama Gaming", "seed": 442, "rounds": 12, "plants": 6}
-{"opponent": "gc_v1", "block": 5, "preset": "Touyama Gaming", "seed": 542, "rounds": 12, "plants": 2}
-{"opponent": "gc_v1", "block": 6, "preset": "Touyama Gaming", "seed": 642, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 7, "preset": "Touyama Gaming", "seed": 742, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 8, "preset": "Touyama Gaming", "seed": 842, "rounds": 12, "plants": 2}
-{"opponent": "gc_v1", "block": 9, "preset": "Touyama Gaming", "seed": 942, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 10, "preset": "Touyama Gaming", "seed": 1042, "rounds": 12, "plants": 2}
-{"opponent": "gc_v1", "block": 11, "preset": "Touyama Gaming", "seed": 1142, "rounds": 12, "plants": 5}
-{"opponent": "gc_v1", "block": 12, "preset": "Touyama Gaming", "seed": 1242, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 13, "preset": "Touyama Gaming", "seed": 1342, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 14, "preset": "Touyama Gaming", "seed": 1442, "rounds": 12, "plants": 3}
-{"opponent": "gc_v1", "block": 15, "preset": "Touyama Gaming", "seed": 1542, "rounds": 12, "plants": 5}
-{"opponent": "gc_v1", "block": 16, "preset": "Touyama Gaming", "seed": 1642, "rounds": 12, "plants": 5}
-{"opponent": "gc_v1", "block": 17, "preset": "Touyama Gaming", "seed": 1742, "rounds": 12, "plants": 4}
-{"opponent": "gc_v1", "block": 18, "preset": "Touyama Gaming", "seed": 1842, "rounds": 12, "plants": 2}
-{"opponent": "gc_v1", "block": 19, "preset": "Touyama Gaming", "seed": 1942, "rounds": 12, "plants": 5}
-{"opponent": "gc_v1", "block": 20, "preset": "Touyama Gaming", "seed": 2042, "rounds": 12, "plants": 3}
-{"opponent": "concon_v1", "block": 1, "preset": "Touyama Gaming", "seed": 1000142, "rounds": 12, "plants": 8}
-{"opponent": "concon_v1", "block": 2, "preset": "Touyama Gaming", "seed": 1000242, "rounds": 12, "plants": 8}
-{"opponent": "concon_v1", "block": 3, "preset": "Touyama Gaming", "seed": 1000342, "rounds": 12, "plants": 8}
-{"opponent": "concon_v1", "block": 4, "preset": "Touyama Gaming", "seed": 1000442, "rounds": 12, "plants": 7}
-{"opponent": "concon_v1", "block": 5, "preset": "Touyama Gaming", "seed": 1000542, "rounds": 12, "plants": 9}
-{"opponent": "concon_v1", "block": 6, "preset": "Touyama Gaming", "seed": 1000642, "rounds": 12, "plants": 9}
-{"opponent": "concon_v1", "block": 7, "preset": "Touyama Gaming", "seed": 1000742, "rounds": 12, "plants": 8}
-{"opponent": "concon_v1", "block": 8, "preset": "Touyama Gaming", "seed": 1000842, "rounds": 12, "plants": 7}
-{"opponent": "concon_v1", "block": 9, "preset": "Touyama Gaming", "seed": 1000942, "rounds": 12, "plants": 9}
-{"opponent": "concon_v1", "block": 10, "preset": "Touyama Gaming", "seed": 1001042, "rounds": 12, "plants": 11}
-{"opponent": "concon_v1", "block": 11, "preset": "Touyama Gaming", "seed": 1001142, "rounds": 12, "plants": 10}
-{"opponent": "concon_v1", "block": 12, "preset": "Touyama Gaming", "seed": 1001242, "rounds": 12, "plants": 10}
-{"opponent": "concon_v1", "block": 13, "preset": "Touyama Gaming", "seed": 1001342, "rounds": 12, "plants": 10}
-{"opponent": "concon_v1", "block": 14, "preset": "Touyama Gaming", "seed": 1001442, "rounds": 12, "plants": 9}
-{"opponent": "concon_v1", "block": 15, "preset": "Touyama Gaming", "seed": 1001542, "rounds": 12, "plants": 8}
-{"opponent": "omoko_v1", "block": 1, "preset": "Touyama Gaming", "seed": 2000142, "rounds": 12, "plants": 12}
-{"opponent": "omoko_v1", "block": 2, "preset": "Touyama Gaming", "seed": 2000242, "rounds": 12, "plants": 11}
-{"opponent": "omoko_v1", "block": 3, "preset": "Touyama Gaming", "seed": 2000342, "rounds": 12, "plants": 11}
-{"opponent": "omoko_v1", "block": 4, "preset": "Touyama Gaming", "seed": 2000442, "rounds": 12, "plants": 11}
-{"opponent": "omoko_v1", "block": 5, "preset": "Touyama Gaming", "seed": 2000542, "rounds": 12, "plants": 10}
-{"opponent": "omoko_v1", "block": 6, "preset": "Touyama Gaming", "seed": 2000642, "rounds": 12, "plants": 12}
-{"opponent": "omoko_v1", "block": 7, "preset": "Touyama Gaming", "seed": 2000742, "rounds": 12, "plants": 11}
-{"opponent": "omoko_v1", "block": 8, "preset": "Touyama Gaming", "seed": 2000842, "rounds": 12, "plants": 11}
-{"opponent": "omoko_v1", "block": 9, "preset": "Touyama Gaming", "seed": 2000942, "rounds": 12, "plants": 12}
-{"opponent": "omoko_v1", "block": 10, "preset": "Touyama Gaming", "seed": 2001042, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 1, "preset": "Touyama Gaming", "seed": 3000142, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 2, "preset": "Touyama Gaming", "seed": 3000242, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 3, "preset": "Touyama Gaming", "seed": 3000342, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 4, "preset": "Touyama Gaming", "seed": 3000442, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 5, "preset": "Touyama Gaming", "seed": 3000542, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 6, "preset": "Touyama Gaming", "seed": 3000642, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 7, "preset": "Touyama Gaming", "seed": 3000742, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 8, "preset": "Touyama Gaming", "seed": 3000842, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 9, "preset": "Touyama Gaming", "seed": 3000942, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 10, "preset": "Touyama Gaming", "seed": 3001042, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 11, "preset": "Touyama Gaming", "seed": 3001142, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 12, "preset": "Touyama Gaming", "seed": 3001242, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 13, "preset": "Touyama Gaming", "seed": 3001342, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 14, "preset": "Touyama Gaming", "seed": 3001442, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 15, "preset": "Touyama Gaming", "seed": 3001542, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 16, "preset": "Touyama Gaming", "seed": 3001642, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 17, "preset": "Touyama Gaming", "seed": 3001742, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 18, "preset": "Touyama Gaming", "seed": 3001842, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 19, "preset": "Touyama Gaming", "seed": 3001942, "rounds": 12, "plants": 12}
-{"opponent": "fnatic_v3", "block": 20, "preset": "Touyama Gaming", "seed": 3002042, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 1, "preset": "Touyama Gaming", "seed": 4000142, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 2, "preset": "Touyama Gaming", "seed": 4000242, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 3, "preset": "Touyama Gaming", "seed": 4000342, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 4, "preset": "Touyama Gaming", "seed": 4000442, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 5, "preset": "Touyama Gaming", "seed": 4000542, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 6, "preset": "Touyama Gaming", "seed": 4000642, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 7, "preset": "Touyama Gaming", "seed": 4000742, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 8, "preset": "Touyama Gaming", "seed": 4000842, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 9, "preset": "Touyama Gaming", "seed": 4000942, "rounds": 12, "plants": 12}
-{"opponent": "frc_v1", "block": 10, "preset": "Touyama Gaming", "seed": 4001042, "rounds": 12, "plants": 12}
-{"opponent": "toru_ai_v4", "block": 1, "preset": "Touyama Gaming", "seed": 5000142, "rounds": 12, "plants": 1}
-{"opponent": "toru_ai_v4", "block": 2, "preset": "Touyama Gaming", "seed": 5000242, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 3, "preset": "Touyama Gaming", "seed": 5000342, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 4, "preset": "Touyama Gaming", "seed": 5000442, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 5, "preset": "Touyama Gaming", "seed": 5000542, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 6, "preset": "Touyama Gaming", "seed": 5000642, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 7, "preset": "Touyama Gaming", "seed": 5000742, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 8, "preset": "Touyama Gaming", "seed": 5000842, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 9, "preset": "Touyama Gaming", "seed": 5000942, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 10, "preset": "Touyama Gaming", "seed": 5001042, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 11, "preset": "Touyama Gaming", "seed": 5001142, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 12, "preset": "Touyama Gaming", "seed": 5001242, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 13, "preset": "Touyama Gaming", "seed": 5001342, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 14, "preset": "Touyama Gaming", "seed": 5001442, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 15, "preset": "Touyama Gaming", "seed": 5001542, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 16, "preset": "Touyama Gaming", "seed": 5001642, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 17, "preset": "Touyama Gaming", "seed": 5001742, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 18, "preset": "Touyama Gaming", "seed": 5001842, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 19, "preset": "Touyama Gaming", "seed": 5001942, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 20, "preset": "Touyama Gaming", "seed": 5002042, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 21, "preset": "Touyama Gaming", "seed": 5002142, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 22, "preset": "Touyama Gaming", "seed": 5002242, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 23, "preset": "Touyama Gaming", "seed": 5002342, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 24, "preset": "Touyama Gaming", "seed": 5002442, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 25, "preset": "Touyama Gaming", "seed": 5002542, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 26, "preset": "Touyama Gaming", "seed": 5002642, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 27, "preset": "Touyama Gaming", "seed": 5002742, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 28, "preset": "Touyama Gaming", "seed": 5002842, "rounds": 12, "plants": 9}
-{"opponent": "toru_ai_v4", "block": 29, "preset": "Touyama Gaming", "seed": 5002942, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 30, "preset": "Touyama Gaming", "seed": 5003042, "rounds": 12, "plants": 1}
-{"opponent": "toru_ai_v4", "block": 31, "preset": "Touyama Gaming", "seed": 5003142, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 32, "preset": "Touyama Gaming", "seed": 5003242, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 33, "preset": "Touyama Gaming", "seed": 5003342, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 34, "preset": "Touyama Gaming", "seed": 5003442, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 35, "preset": "Touyama Gaming", "seed": 5003542, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 36, "preset": "Touyama Gaming", "seed": 5003642, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 37, "preset": "Touyama Gaming", "seed": 5003742, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 38, "preset": "Touyama Gaming", "seed": 5003842, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 39, "preset": "Touyama Gaming", "seed": 5003942, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 40, "preset": "Touyama Gaming", "seed": 5004042, "rounds": 12, "plants": 2}
-{"opponent": "toru_ai_v4", "block": 41, "preset": "Touyama Gaming", "seed": 5004142, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 42, "preset": "Touyama Gaming", "seed": 5004242, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 43, "preset": "Touyama Gaming", "seed": 5004342, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 44, "preset": "Touyama Gaming", "seed": 5004442, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 45, "preset": "Touyama Gaming", "seed": 5004542, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 46, "preset": "Touyama Gaming", "seed": 5004642, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 47, "preset": "Touyama Gaming", "seed": 5004742, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 48, "preset": "Touyama Gaming", "seed": 5004842, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 49, "preset": "Touyama Gaming", "seed": 5004942, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 50, "preset": "Touyama Gaming", "seed": 5005042, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 51, "preset": "Touyama Gaming", "seed": 5005142, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 52, "preset": "Touyama Gaming", "seed": 5005242, "rounds": 12, "plants": 9}
-{"opponent": "toru_ai_v4", "block": 53, "preset": "Touyama Gaming", "seed": 5005342, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 54, "preset": "Touyama Gaming", "seed": 5005442, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 55, "preset": "Touyama Gaming", "seed": 5005542, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 56, "preset": "Touyama Gaming", "seed": 5005642, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 57, "preset": "Touyama Gaming", "seed": 5005742, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 58, "preset": "Touyama Gaming", "seed": 5005842, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 59, "preset": "Touyama Gaming", "seed": 5005942, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 60, "preset": "Touyama Gaming", "seed": 5006042, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 61, "preset": "Touyama Gaming", "seed": 5006142, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 62, "preset": "Touyama Gaming", "seed": 5006242, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 63, "preset": "Touyama Gaming", "seed": 5006342, "rounds": 12, "plants": 2}
-{"opponent": "toru_ai_v4", "block": 64, "preset": "Touyama Gaming", "seed": 5006442, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 65, "preset": "Touyama Gaming", "seed": 5006542, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 66, "preset": "Touyama Gaming", "seed": 5006642, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 67, "preset": "Touyama Gaming", "seed": 5006742, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 68, "preset": "Touyama Gaming", "seed": 5006842, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 69, "preset": "Touyama Gaming", "seed": 5006942, "rounds": 12, "plants": 2}
-{"opponent": "toru_ai_v4", "block": 70, "preset": "Touyama Gaming", "seed": 5007042, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 71, "preset": "Touyama Gaming", "seed": 5007142, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 72, "preset": "Touyama Gaming", "seed": 5007242, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 73, "preset": "Touyama Gaming", "seed": 5007342, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 74, "preset": "Touyama Gaming", "seed": 5007442, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 75, "preset": "Touyama Gaming", "seed": 5007542, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 76, "preset": "Touyama Gaming", "seed": 5007642, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 77, "preset": "Touyama Gaming", "seed": 5007742, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 78, "preset": "Touyama Gaming", "seed": 5007842, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 79, "preset": "Touyama Gaming", "seed": 5007942, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 80, "preset": "Touyama Gaming", "seed": 5008042, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 81, "preset": "Touyama Gaming", "seed": 5008142, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 82, "preset": "Touyama Gaming", "seed": 5008242, "rounds": 12, "plants": 8}
-{"opponent": "toru_ai_v4", "block": 83, "preset": "Touyama Gaming", "seed": 5008342, "rounds": 12, "plants": 2}
-{"opponent": "toru_ai_v4", "block": 84, "preset": "Touyama Gaming", "seed": 5008442, "rounds": 12, "plants": 7}
-{"opponent": "toru_ai_v4", "block": 85, "preset": "Touyama Gaming", "seed": 5008542, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 86, "preset": "Touyama Gaming", "seed": 5008642, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 87, "preset": "Touyama Gaming", "seed": 5008742, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 88, "preset": "Touyama Gaming", "seed": 5008842, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 89, "preset": "Touyama Gaming", "seed": 5008942, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 90, "preset": "Touyama Gaming", "seed": 5009042, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 91, "preset": "Touyama Gaming", "seed": 5009142, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 92, "preset": "Touyama Gaming", "seed": 5009242, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 93, "preset": "Touyama Gaming", "seed": 5009342, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 94, "preset": "Touyama Gaming", "seed": 5009442, "rounds": 12, "plants": 3}
-{"opponent": "toru_ai_v4", "block": 95, "preset": "Touyama Gaming", "seed": 5009542, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 96, "preset": "Touyama Gaming", "seed": 5009642, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 97, "preset": "Touyama Gaming", "seed": 5009742, "rounds": 12, "plants": 5}
-{"opponent": "toru_ai_v4", "block": 98, "preset": "Touyama Gaming", "seed": 5009842, "rounds": 12, "plants": 6}
-{"opponent": "toru_ai_v4", "block": 99, "preset": "Touyama Gaming", "seed": 5009942, "rounds": 12, "plants": 4}
-{"opponent": "toru_ai_v4", "block": 100, "preset": "Touyama Gaming", "seed": 5010042, "rounds": 12, "plants": 2}
+{"opponent": "gc_v1", "block": 1, "preset": "Touyama Gaming", "seed": 142, "requested_site": "L", "rounds": 12, "plants": 5}
+{"opponent": "gc_v1", "block": 2, "preset": "Touyama Gaming", "seed": 242, "requested_site": "R", "rounds": 12, "plants": 11}
+{"opponent": "gc_v1", "block": 3, "preset": "Touyama Gaming", "seed": 342, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 4, "preset": "Touyama Gaming", "seed": 442, "requested_site": "L", "rounds": 12, "plants": 6}
+{"opponent": "gc_v1", "block": 5, "preset": "Touyama Gaming", "seed": 542, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "gc_v1", "block": 6, "preset": "Touyama Gaming", "seed": 642, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 7, "preset": "Touyama Gaming", "seed": 742, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 8, "preset": "Touyama Gaming", "seed": 842, "requested_site": "L", "rounds": 12, "plants": 2}
+{"opponent": "gc_v1", "block": 9, "preset": "Touyama Gaming", "seed": 942, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 10, "preset": "Touyama Gaming", "seed": 1042, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "gc_v1", "block": 11, "preset": "Touyama Gaming", "seed": 1142, "requested_site": "L", "rounds": 12, "plants": 5}
+{"opponent": "gc_v1", "block": 12, "preset": "Touyama Gaming", "seed": 1242, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 13, "preset": "Touyama Gaming", "seed": 1342, "requested_site": "L", "rounds": 12, "plants": 3}
+{"opponent": "gc_v1", "block": 14, "preset": "Touyama Gaming", "seed": 1442, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "gc_v1", "block": 15, "preset": "Touyama Gaming", "seed": 1542, "requested_site": "L", "rounds": 12, "plants": 5}
+{"opponent": "gc_v1", "block": 16, "preset": "Touyama Gaming", "seed": 1642, "requested_site": "L", "rounds": 12, "plants": 5}
+{"opponent": "gc_v1", "block": 17, "preset": "Touyama Gaming", "seed": 1742, "requested_site": "L", "rounds": 12, "plants": 4}
+{"opponent": "gc_v1", "block": 18, "preset": "Touyama Gaming", "seed": 1842, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "concon_v1", "block": 1, "preset": "Touyama Gaming", "seed": 1000142, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "concon_v1", "block": 2, "preset": "Touyama Gaming", "seed": 1000242, "requested_site": "R", "rounds": 12, "plants": 9}
+{"opponent": "concon_v1", "block": 3, "preset": "Touyama Gaming", "seed": 1000342, "requested_site": "R", "rounds": 12, "plants": 5}
+{"opponent": "concon_v1", "block": 4, "preset": "Touyama Gaming", "seed": 1000442, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "concon_v1", "block": 5, "preset": "Touyama Gaming", "seed": 1000542, "requested_site": "R", "rounds": 12, "plants": 10}
+{"opponent": "concon_v1", "block": 6, "preset": "Touyama Gaming", "seed": 1000642, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "concon_v1", "block": 7, "preset": "Touyama Gaming", "seed": 1000742, "requested_site": "R", "rounds": 12, "plants": 6}
+{"opponent": "concon_v1", "block": 8, "preset": "Touyama Gaming", "seed": 1000842, "requested_site": "R", "rounds": 12, "plants": 10}
+{"opponent": "concon_v1", "block": 9, "preset": "Touyama Gaming", "seed": 1000942, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "concon_v1", "block": 10, "preset": "Touyama Gaming", "seed": 1001042, "requested_site": "R", "rounds": 12, "plants": 5}
+{"opponent": "concon_v1", "block": 11, "preset": "Touyama Gaming", "seed": 1001142, "requested_site": "R", "rounds": 12, "plants": 8}
+{"opponent": "concon_v1", "block": 12, "preset": "Touyama Gaming", "seed": 1001242, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 1, "preset": "Touyama Gaming", "seed": 2000142, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 2, "preset": "Touyama Gaming", "seed": 2000242, "requested_site": "R", "rounds": 12, "plants": 10}
+{"opponent": "omoko_v1", "block": 3, "preset": "Touyama Gaming", "seed": 2000342, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 4, "preset": "Touyama Gaming", "seed": 2000442, "requested_site": "L", "rounds": 12, "plants": 11}
+{"opponent": "omoko_v1", "block": 5, "preset": "Touyama Gaming", "seed": 2000542, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 6, "preset": "Touyama Gaming", "seed": 2000642, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 7, "preset": "Touyama Gaming", "seed": 2000742, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 8, "preset": "Touyama Gaming", "seed": 2000842, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "omoko_v1", "block": 9, "preset": "Touyama Gaming", "seed": 2000942, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "omoko_v1", "block": 10, "preset": "Touyama Gaming", "seed": 2001042, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 1, "preset": "Touyama Gaming", "seed": 3000142, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 2, "preset": "Touyama Gaming", "seed": 3000242, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 3, "preset": "Touyama Gaming", "seed": 3000342, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 4, "preset": "Touyama Gaming", "seed": 3000442, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 5, "preset": "Touyama Gaming", "seed": 3000542, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 6, "preset": "Touyama Gaming", "seed": 3000642, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 7, "preset": "Touyama Gaming", "seed": 3000742, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 8, "preset": "Touyama Gaming", "seed": 3000842, "requested_site": "R", "rounds": 12, "plants": 11}
+{"opponent": "fnatic_v3", "block": 9, "preset": "Touyama Gaming", "seed": 3000942, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "fnatic_v3", "block": 10, "preset": "Touyama Gaming", "seed": 3001042, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "frc_v1", "block": 1, "preset": "Touyama Gaming", "seed": 4000142, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "frc_v1", "block": 2, "preset": "Touyama Gaming", "seed": 4000242, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "frc_v1", "block": 3, "preset": "Touyama Gaming", "seed": 4000342, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "frc_v1", "block": 4, "preset": "Touyama Gaming", "seed": 4000442, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "frc_v1", "block": 5, "preset": "Touyama Gaming", "seed": 4000542, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "frc_v1", "block": 6, "preset": "Touyama Gaming", "seed": 4000642, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "frc_v1", "block": 7, "preset": "Touyama Gaming", "seed": 4000742, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "frc_v1", "block": 8, "preset": "Touyama Gaming", "seed": 4000842, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "frc_v1", "block": 9, "preset": "Touyama Gaming", "seed": 4000942, "requested_site": "L", "rounds": 12, "plants": 10}
+{"opponent": "frc_v1", "block": 10, "preset": "Touyama Gaming", "seed": 4001042, "requested_site": "R", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 1, "preset": "Touyama Gaming", "seed": 5000142, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 2, "preset": "Touyama Gaming", "seed": 5000242, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 3, "preset": "Touyama Gaming", "seed": 5000342, "requested_site": "R", "rounds": 12, "plants": 4}
+{"opponent": "toru_ai_v4", "block": 4, "preset": "Touyama Gaming", "seed": 5000442, "requested_site": "R", "rounds": 12, "plants": 3}
+{"opponent": "toru_ai_v4", "block": 5, "preset": "Touyama Gaming", "seed": 5000542, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 6, "preset": "Touyama Gaming", "seed": 5000642, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 7, "preset": "Touyama Gaming", "seed": 5000742, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 8, "preset": "Touyama Gaming", "seed": 5000842, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 9, "preset": "Touyama Gaming", "seed": 5000942, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 10, "preset": "Touyama Gaming", "seed": 5001042, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 11, "preset": "Touyama Gaming", "seed": 5001142, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 12, "preset": "Touyama Gaming", "seed": 5001242, "requested_site": "R", "rounds": 12, "plants": 4}
+{"opponent": "toru_ai_v4", "block": 13, "preset": "Touyama Gaming", "seed": 5001342, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 14, "preset": "Touyama Gaming", "seed": 5001442, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 15, "preset": "Touyama Gaming", "seed": 5001542, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 16, "preset": "Touyama Gaming", "seed": 5001642, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 17, "preset": "Touyama Gaming", "seed": 5001742, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 18, "preset": "Touyama Gaming", "seed": 5001842, "requested_site": "R", "rounds": 12, "plants": 3}
+{"opponent": "toru_ai_v4", "block": 19, "preset": "Touyama Gaming", "seed": 5001942, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 20, "preset": "Touyama Gaming", "seed": 5002042, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 21, "preset": "Touyama Gaming", "seed": 5002142, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 22, "preset": "Touyama Gaming", "seed": 5002242, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 23, "preset": "Touyama Gaming", "seed": 5002342, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 24, "preset": "Touyama Gaming", "seed": 5002442, "requested_site": "R", "rounds": 12, "plants": 2}
+{"opponent": "toru_ai_v4", "block": 25, "preset": "Touyama Gaming", "seed": 5002542, "requested_site": "R", "rounds": 12, "plants": 4}
+{"opponent": "toru_ai_v4", "block": 26, "preset": "Touyama Gaming", "seed": 5002642, "requested_site": "R", "rounds": 12, "plants": 3}
+{"opponent": "toru_ai_v4", "block": 27, "preset": "Touyama Gaming", "seed": 5002742, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 28, "preset": "Touyama Gaming", "seed": 5002842, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 29, "preset": "Touyama Gaming", "seed": 5002942, "requested_site": "L", "rounds": 12, "plants": 12}
+{"opponent": "toru_ai_v4", "block": 30, "preset": "Touyama Gaming", "seed": 5003042, "requested_site": "R", "rounds": 12, "plants": 1}
+{"opponent": "toru_ai_v4", "block": 31, "preset": "Touyama Gaming", "seed": 5003142, "requested_site": "R", "rounds": 12, "plants": 3}

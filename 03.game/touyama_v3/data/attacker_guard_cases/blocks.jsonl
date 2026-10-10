@@ -1,30 +1,96 @@
-{"opponent": "gc_v1", "block": 1, "seed": 142}
-{"opponent": "gc_v1", "block": 2, "seed": 242}
-{"opponent": "gc_v1", "block": 3, "seed": 342}
-{"opponent": "gc_v1", "block": 4, "seed": 442}
-{"opponent": "gc_v1", "block": 5, "seed": 542}
-{"opponent": "concon_v1", "block": 1, "seed": 1000142}
-{"opponent": "concon_v1", "block": 2, "seed": 1000242}
-{"opponent": "concon_v1", "block": 3, "seed": 1000342}
-{"opponent": "concon_v1", "block": 4, "seed": 1000442}
-{"opponent": "concon_v1", "block": 5, "seed": 1000542}
-{"opponent": "omoko_v1", "block": 1, "seed": 2000142}
-{"opponent": "omoko_v1", "block": 2, "seed": 2000242}
-{"opponent": "omoko_v1", "block": 3, "seed": 2000342}
-{"opponent": "omoko_v1", "block": 4, "seed": 2000442}
-{"opponent": "omoko_v1", "block": 5, "seed": 2000542}
-{"opponent": "fnatic_v3", "block": 1, "seed": 3000142}
-{"opponent": "fnatic_v3", "block": 2, "seed": 3000242}
-{"opponent": "fnatic_v3", "block": 3, "seed": 3000342}
-{"opponent": "fnatic_v3", "block": 4, "seed": 3000442}
-{"opponent": "fnatic_v3", "block": 5, "seed": 3000542}
-{"opponent": "frc_v1", "block": 1, "seed": 4000142}
-{"opponent": "frc_v1", "block": 2, "seed": 4000242}
-{"opponent": "frc_v1", "block": 3, "seed": 4000342}
-{"opponent": "frc_v1", "block": 4, "seed": 4000442}
-{"opponent": "frc_v1", "block": 5, "seed": 4000542}
-{"opponent": "toru_ai_v4", "block": 1, "seed": 5000142}
-{"opponent": "toru_ai_v4", "block": 2, "seed": 5000242}
-{"opponent": "toru_ai_v4", "block": 3, "seed": 5000342}
-{"opponent": "toru_ai_v4", "block": 4, "seed": 5000442}
-{"opponent": "toru_ai_v4", "block": 5, "seed": 5000542}
+{"opponent": "gc_v1", "block": 1, "seed": 142, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 2, "seed": 242, "requested_site": "R"}
+{"opponent": "gc_v1", "block": 3, "seed": 342, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 4, "seed": 442, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 5, "seed": 542, "requested_site": "R"}
+{"opponent": "gc_v1", "block": 6, "seed": 642, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 7, "seed": 742, "requested_site": "R"}
+{"opponent": "gc_v1", "block": 8, "seed": 842, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 9, "seed": 942, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 10, "seed": 1042, "requested_site": "R"}
+{"opponent": "gc_v1", "block": 11, "seed": 1142, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 12, "seed": 1242, "requested_site": "L"}
+{"opponent": "gc_v1", "block": 13, "seed": 1342, "requested_site": "R"}
+{"opponent": "concon_v1", "block": 1, "seed": 1000142, "requested_site": "L"}
+{"opponent": "concon_v1", "block": 2, "seed": 1000242, "requested_site": "R"}
+{"opponent": "concon_v1", "block": 3, "seed": 1000342, "requested_site": "L"}
+{"opponent": "concon_v1", "block": 4, "seed": 1000442, "requested_site": "R"}
+{"opponent": "concon_v1", "block": 5, "seed": 1000542, "requested_site": "L"}
+{"opponent": "concon_v1", "block": 6, "seed": 1000642, "requested_site": "R"}
+{"opponent": "concon_v1", "block": 7, "seed": 1000742, "requested_site": "L"}
+{"opponent": "concon_v1", "block": 8, "seed": 1000842, "requested_site": "R"}
+{"opponent": "concon_v1", "block": 9, "seed": 1000942, "requested_site": "L"}
+{"opponent": "concon_v1", "block": 10, "seed": 1001042, "requested_site": "R"}
+{"opponent": "omoko_v1", "block": 1, "seed": 2000142, "requested_site": "L"}
+{"opponent": "omoko_v1", "block": 2, "seed": 2000242, "requested_site": "R"}
+{"opponent": "omoko_v1", "block": 3, "seed": 2000342, "requested_site": "L"}
+{"opponent": "omoko_v1", "block": 4, "seed": 2000442, "requested_site": "R"}
+{"opponent": "omoko_v1", "block": 5, "seed": 2000542, "requested_site": "L"}
+{"opponent": "omoko_v1", "block": 6, "seed": 2000642, "requested_site": "R"}
+{"opponent": "omoko_v1", "block": 7, "seed": 2000742, "requested_site": "L"}
+{"opponent": "omoko_v1", "block": 8, "seed": 2000842, "requested_site": "R"}
+{"opponent": "omoko_v1", "block": 9, "seed": 2000942, "requested_site": "L"}
+{"opponent": "omoko_v1", "block": 10, "seed": 2001042, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 1, "seed": 3000142, "requested_site": "L"}
+{"opponent": "fnatic_v3", "block": 2, "seed": 3000242, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 3, "seed": 3000342, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 4, "seed": 3000442, "requested_site": "L"}
+{"opponent": "fnatic_v3", "block": 5, "seed": 3000542, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 6, "seed": 3000642, "requested_site": "L"}
+{"opponent": "fnatic_v3", "block": 7, "seed": 3000742, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 8, "seed": 3000842, "requested_site": "L"}
+{"opponent": "fnatic_v3", "block": 9, "seed": 3000942, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 10, "seed": 3001042, "requested_site": "R"}
+{"opponent": "fnatic_v3", "block": 11, "seed": 3001142, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 1, "seed": 4000142, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 2, "seed": 4000242, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 3, "seed": 4000342, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 4, "seed": 4000442, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 5, "seed": 4000542, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 6, "seed": 4000642, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 7, "seed": 4000742, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 8, "seed": 4000842, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 9, "seed": 4000942, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 10, "seed": 4001042, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 11, "seed": 4001142, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 12, "seed": 4001242, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 13, "seed": 4001342, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 14, "seed": 4001442, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 15, "seed": 4001542, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 16, "seed": 4001642, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 17, "seed": 4001742, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 18, "seed": 4001842, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 19, "seed": 4001942, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 20, "seed": 4002042, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 21, "seed": 4002142, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 22, "seed": 4002242, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 23, "seed": 4002342, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 24, "seed": 4002442, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 25, "seed": 4002542, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 26, "seed": 4002642, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 27, "seed": 4002742, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 28, "seed": 4002842, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 29, "seed": 4002942, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 30, "seed": 4003042, "requested_site": "R"}
+{"opponent": "frc_v1", "block": 31, "seed": 4003142, "requested_site": "L"}
+{"opponent": "frc_v1", "block": 32, "seed": 4003242, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 1, "seed": 5000142, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 2, "seed": 5000242, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 3, "seed": 5000342, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 4, "seed": 5000442, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 5, "seed": 5000542, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 6, "seed": 5000642, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 7, "seed": 5000742, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 8, "seed": 5000842, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 9, "seed": 5000942, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 10, "seed": 5001042, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 11, "seed": 5001142, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 12, "seed": 5001242, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 13, "seed": 5001342, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 14, "seed": 5001442, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 15, "seed": 5001542, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 16, "seed": 5001642, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 17, "seed": 5001742, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 18, "seed": 5001842, "requested_site": "L"}
+{"opponent": "toru_ai_v4", "block": 19, "seed": 5001942, "requested_site": "R"}
+{"opponent": "toru_ai_v4", "block": 20, "seed": 5002042, "requested_site": "L"}

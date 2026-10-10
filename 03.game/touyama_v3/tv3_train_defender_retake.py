@@ -24,6 +24,7 @@ from touyama_v3.tv3_scenario import OPPONENTS
 from touyama_v3.tv3_train_defender_analysis import seed_all
 from touyama_v3.tv3_retake_coordination import RETAKE_VERSION, retake_layout
 from touyama_v3.tv3_retake_combat import RETAKE_OBS_DIM, LEGACY_RETAKE_OBS_DIM, initialize_retake
+from touyama_v3.tv3_collect_site_sampling import SAMPLING_VERSION, site_sampling
 
 RETAKE_REPLAY_SIZE = 10000  # Per attacker/site; twelve buffers remain bounded.
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。左右モデルは同じworker。
@@ -36,6 +37,9 @@ TRAINING_PRESETS = SEARCH_TRAINING_PRESETS
 EVALUATION_PRESETS = SEARCH_EVALUATION_PRESETS
 EVALUATION_INTERVAL = 1  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 EVALUATION_SEED_COUNT = 6  # More natural plants for sites with sparse evaluation samples.
+SITE_EVALUATION_SEED_COUNT = 2  # サイト指定収集のモデルは、独立seedの左右指定対戦でも評価。
+SITE_EVALUATION_SEED_OFFSET = 500_000_000
+SITE_EVALUATION_RIGHT_SEED_OFFSET = 100_000
 UPDATES_PER_SET = 100
 BATCH_SIZE = 64
 RANDOM_SEED = 42
@@ -110,6 +114,19 @@ def training_defaults():
                 data_dir=DATA_DIRECTORY, best_dir=BEST_DIRECTORY, log_dir=LOG_DIRECTORY)
 
 
+def evaluate_requested_site(opponent, side, opponent_plan, scenario, search, retakes, analyses,
+                            *, logger=None, log_context="", round_callback=None):
+    """Independent normal-start rounds with a recorded collection site condition."""
+    records = []
+    for _, preset, seed in opponent_plan[:SITE_EVALUATION_SEED_COUNT]:
+        seed += SITE_EVALUATION_SEED_OFFSET + (SITE_EVALUATION_RIGHT_SEED_OFFSET if side == "R" else 0)
+        with site_sampling(side, attacker=opponent):
+            result, _ = rollout(opponent, preset, scenario, search, retakes, analyses, "retake", seed,
+                logger=logger, log_context=log_context, round_callback=round_callback)
+        records.extend(r for r in result if r["site"] == side)
+    return records
+
+
 def split_retakes(rounds, samples):
     return {side: ([r for r in rounds if r["site"] == side], [t for t in samples if t[6] == side])
             for side in ("L", "R")}
@@ -148,12 +165,18 @@ def train_retake(args, scenario, analyses, hashes):
     cases = None
     case_tensor_cache = {}
     dataset_hash = None
+    targeted_cases = False
     if args.cases_dir is not None:
         from touyama_v3.tv3_collect_defender_retake import read_rows
         case_dir = args.cases_dir.resolve()
         collection = json.loads((case_dir / "collection.json").read_text(encoding="utf-8"))
         if collection.get("format") != "touyama_v3_plant_cases_v1" or collection.get("scenario") != scenario.signature:
             raise ValueError("Retake case format/map mismatch")
+        targeted_cases = collection.get("site_sampling") == "targeted"
+        if "sampling_version" in collection:
+            summary = json.loads((case_dir / "collection_summary.json").read_text(encoding="utf-8"))
+            if not summary.get("complete"):
+                raise ValueError("Retake collection is incomplete; finish collection before training")
         rows = read_rows(case_dir / "cases.jsonl")
         cases = {opponent: [r for r in rows if r["opponent"] == opponent] for opponent in args.opponents}
         digest = hashlib.sha256((case_dir / "collection.json").read_bytes() + (case_dir / "cases.jsonl").read_bytes())
@@ -198,6 +221,9 @@ def train_retake(args, scenario, analyses, hashes):
                                 defuser_sample_fraction=MODEL_LEARNING_OVERRIDES.get(key, {}).get('defuser_sample_fraction', DEFUSER_SAMPLE_FRACTION),
                                 target=TARGET_RETAKE_WIN_RATE, target_min_rounds=TARGET_MIN_EVALUATION_ROUNDS,
                                 extra_updates=BELOW_TARGET_UPDATE_MULTIPLIER))
+                if targeted_cases:
+                    contract["site_evaluation"] = dict(version=SAMPLING_VERSION, seeds=SITE_EVALUATION_SEED_COUNT,
+                        seed_offset=SITE_EVALUATION_SEED_OFFSET, right_seed_offset=SITE_EVALUATION_RIGHT_SEED_OFFSET)
                 contracts[key] = contract
                 path = (args.best_dir.resolve() / opponent / f"retake_{side}_best.pt" if args.eval_only else
                         args.data_dir.resolve() / "retake" / opponent / f"{side}_latest.pt")
@@ -300,7 +326,16 @@ def train_retake(args, scenario, analyses, hashes):
                     for side in ("L", "R"):
                         key = opponent, side
                         subset = [r for r in records if r["site"] == side]
+                        if targeted_cases:
+                            logger.info("[retake][通常対戦評価] 相手AI=%s サイト=%s %s", opponent, side,
+                                        evaluation_summary(summarize_defender(subset)))
+                            subset = evaluate_requested_site(opponent, side, opponent_plan, scenario, search,
+                                models[opponent], analyses, logger=logger,
+                                log_context=f"サイト指定評価={side} set={set_no}", round_callback=record_combat_round)
+                            logger.info("[retake][サイト指定評価・best選定] 相手AI=%s サイト=%s", opponent, side)
                         metrics = summarize_defender(subset)
+                        if targeted_cases:
+                            metrics["site_sampling"] = "targeted"
                         last_evaluations[key] = metrics
                         logger.info("[retake][目標判定] 相手AI=%s サイト=%s 目標=%.0f%% 評価数=%d 判定=%s", opponent, side,
                             TARGET_RETAKE_WIN_RATE*100, metrics['plants'],
