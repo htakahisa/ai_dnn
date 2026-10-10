@@ -1,7 +1,7 @@
 """Ability and ultimate effects, projectiles, smoke, and line of sight."""
 
 from collections import deque
-from grid_lines import line_cells
+from grid_lines import line_cells, iter_line_cells, wall_line_cells
 
 from game_core import (
     absorb_shield_damage,
@@ -813,7 +813,7 @@ class AbilityLosMixin:
         line_cells = self._line_cells(start, end)
 
         grid_height, grid_width = self.grid.shape
-        for r, c in line_cells:
+        for r, c in wall_line_cells(tuple(start), tuple(end)):
             # 境界チェックを追加してIndexErrorを防止
             if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
                 continue
@@ -830,7 +830,7 @@ class AbilityLosMixin:
         line_cells = self._line_cells(tuple(p1.pos), tuple(p2.pos))
 
         grid_height, grid_width = self.grid.shape
-        for r, c in line_cells:
+        for r, c in wall_line_cells(tuple(p1.pos), tuple(p2.pos)):
             # 境界チェックを追加してIndexErrorを防止
             if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
                 continue
@@ -956,9 +956,16 @@ class AbilityLosMixin:
             return [start]
         scale = max(self.height, self.width) * 3
         far = (sr + dr * scale, sc + dc * scale)
-        raw = self._line_cells(start, far)
+        builder = self._line_cells
+        if builder is line_cells or getattr(builder, "__func__", None) is AbilityLosMixin._line_cells:
+            # The direction extends far beyond the board. Generate only the
+            # cells up to its first wall/edge, rather than caching the full ray.
+            raw = iter_line_cells(start, far)
+        else:
+            raw = iter(builder(start, far))  # Preserve custom geometry hooks.
+        next(raw, None)  # Skip the source, which is already in path.
         path = [start]
-        for rr, cc in raw[1:]:
+        for rr, cc in raw:
             if not (0 <= rr < self.height and 0 <= cc < self.width):
                 break
             if self.grid[rr, cc] == 1:

@@ -5,3 +5,11 @@
 # Generated evaluation results and logs.
 /eval_logs/
 logs/
+
+# Local training resume checkpoints; keep inference best.pt files tracked.
+/touyama_v3/data/**/latest.pt
+/touyama_v3/data/**/*_latest.pt
+
+# Interrupted checkpoint writes and root-level debug logs.
+/touyama_v3/data/**/*.tmp
+/*_debug.log

@@ -750,6 +750,10 @@ class Character:
 
         # 覚醒・コンボで一時的に上昇させる、1Tickあたりの移動マス数。既定は1。
         self.move_steps_per_tick = 1
+        self._fast_move_last_transition = None
+        self._fast_move_recent_positions = []
+        self._fast_move_slow_ticks = 0
+        self._navigation_step_limit = None
         self.movement_disabled_remaining = 0
 
         # 覚醒等でスモーク越しに視認・射撃できるようになったかどうか。既定はFalse。

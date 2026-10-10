@@ -2,28 +2,22 @@
 
 `concon_v1` ディレクトリから実行します。
 
-## 共通モデルと相手専用モデル
+## 共通モデル
 
-既存の左右の `best` は、そのまま共通モデルとして使用します。相手指定なしの学習は従来の共通モデル保存先を使用します。`--opponent`、または相手を1つ指定した `--opponents` は専用モデルを学習します。`--opponents` に複数指定した場合は、その相手群で共通モデルを学習します。
+左右それぞれ1つの共通モデルを学習・使用します。通常設定は `co1_train_defender_retake.py` 冒頭の `TRAIN_OPPONENTS`、`TRAIN_LEFT_SITE`、`TRAIN_RIGHT_SITE`、`DEFAULT_CASE_EPOCHS`、`RESUME_TRAINING`、`COMPARE_PREVIOUS_BEST` で変更します。`--opponents` は一時的に学習相手を絞るための上書きであり、1相手を指定しても共通モデルを保存します。
 
 作業ディレクトリ: `03.game/concon_v1/`
 
 ```powershell
-# 共通モデルの学習（既存モデルを継続する場合は --resume）
+# 通常実行（継続学習は冒頭の RESUME_TRAINING = True）
 python co1_train_defender_retake.py
-
-# gc_v1 専用: 共通 best から開始し、既存の gc_v1 のケースのみ使用
-python co1_train_defender_retake.py --opponent gc_v1
-
-# gc_v1 専用 latest と optimizer から追加学習
-python co1_train_defender_retake.py --opponent gc_v1 --resume
 ```
 
-対象は `gc_v1`、`frc_v1`、`fnatic_v3`、`touyama_v2`、`omoko_v1`、`toru_ai_v3.1` です。専用の左右の best/latest は `data/defender_retake_opponents/<相手名>/`、ログは `logs/defender_retake_opponents/<相手名>/` に保存します。専用モデルの `--save-dir` はこの保存先以外を拒否し、共通モデルの上書きを防ぎます。専用学習の初期重み・基礎モデルは共通保存先から読み込み、初回は共通 best の重みを引き継いで新しい optimizer で開始します。`--resume` は専用 latest が必要で、別の相手のチェックポイントは拒否します。
+学習相手は `gc_v1`、`frc_v1`、`fnatic_v3`、`touyama_v2`、`omoko_v1`、`toru_ai_v3.1` の6種類です。左右のモデルは従来の `data/defender_retake_L_data/`、`data/defender_retake_R_data/` に保存します。新規学習は各サイトのfoundation、継続学習は各サイトのlatestから開始します。
 
 引数なしの現在の設定では、600件を10周、計6000 episodeです。相手1つでは左右各50件、計100件を10周、計1000 episodeになります。回数は `--case-epochs` で変更できます。評価は保存ケースからではなく通常対戦で、指定相手に対して実施します。
 
-通常対戦では現在の攻撃側AIを識別し、サイトごとに専用 best があれば使用し、なければ既存の共通 best を使用します。未知の相手も共通モデルを使用します。明示的に `retake_model_paths` を渡した場合は、その指定を優先します。専用 latest は評価前には採用しません。専用モデルの採用に80%の閾値は設けず、従来の解除率評価による best 選択を使います（attacker の採用方針とは別です）。
+通常対戦は相手AIにかかわらず共通の左右bestを使用します。明示的に `retake_model_paths` を渡した場合は、その指定を使用します。
 
 既定の対戦相手は `omoko_v1`、`touyama_v2`、`fnatic_v3`、`gc_v1`、`toru_ai_v3.1`、`frc_v1`（Furina Classic）の6チームです。収集データで学習する場合は、追加した `frc_v1` の左右両サイトの場面も必要です。既存のデータに追加収集するには、作業ディレクトリを `03.game/concon_v1/` として次を実行します。
 
@@ -271,7 +265,7 @@ python co1_train_defender_retake.py --resume-dir data/retake_run --save-dir data
 
 学習ログの `episode` は左右合計の学習回数です。`training_episodes` に左右それぞれの内訳を保存します。保存モデルの `episode_counting` は `team_balanced_retake` です。
 
-`co1_train_defender_retake.py` 冒頭の `COMPARE_PREVIOUS_BEST = True`（既定）では、今回最初の評価時に保存先の前回bestを読み込み、今回と同じ相手・評価件数・search・アビリティ距離設定・seed・epsilon=0で再評価します。過去のチェックポイントに記録された評価値だけでは比較しません。平均解除率、対戦相手別の最低解除率、通常の敵への移動射撃率（低い方を優先）の順で比較し、同点・悪化なら既存bestを保持します。改善したモデルを採用した後も、それを上回った場合だけ更新します。前回bestの読み込みに失敗したサイトでは、理由を表示して比較対象から外し、今回の有効な評価結果でbestを上書きします。その後は今回の学習内で成績が改善した場合だけ更新します。前回bestを読み込めても評価リテイクが0件のサイトでは、既存bestを保持します。前回bestがないサイトでは今回の学習内から選びます。比較対象は選択サイトの保存先で、相手専用学習ならその相手の専用bestです。latestと指定時の番号付きチェックポイントはbestの採否に関係なく保存します。
+`co1_train_defender_retake.py` 冒頭の `COMPARE_PREVIOUS_BEST = True`（既定）では、今回最初の評価時に保存先の前回bestを読み込み、今回と同じ相手・評価件数・search・アビリティ距離設定・seed・epsilon=0で再評価します。過去のチェックポイントに記録された評価値だけでは比較しません。平均解除率、対戦相手別の最低解除率、通常の敵への移動射撃率（低い方を優先）の順で比較し、同点・悪化なら既存bestを保持します。改善したモデルを採用した後も、それを上回った場合だけ更新します。前回bestの読み込みに失敗したサイトでは、理由を表示して比較対象から外し、今回の有効な評価結果でbestを上書きします。その後は今回の学習内で成績が改善した場合だけ更新します。前回bestを読み込めても評価リテイクが0件のサイトでは、既存bestを保持します。前回bestがないサイトでは今回の学習内から選びます。比較対象は選択サイトの保存先にある共通bestです。latestと指定時の番号付きチェックポイントはbestの採否に関係なく保存します。
 
 従来の「今回の学習内だけでbestを選ぶ」動作にする場合は、冒頭の `COMPARE_PREVIOUS_BEST = False` に変更し、作業ディレクトリ `03.game/concon_v1/` で `python co1_train_defender_retake.py` を実行します。一時的な上書きには `--compare-previous-best` / `--no-compare-previous-best` も使用できます。評価は有限の対戦結果による比較です。相手別の評価件数は `evaluation` に保存します。`retake_training_log.jsonl` は設置前の除外試合も含みます。`--force-save` を指定すると保存間隔ごとに番号付き重みを追加します。
 

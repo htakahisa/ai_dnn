@@ -34,6 +34,9 @@ from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
 from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
 from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
 
+from touyama_v3.tv3_touyama_defender_controller import Tv3TouyamaDefenderController
+from touyama_v3.tv3_touyama_attacker_controller import Tv3TouyamaAttackerController
+
 from omoko_v1.ov1_attacker_controller import Ov1AttackerController
 from omoko_v1.ov1_defender_controller import Ov1DefenderController
 # from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
@@ -193,6 +196,13 @@ def _build_team_ai(key, *, device=None):
             name="Touyama Gaming v2",
             attacker_factory=lambda: Tv2TouyamaAttackerController(device=device),
             defender_factory=lambda: Tv2TouyamaDefenderController(device=device),
+        )
+
+    if normalized == "touyama_gaming_v3":
+        return DualRoleTeamAI(
+            name="Touyama Gaming v3",
+            attacker_factory=lambda: Tv3TouyamaAttackerController(device=device),
+            defender_factory=lambda: Tv3TouyamaDefenderController(device=device),
         )
 
     if normalized == "omoko_gaming_v1":

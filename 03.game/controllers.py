@@ -217,10 +217,21 @@ class BaseController:
                 moving_char=moving_char,
             )
 
-        # startの直後の1マスまで親をたどる
-        step = reached_goal
-        while parent[step] is not None and parent[step] != start:
-            step = parent[step]
+        # 高速キャラも経路の曲がり角・ゴールを通り越さないよう、
+        # 最初の直線部分の長さを移動処理へ渡す。
+        route = [reached_goal]
+        while parent[route[-1]] is not None:
+            route.append(parent[route[-1]])
+        route.reverse()
+        step = route[1] if len(route) > 1 else start
+        if moving_char is not None and len(route) > 1:
+            direction = (step[0] - start[0], step[1] - start[1])
+            straight_steps = 1
+            for previous, following in zip(route[1:], route[2:]):
+                if (following[0] - previous[0], following[1] - previous[1]) != direction:
+                    break
+                straight_steps += 1
+            moving_char._navigation_step_limit = straight_steps
 
         if parent[step] is None:
             return [start[0], start[1]]

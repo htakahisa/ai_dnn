@@ -1,0 +1,39 @@
+{
+  "format": "touyama_v3_plant_cases_v1",
+  "scenario": "56a32296b2b4b10fd07a8fdf248e687824952376a3b88c95cdb5d01227ca9da6",
+  "seed": 42,
+  "presets": [
+    "Touyama Gaming"
+  ],
+  "opponents": [
+    "gc_v1",
+    "concon_v1",
+    "omoko_v1",
+    "fnatic_v3",
+    "frc_v1",
+    "toru_ai_v4"
+  ],
+  "sites": [
+    "L",
+    "R"
+  ],
+  "search_hashes": {
+    "gc_v1": "eac5f1c0b9a06521346f40a8f26e28d216f7ecd3b060ed07f8537df6156ba1eb",
+    "concon_v1": "ffe71e1401868659d5a152e81cd4adee20ef472008d2acb23162d2895f1290b5",
+    "omoko_v1": "f49de7af2b77cd6278985959136ff59958615f038b223e0774963fd43b4f9e9e",
+    "fnatic_v3": "96007d71458b5720ec6e9d1302945db8fb87d21f0040e7384c19a5c53d7e1a99",
+    "frc_v1": "42336a98f1f329549244f62df52a6d63a775d0c196e83d1d1b634126b3623935",
+    "toru_ai_v4": "f66ab27d6561eb247d3799275747d2e7f27ae17ccbd0dc8a59fd6ac43a031e0d"
+  },
+  "analysis_hashes": {
+    "gc_v1": "f6455ef05fd4a4a4198593962d3658cc198dac66ba1b62d158553c5c4927aa33",
+    "concon_v1": "68148db056e7fa6d26e75c4b5e7e6e502b5390f727a4dceb23f9b1d86efe946e",
+    "omoko_v1": "615af499e72b7d0db8a19ea8a1c1fcda20d178ca5800e7730d87867dd87c2c22",
+    "fnatic_v3": "36ae492e8312e0766d6639817ca7eaee7cc27c37e724396de8d982dd7d779fc6",
+    "frc_v1": "d66bdc76482b788f1ff912586d6fb78f5243b20e0781827e07767705d5a0cb09",
+    "toru_ai_v4": "c27dd1d50f5e103bd06874d4b3f0a3291307e63d88a3dc84ae55745a4fead0e4"
+  },
+  "site_sampling": "targeted",
+  "sampling_version": "site_curriculum_v1",
+  "capture_boundary": "end_of_first_plant_tick_before_retake_decisions"
+}
