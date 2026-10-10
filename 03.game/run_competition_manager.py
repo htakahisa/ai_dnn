@@ -54,6 +54,7 @@ CONTROLLER_OPTIONS = {
     "Toru AI v4": "toru_ai_v4",
     "Toru AI v3.1": "toru_ai_v3.1",
     "ConCon v1": "concon_v1",
+    "Touyama Gaming v3": "touyama_gaming_v3",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
@@ -3079,6 +3080,7 @@ class CompetitionApp:
         available_ais = [
             ("Toru AI v4", "toru_ai_v4"),
             ("Toru AI v3.1", "toru_ai_v3.1"),
+            ("Touyama Gaming v3", "touyama_gaming_v3"),
             ("Touyama Gaming v2", "touyama_gaming_v2"),
             ("Touyama Gaming v1", "touyama_gaming_v1"),
             ("Fnatic v3", "fnatic_v3"),

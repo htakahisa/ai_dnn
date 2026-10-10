@@ -1,7 +1,7 @@
 """Ability and ultimate effects, projectiles, smoke, and line of sight."""
 
 from collections import deque
-from grid_lines import line_cells, iter_line_cells
+from grid_lines import line_cells, iter_line_cells, wall_line_cells
 
 from game_core import (
     absorb_shield_damage,
@@ -802,7 +802,7 @@ class AbilityLosMixin:
         line_cells = self._line_cells(start, end)
 
         grid_height, grid_width = self.grid.shape
-        for r, c in line_cells:
+        for r, c in wall_line_cells(tuple(start), tuple(end)):
             # 境界チェックを追加してIndexErrorを防止
             if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
                 continue
@@ -819,7 +819,7 @@ class AbilityLosMixin:
         line_cells = self._line_cells(tuple(p1.pos), tuple(p2.pos))
 
         grid_height, grid_width = self.grid.shape
-        for r, c in line_cells:
+        for r, c in wall_line_cells(tuple(p1.pos), tuple(p2.pos)):
             # 境界チェックを追加してIndexErrorを防止
             if r < 0 or r >= grid_height or c < 0 or c >= grid_width:
                 continue

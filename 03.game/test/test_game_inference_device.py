@@ -17,6 +17,7 @@ class InferenceDeviceTests(unittest.TestCase):
     def test_all_learned_opponent_factories_forward_explicit_cpu(self):
         from run_game import _build_team_ai
         factories = {
+            "touyama_gaming_v3": ("run_game.Tv3TouyamaAttackerController", "run_game.Tv3TouyamaDefenderController"),
             "touyama_gaming_v2": ("run_game.Tv2TouyamaAttackerController", "run_game.Tv2TouyamaDefenderController"),
             "omoko_gaming_v1": ("run_game.Ov1AttackerController", "run_game.Ov1DefenderController"),
             "gc_v1": ("run_game.GhostChampionsV1AttackerController", "run_game.GhostChampionsV1DefenderController"),
