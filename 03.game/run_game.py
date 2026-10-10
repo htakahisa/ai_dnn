@@ -1057,9 +1057,9 @@ class VisualFPSBattle(
     def defender_setup_ticks_remaining(self):
         return int(self.defender_setup_phase.ticks_remaining)
 
-    def run(self):
+    def run(self, stop_event=None):
         if self.headless:
-            self.run_headless_loop()
+            self.run_headless_loop(stop_event=stop_event)
         else:
             self.draw()
             self._schedule_match_callback(self.loop)

@@ -122,7 +122,14 @@ plant/guardは左右別モデルにせず、サイトを入力して共通重み
 | Tortlilyan | d → D | (8, 31) | (14, 31) | S |
 | えんぺん | e → E | (2, 40) | (14, 40) | S |
 
-これは**初期配置だけの指定**。その後に同じ場所・方向へ固定し続けるものではない。敵の公開観測に合わせたfacing、短距離の射線展開、退避、予測サイトへの寄りを認める。配置フェーズでは既存の移動可能マスクと味方占有を守り、テレポートで配置しない。
+これは**setup中からラウンド開始後の序盤までを含む、初期監視位置の目安**。setup専用の配置や、setup終了で役割を終えるマップと解釈しない。小文字a-eを序盤に目指す移動先、対応する大文字A-Eを到着時のfacing目標として扱う。移動・到着を強制せず、到着後も同じ場所・方向へ固定し続けない。敵の公開観測に合わせたfacing、短距離の射線展開、退避、予測サイトへの寄りを認める。配置フェーズでは既存の移動可能マスクと味方占有を守り、テレポートで配置しない。
+
+### コピー・次版作成時の注意（2026-10-11確認）
+
+- このプロジェクトをコピー・移植するときも、初期監視配置はsetup後のsearchまで含めた設計として引き継ぐ。マップを読み込むだけで配置を学習できると判断せず、setup後も移動目標・学習入力・教師例・報酬に意図が反映されているか確認する。
+- 現行実装ではsetup中は教師行動を使い、ラウンド開始後は学習したQ値で行動を選ぶ。設置前かつ予測確率が65%未満ならa-eが基本目標となり、65%以上なら未到着でも予測サイトの合流地点へ切り替わる。目標として使うことと実際に到着することは区別し、到着保証はしない。
+- 今後の学習・評価ではsetup終了時だけでなく、ラウンド開始後に目標へ近づく行動と、交戦・退避・早期寄りによって目標を変更する行動も確認する。初期位置へ向かわせるために推論側で移動を強制したり、敵観測・交戦を無効にしたりしない。
+- 今回はユーザーに再学習の時間がないため、意図の明記のみとする。既存モデル・行動ロジック・マップのマーカー・シナリオ識別値は変更せず、再学習も実行しない。将来、入力・報酬・シナリオ等を変更する場合は、既存モデルと依存モデルへの影響を確認し、必要な再学習範囲を説明する。
 
 到達可能性の確認結果：現在のsetup進入制限ではa/b/c/dはスポーンから到達不能、eは最寄りスポーンから最短29歩でsetupの20tickを超える。通常ラウンドの地形では全点に到達可能で、最寄りスポーンからa=21、b=12、c=15、d=16、e=19歩（味方占有・交戦を除いた下限）。したがって初期監視位置は「setup終了時に必ず配置完了する地点」ではなく「序盤に移動して確保する地点」とする。setup中は許可範囲内で目標へ近づき、開始後に移動を続けて到着時に指定facingを設定する。安全な経路・敵接触・早期寄りを優先できるようにし、初期配置が終わるまで敵観測や交戦を無効にしない。ゲーム共通のsetup制限はこの指定だけを理由に変更しない。
 
@@ -319,18 +326,31 @@ Toru v4の相手編成は `Team Elites` を初期設定にした。v2向け固�
 - LOS版をscenario署名に含めるため、旧analysisも含めたv3モデル・ケースは新条件で更新する。attacker analysis→plant→guard収集/学習、defender analysis→search→retake収集/学習の順。既存best/latest/ケースを勝手に更新しない。Toru固定相手の保存初期配置とモデルhashは保持する。
 - 学習実行は禁止のまま。重み更新なしの診断、単体テストのみを行う。評価各ラウンドをset・seed付きで記録する。
 
-- Defender
+### Defender 全学習コマンド
 py tv3_train_defender_analysis.py
 py tv3_train_defender_search.py
 py tv3_collect_defender_retake.py
 py tv3_train_defender_retake.py
 
+- 全AI再学習
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_defender_all.ps1
 
-- Attacker
+- 例) FRCのみ
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_attacker_all.ps1 -Opponents frc_v1
+- 例) 複数指定
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_attacker_all.ps1 -Opponents "gc_v1,frc_v1"
+
+
+### Attacker 全学習コマンド
 py tv3_train_attacker_analysis.py
 py tv3_train_attacker_plant.py
 py tv3_collect_attacker_guard.py
 py tv3_train_attacker_guard.py
 
+- 全AI再学習
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_attacker_all.ps1
+
+- 例) gc_v1のみ
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_defender_all.ps1 -Opponents "gc_v1"
+- 例) 複数指定
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_defender_all.ps1 -Opponents "gc_v1,frc_v1"

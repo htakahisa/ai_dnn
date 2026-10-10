@@ -81,6 +81,15 @@ UNUSED = "（未使用）"
 MAX_TEAM_SLOTS = 30
 
 
+class CompetitionCancelled(Exception):
+    """Normal shutdown, never a match result or an application error."""
+
+
+def check_competition_cancelled(stop_event: threading.Event | None) -> None:
+    if stop_event is not None and stop_event.is_set():
+        raise CompetitionCancelled()
+
+
 class TeamPlayerKey(str):
     """
     画面上では通常の選手名として表示されるが、辞書キーとしては
@@ -734,7 +743,11 @@ def play_map(
     series_tactical_state: dict[str, Any] | None = None,
     tick_time_ms: int | Callable[[], int] = TICK_TIME,
     shield_abilities_enabled: bool = True,
+    stop_event: threading.Event | None = None,
+    on_close: Callable[[], None] | None = None,
+    on_game_ready: Callable[[Any], None] | None = None,
 ) -> MResult:
+    check_competition_cancelled(stop_event)
     seed_all(seed)
 
     team1_controller_key = str(team1_controller_key or "fnatic_v1")
@@ -745,6 +758,7 @@ def play_map(
 
     ai1 = _build_team_ai(team1_controller_key)
     ai2 = _build_team_ai(team2_controller_key)
+    check_competition_cancelled(stop_event)
 
     team1_keys = [TeamPlayerKey(name, f"team1:{team1.name}") for name in team1.players]
     team2_keys = [TeamPlayerKey(name, f"team2:{team2.name}") for name in team2.players]
@@ -816,14 +830,13 @@ def play_map(
             shield_abilities_enabled=shield_abilities_enabled,
         )
 
+        watch_after_id = None
         if render:
             # 管理画面は隠さず、観戦画面と同時に表示する。
             # VisualFPSBattle側のmainloopはネストされるが、
             # 同じTkイベント系の管理画面も更新され続ける。
-            # destroy()で観戦用Tkを破棄すると、大会管理画面側の
-            # Tcl/Tkイベント処理まで止まる環境がある。
-            # quit()でこの観戦画面のmainloopだけを抜け、
-            # ウィンドウ自体はwithdraw()で非表示にする。
+            # quit()で観戦画面のmainloopを抜けてから、
+            # タイマーを取り消してウィンドウを破棄する。
             closing_started = False
 
             def finish_rendered_match() -> None:
@@ -831,6 +844,7 @@ def play_map(
                 if closing_started:
                     return
                 closing_started = True
+                game.stop_playback()
                 try:
                     game.root.withdraw()
                 except tk.TclError:
@@ -841,38 +855,70 @@ def play_map(
                     pass
 
             def watch_match_end() -> None:
+                nonlocal watch_after_id
                 try:
+                    if closing_started:
+                        return
+                    if stop_event is not None and stop_event.is_set():
+                        finish_rendered_match()
+                        return
                     if bool(getattr(game, "match_over", False)):
                         # 最終スコアを少し表示してから次のマップへ進む。
-                        game.root.after(
+                        watch_after_id = game.root.after(
                             1200,
                             finish_rendered_match,
                         )
                         return
-                    game.root.after(100, watch_match_end)
+                    watch_after_id = game.root.after(100, watch_match_end)
                 except tk.TclError:
                     return
 
-            # 手動で閉じた場合も大会自体は継続する。
+            def close_rendered_match() -> None:
+                if stop_event is not None:
+                    stop_event.set()
+                if on_close is not None:
+                    on_close()
+                finish_rendered_match()
+
             game.root.protocol(
                 "WM_DELETE_WINDOW",
-                finish_rendered_match,
+                close_rendered_match,
             )
-            game.root.after(100, watch_match_end)
+            watch_after_id = game.root.after(100, watch_match_end)
 
-        game.run()
+        try:
+            if on_game_ready is not None:
+                on_game_ready(game)
+            check_competition_cancelled(stop_event)
+            if stop_event is None:
+                game.run()
+            else:
+                game.run(stop_event=stop_event)
+            check_competition_cancelled(stop_event)
+            if render and not game.match_over:
+                raise CompetitionCancelled()
+        finally:
+            if render:
+                # Destroy only after the nested match mainloop has returned.
+                # Cancel timers first so hidden games cannot keep simulating.
+                with contextlib.suppress(tk.TclError):
+                    game.stop_playback()
+                    if watch_after_id is not None:
+                        game.root.after_cancel(watch_after_id)
+                    game.root.update_idletasks()
+                    game.root.destroy()
+                # Controllers can retain the game in cycles collected by the
+                # worker. Release Tcl resources here, on the Tk thread.
+                for name, value in list(vars(game).items()):
+                    if isinstance(value, (tk.Misc, tk.Variable, tk.Image)):
+                        setattr(game, name, None)
+                game.skip_buttons = []
+                if hasattr(game, "_ace_effect_image_cache"):
+                    game._ace_effect_image_cache.clear()
 
         if mental_fatigue_state is not None:
             mental_fatigue_state.clear()
             mental_fatigue_state.update(getattr(game, "player_mental_fatigue", {}))
-
-        if render:
-            # run()内のmainloopから戻ったことを保証したうえで非表示化。
-            try:
-                game.root.withdraw()
-                game.root.update_idletasks()
-            except tk.TclError:
-                pass
 
     score1, score2 = original_scores(
         game,
@@ -2606,6 +2652,10 @@ class CompetitionApp:
         self.events: queue.Queue = queue.Queue()
         self.render_requests: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
+        self.stop_event = threading.Event()
+        self._closing = False
+        self._active_game = None
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.live_render_enabled = False
         self.names = all_preset_names()
         if len(self.names) < 2:
@@ -4574,6 +4624,8 @@ class CompetitionApp:
                 messages.put(("error", str(exc)))
 
         def poll() -> None:
+            if self._closing:
+                return
             while not messages.empty():
                 kind, value = messages.get_nowait()
                 if kind == "progress":
@@ -5539,6 +5591,7 @@ class CompetitionApp:
             y += 42
 
     def emit(self, event: tuple[Any, ...]) -> None:
+        check_competition_cancelled(getattr(self, "stop_event", None))
         self.events.put(event)
 
     def append(self, value: str) -> None:
@@ -5736,6 +5789,8 @@ class CompetitionApp:
             mental_fatigue_state: dict[str, float] | None = None,
             series_tactical_state: dict[str, Any] | None = None,
         ) -> MResult:
+            stop_event = getattr(self.app, "stop_event", None)
+            check_competition_cancelled(stop_event)
             user_match = "user" in {
                 team1_controller_key,
                 team2_controller_key,
@@ -5755,6 +5810,7 @@ class CompetitionApp:
                     mental_fatigue_state,
                     series_tactical_state,
                     shield_abilities_enabled=getattr(self.app, "current_shield_abilities_enabled", True),
+                    stop_event=stop_event,
                 )
 
             request = {
@@ -5775,7 +5831,9 @@ class CompetitionApp:
                 "error": None,
             }
             self.app.render_requests.put(request)
-            request["done"].wait()
+            while not request["done"].wait(0.1):
+                check_competition_cancelled(stop_event)
+            check_competition_cancelled(stop_event)
 
             if request["error"] is not None:
                 raise request["error"]
@@ -5791,6 +5849,8 @@ class CompetitionApp:
 
     def _process_render_requests(self) -> None:
         """描画マップをTkメインスレッドで1件ずつ実行する。"""
+        if getattr(self, "_closing", False):
+            return
         try:
             request = self.render_requests.get_nowait()
         except queue.Empty:
@@ -5812,11 +5872,19 @@ class CompetitionApp:
                 request.get("series_tactical_state"),
                 tick_time_ms=lambda: self.tick_time_ms,
                 shield_abilities_enabled=request.get("shield_abilities_enabled", True),
+                stop_event=getattr(self, "stop_event", None),
+                on_close=self.close,
+                on_game_ready=self._set_active_game,
             )
         except BaseException as exc:
-            request["error"] = exc
+            # Do not send frames holding Tk objects to the worker thread.
+            request["error"] = exc.with_traceback(None)
         finally:
+            self._active_game = None
             request["done"].set()
+
+    def _set_active_game(self, game: Any) -> None:
+        self._active_game = game
 
     def _execute_job(
         self,
@@ -5900,8 +5968,11 @@ class CompetitionApp:
                     self.emit,
                     team_controllers,
                 )
+        except CompetitionCancelled:
+            pass
         except Exception:
-            self.emit(("error", traceback.format_exc()))
+            if not self.stop_event.is_set():
+                self.events.put(("error", traceback.format_exc()))
         finally:
             # Tk操作は_poll_events側のメインスレッドだけで行う。
             pass
@@ -5995,8 +6066,14 @@ class CompetitionApp:
         return "\n".join(lines) + "\n"
 
     def _poll_events(self) -> None:
+        if self._closing:
+            self.root.quit()
+            return
         # 描画要求は必ずTkメインスレッドで処理する。
         self._process_render_requests()
+        if self._closing:
+            self.root.quit()
+            return
 
         try:
             while True:
@@ -6167,8 +6244,42 @@ class CompetitionApp:
             pass
         self.root.after(100, self._poll_events)
 
+    def close(self) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        self.stop_event.set()
+        # Release workers waiting for a map that will no longer be rendered.
+        while True:
+            try:
+                request = self.render_requests.get_nowait()
+            except queue.Empty:
+                break
+            request["error"] = CompetitionCancelled()
+            request["done"].set()
+        game = self._active_game
+        if game is not None:
+            with contextlib.suppress(tk.TclError):
+                game.stop_playback()
+                game.root.withdraw()
+                game.root.quit()
+        with contextlib.suppress(tk.TclError):
+            self.root.withdraw()
+            self.root.quit()
+
     def run(self) -> None:
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            self.close()
+            if self.worker is not None:
+                self.worker.join()
+            # Also remove callbacks owned by auxiliary windows before destroy.
+            with contextlib.suppress(tk.TclError):
+                for handle in self.root.tk.splitlist(self.root.tk.call("after", "info")):
+                    self.root.after_cancel(handle)
+                self.root.update_idletasks()
+                self.root.destroy()
 
 
 if __name__ == "__main__":

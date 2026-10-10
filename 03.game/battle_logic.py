@@ -1851,9 +1851,11 @@ class BattleLogicMixin(MatchPlaybackMixin):
             if not self.round_over and not self.match_over:
                 self._schedule_match_callback(self.loop)
 
-    def run_headless_loop(self):
+    def run_headless_loop(self, stop_event=None):
         """Run normal game ticks without drawing."""
         while not self.match_over:
+            if stop_event is not None and stop_event.is_set():
+                break
             if not self.step_tick():
                 break
             if self.round_over and getattr(self, "stop_after_round", False):
