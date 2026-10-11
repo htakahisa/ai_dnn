@@ -258,11 +258,15 @@ class TouyamaV3AttackerPlantController:
         names = {a.slot: a.name for a in snapshot.allies}
         for ally in sorted((a for a in snapshot.allies if a.alive), key=lambda a: (not a.has_spike, a.slot != self.retriever, a.slot)):
             goal = self.goal_for(snapshot, ally)
-            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal)
+            from touyama_v3.tv3_learn_attacker_fire_support import public_threats
+            threats=public_threats(snapshot,self.analysis_encoder.history.tracks)
+            carrier_inputs=self.inputs.get(holder.name) if holder else None
+            carrier_goal=carrier_inputs.goal if carrier_inputs else None
+            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal,threats=threats,carrier_goal=carrier_goal)
             goal=self.custom_pipeline.adjust_goal(custom_context,goal)
             inputs = self.encoder.encode(snapshot, ally, goal, self.route, analysis,
                 self.analysis_encoder.history.tracks, masks, self.cursors[ally.slot], self.route_mode, coordination)
-            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal)
+            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal,threats=threats,carrier_goal=carrier_goal)
             inputs=self.custom_pipeline.adjust_inputs(custom_context,inputs)
             self._restrict_movement(ally, inputs, reserved)
             inputs.traffic = traffic_distances(snapshot, ally, goal, reserved)

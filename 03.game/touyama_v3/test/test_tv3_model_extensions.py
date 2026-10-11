@@ -57,7 +57,7 @@ class ModelExtensionTests(unittest.TestCase):
         pipeline=ext.build_extensions((TEMPLATE,),role='attacker_plant',opponent='frc_v1')
         contract=pipeline.contract
         self.assertEqual(ext.load_extensions(contract,role='attacker_plant',opponent='frc_v1').contract,contract)
-        for key,value in [('revision',2),('site','L')]:
+        for key,value in [('revision',contract['extensions'][0]['revision']+1),('site','L')]:
             wrong=copy.deepcopy(contract)
             wrong['extensions'][0][key]=value
             with self.assertRaises(ValueError):

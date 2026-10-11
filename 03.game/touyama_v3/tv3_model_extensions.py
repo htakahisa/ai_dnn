@@ -23,6 +23,8 @@ class ExtensionContext:
     ally: object = None
     goal: object = None
     action: object = None
+    threats: tuple = ()  # Bounded public sightings/history, never live enemies.
+    carrier_goal: tuple | None = None  # Public goal assigned earlier in this team tick.
 
 
 def _module(name,expected_hash=None):

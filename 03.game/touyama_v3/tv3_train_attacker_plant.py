@@ -7,8 +7,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # 通常設定：このファイル冒頭を編集し、touyama_v3からオプションなしで実行。
-TRAINING_SETS = 70  # 1セット=12ラウンド。
-TOTAL_TRAINING_SET_LIMIT = 70  # 自動停止するラウンド数の上限。0で無制限。
+TRAINING_SETS = 5  # 右専用修正の短期検証。1セット=12ラウンド。
+TOTAL_TRAINING_SET_LIMIT = 5  # 自動停止するセット数の上限。0で無制限。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 RESUME_TRAINING = False
 WARM_START_FROM_BEST = True  # Reuse compatible weights; start a fresh optimizer and replay.
@@ -24,12 +24,15 @@ EVALUATION_INTERVAL = 5
 EVALUATION_SEED_COUNT = 3
 TRAINING_START_ROUNDS = (1, 13)
 EVALUATION_START_ROUNDS = (1, 13)
-BEST_SELECTION_POLICY = 'man_advantaged_plant_then_competitive_plant_then_ability_advantage_v1'
-BEST_SELECTION_PRIORITIES = ('advantaged_plant_rate','competitive_plant_rate','ability_advantage_plant_rate')
+TIMEOUT_FIRST_SELECTION = True  # 時間切れ回避を最優先、その次に設置と同人数以上設置。
+BEST_SELECTION_POLICY = ('timeout_then_plant_then_competitive_plant_v2' if TIMEOUT_FIRST_SELECTION
+                         else 'man_advantaged_plant_then_competitive_plant_then_ability_advantage_v1')
+BEST_SELECTION_PRIORITIES = ('plant_rate','competitive_plant_rate','advantaged_plant_rate','ability_advantage_plant_rate')
 SAVE_EVALUATION_CHECKPOINTS = True  # Keep evaluated weights even when they are not selected as best.
 SAVE_REVIEW_WEIGHT_CHECKPOINTS = True  # 学習前・各セットの重みだけを実行ごとに保存し、劣化箇所を後から比較する。
-PLANT_CUSTOM_MODULES = ()  # 共通処理のみ。例: ('tv3_custom_train_attacker_plant_frc_v1_R',)
+PLANT_CUSTOM_MODULES = ('tv3_custom_train_attacker_plant_frc_v1_R_v3',)  # FRC右・期限内完遂の教師。
 PLANT_COMMON_DIRECTORY = HERE/'data'/'best'  # 左右専用分岐が保持する、凍結した共通モデルの入力元。
+PLANT_CUSTOM_INITIAL_CHECKPOINT = HERE/'data'/'best'/'custom_profiles'/'3e2fa49fec166d75'/'frc_v1'/'attacker_plant_best.pt'
 OPTIMIZER_UPDATES = 200
 BATCH_SIZE = 64
 REPLAY_SIZE = 60000
@@ -64,7 +67,7 @@ EVALUATION_CONSOLE_COLOR = "\033[1;32m"
 PLANT_SUCCESS_REWARD = 8.
 PLANT_COMPLETION_REWARD = 1.  # Every real plant is progress, including an outnumbered plant.
 PLANT_FAILURE_REWARD = -6.
-PLANT_TIMEOUT_REWARD = -10.  # Deliberate failure must not become cheap by waiting.
+PLANT_TIMEOUT_REWARD = -20.  # 時間切れを全滅(-6)より強く罰する。旧replayは使わない。
 FAILURE_DISCOUNT_COMPENSATION = True
 SURVIVOR_REWARD = 0.  # Survival is already represented by the team player ratio.
 RESOURCE_REWARD = .10
@@ -164,6 +167,20 @@ def warm_start_schema_compatible(source,target):
     omitted={'version','execution','recent_edge_progress_exception','empty_evidence','temporary_body_cover',
              'flash_progress_release','flash_step_teacher','flash_rally_release'}
     return {k:v for k,v in source.items() if k not in omitted}=={k:v for k,v in target.items() if k not in omitted}
+
+
+def initialize_custom_weights(policy,path,scenario,opponent,analysis_hash,schema):
+    """Explicit weights-only custom initialization; retain the new source contract."""
+    from touyama_v3.tv3_learn_attacker_plant import load_plant
+    source,state=load_plant(path,scenario,opponent,analysis_hash)
+    if (not hasattr(source,'common_policy') or source.weight_scope != policy.weight_scope
+            or source.common_policy_payload != policy.common_policy_payload
+            or {k:v for k,v in state['schema'].items() if k!='custom_extensions'}
+            != {k:v for k,v in schema.items() if k!='custom_extensions'}):
+        raise ValueError('Custom initialization requires identical inputs, scenario, analysis and pinned common weights')
+    policy.load_state_dict(source.state_dict())
+    policy.warm_start_hash=hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return state
 
 
 def carrier_stall_cost(before, inputs, action):
@@ -549,11 +566,17 @@ def plant_advantage_summary(rounds):
         ability_advantage_plant_rate=ability_wins/count if complete and count else (0. if complete else None))
 
 
-def best_rank(metrics):
-    required=BEST_SELECTION_PRIORITIES
+def best_rank(metrics, *, timeout_first=False):
+    required=BEST_SELECTION_PRIORITIES if timeout_first else (
+        'advantaged_plant_rate','competitive_plant_rate','ability_advantage_plant_rate')
     if any(metrics.get(k) is None for k in required):
         raise ValueError('Best selection needs plant-time enemy counts/resources; re-evaluate the saved weights')
-    return tuple(metrics[k] for k in required)+(-metrics['mean_damage'],-(metrics['mean_plant_ticks'] or 1000))
+    priority = ()
+    if timeout_first:
+        if metrics.get('rounds',0) <= 0 or metrics.get('timeouts') is None:
+            raise ValueError('Timeout-first selection requires evaluated rounds/timeouts')
+        priority = (-metrics['timeouts']/metrics['rounds'],)
+    return priority+tuple(metrics[k] for k in required)+(-metrics['mean_damage'],-(metrics['mean_plant_ticks'] or 1000))
 
 
 def exploration_values(completed_sets):
@@ -593,7 +616,10 @@ def log_evaluation(logger, opponent, evaluation, completed):
     logger.info("[%s][少被害設置] %d/%d (%.1f%%、%d人生存・HP%.0f%%以上)", opponent,
                 metrics['low_damage_plants'], metrics['rounds'], 100*metrics['low_damage_plant_rate'],
                 LOW_DAMAGE_MIN_SURVIVORS, 100*LOW_DAMAGE_HP_FRACTION)
-    logger.info('[%s][best選定] 人数優勢の設置=%d/%d 同人数以上の有効設置=%d/%d 有効設置時のアビリティ優勢=%s/%d',
+    if TIMEOUT_FIRST_SELECTION:
+        logger.info('[%s][best選定・最優先] timeout=%d/%d 次に設置=%d/%d、同人数以上設置を比較',
+                    opponent,metrics['timeouts'],metrics['rounds'],metrics['plants'],metrics['rounds'])
+    logger.info('[%s][設置人数・能力の内訳] 人数優勢の設置=%d/%d 同人数以上の有効設置=%d/%d 有効設置時のアビリティ優勢=%s/%d',
         opponent,metrics['advantaged_plants'],metrics['rounds'],metrics['competitive_plants'],metrics['rounds'],
         metrics['ability_advantage_plants'],metrics['rounds'])
 
@@ -700,6 +726,8 @@ def main(argv=None):
     config['failure_discount_compensation'] = FAILURE_DISCOUNT_COMPENSATION
     config['terminal_success_condition'] = 'all_plants_positive_man_ratio_or_enemy_elimination_v1'
     config['warm_start_from_best'] = WARM_START_FROM_BEST
+    config['timeout_first_selection'] = TIMEOUT_FIRST_SELECTION
+    config['custom_initial_checkpoint'] = str(PLANT_CUSTOM_INITIAL_CHECKPOINT) if PLANT_CUSTOM_INITIAL_CHECKPOINT else None
     custom_profiles={o:build_extensions(PLANT_CUSTOM_MODULES,role='attacker_plant',opponent=o).contract for o in args.opponents}
     frozen = {opponent: load_frozen_analysis(args.analysis_dir.resolve(), opponent, scenario) for opponent in args.opponents}
     common_payloads={}
@@ -768,6 +796,9 @@ def main(argv=None):
                 policy.load_state_dict(policy.common_policy.state_dict())
                 policy.warm_start_hash=routing['common_sha256']
                 logger.info('[%s] %s専用重みを共通モデルから初期化。共通重みは凍結・適用外サイトでは共通モデルを使用。',opponent,routing['site'])
+                if PLANT_CUSTOM_INITIAL_CHECKPOINT is not None:
+                    initialize_custom_weights(policy,PLANT_CUSTOM_INITIAL_CHECKPOINT,scenario,opponent,analysis_hash,schema)
+                    logger.info('[%s] 専用重み初期値=%s（重みのみ、optimizer/replayは新規）',opponent,PLANT_CUSTOM_INITIAL_CHECKPOINT)
             target = copy.deepcopy(policy)
             target.eval()
             optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
@@ -845,6 +876,15 @@ def main(argv=None):
                     record_path=log_dir/f'{opponent}_evaluation_rounds.jsonl',completed=completed)
                 log_evaluation(logger, opponent, result, completed)
                 continue
+            if routing is not None and not args.resume and old_evaluation is None:
+                old_evaluation=evaluate(opponent,scenario,analysis,policy,config,seeds,
+                    record_path=log_dir/f'{opponent}_initial_evaluation_rounds.jsonl',completed=0)
+                log_evaluation(logger,opponent,old_evaluation,0)
+                reference={"set":0,"evaluation":old_evaluation}
+                atomic_save(directory/'initial_evaluation.pt',dict(schema=schema,opponent=opponent,
+                    analysis_hash=analysis_hash,model=policy.state_dict(),completed_sets=0,
+                    evaluation=old_evaluation,config=config,selection_rule=BEST_SELECTION_POLICY,
+                    warm_start_hash=getattr(policy,'warm_start_hash',None),**routing_checkpoint_fields(policy)))
             additional_sets = remaining_training_sets(args.sets, completed, args.total_sets)
             logger.info("[%s] 完了=%d 今回追加=%dセット 通算上限=%s analysis=%s",
                         opponent, completed, additional_sets, args.total_sets, analysis_hash)
@@ -894,12 +934,12 @@ def main(argv=None):
                             "warm_start_hash": getattr(policy,'warm_start_hash',None),**routing_checkpoint_fields(policy)}
                     if SAVE_EVALUATION_CHECKPOINTS:
                         atomic_save(directory/'evaluation_checkpoints'/f'set_{completed:06d}.pt',evaluated)
-                    if old_evaluation is None or best_rank(result["selected"]) > best_rank(old_evaluation["selected"]):
+                    if old_evaluation is None or best_rank(result["selected"],timeout_first=TIMEOUT_FIRST_SELECTION) > best_rank(old_evaluation["selected"],timeout_first=TIMEOUT_FIRST_SELECTION):
                         atomic_save(best_path,evaluated)
                         old_evaluation = result
                         logger.info("[%s] best更新 採用set=%d 保存=%s", opponent, completed, best_path)
                     else:
-                        logger.info("[%s] best維持=%s", opponent, best_path)
+                        logger.info("[%s] 保存best維持=%s" if best_path.exists() else "[%s] 初期評価を超えず、専用best採用なし=%s", opponent, best_path)
     except KeyboardInterrupt:
         logger.info("中断。完了セットはlatest保存済み。RESUME_TRAINING=Trueで再開できます。")
         return 130
