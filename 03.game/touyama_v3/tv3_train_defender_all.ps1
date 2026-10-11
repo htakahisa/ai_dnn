@@ -8,7 +8,6 @@
 # - frc_v1
 # - toru_ai_v4
 # - ghost_champions_v2
-# ghost_champions_v2 is not selectable yet.
 # One AI: .\tv3_train_defender_all.ps1 -Opponents frc_v1
 # Multiple AIs: .\tv3_train_defender_all.ps1 -Opponents gc_v1,frc_v1
 # With powershell -File, use one quoted comma-separated argument:
@@ -22,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 $PythonCommand = 'py'
 # Set persistent targets here; empty uses each Python script's target constants.
 $DefaultOpponents = @()
-$AvailableOpponents = @('gc_v1', 'concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4')
+$AvailableOpponents = @('gc_v1', 'concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4', 'ghost_champions_v2')
 $SelectedOpponents = $DefaultOpponents
 if ($PSBoundParameters.ContainsKey('Opponents')) {
     $SelectedOpponents = $Opponents

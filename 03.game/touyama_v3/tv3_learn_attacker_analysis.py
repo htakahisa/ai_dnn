@@ -14,12 +14,25 @@ from touyama_v3.tv3_attacker_entry_utility import utility_schema
 from touyama_v3.tv3_attacker_route_planner import planner_schema
 from touyama_v3.tv3_attacker_combat import combat_schema
 
-ANALYSIS_VERSION = 3  # Online observations, belief-aware routes, adaptive continuation labels.
+ANALYSIS_VERSION = 4  # Selected-site completion; legacy v3 predicts any-site adaptive completion.
 ROUTE_PRESSURE_WEIGHT = .15
 ENTRY_PRESSURE_WEIGHT = .35
 ENTRY_MODES = ("preserve", "supported")
 MAX_ROUTES_PER_SITE = 6
 TIME_MARGIN_TICKS = 5
+ROUTE_ENTRY_CELLS = 6
+PUBLIC_ROUTE_THREAT_TICKS = 20
+
+
+def completion_target(terminal, selected_site, execution_version):
+    """V4 predicts completion at the selected site, retaining adaptive movement within it."""
+    if execution_version not in (3, 4):
+        raise ValueError('Unsupported attacker analysis version')
+    if not terminal['planted']:
+        return 0.
+    if terminal['site'] not in ('L', 'R') or selected_site not in ('L', 'R'):
+        raise ValueError('Plant success requires a valid actual and selected site')
+    return float(execution_version == 3 or terminal['site'] == selected_site)
 
 
 def shortest_path(scenario, start, goals, blocked=()):
@@ -60,6 +73,14 @@ def branch_sequence(scenario, cells):
     return tuple(result)
 
 
+def route_entry_positions(scenario, route):
+    """Diagnostic boundary; a route starting inside a site has no future entrance."""
+    for i,p in enumerate(route.cells):
+        if scenario.grid[p]==2:
+            return (route.cells[i-1],p) if i else ((-1,-1),(-1,-1))
+    return (-1,-1),(-1,-1)
+
+
 def candidate_routes(scenario, origin, remaining_ticks, limit=MAX_ROUTES_PER_SITE):
     """Bounded diverse simple cell paths via branch waypoints, including detours.
 
@@ -93,17 +114,24 @@ def candidate_routes(scenario, origin, remaining_ticks, limit=MAX_ROUTES_PER_SIT
 
 
 class AttackerEncoder:
-    def __init__(self, scenario):
+    def __init__(self, scenario, execution_version=ANALYSIS_VERSION):
+        if execution_version not in (3, 4):
+            raise ValueError('Unsupported attacker analysis version')
+        self.execution_version = execution_version
         self.scenario = scenario
         self.history = FeatureHistory(scenario)
         self.fields = self.history.fields + [f"ally_{i}_{name}" for i in range(5)
             for name in ("charges", "spike", "plant_progress", "movement_disabled")]
         self.fields += [f"observed_fraction_{name}" for name in scenario.names]
+        if self.execution_version >= 4:
+            self.fields += ['absolute_match_round']
         self.route_fields = ["site_R", "supported", "steps", "time_slack", "visible_fraction",
                              "known_exposure", "information_age"]
         self.route_fields += [f"route_{n}_{field}" for n in scenario.names
                               for field in ("fraction", "first", "last")]
         self.route_fields += ["belief_route_pressure", "belief_entry_pressure", "observed_empty_fraction", "information_gain"]
+        if self.execution_version >= 4:
+            self.route_fields += ['known_approach_wall_exposure','known_entry_wall_exposure']
         self.region_cells = {n: tuple(map(tuple, np.argwhere((scenario.region == i) & (scenario.grid != 1))))
                              for i, n in enumerate(scenario.names)}
         self.visibility_cache = {}
@@ -117,12 +145,19 @@ class AttackerEncoder:
         if snapshot.side != "A":
             raise ValueError("Attacker analysis requires an A-side public snapshot")
         base = self.history.encode(snapshot, rounds)
+        if self.execution_version >= 4:
+            # Keep shared defender/guard history and all v3 inputs unchanged.
+            # Absolute context remains separate: opponent anchors can differ at 13 and 1.
+            base[:12] = 0.
+            base[(snapshot.round_number - 1) % 12] = 1.
         self.observed_cells.update(snapshot.visible_cells)
         extra = [v for a in snapshot.allies for v in
                  (a.charges / 10, float(a.has_spike), a.plant_progress / PLANT_REQUIRED_TICKS,
                   float(a.movement_disabled > 0))]
         extra += [sum(p in self.observed_cells for p in self.region_cells[n]) / len(self.region_cells[n])
                   for n in self.scenario.names]
+        if self.execution_version >= 4:
+            extra += [snapshot.round_number / 48.]
         return np.concatenate((base, np.asarray(extra, dtype=np.float32)))
 
     def route_features(self, snapshot, route, mode, placement=None):
@@ -159,21 +194,40 @@ class AttackerEncoder:
                 if max(abs(p[0]-probe[0]), abs(p[1]-probe[1])) <= 6 and self.scenario.clear(probe, p))
         potential = self.visibility_cache[probe]
         values += [sum(p not in self.observed_cells for p in potential) / max(1, len(potential))]
+        if self.execution_version >= 4:
+            occupied={s.position for s in snapshot.sightings}
+            positions=[p for i,(p,t,_) in self.history.tracks.items() if i in alive
+                and 0<=snapshot.tick-t<=PUBLIC_ROUTE_THREAT_TICKS and (p not in visible or p in occupied)]
+            split=max(0,len(cells)-ROUTE_ENTRY_CELLS)
+            for section in (cells[:split],cells[split:]):
+                values.append(sum(any(self.scenario.clear(p,t) for t in positions) for p in section)/max(1,len(section)))
         return np.asarray(values, dtype=np.float32)
 
     def schema(self):
-        return {"version": ANALYSIS_VERSION, "board": self.scenario.grid.tolist(), "scenario": self.scenario.signature,
+        schema = {"version": self.execution_version, "board": self.scenario.grid.tolist(), "scenario": self.scenario.signature,
                 "branches": self.scenario.branches, "fields": self.fields,
                 "route_fields": self.route_fields, "modes": list(ENTRY_MODES),
                 "max_routes_per_site": MAX_ROUTES_PER_SITE, "margin": TIME_MARGIN_TICKS,
                 "executor": "public_online_combat_attack_v7", "entry_utility": utility_schema(), "combat": combat_schema(),
                 "planner": planner_schema(), "risk_weights": [ROUTE_PRESSURE_WEIGHT, ENTRY_PRESSURE_WEIGHT],
                 "sensor": "frc_public_team_v1"}
+        if self.execution_version >= 4:
+            schema['round_clock'] = dict(version=1, cyclic_one_hot=12,
+                absolute_scale=48, absolute_clipped=False, history='attacker_role_local')
+            schema['success_target'] = 'selected_site_completion_with_adaptive_routes_v1'
+            schema['site_entry_route_binding'] = 'changed_entry_outside_remaining_path_v3'
+            schema['flank_entry_reachability'] = 'outside_sites_public_distance_and_deadline_v1'
+            schema['public_route_exposure']=dict(version=1,entry_cells=ROUTE_ENTRY_CELLS,
+                memory_ticks=PUBLIC_ROUTE_THREAT_TICKS,cover='walls_only',selection='learned_outcomes')
+        return schema
 
 
 class AttackerAnalysisModel(nn.Module):
-    def __init__(self, observation_size, route_size, regions):
+    def __init__(self, observation_size, route_size, regions, execution_version=ANALYSIS_VERSION):
         super().__init__()
+        if execution_version not in (3, 4):
+            raise ValueError('Unsupported attacker analysis version')
+        self.execution_version = execution_version
         self.regions = regions
         self.encoder = nn.Sequential(nn.Linear(observation_size, 128), nn.ReLU(), nn.Linear(128, 64), nn.ReLU())
         self.placement = nn.Linear(64, 5 * (regions + 1))
@@ -214,14 +268,15 @@ class AttackerAnalysisModel(nn.Module):
         results = []
         for (route, mode), outcome, route_input in zip(pairs, outcomes, route_inputs):
             success, damage, losses, charges, ticks = map(float, outcome)
+            field={name:float(route_input[i]) for i,name in enumerate(encoder.route_fields)}
             results.append({"route": route, "mode": mode, "plant_probability": success,
                 "expected_hp_damage": damage * 500, "expected_losses": losses * 5,
                 "expected_ability_uses": charges * 10, "expected_plant_ticks_if_success": ticks * 100,
                 "minimum_ticks": len(route.cells) - 1 + PLANT_REQUIRED_TICKS,
-                "route_pressure": float(route_input[-4]), "entry_pressure": float(route_input[-3]),
-                "observed_empty_fraction": float(route_input[-2]), "information_gain": float(route_input[-1]),
+                "route_pressure": field['belief_route_pressure'], "entry_pressure": field['belief_entry_pressure'],
+                "observed_empty_fraction": field['observed_empty_fraction'], "information_gain": field['information_gain'],
                 "score": success - .25 * losses - .15 * damage - .05 * charges - .05 * ticks
-                         - ROUTE_PRESSURE_WEIGHT * float(route_input[-4]) - ENTRY_PRESSURE_WEIGHT * float(route_input[-3])})
+                         - ROUTE_PRESSURE_WEIGHT * field['belief_route_pressure'] - ENTRY_PRESSURE_WEIGHT * field['belief_entry_pressure']})
         results.sort(key=lambda r: r["score"], reverse=True)
         return {"candidates": results, **belief}
 
@@ -255,15 +310,15 @@ def optimize(model, optimizer, replay, rng, updates, batch_size):
 
 
 def load_analysis(path, scenario, opponent=None):
-    encoder = AttackerEncoder(scenario)
     state = torch.load(path, map_location="cpu", weights_only=True)
+    encoder = AttackerEncoder(scenario, state['schema'].get('version'))
     # JSON normalizes tuples consistently when a schema was serialized elsewhere.
     if json.dumps(state["schema"], sort_keys=True) != json.dumps(encoder.schema(), sort_keys=True):
         raise ValueError("Attacker analysis schema does not match the current map/executor/LOS. "
                          "After the wall-corner LOS fix, retrain attacker analysis with RESUME_TRAINING=False before plant.")
     if opponent is not None and state["opponent"] != opponent:
         raise ValueError("Attacker analysis opponent mismatch")
-    model = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names))
+    model = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names), encoder.execution_version)
     model.load_state_dict(state["model"])
     model.trained_rounds = state["trained_rounds"]
     model.eval()

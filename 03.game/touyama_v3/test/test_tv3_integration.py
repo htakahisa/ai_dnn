@@ -51,7 +51,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_all_opponents_and_fixed_roster_include_toru_v4_instead_of_v3(self):
         from touyama_v3.tv3_attacker_rosters import eligible_attacker_presets
-        self.assertEqual(len(OPPONENTS), 6)
+        self.assertEqual(len(OPPONENTS), 7)
         self.assertEqual(OPPONENTS['toru_ai_v4'][0], 'toru_ai_v4')
         self.assertNotIn('toru_ai_v3', OPPONENTS)
         self.assertNotIn('touyama_v2', OPPONENTS)
@@ -59,10 +59,34 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(OPPONENT_NAMES['ConCon v1'], 'concon_v1')
         self.assertNotIn('Touyama Gaming v2', OPPONENT_NAMES)
         self.assertEqual(OPPONENT_NAMES['Toru AI v4'], 'toru_ai_v4')
+        self.assertEqual(OPPONENTS['ghost_champions_v2'], ('ghost_champions_v2', 'Ghost Champions'))
+        self.assertEqual(OPPONENT_NAMES['Ghost Champions v2'], 'ghost_champions_v2')
         for opponent in OPPONENTS:
             self.assertEqual(eligible_attacker_presets(('Touyama Gaming',), opponent), ['Touyama Gaming'])
         with self.assertRaises(ValueError):
             eligible_attacker_presets(('Gorigons',), 'gc_v1')
+
+    def test_gc_v2_remains_a_training_target_and_uses_its_own_factories(self):
+        import os
+        from touyama_v3 import tv3_train_attacker_analysis, tv3_train_attacker_plant
+        from touyama_v3 import tv3_collect_attacker_guard, tv3_train_attacker_guard
+        from touyama_v3.tv3_opponents import build_opponent_ai
+        from ghost_champions_v2.controller import GhostChampionsV2AttackerController
+        from ghost_champions_v2.defender_macro_v1.controller import GhostChampionsV2DefenderController
+        for module in (tv3_train_attacker_analysis,tv3_train_attacker_plant,
+                       tv3_collect_attacker_guard,tv3_train_attacker_guard):
+            if module is tv3_train_attacker_plant:
+                self.assertIn('ghost_champions_v2',module.ALL_TARGET_OPPONENTS)
+                self.assertEqual(module.parser().parse_args([]).opponents,['frc_v1'])
+            else:
+                self.assertIn('ghost_champions_v2',module.parser().parse_args([]).opponents)
+            self.assertEqual(module.parser().parse_args(['--opponents','ghost_champions_v2']).opponents,
+                             ['ghost_champions_v2'])
+        with patch.dict(os.environ,{'GC_V2_RL_CHECKPOINT':''}):
+            team = build_opponent_ai(OPPONENTS['ghost_champions_v2'][0])
+        self.assertEqual(team.name,'Ghost Champions v2')
+        self.assertIs(team.attacker_factory,GhostChampionsV2AttackerController)
+        self.assertIs(team.defender_factory,GhostChampionsV2DefenderController)
 
     def test_initial_markers_are_targets_and_capitals_are_look_points(self):
         scenario = Scenario()

@@ -21,6 +21,7 @@ OPPONENTS = {
     "fnatic_v3": ("fnatic_v3", "Fnatic2023"),
     "frc_v1": ("frc_v1", "Furina Classic"),
     "toru_ai_v4": ("toru_ai_v4", "Team Elites"),
+    "ghost_champions_v2": ("ghost_champions_v2", "Ghost Champions"),
 }
 MOVES = ((-1, 0), (1, 0), (0, -1), (0, 1))
 

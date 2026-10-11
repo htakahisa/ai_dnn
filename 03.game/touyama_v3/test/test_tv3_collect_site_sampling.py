@@ -66,6 +66,20 @@ class SiteSamplingTests(unittest.TestCase):
                 self.assertIs(module.forced_attack_site, original[0])
                 self.assertIs(module.attack_plant_cells, original[1])
 
+    def test_gc_v2_site_selection_filters_available_sites_and_restores(self):
+        from ghost_champions_v2.tactics import AttackerTactics
+        from ghost_champions_v2.config import load_config
+        original = AttackerTactics.choose_site
+        for site, axis in (('L','A'),('R','B')):
+            controller = AttackerTactics(load_config())
+            with self.assertRaisesRegex(RuntimeError, 'stop'):
+                with site_sampling(site, attacker='ghost_champions_v2'):
+                    self.assertEqual(controller.choose_site(), axis)
+                    self.assertEqual(controller.choose_site(), axis)
+                    self.assertIsNone(controller.choose_site(('B' if axis=='A' else 'A',)))
+                    raise RuntimeError('stop')
+            self.assertIs(AttackerTactics.choose_site, original)
+
     def test_guard_requires_each_site_and_records_request(self):
         for limit, complete in ((3, False), (4, True)):
             with self.subTest(limit=limit), tempfile.TemporaryDirectory() as temp:

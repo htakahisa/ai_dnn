@@ -30,8 +30,9 @@ class TouyamaV3AttackerPlantController:
     def __init__(self, scenario, analysis, policy, *, seed=42, training=False):
         self.scenario, self.analysis, self.policy = scenario, analysis, policy
         self.sensor = FrcPerceptionBuilder("A")
-        self.analysis_encoder = AttackerEncoder(scenario)
+        self.analysis_encoder = AttackerEncoder(scenario, getattr(analysis, 'execution_version', 3))
         self.encoder = PlantEncoder(scenario, getattr(policy, "execution_version", PLANT_VERSION))
+        self.encoder.experimental_flash_teacher=getattr(policy,'experimental_flash_teacher',False)
         self.rng = np.random.default_rng(seed)
         self.training = training
         self.epsilon = self.teacher_probability = 0.
@@ -57,6 +58,7 @@ class TouyamaV3AttackerPlantController:
         self.cache = self.snapshot = self.route = self.route_mode = None
         self.cursors, self.inputs, self.actions, self.plans, self.decisions = {}, {}, {}, {}, {}
         self.previous_inputs = {}
+        self.pending_public_flashes=[]
         self.edges = Counter()
         self.edge_history = deque()
         self.endpoints = {}
@@ -65,13 +67,21 @@ class TouyamaV3AttackerPlantController:
         self.route_planner = AdaptiveAttackPlanner(site_switch_margin=SITE_SWITCH_MARGIN,
                                                    switch_travel_cost=SITE_SWITCH_TRAVEL_COST)
         self.entry_coordinator = EntryCoordinator(self.scenario)
-        self.site_assembly = PlantSiteAssembly(self.scenario)
+        self.site_assembly = PlantSiteAssembly(self.scenario,
+            follow_route_entry=getattr(self.analysis, 'execution_version', 3) >= 4,
+            bind_changed_entry_only=getattr(self.analysis, 'execution_version', 3) >= 4)
         self.site_entry_state = None
         self.attack_plan = None
         self.encoder.combat_coach = type(self.encoder.combat_coach)(self.scenario)
+        self.encoder.support_coach.reset()
+        self.encoder.empty_evidence=type(self.encoder.empty_evidence)()
+        if self.encoder.execution_version >= 12:
+            from touyama_v3.tv3_learn_attacker_corner_utility import FriendlyFlashTracker
+            self.encoder.flash_tracker=FriendlyFlashTracker(self.scenario)
         self.events = []
 
     def select_route(self, snapshot, observation):
+        self.route_planner.allow_deadline_route_reserve=getattr(getattr(self,'encoder',None),'execution_version',0)>=18
         holder = next((a for a in getattr(snapshot, 'allies', ()) if a.alive and a.has_spike), None)
         previous = self.previous_inputs.get(holder.name) if holder else None
         coordinated_wait = (holder and self.site_entry_state and self.site_entry_state['wait']
@@ -80,8 +90,14 @@ class TouyamaV3AttackerPlantController:
                        and previous.combat.reason in ('assemble', 'stop_shoot', 'cover_retreat'))
         if coordinated_wait or combat_wait:
             self.route_planner.progress_tick = snapshot.tick
+        planning_options = {} if not hasattr(self, 'planning_rng') else dict(
+            rng=self.planning_rng, exploration=self.planning_exploration,
+            exploration_scope=self.planning_exploration_scope,
+            exploration_probe_steps=self.planning_probe_steps,
+            exploration_probe_ticks=self.planning_probe_ticks,
+            exploration_round_start_only=self.planning_round_start_only)
         plan = self.route_planner.update(snapshot, observation, self.analysis_encoder, self.analysis,
-                                         self.route, self.route_mode)
+                                         self.route, self.route_mode, **planning_options)
         if plan is not None:
             invalid = {slot for slot,(outside,inside) in self.route_planner.flank_entries.items()
                        if outside == inside or self.scenario.grid[outside] == 2
@@ -121,6 +137,21 @@ class TouyamaV3AttackerPlantController:
         return True
 
     def goal_for(self, snapshot, ally):
+        goal=self._assigned_goal_for(snapshot,ally)
+        if self.encoder.execution_version>=17:
+            from touyama_v3.tv3_attacker_entry_yield import yielding_entry_goal
+            holder=next((a for a in snapshot.allies if a.alive and a.has_spike),None)
+            carrier_inputs=self.inputs.get(holder.name) if holder else None
+            if carrier_inputs is not None:
+                replacement=yielding_entry_goal(self.scenario,snapshot,ally,goal,carrier_inputs.goal,self.route.site)
+                if replacement is not None:
+                    self.endpoints[ally.slot]=replacement
+                    self.events.append(dict(type='entry_yield',tick=snapshot.tick,slot=ally.slot,
+                        position=ally.position,old_goal=goal,new_goal=replacement))
+                    return replacement
+        return goal
+
+    def _assigned_goal_for(self, snapshot, ally):
         self.cursors.setdefault(ally.slot, 0)
         if ally.slot == self.retriever:
             return snapshot.spike_dropped
@@ -145,6 +176,15 @@ class TouyamaV3AttackerPlantController:
         if self.cache == key:
             return
         snapshot = self.sensor.build(self.game)
+        if self.encoder.execution_version >= 12:
+            allies={a.slot:a for a in snapshot.allies}
+            remaining=[]
+            for tick,slot,origin,aim,charges in self.pending_public_flashes:
+                if snapshot.tick<=tick:
+                    remaining.append((tick,slot,origin,aim,charges))
+                elif slot in allies and allies[slot].charges<charges:
+                    self.encoder.flash_tracker.record(tick,origin,aim)
+            self.pending_public_flashes=remaining
         self.snapshot, self.cache = snapshot, key
         self.previous_inputs = self.inputs
         self.inputs, self.actions, self.plans = {}, {}, {}
@@ -171,6 +211,20 @@ class TouyamaV3AttackerPlantController:
         masks = build_masks(snapshot)
         coordination = self.entry_coordinator.observe(snapshot, self.route, self.route_planner.flank_entries)
         self.site_entry_state = self.site_assembly.observe(snapshot, self.route)
+        if (self.encoder.execution_version>=16 and holder and self.site_entry_state
+                and self.site_entry_state['wait'] and holder.slot in self.site_entry_state['ready']
+                and not holder.blind):
+            from game_core import PLANT_REQUIRED_TICKS
+            from touyama_v3.tv3_learn_attacker_corner_utility import confirmed_flash_step_window,flash_window_allows_completion
+            inside=self.site_assembly.entries.get(holder.slot)
+            if inside is not None:
+                tactical=self.encoder.empty_evidence.tactical_snapshot(snapshot,temporary_body_cover=True)
+                window=confirmed_flash_step_window(self.scenario,tactical,holder,inside,
+                    self.analysis_encoder.history.tracks,self.encoder.flash_tracker)
+                travel=distance_map(self.scenario.grid,inside)[holder.position]
+                if flash_window_allows_completion(window,travel,PLANT_REQUIRED_TICKS):
+                    self.site_assembly.launched=True
+                    self.site_entry_state=self.site_assembly.observe(snapshot,self.route)
         if self.site_entry_state is not None:
             coordination = self.site_entry_state
         reserved = set()
@@ -191,9 +245,19 @@ class TouyamaV3AttackerPlantController:
                     dr, dc = MOVE_STEPS.get(MOVEMENTS[i // 8], (0, 0))
                     p = ally.position[0] + dr, ally.position[1] + dc
                     field = teacher_distances(inputs.distances, inputs.traffic, ally.position)
+                    if self.encoder.execution_version >= 11 and inputs.support_distances is not None:
+                        field = inputs.support_distances
                     d = field[p]
+                    if self.encoder.execution_version>=19:
+                        return d if d >= 0 else 9999,int(inputs.actions[i].facing!=inputs.combat.facing),i
                     return d if d >= 0 else 9999, i
-                inputs.teacher = int(min(candidates, key=rank))
+                if self.encoder.execution_version>=19 and inputs.combat.reason=='cover_retreat':
+                    from touyama_v3.tv3_learn_attacker_masked_teacher import masked_retreat_teacher
+                    tactical=self.encoder.empty_evidence.tactical_snapshot(snapshot,temporary_body_cover=True)
+                    inputs.teacher=masked_retreat_teacher(self.scenario,tactical,ally,inputs,
+                        self.analysis_encoder.history.tracks)
+                else:
+                    inputs.teacher = int(min(candidates, key=rank))
             if self.training and self.rng.random() < self.teacher_probability:
                 action_index = inputs.teacher
             elif self.training and self.rng.random() < self.epsilon:
@@ -211,6 +275,8 @@ class TouyamaV3AttackerPlantController:
 
     def _restrict_movement(self, ally, inputs, reserved):
         self._expire_edges(self.snapshot.tick)
+        inputs.engine_movement_mask = inputs.mask[:40].copy()
+        inputs.movement_debug = {}
         path = self.route.cells
         cursor = self.cursors[ally.slot]
         allowed_path = path[max(0, cursor - ROUTE_RETREAT_CELLS):]
@@ -237,15 +303,31 @@ class TouyamaV3AttackerPlantController:
             destination = ally.position[0] + dr, ally.position[1] + dc
             if destination in reserved:
                 inputs.mask[i] = False
+                inputs.movement_debug.setdefault(kind, []).append('team_reservation')
             elif not recovering:
+                if getattr(inputs, 'diagnostic_allow_detour', False):
+                    continue  # Experimental teacher only; never set by production encoders.
                 edge = tuple(sorted((ally.position, destination)))
                 public_contact = bool(self.encoder.combat_coach.contacts(self.snapshot, ally, ally.position))
                 retreat = inputs.combat is not None and inputs.combat.reason == "cover_retreat"
+                progress_escape=(self.encoder.execution_version==14 and destination in self.route.cells
+                    and inputs.traffic[ally.position]>=0
+                    and 0<=inputs.traffic[destination]<inputs.traffic[ally.position])
+                if (self.encoder.execution_version>=16 and destination in self.route.cells
+                        and inputs.traffic[ally.position]>=0
+                        and 0<=inputs.traffic[destination]<inputs.traffic[ally.position]
+                        and self.edges[(ally.slot,edge)]>=MAX_EDGE_TRAVERSALS):
+                    from touyama_v3.tv3_learn_attacker_corner_utility import confirmed_flash_covers_step
+                    tactical=self.encoder.empty_evidence.tactical_snapshot(self.snapshot,temporary_body_cover=True)
+                    progress_escape=confirmed_flash_covers_step(self.scenario,tactical,ally,destination,
+                        self.analysis_encoder.history.tracks,self.encoder.flash_tracker)
                 if (self.edges[(ally.slot, edge)] >= MAX_EDGE_TRAVERSALS
-                        and not (ally.blind or public_contact or retreat)):
+                        and not (ally.blind or public_contact or retreat or progress_escape)):
                     inputs.mask[i] = False
+                    inputs.movement_debug.setdefault(kind, []).append('recent_edge_limit')
                 if not (ally.blind or public_contact or retreat) and corridor[ally.position] <= ROUTE_CORRIDOR_CELLS and corridor[destination] > ROUTE_CORRIDOR_CELLS:
                     inputs.mask[i] = False
+                    inputs.movement_debug.setdefault(kind, []).append('route_corridor')
 
     @staticmethod
     def _has_progress_move(ally, inputs):
@@ -269,11 +351,22 @@ class TouyamaV3AttackerPlantController:
         name = str(getattr(char, "base_name", char.name))
         if name in self.plans:
             self.decisions[name] = self.plans[name]
+            selected,inputs,before=self.plans[name]
+            action=inputs.actions[selected]
+            if self.encoder.execution_version>=12 and before.ability_name=='FLASH' and action.kind=='ABILITY' and action.target is not None:
+                pending=(self.snapshot.tick,before.slot,before.position,action.target,before.charges)
+                if pending not in self.pending_public_flashes:
+                    self.pending_public_flashes.append(pending)
         return self.actions.get(name, (list(char.pos), {"facing": char.facing}))
 
     def observe_executed_moves(self, chars):
         by_name = {str(getattr(c, "base_name", c.name)): c for c in chars}
-        for name, (_, _, before) in self.decisions.items():
+        for name, (selected, inputs, before) in self.decisions.items():
+            action=inputs.actions[selected]
+            if (self.encoder.execution_version >= 12 and before.ability_name=='FLASH'
+                    and action.kind=='ABILITY' and action.target is not None
+                    and getattr(by_name[name],'flash_charges',before.charges)<before.charges):
+                self.encoder.flash_tracker.record(self.snapshot.tick,before.position,action.target)
             after = tuple(map(int, by_name[name].pos))
             if after != before.position:
                 edge = tuple(sorted((before.position, after)))

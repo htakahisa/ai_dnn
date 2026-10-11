@@ -42,11 +42,11 @@ def load_sources(scenario, opponents, best_dir, analysis_dir):
         analysis_path = Path(analysis_dir).resolve() / opponent / "attacker_analysis_best.pt"
         plant_state, plant_hash = read_checkpoint(plant_path)
         analysis_state, analysis_hash = read_checkpoint(analysis_path)
-        encoder = AttackerEncoder(scenario)
+        encoder = AttackerEncoder(scenario, analysis_state['schema'].get('version'))
         if plant_state["opponent"] != opponent or analysis_state["opponent"] != opponent:
             raise ValueError(f"Source opponent mismatch: {opponent}")
         version = plant_state["schema"].get("version")
-        if version not in (9, 10):
+        if version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
             raise ValueError(f"Source plant version unsupported: {opponent}, version={version}")
         if json.dumps(plant_state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
             raise ValueError(f"Source plant map/schema mismatch: {opponent}, version={version}")
@@ -56,7 +56,7 @@ def load_sources(scenario, opponents, best_dir, analysis_dir):
             raise ValueError(f"Plant and analysis best do not match: {opponent}")
         plant = PlantDQN(version)
         plant.load_state_dict(plant_state["model"])
-        analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names))
+        analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names), encoder.execution_version)
         analysis.load_state_dict(analysis_state["model"])
         analysis.trained_rounds = analysis_state["trained_rounds"]
         for model in (plant, analysis):
@@ -209,20 +209,25 @@ def play_round(game, controller, opponent, rewards, max_steps, capture=None):
     return record, transitions
 
 
-def play_block(opponent, scenario, source, guard_policy, seed, *, capture=None, rewards=None, max_steps=400, preset_name=None):
+def play_block(opponent, scenario, source, guard_policy, seed, *, capture=None, rewards=None, max_steps=400, preset_name=None, start_round=1):
+    if not isinstance(start_round, int) or start_round < 1:
+        raise ValueError('start_round must be a positive match round number')
     from simulation_runtime import cpu_inference
     rounds, transitions, history = [], [], []
     with legacy_root(), open(os.devnull, "w", encoding="utf-8") as quiet, \
             contextlib.redirect_stdout(quiet), contextlib.redirect_stderr(quiet), cpu_inference(enabled=True):
         game, controller = build_game(opponent, scenario, source, guard_policy, seed, preset_name)
-        for round_number in range(1, 13):
+        if start_round != 1:
+            game.current_round = start_round
+            game.init_round()
+        for round_number in range(start_round, start_round + 12):
             controller.plant.previous_rounds = list(history)
             record, rows = play_round(game, controller, opponent, rewards or DEFAULT_REWARDS, max_steps, capture)
             record["preset"] = preset_name or source["preset"]
             rounds.append(record)
             transitions.extend(rows)
             history.append({"site": record["site"], "winner": "A" if record["full_round_won"] else "D"})
-            if round_number < 12:
+            if round_number < start_round + 11:
                 game.current_round += 1
                 game.init_round()
     return rounds, transitions

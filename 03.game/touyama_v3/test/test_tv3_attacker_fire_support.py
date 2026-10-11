@@ -131,7 +131,7 @@ class FireSupportTests(unittest.TestCase):
         snap=collector.snapshot
         ally=snap.allies[0]
         analysis=model.analyze(encoder,snap,collector.frames[0]['observation'],[collector.route])
-        result=PlantEncoder(self.game).encode(snap,ally,collector.route.cells[-1],collector.route,
+        result=PlantEncoder(self.game, execution_version=10).encode(snap,ally,collector.route.cells[-1],collector.route,
             analysis,{},build_masks(snap),0,'supported')
         self.assertEqual(len(result.observation),892)
         self.assertTrue(np.isfinite(result.observation).all())
@@ -146,7 +146,7 @@ class FireSupportTests(unittest.TestCase):
         analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(self.game.names))
         analysis_state = {'schema': encoder.schema(), 'opponent': 'fnatic_v3',
                           'model': analysis.state_dict(), 'trained_rounds': 1, 'completed_sets': 1}
-        for version in (9, 10):
+        for version in (9, 10, 11):
             with self.subTest(version=version):
                 plant = PlantDQN(version)
                 plant_state = {'schema': policy_schema(self.game, version), 'opponent': 'fnatic_v3',

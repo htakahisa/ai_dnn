@@ -10,7 +10,7 @@ from frc_v1.actions import build_masks, KINDS
 from touyama_v3.tv3_observer import facing
 from touyama_v3.tv3_scenario import OPPONENTS
 from touyama_v3.tv3_learn_attacker_analysis import (
-    AttackerEncoder, Route, ENTRY_MODES, candidate_routes, branch_sequence, shortest_path,
+    AttackerEncoder, Route, ENTRY_MODES, candidate_routes, branch_sequence, shortest_path, completion_target, route_entry_positions,
 )
 from touyama_v3.tv3_train_defender_analysis import legacy_root, seed_all, relocate_debug_logs
 from touyama_v3.tv3_attacker_entry_utility import predicted_entry_utility, projectile_impact, flash_entry_step, SupportUseTracker
@@ -32,12 +32,17 @@ class AnalysisCollectorController:
     """
     handles_team_perception = True
 
-    def __init__(self, scenario, model, rng, exploration=1.):
+    def __init__(self, scenario, model, rng, exploration=1., *, exploration_scope="score_window",
+                 exploration_probe_steps=0, exploration_probe_ticks=0, exploration_round_start_only=False):
         self.scenario, self.model, self.rng = scenario, model, rng
         self.exploration = exploration
+        self.exploration_scope = exploration_scope
+        self.exploration_probe_steps = exploration_probe_steps
+        self.exploration_probe_ticks = exploration_probe_ticks
+        self.exploration_round_start_only = exploration_round_start_only
         self.combat_enabled = COMBAT_POLICY_ENABLED
         self.sensor = FrcPerceptionBuilder("A")
-        self.encoder = AttackerEncoder(scenario)
+        self.encoder = AttackerEncoder(scenario, getattr(model, 'execution_version', 3))
         self.previous_rounds = []
         self.game = None
         self.reset_round()
@@ -65,7 +70,11 @@ class AnalysisCollectorController:
     def _select(self, snapshot, observation):
         self.route_planner.enable_flanks = self.combat_enabled
         plan = self.route_planner.update(snapshot, observation, self.encoder, self.model, self.route, self.mode,
-                                         rng=self.rng, exploration=self.exploration)
+                                         rng=self.rng, exploration=self.exploration,
+                                         exploration_scope=self.exploration_scope,
+                                         exploration_probe_steps=self.exploration_probe_steps,
+                                         exploration_probe_ticks=self.exploration_probe_ticks,
+                                         exploration_round_start_only=self.exploration_round_start_only)
         self.attack_plan = plan
         if plan is None:
             self.route = self.mode = None
@@ -164,6 +173,9 @@ class AnalysisCollectorController:
             "decision_id": self.route_planner.decision_id, "site": self.route.site,
             "phase": self.attack_plan.phase,
             "alive": sum(a.alive for a in snapshot.allies)})
+        outside,inside=route_entry_positions(self.scenario,remaining)
+        self.frames[-1].update(entry_outside=outside,entry_inside=inside,
+                              carrier_slot=holder.slot if holder else -1)
         if snapshot.spike_dropped is not None and holder is None:
             alive = [a for a in snapshot.allies if a.alive]
             current = next((a for a in alive if a.slot == self.retriever), None)
@@ -305,8 +317,10 @@ class AnalysisCollectorController:
         return self.actions.get(name, (list(char.pos), {"facing": char.facing}))
 
 
-def play_block(opponent, scenario, model, config, seed, exploration, *, preset_name):
+def play_block(opponent, scenario, model, config, seed, exploration, *, preset_name, plant_policy=None, tick_callback=None, start_round=1):
     """Twelve rounds preserve defender history. Hidden coordinates are labels only."""
+    if not isinstance(start_round, int) or start_round < 1:
+        raise ValueError('start_round must be a positive match round number')
     from simulation_runtime import cpu_inference
     results, samples, history = [], [], []
     with legacy_root(), open(os.devnull, "w", encoding="utf-8") as raw, \
@@ -321,8 +335,22 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
         defender = get_preset(OPPONENTS[opponent][1])
         from touyama_v3.tv3_opponents import scoped_presets
         attacker, defender = scoped_presets(attacker, defender)
-        controller = AnalysisCollectorController(scenario, model, np.random.default_rng(seed), exploration)
-        controller.combat_enabled = config.get("combat_policy_enabled", COMBAT_POLICY_ENABLED)
+        if plant_policy is None:
+            if config.get('collection_executor') == 'fixed_plant':
+                raise ValueError('Fixed plant collection requires the pinned plant model')
+            controller = AnalysisCollectorController(scenario, model, np.random.default_rng(seed), exploration,
+                exploration_scope=config.get('exploration_scope', 'score_window'),
+                exploration_probe_steps=config.get('exploration_probe_steps', 0),
+                exploration_probe_ticks=config.get('exploration_probe_ticks', 0),
+                exploration_round_start_only=config.get('exploration_round_start_only', False))
+            controller.combat_enabled = config.get("combat_policy_enabled", COMBAT_POLICY_ENABLED)
+        else:
+            from touyama_v3.tv3_collect_attacker_analysis_plant import FixedPlantAnalysisCollector
+            controller = FixedPlantAnalysisCollector(scenario, model, plant_policy, seed=seed,
+                exploration=exploration, exploration_scope=config.get('exploration_scope', 'score_window'),
+                exploration_probe_steps=config.get('exploration_probe_steps', 0),
+                exploration_probe_ticks=config.get('exploration_probe_ticks', 0),
+                exploration_round_start_only=config.get('exploration_round_start_only', False))
         team = DualRoleTeamAI("Touyama v3 analysis collector", lambda: controller, DefaultDefenderController)
         game = VisualFPSBattle(scenario.maze, team, _build_team_ai(OPPONENTS[opponent][0], device="cpu"), headless=True,
             attacker_roster=list(attacker.players), defender_roster=list(defender.players),
@@ -332,7 +360,10 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
         game.stop_after_round, game.analytics_tracker = True, None
         game._record_replay_frame = lambda: None
         relocate_debug_logs(game.defender_controller, None)
-        for round_number in range(1, 13):
+        if start_round != 1:
+            game.current_round = start_round
+            game.init_round()
+        for round_number in range(start_round, start_round + 12):
             audit = CombatAudit() if config.get("combat_diagnostics", COMBAT_DIAGNOSTICS) else None
             controller.previous_rounds = list(history)
             before_wins = game.attacker_wins
@@ -347,6 +378,8 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
             damage = uses = 0.
             terminal = None
             steps = 0
+            paths = {str(getattr(c, 'base_name', c.name)): [tuple(map(int, c.pos))] for c in own}
+            carrier_site_entries=[]
             while not game.round_over and not game.match_over:
                 if not game.defender_setup_phase.active and not game.is_planted:
                     controller.prepare_team_tick()
@@ -357,8 +390,28 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
                             else len(scenario.names) for c in game.chars if c.team == "D"], dtype=np.int64)
                         frame["damage"], frame["uses"] = damage, uses
                     if audit and controller.snapshot:
-                        audit.before(controller.snapshot, controller.actions, controller.encoder.history.tracks)
+                        history_encoder = getattr(controller, 'analysis_encoder', controller.encoder)
+                        audit.before(controller.snapshot, controller.actions, history_encoder.history.tracks)
+                    if tick_callback is not None:
+                        tick_callback(controller)
+                carrying_before=[(str(getattr(c,'base_name',c.name)),tuple(map(int,c.pos)),c)
+                                 for c in own if c.is_alive and c.has_spike]
                 game.step_tick()
+                if terminal is None:
+                    for name,before,c in carrying_before:
+                        after=tuple(map(int,c.pos))
+                        if scenario.grid[before]!=2 and scenario.grid[after]==2:
+                            carrier_site_entries.append(dict(tick=int(game.battle_tick),name=name,
+                                                            outside=before,inside=after))
+                if plant_policy is not None:
+                    controller.observe_executed_moves(own)
+                    controller.decisions.clear()
+                if terminal is None:
+                    for c in own:
+                        path = paths[str(getattr(c, 'base_name', c.name))]
+                        pos = tuple(map(int, c.pos))
+                        if pos != path[-1]:
+                            path.append(pos)
                 if audit:
                     audit.after(game)
                 steps += 1
@@ -383,14 +436,21 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
                 raise RuntimeError("Twelve-round collector block ended unexpectedly")
             frames = controller.frames
             if frames:
-                targets = [[float(terminal["planted"]), min(1., (terminal["damage"] - f["damage"]) / 500),
+                analysis_version = getattr(model, 'execution_version', 3)
+                targets = [[completion_target(terminal, f['site'], analysis_version), min(1., (terminal["damage"] - f["damage"]) / 500),
                     (f["alive"] - terminal["alive"]) / 5, min(1., (terminal["uses"] - f["uses"]) / 10),
-                    (terminal["tick"] - f["tick"]) / 100 if terminal["planted"] else 0.] for f in frames]
+                    (terminal["tick"] - f["tick"]) / 100
+                        if completion_target(terminal, f['site'], analysis_version) else 0.] for f in frames]
                 samples.append({"observations": np.stack([f["observation"] for f in frames]).astype(np.float16),
                     "routes": np.stack([f["route_features"] for f in frames]).astype(np.float16),
                     "outcomes": np.asarray(targets, dtype=np.float32),
                     "decision_ids": np.asarray([f["decision_id"] for f in frames], dtype=np.int32),
+                    "ticks": np.asarray([f["tick"] for f in frames],dtype=np.int32),
                     "selected_sites": np.asarray([f["site"] == "R" for f in frames], dtype=np.int8),
+                    "entry_outside": np.asarray([f["entry_outside"] for f in frames],dtype=np.int16),
+                    "entry_inside": np.asarray([f["entry_inside"] for f in frames],dtype=np.int16),
+                    "carrier_slots": np.asarray([f["carrier_slot"] for f in frames],dtype=np.int8),
+                    "any_site_success": np.full(len(frames), float(terminal['planted']), dtype=np.float32),
                     "placements": np.stack([f["placement"] for f in frames]), "round": round_number})
             result = {"round": round_number, "preset": preset_name, **terminal, "route": controller.route.key if controller.route else None,
                       "branches": controller.route.branches if controller.route else (), "mode": controller.mode,
@@ -399,11 +459,20 @@ def play_block(opponent, scenario, model, config, seed, exploration, *, preset_n
                       "route_decisions": controller.route_planner.events,
                       "combat_diagnostics": audit.report() if audit else None,
                       "target_site": controller.route.site if controller.route else None,
+                      "collection_executor": config.get('collection_executor', 'rule'),
+                      "analysis_version": getattr(model, 'execution_version', 3),
+                      "carrier_site_entries": carrier_site_entries,
+                      "success_target": 'selected_site_completion_with_adaptive_routes_v1'
+                          if getattr(model, 'execution_version', 3) >= 4 else 'legacy_any_site_completion',
+                      "actual_paths": paths,
+                      "actual_branches": {name: branch_sequence(scenario, path) for name, path in paths.items()},
+                      "actual_site_entries": {name: [(path[i-1], p) for i, p in enumerate(path)
+                          if i and scenario.grid[p] == 2 and scenario.grid[path[i-1]] != 2] for name, path in paths.items()},
                       "reason": "planted" if terminal["planted"] else "attacker_eliminated" if not terminal["alive"]
                                 else "timeout" if game.round_timer <= 0 else "defender_eliminated"}
             results.append(result)
             history.append({"site": terminal["site"], "winner": "A" if game.attacker_wins > before_wins else "D"})
-            if round_number < 12:
+            if round_number < start_round + 11:
                 game.current_round += 1
                 game.init_round()
     return results, samples

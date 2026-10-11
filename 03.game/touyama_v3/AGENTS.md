@@ -1,4 +1,8 @@
 【前提】
+・attacker・defender・analysis、およびsearch・plant・retake・guardの生成・改修に役立つ共通の調査知見は、[../docs/MODEL_BUILD_BASE_POLICY.md](../docs/MODEL_BUILD_BASE_POLICY.md) にまとめている。新モデルの設計・実装・学習・評価前に確認すること。修正実装、教師診断、学習済み性能を区別し、他モデルでの効果を未検証のまま確定扱いしない。
+・2026-10-11の次の短期plant検証はv19。右8ラウンドの一手比較で38tickの向き変更だけで時間切れ→4v3設置、47tickのフラッシュ使用だけで4v4設置。種類別教師損失が教師と異なる向き・投擲先へ正の勾配を入れる点を修正。v19はmask後の教師の退避意図・向きも維持する。詳細は`docs/tv3_frc_v18_set5_failure_investigation.md`末尾。FRCのみ5セット自動停止、best v16 set10から重みだけ初期化、optimizer/replayは新規。予約順変更は最終人数を改善しなかったため採用しない。学習・性能改善の確認はユーザー実行後。既存のv16/v18モデルは元の版・schemaで読む。
+・2026-10-11の最新attacker plant検証はv18。詳細は`docs/tv3_frc_set10_entry_deadline_review.md`。入力数は969のまま、v17で入口を塞ぐ味方の目標を修正し、v18で候補消失時だけ終盤の余裕条件を外す。保存best v16 set10は元の版で読む。重みだけのv16→v18初期化を許可しても、schemaの読み替えや旧optimizer/replay再開はしない。
+・現在のplant通常設定はFRCのみ5セットで自動停止、set5で独立評価。analysisは固定し、実力評価確認前に全対象・guardへ広げない。全対象候補は`ALL_TARGET_OPPONENTS`に保持する。学習は引き続きユーザーが実行する。未学習候補の比較を、再学習後の性能や時間切れ全体の解決と扱わない。
 ・機械学習については、基本的に行動は学習によって対応し、推論側にロジックを入れて行動を制御することは可能な限りせずに、学習させた結果として行動させるようにする。
 ・ゲームのcore となるファイルはabilities_los.py, battle_logic.py, game_core.py, map_data.py, map_data_defender_setup.py, run_game.py
 あたりです。
@@ -36,6 +40,32 @@ py tv3_train_defender_retake.py
 マップのデータは map_data.py にあり、 0が床、1が壁(壁は移動不可能)、2がスパイク配置可能な床、3がattacker の配置位置、4がdefender の配置位置です。
 
 # Touyama Gaming v3 新モデル設計方針
+
+## 2026-10-11：Ghost Champions v2を学習対象へ追加
+
+- 対象キーは `ghost_champions_v2`、相手編成は `Ghost Champions`、ゲーム上のAI名は `Ghost Champions v2`。既存6対象に追加した7対象を通常学習の既定値にする。モデル・ログ・ケースはこのキーごとのディレクトリへ保存する。
+- attackerのanalysis/plant/guard収集/guard学習の冒頭 `TARGET_OPPONENTS` と両側の一括PowerShellの許可対象を更新した。defenderの各既定対象は共通 `OPPONENTS` から取得する。通常対戦の相手名識別も対応済み。
+- defender retakeの左右別ケース収集では、GC v2の `AttackerTactics.choose_site()` の利用可能サイトを収集コンテキスト内だけで絞り、終了・例外時に戻す。通常対戦のGC v2コード・重みは変更しない。
+- registry追加はscenario metadataに含まれないため、scenario署名・LOS・配置は不変。既存6対象のモデルの互換性は維持する。GC v2向けモデルは新規に作成する。161件の非学習テスト、実際のGC v2両側controller生成、PowerShell構文を確認した。学習は実行していない。
+- 通常のattacker一括学習は `touyama_v3/` で `powershell -NoProfile -ExecutionPolicy Bypass -File .\tv3_train_attacker_all.ps1`。対象を恒常的に絞る場合は各Pythonの `TARGET_OPPONENTS` または一括スクリプト冒頭の `$DefaultOpponents` を変更する。CLI `-Opponents` は一時検証用の上書きに使える。
+
+## 2026-10-11：右入口の援護教師修正（plant v11）
+
+- 詳細は `docs/tv3_frc_support_review.md`。固定FRC評価は22/36設置。seed 804000142第6ラウンドでは、所持者が入口で6回退避往復し、射線のない目標に着いた味方も待機した。モデルと旧教師の両方に停滞がある。
+- 新規plantはversion 11・入力909。v9=872、v10=892は元のschema・入力・教師条件で厳密に読み、旧重みをv11へ流用しない。既存6相手のanalysis/plant/guard読込とFRCモデルhash不変を確認済み。
+- 元の目標に着いたが射線がなく、設置役にも援護がない味方に限定して、公開敵への短い援護経路を教える。設置役の目標を援護役の停止地点にしない。教師計画の継続・解放、17入力追加、小さな援護距離potential報酬を使う。推論の援護・設置を強制しない。
+- 経路planner・移動制限まで広く変更した試行は不採用。最終版では元の進捗判定・合法候補・経路範囲・辺制限を維持する。除外理由・除外前Q・公開射線・援護経路・進捗時計は診断ログに記録する。
+- 更新なしの36ラウンド教師比較は旧教師30設置、新教師32設置。同じ失敗場面の55tickからの比較では旧教師が100tickで時間切れ、新教師が87tick・4人生存・HP400で設置した。教師診断を学習済みモデルの成績として扱わない。159件の非学習テスト通過。
+- 援護修正単独はplant新規学習→guard再収集/再学習。前回の固定plantによるanalysis収集・全経路探索も反映する場合はanalysis→plant→guard再収集/再学習。v10 latest/replayからv11へ再開しない。analysis入力・scenario・LOS・defenderは今回変更していない。学習はユーザーが実行する。
+- 通常の診断は `touyama_v3/` から `python tv3_review_attacker_right.py`、同一失敗場面の教師比較は `python tv3_review_attacker_support_case.py`。設定は各冒頭の定数。集計/図示は `python tv3_review_attacker_support.py`（冒頭prefixに対応する診断ログが必要）。
+
+## 2026-10-11：右サイトの経路探索調査と次回学習
+
+- 詳細は `docs/tv3_frc_route_exploration_review.md`。analysis収集には右6経路の初期選択記録があるが、plant学習1,200ラウンド中の初期右選択95回は同じ外周経路だった。初期経路の選択と、実際の移動・入口横断は区別する。
+- 次回analysis学習は、既存plantがあれば互換性を確認して固定し、初回でplantがなければルール実行器を使う。固定ペアは `data/attacker_analysis/collection_sources/<opponent>/` に保存し、再開時も同じhashを検証する。学習途中の新bestへ実行plantを入れ替えない。
+- 経路探索は全候補から行い、通常は開始時だけ抽選する。短い試行区間は公開危険で中断できる。plantの経路探索と局所行動epsilonは別設定。通常対戦・独立評価には探索を入れない。
+- 実移動列・分岐列・実入口横断をログに残す。収集の成功率を学習後の勝率として扱わない。右の入口での退避往復・援護不足は残る調査対象。
+- 今回は入力・scenario・LOS・既存重み・plant教師/報酬を変えていない。新収集条件では旧latest/replayから再開せず、analysis→plant→guard再収集/学習の順。defenderの再学習は今回の変更では不要。学習はユーザーが実行し、自動実行しない。
 
 ## 状態と確定事項
 

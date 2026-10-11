@@ -34,6 +34,27 @@ class PublicContactModel:
 
 
 class OnlineAttackTests(unittest.TestCase):
+    def test_deadline_fallback_keeps_feasible_plant_and_rejects_too_little_time(self):
+        snapshot=replace(self.snapshot,round_timer=5.,allies=tuple(
+            replace(a,position=(10,41)) if a.has_spike else replace(a,alive=False) for a in self.snapshot.allies))
+        self.assertIsNone(self.update(snapshot))  # Original reserve is preserved by default.
+        self.planner=AdaptiveAttackPlanner()
+        self.planner.allow_deadline_route_reserve=True
+        plan=self.update(snapshot)
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan.route.site,'R')
+        self.assertEqual(plan.route.cells,((10,41),))
+        self.planner=AdaptiveAttackPlanner()
+        self.planner.allow_deadline_route_reserve=True
+        self.assertIsNone(self.update(replace(snapshot,round_timer=3.)))
+
+    def test_deadline_fallback_never_expands_an_existing_candidate_list(self):
+        from unittest.mock import patch
+        self.planner.allow_deadline_route_reserve=True
+        with patch('touyama_v3.tv3_learn_attacker_analysis.candidate_routes',wraps=candidate_routes) as generate:
+            self.assertIsNotNone(self.update(self.snapshot))
+        self.assertEqual(generate.call_count,1)
+
     def setUp(self):
         torch.set_num_threads(1)
         self.game = world()
@@ -80,6 +101,23 @@ class OnlineAttackTests(unittest.TestCase):
         self.assertTrue(second.changed)
         self.assertEqual(second.route.site, "R")
         self.assertEqual(second.reason, "public_state_changed")
+
+    def test_new_public_contact_can_reassess_before_periodic_tick_without_damage(self):
+        first_snapshot=replace(self.snapshot,sightings=(Sighting(0,self.game.sites['L'][0],'normal'),))
+        new_snapshot=replace(first_snapshot,tick=1,
+            sightings=tuple(Sighting(i+1,p,'normal') for i,p in enumerate(self.game.sites['R'][:3])))
+        for enabled in (False,True):
+            encoder=AttackerEncoder(self.game)
+            planner=AdaptiveAttackPlanner()
+            planner.reassess_new_contacts=enabled
+            first=planner.update(first_snapshot,encoder.observe(first_snapshot,[]),encoder,self.model)
+            self.assertEqual(first.route.site,'R')
+            second=planner.update(new_snapshot,encoder.observe(new_snapshot,[]),encoder,self.model,first.route,first.mode)
+            self.assertEqual(second.route.site,'L' if enabled else 'R')
+            self.assertEqual(second.reason,'public_state_changed' if enabled else 'observe')
+            if enabled:
+                self.assertTrue(planner.decision_debug['fresh_public_contact'])
+                self.assertTrue(planner.decision_debug['urgent'])
 
     def test_same_enemy_moving_between_sites_can_trigger_more_than_two_replans(self):
         plan = self.update(self.snapshot)

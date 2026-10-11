@@ -7,19 +7,27 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # 通常設定：このファイル冒頭を編集し、touyama_v3からオプションなしで実行。
-TRAINING_SETS = 100  # 各相手への追加セット。1セット=12ラウンド。
-TOTAL_TRAINING_SET_LIMIT = 100 # 最大のセット。50セットから200追加としても、100セット目でとまる
+TRAINING_SETS = 5  # FRCのv19教師修正の検証学習。1セット=12ラウンド。
+TOTAL_TRAINING_SET_LIMIT = 5  # set5で自動停止してから実力評価を確認する。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 RESUME_TRAINING = False
+WARM_START_FROM_BEST = True  # Reuse compatible weights; start a fresh optimizer and replay.
 
-TARGET_OPPONENTS = ("gc_v1", "concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4")
+ALL_TARGET_OPPONENTS = ("concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4", "ghost_champions_v2")
+TARGET_OPPONENTS = ("frc_v1",)  # 検証後に全対象へ広げる場合はALL_TARGET_OPPONENTSへ変更。
 #TARGET_OPPONENTS = ("frc_v1",)  # 1種類でも末尾のカンマが必要。
 TRAINING_PRESETS = ("Touyama Gaming",)
 EVALUATION_PRESETS = ("Touyama Gaming",)  # 同じ5人・独立seedで評価。
 EVALUATION_ONLY = False
 RANDOM_SEED = 42
-EVALUATION_INTERVAL = 10
+EVALUATION_INTERVAL = 5
 EVALUATION_SEED_COUNT = 3
+TRAINING_START_ROUNDS = (1, 13)
+EVALUATION_START_ROUNDS = (1, 13)
+BEST_SELECTION_POLICY = 'man_advantaged_plant_then_competitive_plant_then_ability_advantage_v1'
+BEST_SELECTION_PRIORITIES = ('advantaged_plant_rate','competitive_plant_rate','ability_advantage_plant_rate')
+SAVE_EVALUATION_CHECKPOINTS = True  # Keep evaluated weights even when they are not selected as best.
+SAVE_REVIEW_WEIGHT_CHECKPOINTS = True  # 学習前・各セットの重みだけを実行ごとに保存し、劣化箇所を後から比較する。
 OPTIMIZER_UPDATES = 200
 BATCH_SIZE = 64
 REPLAY_SIZE = 60000
@@ -29,11 +37,16 @@ EPSILON_END = .03
 TEACHER_START = .95
 TEACHER_END = .10
 EXPLORATION_DECAY_SETS = 60
+ROUTE_EXPLORATION_START = .30  # Separate from local move/ability epsilon.
+ROUTE_EXPLORATION_END = .05
+ROUTE_EXPLORATION_PROBE_STEPS = 24
+ROUTE_EXPLORATION_PROBE_TICKS = 40
 DEMONSTRATION_WEIGHT = .05
 DEMONSTRATION_KIND_WEIGHT = .25
 CARRIER_SAMPLE_FRACTION = .50
 FRC_DEMONSTRATION_WEIGHT = .15
 FRC_DEMONSTRATION_KIND_WEIGHT = 1.
+DEMONSTRATION_TEACHER_VARIANT = True  # 種類だけでなく、教師の向き・投擲先へ正の勾配を入れる。
 FRC_CARRIER_SAMPLE_FRACTION = .65
 FRC_OPTIMIZER_UPDATE_MULTIPLIER = 2
 TORCH_THREADS = 1
@@ -47,9 +60,12 @@ EVALUATION_CONSOLE_COLOR = "\033[1;32m"
 
 # プラント成功を主目的とする。facing補助は敵との初接触時だけ。
 PLANT_SUCCESS_REWARD = 8.
+PLANT_COMPLETION_REWARD = 1.  # Every real plant is progress, including an outnumbered plant.
 PLANT_FAILURE_REWARD = -6.
-SURVIVOR_REWARD = .30
-RESOURCE_REWARD = .30
+PLANT_TIMEOUT_REWARD = -10.  # Deliberate failure must not become cheap by waiting.
+FAILURE_DISCOUNT_COMPENSATION = True
+SURVIVOR_REWARD = 0.  # Survival is already represented by the team player ratio.
+RESOURCE_REWARD = .10
 TICK_PENALTY = .01
 PROGRESS_REWARD = .04
 DAMAGE_PENALTY = .01
@@ -67,11 +83,12 @@ GROUP_DISTANCE_LIMIT = 4
 GROUP_SEPARATION_PENALTY = .01
 LOW_DAMAGE_MIN_SURVIVORS = 5
 LOW_DAMAGE_HP_FRACTION = .90
-LOW_DAMAGE_PLANT_REWARD = 3.
-PLANT_HP_RETENTION_REWARD = 1.
+LOW_DAMAGE_PLANT_REWARD = 0.  # Keep the statistic, not a pristine-HP objective.
+PLANT_HP_RETENTION_REWARD = 0.  # Avoid double-counting pristine HP at completion.
 COOPERATIVE_HIT_REWARD = .08
 SHARED_FIRE_PROGRESS_REWARD = .04
 CARRIER_STALL_PENALTY = .08
+SUPPORT_PROGRESS_REWARD = .08  # v11: discounted public firing-lane distance potential.
 
 import argparse
 from collections import deque, Counter
@@ -80,6 +97,7 @@ import copy
 import json
 import logging
 import os
+import uuid
 
 import numpy as np
 import torch
@@ -93,6 +111,7 @@ from touyama_v3.tv3_train_attacker_analysis import (
 from touyama_v3.tv3_learn_attacker_plant import (
     PlantDQN, OBS_DIM, ACTION_DIM, policy_schema, load_frozen_analysis, learn_plant,
 )
+from touyama_v3.tv3_learn_attacker_analysis import branch_sequence
 from touyama_v3.tv3_attacker_plant_controller import TouyamaV3AttackerPlantController
 from touyama_v3.tv3_attacker_site_entry import mission_progress
 from touyama_v3.tv3_attacker_rosters import eligible_attacker_presets
@@ -101,6 +120,45 @@ from touyama_v3.tv3_checkpoint import load_checkpoint
 
 def reward_config():
     return {key: value for key, value in globals().items() if key.endswith("_REWARD") or key.endswith("_PENALTY")}
+
+
+def warm_start_source(path,schema,analysis_hash,opponent,directory):
+    """Archive exact compatible input weights; never restore old reward replay."""
+    import io,hashlib
+    payload=Path(path).read_bytes()
+    state=torch.load(io.BytesIO(payload),map_location='cpu',weights_only=True)
+    if not warm_start_schema_compatible(state['schema'],schema) or state['analysis_hash']!=analysis_hash or state['opponent']!=opponent:
+        return None,None
+    digest=hashlib.sha256(payload).hexdigest()
+    destination=Path(directory)/opponent/f'{digest}.pt'
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    if destination.exists():
+        if hashlib.sha256(destination.read_bytes()).hexdigest()!=digest:
+            raise ValueError('Warm-start archive hash mismatch')
+    else:
+        temporary=destination.with_suffix('.tmp')
+        temporary.write_bytes(payload)
+        temporary.replace(destination)
+    return state,digest
+
+
+def warm_start_schema_compatible(source,target):
+    if source==target:
+        return True
+    if source.get('version')==16 and target.get('version')==18:
+        omitted={'version','execution','entry_yield','deadline_route_reserve'}
+        return {k:v for k,v in source.items() if k not in omitted}=={k:v for k,v in target.items() if k not in omitted}
+    if source.get('version') in (16,18) and target.get('version')==19:
+        omitted={'version','execution','entry_yield','deadline_route_reserve',
+                 'masked_retreat_teacher','masked_teacher_facing'} if source['version']==16 else {
+                 'version','execution','masked_retreat_teacher','masked_teacher_facing'}
+        return {k:v for k,v in source.items() if k not in omitted}=={k:v for k,v in target.items() if k not in omitted}
+    if source.get('version')!=13 or target.get('version') not in (14,16):
+        return False
+    # Initialization only: no optimizer/replay migration or checkpoint retagging.
+    omitted={'version','execution','recent_edge_progress_exception','empty_evidence','temporary_body_cover',
+             'flash_progress_release','flash_step_teacher','flash_rally_release'}
+    return {k:v for k,v in source.items() if k not in omitted}=={k:v for k,v in target.items() if k not in omitted}
 
 
 def carrier_stall_cost(before, inputs, action):
@@ -113,9 +171,22 @@ def carrier_stall_cost(before, inputs, action):
     return CARRIER_STALL_PENALTY if inputs.observation[-2:].max() > .5 else 0.
 
 
+def support_progress_credit(before, after, inputs, done):
+    field = inputs.support_distances
+    if field is None:
+        return 0.
+    from touyama_v3.tv3_learn_attacker_plant import GAMMA
+    from touyama_v3.tv3_learn_attacker_support import SUPPORT_SEARCH_STEPS
+    def potential(position):
+        distance = field[tuple(position)]
+        return -min(SUPPORT_SEARCH_STEPS, distance if distance >= 0 else SUPPORT_SEARCH_STEPS) / SUPPORT_SEARCH_STEPS
+    return SUPPORT_PROGRESS_REWARD * ((0. if done else GAMMA * potential(after)) - potential(before.position))
+
+
 def learning_settings(opponent, updates):
     frc = opponent == 'frc_v1'
     return {'demonstration_weight': FRC_DEMONSTRATION_WEIGHT if frc else DEMONSTRATION_WEIGHT,
+        'demonstration_teacher_variant': DEMONSTRATION_TEACHER_VARIANT,
             'demonstration_kind_weight': FRC_DEMONSTRATION_KIND_WEIGHT if frc else DEMONSTRATION_KIND_WEIGHT,
             'carrier_sample_fraction': FRC_CARRIER_SAMPLE_FRACTION if frc else CARRIER_SAMPLE_FRACTION,
             'updates': updates * (FRC_OPTIMIZER_UPDATE_MULTIPLIER if frc else 1)}
@@ -152,29 +223,57 @@ def utility_effect_credit(record):
     return credit
 
 
+def terminal_succeeded(terminal):
+    if 'preplant_round_won' in terminal:
+        return terminal['planted'] or terminal['preplant_round_won']
+    if terminal.get('reason')=='defender_eliminated' and terminal.get('enemy_alive')==0 and terminal['alive']>0:
+        return True
+    return terminal['planted']
+
+
 def terminal_bonus(terminal, initial_alive, reserve):
+    if not terminal_succeeded(terminal):
+        return PLANT_TIMEOUT_REWARD if terminal.get('reason')=='timeout' else PLANT_FAILURE_REWARD
     hp_fraction = terminal.get('remaining_hp', 0.) / max(1., terminal.get('initial_team_hp', 1.))
     low_damage = (terminal['alive'] >= LOW_DAMAGE_MIN_SURVIVORS and hp_fraction >= LOW_DAMAGE_HP_FRACTION)
-    return (PLANT_SUCCESS_REWARD * terminal["alive"] / max(1, initial_alive)
+    total_players=terminal['alive']+terminal['enemy_alive'] if 'enemy_alive' in terminal else initial_alive
+    if 'remaining_abilities_alive' in terminal and 'enemy_remaining_abilities_alive' in terminal:
+        own_charges=terminal['remaining_abilities_alive']
+        reserve=own_charges/max(1,own_charges+terminal['enemy_remaining_abilities_alive'])
+    return (PLANT_COMPLETION_REWARD + PLANT_SUCCESS_REWARD * terminal["alive"] / max(1,total_players)
             + SURVIVOR_REWARD * terminal["alive"] + RESOURCE_REWARD * reserve
             + PLANT_HP_RETENTION_REWARD * min(1., hp_fraction) + LOW_DAMAGE_PLANT_REWARD * low_damage
-            if terminal["planted"] else PLANT_FAILURE_REWARD)
+            if terminal_succeeded(terminal) else PLANT_FAILURE_REWARD)
 
 
-def apply_terminal_bonus(transitions, indices, alive, terminal, initial_alive, reserve):
+def apply_terminal_bonus(transitions, indices, alive, terminal, initial_alive, reserve, decision_counts=None):
     bonus = terminal_bonus(terminal, initial_alive, reserve)
     total = 0.
     for n, index in indices.items():
-        if terminal["planted"] and not alive[n]:
+        if terminal_succeeded(terminal) and not alive[n]:
             continue
-        transitions[index][2] += bonus
+        outcome_bonus=bonus
+        if not terminal_succeeded(terminal):
+            # A dead actor cannot choose to keep waiting after their own death.
+            if not alive[n]:
+                outcome_bonus=PLANT_FAILURE_REWARD
+            if FAILURE_DISCOUNT_COMPENSATION:
+                from touyama_v3.tv3_learn_attacker_plant import GAMMA
+                count=(decision_counts or {}).get(n,1)
+                if count<1:
+                    raise ValueError('A terminal actor must have at least one recorded decision')
+                outcome_bonus /= GAMMA**(count-1)
+        transitions[index][2] += outcome_bonus
         transitions[index][5] = 1.
-        total += bonus
+        total += outcome_bonus
     return total
 
 
 def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
-            training=False, epsilon=0., teacher_probability=0., tick_callback=None):
+            training=False, epsilon=0., teacher_probability=0., tick_callback=None, route_exploration=0.,
+            round_callback=None, round_start_callback=None, start_round=1):
+    if not isinstance(start_round, int) or start_round < 1:
+        raise ValueError('start_round must be a positive match round number')
     rounds, transitions, history = [], [], []
     from touyama_v3.tv3_attacker_combat_audit import CombatAudit
     from simulation_runtime import cpu_inference
@@ -192,6 +291,13 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
         own_preset, enemy_preset = scoped_presets(own_preset, enemy_preset)
         controller = TouyamaV3AttackerPlantController(scenario, analysis, policy, seed=seed + 19, training=training)
         controller.epsilon, controller.teacher_probability = epsilon, teacher_probability
+        if training and route_exploration:
+            controller.planning_rng = controller.rng
+            controller.planning_exploration = route_exploration
+            controller.planning_exploration_scope = 'all_routes'
+            controller.planning_probe_steps = config['route_exploration']['probe_steps']
+            controller.planning_probe_ticks = config['route_exploration']['probe_ticks']
+            controller.planning_round_start_only = True
         team = DualRoleTeamAI("Touyama v3 plant trainer", lambda: controller, DefaultDefenderController)
         game = VisualFPSBattle(scenario.maze, team, _build_team_ai(OPPONENTS[opponent][0], device="cpu"), headless=True,
             attacker_roster=list(own_preset.players), defender_roster=list(enemy_preset.players),
@@ -201,7 +307,12 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
         game.stop_after_round, game.analytics_tracker = True, None
         game._record_replay_frame = lambda: None
         relocate_debug_logs(game.defender_controller, None)
-        for round_number in range(1, 13):
+        if start_round != 1:
+            game.current_round = start_round
+            game.init_round()
+        for round_number in range(start_round, start_round + 12):
+            if round_start_callback is not None:
+                round_start_callback(controller, round_number)
             audit = CombatAudit() if training or config.get("combat_diagnostics", True) else None
             controller.previous_rounds = list(history)
             own = [c for c in game.chars if c.team == "A"]
@@ -214,11 +325,13 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
             damage = uses = reward_sum = 0.
             steps = 0
             last_indices = {}
+            decision_counts = Counter()
             utility_indices = {}
             contacts = set()
             entry_counts = Counter()
             entry_launched = False
             score_before = game.attacker_wins
+            paths = {str(getattr(c, 'base_name', c.name)): [tuple(map(int, c.pos))] for c in own}
             while not game.round_over and not game.match_over:
                 closed = terminal is not None
                 controller.decisions = {}
@@ -245,6 +358,12 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                 # These exact cells are available only to the training reward evaluator.
                 enemy_before = {i: tuple(map(int, c.pos)) for i, c in enumerate(enemy) if c.is_alive}
                 game.step_tick()
+                if not closed:
+                    for c in own:
+                        path = paths[str(getattr(c, 'base_name', c.name))]
+                        pos = tuple(map(int, c.pos))
+                        if pos != path[-1]:
+                            path.append(pos)
                 if audit:
                     audit.after(game)
                 steps += 1
@@ -284,6 +403,10 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                                 inputs.combat.contacts > 0 and inputs.combat.supporters == 0)
                     reward = -TICK_PENALTY + PROGRESS_REWARD * progress - DAMAGE_PENALTY * own_damage
                     reward -= carrier_stall_cost(before, inputs, chosen_action)
+                    support_credit = support_progress_credit(before, char.pos, inputs, done_team or not char.is_alive)
+                    reward += support_credit
+                    entry_counts['support_plan_ticks'] += int(inputs.support is not None)
+                    entry_counts['support_shaping_reward'] += support_credit
                     reward += KILL_REWARD * (char.round_kills - previous_kills[name]) + TEAM_DAMAGE_REWARD * min(200., enemy_damage)
                     reward += STATIONARY_HIT_REWARD * sum(s["hit"] and not s["shooter"].moved_this_tick
                         for s in getattr(game, "last_shots", ()) if s["shooter"] is char)
@@ -311,13 +434,16 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                                 enemy_before[sighting.enemy_id], chosen_action.facing)
                     done = done_team or not char.is_alive
                     next_inputs = controller.inputs.get(name)
-                    next_obs = next_inputs.observation if next_inputs is not None and not done else np.zeros(OBS_DIM, np.float32)
+                    next_obs = next_inputs.observation if next_inputs is not None and not done else np.zeros_like(inputs.observation)
                     next_mask = next_inputs.mask.copy() if next_inputs is not None and not done else np.ones(ACTION_DIM, bool)
                     if next_inputs is None and not done:
                         done = True
                     transitions.append([inputs.observation.astype(np.float16), action_index, reward,
                         next_obs.astype(np.float16), next_mask, float(done), inputs.teacher, inputs.mask.copy()])
+                    if name in last_indices and transitions[last_indices[name]][5]>.5:
+                        decision_counts[name]=0  # Count only the actor's connected episode.
                     last_indices[name] = len(transitions) - 1
+                    decision_counts[name] += 1
                     if chosen_action.kind == "ABILITY":
                         utility_indices[(decision_tick, name, before.ability_name)] = len(transitions)-1
                     reward_sum += reward
@@ -331,19 +457,23 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                             record["credited"] = True
                 if done_team:
                     terminal = {"planted": bool(game.is_planted), "tick": int(game.battle_tick),
+                        "preplant_round_won":bool(not game.is_planted and game.attacker_wins>score_before),
                         "alive": sum(c.is_alive for c in own), "enemy_alive": sum(c.is_alive for c in enemy),
                         "remaining_hp": float(sum(max(0., c.hp) for c in own if c.is_alive)),
                         "initial_team_hp": initial_team_hp,
                         "initial_alive": initial_alive, "initial_enemy_alive": initial_enemy_alive,
                         "initial_abilities": initial_abilities,
                         "remaining_abilities_alive": sum(charges[n] for n, c in current.items() if c.is_alive),
+                        # Evaluation label only, read after the public action has executed.
+                        "enemy_remaining_abilities_alive": sum(int(getattr(c,c.ability_name.lower()+'_charges',0))
+                            for c in enemy if c.is_alive),
                         "damage": damage, "uses": uses,
                         "site": scenario.site_of(game.planted_pos) if game.is_planted else None,
                         "reason": "planted" if game.is_planted else "attacker_eliminated" if not any(c.is_alive for c in own)
                                   else "timeout" if game.round_timer <= 0 else "defender_eliminated"}
                     reserve = min(1., terminal["remaining_abilities_alive"] / initial_abilities) if initial_abilities else 0.
                     reward_sum += apply_terminal_bonus(transitions, last_indices,
-                        {n: c.is_alive for n, c in current.items()}, terminal, initial_alive, reserve)
+                        {n: c.is_alive for n, c in current.items()}, terminal, initial_alive, reserve,decision_counts)
             if terminal is None or game.current_round != round_number or not game.round_over:
                 raise RuntimeError("Plant block ended without a real terminal outcome")
             rounds.append({"round": round_number, "preset": preset_name, **terminal,
@@ -351,11 +481,17 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                 "route": controller.route.key if controller.route else None,
                 "branches": controller.route.branches if controller.route else (),
                 "replans": controller.replans, "route_decisions": controller.route_planner.events,
+                "actual_paths": paths,
+                "actual_branches": {name: branch_sequence(scenario, path) for name, path in paths.items()},
+                "actual_site_entries": {name: [(path[i-1], p) for i, p in enumerate(path)
+                    if i and scenario.grid[p] == 2 and scenario.grid[path[i-1]] != 2] for name, path in paths.items()},
                 "combat_diagnostics": audit.report() if audit else None,
                 "site_entry_diagnostics": dict(entry_counts),
                 "reward": reward_sum})
+            if round_callback is not None:
+                round_callback(rounds[-1])
             history.append({"site": terminal["site"], "winner": "A" if game.attacker_wins > score_before else "D"})
-            if round_number < 12:
+            if round_number < start_round + 11:
                 game.current_round += 1
                 game.init_round()
     return rounds, transitions
@@ -364,11 +500,12 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
 def summarize_plant(rounds):
     metrics = summarize(rounds)
     metrics.update(low_damage_summary(rounds))
+    metrics.update(plant_advantage_summary(rounds))
     metrics["mean_reward"] = float(np.mean([r["reward"] for r in rounds])) if rounds else 0.
     metrics["by_site"] = {}
     for side in ("L", "R"):
         subset = [r for r in rounds if r["target_site"] == side]
-        metrics["by_site"][side] = {**summarize(subset), **low_damage_summary(subset)} if subset else {"rounds": 0, "plant_rate": None}
+        metrics["by_site"][side] = {**summarize(subset), **low_damage_summary(subset), **plant_advantage_summary(subset)} if subset else {"rounds": 0, "plant_rate": None}
     return metrics
 
 
@@ -379,11 +516,25 @@ def low_damage_summary(rounds):
     return {'low_damage_plants': count, 'low_damage_plant_rate': count / len(rounds) if rounds else 0.}
 
 
+def plant_advantage_summary(rounds):
+    count=len(rounds)
+    planted=[r for r in rounds if r['planted']]
+    competitive=[r for r in planted if r['alive']>=r['enemy_alive']]
+    advantaged=[r for r in planted if r['alive']>r['enemy_alive']]
+    complete=all(r.get('enemy_remaining_abilities_alive') is not None and r.get('remaining_abilities_alive') is not None for r in rounds)
+    ability_wins=sum(r['remaining_abilities_alive']>r['enemy_remaining_abilities_alive'] for r in competitive) if complete else None
+    return dict(advantaged_plants=len(advantaged),advantaged_plant_rate=len(advantaged)/count if count else 0.,
+        competitive_plants=len(competitive),competitive_plant_rate=len(competitive)/count if count else 0.,
+        disadvantaged_plants=len(planted)-len(competitive),ability_labels_complete=complete,
+        ability_advantage_plants=ability_wins,
+        ability_advantage_plant_rate=ability_wins/count if complete and count else (0. if complete else None))
+
+
 def best_rank(metrics):
-    return (metrics.get('low_damage_plant_rate', metrics.get('viable_plant_rate', metrics['plant_rate'])),
-            metrics.get("viable_plant_rate", metrics["plant_rate"]), metrics["plant_rate"], metrics["mean_alive"], -metrics["mean_damage"],
-            metrics["ability_reserve_rate"] if metrics["ability_reserve_rate"] is not None else 0.,
-            -metrics["mean_ability_uses"], -(metrics["mean_plant_ticks"] or 1000))
+    required=BEST_SELECTION_PRIORITIES
+    if any(metrics.get(k) is None for k in required):
+        raise ValueError('Best selection needs plant-time enemy counts/resources; re-evaluate the saved weights')
+    return tuple(metrics[k] for k in required)+(-metrics['mean_damage'],-(metrics['mean_plant_ticks'] or 1000))
 
 
 def exploration_values(completed_sets):
@@ -398,14 +549,15 @@ def evaluate(opponent, scenario, analysis, policy, config, seeds, *, record_path
     plan = []
     for i, seed in enumerate(seeds):
         preset = presets[i % len(presets)]
-        records, _ = rollout(opponent, scenario, analysis, policy, config, seed, preset_name=preset)
-        if record_path is not None:
-            with Path(record_path).open('a',encoding='utf-8') as out:
-                for record in records:
-                    out.write(json.dumps({'set':completed,'seed':seed,'preset':preset,
-                        'teacher_probability':0,'epsilon':0,**record},ensure_ascii=False)+'\n')
-        rounds.extend(records)
-        plan.append({"seed": seed, "preset": preset})
+        for start in config.get('evaluation_start_rounds', (1,)):
+            records, _ = rollout(opponent, scenario, analysis, policy, config, seed, preset_name=preset, start_round=start)
+            if record_path is not None:
+                with Path(record_path).open('a',encoding='utf-8') as out:
+                    for record in records:
+                        out.write(json.dumps({'set':completed,'seed':seed,'preset':preset,
+                            'teacher_probability':0,'epsilon':0,**record},ensure_ascii=False)+'\n')
+            rounds.extend(records)
+            plan.append({"seed": seed, "preset": preset, "start_round": start})
     return {"selected": summarize_plant(rounds), "seeds": list(seeds), "roster_plan": plan}
 
 
@@ -422,6 +574,9 @@ def log_evaluation(logger, opponent, evaluation, completed):
     logger.info("[%s][少被害設置] %d/%d (%.1f%%、%d人生存・HP%.0f%%以上)", opponent,
                 metrics['low_damage_plants'], metrics['rounds'], 100*metrics['low_damage_plant_rate'],
                 LOW_DAMAGE_MIN_SURVIVORS, 100*LOW_DAMAGE_HP_FRACTION)
+    logger.info('[%s][best選定] 人数優勢の設置=%d/%d 同人数以上の有効設置=%d/%d 有効設置時のアビリティ優勢=%s/%d',
+        opponent,metrics['advantaged_plants'],metrics['rounds'],metrics['competitive_plants'],metrics['rounds'],
+        metrics['ability_advantage_plants'],metrics['rounds'])
 
 
 def save_latest(path, policy, target, optimizer, replay, completed, opponent, schema, config, analysis_hash, rng, last_evaluation):
@@ -429,7 +584,23 @@ def save_latest(path, policy, target, optimizer, replay, completed, opponent, sc
     atomic_save(path, {"schema": schema, "opponent": opponent, "config": config, "analysis_hash": analysis_hash,
         "model": policy.state_dict(), "target": target.state_dict(), "optimizer": optimizer.state_dict(),
         "completed_sets": completed, "trained_rounds": completed * 12, "replay": packed,
-        "rng": json.dumps(rng.bit_generator.state), "last_evaluation": last_evaluation})
+        "rng": json.dumps(rng.bit_generator.state), "last_evaluation": last_evaluation,
+        "selection_rule": BEST_SELECTION_POLICY,
+        "warm_start_hash": getattr(policy,'warm_start_hash',None)})
+
+
+def review_run_directory(directory,version):
+    return Path(directory)/'review_checkpoints'/f'v{version}_{uuid.uuid4().hex}'
+
+
+def save_review_weights(directory,policy,completed,opponent,schema,config,analysis_hash,started):
+    path=Path(directory)/f'set_{completed:06d}.pt'
+    atomic_save(path,dict(schema=schema,opponent=opponent,config=config,analysis_hash=analysis_hash,
+        model=policy.state_dict(),completed_sets=completed,trained_rounds=completed*12,
+        warm_start_hash=getattr(policy,'warm_start_hash',None),
+        run_started_at_completed_set=started,evaluation_status='not_evaluated',
+        checkpoint_kind='diagnostic_weights_only'))
+    return path
 
 
 def parser():
@@ -474,7 +645,10 @@ def main(argv=None):
         raise ValueError("Evaluation-only requires RESUME_TRAINING=True")
     if len(args.opponents) != len(set(args.opponents)):
         raise ValueError("Duplicate opponents")
-    if not 0 <= EPSILON_END <= EPSILON_START <= 1 or not 0 <= TEACHER_END <= TEACHER_START <= 1 or EXPLORATION_DECAY_SETS < 1:
+    if (not 0 <= EPSILON_END <= EPSILON_START <= 1 or not 0 <= TEACHER_END <= TEACHER_START <= 1
+            or not 0 <= ROUTE_EXPLORATION_END <= ROUTE_EXPLORATION_START <= 1
+            or min(ROUTE_EXPLORATION_PROBE_STEPS, ROUTE_EXPLORATION_PROBE_TICKS) < 1
+            or EXPLORATION_DECAY_SETS < 1):
         raise ValueError("Invalid exploration/demonstration schedule")
     torch.set_num_threads(args.torch_threads)
     scenario = Scenario()
@@ -486,10 +660,19 @@ def main(argv=None):
         "roster_scope": "touyama_fixed_five_independent_seeds", "eval_seeds": args.eval_seeds,
         "max_round_steps": args.max_round_steps, "rewards": reward_config(),
         "schedule": [EPSILON_START, EPSILON_END, TEACHER_START, TEACHER_END, EXPLORATION_DECAY_SETS],
+        "route_exploration": dict(scope='all_routes', round_start_only=True,
+            start=ROUTE_EXPLORATION_START, end=ROUTE_EXPLORATION_END,
+            decay_sets=EXPLORATION_DECAY_SETS, probe_steps=ROUTE_EXPLORATION_PROBE_STEPS,
+            probe_ticks=ROUTE_EXPLORATION_PROBE_TICKS),
         "demonstration_weight": DEMONSTRATION_WEIGHT, "formation": [GROUP_DISTANCE_LIMIT, GROUP_SEPARATION_PENALTY],
         "learning_by_opponent": {o: learning_settings(o, args.updates) for o in OPPONENTS},
         "formation_context": "executed_action_tick_v1",
         "low_damage_conditions": [LOW_DAMAGE_MIN_SURVIVORS, LOW_DAMAGE_HP_FRACTION]}
+    config['training_start_rounds'] = list(TRAINING_START_ROUNDS)
+    config['evaluation_start_rounds'] = list(EVALUATION_START_ROUNDS)
+    config['failure_discount_compensation'] = FAILURE_DISCOUNT_COMPENSATION
+    config['terminal_success_condition'] = 'all_plants_positive_man_ratio_or_enemy_elimination_v1'
+    config['warm_start_from_best'] = WARM_START_FROM_BEST
     frozen = {opponent: load_frozen_analysis(args.analysis_dir.resolve(), opponent, scenario) for opponent in args.opponents}
     if args.describe:
         print(json.dumps({"schema": schema, "config": config,
@@ -547,16 +730,46 @@ def main(argv=None):
                 replay.extend([[v.numpy() if isinstance(v, torch.Tensor) else v for v in row] for row in state["replay"]])
                 rng.bit_generator.state = json.loads(state["rng"])
                 completed, reference = state["completed_sets"], state.get("last_evaluation")
+                policy.warm_start_hash=state.get('warm_start_hash')
+            elif WARM_START_FROM_BEST and best_path.exists():
+                initial,initial_hash=warm_start_source(best_path,schema,analysis_hash,opponent,data_dir/'warm_start_sources')
+                if initial is not None:
+                    policy.load_state_dict(initial['model'])
+                    target.load_state_dict(initial['model'])
+                    policy.warm_start_hash=initial_hash
+                    logger.info('[%s] best v%d set=%dの重みからv%dの入力・教師・報酬で学習。optimizer/replayは新規、通算setは0から。',
+                        opponent,initial['schema']['version'],initial['completed_sets'],schema['version'])
+                else:
+                    logger.info('[%s] 保存bestの観測/analysis依存が異なるため、重み初期化は新規。',opponent)
             policy.eval()
             seeds = [args.seed + 800_000_000 + index * 1_000_000 + i * 100 for i in range(args.eval_seeds)]
             old_evaluation = None
-            if args.resume and best_path.exists():
-                old = load_checkpoint(best_path)
-                if any(old[k] != v for k, v in (("schema", schema), ("config", config), ("analysis_hash", analysis_hash))):
+            if (args.resume or getattr(policy,'warm_start_hash',None)) and best_path.exists():
+                from touyama_v3.tv3_guard_runtime import read_checkpoint
+                old,old_hash = read_checkpoint(best_path)
+                if (not warm_start_schema_compatible(old['schema'],schema)
+                        or old['analysis_hash']!=analysis_hash or old['opponent']!=opponent):
                     raise ValueError(f"Best evaluation conditions differ: {best_path}")
-                if old["evaluation"]["seeds"] != seeds:
-                    raise ValueError("Best evaluation seeds differ")
                 old_evaluation = old["evaluation"]
+                if not args.eval_only and (old_evaluation['selected'].get('ability_advantage_plant_rate') is None
+                        or old['config']!=config or old_evaluation['seeds']!=seeds
+                        or old.get('selection_rule')!=BEST_SELECTION_POLICY):
+                    # Historical summaries cannot reconstruct enemy charges. Re-evaluate
+                    # the actual saved weights; do not invent labels or reset training.
+                    cache_path=log_dir/f'{opponent}_best_reassessment.json'
+                    cache_key=dict(model_hash=old_hash,config=config,seeds=seeds,selection=BEST_SELECTION_POLICY)
+                    cached=json.loads(cache_path.read_text(encoding='utf8')) if cache_path.exists() else {}
+                    if cached.get('key')==cache_key:
+                        old_evaluation=cached['evaluation']
+                    else:
+                        with torch.random.fork_rng(devices=[]):
+                            baseline=PlantDQN(old['schema']['version'])
+                            baseline.load_state_dict(old['model'])
+                        baseline.eval()
+                        old_evaluation=evaluate(opponent,scenario,analysis,baseline,config,seeds,
+                            record_path=log_dir/f'{opponent}_best_reassessment_rounds.jsonl',completed=old['completed_sets'])
+                        cache_path.write_text(json.dumps(dict(key=cache_key,evaluation=old_evaluation),ensure_ascii=False),encoding='utf8')
+                    logger.info('[%s] 新しい選定基準で保存best set=%dを再評価（学習更新なし）',opponent,old['completed_sets'])
                 logger.info("[%s][保存best] 採用set=%d %s", opponent, old["completed_sets"], format_summary(old_evaluation["selected"]))
             if args.eval_only:
                 result = evaluate(opponent, scenario, analysis, policy, config, seeds,
@@ -566,20 +779,33 @@ def main(argv=None):
             additional_sets = remaining_training_sets(args.sets, completed, args.total_sets)
             logger.info("[%s] 完了=%d 今回追加=%dセット 通算上限=%s analysis=%s",
                         opponent, completed, additional_sets, args.total_sets, analysis_hash)
+            review_directory=None
+            review_started=completed
+            if SAVE_REVIEW_WEIGHT_CHECKPOINTS and additional_sets:
+                review_directory=review_run_directory(directory,policy.execution_version)
+                save_review_weights(review_directory,policy,completed,opponent,schema,config,analysis_hash,review_started)
+                logger.info('[%s] 診断用重みを学習前・各セットで保存（未評価・optimizer/replayなし）: %s',opponent,review_directory)
             for additional in range(1, additional_sets + 1):
                 epsilon, teacher = exploration_values(completed)
+                fraction = min(1., completed / EXPLORATION_DECAY_SETS)
+                route_exploration = ROUTE_EXPLORATION_START + fraction * (ROUTE_EXPLORATION_END - ROUTE_EXPLORATION_START)
                 training_presets = eligible_attacker_presets(args.train_presets, opponent)
                 preset = training_presets[completed % len(training_presets)]
                 records, transitions = rollout(opponent, scenario, analysis, policy, config,
                     args.seed + index * 1_000_000 + (completed + 1) * 100, training=True,
-                    epsilon=epsilon, teacher_probability=teacher, preset_name=preset)
+                    epsilon=epsilon, teacher_probability=teacher, preset_name=preset, route_exploration=route_exploration,
+                    start_round=TRAINING_START_ROUNDS[completed % len(TRAINING_START_ROUNDS)])
                 replay.extend(transitions)
                 settings = learning_settings(opponent, args.updates)
                 loss = learn_plant(policy, target, optimizer, replay, rng, settings['updates'], args.batch_size,
-                    settings['demonstration_weight'], settings['demonstration_kind_weight'], settings['carrier_sample_fraction'])
+                    settings['demonstration_weight'], settings['demonstration_kind_weight'], settings['carrier_sample_fraction'],
+                    demonstration_teacher_variant=settings['demonstration_teacher_variant'])
                 completed += 1
                 save_latest(latest, policy, target, optimizer, replay, completed, opponent, schema, config, analysis_hash, rng, reference)
+                if review_directory is not None:
+                    save_review_weights(review_directory,policy,completed,opponent,schema,config,analysis_hash,review_started)
                 metrics = summarize_plant(records)
+                logger.info('[%s][学習 set=%d] 経路探索=%.1f%%（開始時の全候補）', opponent, completed, 100*route_exploration)
                 logger.info("[%s][学習 set=%d][編成=%s][教師選択=%.1f%% 教師以外の探索=%.1f%%] 直近実力=%s | %s loss=%s", opponent,
                     completed, preset, 100 * teacher, 100 * epsilon, format_last_evaluation(reference),
                     format_summary(metrics, "収集プラント成功率"), loss)
@@ -592,11 +818,15 @@ def main(argv=None):
                     log_evaluation(logger, opponent, result, completed)
                     reference = {"set": completed, "evaluation": result}
                     save_latest(latest, policy, target, optimizer, replay, completed, opponent, schema, config, analysis_hash, rng, reference)
-                    if old_evaluation is None or best_rank(result["selected"]) > best_rank(old_evaluation["selected"]):
-                        atomic_save(best_path, {"schema": schema, "opponent": opponent, "config": config,
+                    evaluated={"schema": schema, "opponent": opponent, "config": config,
                             "analysis_hash": analysis_hash, "model": policy.state_dict(), "completed_sets": completed,
                             "trained_rounds": completed * 12, "evaluation": result,
-                            "selection_rule": "low_damage_then_viable_plant_survival_damage_reserve_v3"})
+                            "selection_rule": BEST_SELECTION_POLICY,
+                            "warm_start_hash": getattr(policy,'warm_start_hash',None)}
+                    if SAVE_EVALUATION_CHECKPOINTS:
+                        atomic_save(directory/'evaluation_checkpoints'/f'set_{completed:06d}.pt',evaluated)
+                    if old_evaluation is None or best_rank(result["selected"]) > best_rank(old_evaluation["selected"]):
+                        atomic_save(best_path,evaluated)
                         old_evaluation = result
                         logger.info("[%s] best更新 採用set=%d 保存=%s", opponent, completed, best_path)
                     else:

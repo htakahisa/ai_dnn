@@ -180,6 +180,8 @@ class CombatTests(unittest.TestCase):
         safe = {"plant_rate": .5, "viable_plant_rate": .5, "mean_alive": 3., "mean_damage": 200.,
                 "ability_reserve_rate": .2, "mean_ability_uses": 2., "mean_plant_ticks": 50.}
         unsafe = {**safe, "plant_rate": .9, "viable_plant_rate": .1, "mean_alive": 1.}
+        safe.update(advantaged_plant_rate=.5,competitive_plant_rate=.5,ability_advantage_plant_rate=.1)
+        unsafe.update(advantaged_plant_rate=.1,competitive_plant_rate=.1,ability_advantage_plant_rate=.1)
         self.assertGreater(best_rank(safe), best_rank(unsafe))
         empty = {"ability": "RECON", "affected_enemies": [], "blocked_lines": 0}
         self.assertLess(utility_effect_credit(empty), 0.)

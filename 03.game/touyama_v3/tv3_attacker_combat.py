@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from game_core import FACING_VECTORS
 
 from touyama_v3.tv3_observer import facing
+from touyama_v3.tv3_attacker_threat_evidence import confirmed_empty_cells
 
 LOW_HP_FRACTION = .35
 # A lost sighting is still a threat: the engine can shoot beyond public vision.
@@ -96,7 +97,7 @@ class AttackerCombatCoach:
         alive = {e.enemy_id for e in snapshot.enemies if e.alive}
         known.update(pos for enemy_id, (pos, tick, _) in (tracks or {}).items()
                      if enemy_id in alive and snapshot.tick-tick <= RECENT_CONTACT_TICKS)
-        visible_empty = set(snapshot.visible_cells) - {s.position for s in snapshot.sightings}
+        visible_empty = set(confirmed_empty_cells(snapshot)) - {s.position for s in snapshot.sightings}
         remembered = known - visible_empty
         contacts = list(dict.fromkeys(contacts + [p for p in remembered if self.clear(snapshot, origin, p, ally.slot)]))
         future = list(dict.fromkeys(future + [p for p in remembered if self.clear(snapshot, destination, p, ally.slot)]))

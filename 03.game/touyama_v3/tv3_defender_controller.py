@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 DEFENDER_BEST = HERE / "data" / "best"
 OPPONENT_NAMES = {"Ghost Champions v1": "gc_v1", "ConCon v1": "concon_v1",
                   "Omoko Gaming v1": "omoko_v1", "Fnatic v3": "fnatic_v3", "FRC v1": "frc_v1",
-                  "Toru AI v4": "toru_ai_v4"}
+                  "Toru AI v4": "toru_ai_v4", "Ghost Champions v2": "ghost_champions_v2"}
 
 
 def policy_metadata(scenario, phase="search"):

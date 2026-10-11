@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 TRAINING_SETS = 60  # 相手AIごとの追加セット数。1セット = 12ラウンド。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 
-TARGET_OPPONENTS = ("gc_v1", "concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4")
+TARGET_OPPONENTS = ("concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4", "ghost_champions_v2")
 #TARGET_OPPONENTS = ("frc_v1",)  # 1種類でも末尾のカンマが必要。
 TRAINING_PRESETS = ("Touyama Gaming",)
 EVALUATION_PRESETS = ("Touyama Gaming",)
@@ -20,7 +20,15 @@ RESUME_TRAINING = False
 EVALUATION_ONLY = False
 EVALUATION_INTERVAL = 10
 EVALUATION_SEED_COUNT = 3
+TRAINING_START_ROUNDS = (1, 13)  # Alternate twelve-round blocks; keep the set budget.
+EVALUATION_START_ROUNDS = (1, 13)  # Evaluate each seed in both match halves.
 EXPLORATION_RATE = .8
+EXPLORATION_SCOPE = "all_routes"  # Score filtering must not hide untested routes.
+EXPLORATION_PROBE_STEPS = 24  # Give the sampled approach time to be executed.
+EXPLORATION_PROBE_TICKS = 40  # Public contact/damage/death interrupts immediately.
+EXPLORATION_ROUND_START_ONLY = True  # Avoid resampling unrelated routes every three ticks.
+COLLECTION_EXECUTOR = "auto"  # auto: pin existing plant; use rules only before the first plant exists.
+FROZEN_PLANT_DIRECTORY = HERE / "data" / "best"
 OPTIMIZER_UPDATES = 100
 BATCH_SIZE = 64
 REPLAY_ROUNDS = 600
@@ -98,6 +106,12 @@ def parser():
     p.add_argument("--eval-every", type=int, default=EVALUATION_INTERVAL)
     p.add_argument("--eval-seeds", type=int, default=EVALUATION_SEED_COUNT)
     p.add_argument("--exploration", type=float, default=EXPLORATION_RATE)
+    p.add_argument("--exploration-scope", choices=("score_window", "all_routes"), default=EXPLORATION_SCOPE)
+    p.add_argument("--exploration-probe-steps", type=int, default=EXPLORATION_PROBE_STEPS)
+    p.add_argument("--exploration-probe-ticks", type=int, default=EXPLORATION_PROBE_TICKS)
+    p.add_argument("--exploration-round-start-only", action=argparse.BooleanOptionalAction, default=EXPLORATION_ROUND_START_ONLY)
+    p.add_argument("--collection-executor", choices=("auto", "rule", "fixed_plant"), default=COLLECTION_EXECUTOR)
+    p.add_argument("--frozen-plant-dir", type=Path, default=FROZEN_PLANT_DIRECTORY)
     p.add_argument("--updates", type=int, default=OPTIMIZER_UPDATES)
     p.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     p.add_argument("--replay-rounds", type=int, default=REPLAY_ROUNDS)
@@ -173,6 +187,11 @@ def log_evaluation(logger, opponent, evaluation, completed):
                 format_summary(evaluation["selected"]), extra={"highlight_evaluation": True})
     logger.info("[%s][比較評価 set=%d][ランダム探索100%%] %s", opponent, completed,
                 format_summary(evaluation["random"], "ランダム経路の成功率"))
+    prediction=evaluation['prediction']
+    if prediction.get('brier_skill_vs_constant_half') is not None:
+        logger.info('[%s][予測評価 set=%d] Brier=%.4f 50%%固定=%.4f skill=%.4f（正なら固定予測より良い）',
+            opponent,completed,prediction['brier'],prediction['constant_half_brier'],
+            prediction['brier_skill_vs_constant_half'])
     logger.info("[%s][独立評価 set=%d][詳細] %s", opponent, completed, json.dumps(evaluation, ensure_ascii=False))
 
 
@@ -186,6 +205,7 @@ def prediction_metrics(model, samples, fields=None):
         y = sample["outcomes"]
         placement, raw = model(x, z)
         predicted = raw.sigmoid().numpy()
+        success_frames=y[:,0]>.5
         unseen_accuracy = None
         if fields is not None:
             current = sample["observations"][:, [fields.index(f"enemy_{i}_current") for i in range(5)]]
@@ -198,25 +218,75 @@ def prediction_metrics(model, samples, fields=None):
             "damage_mae": float(np.mean(abs(predicted[:, 1] - y[:, 1])) * 500),
             "losses_mae": float(np.mean(abs(predicted[:, 2] - y[:, 2])) * 5),
             "ability_mae": float(np.mean(abs(predicted[:, 3] - y[:, 3])) * 10),
-            "plant_ticks_mae": float(np.mean(abs(predicted[:, 4] - y[:, 4])) * 100) if y[0, 0] else None})
-    return {key: float(np.mean([r[key] for r in rows if r[key] is not None]))
+            "plant_ticks_mae": float(np.mean(abs(predicted[success_frames, 4] - y[success_frames, 4])) * 100)
+                if success_frames.any() else None})
+    metrics={key: float(np.mean([r[key] for r in rows if r[key] is not None]))
             if any(r[key] is not None for r in rows) else None
             for key in ("brier", "placement_accuracy", "unseen_placement_accuracy", "damage_mae", "losses_mae", "ability_mae", "plant_ticks_mae")}
+    metrics['constant_half_brier']=.25 if rows else None
+    metrics['brier_skill_vs_constant_half']=1.-metrics['brier']/.25 if rows else None
+    return metrics
 
 
-def evaluate(opponent, scenario, model, config, seeds):
+def route_coverage(rounds):
+    """Separate requested initial geometry from actually crossed site entries."""
+    from collections import Counter
+    initial, entries = Counter(), Counter()
+    for row in rounds:
+        decisions = row.get('route_decisions', ())
+        if decisions:
+            event = decisions[0]
+            initial[(event['site'], tuple(event.get('branches', ())),
+                     tuple(event['entry']) if event.get('entry') else None)] += 1
+        for actor_entries in row.get('actual_site_entries', {}).values():
+            entries.update((tuple(outside), tuple(inside)) for outside, inside in actor_entries)
+    return dict(initial_routes=[dict(site=site, branches=branches, entry=entry, rounds=count)
+        for (site, branches, entry), count in initial.items()],
+        executed_entries=[dict(outside=outside, inside=inside, crossings=count)
+            for (outside, inside), count in entries.items()])
+
+
+def entry_prediction_metrics(rounds):
+    """One first public-contact prediction per round; no correlated frame weighting."""
+    groups={}
+    eligible=0
+    for row in rounds:
+        selected=next((d for d in row.get('route_decisions',())
+            if d.get('public_contact_count',0)>0 and d.get('predicted_plant_probability') is not None
+            and d.get('entry_boundary',{}).get('outside',(-1,-1))[0]>=0),None)
+        if selected is None:
+            continue
+        eligible+=1
+        p=float(selected['predicted_plant_probability'])
+        success=float(row['planted'] and row['site']==selected['site'])
+        outside=selected['entry_boundary']['outside']
+        key=f"{selected['site']}:{outside[0]},{outside[1]}"
+        for group in ('all',key,key+':p>=0.9' if p>=.9 else None):
+            if group is not None:
+                groups.setdefault(group,[]).append((p,success))
+    return dict(scope='first_contact_selected_site_adaptive_completion_not_fixed_entry_breakthrough',
+        matched_rounds=eligible,total_rounds=len(rounds),
+        groups={name:dict(rounds=len(values),mean_prediction=float(np.mean([p for p,y in values])),
+            plants=int(sum(y for p,y in values)),plant_rate=float(np.mean([y for p,y in values])),
+            brier=float(np.mean([(p-y)**2 for p,y in values]))) for name,values in groups.items()})
+
+
+def evaluate(opponent, scenario, model, config, seeds, plant_policy=None):
     selected, random_rounds, random_samples = [], [], []
     presets = eligible_attacker_presets(config["eval_presets"], opponent)
     plan = []
     for i, seed in enumerate(seeds):
         preset = presets[i % len(presets)]
-        rounds, _ = play_block(opponent, scenario, model, config, seed, exploration=0., preset_name=preset)
-        selected.extend(rounds)
-        rounds, samples = play_block(opponent, scenario, model, config, seed + 500_000, exploration=1., preset_name=preset)
-        random_rounds.extend(rounds)
-        random_samples.extend(samples)
-        plan.append({"seed": seed, "preset": preset})
+        for start in config.get('evaluation_start_rounds', (1,)):
+            rounds, _ = play_block(opponent, scenario, model, config, seed, exploration=0., preset_name=preset, plant_policy=plant_policy, start_round=start)
+            selected.extend(rounds)
+            rounds, samples = play_block(opponent, scenario, model, config, seed + 500_000, exploration=1., preset_name=preset, plant_policy=plant_policy, start_round=start)
+            random_rounds.extend(rounds)
+            random_samples.extend(samples)
+            plan.append({"seed": seed, "preset": preset, "start_round": start})
     return {"selected": summarize(selected), "random": summarize(random_rounds),
+            "selected_entry_prediction": entry_prediction_metrics(selected),
+            "route_coverage": {'selected': route_coverage(selected), 'exploratory': route_coverage(random_rounds)},
             "prediction": prediction_metrics(model, random_samples, AttackerEncoder(scenario).fields), "seeds": seeds, "roster_plan": plan}
 
 
@@ -236,10 +306,57 @@ def save_latest(path, model, optimizer, replay, completed, opponent, schema, con
         "last_evaluation": last_evaluation})
 
 
+def collection_source(opponent, scenario, args, data_dir):
+    """Pin validated executor weights before replacing any analysis best.
+
+    Resume reads that snapshot, never a newer production best. Production
+    source loading retains all schema and dependency-hash checks.
+    """
+    from touyama_v3.tv3_guard_runtime import load_sources
+    import hashlib
+    import tempfile
+    pinned = data_dir / 'collection_sources'
+    if args.resume:
+        latest = load_checkpoint(data_dir / opponent / 'latest.pt')
+        previous = latest['config']
+        kind = previous.get('collection_executor', 'rule')
+        if args.collection_executor != 'auto' and args.collection_executor != kind:
+            raise ValueError('Collection executor changed; start a new analysis training run')
+        if kind == 'rule':
+            return None, dict(collection_executor='rule')
+        source = load_sources(scenario, (opponent,), pinned, pinned)[opponent]
+        if source['hashes'] != previous.get('collection_source_hashes'):
+            raise ValueError('Pinned analysis collection source hashes changed')
+        return source['plant'], dict(collection_executor='fixed_plant', collection_source_hashes=source['hashes'])
+    available = (args.frozen_plant_dir / opponent / 'attacker_plant_best.pt').exists()
+    if args.collection_executor == 'rule' or args.collection_executor == 'auto' and not available:
+        return None, dict(collection_executor='rule')
+    source = load_sources(scenario, (opponent,), args.frozen_plant_dir, args.frozen_plant_dir)[opponent]
+    # Keep the dependency pair intact. These writes occur only when the user
+    # explicitly runs training; the audit tools do not call this function.
+    for phase in ('analysis', 'plant'):
+        content = Path(source['paths'][phase]).read_bytes()
+        if hashlib.sha256(content).hexdigest() != source['hashes'][phase]:
+            raise ValueError('Collection source changed while pinning; retry with stable best files')
+        target = pinned / opponent / f'attacker_{phase}_best.pt'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=target.parent, suffix='.tmp', delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+        try:
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+    frozen = load_sources(scenario, (opponent,), pinned, pinned)[opponent]
+    return frozen['plant'], dict(collection_executor='fixed_plant', collection_source_hashes=frozen['hashes'])
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     positive = ("sets", "eval_seeds", "updates", "batch_size", "replay_rounds", "max_round_steps", "torch_threads")
-    if any(getattr(args, k) < 1 for k in positive) or args.eval_every < 0 or not 0 <= args.exploration <= 1 or args.learning_rate <= 0:
+    if (any(getattr(args, k) < 1 for k in positive) or args.eval_every < 0
+            or min(args.exploration_probe_steps, args.exploration_probe_ticks) < 0
+            or not 0 <= args.exploration <= 1 or args.learning_rate <= 0):
         raise ValueError("Counts must be positive, eval-every >= 0, exploration in [0,1], learning-rate > 0")
     if args.eval_only and not args.resume:
         raise ValueError("Evaluation-only requires RESUME_TRAINING=True or --resume")
@@ -277,13 +394,20 @@ def main(argv=None):
     for handler in handlers:
         logger.addHandler(handler)
     # Persist execution/evaluation conditions; cosmetic output locations are excluded.
-    config = {k: getattr(args, k) for k in ("seed", "train_presets", "eval_presets", "exploration", "max_round_steps", "eval_seeds")}
-    config["roster_scope"] = "touyama_fixed_five_independent_seeds"
+    base_config = {k: getattr(args, k) for k in ("seed", "train_presets", "eval_presets", "exploration", "max_round_steps", "eval_seeds",
+                                              "exploration_scope", "exploration_probe_steps", "exploration_probe_ticks", "exploration_round_start_only")}
+    base_config["roster_scope"] = "touyama_fixed_five_independent_seeds"
+    base_config['training_start_rounds'] = list(TRAINING_START_ROUNDS)
+    base_config['evaluation_start_rounds'] = list(EVALUATION_START_ROUNDS)
     logger.info("attacker analysis: 12ラウンド/セット、相手別モデル、guard対象外")
     logger.info("成功率の見方: [実力評価]=解析で選んだ経路の性能（コンソールでは緑色）。[データ収集]はランダム探索を含む結果。")
     logger.info("設定=%s", json.dumps({k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}, ensure_ascii=False))
     try:
         for opponent in args.opponents:
+            plant_policy, executor_metadata = collection_source(opponent, scenario, args, data_dir)
+            config = {**base_config, **executor_metadata}
+            logger.info('[%s] 収集executor=%s 探索範囲=%s 固定モデル=%s', opponent,
+                config['collection_executor'], config['exploration_scope'], config.get('collection_source_hashes'))
             index = list(OPPONENTS).index(opponent)
             seed_all(args.seed + index)
             model = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names))
@@ -322,7 +446,7 @@ def main(argv=None):
                     old_evaluation["selected"]["plants"], old_evaluation["selected"]["rounds"])
             if args.eval_only:
                 logger.info("[%s] 評価専用 学習済み=%dセット モデル=%s", opponent, completed, latest)
-                result = evaluate(opponent, scenario, model, config, seeds)
+                result = evaluate(opponent, scenario, model, config, seeds, plant_policy)
                 log_evaluation(logger, opponent, result, completed)
                 continue
             logger.info("[%s] 完了=%d 今回追加=%dセット 保存=%s", opponent, completed, args.sets, latest)
@@ -331,7 +455,8 @@ def main(argv=None):
                 presets = eligible_attacker_presets(args.train_presets, opponent)
                 preset = presets[completed % len(presets)]
                 rounds, samples = play_block(opponent, scenario, model, config,
-                    args.seed + index * 1_000_000 + set_number * 100, args.exploration, preset_name=preset)
+                    args.seed + index * 1_000_000 + set_number * 100, args.exploration, preset_name=preset, plant_policy=plant_policy,
+                    start_round=TRAINING_START_ROUNDS[completed % len(TRAINING_START_ROUNDS)])
                 replay.extend(samples)
                 loss = optimize(model, optimizer, replay, rng, args.updates, args.batch_size)
                 completed += 1
@@ -341,6 +466,8 @@ def main(argv=None):
                 np.savez_compressed(directory / f"set_{completed:06d}.npz", **arrays)
                 save_latest(latest, model, optimizer, replay, completed, opponent, schema, config, rng, last_evaluation)
                 metrics = summarize(rounds)
+                logger.info('[%s][経路実行 set=%d] %s', opponent, completed,
+                            json.dumps(route_coverage(rounds), ensure_ascii=False))
                 logger.info("[%s][データ収集 set=%d][編成=%s][ランダム探索率=%.0f%%] 直近の実力評価=%s | %s loss=%s",
                     opponent, completed, preset, 100 * args.exploration, format_last_evaluation(last_evaluation),
                     format_summary(metrics, "収集プラント成功率"), loss)
@@ -348,7 +475,7 @@ def main(argv=None):
                     for row in rounds:
                         output.write(json.dumps({"set": completed, **row}, ensure_ascii=False) + "\n")
                 if (args.eval_every and completed % args.eval_every == 0) or additional == args.sets:
-                    result = evaluate(opponent, scenario, model, config, seeds)
+                    result = evaluate(opponent, scenario, model, config, seeds, plant_policy)
                     last_evaluation = {"set": completed, "evaluation": result}
                     save_latest(latest, model, optimizer, replay, completed, opponent, schema, config, rng, last_evaluation)
                     log_evaluation(logger, opponent, result, completed)

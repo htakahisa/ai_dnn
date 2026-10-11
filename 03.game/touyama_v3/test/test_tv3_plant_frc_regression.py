@@ -14,6 +14,48 @@ from touyama_v3.tv3_train_attacker_plant import carrier_stall_cost, learning_set
 
 
 class PlantFrcRegression(unittest.TestCase):
+    def test_v14_recovers_repeated_forward_edge_but_respects_other_restrictions(self):
+        controller=Controller.__new__(Controller)
+        controller.scenario=NS(grid=np.zeros((7,7),dtype=int))
+        controller.snapshot=NS(tick=2)
+        controller.route=NS(cells=((3,2),(3,3),(3,4)))
+        controller.cursors={0:1}
+        controller.attack_plan=NS(scout_goals={})
+        controller.retriever=None
+        controller.edge_history=deque()
+        controller.edges=Counter({(0,((3,3),(3,4))):2})
+        controller.encoder=NS(execution_version=13,combat_coach=NS(contacts=lambda *args: ()))
+        ally=NS(slot=0,position=(3,3),blind=0)
+        traffic=np.full((7,7),10.)
+        traffic[3,3],traffic[3,4],traffic[3,2]=2.,1.,3.
+        inputs=NS(mask=np.ones(58,bool),traffic=traffic,combat=NS(reason='advance'))
+        from touyama_v3.tv3_learn_attacker_plant import MOVEMENTS
+        east,west=MOVEMENTS.index('E')*8,MOVEMENTS.index('W')*8
+        controller._restrict_movement(ally,inputs,set())
+        self.assertFalse(inputs.mask[east])
+        self.assertTrue(inputs.mask[west])
+        controller.encoder.execution_version=14
+        inputs.mask[:]=True
+        controller._restrict_movement(ally,inputs,set())
+        self.assertTrue(inputs.mask[east])
+        inputs.mask[:]=True
+        controller._restrict_movement(ally,inputs,{(3,4)})
+        self.assertFalse(inputs.mask[east])
+        inputs.mask[:]=True
+        traffic[3,4]=3.
+        controller._restrict_movement(ally,inputs,set())
+        self.assertFalse(inputs.mask[east])
+        traffic[3,4]=1.
+        controller.route.cells=((3,2),(3,3))
+        inputs.mask[:]=True
+        controller._restrict_movement(ally,inputs,set())
+        self.assertFalse(inputs.mask[east])
+        controller.route.cells=((3,2),(3,3),(3,4))
+        inputs.mask[:]=True
+        inputs.mask[east:east+8]=False
+        controller._restrict_movement(ally,inputs,set())
+        self.assertFalse(inputs.mask[east])
+
     def test_total_limit_constant_is_connected_to_argument_defaults(self):
         from unittest.mock import patch
         from touyama_v3 import tv3_train_attacker_plant as training
@@ -53,7 +95,7 @@ class PlantFrcRegression(unittest.TestCase):
         controller.retriever = None
         controller.edge_history = deque()
         controller.edges = Counter({(0,((3,3),(3,4))):2})
-        controller.encoder = NS(combat_coach=NS(contacts=lambda *args: ()))
+        controller.encoder = NS(execution_version=10, combat_coach=NS(contacts=lambda *args: ()))
         ally = NS(slot=0,position=(3,3),blind=0)
         from touyama_v3.tv3_learn_attacker_plant import MOVEMENTS
         east = MOVEMENTS.index('E')*8

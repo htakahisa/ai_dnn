@@ -9,7 +9,7 @@ if str(HERE.parent) not in sys.path:
 TRAINING_SETS = 30  # 1セット=相手AIの保存ケースをランダム順に各1回学習。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 
-TARGET_OPPONENTS = ("gc_v1", "concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4")
+TARGET_OPPONENTS = ("concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4", "ghost_champions_v2")
 CASES_DIRECTORY = HERE / "data" / "attacker_guard_cases"
 DATA_DIRECTORY = HERE / "data" / "attacker_guard"
 BEST_DIRECTORY = HERE / "data" / "best"
@@ -18,6 +18,7 @@ RESUME_TRAINING = False
 EVALUATION_ONLY = False
 EVALUATION_INTERVAL = 5  # xセットごとの独立評価。最終セットも評価。
 EVALUATION_SEED_COUNT = 3
+EVALUATION_START_ROUNDS = (1, 13)
 RANDOM_SEED = 42
 OPTIMIZER_UPDATES = 200
 BATCH_SIZE = 64
@@ -126,10 +127,11 @@ def evaluation(opponent, scenario, source, model, seeds, rewards, max_steps):
     plan = []
     for i, seed in enumerate(seeds):
         preset = source["eval_presets"][i % len(source["eval_presets"])]
-        rows, _ = play_block(opponent, scenario, source, model, seed, rewards=rewards, max_steps=max_steps,
-                             preset_name=preset)
-        records.extend(rows)
-        plan.append({"seed": seed, "preset": preset})
+        for start in EVALUATION_START_ROUNDS:
+            rows, _ = play_block(opponent, scenario, source, model, seed, rewards=rewards, max_steps=max_steps,
+                                 preset_name=preset, start_round=start)
+            records.extend(rows)
+            plan.append({"seed": seed, "preset": preset, "start_round": start})
     return {"metrics": summarize_guard(records), "seeds": list(seeds), "roster_plan": plan}
 
 
@@ -206,6 +208,7 @@ def main(argv=None):
     rewards = rewards_config()
     schedule = {"interval": args.eval_every, "unit": "sets", "set_unit": "one_pass_all_opponent_cases"}
     config = {"seed": args.seed, "eval_seeds": args.eval_seeds, "rewards": rewards,
+        "evaluation_start_rounds": list(EVALUATION_START_ROUNDS),
         "schedule": [EPSILON_START, EPSILON_END, TEACHER_START, TEACHER_END, EXPLORATION_DECAY_SETS],
         "demonstration_weight": DEMONSTRATION_WEIGHT, "max_steps": args.max_round_steps,
         "evaluation_scope": "fresh_setup_with_fixed_plant_analysis"}

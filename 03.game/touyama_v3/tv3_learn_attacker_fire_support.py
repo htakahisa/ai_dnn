@@ -6,6 +6,7 @@ from game_core import FACING_VECTORS
 from frc_v1.perception import Sighting
 from frc_v1.actions import MOVE_STEPS, KINDS
 from touyama_v3.tv3_attacker_combat import RECENT_CONTACT_TICKS, LOW_HP_FRACTION, AttackerCombatCoach
+from touyama_v3.tv3_attacker_threat_evidence import confirmed_empty_cells
 
 MOVES = ('STAY', 'N', 'E', 'S', 'W')
 FIRE_SUPPORT_FEATURES = len(MOVES)*4
@@ -25,7 +26,7 @@ def public_threats(snapshot, tracks):
     result = [s for s in snapshot.sightings if s.enemy_id in alive]
     current = {s.enemy_id for s in result}
     occupied = {s.position for s in result}
-    visible = set(snapshot.visible_cells)
+    visible = set(confirmed_empty_cells(snapshot))
     for enemy_id, (position, tick, _) in tracks.items():
         if (enemy_id in alive and enemy_id not in current
                 and 0 <= snapshot.tick-tick <= RECENT_CONTACT_TICKS
@@ -34,13 +35,14 @@ def public_threats(snapshot, tracks):
     return tuple(result)
 
 
-def shot_clear(scenario, snapshot, origin, target, slot):
+def shot_clear(scenario, snapshot, origin, target, slot, *, potential_body_cover=False):
     if origin == target or not scenario.clear(origin, target):
         return False
     line = line_cells(origin,target)
     if len(line) <= 2:
         return True  # Match the engine's adjacent shot rule.
-    blockers = {a.position for a in snapshot.allies if a.alive and a.slot != slot}
+    blockers = {a.position for a in snapshot.allies if a.alive and a.slot != slot
+                and (not potential_body_cover or a.movement_disabled>0 and not a.warping)}
     blockers.update(s.position for s in snapshot.sightings if s.source != 'history' and s.position != target)
     if set(line[1:-1]).intersection(blockers):
         return False

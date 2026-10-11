@@ -9,7 +9,7 @@ if str(HERE.parent) not in sys.path:
 CASES_PER_SITE = 50  # 各相手の各サイト。左右なら合計100件。
 TARGET_SITES = ("L", "R")
 SITE_SAMPLING = "targeted"  # 収集時だけ不足側の経路を指定。通常推論・評価は通常選択。
-TARGET_OPPONENTS = ("gc_v1", "concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4")
+TARGET_OPPONENTS = ("concon_v1", "omoko_v1", "fnatic_v3", "frc_v1", "toru_ai_v4", "ghost_champions_v2")
 PLANT_BEST_DIRECTORY = HERE / "data" / "best"
 ANALYSIS_BEST_DIRECTORY = HERE / "data" / "best"
 OUTPUT_DIRECTORY = HERE / "data" / "attacker_guard_cases"
@@ -19,6 +19,7 @@ RANDOM_SEED = 42
 MAX_COLLECTION_BLOCKS = 200  # 不得意な側の失敗も含む累計上限。左右の目標到達で早期終了。
 MAX_ROUND_STEPS = 400
 TORCH_THREADS = 1
+COLLECTION_START_ROUNDS = (1, 13)
 
 import argparse
 from collections import Counter
@@ -47,7 +48,8 @@ def collection_config(scenario, sources, seed, sites=TARGET_SITES, sampling=SITE
         "source_paths": {k: v["paths"] for k, v in sources.items()},
         "presets": {k: v["train_presets"] for k, v in sources.items()},
         "capture_boundary": "end_of_first_plant_tick_before_guard_actions",
-        "sites": list(sites), "site_selection": sampling, "sampling_version": SAMPLING_VERSION}
+        "sites": list(sites), "site_selection": sampling, "sampling_version": SAMPLING_VERSION,
+        "collection_start_rounds": list(COLLECTION_START_ROUNDS)}
 
 
 def validate_output(directory, protected=()):
@@ -139,8 +141,9 @@ def collect(args):
                     counts[enemy, side] += 1
                 with site_sampling(requested_site):
                     rounds, _ = play_block(opponent, scenario, source, None, seed, capture=capture, max_steps=args.max_round_steps,
-                                           preset_name=preset)
-                append_row(progress, {"opponent": opponent, "block": block, "seed": seed, "requested_site": requested_site})
+                                           preset_name=preset, start_round=COLLECTION_START_ROUNDS[(block-1) % len(COLLECTION_START_ROUNDS)])
+                append_row(progress, {"opponent": opponent, "block": block, "seed": seed, "requested_site": requested_site,
+                    "start_round": COLLECTION_START_ROUNDS[(block-1) % len(COLLECTION_START_ROUNDS)]})
                 logger.info("[%s] block=%d 編成=%s 指定=%s 設置=%d/12 有効ケース=%s 各目標=%d", opponent, block, preset,
                             requested_site, sum(r["planted"] for r in rounds), {s: counts[opponent, s] for s in args.sites}, args.cases)
         complete = all(counts[o, s] >= args.cases for o in args.opponents for s in args.sites)

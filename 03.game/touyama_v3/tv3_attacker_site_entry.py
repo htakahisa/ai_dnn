@@ -130,8 +130,12 @@ def site_entry_features(snapshot, ally, goal, traffic, state):
 
 class PlantSiteAssembly:
     """Assign public goals, never override or force learned actions."""
-    def __init__(self, scenario):
+    def __init__(self, scenario, *, follow_route_entry=False, bind_changed_entry_only=False):
         self.scenario = scenario
+        self.follow_route_entry = follow_route_entry
+        self.bind_changed_entry_only = bind_changed_entry_only
+        self.entry_changed = False
+        self.primary_entry = None
         self.side = None
         self.assigned = {}
         self.entries = {}
@@ -147,10 +151,38 @@ class PlantSiteAssembly:
             return None
         holder = next((a for a in alive if a.has_spike), None)
         if self.side != route.site:
-            self.__init__(self.scenario)
+            self.__init__(self.scenario, follow_route_entry=self.follow_route_entry,
+                          bind_changed_entry_only=self.bind_changed_entry_only)
             self.side = route.site
         if not holder or holder.plant_progress or self.scenario.grid[holder.position] == 2:
             return None
+        index = next((i for i,p in enumerate(route.cells) if self.scenario.grid[p] == 2), None)
+        if self.follow_route_entry:
+            if index is None or index == 0:
+                return None
+            primary = route.cells[index-1], route.cells[index]
+            if self.primary_entry is not None and self.primary_entry != primary:
+                self.__init__(self.scenario, follow_route_entry=True,
+                              bind_changed_entry_only=self.bind_changed_entry_only)
+                self.side=route.site
+                self.entry_changed=True
+        if self.follow_route_entry and (not self.bind_changed_entry_only or self.entry_changed):
+            approach_board = self.scenario.grid.copy()
+            approach_board[approach_board == 2] = 1
+            field = distance_map(approach_board, holder.position)
+            anchors = [(int(field[p]), -i, i) for i,p in enumerate(route.cells[:index]) if field[p] >= 0]
+            if not anchors:
+                return None
+            travel, _, anchor = min(anchors)
+            remaining = travel + index-anchor
+            if self.assigned and (self.primary_entry != primary or remaining > PREPARE_STEPS):
+                changed=self.entry_changed
+                self.__init__(self.scenario, follow_route_entry=True,
+                              bind_changed_entry_only=self.bind_changed_entry_only)
+                self.side = route.site
+                self.entry_changed=changed
+            if remaining > PREPARE_STEPS:
+                return None  # Keep the selected approach waypoint until its entry is actually near.
         if self.carrier_slot is not None and self.carrier_slot != holder.slot:
             self.launched = True  # The retriever must not wait at a support player's old rally goal.
             self.carrier_slot = holder.slot
@@ -158,10 +190,10 @@ class PlantSiteAssembly:
             to_site = self.scenario.site_dist[route.site]
             if to_site[holder.position] < 0 or to_site[holder.position] > PREPARE_STEPS:
                 return None
-            index = next((i for i,p in enumerate(route.cells) if self.scenario.grid[p] == 2), None)
             if index is None or index == 0:
                 return None
             primary = route.cells[index-1], route.cells[index]
+            self.primary_entry = primary
             board = self.scenario.grid.copy()
             board[board == 2] = 1
             primary_map = distance_map(board, primary[0])

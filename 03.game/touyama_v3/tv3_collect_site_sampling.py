@@ -57,6 +57,13 @@ def site_sampling(site, *, attacker="touyama_v3"):
             replace(FnaticV3AttackerController, "_plant_candidates", candidates)
             replace(FnaticV3AttackerController, "_select_attack_target", select)
             replace(FnaticV3AttackerController, "_rotate_target", lambda *args: False)
+        elif attacker == "ghost_champions_v2":
+            from ghost_champions_v2.tactics import AttackerTactics
+            original = AttackerTactics.choose_site
+            requested = "A" if site == "L" else "B"
+            def choose(self, available=("A", "B")):
+                return original(self, tuple(s for s in available if s == requested))
+            replace(AttackerTactics, "choose_site", choose)
         elif attacker == "gc_v1":
             def cells(game, grid):
                 import numpy as np

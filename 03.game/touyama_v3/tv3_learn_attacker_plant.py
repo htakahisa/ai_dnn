@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import math
+from game_core import BLIND_DURATION_TICKS
 
 import numpy as np
 import torch
@@ -32,12 +33,35 @@ from touyama_v3.tv3_learn_attacker_fire_support import (
     public_threats, defensive_advice, smoke_screen, PublicPlantCombatCoach,
 )
 
-PLANT_VERSION = 10
+from touyama_v3.tv3_learn_attacker_support import (
+    SUPPORT_FEATURES, support_schema, support_targets, support_features, support_advice, SupportCoach,
+)
+
+from touyama_v3.tv3_learn_attacker_corner_utility import (
+    CORNER_UTILITY_FEATURES,FRIENDLY_FLASH_FEATURES,FriendlyFlashTracker,
+    corner_utility_schema,fill_corner_targets,corner_utility_features,
+    confirmed_flash_covers_step,confirmed_flash_step_window,flash_window_allows_completion,
+)
+
+from touyama_v3.tv3_learn_attacker_recon_cover import (
+    RECON_COVER_FEATURES,recon_cover_schema,recon_cover_plan,recon_cover_advice,recon_cover_features,
+    incoming_clear,
+)
+from touyama_v3.tv3_attacker_threat_evidence import PublicEmptyEvidence, empty_evidence_schema
+
+PLANT_VERSION = 19  # New teacher-label validation; saved models keep their original execution contract.
 PLANT_ACTION = ACTION_DIM - 2
 ORB_ACTION = ACTION_DIM - 1
 REGIONS = 14
 LEGACY_OBS_DIM = BASE_OBS_DIM + 5 * (REGIONS + 1) + 24 + COMBAT_FEATURES + ENTRY_FEATURES + SITE_ENTRY_FEATURES + 2
-OBS_DIM = LEGACY_OBS_DIM + FIRE_SUPPORT_FEATURES
+V10_OBS_DIM = LEGACY_OBS_DIM + FIRE_SUPPORT_FEATURES
+V11_OBS_DIM = V10_OBS_DIM + SUPPORT_FEATURES
+V12_OBS_DIM = V11_OBS_DIM + CORNER_UTILITY_FEATURES + FRIENDLY_FLASH_FEATURES
+OBS_DIM = V12_OBS_DIM + RECON_COVER_FEATURES
+
+
+def observation_dim(version):
+    return {9: LEGACY_OBS_DIM, 10: V10_OBS_DIM, 11: V11_OBS_DIM, 12: V12_OBS_DIM, 13: OBS_DIM, 14: OBS_DIM, 15: OBS_DIM, 16: OBS_DIM, 17: OBS_DIM, 18: OBS_DIM, 19: OBS_DIM}[version]
 CARRIER_FEATURE_INDEX = BASE_OBS_DIM + 5 * (REGIONS + 1)
 GAMMA = .98
 ROUTE_CORRIDOR_CELLS = 2
@@ -49,10 +73,10 @@ EDGE_TRAVERSAL_WINDOW = 8
 class PlantDQN(nn.Module):
     def __init__(self, execution_version=PLANT_VERSION):
         super().__init__()
-        if execution_version not in (9, 10):
+        if execution_version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
             raise ValueError("Unsupported plant execution version")
         self.execution_version = execution_version
-        dimension = LEGACY_OBS_DIM if execution_version == 9 else OBS_DIM
+        dimension = observation_dim(execution_version)
         self.net = nn.Sequential(nn.Linear(dimension, 256), nn.ReLU(), nn.Linear(256, 128),
                                  nn.ReLU(), nn.Linear(128, ACTION_DIM))
 
@@ -61,10 +85,10 @@ class PlantDQN(nn.Module):
 
 
 def policy_schema(scenario, execution_version=PLANT_VERSION):
-    if execution_version not in (9, 10):
+    if execution_version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
         raise ValueError("Unsupported plant execution version")
     schema = {"version": execution_version, "board": scenario.grid.tolist(), "scenario": scenario.signature, "branches": scenario.branches,
-        "obs_dim": LEGACY_OBS_DIM if execution_version == 9 else OBS_DIM, "action_dim": ACTION_DIM, "gamma": GAMMA,
+        "obs_dim": observation_dim(execution_version), "action_dim": ACTION_DIM, "gamma": GAMMA,
         "route_corridor": ROUTE_CORRIDOR_CELLS, "retreat": ROUTE_RETREAT_CELLS,
         "edge_limit": MAX_EDGE_TRAVERSALS, "edge_window": EDGE_TRAVERSAL_WINDOW, "planner": planner_schema(),
         "sensor": "frc_public_team_v1", "scope": "preplant_only",
@@ -74,8 +98,53 @@ def policy_schema(scenario, execution_version=PLANT_VERSION):
         "entry_utility": utility_schema(), "entry_coordination": coordination_schema(),
         "site_entry": site_entry_schema(),
         "plant_legal_progress_features": 2, "wall_los": WALL_LOS_VERSION, "public_hazards": hazard_schema()}
-    if execution_version == 10:
+    if execution_version >= 10:
         schema["fire_support"] = fire_support_schema()
+    if execution_version >= 11:
+        schema["execution"] = "public_carrier_support_plant_v11"
+        schema["carrier_support"] = support_schema()
+    if execution_version >= 12:
+        schema['execution']='public_corner_utility_plant_v12'
+        schema['corner_utility']=corner_utility_schema()
+        schema['friendly_flash_window']=dict(version=1,features=FRIENDLY_FLASH_FEATURES,
+            evidence='own_charge_consumption_and_public_burst',freshness_ticks=5,
+            duration=BLIND_DURATION_TICKS,selection='learned_actions',teacher_override=False)
+    if execution_version >= 13:
+        schema['execution']='public_recon_wall_cover_plant_v13'
+        schema['recon_cover']=recon_cover_schema()
+    if execution_version==14:
+        schema['execution']='public_route_progress_escape_plant_v14'
+        schema['recent_edge_progress_exception']='engine_legal_on_selected_route_decreasing_goal_traffic_v1'
+    if execution_version>=15:
+        schema['execution']='public_confirmed_empty_threats_plant_v15'
+        schema['empty_evidence']=empty_evidence_schema()
+    if execution_version>=16:
+        schema['execution']='public_temporary_body_cover_plant_v16'
+        schema['temporary_body_cover']=dict(version=1,incoming='potential_after_mobile_ally_leaves',
+            persistent='movement_disabled_and_not_warping',outgoing='current_actual_bodies',
+            teacher='potential_threat_enables_utility_without_unmarked_forced_hold',selection='learned_actions')
+        schema['flash_progress_release']=dict(version=1,edge='selected_route_decreasing_goal_traffic',
+            evidence='all_known_incoming_lines_covered_by_confirmed_owned_flash',
+            preserves='engine_mask_team_reservation_route_corridor',selection='learned_actions')
+        schema['flash_step_teacher']=dict(version=1,next_step='goal_progress_on_selected_route',
+            evidence='confirmed_owned_flash_covers_all_known_incoming_lines',
+            eligibility='not_blind_not_low_hp',selection='teacher_examples_only')
+        schema['flash_rally_release']=dict(version=1,eligibility='carrier_ready_known_entry_lines_covered',
+            duration='entry_distance_plus_required_plant_ticks_plus_one',selection='release_goal_wait_not_force_action')
+    if execution_version>=17:
+        from touyama_v3.tv3_attacker_entry_yield import entry_yield_schema
+        schema['execution']='public_entry_yield_plant_v17'
+        schema['entry_yield']=entry_yield_schema()
+    if execution_version>=18:
+        schema['execution']='public_deadline_route_candidates_plant_v18'
+        schema['deadline_route_reserve']=dict(version=1,trigger='normal_candidates_and_remaining_route_empty',
+            relaxation='remove_time_margin_only_keep_travel_plus_plant_feasibility',selection='learned_actions')
+    if execution_version>=19:
+        schema['execution']='public_masked_retreat_teacher_plant_v19'
+        schema['masked_retreat_teacher']=dict(version=1,trigger='retreat_teacher_removed_by_coordination',
+            order=('public_incoming_lines','unreturnable_lines','distance_to_retreat_step','facing'),
+            selection='teacher_examples_only_legal_actions')
+        schema['masked_teacher_facing']='preserve_combat_advice_facing_on_equal_distance'
     return schema
 
 
@@ -94,7 +163,7 @@ def load_frozen_analysis(directory, opponent, scenario):
 def load_plant(path, scenario, opponent=None, analysis_hash=None):
     state = load_checkpoint(path)
     version = state["schema"].get("version")
-    if version not in (9, 10) or json.dumps(state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
+    if version not in (9, 10, 11) or json.dumps(state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
         raise ValueError("Plant model map/action/schema mismatch")
     if opponent is not None and state["opponent"] != opponent:
         raise ValueError("Plant model opponent mismatch")
@@ -116,6 +185,8 @@ class PlantInputs:
     goal: tuple
     combat: object = None
     traffic: object = None
+    support: object = None
+    support_distances: object = None
 
 
 def predicted_targets(scenario, snapshot, ally, analysis):
@@ -139,7 +210,7 @@ def predicted_targets(scenario, snapshot, ally, analysis):
 
 class PlantEncoder:
     def __init__(self, scenario, execution_version=PLANT_VERSION):
-        if execution_version not in (9, 10):
+        if execution_version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
             raise ValueError("Unsupported plant execution version")
         self.execution_version = execution_version
         if len(scenario.names) != REGIONS:
@@ -147,6 +218,10 @@ class PlantEncoder:
         self.scenario = scenario
         self.base = PolicyEncoder(scenario)
         self.combat_coach = (AttackerCombatCoach if execution_version == 9 else PublicPlantCombatCoach)(scenario)
+        self.support_coach = SupportCoach()
+        self.flash_tracker = FriendlyFlashTracker(scenario)
+        self.experimental_flash_teacher=False  # Disabled after 36-round regression; diagnostics may opt in.
+        self.empty_evidence=PublicEmptyEvidence()
 
     def encode(self, snapshot, ally, goal, route, analysis, tracks, masks, cursor, route_mode, coordination=None):
         site = np.asarray([float(route.site == "L"), float(route.site == "R")], np.float32)
@@ -155,6 +230,8 @@ class PlantEncoder:
         routes = teacher_distances(base.distances, traffic, ally.position)
         targets = predicted_targets(self.scenario, snapshot, ally, analysis)
         entry_plan = predicted_entry_utility(self.scenario, snapshot, ally, analysis, route, masks)
+        if self.execution_version>=15:
+            snapshot=self.empty_evidence.tactical_snapshot(snapshot,temporary_body_cover=self.execution_version>=16)
         seen = self.combat_coach.contacts(snapshot, ally, ally.position)
         direction = ally.facing if ally.forced_facing else facing(ally.position,
             min(seen, key=lambda p: max(abs(p[0]-ally.position[0]), abs(p[1]-ally.position[1]))) if seen else targets[0][0] if targets else goal)
@@ -177,12 +254,42 @@ class PlantEncoder:
             advice = replace(advice, position=ally.position, reason='stop_shoot')
         utility_snapshot = snapshot
         screen = None
-        if self.execution_version == 10:
+        if self.execution_version >= 10:
             advice = defensive_advice(self.scenario, snapshot, ally, advice, tracks, masks)
             utility_snapshot = replace(snapshot, sightings=public_threats(snapshot, tracks))
             if ally.ability_name == 'SMOKE':
                 screen = smoke_screen(self.scenario, snapshot, ally, utility_snapshot.sightings,
                                       masks.target[ally.slot, 0].reshape(self.scenario.grid.shape))
+        recon_plan = recon_cover_plan(self.scenario,snapshot,ally,tracks,masks,destination) if self.execution_version>=13 else None
+        support_plan = None
+        support_values = []
+        if self.execution_version >= 11:
+            support_threats = support_targets(self.scenario, snapshot, route, tracks)
+            support_plan = self.support_coach.plan(self.scenario, snapshot, ally, goal, route, support_threats, advice) if recon_plan is None else None
+            support_values = support_features(self.scenario, snapshot, ally, support_threats, support_plan).tolist()
+            advice = support_advice(self.scenario, snapshot, ally, advice, support_threats, support_plan)
+        if self.execution_version >= 12 and self.experimental_flash_teacher and not ally.blind and ally.hp>ally.max_hp*LOW_HP_FRACTION:
+            potential=[s for s in public_threats(snapshot,tracks) if self.scenario.clear(ally.position,s.position)
+                       or self.scenario.clear(destination,s.position)]
+            if potential and all(self.flash_tracker.suppressed(snapshot,s.position,tracks) for s in potential):
+                advice=replace(advice,position=destination,reason='advance',contacts=0,future_contacts=0)
+        if self.execution_version >= 13:
+            advice = recon_cover_advice(ally,advice,recon_plan)
+        if self.execution_version>=16:
+            potential=sum(incoming_clear(self.scenario,snapshot,ally,destination,t)
+                          for t in public_threats(snapshot,tracks))
+            advice=replace(advice,future_contacts=max(advice.future_contacts,potential))
+            if (destination in route.cells and traffic[ally.position]>=0
+                    and 0<=traffic[destination]<traffic[ally.position]
+                    and ally.hp>ally.max_hp*LOW_HP_FRACTION
+                    and confirmed_flash_covers_step(self.scenario,snapshot,ally,destination,tracks,self.flash_tracker)):
+                advice=replace(advice,position=destination,reason='advance',contacts=0,future_contacts=0)
+            if (ally.has_spike and self.scenario.grid[ally.position]==2
+                    and ally.hp>ally.max_hp*LOW_HP_FRACTION):
+                from game_core import PLANT_REQUIRED_TICKS
+                window=confirmed_flash_step_window(self.scenario,snapshot,ally,ally.position,tracks,self.flash_tracker)
+                if flash_window_allows_completion(window,0,PLANT_REQUIRED_TICKS-max(0,ally.plant_progress)):
+                    advice=replace(advice,position=ally.position,reason='advance',contacts=0,future_contacts=0)
         direction = advice.facing
         actions, legal = list(base.actions), base.mask.copy()
         # Replace defender-specific terminal actions with attacker PLANT.
@@ -197,7 +304,7 @@ class PlantEncoder:
         coordinates += [targets[i][0] if i < len(targets) else None for i in range(2)]
         if entry_plan:
             coordinates[3] = entry_plan[0]["target"]
-        if self.execution_version == 10:
+        if self.execution_version >= 10:
             known = sorted({s.position for s in utility_snapshot.sightings},
                            key=lambda p: (max(abs(p[0]-ally.position[0]), abs(p[1]-ally.position[1])), p))
             coordinates[:3] = known[:3] + [None] * max(0, 3-len(known))
@@ -205,6 +312,8 @@ class PlantEncoder:
                 coordinates[3] = screen
                 entry_plan = None
         coordinates += [route.cells[-1], snapshot.spike_dropped, ally.position]
+        if self.execution_version >= 12:
+            coordinates=fill_corner_targets(self.scenario,snapshot,ally,route,tracks,masks,direction,coordinates)
         allies = sorted(snapshot.allies, key=lambda a: (a.position, a.ability_name))
         for kind_index, kind in enumerate(("ABILITY", "ULTIMATE")):
             for index, pos in enumerate(coordinates):
@@ -238,10 +347,16 @@ class PlantEncoder:
         observation = np.concatenate((base.observation, np.asarray(
             beliefs + extra + advice.features(ally, self.scenario.grid.shape) + support
             + (fire_support_features(self.scenario, snapshot, ally, tracks).tolist()
-               if self.execution_version == 10 else [])
+               if self.execution_version >= 10 else [])
+            + support_values
+            + (corner_utility_features(self.scenario,snapshot,ally,tracks,actions,legal).tolist()
+               if self.execution_version >= 12 else [])
+            + (self.flash_tracker.features(snapshot,tracks) if self.execution_version >= 12 else [])
+            + (recon_cover_features(self.scenario,snapshot,ally,tracks,recon_plan).tolist()
+               if self.execution_version >= 13 else [])
             + site_entry_features(snapshot, ally, goal, traffic, coordination).tolist()
             + [float(legal[PLANT_ACTION]), 0.], np.float32)))
-        if len(observation) != (LEGACY_OBS_DIM if self.execution_version == 9 else OBS_DIM) or not np.isfinite(observation).all():
+        if len(observation) != observation_dim(self.execution_version) or not np.isfinite(observation).all():
             raise ValueError("Invalid plant observation")
         join_wait = (coordination and coordination['wait'] and ally.slot in coordination['main']
                      and ally.slot in coordination['ready'] and advice.reason == 'advance')
@@ -265,6 +380,8 @@ class PlantEncoder:
             active = {e.kind for e in snapshot.effects if e.phase in ("active", "flight")}
             threat = bool(advice.contacts) or bool(targets and targets[0][1] >= .8 and
                        max(abs(targets[0][0][0] - ally.position[0]), abs(targets[0][0][1] - ally.position[1])) <= 8)
+            if self.execution_version>=16:
+                threat=threat or bool(advice.future_contacts)
             choices = []
             if entry_plan or screen is not None:
                 choices = [43]
@@ -274,9 +391,17 @@ class PlantEncoder:
                 choices = [43, 44, 45]
             elif ally.ability_name == "DANCE":
                 choices = [40 + i for i, a in enumerate(allies) if a.alive and a.hp < .7 * a.max_hp]
-            if self.execution_version == 10 and advice.reason == 'cover_retreat':
+            safe_cover_cast=(self.execution_version>=16 and recon_plan is not None
+                             and recon_plan['steps']==0 and recon_plan['incoming']==0)
+            if self.execution_version >= 10 and advice.reason == 'cover_retreat' and not safe_cover_cast:
                 choices = []  # Teach the legal escape instead of a stationary cast in the open.
+            if self.execution_version >= 11 and support_plan and support_plan['steps']:
+                choices = []  # Show the reachable support path before an unrelated stationary cast.
             teacher = next((i for i in choices if legal[i]), teacher)
+            if self.execution_version >= 12 and self.experimental_flash_teacher and ally.ability_name=='FLASH' and actions[teacher].kind=='ABILITY':
+                threats=public_threats(snapshot,tracks)
+                if threats and all(self.flash_tracker.suppressed(snapshot,s.position,tracks) for s in threats):
+                    teacher=int(min(movement,key=score))  # Preserve the window rather than repeat known covered support.
             # Only pause before leaving cover; an exposed player should not be
             # taught to freeze. Recon flights never require an entry pause.
             if impact is not None and advice.reason == "advance":
@@ -296,15 +421,23 @@ class PlantEncoder:
                 stays = [i for i in movement if actions[i].kind == 'STAY' and actions[i].facing == direction]
                 if stays:
                     teacher = int(stays[0])
-        return PlantInputs(observation, legal, tuple(actions), teacher, base.distances, goal, advice, traffic)
+        support_field = traffic_distances(snapshot, ally, support_plan['goal']) if support_plan else None
+        return PlantInputs(observation, legal, tuple(actions), teacher, base.distances, goal, advice, traffic,
+                           support_plan, support_field)
 
 
-def demonstration_kind_loss(values, teachers, masks):
+def demonstration_kind_loss(values, teachers, masks, *, teacher_variant=False):
     """Teach move/stay/utility/plant independently of eight facing variants."""
     legal = values.masked_fill(~masks, -1e9)
     groups = torch.stack([legal[:,i:i+8].max(1).values for i in range(0,56,8)]
                          + [legal[:,56],legal[:,57]],dim=1)
     kinds = torch.where(teachers < 56, teachers//8, teachers-49)
+    if teacher_variant:
+        if not bool(masks.gather(1,teachers[:,None]).all()):
+            raise ValueError('Teacher variant must be legal under the final mask')
+        # A correct movement kind must not reinforce a different facing;
+        # ability variants are targets, so preserve the demonstrated target too.
+        groups=groups.scatter(1,kinds[:,None],legal.gather(1,teachers[:,None]))
     return nn.functional.cross_entropy(groups,kinds)
 
 
@@ -318,7 +451,7 @@ def sample_plant_batch(replay, rng, batch_size, carrier_fraction=0., carriers=No
 
 
 def learn_plant(model, target, optimizer, replay, rng, updates, batch_size, demonstration_weight=.05,
-                demonstration_kind_weight=0., carrier_sample_fraction=0.):
+                demonstration_kind_weight=0., carrier_sample_fraction=0., demonstration_teacher_variant=False):
     if len(replay) < batch_size:
         return None
     replay = list(replay)  # Avoid repeated linear-time random indexing of a deque.
@@ -342,7 +475,8 @@ def learn_plant(model, target, optimizer, replay, rng, updates, batch_size, demo
         loss = nn.functional.smooth_l1_loss(values.gather(1, actions[:, None]).squeeze(1), expected)
         loss += demonstration_weight * nn.functional.cross_entropy(values.masked_fill(~masks, -1e9), teachers)
         if demonstration_kind_weight:
-            loss += demonstration_kind_weight * demonstration_kind_loss(values,teachers,masks)
+            loss += demonstration_kind_weight * demonstration_kind_loss(values,teachers,masks,
+                teacher_variant=demonstration_teacher_variant)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), 5.)

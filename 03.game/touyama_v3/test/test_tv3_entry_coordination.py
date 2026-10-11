@@ -78,18 +78,19 @@ class CoordinationTests(unittest.TestCase):
         self.assertEqual(flashed[0],1)
         self.assertNotEqual(base,flashed)
 
-    def test_low_damage_plants_rank_above_high_success_with_heavy_losses(self):
+    def test_low_damage_is_diagnostic_and_not_a_best_selection_priority(self):
         base={'plant_rate':1.,'viable_plant_rate':1.,'mean_alive':4.,'mean_damage':10.,
               'ability_reserve_rate':.5,'mean_ability_uses':2.,'mean_plant_ticks':40.}
+        base.update(advantaged_plant_rate=.5,competitive_plant_rate=.5,ability_advantage_plant_rate=.1)
         safe={**base,'low_damage_plant_rate':.9}
         damaged={**base,'low_damage_plant_rate':.1,'ability_reserve_rate':1.}
-        self.assertGreater(best_rank(safe),best_rank(damaged))
+        self.assertEqual(best_rank(safe),best_rank(damaged))
         records=[{'planted':True,'alive':5,'remaining_hp':500,'initial_team_hp':500},
                  {'planted':True,'alive':4,'remaining_hp':390,'initial_team_hp':500},
                  {'planted':False,'alive':5,'remaining_hp':500,'initial_team_hp':500}]
         self.assertEqual(low_damage_summary(records)['low_damage_plants'],1)
         terminal={'planted':True,'alive':5,'initial_team_hp':500,'remaining_hp':500}
-        self.assertGreater(terminal_bonus(terminal,5,0.),
+        self.assertLess(terminal_bonus(terminal,5,0.),
                            terminal_bonus({**terminal,'remaining_hp':200},5,1.))
 
 
