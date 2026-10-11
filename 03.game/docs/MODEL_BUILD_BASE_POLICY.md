@@ -367,3 +367,13 @@ schema変更には、観測・行動の構造だけでなく意味、教師、�
 | 他モデルの関連設計例（今回のFRC plant追試とは別） | [解除範囲・期限・担当](../toruAI_v4/docs/retake_deadline_review.md)、[guardの配置・能力・評価](../concon_v1/docs/guard_models.md) |
 
 主な実装は、[経路・analysis](../touyama_v3/tv3_learn_attacker_analysis.py)、[経路planner](../touyama_v3/tv3_attacker_route_planner.py)、[入口・距離・集合](../touyama_v3/tv3_attacker_site_entry.py)、[plant controller](../touyama_v3/tv3_attacker_plant_controller.py)、[公開射線・支援](../touyama_v3/tv3_learn_attacker_fire_support.py)、[被リコン退避](../touyama_v3/tv3_learn_attacker_recon_cover.py)、[投擲・FLASH確認](../touyama_v3/tv3_learn_attacker_corner_utility.py)、[不在確認](../touyama_v3/tv3_attacker_threat_evidence.py)、[代替退避教師](../touyama_v3/tv3_learn_attacker_masked_teacher.py)、[学習損失](../touyama_v3/tv3_learn_attacker_plant.py)、[報酬・学習・途中保存](../touyama_v3/tv3_train_attacker_plant.py)、[後続ケース・依存読込](../touyama_v3/tv3_guard_runtime.py)を参照する。
+
+## 16. 条件別の修正では、処理の範囲と重みの範囲を両方分ける
+
+特定相手の右サイトだけの処理を別ファイルへ分離しても、左右で同じネットワークを再学習すると左の重み・出力も変わり得る。共通重みを保持したい場合は、専用条件の重みを別ネットにし、共通側をoptimizerから除外して凍結する。学習データの条件を選別し、通常推論でも該当条件の専用モデルと適用外の固定共通モデルを切り替える。
+
+共通と専用のモデル・評価・ログを別保存し、専用checkpointに共通の実データとSHA、拡張の適用条件・版・ソースSHAを固定する。個別修正を有効にしただけで共通bestを上書きしない。専用の条件を外れた遷移でのbootstrap・終端帰属も設計し、他条件のデータで専用重みを更新しない。
+
+重みを凍結しても、専用側の行動による対戦状態・履歴の変化は残る。処理／パラメータの分離と、左右や他AIの実力が落ちないことは別々に検証する。
+
+Touyama v3の接続済みの例は[条件別拡張と重み分離](../touyama_v3/docs/tv3_scoped_model_extensions.md)。現時点の学習・重みrouting接続はattacker plant。search・retake・guardへ適用する際は各段階のモデル・schema・遷移・依存に合わせて接続し、接続済み／効果検証済みと誤解しない。

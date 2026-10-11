@@ -10,6 +10,7 @@ from frc_v1.actions import build_masks, to_game_action, MOVE_STEPS
 from grid_paths import distance_map
 from touyama_v3.tv3_attacker_route_planner import AdaptiveAttackPlanner
 from touyama_v3.tv3_attacker_combat import AttackerCombatCoach
+from touyama_v3.tv3_model_extensions import ExtensionContext,load_extensions
 from touyama_v3.tv3_attacker_entry_coordination import EntryCoordinator
 from touyama_v3.tv3_attacker_site_entry import (
     PlantSiteAssembly, traffic_distances, site_entry_features, ENTRY_FEATURES as SITE_ENTRY_FEATURES,
@@ -27,14 +28,18 @@ from touyama_v3.tv3_learn_attacker_plant import (
 class TouyamaV3AttackerPlantController:
     handles_team_perception = True
 
-    def __init__(self, scenario, analysis, policy, *, seed=42, training=False):
+    def __init__(self, scenario, analysis, policy, *, seed=42, training=False,opponent=None):
         self.scenario, self.analysis, self.policy = scenario, analysis, policy
+        self.root_policy=policy
         self.sensor = FrcPerceptionBuilder("A")
         self.analysis_encoder = AttackerEncoder(scenario, getattr(analysis, 'execution_version', 3))
         self.encoder = PlantEncoder(scenario, getattr(policy, "execution_version", PLANT_VERSION))
         self.encoder.experimental_flash_teacher=getattr(policy,'experimental_flash_teacher',False)
         self.rng = np.random.default_rng(seed)
         self.training = training
+        self.custom_opponent=opponent or getattr(policy,'opponent',None)
+        self.custom_pipeline=load_extensions(getattr(policy,'custom_extension_contract',None),
+            role='attacker_plant',opponent=self.custom_opponent)
         self.epsilon = self.teacher_probability = 0.
         self.previous_rounds = []
         self.game = None
@@ -50,9 +55,14 @@ class TouyamaV3AttackerPlantController:
         best_dir = Path(best_dir) if best_dir else Path(__file__).resolve().parent / "data" / "best"
         analysis, signature, _ = load_frozen_analysis(analysis_dir or best_dir, opponent, scenario)
         policy, _ = load_plant(best_dir / opponent / "attacker_plant_best.pt", scenario, opponent, signature)
-        return cls(scenario, analysis, policy)
+        return cls(scenario, analysis, policy,opponent=opponent)
 
     def reset_round(self):
+        if hasattr(self.root_policy,'common_policy'):
+            self.policy=self.root_policy.common_policy
+            self.encoder=PlantEncoder(self.scenario,self.policy.execution_version)
+            self.common_encoder=self.encoder
+            self.custom_encoder=PlantEncoder(self.scenario,self.root_policy.execution_version)
         self.sensor.reset()
         self.analysis_encoder.reset()
         self.cache = self.snapshot = self.route = self.route_mode = None
@@ -79,6 +89,22 @@ class TouyamaV3AttackerPlantController:
             from touyama_v3.tv3_learn_attacker_corner_utility import FriendlyFlashTracker
             self.encoder.flash_tracker=FriendlyFlashTracker(self.scenario)
         self.events = []
+        if hasattr(self.root_policy,'common_policy'):
+            self.custom_encoder.flash_tracker=self.encoder.flash_tracker
+            self.custom_encoder.empty_evidence=self.encoder.empty_evidence
+            self.custom_encoder.support_coach=self.encoder.support_coach
+            if type(self.custom_encoder.combat_coach)==type(self.encoder.combat_coach):
+                self.custom_encoder.combat_coach=self.encoder.combat_coach
+
+    def select_weight_policy(self,site):
+        if hasattr(self.root_policy,'common_policy'):
+            custom=site==self.root_policy.weight_scope
+            self.policy=self.root_policy if custom else self.root_policy.common_policy
+            self.encoder=self.custom_encoder if custom else self.common_encoder
+
+    @property
+    def training_current_policy(self):
+        return self.training and (not hasattr(self.root_policy,'common_policy') or self.policy is self.root_policy)
 
     def select_route(self, snapshot, observation):
         self.route_planner.allow_deadline_route_reserve=getattr(getattr(self,'encoder',None),'execution_version',0)>=18
@@ -193,6 +219,7 @@ class TouyamaV3AttackerPlantController:
         observation = self.analysis_encoder.observe(snapshot, self.previous_rounds)
         if not self.select_route(snapshot, observation):
             return
+        self.select_weight_policy(self.route.site)
         holder = next((a for a in snapshot.allies if a.alive and a.has_spike), None)
         if holder is None and snapshot.spike_dropped:
             alive = [a for a in snapshot.allies if a.alive]
@@ -231,8 +258,12 @@ class TouyamaV3AttackerPlantController:
         names = {a.slot: a.name for a in snapshot.allies}
         for ally in sorted((a for a in snapshot.allies if a.alive), key=lambda a: (not a.has_spike, a.slot != self.retriever, a.slot)):
             goal = self.goal_for(snapshot, ally)
+            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal)
+            goal=self.custom_pipeline.adjust_goal(custom_context,goal)
             inputs = self.encoder.encode(snapshot, ally, goal, self.route, analysis,
                 self.analysis_encoder.history.tracks, masks, self.cursors[ally.slot], self.route_mode, coordination)
+            custom_context=ExtensionContext('attacker_plant',self.custom_opponent,self.route.site,snapshot,ally,goal)
+            inputs=self.custom_pipeline.adjust_inputs(custom_context,inputs)
             self._restrict_movement(ally, inputs, reserved)
             inputs.traffic = traffic_distances(snapshot, ally, goal, reserved)
             inputs.observation[-SITE_ENTRY_FEATURES-2:-2] = site_entry_features(
@@ -258,9 +289,10 @@ class TouyamaV3AttackerPlantController:
                         self.analysis_encoder.history.tracks)
                 else:
                     inputs.teacher = int(min(candidates, key=rank))
-            if self.training and self.rng.random() < self.teacher_probability:
+            actor_training=self.training_current_policy
+            if actor_training and self.rng.random() < self.teacher_probability:
                 action_index = inputs.teacher
-            elif self.training and self.rng.random() < self.epsilon:
+            elif actor_training and self.rng.random() < self.epsilon:
                 action_index = int(self.rng.choice(np.flatnonzero(inputs.mask)))
             else:
                 with torch.no_grad():

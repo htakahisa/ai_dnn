@@ -84,7 +84,7 @@ class PlantDQN(nn.Module):
         return self.net(observation)
 
 
-def policy_schema(scenario, execution_version=PLANT_VERSION):
+def policy_schema(scenario, execution_version=PLANT_VERSION, *, custom_extensions=None,weight_routing=None):
     if execution_version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
         raise ValueError("Unsupported plant execution version")
     schema = {"version": execution_version, "board": scenario.grid.tolist(), "scenario": scenario.signature, "branches": scenario.branches,
@@ -145,7 +145,51 @@ def policy_schema(scenario, execution_version=PLANT_VERSION):
             order=('public_incoming_lines','unreturnable_lines','distance_to_retreat_step','facing'),
             selection='teacher_examples_only_legal_actions')
         schema['masked_teacher_facing']='preserve_combat_advice_facing_on_equal_distance'
+    if custom_extensions is not None:
+        schema['custom_extensions']=custom_extensions
+    if weight_routing is not None:
+        schema['weight_routing']=weight_routing
     return schema
+
+
+def attach_common_policy(model,payload,scenario,opponent,analysis_hash,site):
+    """Pin actual common weights without registering them in the custom optimizer."""
+    if site not in ('L','R') or not isinstance(payload,bytes):
+        raise ValueError('Site-specific weights require a pinned common checkpoint')
+    state=torch.load(io.BytesIO(payload),map_location='cpu',weights_only=True)
+    if (state['opponent']!=opponent or state['analysis_hash']!=analysis_hash
+            or state['schema']!=policy_schema(scenario,state['schema']['version'])):
+        raise ValueError('Common model schema/opponent/analysis mismatch; nested custom models are not common')
+    common=PlantDQN(state['schema']['version'])
+    common.load_state_dict(state['model'])
+    common.opponent=opponent
+    common.eval()
+    common.requires_grad_(False)
+    object.__setattr__(model,'common_policy',common)
+    model.common_policy_payload=payload
+    model.weight_scope=site
+    model.weight_routing=dict(site=site,common_sha256=hashlib.sha256(payload).hexdigest(),
+        transition_boundary='end_custom_episode_on_scope_exit')
+    return dict(model.weight_routing)
+
+
+def routing_checkpoint_fields(model):
+    payload=getattr(model,'common_policy_payload',None)
+    return {} if payload is None else dict(common_policy_payload=payload)
+
+
+def restore_policy_routing(model,state,scenario):
+    from touyama_v3.tv3_model_extensions import extension_weight_scope
+    scope=extension_weight_scope(state['schema'].get('custom_extensions'))
+    routing=state['schema'].get('weight_routing')
+    if scope in ('L','R'):
+        actual=attach_common_policy(model,state.get('common_policy_payload'),scenario,
+            state['opponent'],state['analysis_hash'],scope)
+        if actual!=routing:
+            raise ValueError('Pinned common weight hash/routing mismatch')
+    elif routing is not None or 'common_policy_payload' in state:
+        raise ValueError('Unexpected common weight routing')
+    return routing
 
 
 def load_frozen_analysis(directory, opponent, scenario):
@@ -163,14 +207,22 @@ def load_frozen_analysis(directory, opponent, scenario):
 def load_plant(path, scenario, opponent=None, analysis_hash=None):
     state = load_checkpoint(path)
     version = state["schema"].get("version")
-    if version not in (9, 10, 11) or json.dumps(state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
+    if version not in (9,10,11,12,13,14,15,16,17,18,19):
+        raise ValueError("Plant model map/action/schema mismatch")
+    from touyama_v3.tv3_model_extensions import load_extensions
+    contract=state['schema'].get('custom_extensions')
+    pipeline=load_extensions(contract,role='attacker_plant',opponent=state.get('opponent'))
+    if version not in (9,10,11,12,13,14,15,16,17,18,19) or json.dumps(state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version,custom_extensions=pipeline.contract,weight_routing=state['schema'].get('weight_routing')), sort_keys=True):
         raise ValueError("Plant model map/action/schema mismatch")
     if opponent is not None and state["opponent"] != opponent:
         raise ValueError("Plant model opponent mismatch")
     if analysis_hash is not None and state["analysis_hash"] != analysis_hash:
         raise ValueError("Frozen analysis changed since plant training")
     model = PlantDQN(version)
+    model.opponent=state['opponent']
+    model.custom_extension_contract=pipeline.contract
     model.load_state_dict(state["model"])
+    restore_policy_routing(model,state,scenario)
     model.eval()
     return model, state
 

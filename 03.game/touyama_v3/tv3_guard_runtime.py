@@ -13,7 +13,7 @@ import torch
 from concon_v1.co1_retake_cases import load_case
 from touyama_v3.tv3_scenario import OPPONENTS
 from touyama_v3.tv3_learn_attacker_analysis import AttackerEncoder, AttackerAnalysisModel
-from touyama_v3.tv3_learn_attacker_plant import PlantDQN, policy_schema
+from touyama_v3.tv3_learn_attacker_plant import PlantDQN, policy_schema,restore_policy_routing
 from touyama_v3.tv3_learn_attacker_guard import OBS_DIM, ACTION_DIM
 from touyama_v3.tv3_learn_attacker_guard import crossfire_score
 from touyama_v3.tv3_attacker_guard_controller import TouyamaV3AttackerPlantGuardController
@@ -46,16 +46,21 @@ def load_sources(scenario, opponents, best_dir, analysis_dir):
         if plant_state["opponent"] != opponent or analysis_state["opponent"] != opponent:
             raise ValueError(f"Source opponent mismatch: {opponent}")
         version = plant_state["schema"].get("version")
+        from touyama_v3.tv3_model_extensions import load_extensions
+        custom=load_extensions(plant_state['schema'].get('custom_extensions'),role='attacker_plant',opponent=opponent)
         if version not in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19):
             raise ValueError(f"Source plant version unsupported: {opponent}, version={version}")
-        if json.dumps(plant_state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version), sort_keys=True):
+        if json.dumps(plant_state["schema"], sort_keys=True) != json.dumps(policy_schema(scenario, version,custom_extensions=custom.contract,weight_routing=plant_state['schema'].get('weight_routing')), sort_keys=True):
             raise ValueError(f"Source plant map/schema mismatch: {opponent}, version={version}")
         if json.dumps(analysis_state["schema"], sort_keys=True) != json.dumps(encoder.schema(), sort_keys=True):
             raise ValueError(f"Source analysis map/schema mismatch: {opponent}")
         if plant_state["analysis_hash"] != analysis_hash:
             raise ValueError(f"Plant and analysis best do not match: {opponent}")
         plant = PlantDQN(version)
+        plant.opponent=opponent
+        plant.custom_extension_contract=custom.contract
         plant.load_state_dict(plant_state["model"])
+        restore_policy_routing(plant,plant_state,scenario)
         analysis = AttackerAnalysisModel(len(encoder.fields), len(encoder.route_fields), len(scenario.names), encoder.execution_version)
         analysis.load_state_dict(analysis_state["model"])
         analysis.trained_rounds = analysis_state["trained_rounds"]

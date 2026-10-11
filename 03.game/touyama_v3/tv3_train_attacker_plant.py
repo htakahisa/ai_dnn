@@ -7,8 +7,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # 通常設定：このファイル冒頭を編集し、touyama_v3からオプションなしで実行。
-TRAINING_SETS = 5  # FRCのv19教師修正の検証学習。1セット=12ラウンド。
-TOTAL_TRAINING_SET_LIMIT = 5  # set5で自動停止してから実力評価を確認する。
+TRAINING_SETS = 70  # 1セット=12ラウンド。
+TOTAL_TRAINING_SET_LIMIT = 70  # 自動停止するラウンド数の上限。0で無制限。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 RESUME_TRAINING = False
 WARM_START_FROM_BEST = True  # Reuse compatible weights; start a fresh optimizer and replay.
@@ -28,6 +28,8 @@ BEST_SELECTION_POLICY = 'man_advantaged_plant_then_competitive_plant_then_abilit
 BEST_SELECTION_PRIORITIES = ('advantaged_plant_rate','competitive_plant_rate','ability_advantage_plant_rate')
 SAVE_EVALUATION_CHECKPOINTS = True  # Keep evaluated weights even when they are not selected as best.
 SAVE_REVIEW_WEIGHT_CHECKPOINTS = True  # 学習前・各セットの重みだけを実行ごとに保存し、劣化箇所を後から比較する。
+PLANT_CUSTOM_MODULES = ()  # 共通処理のみ。例: ('tv3_custom_train_attacker_plant_frc_v1_R',)
+PLANT_COMMON_DIRECTORY = HERE/'data'/'best'  # 左右専用分岐が保持する、凍結した共通モデルの入力元。
 OPTIMIZER_UPDATES = 200
 BATCH_SIZE = 64
 REPLAY_SIZE = 60000
@@ -98,6 +100,7 @@ import json
 import logging
 import os
 import uuid
+import hashlib
 
 import numpy as np
 import torch
@@ -110,10 +113,12 @@ from touyama_v3.tv3_train_attacker_analysis import (
 )
 from touyama_v3.tv3_learn_attacker_plant import (
     PlantDQN, OBS_DIM, ACTION_DIM, policy_schema, load_frozen_analysis, learn_plant,
+    attach_common_policy,routing_checkpoint_fields,restore_policy_routing,
 )
 from touyama_v3.tv3_learn_attacker_analysis import branch_sequence
 from touyama_v3.tv3_attacker_plant_controller import TouyamaV3AttackerPlantController
 from touyama_v3.tv3_attacker_site_entry import mission_progress
+from touyama_v3.tv3_model_extensions import ExtensionContext,build_extensions,extension_weight_scope
 from touyama_v3.tv3_attacker_rosters import eligible_attacker_presets
 from touyama_v3.tv3_checkpoint import load_checkpoint
 
@@ -275,6 +280,9 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
     if not isinstance(start_round, int) or start_round < 1:
         raise ValueError('start_round must be a positive match round number')
     rounds, transitions, history = [], [], []
+    scoped_weights=hasattr(policy,'common_policy')
+    trainable_flags=[]
+    scope_boundaries=set()
     from touyama_v3.tv3_attacker_combat_audit import CombatAudit
     from simulation_runtime import cpu_inference
     with legacy_root(), open(os.devnull, "w", encoding="utf-8") as quiet, \
@@ -289,7 +297,7 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
         enemy_preset = get_preset(OPPONENTS[opponent][1])
         from touyama_v3.tv3_opponents import scoped_presets
         own_preset, enemy_preset = scoped_presets(own_preset, enemy_preset)
-        controller = TouyamaV3AttackerPlantController(scenario, analysis, policy, seed=seed + 19, training=training)
+        controller = TouyamaV3AttackerPlantController(scenario, analysis, policy, seed=seed + 19, training=training,opponent=opponent)
         controller.epsilon, controller.teacher_probability = epsilon, teacher_probability
         if training and route_exploration:
             controller.planning_rng = controller.rng
@@ -350,6 +358,7 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                         entry_counts['launches'] += 1
                     entry_launched = entry_state['launched']
                 decision_snapshot = controller.snapshot
+                decision_custom=controller.policy is policy
                 if tick_callback is not None and not closed and not game.defender_setup_phase.active:
                     tick_callback(controller)
                 previous_hp = {str(getattr(c, "base_name", c.name)): max(0., c.hp) if c.is_alive else 0. for c in own}
@@ -432,7 +441,11 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                             # Credit anticipatory facing once at a geometrically relevant first contact.
                             reward += first_contact_preaim(scenario, before.position,
                                 enemy_before[sighting.enemy_id], chosen_action.facing)
-                    done = done_team or not char.is_alive
+                    reward=controller.custom_pipeline.adjust_reward(ExtensionContext(
+                        'attacker_plant',opponent,decision_plan.route.site if decision_plan else None,
+                        decision_snapshot,before,inputs.goal,chosen_action),reward)
+                    scope_exit=scoped_weights and decision_custom and controller.policy is not policy
+                    done = done_team or not char.is_alive or scope_exit
                     next_inputs = controller.inputs.get(name)
                     next_obs = next_inputs.observation if next_inputs is not None and not done else np.zeros_like(inputs.observation)
                     next_mask = next_inputs.mask.copy() if next_inputs is not None and not done else np.ones(ACTION_DIM, bool)
@@ -440,6 +453,9 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                         done = True
                     transitions.append([inputs.observation.astype(np.float16), action_index, reward,
                         next_obs.astype(np.float16), next_mask, float(done), inputs.teacher, inputs.mask.copy()])
+                    trainable_flags.append(not scoped_weights or decision_custom)
+                    if scope_exit:
+                        scope_boundaries.add(len(transitions)-1)
                     if name in last_indices and transitions[last_indices[name]][5]>.5:
                         decision_counts[name]=0  # Count only the actor's connected episode.
                     last_indices[name] = len(transitions) - 1
@@ -472,7 +488,8 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
                         "reason": "planted" if game.is_planted else "attacker_eliminated" if not any(c.is_alive for c in own)
                                   else "timeout" if game.round_timer <= 0 else "defender_eliminated"}
                     reserve = min(1., terminal["remaining_abilities_alive"] / initial_abilities) if initial_abilities else 0.
-                    reward_sum += apply_terminal_bonus(transitions, last_indices,
+                    terminal_indices={name:index for name,index in last_indices.items() if index not in scope_boundaries}
+                    reward_sum += apply_terminal_bonus(transitions, terminal_indices,
                         {n: c.is_alive for n, c in current.items()}, terminal, initial_alive, reserve,decision_counts)
             if terminal is None or game.current_round != round_number or not game.round_over:
                 raise RuntimeError("Plant block ended without a real terminal outcome")
@@ -494,6 +511,8 @@ def rollout(opponent, scenario, analysis, policy, config, seed, *, preset_name,
             if round_number < start_round + 11:
                 game.current_round += 1
                 game.init_round()
+    if scoped_weights:
+        transitions=[row for row,trainable in zip(transitions,trainable_flags) if trainable]
     return rounds, transitions
 
 
@@ -586,11 +605,19 @@ def save_latest(path, policy, target, optimizer, replay, completed, opponent, sc
         "completed_sets": completed, "trained_rounds": completed * 12, "replay": packed,
         "rng": json.dumps(rng.bit_generator.state), "last_evaluation": last_evaluation,
         "selection_rule": BEST_SELECTION_POLICY,
-        "warm_start_hash": getattr(policy,'warm_start_hash',None)})
+        "warm_start_hash": getattr(policy,'warm_start_hash',None),**routing_checkpoint_fields(policy)})
 
 
 def review_run_directory(directory,version):
     return Path(directory)/'review_checkpoints'/f'v{version}_{uuid.uuid4().hex}'
+
+
+def plant_output_directories(data_directory,best_directory,opponent,custom_contract=None,weight_routing=None):
+    if custom_contract is not None:
+        digest=hashlib.sha256(json.dumps(dict(custom_extensions=custom_contract,weight_routing=weight_routing),sort_keys=True).encode()).hexdigest()[:16]
+        data_directory=Path(data_directory)/'custom_profiles'/digest
+        best_directory=Path(best_directory)/'custom_profiles'/digest
+    return Path(data_directory)/opponent,Path(best_directory)/opponent
 
 
 def save_review_weights(directory,policy,completed,opponent,schema,config,analysis_hash,started):
@@ -599,7 +626,7 @@ def save_review_weights(directory,policy,completed,opponent,schema,config,analys
         model=policy.state_dict(),completed_sets=completed,trained_rounds=completed*12,
         warm_start_hash=getattr(policy,'warm_start_hash',None),
         run_started_at_completed_set=started,evaluation_status='not_evaluated',
-        checkpoint_kind='diagnostic_weights_only'))
+        checkpoint_kind='diagnostic_weights_only',**routing_checkpoint_fields(policy)))
     return path
 
 
@@ -673,12 +700,28 @@ def main(argv=None):
     config['failure_discount_compensation'] = FAILURE_DISCOUNT_COMPENSATION
     config['terminal_success_condition'] = 'all_plants_positive_man_ratio_or_enemy_elimination_v1'
     config['warm_start_from_best'] = WARM_START_FROM_BEST
+    custom_profiles={o:build_extensions(PLANT_CUSTOM_MODULES,role='attacker_plant',opponent=o).contract for o in args.opponents}
     frozen = {opponent: load_frozen_analysis(args.analysis_dir.resolve(), opponent, scenario) for opponent in args.opponents}
+    common_payloads={}
+    weight_routings={}
+    for opponent,contract in custom_profiles.items():
+        scope=extension_weight_scope(contract)
+        if scope in ('L','R'):
+            path=PLANT_COMMON_DIRECTORY/opponent/'attacker_plant_best.pt'
+            if not path.exists():
+                raise ValueError(f'Site-specific training needs a common plant first: {path}')
+            payload=path.read_bytes()
+            weight_routings[opponent]=attach_common_policy(PlantDQN(),payload,scenario,opponent,frozen[opponent][1],scope)
+            common_payloads[opponent]=payload
     if args.describe:
-        print(json.dumps({"schema": schema, "config": config,
+        print(json.dumps({"schema": schema, "config": config,"custom_extensions_by_opponent":custom_profiles,
+                          'weight_routing_by_opponent':weight_routings,
                           "analysis_hashes": {k: v[1] for k, v in frozen.items()}}, ensure_ascii=False, indent=2))
         return 0
     data_dir, log_dir, best_dir = args.data_dir.resolve(), args.log_dir.resolve(), args.best_dir.resolve()
+    if any(custom_profiles.values()):
+        log_digest=hashlib.sha256(json.dumps(dict(extensions=custom_profiles,routing=weight_routings),sort_keys=True).encode()).hexdigest()[:16]
+        log_dir=log_dir/'custom_profiles'/log_digest
     from touyama_v3.tv3_training_parallel import run_opponent_workers
     status = run_opponent_workers(__file__, argv, args.opponents, args.max_workers, log_dir=log_dir)
     if status is not None:
@@ -701,11 +744,30 @@ def main(argv=None):
     logger.info("[実力評価]（緑色）が教師・探索なしのプラント性能。[学習]は行動探索と教師を含みます。")
     logger.info("設定=%s", json.dumps({k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}, ensure_ascii=False))
     try:
+        common_config=config
         for opponent in args.opponents:
             index = list(OPPONENTS).index(opponent)
             analysis, analysis_hash, _ = frozen[opponent]
             seed_all(args.seed + index)
+            config=dict(common_config)
+            custom_contract=custom_profiles[opponent]
+            if custom_contract is not None:
+                config['custom_extensions']=custom_contract
+                logger.info('[%s] 個別拡張（モデルに固定）=%s',opponent,json.dumps(custom_contract,ensure_ascii=False))
+            routing=weight_routings.get(opponent)
+            if routing is not None:
+                config['weight_routing']=routing
+            schema=policy_schema(scenario,custom_extensions=custom_contract,weight_routing=routing)
             policy = PlantDQN()
+            policy.opponent=opponent
+            policy.custom_extension_contract=custom_contract
+            if routing is not None:
+                attach_common_policy(policy,common_payloads[opponent],scenario,opponent,analysis_hash,routing['site'])
+                if not warm_start_schema_compatible(policy_schema(scenario,policy.common_policy.execution_version),policy_schema(scenario)):
+                    raise ValueError('Common weights cannot initialize this custom input schema')
+                policy.load_state_dict(policy.common_policy.state_dict())
+                policy.warm_start_hash=routing['common_sha256']
+                logger.info('[%s] %s専用重みを共通モデルから初期化。共通重みは凍結・適用外サイトでは共通モデルを使用。',opponent,routing['site'])
             target = copy.deepcopy(policy)
             target.eval()
             optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
@@ -713,9 +775,9 @@ def main(argv=None):
             rng = np.random.default_rng(args.seed + index)
             completed = 0
             reference = None
-            directory = data_dir / opponent
+            directory,opponent_best_directory=plant_output_directories(data_dir,best_dir,opponent,custom_contract,routing)
             latest = directory / "latest.pt"
-            best_path = best_dir / opponent / "attacker_plant_best.pt"
+            best_path = opponent_best_directory / "attacker_plant_best.pt"
             if args.resume:
                 state = load_checkpoint(latest)
                 if "attacker_preset" in state.get("config", {}):
@@ -723,7 +785,9 @@ def main(argv=None):
                 if state["schema"] != schema or state["opponent"] != opponent or state["config"] != config or state["analysis_hash"] != analysis_hash:
                     raise ValueError(f"Resume map/config/analysis mismatch: {latest}")
                 policy.load_state_dict(state["model"])
+                restore_policy_routing(policy,state,scenario)
                 target.load_state_dict(state["target"])
+                restore_policy_routing(target,state,scenario)
                 optimizer.load_state_dict(state["optimizer"])
                 for group in optimizer.param_groups:
                     group["lr"] = args.learning_rate
@@ -735,7 +799,9 @@ def main(argv=None):
                 initial,initial_hash=warm_start_source(best_path,schema,analysis_hash,opponent,data_dir/'warm_start_sources')
                 if initial is not None:
                     policy.load_state_dict(initial['model'])
+                    restore_policy_routing(policy,initial,scenario)
                     target.load_state_dict(initial['model'])
+                    restore_policy_routing(target,initial,scenario)
                     policy.warm_start_hash=initial_hash
                     logger.info('[%s] best v%d set=%dの重みからv%dの入力・教師・報酬で学習。optimizer/replayは新規、通算setは0から。',
                         opponent,initial['schema']['version'],initial['completed_sets'],schema['version'])
@@ -764,7 +830,10 @@ def main(argv=None):
                     else:
                         with torch.random.fork_rng(devices=[]):
                             baseline=PlantDQN(old['schema']['version'])
+                            baseline.opponent=opponent
+                            baseline.custom_extension_contract=old['schema'].get('custom_extensions')
                             baseline.load_state_dict(old['model'])
+                            restore_policy_routing(baseline,old,scenario)
                         baseline.eval()
                         old_evaluation=evaluate(opponent,scenario,analysis,baseline,config,seeds,
                             record_path=log_dir/f'{opponent}_best_reassessment_rounds.jsonl',completed=old['completed_sets'])
@@ -822,7 +891,7 @@ def main(argv=None):
                             "analysis_hash": analysis_hash, "model": policy.state_dict(), "completed_sets": completed,
                             "trained_rounds": completed * 12, "evaluation": result,
                             "selection_rule": BEST_SELECTION_POLICY,
-                            "warm_start_hash": getattr(policy,'warm_start_hash',None)}
+                            "warm_start_hash": getattr(policy,'warm_start_hash',None),**routing_checkpoint_fields(policy)}
                     if SAVE_EVALUATION_CHECKPOINTS:
                         atomic_save(directory/'evaluation_checkpoints'/f'set_{completed:06d}.pt',evaluated)
                     if old_evaluation is None or best_rank(result["selected"]) > best_rank(old_evaluation["selected"]):

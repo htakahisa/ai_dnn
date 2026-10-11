@@ -1,4 +1,5 @@
 【前提】
+・条件別拡張は`docs/tv3_scoped_model_extensions.md`を確認する。attacker plantは`PLANT_CUSTOM_MODULES=()`が既定。専用処理は`tv3_custom_*.py`へ分離し、role・相手・目標サイトで適用する。左右専用では共通重みを凍結・固定し、専用重みだけを対象区間で学習する。拡張profileと共通SHAをモデルに保存し、適用外は固定共通モデルを使う。通常対戦の採用先や既存モデルをこの仕組み追加だけで変更しない。
 ・attacker・defender・analysis、およびsearch・plant・retake・guardの生成・改修に役立つ共通の調査知見は、[../docs/MODEL_BUILD_BASE_POLICY.md](../docs/MODEL_BUILD_BASE_POLICY.md) にまとめている。新モデルの設計・実装・学習・評価前に確認すること。修正実装、教師診断、学習済み性能を区別し、他モデルでの効果を未検証のまま確定扱いしない。
 ・2026-10-11の次の短期plant検証はv19。右8ラウンドの一手比較で38tickの向き変更だけで時間切れ→4v3設置、47tickのフラッシュ使用だけで4v4設置。種類別教師損失が教師と異なる向き・投擲先へ正の勾配を入れる点を修正。v19はmask後の教師の退避意図・向きも維持する。詳細は`docs/tv3_frc_v18_set5_failure_investigation.md`末尾。FRCのみ5セット自動停止、best v16 set10から重みだけ初期化、optimizer/replayは新規。予約順変更は最終人数を改善しなかったため採用しない。学習・性能改善の確認はユーザー実行後。既存のv16/v18モデルは元の版・schemaで読む。
 ・2026-10-11の最新attacker plant検証はv18。詳細は`docs/tv3_frc_set10_entry_deadline_review.md`。入力数は969のまま、v17で入口を塞ぐ味方の目標を修正し、v18で候補消失時だけ終盤の余裕条件を外す。保存best v16 set10は元の版で読む。重みだけのv16→v18初期化を許可しても、schemaの読み替えや旧optimizer/replay再開はしない。

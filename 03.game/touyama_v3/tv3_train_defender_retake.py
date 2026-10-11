@@ -32,10 +32,10 @@ MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。左右モ�
 # 通常はここを編集し、touyama_v3/ で python tv3_train_defender_retake.py を実行する。
 # 1セット = 各相手AIの全保存ケースを1回ずつ学習（左右各50件なら各モデル50ラウンド）。
 TRAINING_SETS = 10
+EVALUATION_INTERVAL = 1  # 5セットごと・終了時に同じ評価条件でbestを比較。更新量の目標判定もこの間隔。
 TRAINING_OPPONENTS = tuple(OPPONENTS)
 TRAINING_PRESETS = SEARCH_TRAINING_PRESETS
 EVALUATION_PRESETS = SEARCH_EVALUATION_PRESETS
-EVALUATION_INTERVAL = 1  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 EVALUATION_SEED_COUNT = 6  # More natural plants for sites with sparse evaluation samples.
 SITE_EVALUATION_SEED_COUNT = 2  # サイト指定収集のモデルは、独立seedの左右指定対戦でも評価。
 SITE_EVALUATION_SEED_OFFSET = 500_000_000

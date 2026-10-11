@@ -72,14 +72,20 @@ def load_review_source(scenario,plant_checkpoint=None):
         from touyama_v3.tv3_learn_attacker_plant import policy_schema
         state,digest=read_checkpoint(checkpoint)
         version=state['schema'].get('version')
+        from touyama_v3.tv3_model_extensions import load_extensions
+        custom=load_extensions(state['schema'].get('custom_extensions'),role='attacker_plant',opponent=OPPONENT)
         if state['opponent']!=OPPONENT:
             raise ValueError('Diagnostic checkpoint opponent mismatch')
-        if json.dumps(state['schema'],sort_keys=True)!=json.dumps(policy_schema(scenario,version),sort_keys=True):
+        if json.dumps(state['schema'],sort_keys=True)!=json.dumps(policy_schema(scenario,version,custom_extensions=custom.contract,weight_routing=state['schema'].get('weight_routing')),sort_keys=True):
             raise ValueError('Diagnostic checkpoint map/schema mismatch')
         if state['analysis_hash']!=source['hashes']['analysis']:
             raise ValueError('Diagnostic checkpoint analysis dependency mismatch')
         plant=PlantDQN(version)
+        plant.opponent=OPPONENT
+        plant.custom_extension_contract=custom.contract
         plant.load_state_dict(state['model'])
+        from touyama_v3.tv3_learn_attacker_plant import restore_policy_routing
+        restore_policy_routing(plant,state,scenario)
         plant.eval()
         plant.requires_grad_(False)
         source['plant']=plant
@@ -124,7 +130,8 @@ def main():
         version=policy.execution_version,plant_set=candidate['plant_set'])
     from touyama_v3.tv3_learn_attacker_plant import policy_schema
     output['execution_schema_hash']=hashlib.sha256(json.dumps(
-        policy_schema(scenario,policy.execution_version),sort_keys=True).encode()).hexdigest()
+        policy_schema(scenario,policy.execution_version,custom_extensions=getattr(policy,'custom_extension_contract',None),
+            weight_routing=getattr(policy,'weight_routing',None)),sort_keys=True).encode()).hexdigest()
     output['candidate_target_only']=CANDIDATE_TARGET_ONLY
     output['preceding_rounds']=[]
     output['forced_diagnostic_site']=FORCE_DIAGNOSTIC_SITE
@@ -351,8 +358,14 @@ def main():
             output['target_start_rng_hash']=hashlib.sha256(pickle.dumps((random.getstate(),
                 np.random.get_state(),torch.get_rng_state().numpy().tobytes()))).hexdigest()
             if (CANDIDATE_VERSION is not None or candidate is not None) and CANDIDATE_TARGET_ONLY:
+                controller.root_policy=policy
                 controller.policy=policy
                 controller.encoder=PlantEncoder(scenario,policy.execution_version)
+                if getattr(policy,'custom_extension_contract',None) is not None:
+                    from touyama_v3.tv3_model_extensions import load_extensions
+                    controller.custom_pipeline=load_extensions(policy.custom_extension_contract,
+                        role='attacker_plant',opponent=OPPONENT)
+                    controller.reset_round()
             if FORCE_TEACHER_TARGET:
                 controller.training=True
                 controller.teacher_probability=1.

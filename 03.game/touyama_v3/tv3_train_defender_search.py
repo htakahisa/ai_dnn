@@ -27,6 +27,7 @@ from touyama_v3.tv3_defender_controller import (
 # 各相手モデルの1セット = その相手との12ラウンド。味方はTouyamaの5人に固定。
 TRAINING_SETS = 100
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
+EVALUATION_INTERVAL = 5  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 
 TRAINING_OPPONENTS = tuple(OPPONENTS)
 TRAINING_PHASE = "search"
@@ -35,7 +36,6 @@ RANDOM_SEED = 42
 DATA_DIRECTORY = HERE / "data" / "defender"
 BEST_DIRECTORY = DEFENDER_BEST
 LOG_DIRECTORY = HERE / "logs" / "defender"
-EVALUATION_INTERVAL = 1  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 EVALUATION_SEED_COUNT = 3
 PLANT_ADVANTAGE_REWARD = .10  # 味方生存人数 - 相手生存人数
 RETAKE_COMBAT_RESERVE_TICKS = 20
