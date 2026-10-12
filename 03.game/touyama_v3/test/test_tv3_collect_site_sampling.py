@@ -80,6 +80,38 @@ class SiteSamplingTests(unittest.TestCase):
                     raise RuntimeError('stop')
             self.assertIs(AttackerTactics.choose_site, original)
 
+    def test_gc_v2_deadline_objective_cannot_commit_to_opposite_site(self):
+        from ghost_champions_v2.tactics import AttackerTactics
+        from ghost_champions_v2.config import load_config
+        original = AttackerTactics.objective_action
+        grid = np.zeros((3, 10), dtype=int)
+        cells = [(1, 1), (1, 8)]
+        for site, requested, opposite in (('L', cells[0], cells[1]), ('R', cells[1], cells[0])):
+            controller = AttackerTactics(load_config())
+            holder = NS(name='carrier', pos=list(opposite), team='A', is_alive=True, plant_timer=0)
+            state = dict(grid=grid, chars=[holder], round_timer=1)
+            distances = {opposite: 0, requested: 7}
+            with patch.object(controller, 'preplant_route', return_value=[opposite, requested]):
+                # Reproduces the bypass: the unfiltered objective plants on
+                # the nearest floor before choose_site is consulted.
+                self.assertEqual(controller.objective_action(holder,state,holder,cells,distances)[1], 'PLANT')
+                controller.plant_commit = None
+                with self.assertRaisesRegex(RuntimeError, 'stop'):
+                    with site_sampling(site, attacker='ghost_champions_v2'):
+                        action = controller.objective_action(holder,state,holder,cells,distances)
+                        self.assertEqual(controller.plant_commit['target'], requested)
+                        self.assertNotEqual(action[1], 'PLANT')
+                        self.assertEqual(controller.selected_site, 'A' if site=='L' else 'B')
+                        raise RuntimeError('stop')
+            self.assertIs(AttackerTactics.objective_action, original)
+
+    def test_gc_v2_deadline_does_not_use_unreachable_requested_floors(self):
+        from ghost_champions_v2.tactics import AttackerTactics
+        from ghost_champions_v2.config import load_config
+        controller = AttackerTactics(load_config())
+        with site_sampling('L', attacker='ghost_champions_v2'):
+            self.assertIsNone(controller.objective_action(None,dict(grid=np.zeros((3,10))),None,[(1,8)],{(1,8):0}))
+
     def test_guard_requires_each_site_and_records_request(self):
         for limit, complete in ((3, False), (4, True)):
             with self.subTest(limit=limit), tempfile.TemporaryDirectory() as temp:

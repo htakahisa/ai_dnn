@@ -14,6 +14,23 @@ from touyama_v3.tv3_guard_runtime import load_sources
 from touyama_v3.tv3_learn_attacker_guard import load_guard
 
 
+def _configured_roster(game, side):
+    # Side swaps bind controllers before init_round recreates the characters.
+    # The roster settings already belong to the new side at that boundary.
+    configured = getattr(game, 'attacker_roster' if side == 'A' else 'defender_roster', None)
+    if configured is not None:
+        return tuple(map(str, configured))
+    return tuple(str(getattr(c, 'base_name', c.name))
+                 for c in getattr(game, 'chars', ()) if c.team == side)
+
+
+def _is_active_controller(game, controller, side):
+    # DualRoleTeamAI.bind_game also visits its cached inactive-role controller.
+    team = getattr(game, 'current_attacker_team_ai' if side == 'A' else 'current_defender_team_ai', None)
+    active = getattr(team, '_attacker_controller' if side == 'A' else '_defender_controller', None)
+    return active is None or active is controller
+
+
 class TouyamaV3GameAttackerController:
     """Opponent-specific analysis/plant/guard best for normal games."""
     handles_team_perception = True
@@ -29,9 +46,12 @@ class TouyamaV3GameAttackerController:
 
     def set_game(self, game):
         real = getattr(game, '_real', game)
+        if not _is_active_controller(real, self, 'A'):
+            return
         name = real.current_defender_team_ai.name
         opponent = OPPONENT_NAMES.get(name)
-        binding = id(real), name
+        roster = _configured_roster(real, 'A')
+        binding = id(real), name, roster
         self.game = real
         self.generic.set_game(real)
         if binding == self.binding:
@@ -39,10 +59,7 @@ class TouyamaV3GameAttackerController:
         self.binding, self.opponent, self.learned = binding, opponent, None
         self.status = {phase: '汎用controller' for phase in ('analysis', 'plant', 'guard')}
         from touyama_v3.tv3_character_stats_touyama import TOUYAMA_ROSTER_ORDER
-        own_team = "A" if isinstance(self, TouyamaV3GameAttackerController) else "D"
-        roster = {str(getattr(c, "base_name", c.name)) for c in real.chars if c.team == own_team} if hasattr(real, "chars") else set(
-            map(str, (real.attacker_roster if own_team == "A" else real.defender_roster) or ()))
-        if roster != set(TOUYAMA_ROSTER_ORDER):
+        if len(roster) != 5 or set(roster) != set(TOUYAMA_ROSTER_ORDER):
             self._report(name, "Touyama Gamingの5人専用モデル: 味方編成が不一致")
             return
         if opponent is None:
@@ -129,9 +146,12 @@ class TouyamaV3GameDefenderController:
 
     def set_game(self, game):
         real = getattr(game, "_real", game)
+        if not _is_active_controller(real, self, 'D'):
+            return
         name = real.current_attacker_team_ai.name
         opponent = OPPONENT_NAMES.get(name)
-        binding = (id(real), name)
+        roster = _configured_roster(real, 'D')
+        binding = (id(real), name, roster)
         self.game = real
         self.generic.set_game(real)
         if binding == self.binding:
@@ -139,10 +159,7 @@ class TouyamaV3GameDefenderController:
         self.binding, self.opponent, self.learned = binding, opponent, None
         self.status = {phase: "汎用controller" for phase in ("search", "retake_L", "retake_R")}
         from touyama_v3.tv3_character_stats_touyama import TOUYAMA_ROSTER_ORDER
-        own_team = "A" if isinstance(self, TouyamaV3GameAttackerController) else "D"
-        roster = {str(getattr(c, "base_name", c.name)) for c in real.chars if c.team == own_team} if hasattr(real, "chars") else set(
-            map(str, (real.attacker_roster if own_team == "A" else real.defender_roster) or ()))
-        if roster != set(TOUYAMA_ROSTER_ORDER):
+        if len(roster) != 5 or set(roster) != set(TOUYAMA_ROSTER_ORDER):
             self._report(name, "Touyama Gamingの5人専用モデル: 味方編成が不一致")
             return
         if opponent is None:

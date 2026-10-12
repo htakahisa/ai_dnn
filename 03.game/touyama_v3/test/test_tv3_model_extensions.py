@@ -118,6 +118,8 @@ class ModelExtensionTests(unittest.TestCase):
         torch.save(dict(schema=policy_schema(scenario,19),opponent='frc_v1',
                         analysis_hash='analysis',model=common.state_dict()),buffer)
         payload=buffer.getvalue()
+        with self.assertRaisesRegex(ValueError, 'different analysis'):
+            attach_common_policy(model,payload,scenario,'frc_v1','new-analysis','R')
         routing=attach_common_policy(model,payload,scenario,'frc_v1','analysis','R')
         custom=policy_schema(scenario,19,custom_extensions=contract,weight_routing=routing)
         with tempfile.TemporaryDirectory() as directory:

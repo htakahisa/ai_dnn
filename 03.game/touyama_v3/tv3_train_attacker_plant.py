@@ -7,7 +7,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # 通常設定：このファイル冒頭を編集し、touyama_v3からオプションなしで実行。
-TRAINING_SETS = 5  # 右専用修正の短期検証。1セット=12ラウンド。
+TRAINING_SETS = 70  # 右専用修正の短期検証。1セット=12ラウンド。
 TOTAL_TRAINING_SET_LIMIT = 5  # 自動停止するセット数の上限。0で無制限。
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 RESUME_TRAINING = False
@@ -31,6 +31,9 @@ BEST_SELECTION_PRIORITIES = ('plant_rate','competitive_plant_rate','advantaged_p
 SAVE_EVALUATION_CHECKPOINTS = True  # Keep evaluated weights even when they are not selected as best.
 SAVE_REVIEW_WEIGHT_CHECKPOINTS = True  # 学習前・各セットの重みだけを実行ごとに保存し、劣化箇所を後から比較する。
 PLANT_CUSTOM_MODULES = ('tv3_custom_train_attacker_plant_frc_v1_R_v3',)  # FRC右・期限内完遂の教師。
+PLANT_TRAINING_PROFILE = 'common'  # 全体再学習。右専用検証時だけ 'custom' に変更。
+COMMON_TARGET_OPPONENTS = ALL_TARGET_OPPONENTS  # 一括再学習で作り直す共通plantの対象。
+COMMON_TOTAL_TRAINING_SET_LIMIT = None  # 共通学習ではTRAINING_SETS分を実行。専用の5set上限と分離。
 PLANT_COMMON_DIRECTORY = HERE/'data'/'best'  # 左右専用分岐が保持する、凍結した共通モデルの入力元。
 PLANT_CUSTOM_INITIAL_CHECKPOINT = HERE/'data'/'best'/'custom_profiles'/'3e2fa49fec166d75'/'frc_v1'/'attacker_plant_best.pt'
 OPTIMIZER_UPDATES = 200
@@ -661,6 +664,7 @@ def parser():
     p.add_argument("--max-workers", type=int, default=MAX_PARALLEL_WORKERS)
     p.add_argument("--sets", type=int, default=TRAINING_SETS)
     p.add_argument("--total-sets", type=int, default=TOTAL_TRAINING_SET_LIMIT)
+    p.add_argument('--training-profile', choices=('common','custom'), default=PLANT_TRAINING_PROFILE)
     p.add_argument("--opponents", nargs="+", choices=tuple(OPPONENTS), default=list(TARGET_OPPONENTS))
     p.add_argument("--train-presets", nargs="+", default=list(TRAINING_PRESETS))
     p.add_argument("--eval-presets", nargs="+", default=list(EVALUATION_PRESETS))
@@ -689,8 +693,21 @@ def remaining_training_sets(additional, completed, total_limit=None):
     return additional if total_limit is None else max(0, min(additional, total_limit-completed))
 
 
+def training_profile_settings(args, argv):
+    """Keep the dedicated profile intact when rebuilding a common plant."""
+    if args.training_profile == 'common':
+        if not any(value == '--opponents' or value.startswith('--opponents=') for value in argv):
+            args.opponents = list(COMMON_TARGET_OPPONENTS)
+        if not any(value == '--total-sets' or value.startswith('--total-sets=') for value in argv):
+            args.total_sets = COMMON_TOTAL_TRAINING_SET_LIMIT
+        return (), None
+    return PLANT_CUSTOM_MODULES, PLANT_CUSTOM_INITIAL_CHECKPOINT
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
+    custom_modules, custom_initial_checkpoint = training_profile_settings(
+        args, list(sys.argv[1:] if argv is None else argv))
     counts = ("sets", "eval_seeds", "updates", "batch_size", "replay_size", "torch_threads", "max_round_steps")
     if min(getattr(args, k) for k in counts) < 1 or args.eval_every < 0 or args.learning_rate <= 0:
         raise ValueError("Counts must be positive; evaluation interval >= 0")
@@ -727,8 +744,8 @@ def main(argv=None):
     config['terminal_success_condition'] = 'all_plants_positive_man_ratio_or_enemy_elimination_v1'
     config['warm_start_from_best'] = WARM_START_FROM_BEST
     config['timeout_first_selection'] = TIMEOUT_FIRST_SELECTION
-    config['custom_initial_checkpoint'] = str(PLANT_CUSTOM_INITIAL_CHECKPOINT) if PLANT_CUSTOM_INITIAL_CHECKPOINT else None
-    custom_profiles={o:build_extensions(PLANT_CUSTOM_MODULES,role='attacker_plant',opponent=o).contract for o in args.opponents}
+    config['custom_initial_checkpoint'] = str(custom_initial_checkpoint) if custom_initial_checkpoint else None
+    custom_profiles={o:build_extensions(custom_modules,role='attacker_plant',opponent=o).contract for o in args.opponents}
     frozen = {opponent: load_frozen_analysis(args.analysis_dir.resolve(), opponent, scenario) for opponent in args.opponents}
     common_payloads={}
     weight_routings={}
@@ -739,7 +756,11 @@ def main(argv=None):
             if not path.exists():
                 raise ValueError(f'Site-specific training needs a common plant first: {path}')
             payload=path.read_bytes()
-            weight_routings[opponent]=attach_common_policy(PlantDQN(),payload,scenario,opponent,frozen[opponent][1],scope)
+            try:
+                weight_routings[opponent]=attach_common_policy(PlantDQN(),payload,scenario,opponent,frozen[opponent][1],scope)
+            except ValueError as error:
+                raise ValueError(f'{path}: {error}. After analysis retraining, rebuild common plant first '
+                                 '(PLANT_TRAINING_PROFILE="common"), then train the custom profile.') from error
             common_payloads[opponent]=payload
     if args.describe:
         print(json.dumps({"schema": schema, "config": config,"custom_extensions_by_opponent":custom_profiles,
@@ -796,9 +817,9 @@ def main(argv=None):
                 policy.load_state_dict(policy.common_policy.state_dict())
                 policy.warm_start_hash=routing['common_sha256']
                 logger.info('[%s] %s専用重みを共通モデルから初期化。共通重みは凍結・適用外サイトでは共通モデルを使用。',opponent,routing['site'])
-                if PLANT_CUSTOM_INITIAL_CHECKPOINT is not None:
-                    initialize_custom_weights(policy,PLANT_CUSTOM_INITIAL_CHECKPOINT,scenario,opponent,analysis_hash,schema)
-                    logger.info('[%s] 専用重み初期値=%s（重みのみ、optimizer/replayは新規）',opponent,PLANT_CUSTOM_INITIAL_CHECKPOINT)
+                if custom_initial_checkpoint is not None:
+                    initialize_custom_weights(policy,custom_initial_checkpoint,scenario,opponent,analysis_hash,schema)
+                    logger.info('[%s] 専用重み初期値=%s（重みのみ、optimizer/replayは新規）',opponent,custom_initial_checkpoint)
             target = copy.deepcopy(policy)
             target.eval()
             optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)

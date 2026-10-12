@@ -63,6 +63,35 @@ class PlantFrcRegression(unittest.TestCase):
             self.assertEqual(training.parser().parse_args([]).total_sets,100)
             self.assertEqual(training.parser().parse_args(['--total-sets','150']).total_sets,150)
 
+    def test_common_training_profile_separates_old_custom_weights_targets_and_limit(self):
+        from touyama_v3 import tv3_train_attacker_plant as training
+        args = training.parser().parse_args(['--training-profile','common'])
+        modules, initial = training.training_profile_settings(args, ['--training-profile','common'])
+        self.assertEqual(modules, ())
+        self.assertIsNone(initial)
+        self.assertEqual(args.opponents, list(training.COMMON_TARGET_OPPONENTS))
+        self.assertEqual(args.total_sets, training.COMMON_TOTAL_TRAINING_SET_LIMIT)
+        self.assertEqual(training.remaining_training_sets(args.sets, 0, args.total_sets), args.sets)
+        self.assertTrue(training.PLANT_CUSTOM_MODULES)
+        self.assertIsNotNone(training.PLANT_CUSTOM_INITIAL_CHECKPOINT)
+
+    def test_common_training_profile_preserves_explicit_targets_and_limits(self):
+        from touyama_v3 import tv3_train_attacker_plant as training
+        argv = ['--training-profile','common','--opponents','frc_v1','--total-sets=2']
+        args = training.parser().parse_args(argv)
+        training.training_profile_settings(args, argv)
+        self.assertEqual(args.opponents, ['frc_v1'])
+        self.assertEqual(args.total_sets, 2)
+
+    def test_custom_training_profile_keeps_right_only_configuration(self):
+        from touyama_v3 import tv3_train_attacker_plant as training
+        args = training.parser().parse_args(['--training-profile','custom'])
+        modules, initial = training.training_profile_settings(args, ['--training-profile','custom'])
+        self.assertEqual(modules, training.PLANT_CUSTOM_MODULES)
+        self.assertEqual(initial, training.PLANT_CUSTOM_INITIAL_CHECKPOINT)
+        self.assertEqual(args.opponents, list(training.TARGET_OPPONENTS))
+        self.assertEqual(args.total_sets, training.TOTAL_TRAINING_SET_LIMIT)
+
     def test_resume_total_limit_accounts_for_each_opponents_completed_sets(self):
         from touyama_v3.tv3_train_attacker_plant import remaining_training_sets
         self.assertEqual(remaining_training_sets(100,51,100),49)

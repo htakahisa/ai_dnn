@@ -19,9 +19,10 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $PythonCommand = 'py'
+$PlantTrainingProfile = 'common' # analysis再学習後は共通plantを再構築。右専用は単独実行。
 # Set persistent targets here; empty uses each Python script's target constants.
 $DefaultOpponents = @()
-$AvailableOpponents = @('gc_v1', 'concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4', 'ghost_champions_v2')
+$AvailableOpponents = @('concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4', 'ghost_champions_v2')
 $SelectedOpponents = $DefaultOpponents
 if ($PSBoundParameters.ContainsKey('Opponents')) {
     $SelectedOpponents = $Opponents
@@ -46,8 +47,12 @@ $TrainingScripts = @(
 Push-Location -LiteralPath $PSScriptRoot
 try {
     foreach ($TrainingScript in $TrainingScripts) {
-        Write-Host "Starting: $PythonCommand $TrainingScript $($PythonArguments -join ' ')"
-        & $PythonCommand $TrainingScript @PythonArguments
+        $StepArguments = @($PythonArguments)
+        if ($TrainingScript -eq 'tv3_train_attacker_plant.py') {
+            $StepArguments += @('--training-profile', $PlantTrainingProfile)
+        }
+        Write-Host "Starting: $PythonCommand $TrainingScript $($StepArguments -join ' ')"
+        & $PythonCommand $TrainingScript @StepArguments
         if ($LASTEXITCODE -ne 0) {
             throw "$TrainingScript failed (exit code: $LASTEXITCODE). Remaining steps were stopped."
         }

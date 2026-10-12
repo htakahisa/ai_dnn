@@ -85,6 +85,32 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(calls, 0)
         self.assertIn("Complete", output)
 
+    def test_resume_default_creates_first_collection_then_preserves_existing_cases(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            best = root/'best'/'gc_v1'
+            best.mkdir(parents=True)
+            (best/'search_best.pt').write_bytes(b'model')
+            directory = root/'cases'
+            args = SimpleNamespace(opponents=['gc_v1'],sites=['L','R'],train_presets=['Touyama Gaming'],
+                best_dir=root/'best',output_dir=directory,seed=42,resume=True,
+                cases_per_site=1,max_blocks=1,site_sampling='targeted')
+            with patch.object(collector,'Scenario',return_value=SimpleNamespace(signature='scenario')), \
+                 patch.object(collector,'load_analyses',return_value=({}, {'gc_v1':'analysis'})), \
+                 patch.object(collector,'load_policy',return_value=(MagicMock(),dict(opponent='gc_v1',analysis_hashes={'gc_v1':'analysis'}))), \
+                 patch.object(collector,'eligible_presets',return_value=args.train_presets), \
+                 patch.object(collector,'site_sampling',return_value=nullcontext()), \
+                 patch.object(collector,'rollout',return_value=([],[])) as rollout, redirect_stdout(io.StringIO()):
+                self.assertFalse(collector.collect(args))
+                self.assertTrue((directory/'collection.json').exists())
+                case = directory/'interrupted.case.gz'
+                case.write_bytes(b'preserved')
+                collector.append_row(directory/'cases.jsonl',dict(opponent='gc_v1',site='L',block=1,file=case.name))
+                self.assertFalse(collector.collect(args))
+                self.assertEqual(rollout.call_count, 1)
+                self.assertEqual(case.read_bytes(), b'preserved')
+                self.assertEqual(len(collector.read_rows(directory/'cases.jsonl')), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,18 +7,14 @@
     "R"
   ],
   "counts": {
-    "gc_v1": 100,
     "concon_v1": 100,
     "omoko_v1": 100,
     "fnatic_v3": 100,
     "frc_v1": 100,
-    "toru_ai_v4": 100
+    "toru_ai_v4": 100,
+    "ghost_champions_v2": 100
   },
   "by_site": {
-    "gc_v1": {
-      "L": 50,
-      "R": 50
-    },
     "concon_v1": {
       "L": 50,
       "R": 50
@@ -36,6 +32,10 @@
       "R": 50
     },
     "toru_ai_v4": {
+      "L": 50,
+      "R": 50
+    },
+    "ghost_champions_v2": {
       "L": 50,
       "R": 50
     }

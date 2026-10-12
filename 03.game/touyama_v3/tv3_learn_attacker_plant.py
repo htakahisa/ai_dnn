@@ -157,9 +157,13 @@ def attach_common_policy(model,payload,scenario,opponent,analysis_hash,site):
     if site not in ('L','R') or not isinstance(payload,bytes):
         raise ValueError('Site-specific weights require a pinned common checkpoint')
     state=torch.load(io.BytesIO(payload),map_location='cpu',weights_only=True)
-    if (state['opponent']!=opponent or state['analysis_hash']!=analysis_hash
-            or state['schema']!=policy_schema(scenario,state['schema']['version'])):
-        raise ValueError('Common model schema/opponent/analysis mismatch; nested custom models are not common')
+    if state['opponent'] != opponent:
+        raise ValueError(f'Common model opponent mismatch: saved={state["opponent"]}, requested={opponent}')
+    if state['analysis_hash'] != analysis_hash:
+        raise ValueError(f'Common plant depends on a different analysis: '
+                         f'saved={state["analysis_hash"]}, current={analysis_hash}')
+    if state['schema'] != policy_schema(scenario,state['schema']['version']):
+        raise ValueError('Common model schema mismatch; nested custom models are not common')
     common=PlantDQN(state['schema']['version'])
     common.load_state_dict(state['model'])
     common.opponent=opponent

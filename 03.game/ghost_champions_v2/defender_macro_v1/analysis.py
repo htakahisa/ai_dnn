@@ -30,10 +30,22 @@ def public_snapshot(char, state, round_number):
     allies, enemies, sightings = [], [], []
     for i in range(5):
         c = own[i] if i < len(own) else None
+        ability_name = str(getattr(c, "ability_name", "")) if c else ""
         allies.append(NS(slot=i, name=str(c.name) if c else f"missing_{i}",
                          alive=bool(c and c.is_alive), hp=float(getattr(c, "hp", 0)),
                          position=tuple(c.pos) if c else (0, 0),
-                         blind=int(getattr(c, "blind_remaining", 0))))
+                         blind=int(getattr(c, "blind_remaining", 0)),
+                         max_hp=float(getattr(c, "max_hp", 0)),
+                         accuracy=float(getattr(c, "accuracy", 0)),
+                         hs_rate=float(getattr(c, "hs_rate", 0)),
+                         dodge=float(getattr(c, "dodge_rate", 0)),
+                         reaction=float(getattr(c, "reaction", 0)),
+                         effective_iq=float(getattr(c, "effective_iq", getattr(c, "iq", 0))),
+                         charges=int(getattr(c, f"{ability_name.lower()}_charges", 0)),
+                         points=int(getattr(c, "ultimate_points", 0)),
+                         cost=int(getattr(c, "ultimate_cost", 0)),
+                         ability_name=ability_name,
+                         ultimate_name=str(getattr(c, "ultimate_name", ""))))
         e = opponents[i] if i < len(opponents) else None
         enemies.append(NS(enemy_id=i, alive=bool(e and e.is_alive)))
         if (e and e.is_alive and getattr(e, "position_known", False)

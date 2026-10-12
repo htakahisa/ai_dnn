@@ -5,6 +5,7 @@ import queue
 import threading
 import tkinter as tk
 import unittest
+import weakref
 from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -71,6 +72,28 @@ class CompetitionShutdownTests(unittest.TestCase):
         with self.assertRaises(manager.CompetitionCancelled):
             app._render_controller.play_map(None, None, 1, 42,
                                             "default", "default", 0, 0, 1)
+
+    def test_completed_render_collects_cycles_on_owner_thread_before_done(self):
+        app = self.app()
+        owner = threading.get_ident()
+        finalized = []
+        request = dict(team1=None,team2=None,map_number=1,seed=42,
+            team1_controller_key='default',team2_controller_key='default',
+            team1_series_wins=0,team2_series_wins=0,series_maps_to_win=1,
+            mental_fatigue_state={},done=threading.Event(),result=None,error=None)
+        app.render_requests.put(request)
+        class RenderResource:
+            def __del__(self):
+                finalized.append((threading.get_ident(),request['done'].is_set()))
+        def completed_map(*args, **kwargs):
+            resource = RenderResource()
+            resource.cycle = resource
+            return 'result'
+        with patch.object(manager,'play_map',side_effect=completed_map):
+            app._process_render_requests()
+        self.assertEqual(finalized,[(owner,False)])
+        self.assertTrue(request['done'].is_set())
+        self.assertEqual(request['result'],'result')
 
     def test_close_during_render_skips_ui_updates_and_timer_reschedule(self):
         app = self.app()
@@ -228,6 +251,44 @@ class CompetitionShutdownTests(unittest.TestCase):
             self.assertTrue(all(game.root is None for game in games))
         finally:
             root.destroy()
+            gc.collect()
+
+    def test_rendered_tk_cycles_are_collected_before_waking_worker(self):
+        # A destroyed widget can retain its Tcl interpreter through a cycle.
+        # Finalizing that cycle in the next worker simulation aborts Tcl.
+        app = self.app()
+        try:
+            window = tk.Tk()
+        except tk.TclError as exc:
+            self.skipTest(f'Tk unavailable: {exc}')
+        window.withdraw()
+        owner = threading.get_ident()
+        finalized = []
+        request = dict(team1=None,team2=None,map_number=1,seed=42,
+            team1_controller_key='default',team2_controller_key='default',
+            team1_series_wins=0,team2_series_wins=0,series_maps_to_win=1,
+            mental_fatigue_state={},done=threading.Event(),result=None,error=None)
+        app.render_requests.put(request)
+
+        def completed_map(*args, **kwargs):
+            label = tk.Label(window)
+            label.cycle = label
+            weakref.finalize(label, lambda: finalized.append(threading.get_ident()))
+            label.destroy()
+            return 'result'
+
+        try:
+            with patch.object(manager,'play_map',side_effect=completed_map):
+                app._process_render_requests()
+            self.assertTrue(request['done'].is_set())
+            self.assertEqual(request['result'],'result')
+            self.assertEqual(finalized,[owner])
+            worker = threading.Thread(target=gc.collect)
+            worker.start()
+            worker.join(timeout=2)
+            self.assertFalse(worker.is_alive())
+        finally:
+            window.destroy()
             gc.collect()
 
 

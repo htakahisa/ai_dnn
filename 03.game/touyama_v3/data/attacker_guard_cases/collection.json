@@ -1496,44 +1496,40 @@
   },
   "seed": 42,
   "opponents": [
-    "gc_v1",
     "concon_v1",
     "omoko_v1",
     "fnatic_v3",
     "frc_v1",
-    "toru_ai_v4"
+    "toru_ai_v4",
+    "ghost_champions_v2"
   ],
   "source_hashes": {
-    "gc_v1": {
-      "plant": "d689fd3a47200612ee098a29155e822be859cdc7f2742a7c8dc4da53e4235b01",
-      "analysis": "7c98b3014b1f1a328c93671d013fccea2e70f530264c870c40580ad974181f33"
-    },
     "concon_v1": {
-      "plant": "f69e19c7c27dfba8499ed78373ee7b5d0110e671a6f8f672596473d50b2deb4e",
-      "analysis": "dffa366622ad78e15e24795e4db2074388f29e880c02f9f7e17281c480ac9bdc"
+      "plant": "e2db5c8d6090a4f123d831eb1075c9525d135bb124b5983bf6eead770af6c177",
+      "analysis": "afe3969532624609c988c068a1d3c7ae1294a6102fefb669d786ddbd95be8a94"
     },
     "omoko_v1": {
-      "plant": "5d913027f560aa0b9ffe2d281f594e9eb45b046a9d761504273c6d574c2dbf3f",
-      "analysis": "46d40614e7f1da5c59fedca7b9448cfa77348ae6b793c6944e59d9826b40acc8"
+      "plant": "054fd16959814dde2a27cc45c540e33b474159b704e95b90dfe8532bc6fac6c5",
+      "analysis": "dc77966b419f177acb43283ab72a64bd4362d85c765c4a9a05c2603a84874030"
     },
     "fnatic_v3": {
-      "plant": "106aded8ea93769386044b224177c4a0dd85f31d888120edda196f814bbc61e5",
-      "analysis": "14d45a3a0f655fb64826147373d9d5248eb0dd393d5809a12f74f3492533e8f7"
+      "plant": "d4ac355190452858d8f44859a62b3995f6a64ac68193cf5c16d78c0593961a0b",
+      "analysis": "245ee74149d31f8485a9a32d96405b798a54a08ee82601ff7a4f36aa307603fc"
     },
     "frc_v1": {
-      "plant": "d1812e666afac4f992ed8102e1fe7c6f1433ebcffb16cb0254c8ce0a0fc5333c",
-      "analysis": "0f2641b1036339a1a17d8366a71541c650dc9194d5b4ab1a9347551beeb79e69"
+      "plant": "f988432a2285fdc99a4c12e60b1a2393e30ded1bf517328766b139551c92c20d",
+      "analysis": "52533feec0ce8ac23f258d0b5dd3ef35a345980d1258dd0af55b5c9a901d0e69"
     },
     "toru_ai_v4": {
-      "plant": "9f3b909eaa4710088cf5e39f5b71bea1534a02ebdb9867c8ebb6718c0c7c2fbe",
-      "analysis": "07d4df1843401f7149bd459782e3ec5ac80b3a08852ac967d493399364228671"
+      "plant": "7adc266f7dd833fa4e50777cf107ca8c25a1f5f052ef62bf105af7b636cda2f0",
+      "analysis": "fdfa6206795fbcd2d6c02c16467f73391b70e85b3798bf2b29bb229750ffb0cb"
+    },
+    "ghost_champions_v2": {
+      "plant": "9962372454109a3205dc444fd3b59ce6c0ee70be18ccc4ba7af7f13f53932598",
+      "analysis": "bbbc544f76641f27cca60d3ba889468f2ceef0f7025f09015fdfd82df93040d0"
     }
   },
   "source_paths": {
-    "gc_v1": {
-      "plant": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\gc_v1\\attacker_plant_best.pt",
-      "analysis": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\gc_v1\\attacker_analysis_best.pt"
-    },
     "concon_v1": {
       "plant": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\concon_v1\\attacker_plant_best.pt",
       "analysis": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\concon_v1\\attacker_analysis_best.pt"
@@ -1553,12 +1549,13 @@
     "toru_ai_v4": {
       "plant": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\toru_ai_v4\\attacker_plant_best.pt",
       "analysis": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\toru_ai_v4\\attacker_analysis_best.pt"
+    },
+    "ghost_champions_v2": {
+      "plant": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\ghost_champions_v2\\attacker_plant_best.pt",
+      "analysis": "C:\\Users\\ronet\\MyProject\\git\\AI_dnn\\03.game\\touyama_v3\\data\\best\\ghost_champions_v2\\attacker_analysis_best.pt"
     }
   },
   "presets": {
-    "gc_v1": [
-      "Touyama Gaming"
-    ],
     "concon_v1": [
       "Touyama Gaming"
     ],
@@ -1573,6 +1570,9 @@
     ],
     "toru_ai_v4": [
       "Touyama Gaming"
+    ],
+    "ghost_champions_v2": [
+      "Touyama Gaming"
     ]
   },
   "capture_boundary": "end_of_first_plant_tick_before_guard_actions",
@@ -1581,5 +1581,9 @@
     "R"
   ],
   "site_selection": "targeted",
-  "sampling_version": "site_curriculum_v1"
+  "sampling_version": "site_curriculum_v1",
+  "collection_start_rounds": [
+    1,
+    13
+  ]
 }

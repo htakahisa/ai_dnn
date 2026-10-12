@@ -39,7 +39,11 @@ RESUME_TRAINING = False
 EVALUATION_SEED_COUNT = 3  # 各seedで12ラウンド。合計36ラウンド。
 TRAINING_PRESETS = ("Touyama Gaming",)
 EVALUATION_PRESETS = ("Touyama Gaming",)
-TARGET_OPPONENTS = tuple(OPPONENTS)
+# 通常の学習対象はここで指定する。共通のAI登録一覧には連動させない。
+TARGET_OPPONENTS = (
+    "gc_v1", "concon_v1", "omoko_v1", "fnatic_v3",
+    "frc_v1", "toru_ai_v4", "ghost_champions_v2",
+)
 RANDOM_SEED = 42
 DATA_DIRECTORY = HERE / "data" / "defender_analysis"
 LOG_DIRECTORY = HERE / "logs" / "defender_analysis"

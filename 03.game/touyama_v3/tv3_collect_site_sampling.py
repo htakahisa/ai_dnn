@@ -64,6 +64,17 @@ def site_sampling(site, *, attacker="touyama_v3"):
             def choose(self, available=("A", "B")):
                 return original(self, tuple(s for s in available if s == requested))
             replace(AttackerTactics, "choose_site", choose)
+            # The deadline/continuation path runs before choose_site and can
+            # commit to the nearest floor on the opposite site. Restrict that
+            # path too, only while collecting; keep the real board unchanged.
+            original_objective = AttackerTactics.objective_action
+            def objective(self, char, state, holder, cells, distances):
+                selected = [p for p in cells
+                            if (p[1] < state['grid'].shape[1] / 2) == (site == 'L')]
+                if not selected:
+                    return None
+                return original_objective(self, char, state, holder, selected, distances)
+            replace(AttackerTactics, "objective_action", objective)
         elif attacker == "gc_v1":
             def cells(game, grid):
                 import numpy as np

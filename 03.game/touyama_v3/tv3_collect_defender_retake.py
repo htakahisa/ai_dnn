@@ -19,14 +19,18 @@ from touyama_v3.tv3_collect_site_sampling import SAMPLING_VERSION, pending_site,
 DEFAULT_CASES_PER_SITE = 50
 DEFAULT_OUTPUT = HERE / "data" / "retake_cases"
 # 通常はここを編集して、python tv3_collect_defender_retake.py をオプションなしで実行する。
-DEFAULT_OPPONENTS = tuple(OPPONENTS)
+# 通常の収集対象はここで指定する。共通のAI登録一覧には連動させない。
+DEFAULT_OPPONENTS = (
+    "gc_v1", "concon_v1", "omoko_v1", "fnatic_v3",
+    "frc_v1", "toru_ai_v4", "ghost_champions_v2",
+)
 DEFAULT_SITES = ("L", "R")
 DEFAULT_TRAINING_PRESETS = TRAINING_PRESETS
 DEFAULT_BEST_DIRECTORY = DEFENDER_BEST
 DEFAULT_SEED = 42
 DEFAULT_MAX_BLOCKS = 200  # 不得意な側の設置失敗を含む。左右の目標到達で早期終了。
 DEFAULT_SITE_SAMPLING = "targeted"  # 不足側を指定して実際の設置まで対戦。naturalは通常選択のみ。
-DEFAULT_RESUME = False  # 既存の収集データを再開・追加する場合は True
+DEFAULT_RESUME = True  # 同条件の既存ケースを保持し、不足分だけ収集。初回は新規作成。
 
 
 def reset_collection(directory):
@@ -75,11 +79,13 @@ def collect(args):
                   search_hashes=signatures, analysis_hashes=hashes,
                   site_sampling=args.site_sampling, sampling_version=SAMPLING_VERSION,
                   capture_boundary="end_of_first_plant_tick_before_retake_decisions")
-    if args.resume:
+    if args.resume and config_path.exists():
         if json.loads(config_path.read_text(encoding="utf-8")) != config:
             raise ValueError("Collection settings/search/analysis changed; use a separate output directory")
-    else:
+    elif not args.resume:
         reset_collection(directory)
+    elif directory.exists() and any(directory.iterdir()):
+        raise ValueError('Cannot resume a nonempty collection without collection.json')
     directory.mkdir(parents=True, exist_ok=True)
     _atomic_write(config_path, lambda p: p.write_text(json.dumps(config, indent=2), encoding="utf-8"))
     _atomic_write(directory / "collection_summary.json", lambda p: p.write_text(json.dumps({"complete": False}), encoding="utf-8"))

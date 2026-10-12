@@ -1,4 +1,5 @@
 【前提】
+・2026-10-12の一括学習停止修正：`docs/tv3_training_pipeline_failure_recovery.md`を参照。plant通常モードは`PLANT_TRAINING_PROFILE='common'`で全体再学習、右専用設定は`'custom'`で保持する。新analysisと旧固定共通plantの依存を混在させない。retake収集は`DEFAULT_RESUME=True`で互換な既存ケースを保持し、GC v2の期限設置処理にも収集サイトを限定する。学習はユーザーが実行する。
 ・frc_v1のv16以降の調査を引き継ぐ場合は、`docs/tv3_frc_post_v16_handoff.md`を最初に確認する。過去の5セット検証、現在の設定、保存重み、局所対照と未解決事項を区別する。
 ・条件別拡張は`docs/tv3_scoped_model_extensions.md`を確認する。attacker plantは`PLANT_CUSTOM_MODULES=()`が既定。専用処理は`tv3_custom_*.py`へ分離し、role・相手・目標サイトで適用する。左右専用では共通重みを凍結・固定し、専用重みだけを対象区間で学習する。拡張profileと共通SHAをモデルに保存し、適用外は固定共通モデルを使う。通常対戦の採用先や既存モデルをこの仕組み追加だけで変更しない。
 ・attacker・defender・analysis、およびsearch・plant・retake・guardの生成・改修に役立つ共通の調査知見は、[../docs/MODEL_BUILD_BASE_POLICY.md](../docs/MODEL_BUILD_BASE_POLICY.md) にまとめている。新モデルの設計・実装・学習・評価前に確認すること。修正実装、教師診断、学習済み性能を区別し、他モデルでの効果を未検証のまま確定扱いしない。

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import gc
 import io
 import json
 import math
@@ -5881,6 +5882,10 @@ class CompetitionApp:
             request["error"] = exc.with_traceback(None)
         finally:
             self._active_game = None
+            # play_map has returned, so its render callbacks and local widgets
+            # can now be collected on their owning Tk thread. Do this before
+            # waking the worker: its next simulation can trigger cyclic GC.
+            gc.collect()
             request["done"].set()
 
     def _set_active_game(self, game: Any) -> None:

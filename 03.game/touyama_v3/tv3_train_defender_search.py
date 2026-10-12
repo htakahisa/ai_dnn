@@ -29,7 +29,11 @@ TRAINING_SETS = 100
 MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。1で順次実行。
 EVALUATION_INTERVAL = 5  # 毎セット、同じ評価条件で比較して最良モデルを保存する。
 
-TRAINING_OPPONENTS = tuple(OPPONENTS)
+# 通常の学習対象はここで指定する。共通のAI登録一覧には連動させない。
+TRAINING_OPPONENTS = (
+    "gc_v1", "concon_v1", "omoko_v1", "fnatic_v3",
+    "frc_v1", "toru_ai_v4", "ghost_champions_v2",
+)
 TRAINING_PHASE = "search"
 TRAINING_MODE = "fresh"
 RANDOM_SEED = 42

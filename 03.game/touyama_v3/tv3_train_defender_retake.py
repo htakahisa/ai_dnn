@@ -33,7 +33,11 @@ MAX_PARALLEL_WORKERS = 6  # 相手AIごとの最大同時実行数。左右モ�
 # 1セット = 各相手AIの全保存ケースを1回ずつ学習（左右各50件なら各モデル50ラウンド）。
 TRAINING_SETS = 10
 EVALUATION_INTERVAL = 1  # 5セットごと・終了時に同じ評価条件でbestを比較。更新量の目標判定もこの間隔。
-TRAINING_OPPONENTS = tuple(OPPONENTS)
+# 通常の学習対象はここで指定する。共通のAI登録一覧には連動させない。
+TRAINING_OPPONENTS = (
+    "gc_v1", "concon_v1", "omoko_v1", "fnatic_v3",
+    "frc_v1", "toru_ai_v4", "ghost_champions_v2",
+)
 TRAINING_PRESETS = SEARCH_TRAINING_PRESETS
 EVALUATION_PRESETS = SEARCH_EVALUATION_PRESETS
 EVALUATION_SEED_COUNT = 6  # More natural plants for sites with sparse evaluation samples.

@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 $PythonCommand = 'py'
 # Set persistent targets here; empty uses each Python script's target constants.
 $DefaultOpponents = @()
-$AvailableOpponents = @('gc_v1', 'concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4', 'ghost_champions_v2')
+$AvailableOpponents = @('concon_v1', 'omoko_v1', 'fnatic_v3', 'frc_v1', 'toru_ai_v4', 'ghost_champions_v2')
 $SelectedOpponents = $DefaultOpponents
 if ($PSBoundParameters.ContainsKey('Opponents')) {
     $SelectedOpponents = $Opponents
