@@ -103,6 +103,8 @@ class MatchPlaybackMixin:
         self._cancel_match_callback()
         self.paused = False
         self.fast_forward_mode = scope
+        self.personal_ability_effect = None
+        self.personal_ability_effect_queue = []
         self._skip_start_round = self.current_round - (1 if self.round_over else 0)
         self._skip_start_side = getattr(self, "_side_swap_count", 0)
         self._update_playback_controls()

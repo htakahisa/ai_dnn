@@ -861,6 +861,8 @@ class VisualFPSBattle(
             )
 
     def init_round(self):
+        self.personal_ability_effect = None
+        self.personal_ability_effect_queue = []
         self._swap_sides_if_needed()
         # OT starts every round from zero, even when side swaps are disabled.
         if self.overtime:

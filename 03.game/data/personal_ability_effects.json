@@ -1,0 +1,12 @@
+{
+    "おもこ": {
+        "追い詰められたおもこ": {
+            "frames": [
+                "image/ability_omoko01.png"
+            ],
+            "frame_interval_ms": 1000,
+            "duration_ms": 1000,
+            "sound": ["sound/ability_omoko.mp3", 0.5]
+        }
+    }
+}

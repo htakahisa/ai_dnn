@@ -13,6 +13,8 @@ from analytics.combat_tracker import CombatTracker
 from controllers import UserInputController
 from iq_perception import build_team_position_view, enemy_position_known
 from roster_utils import roster_information
+from omoko_v1.ov1_ability_cornered_omoko import CorneredOmokoMixin
+from effects.personal_ability_effects import PersonalAbilityEffectsMixin
 from game_core import (
     absorb_shield_damage,
     apply_on_hp_damage,
@@ -138,7 +140,12 @@ def _get_ace_sound(effect):
 from match_playback import MatchPlaybackMixin
 
 
-class BattleLogicMixin(MatchPlaybackMixin):
+class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPlaybackMixin):
+
+    def _play_personal_ability_effect_sound(self, effect):
+        sound = _get_ace_sound(effect)
+        if sound is not None:
+            sound.play()
 
     def _tick_delay_ms(self):
         value = getattr(self, "tick_time_ms", TICK_TIME)
@@ -440,6 +447,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
         old_pos = tuple(char.pos)
         char._navigation_step_limit = None
         try:
+            if self._omoko_cornered_active(char):
+                return self._prepare_omoko_cornered_movement(char)
             return self._move_character_with_rule_facing(char, locked_facing)
         finally:
             if int(getattr(char, "move_steps_per_tick", 1)) > 1:
@@ -1273,6 +1282,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
         """キル数(そのラウンド)に応じた効果音を再生する。学習(headless)中は鳴らさない。"""
         if self.headless:
             return
+        enemy_total = sum(1 for c in self.chars if c.team != shooter.team)
+        if enemy_total > 0 and shooter.round_kills >= enemy_total:
+            effect = ACE_EFFECTS.get(getattr(shooter, "base_name", shooter.name))
+            # 専用ACE音はラウンド終了時に再生するため、通常のキル音と重ねない。
+            if _get_ace_sound(effect) is not None:
+                return
         sound = _get_kill_sound(shooter.round_kills)
         if sound is not None:
             sound.play()
@@ -1360,6 +1375,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
             if not possible_targets:
                 continue
 
+            if getattr(shooter, "omoko_cornered_this_tick", False):
+                possible_targets = [t for t in possible_targets
+                                    if t is shooter.omoko_cornered_target]
+                if not possible_targets:
+                    continue
+
             defusers = [
                 target
                 for target in possible_targets
@@ -1396,7 +1417,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
             # the shot so movement/smoke/blind penalties cannot leak between
             # engagements or depend on an older code path.
             shot_quality_multiplier = 1.0
-            if shooter.moved_this_tick:
+            # 瞬間移動からの能力射撃は、通常の命中率・HS率を使用する。
+            cornered_shot = (
+                getattr(shooter, "omoko_cornered_this_tick", False)
+                and target is getattr(shooter, "omoko_cornered_target", None)
+            )
+            if shooter.moved_this_tick and not cornered_shot:
                 shooter_accuracy = MOVING_ACCURACY
                 shooter_hs_rate = shooter.hs_rate * 0.1
             else:
@@ -1424,7 +1450,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 shooter_hs_rate *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
-            if getattr(shooter, "stopped_after_move_this_tick", False):
+            if getattr(shooter, "stopped_after_move_this_tick", False) and not cornered_shot:
                 shot_quality_multiplier *= 0.75
                 shooter_accuracy *= 0.75
                 shooter_hs_rate *= 0.75
@@ -1488,6 +1514,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 "reaction": shooter.reaction,
             }
             executed_shots.append(shot)
+            if getattr(shooter, "omoko_cornered_this_tick", False):
+                shooter.omoko_cornered_last_target = target.name
 
             if damage > 0 and not getattr(target, "is_ultimate_drone", False):
                 tracker = getattr(self, "analytics_tracker", None)
@@ -1523,6 +1551,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
             drone for drone in getattr(self, "monitor_drones", []) if drone.is_alive
         ]
 
+        self._finish_omoko_cornered_combat()
         self.last_shots = executed_shots
         self.last_shot = executed_shots[-1] if executed_shots else None
 
@@ -1588,6 +1617,9 @@ class BattleLogicMixin(MatchPlaybackMixin):
         for smoke in self.smokes:
             smoke["remaining_ticks"] -= 1
         self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
+
+        # 全員の移動・振り向きと持続効果の更新後、射撃前に瞬間移動する。
+        self._advance_omoko_cornered()
 
         if self.spike_pos is not None:
             for c in self.chars:
@@ -1808,6 +1840,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
         if self.defender_setup_phase.active:
             self._run_defender_setup_tick()
         else:
+            if self._prepare_personal_ability_effects():
+                return False
             # Carnal Lust Syndicate loses 1 HP per live tick after setup.
             for char in self.chars:
                 if char.is_alive and getattr(char, "carnal_lust_syndicate_active", False):
@@ -1844,8 +1878,14 @@ class BattleLogicMixin(MatchPlaybackMixin):
         self._begin_match_callback()
         if getattr(self, "paused", False):
             return
+        if getattr(self, "personal_ability_effect", None):
+            self._advance_personal_ability_effect()
+            return
         if not self.round_over and not self.match_over:
             self._simulate_tick()
+            if getattr(self, "personal_ability_effect", None):
+                self._advance_personal_ability_effect()
+                return
             self.draw()
             self._update_playback_controls()
             if not self.round_over and not self.match_over:

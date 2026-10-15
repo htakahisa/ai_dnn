@@ -660,10 +660,14 @@ class RenderingUIMixin:
 
     def _draw_special_round_banner(self):
         """ラウンド内でのCLUTCH/ACEを、VICTORY演出と同じ中央枠で表示する。"""
-        banner = self.special_round_banner
+        self._draw_character_effect_banner(self.special_round_banner)
+
+    def _draw_character_effect_banner(self, banner):
         is_ace = banner["type"] == "ACE"
-        accent = "#f1c40f" if is_ace else "#e74c3c"
-        effect = banner.get("effect") if is_ace else None
+        is_ability = banner["type"] == "ABILITY"
+        title = banner.get("ability_name", "ABILITY") if is_ability else ("ACE!" if is_ace else "CLUTCH!")
+        accent = "#a78bfa" if is_ability else ("#f1c40f" if is_ace else "#e74c3c")
+        effect = banner.get("effect") if is_ace or is_ability else None
         images = self._get_ace_effect_frames(effect)
 
         if images:
@@ -692,7 +696,7 @@ class RenderingUIMixin:
             )
             self.canvas.create_text(
                 cx, y2 - 8,
-                text="ACE!", fill=accent, font=("Arial", 20, "bold")
+                text=title, fill=accent, font=("Arial", 20, "bold")
             )
             return
 
@@ -712,7 +716,7 @@ class RenderingUIMixin:
         )
         self.canvas.create_text(
             cx, cy + 20,
-            text="ACE!" if is_ace else "CLUTCH!",
+            text=title,
             fill=accent, font=("Arial", 26, "bold")
         )
 
@@ -1252,6 +1256,8 @@ class RenderingUIMixin:
             self._draw_victory_overlay()
         elif getattr(self, "special_round_banner", None):
             self._draw_special_round_banner()
+        elif getattr(self, "personal_ability_effect", None):
+            self._draw_character_effect_banner(self.personal_ability_effect)
 
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
         self.canvas.move("!render_cached", 0, COMBO_BANNER_HEIGHT)

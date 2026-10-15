@@ -706,6 +706,13 @@ class Character:
         self.ultimate_cost = ULTIMATE_COSTS.get(self.role, 5)
         self.ultimate_points = min(self.ultimate_points, self.ultimate_cost)
         self.moved_this_tick = False
+        # 個人能力「追い詰められたおもこ」。Characterはラウンドごとに作り直す。
+        self.omoko_cornered_triggered = False
+        self.omoko_cornered_remaining = 0
+        self.omoko_cornered_last_target = None
+        self.omoko_cornered_target = None
+        self.omoko_cornered_this_tick = False
+        self.omoko_cornered_blocked_this_tick = False
         self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
         self.recon_charges = 2 if self.ability_name == "RECON" else 0
