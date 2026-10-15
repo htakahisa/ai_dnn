@@ -32,7 +32,13 @@ decode_action() / build_action_mask()と完全に一致させる必要がある�
 
 import os
 import random
+import sys
 from collections import deque
+from pathlib import Path
+
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
 
 import numpy as np
 import torch
@@ -40,6 +46,8 @@ from simulation_runtime import resolve_inference_device
 import torch.nn as nn
 
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
+from ov1_map_data_carry import NEW_MAZE_STR as CARRY_MAZE_STR
+from ov1_attacker_carry_route_priors import RoutePriorCache
 from ov1_ultimate_training import (
     nearest_orb,
     orb_context,
@@ -70,7 +78,24 @@ FACING_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 ACTION_DIM = BASE_ACTION_DIM * len(FACING_DIRS)  # 40
 
 SITE_VALUES = frozenset({2, 5})
+WAYPOINT_VALUE_BY_SITE = {"right": 6, "left": 7}
 LINEUP_ABILITY_MARKERS = {"S": "SMOKE", "R": "RECON", "F": "FLASH"}
+
+
+def _parse_waypoint_cells(maze_str):
+    """Read all current carry-map waypoints in training's row-major order."""
+    lines = [line.strip() for line in maze_str.splitlines() if line.strip()]
+    if not lines or len({len(line) for line in lines}) != 1:
+        raise ValueError("carry mapの行長が一致していません")
+    if any(marker not in "0123456789" for line in lines for marker in line):
+        raise ValueError("carry mapに不正な文字があります")
+    points = {}
+    for site, value in WAYPOINT_VALUE_BY_SITE.items():
+        cells = [(r, c) for r, line in enumerate(lines)
+                 for c, marker in enumerate(line) if marker == str(value)]
+        if cells:
+            points[site] = cells
+    return points
 
 
 def _parse_ability_lineup_points(maze_str):
@@ -118,6 +143,11 @@ ROUTE_WARMUP_ROUNDS = 6
 ROUTE_EXPLORE_RATE = 0.15
 ROUTE_PRIOR_WINS = 1.0
 ROUTE_PRIOR_GAMES = 2.0
+ROUTE_PRIOR_ENABLED = True
+ROUTE_PRIOR_MIX = 0.5
+ROUTE_PRIOR_SUMMARY_PATH = (
+    Path(__file__).resolve().parent / "data/carry_route_evaluation/route_priors_summary.json"
+)
 
 
 # ============================================================================
@@ -326,15 +356,9 @@ class Ov1LearningAttackerCarryController:
         self.priority_cells = [tuple(map(int, cell)) for cell in (checkpoint.get("priority_cells") or [])]
         self.has_priority_cells = bool(checkpoint.get("has_priority_cells", False)) and bool(self.priority_cells)
 
-        raw_waypoint_cells = checkpoint.get("waypoint_cells") or {}
-        self.waypoint_cells_by_site = {}
-        for site, raw_cells in raw_waypoint_cells.items():
-            # 旧checkpointの単一座標(tuple)と、新形式の座標リストを両対応する。
-            if raw_cells and isinstance(raw_cells[0], (int, np.integer)):
-                raw_cells = [raw_cells]
-            self.waypoint_cells_by_site[str(site)] = [
-                (int(cell[0]), int(cell[1])) for cell in raw_cells
-            ]
+        # Route markers belong to the current map. Checkpoint weights and
+        # priority planting metadata remain unchanged; saved waypoints are ignored.
+        self.waypoint_cells_by_site = _parse_waypoint_cells(CARRY_MAZE_STR)
 
         raw_lineup_points = checkpoint.get("ability_lineup_points") or {}
         checkpoint_lineup_points = {
@@ -395,6 +419,10 @@ class Ov1LearningAttackerCarryController:
         # Deliberately in-memory: every new map starts with fresh evidence.
         self._route_stats = {}
         self._pending_route_result = None
+        self._route_prior_cache = (
+            RoutePriorCache(ROUTE_PRIOR_SUMMARY_PATH, CARRY_MAZE_STR, model_path)
+            if ROUTE_PRIOR_ENABLED else None
+        )
 
     # -- run_game.py 側フック(hasattr判定で自動呼び出しされる) -------------
     def set_game(self, game):
@@ -552,6 +580,13 @@ class Ov1LearningAttackerCarryController:
             return self._choose_weighted_site(), 0
 
         if current_round is None or current_round <= ROUTE_WARMUP_ROUNDS:
+            cache = getattr(self, "_route_prior_cache", None)
+            if cache is not None:
+                probabilities = cache.probabilities(
+                    self._real_game, routes, self.waypoint_cells_by_site, ROUTE_PRIOR_MIX,
+                )
+                if probabilities is not None:
+                    return random.choices(routes, weights=probabilities, k=1)[0]
             fewest_games = min(self._route_stats.get(route, {}).get("games", 0) for route in routes)
             return random.choice([
                 route for route in routes

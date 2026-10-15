@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Dict, Optional
 
 from game_core import (
+    ASH_CHARGES_PER_ROUND,
     ROUND_DURATION_TICKS,
     SPIKE_DETONATION_TICKS,
     TICK_TIME,
@@ -42,7 +43,7 @@ def get_character_resource_profile(name: str) -> dict[str, Any]:
         "タイガー": ("HUNT", 0),
         "エンジニア": ("RAMP", 2),
         "アイドル": ("DANCE", 3),
-        "コントラクター": ("ASH", 3),
+        "コントラクター": ("ASH", ASH_CHARGES_PER_ROUND),
     }.get(role, ("FLASH", 1))
     return {
         "ability": ability,

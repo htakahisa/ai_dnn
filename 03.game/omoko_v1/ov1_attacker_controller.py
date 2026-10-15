@@ -19,12 +19,17 @@ from ov1_learning_attacker_carry import Ov1LearningAttackerCarryController
 from ov1_learning_attacker_escort import Ov1LearningAttackerEscortController
 from ov1_learning_attacker_retrieve import Ov1LearningAttackerRetrieveController
 from ov1_learning_attacker_guard import Ov1LearningAttackerGuardController
+from ov1_inference_damage_avoidance import escape_destruction_area, avoid_destruction_entry
+from ov1_inference_team_tactics import apply_shared_facing, tactical_state, known_enemies, shot_clear
 
 
 class Ov1AttackerController(BaseController):
     """attacker側の窓口となる単一コントローラー。
     内部でキャリアーモデル・護衛モデルを保持し、キャラごとに使い分ける。
     run_game.py からは通常のコントローラー1つとして扱われる(isinstance判定にはこのクラスを追加する)。"""
+
+    requires_public_effects = True
+    requires_exact_team_tactics = True
 
     def __init__(
         self,
@@ -68,6 +73,23 @@ class Ov1AttackerController(BaseController):
         self.site_ability_used_by_team = False  # 💡追加
 
     def decide_move(self, char, game_state):
+        game = getattr(self, "game", None)
+        shared = tactical_state(game_state)
+        taps = shared.get("defender_defuse_info") or {}
+        if game_state.get("is_planted") and any(
+                taps.get(enemy.name, (0, 0))[0] > 0 and shot_clear(char, enemy, shared)
+                for enemy in known_enemies(char, shared)):
+            # Interrupt an immediately shootable defuser before a zone escape
+            # can move the shooter out of position during the six-tick window.
+            return apply_shared_facing(char, game_state, (list(char.pos), {"facing": char.facing}))
+        escape = escape_destruction_area(char, game_state, game)
+        if escape is not None:
+            return apply_shared_facing(char, game_state, escape)
+        result = self._decide_phase_move(char, game_state)
+        result = avoid_destruction_entry(char, game_state, result, game)
+        return apply_shared_facing(char, game_state, result)
+
+    def _decide_phase_move(self, char, game_state):
         if game_state.get("is_planted"):
             return self.guard_controller.decide_move(char, game_state)
 

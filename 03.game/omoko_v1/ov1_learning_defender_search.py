@@ -31,6 +31,11 @@ OBS_DIMはtrain_defender_search.pyと完全に一致させること。
 
 from collections import deque
 from pathlib import Path
+import sys
+
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
 
 import numpy as np
 import torch
@@ -48,6 +53,8 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR
 
 
 from ov1_map_data_search import SEARCH_MAZE_STR
+from ov1_defender_search_routes import setup_distance_map, deployment_step, moving_deployment_cells
+from ov1_defender_search_orb import IdleOrbOuting
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from roster_utils import model_slots
@@ -483,35 +490,21 @@ def _find_marker_positions(maze_str, char):
 
 
 def _compute_fixed_assignments():
-    """train_defender_search.py と完全に同一のロジックで固定割当を再現する。
-
-    マップ上の文字 a,b,c,d,e (Setup Phase到達地点) / A,B,C,D,E (Search Phase
-    最終担当地点) を ROSTER_ORDER のインデックス順にそのまま1:1
-    対応させる(a/A=roster[0], b/B=roster[1], ...)。総当たり最適化は行わない
-    (学習側で廃止されたのに合わせる)。
-    学習時にモデルが学習した「担当地点への距離・方向」はこの固定割当を
-    前提とした観測であるため、推論側でも必ず同じ割当を使う必要がある。
-    (自己完結ルールにより、学習ファイルをimportせずロジックを複製する)
-    """
+    """Assign uppercase A-E to roster order, identically to training."""
     defense_assignment = {
         name: _find_marker_position(SEARCH_MAZE_STR, chr(ord("A") + i))
         for i, name in enumerate(ROSTER_ORDER)
     }
-    setup_assignment = {
-        name: (
-            _find_marker_position(SEARCH_MAZE_STR, chr(ord("a") + i))
-            if chr(ord("a") + i) in SEARCH_MAZE_STR
-            else defense_assignment[name]
-        )
-        for i, name in enumerate(ROSTER_ORDER)
-    }
+    setup_assignment = dict(defense_assignment)
     return setup_assignment, defense_assignment
 
 
 _FIXED_SETUP_ASSIGNMENT, _FIXED_DEFENSE_ASSIGNMENT = _compute_fixed_assignments()
 _DEFENSE_POSITIONS_CACHE = list(_FIXED_DEFENSE_ASSIGNMENT.values())
 SMOKE_SITE_POSITIONS = _find_marker_positions(SEARCH_MAZE_STR, "S")
-ROTATION_TRANSIT_POSITION = _find_marker_position(SEARCH_MAZE_STR, "T")
+ROTATION_TRANSIT_POSITION = (
+    _find_marker_position(SEARCH_MAZE_STR, "T") if "T" in SEARCH_MAZE_STR else None
+)
 
 
 def _extract_site_positions(grid, max_sites=2):
@@ -674,6 +667,7 @@ class Ov1LearningDefenderSearchController:
         self.model.eval()
 
         self.team_memory = _TeamMemory()
+        self.idle_orb_outing = IdleOrbOuting()
         self._site_positions_cache = None
         self._site_dist_maps_cache = None
         self._processed_this_tick = set()
@@ -700,6 +694,7 @@ class Ov1LearningDefenderSearchController:
     # -- ラウンド開始時のリセット -----------------------------------------
     def reset_round(self):
         self.team_memory.reset()
+        self.idle_orb_outing = IdleOrbOuting()
         self._processed_this_tick.clear()
         self._scheduled_smoke_plan_tick = None
         self._scheduled_smoke_plan = {}
@@ -741,6 +736,9 @@ class Ov1LearningDefenderSearchController:
             self._spike_found_this_round = True
         if self._spike_found_this_round:
             self._right_rotation_stage.clear()
+            return
+
+        if ROTATION_TRANSIT_POSITION is None:
             return
 
         kills = sum(
@@ -907,7 +905,7 @@ class Ov1LearningDefenderSearchController:
                     continue
                 self._assigned_positions[teammate.name] = pos
                 dist_map = _bfs_distance_map(grid, pos)
-                setup_dist_map = _bfs_distance_map(_SETUP_WALK_GRID, setup_pos)
+                setup_dist_map = setup_distance_map(_SETUP_WALK_GRID, dist_map, teammate.pos)
                 r0, c0 = int(teammate.pos[0]), int(teammate.pos[1])
                 if setup_dist_map[r0, c0] < 0:
                     raise RuntimeError(
@@ -915,7 +913,7 @@ class Ov1LearningDefenderSearchController:
                         f"グリッドで到達不能です。spawn={tuple(teammate.pos)}。"
                         f"map_data_defender_setup.pyの進入禁止マスクが経路を塞いでいないか確認してください。"
                     )
-                if dist_map[setup_pos[0], setup_pos[1]] < 0:
+                if dist_map[r0, c0] < 0:
                     raise RuntimeError(
                         f"[整合性エラー] {teammate.name}: 担当ポジション{pos}へ通常グリッドで"
                         f"到達不能です。setup後地点={setup_pos}。"
@@ -950,8 +948,8 @@ class Ov1LearningDefenderSearchController:
             self._assigned_positions[teammate.name] = pos
             dist_map = _bfs_distance_map(grid, pos)
             self._assigned_dist_maps[teammate.name] = dist_map
-            self._assigned_setup_dist_maps[teammate.name] = _bfs_distance_map(
-                _SETUP_WALK_GRID, pos
+            self._assigned_setup_dist_maps[teammate.name] = setup_distance_map(
+                _SETUP_WALK_GRID, dist_map, teammate.pos
             )
             self._prev_defense_bfs_dist[teammate.name] = float(
                 dist_map[int(teammate.pos[0]), int(teammate.pos[1])]
@@ -1311,13 +1309,7 @@ class Ov1LearningDefenderSearchController:
         if smoke_enemy is not None:
             return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
 
-        # --- Defender Setup Phase(配置フェーズ) ---
-        # battle_logic._move_character_during_defender_setup からは
-        # defender_setup_active=True 付きで呼ばれ、戻り値は座標部分だけが
-        # 使われる(アビリティは実行されない)。学習側(train_defender_search.py
-        # の_step_setup_phase)と同様、チーム共有メモリの更新やアビリティ
-        # 使用は行わず、Setup専用マスクで移動可否のみ制限したRLの行動選択を
-        # そのまま使う(BFS強制上書きはしない)。
+        # Setup uses the same restricted deployment routes as training.
         if game_state.get("defender_setup_active", False):
             self._ensure_defense_assignment(char, grid, chars)
             obs, _visible = self._build_observation(
@@ -1346,18 +1338,17 @@ class Ov1LearningDefenderSearchController:
             # 向き(facing)は移動方向と無関係にネットワークの選択をそのまま使う。
             dist_map = self._assigned_setup_dist_maps.get(char.name)
             if dist_map is not None:
-                r0, c0 = int(char.pos[0]), int(char.pos[1])
-                cur_dist = dist_map[r0, c0]
-                if cur_dist > REACH_RADIUS:
-                    occupied_now = {
-                        tuple(o.pos) for o in chars
-                        if getattr(o, "is_alive", True) and o is not char
-                    }
-                    move_offset = _bfs_best_direction_unoccupied(
-                        dist_map, grid, r0, c0, occupied_now
-                    )
-                else:
-                    move_offset = (0, 0)
+                occupied_now = {
+                    tuple(o.pos) for o in chars
+                    if getattr(o, "is_alive", True) and o is not char
+                }
+                move_offset = deployment_step(
+                    _SETUP_WALK_GRID, dist_map, char.pos, occupied_now,
+                    moving_deployment_cells(
+                        [ally for ally in chars if ally.team == char.team],
+                        self._assigned_setup_dist_maps,
+                    ),
+                )
 
             if self.verbose:
                 print(
@@ -1391,6 +1382,29 @@ class Ov1LearningDefenderSearchController:
         # サイトへの増援や合流より、この場で静止して撃つ判断を優先する。
         hold_for_shot = bool(visible_enemies)
         self._update_right_site_rotation(char, grid, chars, int(round_tick))
+        # Combat and known spike/enemy information always cancel orb duties.
+        if not hasattr(self, "idle_orb_outing"):
+            self.idle_orb_outing = IdleOrbOuting()
+        outing_active = self.idle_orb_outing.update(
+            grid, [ally for ally in chars if ally.team == char.team],
+            getattr(self, "_assigned_positions", {}),
+            {tuple(map(int, p)) for p in game_state.get("available_orbs", ())},
+            int(round_tick), int(game_state.get("round_timer", ROUND_DURATION_TICKS - round_tick)),
+            threat=(hold_for_shot or team_in_contact
+                    or self.team_memory.last_seen_enemy is not None
+                    or self.team_memory.spike_pos is not None),
+        )
+        if outing_active:
+            occupied = {tuple(map(int, other.pos)) for other in chars
+                        if other is not char and other.is_alive}
+            orb_plan = self.idle_orb_outing.plan(char, grid, occupied)
+            if orb_plan is not None:
+                if not getattr(char, "facing_forced_this_tick", False):
+                    char.facing = orb_plan.facing
+                if orb_plan.collect:
+                    return list(char.pos), "COLLECT_ORB"
+                return [int(char.pos[0]) + orb_plan.move[0],
+                        int(char.pos[1]) + orb_plan.move[1]], {"facing": char.facing}
 
         # 落下位置が共有されている間は、そのマスへ走り込まず射線を確保する。
         # すでに見えていれば動かず待ち、見えていなければ最寄りの監視マスへ進む。
@@ -1470,6 +1484,10 @@ class Ov1LearningDefenderSearchController:
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
             },
         )
+        if (team_in_contact or self.team_memory.last_seen_enemy is not None
+                or self.team_memory.spike_pos is not None):
+            start = ACTION_ORB_BASE * len(FACING_DIRS)
+            mask[start:start + len(FACING_DIRS)] = False
         if hold_for_shot:
             # ESCAPE は現在地から離れ、ORB回収中は射撃できない。
             if str(getattr(char, "ultimate_name", "")).upper() == "ESCAPE":
@@ -1555,8 +1573,12 @@ class Ov1LearningDefenderSearchController:
                 r0, c0 = int(char.pos[0]), int(char.pos[1])
                 cur_dist = dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
-                    move_offset = _bfs_best_direction_unoccupied(
-                        dist_map, grid, r0, c0, occupied_now
+                    move_offset = deployment_step(
+                        grid, dist_map, char.pos, occupied_now,
+                        moving_deployment_cells(
+                            [ally for ally in chars if ally.team == char.team],
+                            self._assigned_dist_maps,
+                        ),
                     )
                 else:
                     move_offset = (0, 0)

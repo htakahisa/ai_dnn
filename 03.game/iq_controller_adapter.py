@@ -76,6 +76,18 @@ class IQAwareController:
             game_state=game_state,
             game_view=view,
         )
+        if getattr(self.inner, "requires_exact_team_tactics", False):
+            # Opt-in tactical execution uses precise *disclosed* positions.
+            # Keep the ordinary model observation IQ-blurred and keep hidden
+            # enemies masked through the existing team-position boundary.
+            tactical_view = build_team_position_view(self.real_game, char.team)
+            perceived_state["team_tactical_state"] = {
+                "grid": tactical_view.grid,
+                "chars": tactical_view.chars,
+                "planted_pos": tactical_view.planted_pos,
+                "defender_defuse_info": game_state.get("defender_defuse_info", {}),
+                "smoke_cells": game_state.get("smoke_cells", ()),
+            }
         if getattr(self.inner, "requires_public_effects", False):
             from public_effects import PublicEffectReader
             if self._public_effect_reader is None:

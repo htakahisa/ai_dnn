@@ -58,25 +58,27 @@ class ContractorSystemTests(unittest.TestCase):
         self.game._advance_destruction_areas()
 
     def test_contractor_resources_and_editor_profile(self):
-        self.assertEqual((self.owner.ability_name, self.owner.ash_charges), ("ASH", 3))
+        self.assertEqual((self.owner.ability_name, self.owner.ash_charges), ("ASH", 2))
         self.assertEqual((self.owner.ultimate_name, self.owner.ultimate_cost, self.owner.ultimate_points),
                          ("BALEMOON", 5, 5))
         self.assertEqual(get_character_resource_profile(self.owner.name),
-                         {"ability": "ASH", "max_charges": 3, "ultimate": "BALEMOON", "ultimate_cost": 5})
+                         {"ability": "ASH", "max_charges": 2, "ultimate": "BALEMOON", "ultimate_cost": 5})
 
     def test_ash_radius_uses_euclidean_distance_and_rejects_walls(self):
-        self.assertTrue(self.ash((4, 10)))  # Exactly eight cells.
         self.assertFalse(self.ash((4, 11)))
         self.assertFalse(self.ash((10, 8)))  # Diagonal distance sqrt(72).
         self.game.grid[4, 9] = 1
         self.assertFalse(self.ash((4, 9)))
         self.assertEqual(self.owner.ash_charges, 2)
+        self.assertTrue(self.ash((4, 10)))  # Exactly eight cells.
+        self.assertEqual(self.owner.ash_charges, 1)
 
-    def test_ash_has_three_charges_and_creates_three_by_three_level_five(self):
-        for remaining in (2, 1, 0):
+    def test_ash_has_two_charges_and_creates_three_by_three_level_five(self):
+        for remaining in (1, 0):
             self.assertTrue(self.ash())
             self.assertEqual(self.owner.ash_charges, remaining)
         self.assertFalse(self.ash())
+        self.assertEqual(len(self.game.destruction_areas), 2)
         area = self.game.destruction_areas[0]
         self.assertEqual((len(area["cells"]), area["level"], area["remaining_ticks"]), (9, 5, 10))
 
@@ -90,7 +92,7 @@ class ContractorSystemTests(unittest.TestCase):
         self.enemy.pos = [4, 10]
         self.assertTrue(self.ash((4, 10), land=False))
         self.assertEqual(self.game.destruction_areas, [])
-        self.assertEqual(self.owner.ash_charges, 2)
+        self.assertEqual(self.owner.ash_charges, 1)
         for progress in (3, 6):
             self.advance()
             self.assertEqual(self.game.ash_projectiles[0]["progress"], progress)
@@ -128,8 +130,10 @@ class ContractorSystemTests(unittest.TestCase):
         self.assertEqual((self.ally.hp, self.ally.max_hp), (100, 100))
 
     def test_overlapping_areas_do_not_stack_damage_or_refresh_active_contract(self):
-        self.ash()
-        self.ash()
+        self.assertTrue(self.ash())
+        # A second caster can still create an overlapping area.
+        self.game._create_destruction_area(self.owner, (4, 4), radius=1, level=5)
+        self.assertEqual(len(self.game.destruction_areas), 2)
         self.advance()
         self.assertEqual((self.enemy.hp, self.enemy.max_hp, self.enemy.life_contract_remaining), (90, 90, 4))
         self.game._trigger_destruction_areas(self.enemy)
@@ -296,7 +300,7 @@ class ContractorSystemTests(unittest.TestCase):
         frame = json.loads(json.dumps(self.game.replay_frames[0]))
         self.assertEqual((frame["chars"][1]["hp"], frame["chars"][1]["max_hp"], frame["chars"][1]["life_contract"]), (90, 90, 4))
         self.assertEqual(frame["destruction_areas"][0]["level"], 5)
-        self.assertEqual(frame["chars"][0]["ability_charges"], 2)
+        self.assertEqual(frame["chars"][0]["ability_charges"], 1)
         self.assertEqual(frame["chars"][2]["heal_sparkle"], 5)
         self.assertEqual(frame["serenade_flash"], 1)
 
