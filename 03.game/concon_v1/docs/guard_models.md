@@ -107,10 +107,10 @@ python evaluate_co1_guard.py -map R --rounds 36 --output data/guard_R_eval.json
 | 指定名 | 対戦チーム |
 | --- | --- |
 | `omoko_v1` | Omoko Gaming |
-| `touyama_v2` | Touyama Gaming |
+| `touyama_v3` | Touyama Gaming |
 | `fnatic_v3` | Fnatic2023 |
-| `gc_v1` | Ghost Champions |
-| `toru_ai_v3.1` | Team Elites |
+| `gc_v2` | Ghost Champions |
+| `toru_ai_v4` | Team Elites |
 | `frc_v1` | Furina Classic |
 
 学習は既定で各サイト1000エピソード、50エピソードごとにチェックポイントを保存します。

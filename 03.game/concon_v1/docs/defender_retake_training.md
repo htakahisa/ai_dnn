@@ -13,13 +13,13 @@
 python co1_train_defender_retake.py
 ```
 
-学習相手は `gc_v1`、`frc_v1`、`fnatic_v3`、`touyama_v2`、`omoko_v1`、`toru_ai_v3.1` の6種類です。左右のモデルは従来の `data/defender_retake_L_data/`、`data/defender_retake_R_data/` に保存します。新規学習は各サイトのfoundation、継続学習は各サイトのlatestから開始します。
+学習相手は `gc_v2`、`frc_v1`、`fnatic_v3`、`touyama_v3`、`omoko_v1`、`toru_ai_v4` の6種類です。左右のモデルは従来の `data/defender_retake_L_data/`、`data/defender_retake_R_data/` に保存します。新規学習は各サイトのfoundation、継続学習は各サイトのlatestから開始します。
 
 引数なしの現在の設定では、600件を10周、計6000 episodeです。相手1つでは左右各50件、計100件を10周、計1000 episodeになります。回数は `--case-epochs` で変更できます。評価は保存ケースからではなく通常対戦で、指定相手に対して実施します。
 
 通常対戦は相手AIにかかわらず共通の左右bestを使用します。明示的に `retake_model_paths` を渡した場合は、その指定を使用します。
 
-既定の対戦相手は `omoko_v1`、`touyama_v2`、`fnatic_v3`、`gc_v1`、`toru_ai_v3.1`、`frc_v1`（Furina Classic）の6チームです。収集データで学習する場合は、追加した `frc_v1` の左右両サイトの場面も必要です。既存のデータに追加収集するには、作業ディレクトリを `03.game/concon_v1/` として次を実行します。
+既定の対戦相手は `omoko_v1`、`touyama_v3`、`fnatic_v3`、`gc_v2`、`toru_ai_v4`、`frc_v1`（Furina Classic）の6チームです。収集データで学習する場合は、追加した `frc_v1` の左右両サイトの場面も必要です。既存のデータに追加収集するには、作業ディレクトリを `03.game/concon_v1/` として次を実行します。
 
 ```powershell
 python co1_collect_defender_retake.py --opponents frc_v1 --resume
@@ -176,7 +176,7 @@ A集合の導入でマップ観測を10から12チャネルへ増やし、基礎
 - 設置された tick の途中でも、その後の defender 行動は retake に切り替わります。
 - 学習・推論ともに本番の IQ 知覚を使用します。観測に入れる敵位置は、自身または味方が得た視認情報と短期記憶です。隠れた敵位置を待機場所の計算にも使いません。
 
-既定の対戦相手は `touyama_v2`、`omoko_v1`、`gc_v1`、`toru_ai_v3.1`、`fnatic_v3` の5チームです。左右合計200回の学習リテイクごとに評価します。各チームの学習リテイク数は40回ずつです。左右の設置先は試合の自然な結果に任せ、そのサイトのモデルに経験を追加します。左右別の回数は揃えません。
+既定の対戦相手は `touyama_v3`、`omoko_v1`、`gc_v2`、`toru_ai_v4`、`fnatic_v3` の5チームです。左右合計200回の学習リテイクごとに評価します。各チームの学習リテイク数は40回ずつです。左右の設置先は試合の自然な結果に任せ、そのサイトのモデルに経験を追加します。左右別の回数は揃えません。
 
 一方のサイトにしか攻撃しないチームでも、左右合計の40回を終えたらその区間の学習を完了します。リテイクが発生しない試合だけを除外して再試合し、反対サイトの発生を待ち続けません。epsilon は左右合計の学習リテイク数に従って進みます。チームごとの件数を同じにするため、`--episodes` と `--checkpoint-interval` は対戦チーム数で割り切れる値にしてください。
 

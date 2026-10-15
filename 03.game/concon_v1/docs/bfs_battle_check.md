@@ -5,7 +5,7 @@
 交戦時の停止・射撃、IQ知覚、スパイク回収、対戦相手は実ゲームの処理です。
 
 ```powershell
-python check_co1_bfs_battle.py -map A3 --rounds 3 --opponents gc_v1
+python check_co1_bfs_battle.py -map A3 --rounds 3 --opponents gc_v2
 ```
 
 標準では100tick、プラント完了またはラウンド終了までを確認します。
@@ -13,7 +13,7 @@ python check_co1_bfs_battle.py -map A3 --rounds 3 --opponents gc_v1
 相手を複数指定すると、それぞれに対して指定回数実行します。
 
 ```powershell
-python check_co1_bfs_battle.py -map A2 --rounds 10 --opponents gc_v1 omoko_v1 --seed 0
+python check_co1_bfs_battle.py -map A2 --rounds 10 --opponents gc_v2 omoko_v1 --seed 0
 ```
 
 コンソールに終了理由、射撃数・命中数、両チームの死亡tickと位置、attackerの死亡時の経由点、停滞情報を表示します。

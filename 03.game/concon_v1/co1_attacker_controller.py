@@ -2,6 +2,7 @@
 
 import random
 import hashlib
+from pathlib import Path
 
 from controllers import BaseController, DefaultAttackerController
 
@@ -16,13 +17,14 @@ from concon_v1.co1_attacker_scenarios import get_scenario
 from concon_v1.co1_attacker_selection import (
     SELECTION_PATH, load_selection, route_candidates, defending_opponent,
 )
+from concon_v1.ability_advisor_v1.co1_learn_attacker_ability_advisor import FixedAbilityAdvisor
 
 
 class ConconAttackerController(BaseController):
     """Use the learned route before planting and default behavior otherwise."""
 
     def __init__(self, model_path=None, seed=None, checkpoint_bytes=None,
-                 route_controller=None, map_name="A1"):
+                 route_controller=None, map_name="A1", ability_advisor=None):
         super().__init__()
         self.route_controller = route_controller if route_controller is not None else ConconAttackerRouteController(
             model_path=model_path, seed=seed, checkpoint_bytes=checkpoint_bytes, map_name=map_name
@@ -32,6 +34,13 @@ class ConconAttackerController(BaseController):
         self.postplant_controller = None
         self.enemy_sightings = TeamEnemySightings()
         scenario = getattr(self.route_controller, "scenario", get_scenario(map_name))
+        self.ability_advisor = ability_advisor if ability_advisor is not None else FixedAbilityAdvisor()
+        model_hash = None
+        if route_controller is None:
+            source = Path(model_path) if model_path is not None else scenario.model_path
+            if checkpoint_bytes is not None or source.is_file():
+                model_hash = hashlib.sha256(checkpoint_bytes if checkpoint_bytes is not None else source.read_bytes()).hexdigest()
+        self.ability_advisor.bind_route(scenario, model_hash)
         self.fixed_smokes = FixedSmokePlan(scenario)
         self.fixed_flashes = FixedFlashPlan(scenario)
         self.fixed_recons = FixedReconPlan(scenario)
@@ -56,18 +65,30 @@ class ConconAttackerController(BaseController):
         self.fixed_smokes.reset_round()
         self.fixed_flashes.reset_round()
         self.fixed_recons.reset_round()
+        self.ability_advisor.start_round(self.route_controller.scenario.map_name,
+                                         getattr(getattr(self, 'game', None), 'current_round', None))
 
     def decide_move(self, char, game_state):
+        if not game_state.get("defender_setup_active"):
+            self.ability_advisor.observe(self.route_controller.scenario, char, game_state,
+                                         defending_opponent(getattr(self, "game", None)))
         if not game_state.get("is_planted") and not game_state.get("defender_setup_active"):
-            smoke = self.fixed_smokes.choose(char, getattr(self, "game", None))
-            if smoke is not None:
-                return list(char.pos), smoke
-            flash = self.fixed_flashes.choose(char, getattr(self, "game", None))
-            if flash is not None:
-                return list(char.pos), flash
-            recon = self.fixed_recons.choose(char, getattr(self, "game", None))
-            if recon is not None:
-                return list(char.pos), recon
+            for plan in (self.fixed_smokes, self.fixed_flashes, self.fixed_recons):
+                excluded = set()
+                while True:
+                    payload = plan.choose(char, getattr(self, "game", None), excluded_points=excluded)
+                    if payload is None:
+                        break
+                    point = tuple(payload['target']) if payload['ability'] == 'SMOKE' else plan.last_requested_point
+                    advice = self.ability_advisor.advise(
+                        self.route_controller.scenario, char, game_state,
+                        defending_opponent(getattr(self, 'game', None)), payload['ability'],
+                        point, payload['target'], getattr(self, 'game', None))
+                    if advice.use:
+                        return list(char.pos), payload
+                    if hasattr(plan, 'pending'):
+                        plan.pending.pop(point, None)
+                    excluded.add(point)
         chars = game_state.get("chars", [])
         tick = int(game_state.get("battle_tick", 0))
         self.enemy_sightings.observe(
@@ -103,7 +124,8 @@ class ConconRoundAttackerController(BaseController):
     """
 
     def __init__(self, map_names=("A1", "A2", "A3", "A4"), seed=None,
-                 postplant_factories=None, selection_path=SELECTION_PATH):
+                 postplant_factories=None, selection_path=SELECTION_PATH,
+                 ability_advisor=None, route_schedule=None):
         super().__init__()
         names = (map_names,) if isinstance(map_names, str) else tuple(map_names)
         if not names or len(set(names)) != len(names):
@@ -112,6 +134,11 @@ class ConconRoundAttackerController(BaseController):
         self.map_names = names
         self.controllers = {}
         self.model_hashes = {}
+        self.ability_advisor = ability_advisor if ability_advisor is not None else FixedAbilityAdvisor()
+        self.route_schedule = tuple(route_schedule or ())
+        if any(name not in names for name in self.route_schedule):
+            raise ValueError('route schedule must use configured maps')
+        self._route_schedule_index = 0
         self.selection_report = load_selection(selection_path) if selection_path is not None else None
         for name in names:
             scenario = get_scenario(name)
@@ -124,6 +151,7 @@ class ConconRoundAttackerController(BaseController):
                 map_name=name, model_path=model_path,
                 checkpoint_bytes=checkpoint_bytes,
                 seed=self.rng.randrange(2 ** 32),
+                ability_advisor=self.ability_advisor,
             )
         self.postplant_factories = {
             site: tuple(factories)
@@ -147,7 +175,11 @@ class ConconRoundAttackerController(BaseController):
     def reset_round(self):
         opponent = defending_opponent(getattr(self, "game", None))
         self.current_candidates = route_candidates(self.selection_report, opponent, self.map_names, self.model_hashes)
-        self.current_map_name = self.rng.choice(self.current_candidates)
+        if self.route_schedule:
+            self.current_map_name = self.route_schedule[self._route_schedule_index % len(self.route_schedule)]
+            self._route_schedule_index += 1
+        else:
+            self.current_map_name = self.rng.choice(self.current_candidates)
         self.current_controller = self.controllers[self.current_map_name]
         self.current_controller.postplant_controller = None
         if getattr(self, "game", None) is not None:

@@ -20,7 +20,7 @@ class ContactExplorationTests(unittest.TestCase):
                 random.seed(0)
                 np.random.seed(0)
                 torch.manual_seed(0)
-                env = BattleRouteEnv(seed=0, opponents=["gc_v1"], map_name=map_name)
+                env = BattleRouteEnv(seed=0, opponents=["gc_v2"], map_name=map_name)
                 contact_action = learning.preplant_contact_action
                 stopped = {}
                 stop_count = shot_count = 0

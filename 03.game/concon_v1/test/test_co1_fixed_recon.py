@@ -17,7 +17,7 @@ class FixedReconTests(unittest.TestCase):
     def test_marker_validation_and_signature(self):
         for name in ("A1", "A2", "A3"):
             original = get_scenario(name)
-            rows = original.strategy_map.strip().splitlines()
+            rows = original.strategy_map.replace("R", "0").strip().splitlines()
             r, c = next((r, c) for r, row in enumerate(rows) for c, value in enumerate(row)
                         if value == "0" and original.grid[r, c] != 1)
             rows[r] = rows[r][:c] + "R" + rows[r][c + 1:]
@@ -76,7 +76,7 @@ class FixedReconTests(unittest.TestCase):
     def test_battle_controller_launches_fixed_recon(self):
         with contextlib.redirect_stdout(io.StringIO()):
             from concon_v1.co1_battle_training import BattleRouteEnv
-            env = BattleRouteEnv(seed=0, opponents=["gc_v1"])
+            env = BattleRouteEnv(seed=0, opponents=["gc_v2"])
             caster = next(char for char in env.attackers if char.ability_name == "RECON")
             game = env.game
             point = next(game._projectile_path(tuple(caster.pos), (r, c))[-1]

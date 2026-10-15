@@ -73,7 +73,7 @@ python co1_train_defender_search.py --episodes 1000
 | 探索率 | 1.0 → 0.05 | ファイル内の `EPSILON_*` |
 | 加勢の距離上限 | BFS 距離 6 | `--support-distance` |
 
-相手の attacker は omoko_v1、touyama_v2、fnatic_v3、gc_v1、toru_ai_v3.1 です。
+相手の attacker は omoko_v1、touyama_v3、fnatic_v3、gc_v2、toru_ai_v4 です。
 学習の対戦相手はログ表示区間ごとに均等に割り当て、順序をシャッフルします。
 既定の50 episodeでは5チームと各10試合を行います。区間の長さがチーム数で割り切れない場合や
 最後の区間が短い場合も、相手ごとの試合数の差は最大1試合です。
@@ -94,7 +94,7 @@ defender は味方、attacker は敵です。学習・評価の終了理由に d
 
 ```powershell
 python co1_train_defender_search.py --episodes 3000 --eval-rounds 12
-python co1_train_defender_search.py --episodes 1000 --opponents omoko_v1 touyama_v2
+python co1_train_defender_search.py --episodes 1000 --opponents omoko_v1 touyama_v3
 ```
 
 ## 保存・再開・ゲームへの反映

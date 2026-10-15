@@ -45,7 +45,7 @@ class FixedSmokePlan:
     def reset_round(self):
         self.used_points = set()
 
-    def choose(self, char, game):
+    def choose(self, char, game, *, excluded_points=()):
         if (not self.scenario.smoke_points or game is None or not char.is_alive
                 or char.ability_name != "SMOKE" or not char.smoke_charges):
             return None
@@ -56,7 +56,7 @@ class FixedSmokePlan:
 
         allies = [ally for ally in game.chars if ally.is_alive and ally.team == char.team]
         for point in self.scenario.smoke_points:
-            if point in self.used_points:
+            if point in self.used_points or point in excluded_points:
                 continue
             distances = bfs_distance_map(game.grid, point)
             if any(0 <= distances[tuple(ally.pos)] <= self.scenario.smoke_trigger_bfs_distance
@@ -76,7 +76,7 @@ class _FixedProjectilePlan:
         self.used_points = set()
         self.pending = {}
 
-    def choose(self, char, game):
+    def choose(self, char, game, *, excluded_points=()):
         if not getattr(self.scenario, self.points_attr) or game is None:
             return None
         # Charge consumption confirms casts even after their projectiles disappear.
@@ -93,7 +93,7 @@ class _FixedProjectilePlan:
 
         allies = [ally for ally in game.chars if ally.is_alive and ally.team == char.team]
         for point in getattr(self.scenario, self.points_attr):
-            if point in self.used_points:
+            if point in self.used_points or point in excluded_points:
                 continue
             distances = bfs_distance_map(game.grid, point)
             if not any(0 <= distances[tuple(ally.pos)] <= getattr(self.scenario, self.distance_attr)
@@ -103,6 +103,7 @@ class _FixedProjectilePlan:
             if aim is None:
                 continue
             self.pending[point] = (char.name, getattr(char, self.charges_attr))
+            self.last_requested_point = point
             return {"ability": self.ability, "target": aim}
         return None
 

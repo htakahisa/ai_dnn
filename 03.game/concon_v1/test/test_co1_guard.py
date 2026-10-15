@@ -260,10 +260,10 @@ class GuardEngineTests(unittest.TestCase):
             numpy_state = np.random.get_state()
             torch_state = torch.get_rng_state().clone()
             with contextlib.redirect_stdout(io.StringIO()):
-                result = evaluate(site, rounds=len(START_MODES), opponents=["touyama_v2"],
+                result = evaluate(site, rounds=len(START_MODES), opponents=["touyama_v3"],
                                   frozen_checkpoint=buffer.getvalue())
             self.assertEqual(result["epsilon"], 0)
-            self.assertEqual(set(result["opponents"]["touyama_v2"]["by_start_mode"]), set(START_MODES))
+            self.assertEqual(set(result["opponents"]["touyama_v3"]["by_start_mode"]), set(START_MODES))
             self.assertEqual(random.getstate(), python_state)
             np.testing.assert_array_equal(np.random.get_state()[1], numpy_state[1])
             self.assertTrue(torch.equal(torch.get_rng_state(), torch_state))

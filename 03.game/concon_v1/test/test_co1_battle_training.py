@@ -16,7 +16,7 @@ from concon_v1.co1_train_attacker import (
 
 class BattleTrainingTests(unittest.TestCase):
     def c_boundary_env(self, leader_index):
-        env = BattleRouteEnv(seed=0, opponents=["touyama_v2"], map_name="A3")
+        env = BattleRouteEnv(seed=0, opponents=["touyama_v3"], map_name="A3")
         positions = [(22, 35), (22, 36), (19, 40), (18, 40), (18, 41)]
         positions[leader_index], positions[4] = positions[4], positions[leader_index]
         for char, pos in zip(env.attackers, positions):
@@ -78,32 +78,32 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertAlmostEqual(transition[2][4], -0.105)
 
     def test_team_round_metrics_use_each_opponents_round_count(self):
-        opponents = ("omoko_v1", "gc_v1", "fnatic_v3")
-        results = [("omoko_v1", 40, False), ("gc_v1", 100, True),
+        opponents = ("omoko_v1", "gc_v2", "fnatic_v3")
+        results = [("omoko_v1", 40, False), ("gc_v2", 100, True),
                    ("omoko_v1", 80, False)]
         summary = summarize_team_rounds(opponents, results)
         recent = summarize_team_rounds(opponents, results[-2:])
         self.assertEqual(summary["omoko_v1"]["avg_ticks"], 60)
         self.assertEqual(summary["omoko_v1"]["timeouts"], 0)
-        self.assertEqual(summary["gc_v1"]["avg_ticks"], 100)
-        self.assertEqual(summary["gc_v1"]["timeouts"], 1)
+        self.assertEqual(summary["gc_v2"]["avg_ticks"], 100)
+        self.assertEqual(summary["gc_v2"]["timeouts"], 1)
         self.assertIsNone(summary["fnatic_v3"]["avg_ticks"])
         self.assertIn("omoko_v1=60.00(recent100=80.00)",
                       format_team_round_metric(summary, recent, "avg_ticks"))
         self.assertIn("fnatic_v3=-(recent100=-)",
                       format_team_round_metric(summary, recent, "avg_ticks"))
-        self.assertIn("gc_v1=1(recent100=1)",
+        self.assertIn("gc_v2=1(recent100=1)",
                       format_team_round_metric(summary, recent, "timeouts"))
 
     def test_team_plant_rates_use_each_opponents_played_episode_count(self):
         summary = summarize_team_plants(
-            ("omoko_v1", "gc_v1", "fnatic_v3"),
-            (("omoko_v1", True), ("gc_v1", False), ("omoko_v1", False)),
+            ("omoko_v1", "gc_v2", "fnatic_v3"),
+            (("omoko_v1", True), ("gc_v2", False), ("omoko_v1", False)),
         )
         self.assertEqual(summary["omoko_v1"], {
             "plants": 1, "episodes": 2, "plant_rate": 0.5,
         })
-        self.assertEqual(summary["gc_v1"], {
+        self.assertEqual(summary["gc_v2"], {
             "plants": 0, "episodes": 1, "plant_rate": 0.0,
         })
         self.assertEqual(summary["fnatic_v3"], {
@@ -138,7 +138,7 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertIsInstance(env.game.attacker_controller, IQAwareController)
         seen_views = []
 
-        def capture_contact(char, game_state, game, *args):
+        def capture_contact(char, game_state, game, *args, **kwargs):
             seen_views.append((char, game_state, game))
             return list(char.pos)
 
@@ -262,9 +262,12 @@ class BattleTrainingTests(unittest.TestCase):
         self.assertEqual(env.elapsed_ticks, 0)
 
     def test_each_opponent_can_start_training_round(self):
+        from concon_v1.co1_attacker_selection import OPPONENT_NAMES
+        self.assertEqual(set(OPPONENTS), set(OPPONENT_NAMES.values()))
         for opponent in OPPONENTS:
             with self.subTest(opponent=opponent):
                 env = BattleRouteEnv(seed=2, opponents=[opponent])
+                self.assertEqual(OPPONENT_NAMES[env.game.current_defender_team_ai.name], opponent)
                 self.assertEqual(sum(env.alive), 5)
                 self.assertEqual(sum(c.is_alive for c in env.game.chars
                                      if c.team == "D"), 5)

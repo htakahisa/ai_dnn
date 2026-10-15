@@ -98,7 +98,7 @@ class MapSelectionTests(unittest.TestCase):
     def test_evaluation_cli_selects_map_default_model_and_freezes_it(self):
         with patch.object(sys, "argv", [
             "evaluate_co1_attacker.py", "-map", "A2", "--rounds", "1",
-            "--opponents", "gc_v1",
+            "--opponents", "gc_v2",
         ]), patch.object(evaluation.Path, "read_bytes", autospec=True,
                          return_value=b"A2-weights") as read, \
                 patch.object(evaluation, "evaluate", side_effect=RuntimeError("captured")) as evaluate:
@@ -186,7 +186,7 @@ class MapSelectionTests(unittest.TestCase):
     def test_frozen_evaluation_preserves_selected_map_for_every_opponent(self):
         checkpoint = {"map_name": "A2", "training_mode": "battle",
                       "waypoint_order": get_scenario("A2").waypoint_order,
-                      "opponents": ("gc_v1", "omoko_v1")}
+                      "opponents": ("gc_v2", "omoko_v1")}
         with patch.object(evaluation, "evaluate", return_value={
             "plants": 1, "rounds": 2, "plant_success_rate": 0.5,
         }) as evaluate, contextlib.redirect_stdout(io.StringIO()):
@@ -198,7 +198,7 @@ class MapSelectionTests(unittest.TestCase):
         # Exercise checkpoint scheduling with finished stub rounds; no policy
         # steps, optimization, games, or real model files are produced.
         finished = SimpleNamespace(
-            opponents=("gc_v1",), opponent="gc_v1", done=True, success=True,
+            opponents=("gc_v2",), opponent="gc_v2", done=True, success=True,
             had_spike_drop=False, spike_recovered=False, elapsed_ticks=0,
             reset=lambda: ([], []),
         )

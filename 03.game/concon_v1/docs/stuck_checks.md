@@ -48,11 +48,11 @@ py .\check_co1_stuck.py -map A2 --policy model --model .\data\attacker_A2_data\c
 ## 実戦環境
 
 ```powershell
-py .\check_co1_stuck.py -map A2 --mode battle --policy model --max-ticks 100 --rounds 3 --opponents gc_v1 fnatic_v3
+py .\check_co1_stuck.py -map A2 --mode battle --policy model --max-ticks 100 --rounds 3 --opponents gc_v2 fnatic_v3
 ```
 
 `battle` は学習で使う実戦環境とIQ知覚、戦闘・アビリティ・スパイク回収を使います。
-対戦相手は標準で `gc_v1`。複数相手を指定すると相手ごとに `--rounds` 回試します。
+対戦相手は標準で `gc_v2`。複数相手を指定すると相手ごとに `--rounds` 回試します。
 `battle` でも `random` / `move-first` を選べますが、接敵やアビリティによる
 行動の上書きは本番と同じです。上限を100より大きくすると診断のために
 ラウンド時間を延ばします。全滅などによる終了は延長されません。

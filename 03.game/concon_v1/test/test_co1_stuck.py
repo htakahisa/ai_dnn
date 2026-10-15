@@ -140,7 +140,7 @@ class StuckDiagnosticsTests(unittest.TestCase):
     def test_battle_diagnostic_obeys_tick_limit_without_a_model_file(self):
         with contextlib.redirect_stdout(io.StringIO()):
             result = run_trial(get_scenario("A1"), args(mode="battle", max_ticks=2),
-                               0, None, "gc_v1")
+                               0, None, "gc_v2")
         self.assertEqual(result["ticks"], 2)
         self.assertEqual(result["end_reason"], "time_expired")
         self.assertFalse(result["planted"])
@@ -150,7 +150,7 @@ class StuckDiagnosticsTests(unittest.TestCase):
         model = SharedRouteDQN(scenario.obs_dim)
         with contextlib.redirect_stdout(io.StringIO()):
             result = run_trial(scenario, args(mode="battle", policy="model", max_ticks=2,
-                                              epsilon=0.5), 0, model, "gc_v1")
+                                              epsilon=0.5), 0, model, "gc_v2")
         self.assertEqual(result["ticks"], 2)
         self.assertGreater(sum(result["action_counts"].values()), 0)
         json.dumps(result)

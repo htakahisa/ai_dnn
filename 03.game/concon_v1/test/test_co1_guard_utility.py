@@ -22,7 +22,7 @@ class GuardUtilityTests(unittest.TestCase):
         torch.set_num_threads(1)
 
     def environment(self, site="L"):
-        env = GuardBattleEnv(map_name=site, opponents=["touyama_v2"])
+        env = GuardBattleEnv(map_name=site, opponents=["touyama_v3"])
         env.reset("hold", attacker_count=5, defender_count=5)
         for char in env.attackers:
             char.smoke_charges = char.flash_charges = char.recon_charges = 0

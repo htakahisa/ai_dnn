@@ -36,8 +36,8 @@ class SharedRetakeTests(unittest.TestCase):
 
     def test_single_training_opponent_does_not_create_a_dedicated_model(self):
         with patch.object(training, "train") as train:
-            training.main(["--opponents", "gc_v1"])
-            self.assertEqual(train.call_args.kwargs["opponents"], ["gc_v1"])
+            training.main(["--opponents", "gc_v2"])
+            self.assertEqual(train.call_args.kwargs["opponents"], ["gc_v2"])
             self.assertIsNone(train.call_args.kwargs["save_dir"])
             self.assertNotIn("model_opponent", train.call_args.kwargs)
             training.main([])

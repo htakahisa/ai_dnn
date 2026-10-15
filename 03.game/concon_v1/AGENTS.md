@@ -53,7 +53,7 @@ defender の場合は以下のphase があります
 
 ### 全体方針
 - attacker は相手AIごとの得意・不得意を評価し、既存A1〜A4を選択する。defender retake は全相手で共通の左右モデルを使用する。
-- 対象の相手AIは `gc_v1`、`frc_v1`、`fnatic_v3`、`touyama_v2`、`omoko_v1`、`toru_ai_v3.1` の6種類とする。
+- 対象の相手AIは `gc_v2`、`frc_v1`、`fnatic_v3`、`touyama_v3`、`omoko_v1`、`toru_ai_v4` の6種類とする。
 - attacker の carry（A1〜A4）の相手別選択を維持する。defender retake の相手専用モデル・読込・学習処理は2026-10-10のユーザー指示で削除する。
 
 ### attacker：A1〜A4を相手別に振り分ける

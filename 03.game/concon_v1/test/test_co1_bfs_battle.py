@@ -31,7 +31,7 @@ class BfsBattleTests(unittest.TestCase):
     def test_real_battle_records_combat_and_deaths_without_model_inference(self):
         with patch('concon_v1.co1_battle_training._choose_action', side_effect=AssertionError('model used')), \
                 contextlib.redirect_stdout(io.StringIO()):
-            result = run_battle(get_scenario('A1'), 'gc_v1', 0, 100, 5)
+            result = run_battle(get_scenario('A1'), 'gc_v2', 0, 100, 5)
         self.assertEqual(len(result['frames']), result['ticks'] + 1)
         self.assertTrue(any(f['shots'] for f in result['frames']))
         self.assertTrue(result['deaths'])

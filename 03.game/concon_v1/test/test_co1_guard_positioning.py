@@ -77,7 +77,7 @@ class LearnedPositioningTests(unittest.TestCase):
         target = GuardDQN(scenario, navigation=True)
         target.load_state_dict(model.state_dict())
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
-        env = GuardBattleEnv(model=model, map_name=scenario, opponents=["touyama_v2"])
+        env = GuardBattleEnv(model=model, map_name=scenario, opponents=["touyama_v3"])
         env.reset("transition", attacker_count=5, defender_count=5)
         replay = []
         while not env.done:
@@ -88,7 +88,7 @@ class LearnedPositioningTests(unittest.TestCase):
         self.assertTrue(torch.equal(before, model.navigation_values.weight))
 
     def test_quiet_positioning_is_preserved_during_full_exploration(self):
-        env = GuardBattleEnv(model=self.models["L"], map_name="L", opponents=["touyama_v2"])
+        env = GuardBattleEnv(model=self.models["L"], map_name="L", opponents=["touyama_v3"])
         env.reset("hold", attacker_count=5, defender_count=5)
         for char in env.attackers:
             char.smoke_charges = char.flash_charges = char.recon_charges = 0

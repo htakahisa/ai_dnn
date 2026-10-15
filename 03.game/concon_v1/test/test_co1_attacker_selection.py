@@ -24,7 +24,7 @@ with contextlib.redirect_stdout(io.StringIO()):
 
 def report_fixture(rates):
     return dict(version=1, metric=METRIC, threshold=.8, results=[
-        dict(opponent="gc_v1", map_name=name, model_sha256="hash", rounds=50,
+        dict(opponent="gc_v2", map_name=name, model_sha256="hash", rounds=50,
              attack_success_rate=rate)
         for name, rate in zip(("A1", "A2", "A3", "A4"), rates)
     ])
@@ -44,18 +44,18 @@ class AttackerSelectionTests(unittest.TestCase):
     def test_threshold_is_inclusive_and_fallback_uses_best_ties(self):
         names = ("A1", "A2", "A3", "A4")
         hashes = dict.fromkeys(names, "hash")
-        self.assertEqual(route_candidates(report_fixture((.79, .8, .95, .1)), "gc_v1", names, hashes), ("A2", "A3"))
-        self.assertEqual(route_candidates(report_fixture((.7, .7, .6, .1)), "gc_v1", names, hashes), ("A1", "A2"))
+        self.assertEqual(route_candidates(report_fixture((.79, .8, .95, .1)), "gc_v2", names, hashes), ("A2", "A3"))
+        self.assertEqual(route_candidates(report_fixture((.7, .7, .6, .1)), "gc_v2", names, hashes), ("A1", "A2"))
 
     def test_unknown_incomplete_or_updated_models_use_all_candidates(self):
         names = ("A1", "A2", "A3", "A4")
         hashes = dict.fromkeys(names, "hash")
         report = report_fixture((.79, .8, .95, .1))
         self.assertEqual(route_candidates(report, "unknown", names, hashes), names)
-        self.assertEqual(route_candidates(None, "gc_v1", names, hashes), names)
-        self.assertEqual(route_candidates(report, "gc_v1", names, {**hashes, "A1": "updated"}), names)
+        self.assertEqual(route_candidates(None, "gc_v2", names, hashes), names)
+        self.assertEqual(route_candidates(report, "gc_v2", names, {**hashes, "A1": "updated"}), names)
         report["results"].pop()
-        self.assertEqual(route_candidates(report, "gc_v1", names, hashes), names)
+        self.assertEqual(route_candidates(report, "gc_v2", names, hashes), names)
 
     def test_invalid_reports_do_not_break_matches(self):
         with tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
@@ -80,7 +80,7 @@ class AttackerSelectionTests(unittest.TestCase):
                    return_value=SimpleNamespace(model_path=Mock(is_file=Mock(return_value=True), read_bytes=Mock(return_value=data)))), \
              patch("concon_v1.co1_attacker_controller.ConconAttackerController", side_effect=lambda **kw: Mock()) as factory:
             controller = ConconRoundAttackerController(seed=4)
-        game = SimpleNamespace(current_defender_team_ai=SimpleNamespace(name="Ghost Champions v1"))
+        game = SimpleNamespace(current_defender_team_ai=SimpleNamespace(name="Ghost Champions v2"))
         controller.set_game(game)
         with patch.object(controller.rng, "choice", return_value="A2") as choice:
             controller.reset_round()
