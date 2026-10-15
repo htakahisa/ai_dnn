@@ -10,7 +10,9 @@ IQ_CAP = 200.0
 
 # IQ情報誤差の調整値
 ALLY_POSITION_MAX_ERROR = 1
-ENEMY_POSITION_MAX_ERROR = 4
+# Common rule: disclosed enemy coordinates stay exact, regardless of IQ.
+# Visibility/reveal eligibility and IQ-based omission are separate rules.
+ENEMY_POSITION_MAX_ERROR = 0
 DROPPED_SPIKE_MAX_ERROR = 1
 PLANTED_SPIKE_MAX_ERROR = 2
 TARGET_PLANT_MAX_ERROR = 1

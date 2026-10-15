@@ -1,0 +1,5137 @@
+{
+  "version": "omoko_fixed_ability_v1",
+  "label_version": "current_enemy_in_effect_or_smoke_firing_lane_v1",
+  "wall_los_version": "symmetric_supercover_v1",
+  "feature_names": [
+    "map:carry_L",
+    "map:carry_R",
+    "map:escort_L",
+    "map:escort_R",
+    "opponent:concon_v1",
+    "opponent:fnatic_v3",
+    "opponent:frc_v1",
+    "opponent:ghost_champions_v2",
+    "opponent:toru_ai_v4",
+    "opponent:touyama_gaming_v3",
+    "ability:SMOKE",
+    "ability:FLASH",
+    "ability:RECON",
+    "point_r",
+    "point_c",
+    "impact_r",
+    "impact_c",
+    "caster_r",
+    "caster_c",
+    "tick",
+    "charges",
+    "blind",
+    "revealed",
+    "direct_relevance",
+    "caster_facing:N",
+    "caster_facing:NE",
+    "caster_facing:E",
+    "caster_facing:SE",
+    "caster_facing:S",
+    "caster_facing:SW",
+    "caster_facing:W",
+    "caster_facing:NW",
+    "ally:0:known",
+    "ally:0:r",
+    "ally:0:c",
+    "ally:0:N",
+    "ally:0:NE",
+    "ally:0:E",
+    "ally:0:SE",
+    "ally:0:S",
+    "ally:0:SW",
+    "ally:0:W",
+    "ally:0:NW",
+    "ally:1:known",
+    "ally:1:r",
+    "ally:1:c",
+    "ally:1:N",
+    "ally:1:NE",
+    "ally:1:E",
+    "ally:1:SE",
+    "ally:1:S",
+    "ally:1:SW",
+    "ally:1:W",
+    "ally:1:NW",
+    "ally:2:known",
+    "ally:2:r",
+    "ally:2:c",
+    "ally:2:N",
+    "ally:2:NE",
+    "ally:2:E",
+    "ally:2:SE",
+    "ally:2:S",
+    "ally:2:SW",
+    "ally:2:W",
+    "ally:2:NW",
+    "ally:3:known",
+    "ally:3:r",
+    "ally:3:c",
+    "ally:3:N",
+    "ally:3:NE",
+    "ally:3:E",
+    "ally:3:SE",
+    "ally:3:S",
+    "ally:3:SW",
+    "ally:3:W",
+    "ally:3:NW",
+    "ally:4:known",
+    "ally:4:r",
+    "ally:4:c",
+    "ally:4:N",
+    "ally:4:NE",
+    "ally:4:E",
+    "ally:4:SE",
+    "ally:4:S",
+    "ally:4:SW",
+    "ally:4:W",
+    "ally:4:NW",
+    "enemy:0:known",
+    "enemy:0:r",
+    "enemy:0:c",
+    "enemy:0:N",
+    "enemy:0:NE",
+    "enemy:0:E",
+    "enemy:0:SE",
+    "enemy:0:S",
+    "enemy:0:SW",
+    "enemy:0:W",
+    "enemy:0:NW",
+    "enemy:1:known",
+    "enemy:1:r",
+    "enemy:1:c",
+    "enemy:1:N",
+    "enemy:1:NE",
+    "enemy:1:E",
+    "enemy:1:SE",
+    "enemy:1:S",
+    "enemy:1:SW",
+    "enemy:1:W",
+    "enemy:1:NW",
+    "enemy:2:known",
+    "enemy:2:r",
+    "enemy:2:c",
+    "enemy:2:N",
+    "enemy:2:NE",
+    "enemy:2:E",
+    "enemy:2:SE",
+    "enemy:2:S",
+    "enemy:2:SW",
+    "enemy:2:W",
+    "enemy:2:NW",
+    "enemy:3:known",
+    "enemy:3:r",
+    "enemy:3:c",
+    "enemy:3:N",
+    "enemy:3:NE",
+    "enemy:3:E",
+    "enemy:3:SE",
+    "enemy:3:S",
+    "enemy:3:SW",
+    "enemy:3:W",
+    "enemy:3:NW",
+    "enemy:4:known",
+    "enemy:4:r",
+    "enemy:4:c",
+    "enemy:4:N",
+    "enemy:4:NE",
+    "enemy:4:E",
+    "enemy:4:SE",
+    "enemy:4:S",
+    "enemy:4:SW",
+    "enemy:4:W",
+    "enemy:4:NW",
+    "history:0:present",
+    "history:0:carry_L",
+    "history:0:carry_R",
+    "history:0:escort_L",
+    "history:0:escort_R",
+    "history:0:observed",
+    "history:0:phase_seen",
+    "history:0:nearest",
+    "history:0:near_point",
+    "history:0:used",
+    "history:1:present",
+    "history:1:carry_L",
+    "history:1:carry_R",
+    "history:1:escort_L",
+    "history:1:escort_R",
+    "history:1:observed",
+    "history:1:phase_seen",
+    "history:1:nearest",
+    "history:1:near_point",
+    "history:1:used",
+    "history:2:present",
+    "history:2:carry_L",
+    "history:2:carry_R",
+    "history:2:escort_L",
+    "history:2:escort_R",
+    "history:2:observed",
+    "history:2:phase_seen",
+    "history:2:nearest",
+    "history:2:near_point",
+    "history:2:used",
+    "history:3:present",
+    "history:3:carry_L",
+    "history:3:carry_R",
+    "history:3:escort_L",
+    "history:3:escort_R",
+    "history:3:observed",
+    "history:3:phase_seen",
+    "history:3:nearest",
+    "history:3:near_point",
+    "history:3:used",
+    "history:4:present",
+    "history:4:carry_L",
+    "history:4:carry_R",
+    "history:4:escort_L",
+    "history:4:escort_R",
+    "history:4:observed",
+    "history:4:phase_seen",
+    "history:4:nearest",
+    "history:4:near_point",
+    "history:4:used"
+  ],
+  "scenarios": {
+    "carry_L": {
+      "signature": "7804c554d20a505e398b752f7b2b84ff0ff458a28747ca64e009b976c1fda17d",
+      "carry_sha256": "6aa86e55a84f111253d595e20dc1bc4ecc0036719800b78983bc81beab20250f"
+    },
+    "carry_R": {
+      "signature": "9c86d926ec37a5ddf514f9291cbf1338a06f3ce4f0f397b8ef22f29f734092c9",
+      "carry_sha256": "6aa86e55a84f111253d595e20dc1bc4ecc0036719800b78983bc81beab20250f"
+    },
+    "escort_L": {
+      "signature": "7a023aef0b14f77001d552f849c6e9018cbf976258d53880109c7bf19f8b5d3a",
+      "carry_sha256": "6aa86e55a84f111253d595e20dc1bc4ecc0036719800b78983bc81beab20250f"
+    },
+    "escort_R": {
+      "signature": "8bb916f4236cf72796ad1c15a4eff2edf405810b3088b95319d92777210b37ed",
+      "carry_sha256": "6aa86e55a84f111253d595e20dc1bc4ecc0036719800b78983bc81beab20250f"
+    }
+  },
+  "skip_threshold": 0.1,
+  "groups": {
+    "carry_L|ghost_champions_v2|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 4,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 20,
+        "rounds": 20,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 8,
+        "rounds": 8,
+        "positives": 3,
+        "skipped": 4,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.75
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 2,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "carry_R|ghost_champions_v2|FLASH|21,40": {
+      "validated": true,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 22,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "escort_L|fnatic_v3|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 32,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 39,
+        "rounds": 39,
+        "positives": 30,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|concon_v1|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 3,
+        "skipped": 41,
+        "missed_positives": 3,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.926829268292683
+      },
+      "test": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 2,
+        "skipped": 33,
+        "missed_positives": 2,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9393939393939394
+      }
+    },
+    "escort_R|toru_ai_v4|FLASH|10,31": {
+      "validated": true,
+      "validation": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 1,
+        "skipped": 19,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 20,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 3,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 8,
+        "skipped": 10,
+        "missed_positives": 1,
+        "missed_rate": 0.125,
+        "unnecessary_skip_precision": 0.9
+      }
+    },
+    "carry_R|ghost_champions_v2|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 0,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "carry_R|ghost_champions_v2|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|concon_v1|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 1,
+        "skipped": 11,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9090909090909091
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 1,
+        "skipped": 11,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9090909090909091
+      }
+    },
+    "carry_R|fnatic_v3|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 3,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|fnatic_v3|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 18,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 33,
+        "rounds": 33,
+        "positives": 33,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|toru_ai_v4|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 54,
+        "rounds": 54,
+        "positives": 6,
+        "skipped": 34,
+        "missed_positives": 2,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.9411764705882353
+      },
+      "test": {
+        "samples": 62,
+        "rounds": 62,
+        "positives": 6,
+        "skipped": 25,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|FLASH|11,6": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 49,
+        "rounds": 49,
+        "positives": 1,
+        "skipped": 38,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 41,
+        "rounds": 41,
+        "positives": 7,
+        "skipped": 25,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "carry_L|ghost_champions_v2|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 6,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 3,
+        "skipped": 5,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.8
+      }
+    },
+    "carry_R|ghost_champions_v2|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 2,
+        "skipped": 7,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.8571428571428572
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 2,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|8,3": {
+      "validated": true,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 0,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 30,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "escort_L|ghost_champions_v2|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 4,
+        "skipped": 5,
+        "missed_positives": 1,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.8
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 3,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|FLASH|10,2": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|RECON|8,33": {
+      "validated": true,
+      "validation": {
+        "samples": 39,
+        "rounds": 39,
+        "positives": 17,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 48,
+        "rounds": 48,
+        "positives": 24,
+        "skipped": 11,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|8,3": {
+      "validated": true,
+      "validation": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 31,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 0,
+        "skipped": 27,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 8,
+        "rounds": 8,
+        "positives": 3,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 3,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 43,
+        "skipped": 13,
+        "missed_positives": 5,
+        "missed_rate": 0.11627906976744186,
+        "unnecessary_skip_precision": 0.6153846153846154
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 36,
+        "skipped": 13,
+        "missed_positives": 5,
+        "missed_rate": 0.1388888888888889,
+        "unnecessary_skip_precision": 0.6153846153846154
+      }
+    },
+    "carry_R|fnatic_v3|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 2,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 3,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 2,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|RECON|7,5": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|ghost_champions_v2|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.5
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 4,
+        "skipped": 5,
+        "missed_positives": 4,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.19999999999999996
+      }
+    },
+    "carry_R|touyama_gaming_v3|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 0,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 34,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 7,
+        "skipped": 26,
+        "missed_positives": 4,
+        "missed_rate": 0.5714285714285714,
+        "unnecessary_skip_precision": 0.8461538461538461
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 6,
+        "skipped": 28,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|RECON|15,4": {
+      "validated": false,
+      "validation": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 15,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "carry_R|fnatic_v3|FLASH|21,40": {
+      "validated": false,
+      "validation": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 1,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 21,
+        "rounds": 21,
+        "positives": 1,
+        "skipped": 20,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 31,
+        "rounds": 31,
+        "positives": 2,
+        "skipped": 29,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9655172413793104
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 1,
+        "skipped": 25,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.96
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 60,
+        "rounds": 60,
+        "positives": 4,
+        "skipped": 50,
+        "missed_positives": 3,
+        "missed_rate": 0.75,
+        "unnecessary_skip_precision": 0.94
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 0,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 3,
+        "skipped": 13,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.9230769230769231
+      },
+      "test": {
+        "samples": 21,
+        "rounds": 21,
+        "positives": 1,
+        "skipped": 18,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9444444444444444
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.0
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|touyama_gaming_v3|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 15,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 0,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 3,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|frc_v1|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 41,
+        "rounds": 41,
+        "positives": 22,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 13,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 36,
+        "rounds": 36,
+        "positives": 19,
+        "skipped": 7,
+        "missed_positives": 1,
+        "missed_rate": 0.05263157894736842,
+        "unnecessary_skip_precision": 0.8571428571428572
+      },
+      "test": {
+        "samples": 40,
+        "rounds": 40,
+        "positives": 20,
+        "skipped": 9,
+        "missed_positives": 1,
+        "missed_rate": 0.05,
+        "unnecessary_skip_precision": 0.8888888888888888
+      }
+    },
+    "escort_L|frc_v1|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 17,
+        "rounds": 17,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|ghost_champions_v2|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 5,
+        "skipped": 12,
+        "missed_positives": 2,
+        "missed_rate": 0.4,
+        "unnecessary_skip_precision": 0.8333333333333334
+      },
+      "test": {
+        "samples": 27,
+        "rounds": 27,
+        "positives": 5,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 3,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 2,
+        "skipped": 11,
+        "missed_positives": 2,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.8181818181818181
+      }
+    },
+    "carry_L|frc_v1|RECON|11,7": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|touyama_gaming_v3|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 62,
+        "rounds": 62,
+        "positives": 38,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 61,
+        "rounds": 61,
+        "positives": 31,
+        "skipped": 13,
+        "missed_positives": 1,
+        "missed_rate": 0.03225806451612903,
+        "unnecessary_skip_precision": 0.9230769230769231
+      }
+    },
+    "carry_R|frc_v1|RECON|2,25": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "escort_L|toru_ai_v4|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 1,
+        "skipped": 7,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.8571428571428572
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 3,
+        "skipped": 6,
+        "missed_positives": 2,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.6666666666666667
+      }
+    },
+    "carry_L|ghost_champions_v2|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|SMOKE|9,11": {
+      "validated": true,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 22,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 22,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|toru_ai_v4|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 54,
+        "rounds": 54,
+        "positives": 47,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 62,
+        "rounds": 62,
+        "positives": 55,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|4,10": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|RECON|11,7": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|fnatic_v3|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 1,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 0,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|ghost_champions_v2|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 1,
+        "skipped": 4,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.75
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 1,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 0,
+        "skipped": 16,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|ghost_champions_v2|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 47,
+        "rounds": 47,
+        "positives": 14,
+        "skipped": 9,
+        "missed_positives": 1,
+        "missed_rate": 0.07142857142857142,
+        "unnecessary_skip_precision": 0.8888888888888888
+      },
+      "test": {
+        "samples": 54,
+        "rounds": 54,
+        "positives": 6,
+        "skipped": 10,
+        "missed_positives": 2,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.8
+      }
+    },
+    "escort_R|ghost_champions_v2|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|concon_v1|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 8,
+        "skipped": 8,
+        "missed_positives": 6,
+        "missed_rate": 0.75,
+        "unnecessary_skip_precision": 0.25
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 7,
+        "skipped": 5,
+        "missed_positives": 2,
+        "missed_rate": 0.2857142857142857,
+        "unnecessary_skip_precision": 0.6
+      }
+    },
+    "carry_R|frc_v1|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 4,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 3,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 0,
+        "skipped": 16,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|ghost_champions_v2|SMOKE|6,18": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|ghost_champions_v2|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|ghost_champions_v2|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 7,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 6,
+        "skipped": 3,
+        "missed_positives": 1,
+        "missed_rate": 0.16666666666666666,
+        "unnecessary_skip_precision": 0.6666666666666667
+      }
+    },
+    "escort_L|toru_ai_v4|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 22,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 0,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 15,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 20,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|ghost_champions_v2|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 0,
+        "skipped": 37,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 33,
+        "rounds": 33,
+        "positives": 3,
+        "skipped": 30,
+        "missed_positives": 2,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.9333333333333333
+      }
+    },
+    "carry_R|concon_v1|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 3,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.5
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 4,
+        "skipped": 4,
+        "missed_positives": 3,
+        "missed_rate": 0.75,
+        "unnecessary_skip_precision": 0.25
+      }
+    },
+    "escort_R|fnatic_v3|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 1,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 20,
+        "rounds": 20,
+        "positives": 1,
+        "skipped": 19,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 3,
+        "skipped": 20,
+        "missed_positives": 2,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.9
+      },
+      "test": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 1,
+        "skipped": 19,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 61,
+        "rounds": 61,
+        "positives": 4,
+        "skipped": 50,
+        "missed_positives": 3,
+        "missed_rate": 0.75,
+        "unnecessary_skip_precision": 0.94
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 5,
+        "skipped": 45,
+        "missed_positives": 2,
+        "missed_rate": 0.4,
+        "unnecessary_skip_precision": 0.9555555555555556
+      }
+    },
+    "escort_L|concon_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 60,
+        "rounds": 60,
+        "positives": 0,
+        "skipped": 60,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 0,
+        "skipped": 51,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|10,2": {
+      "validated": true,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 0,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 34,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|FLASH|11,6": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 1,
+        "skipped": 5,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.8
+      }
+    },
+    "carry_L|concon_v1|FLASH|6,24": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|ghost_champions_v2|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "carry_L|concon_v1|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 10,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 10,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 7,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 21,
+        "rounds": 21,
+        "positives": 12,
+        "skipped": 7,
+        "missed_positives": 6,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.1428571428571429
+      }
+    },
+    "carry_R|ghost_champions_v2|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 15,
+        "skipped": 24,
+        "missed_positives": 1,
+        "missed_rate": 0.06666666666666667,
+        "unnecessary_skip_precision": 0.9583333333333334
+      },
+      "test": {
+        "samples": 60,
+        "rounds": 60,
+        "positives": 16,
+        "skipped": 32,
+        "missed_positives": 3,
+        "missed_rate": 0.1875,
+        "unnecessary_skip_precision": 0.90625
+      }
+    },
+    "escort_R|toru_ai_v4|RECON|7,37": {
+      "validated": true,
+      "validation": {
+        "samples": 29,
+        "rounds": 29,
+        "positives": 0,
+        "skipped": 24,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 28,
+        "rounds": 28,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|concon_v1|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|concon_v1|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 64,
+        "rounds": 64,
+        "positives": 47,
+        "skipped": 9,
+        "missed_positives": 2,
+        "missed_rate": 0.0425531914893617,
+        "unnecessary_skip_precision": 0.7777777777777778
+      },
+      "test": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 46,
+        "skipped": 5,
+        "missed_positives": 1,
+        "missed_rate": 0.021739130434782608,
+        "unnecessary_skip_precision": 0.8
+      }
+    },
+    "escort_L|toru_ai_v4|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 20,
+        "rounds": 20,
+        "positives": 0,
+        "skipped": 20,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|touyama_gaming_v3|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 0,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 17,
+        "rounds": 17,
+        "positives": 0,
+        "skipped": 17,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 0,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|concon_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|concon_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 0,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 0,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 0,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|toru_ai_v4|FLASH|21,40": {
+      "validated": true,
+      "validation": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 37,
+        "rounds": 37,
+        "positives": 0,
+        "skipped": 37,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 0,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 8,
+        "rounds": 8,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|fnatic_v3|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 33,
+        "rounds": 33,
+        "positives": 4,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 40,
+        "rounds": 40,
+        "positives": 4,
+        "skipped": 23,
+        "missed_positives": 2,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9130434782608696
+      }
+    },
+    "carry_R|fnatic_v3|FLASH|10,31": {
+      "validated": true,
+      "validation": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 12,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 40,
+        "rounds": 40,
+        "positives": 18,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 1,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 0,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 1,
+        "skipped": 15,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|concon_v1|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 4,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|ghost_champions_v2|RECON|2,25": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|concon_v1|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 2,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|concon_v1|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 1,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 27,
+        "rounds": 27,
+        "positives": 20,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 26,
+        "rounds": 26,
+        "positives": 18,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|FLASH|10,2": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|toru_ai_v4|SMOKE|8,32": {
+      "validated": true,
+      "validation": {
+        "samples": 45,
+        "rounds": 45,
+        "positives": 3,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 53,
+        "rounds": 53,
+        "positives": 1,
+        "skipped": 52,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "escort_L|frc_v1|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 1,
+        "skipped": 5,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.8
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 17,
+        "rounds": 17,
+        "positives": 1,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 21,
+        "rounds": 21,
+        "positives": 1,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|RECON|9,12": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 6,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 4,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|fnatic_v3|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 26,
+        "rounds": 26,
+        "positives": 6,
+        "skipped": 21,
+        "missed_positives": 5,
+        "missed_rate": 0.8333333333333334,
+        "unnecessary_skip_precision": 0.7619047619047619
+      },
+      "test": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 2,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 37,
+        "rounds": 37,
+        "positives": 1,
+        "skipped": 30,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9666666666666667
+      },
+      "test": {
+        "samples": 48,
+        "rounds": 48,
+        "positives": 1,
+        "skipped": 41,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|FLASH|6,24": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|touyama_gaming_v3|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 9,
+        "skipped": 22,
+        "missed_positives": 1,
+        "missed_rate": 0.1111111111111111,
+        "unnecessary_skip_precision": 0.9545454545454546
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 8,
+        "skipped": 21,
+        "missed_positives": 1,
+        "missed_rate": 0.125,
+        "unnecessary_skip_precision": 0.9523809523809523
+      }
+    },
+    "escort_L|fnatic_v3|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|touyama_gaming_v3|FLASH|21,40": {
+      "validated": true,
+      "validation": {
+        "samples": 37,
+        "rounds": 37,
+        "positives": 0,
+        "skipped": 37,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 0,
+        "skipped": 31,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|ghost_champions_v2|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 1,
+        "skipped": 10,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 1,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|RECON|7,5": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|ghost_champions_v2|FLASH|13,31": {
+      "validated": false,
+      "validation": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 2,
+        "skipped": 41,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.975609756097561
+      },
+      "test": {
+        "samples": 60,
+        "rounds": 60,
+        "positives": 4,
+        "skipped": 53,
+        "missed_positives": 3,
+        "missed_rate": 0.75,
+        "unnecessary_skip_precision": 0.9433962264150944
+      }
+    },
+    "carry_R|concon_v1|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 0,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 1,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 8,
+        "rounds": 8,
+        "positives": 0,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 8,
+        "rounds": 8,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|frc_v1|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 36,
+        "rounds": 36,
+        "positives": 29,
+        "skipped": 3,
+        "missed_positives": 1,
+        "missed_rate": 0.034482758620689655,
+        "unnecessary_skip_precision": 0.6666666666666667
+      },
+      "test": {
+        "samples": 43,
+        "rounds": 43,
+        "positives": 41,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 0.024390243902439025,
+        "unnecessary_skip_precision": 0.5
+      }
+    },
+    "carry_R|concon_v1|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|frc_v1|FLASH|21,40": {
+      "validated": false,
+      "validation": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 8,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 14,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 2,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 12,
+        "skipped": 3,
+        "missed_positives": 2,
+        "missed_rate": 0.16666666666666666,
+        "unnecessary_skip_precision": 0.33333333333333337
+      }
+    },
+    "escort_L|ghost_champions_v2|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_L|toru_ai_v4|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "carry_L|concon_v1|FLASH|8,3": {
+      "validated": true,
+      "validation": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 0,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 0,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|toru_ai_v4|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 20,
+        "rounds": 20,
+        "positives": 0,
+        "skipped": 19,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 2,
+        "skipped": 15,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 46,
+        "rounds": 46,
+        "positives": 6,
+        "skipped": 38,
+        "missed_positives": 2,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.9473684210526316
+      },
+      "test": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 7,
+        "skipped": 34,
+        "missed_positives": 4,
+        "missed_rate": 0.5714285714285714,
+        "unnecessary_skip_precision": 0.8823529411764706
+      }
+    },
+    "escort_L|ghost_champions_v2|SMOKE|7,3": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 1,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|FLASH|14,3": {
+      "validated": false,
+      "validation": {
+        "samples": 31,
+        "rounds": 31,
+        "positives": 6,
+        "skipped": 28,
+        "missed_positives": 3,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.8928571428571429
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 3,
+        "skipped": 23,
+        "missed_positives": 2,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.9130434782608696
+      }
+    },
+    "carry_R|frc_v1|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 7,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|11,16": {
+      "validated": true,
+      "validation": {
+        "samples": 28,
+        "rounds": 28,
+        "positives": 2,
+        "skipped": 26,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 2,
+        "skipped": 20,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|RECON|9,12": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 49,
+        "rounds": 49,
+        "positives": 34,
+        "skipped": 4,
+        "missed_positives": 1,
+        "missed_rate": 0.029411764705882353,
+        "unnecessary_skip_precision": 0.75
+      },
+      "test": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 20,
+        "skipped": 4,
+        "missed_positives": 2,
+        "missed_rate": 0.1,
+        "unnecessary_skip_precision": 0.5
+      }
+    },
+    "carry_R|touyama_gaming_v3|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|touyama_gaming_v3|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|ghost_champions_v2|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 27,
+        "rounds": 27,
+        "positives": 2,
+        "skipped": 24,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9583333333333334
+      },
+      "test": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 27,
+        "rounds": 27,
+        "positives": 2,
+        "skipped": 10,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 5,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 9,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 5,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|FLASH|8,3": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 3,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 4,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.0
+      }
+    },
+    "escort_L|concon_v1|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 2,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 1,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 0,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|4,10": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "escort_R|toru_ai_v4|FLASH|13,31": {
+      "validated": true,
+      "validation": {
+        "samples": 40,
+        "rounds": 40,
+        "positives": 0,
+        "skipped": 40,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 49,
+        "rounds": 49,
+        "positives": 0,
+        "skipped": 49,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "escort_R|concon_v1|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 34,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 0,
+        "skipped": 35,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|toru_ai_v4|FLASH|13,31": {
+      "validated": true,
+      "validation": {
+        "samples": 54,
+        "rounds": 54,
+        "positives": 0,
+        "skipped": 54,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 62,
+        "rounds": 62,
+        "positives": 0,
+        "skipped": 57,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 19,
+        "rounds": 19,
+        "positives": 4,
+        "skipped": 14,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 3,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 2,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.5
+      }
+    },
+    "carry_R|touyama_gaming_v3|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 50,
+        "rounds": 50,
+        "positives": 42,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 44,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 0.022727272727272728,
+        "unnecessary_skip_precision": 0.0
+      }
+    },
+    "carry_R|frc_v1|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "carry_R|concon_v1|RECON|2,25": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|fnatic_v3|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 60,
+        "rounds": 60,
+        "positives": 4,
+        "skipped": 57,
+        "missed_positives": 1,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.9824561403508771
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 5,
+        "skipped": 47,
+        "missed_positives": 3,
+        "missed_rate": 0.6,
+        "unnecessary_skip_precision": 0.9361702127659575
+      }
+    },
+    "carry_R|concon_v1|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 2,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 2,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.0
+      }
+    },
+    "escort_L|ghost_champions_v2|RECON|7,5": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {}
+    },
+    "carry_L|ghost_champions_v2|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 4,
+        "skipped": 16,
+        "missed_positives": 2,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.875
+      },
+      "test": {
+        "samples": 20,
+        "rounds": 20,
+        "positives": 10,
+        "skipped": 11,
+        "missed_positives": 5,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.5454545454545454
+      }
+    },
+    "carry_R|touyama_gaming_v3|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 14,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 21,
+        "skipped": 3,
+        "missed_positives": 1,
+        "missed_rate": 0.047619047619047616,
+        "unnecessary_skip_precision": 0.6666666666666667
+      }
+    },
+    "escort_L|fnatic_v3|RECON|15,4": {
+      "validated": false,
+      "validation": {
+        "samples": 33,
+        "rounds": 33,
+        "positives": 3,
+        "skipped": 31,
+        "missed_positives": 3,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9032258064516129
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|FLASH|11,6": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 19,
+        "rounds": 19,
+        "positives": 2,
+        "skipped": 17,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9411764705882353
+      },
+      "test": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 1,
+        "skipped": 17,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|frc_v1|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 8,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 0.125,
+        "unnecessary_skip_precision": 0.0
+      },
+      "test": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 2,
+        "skipped": 6,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.8333333333333334
+      }
+    },
+    "escort_R|touyama_gaming_v3|RECON|17,40": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "escort_R|concon_v1|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "escort_R|concon_v1|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|toru_ai_v4|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 46,
+        "rounds": 46,
+        "positives": 3,
+        "skipped": 34,
+        "missed_positives": 2,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.9411764705882353
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 1,
+        "skipped": 37,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.972972972972973
+      }
+    },
+    "escort_R|ghost_champions_v2|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 14,
+        "skipped": 7,
+        "missed_positives": 1,
+        "missed_rate": 0.07142857142857142,
+        "unnecessary_skip_precision": 0.8571428571428572
+      },
+      "test": {
+        "samples": 45,
+        "rounds": 45,
+        "positives": 17,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|toru_ai_v4|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 3,
+        "skipped": 35,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.9714285714285714
+      },
+      "test": {
+        "samples": 30,
+        "rounds": 30,
+        "positives": 2,
+        "skipped": 29,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9655172413793104
+      }
+    },
+    "carry_L|frc_v1|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|ghost_champions_v2|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 42,
+        "rounds": 42,
+        "positives": 5,
+        "skipped": 34,
+        "missed_positives": 2,
+        "missed_rate": 0.4,
+        "unnecessary_skip_precision": 0.9411764705882353
+      },
+      "test": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 4,
+        "skipped": 41,
+        "missed_positives": 1,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.975609756097561
+      }
+    },
+    "carry_R|concon_v1|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 6,
+        "skipped": 7,
+        "missed_positives": 4,
+        "missed_rate": 0.6666666666666666,
+        "unnecessary_skip_precision": 0.4285714285714286
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 5,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|RECON|11,7": {
+      "validated": false,
+      "validation": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 8,
+        "skipped": 7,
+        "missed_positives": 2,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.7142857142857143
+      },
+      "test": {
+        "samples": 28,
+        "rounds": 28,
+        "positives": 11,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|ghost_champions_v2|RECON|2,25": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|frc_v1|FLASH|13,31": {
+      "validated": true,
+      "validation": {
+        "samples": 41,
+        "rounds": 41,
+        "positives": 0,
+        "skipped": 41,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 49,
+        "rounds": 49,
+        "positives": 0,
+        "skipped": 49,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|frc_v1|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 6,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 0,
+        "skipped": 11,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|concon_v1|FLASH|14,3": {
+      "validated": true,
+      "validation": {
+        "samples": 55,
+        "rounds": 55,
+        "positives": 0,
+        "skipped": 46,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 51,
+        "rounds": 51,
+        "positives": 0,
+        "skipped": 39,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|SMOKE|6,18": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {}
+    },
+    "escort_L|concon_v1|SMOKE|7,3": {
+      "validated": true,
+      "validation": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 0,
+        "skipped": 32,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 23,
+        "rounds": 23,
+        "positives": 0,
+        "skipped": 23,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|10,2": {
+      "validated": true,
+      "validation": {
+        "samples": 34,
+        "rounds": 34,
+        "positives": 0,
+        "skipped": 34,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 35,
+        "rounds": 35,
+        "positives": 0,
+        "skipped": 35,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 0,
+        "skipped": 16,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|RECON|15,4": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|FLASH|6,24": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|concon_v1|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|touyama_gaming_v3|SMOKE|8,32": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 1,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 2,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|concon_v1|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 1,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.5
+      }
+    },
+    "carry_R|ghost_champions_v2|FLASH|6,24": {
+      "validated": false,
+      "validation": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 2,
+        "skipped": 2,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.5
+      },
+      "test": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 5,
+        "skipped": 5,
+        "missed_positives": 2,
+        "missed_rate": 0.4,
+        "unnecessary_skip_precision": 0.6
+      }
+    },
+    "escort_R|ghost_champions_v2|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 18,
+        "rounds": 18,
+        "positives": 2,
+        "skipped": 10,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 17,
+        "rounds": 17,
+        "positives": 3,
+        "skipped": 6,
+        "missed_positives": 1,
+        "missed_rate": 0.3333333333333333,
+        "unnecessary_skip_precision": 0.8333333333333334
+      }
+    },
+    "escort_L|concon_v1|RECON|15,4": {
+      "validated": true,
+      "validation": {
+        "samples": 46,
+        "rounds": 46,
+        "positives": 0,
+        "skipped": 42,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 41,
+        "rounds": 41,
+        "positives": 0,
+        "skipped": 37,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|touyama_gaming_v3|FLASH|8,3": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|RECON|15,4": {
+      "validated": false,
+      "validation": {
+        "samples": 13,
+        "rounds": 13,
+        "positives": 13,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 16,
+        "rounds": 16,
+        "positives": 16,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|touyama_gaming_v3|FLASH|4,10": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|concon_v1|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 11,
+        "rounds": 11,
+        "positives": 3,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|ghost_champions_v2|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 15,
+        "rounds": 15,
+        "positives": 0,
+        "skipped": 13,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 0,
+        "skipped": 9,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|toru_ai_v4|RECON|15,4": {
+      "validated": false,
+      "validation": {
+        "samples": 17,
+        "rounds": 17,
+        "positives": 0,
+        "skipped": 17,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 12,
+        "rounds": 12,
+        "positives": 0,
+        "skipped": 12,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|fnatic_v3|SMOKE|9,11": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|SMOKE|6,18": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 1,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_L|frc_v1|FLASH|11,6": {
+      "validated": false,
+      "validation": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 1,
+        "skipped": 8,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 30,
+        "rounds": 30,
+        "positives": 2,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|RECON|15,4": {
+      "validated": false,
+      "validation": {
+        "samples": 40,
+        "rounds": 40,
+        "positives": 29,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 33,
+        "rounds": 33,
+        "positives": 19,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|concon_v1|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 6,
+        "rounds": 6,
+        "positives": 2,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 4,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|toru_ai_v4|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 1,
+        "skipped": 20,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.95
+      },
+      "test": {
+        "samples": 21,
+        "rounds": 21,
+        "positives": 1,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|concon_v1|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 3,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|concon_v1|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 4,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 5,
+        "rounds": 5,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_L|frc_v1|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 53,
+        "rounds": 53,
+        "positives": 12,
+        "skipped": 22,
+        "missed_positives": 3,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.8636363636363636
+      },
+      "test": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 9,
+        "skipped": 10,
+        "missed_positives": 2,
+        "missed_rate": 0.2222222222222222,
+        "unnecessary_skip_precision": 0.8
+      }
+    },
+    "escort_R|fnatic_v3|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 2,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.0
+      }
+    },
+    "escort_L|fnatic_v3|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 25,
+        "rounds": 25,
+        "positives": 0,
+        "skipped": 25,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 24,
+        "rounds": 24,
+        "positives": 1,
+        "skipped": 24,
+        "missed_positives": 1,
+        "missed_rate": 1.0,
+        "unnecessary_skip_precision": 0.9583333333333334
+      }
+    },
+    "escort_R|frc_v1|FLASH|10,31": {
+      "validated": false,
+      "validation": {
+        "samples": 26,
+        "rounds": 26,
+        "positives": 4,
+        "skipped": 21,
+        "missed_positives": 1,
+        "missed_rate": 0.25,
+        "unnecessary_skip_precision": 0.9523809523809523
+      },
+      "test": {
+        "samples": 32,
+        "rounds": 32,
+        "positives": 3,
+        "skipped": 25,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|frc_v1|FLASH|10,31": {
+      "validated": true,
+      "validation": {
+        "samples": 41,
+        "rounds": 41,
+        "positives": 0,
+        "skipped": 27,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 49,
+        "rounds": 49,
+        "positives": 0,
+        "skipped": 38,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|touyama_gaming_v3|RECON|7,37": {
+      "validated": false,
+      "validation": {
+        "samples": 3,
+        "rounds": 3,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "carry_R|fnatic_v3|SMOKE|6,18": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 1,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|touyama_gaming_v3|FLASH|7,40": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 10,
+        "rounds": 10,
+        "positives": 3,
+        "skipped": 2,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|FLASH|7,40": {
+      "validated": false,
+      "validation": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 5,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 14,
+        "rounds": 14,
+        "positives": 12,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|fnatic_v3|FLASH|11,16": {
+      "validated": false,
+      "validation": {
+        "samples": 26,
+        "rounds": 26,
+        "positives": 2,
+        "skipped": 19,
+        "missed_positives": 1,
+        "missed_rate": 0.5,
+        "unnecessary_skip_precision": 0.9473684210526316
+      },
+      "test": {
+        "samples": 22,
+        "rounds": 22,
+        "positives": 0,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|fnatic_v3|SMOKE|7,39": {
+      "validated": false,
+      "validation": {
+        "samples": 9,
+        "rounds": 9,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 7,
+        "rounds": 7,
+        "positives": 0,
+        "skipped": 5,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_R|frc_v1|FLASH|13,31": {
+      "validated": true,
+      "validation": {
+        "samples": 38,
+        "rounds": 38,
+        "positives": 0,
+        "skipped": 38,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 43,
+        "rounds": 43,
+        "positives": 0,
+        "skipped": 43,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|ghost_champions_v2|FLASH|10,2": {
+      "validated": false,
+      "validation": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 1,
+        "rounds": 1,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "escort_R|concon_v1|RECON|2,25": {
+      "validated": false,
+      "validation": {},
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      }
+    },
+    "carry_R|frc_v1|RECON|8,33": {
+      "validated": false,
+      "validation": {
+        "samples": 4,
+        "rounds": 4,
+        "positives": 0,
+        "skipped": 0,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": null
+      },
+      "test": {
+        "samples": 2,
+        "rounds": 2,
+        "positives": 0,
+        "skipped": 1,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    },
+    "escort_L|frc_v1|SMOKE|12,6": {
+      "validated": false,
+      "validation": {
+        "samples": 19,
+        "rounds": 19,
+        "positives": 0,
+        "skipped": 15,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      },
+      "test": {
+        "samples": 19,
+        "rounds": 19,
+        "positives": 0,
+        "skipped": 18,
+        "missed_positives": 0,
+        "missed_rate": 0.0,
+        "unnecessary_skip_precision": 1.0
+      }
+    }
+  },
+  "seed": 0,
+  "validation_loss": 0.2686229944229126,
+  "split": "whole_match_60_20_20",
+  "fold_samples": {
+    "train": 12450,
+    "validation": 4083,
+    "test": 4108
+  }
+}

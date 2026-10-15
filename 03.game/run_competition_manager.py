@@ -72,6 +72,7 @@ CONTROLLER_OPTIONS = {
 }
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
 DEFAULT_CONTROLLER_DISPLAY = next(iter(CONTROLLER_OPTIONS))
+DEFAULT_SHIELD_ABILITIES_ENABLED = False
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
@@ -2681,8 +2682,8 @@ class CompetitionApp:
         self.tick_time_var.trace_add("write", self._on_tick_time_change)
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
-        self.shield_abilities_var = tk.BooleanVar(value=True)
-        self.current_shield_abilities_enabled = True
+        self.shield_abilities_var = tk.BooleanVar(value=DEFAULT_SHIELD_ABILITIES_ENABLED)
+        self.current_shield_abilities_enabled = DEFAULT_SHIELD_ABILITIES_ENABLED
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
         self.team_power_reports: dict[str, dict[str, Any]] = {}

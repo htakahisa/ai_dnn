@@ -14,6 +14,10 @@ for _p in (_THIS_DIR, _ROOT_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+from omoko_v1.ability_advisor_v1.ov1_learn_attacker_ability_advisor import FixedAbilityAdvisor, MAPS
+from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import (
+    policy_path, policy_digest, scenario, defending_opponent,
+)
 from controllers import BaseController, DefaultAttackerController
 from ov1_learning_attacker_carry import Ov1LearningAttackerCarryController
 from ov1_learning_attacker_escort import Ov1LearningAttackerEscortController
@@ -39,8 +43,13 @@ class Ov1AttackerController(BaseController):
         guard_model_path="omoko_v1/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt",
         greedy=False,
         device=None,
+        ability_advisor=None,
     ):
         super().__init__()
+        paths = dict(carry=carry_model_path, escort=escort_model_path,
+                     retrieve=retrieve_model_path, guard=guard_model_path)
+        carry_model_path, escort_model_path, retrieve_model_path, guard_model_path = (
+            policy_path(paths[role]) for role in ('carry', 'escort', 'retrieve', 'guard'))
         self.carry_controller = Ov1LearningAttackerCarryController(model_path=carry_model_path, greedy=greedy, device=device)
         self.escort_controller = Ov1LearningAttackerEscortController(model_path=escort_model_path, greedy=greedy, device=device)
         self.retrieve_controller = Ov1LearningAttackerRetrieveController(model_path=retrieve_model_path, greedy=greedy, device=device)
@@ -48,6 +57,15 @@ class Ov1AttackerController(BaseController):
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。
+        self.ability_advisor = ability_advisor if ability_advisor is not None else FixedAbilityAdvisor()
+        self._advisor_scenarios = {name: scenario(name) for name in MAPS}
+        digest = policy_digest(paths)
+        for context in self._advisor_scenarios.values():
+            self.ability_advisor.bind_route(context, digest)
+        self.carry_controller.lineup_advice = self._lineup_advice
+        self.escort_controller.lineup_advice = self._lineup_advice
+        self._advice_cache = {}
+
         self.site_ability_used_by_team = False
 
     def _build_or_fallback(self, model_path, param_name):
@@ -72,8 +90,17 @@ class Ov1AttackerController(BaseController):
                 ctrl.reset_round()
         self.site_ability_used_by_team = False  # 💡追加
 
+        site = 'L' if self.carry_controller._active_site == 'left' else 'R'
+        self.ability_advisor.start_round('carry_' + site,
+            getattr(getattr(self, 'game', None), 'current_round', None))
+
     def decide_move(self, char, game_state):
         game = getattr(self, "game", None)
+        self._advice_cache = {}
+        self._advice_char, self._advice_state = char, game_state
+        if hasattr(self, 'ability_advisor') and not game_state.get('defender_setup_active'):
+            self.ability_advisor.observe(self._advisor_context(char), char, game_state,
+                                         defending_opponent(game))
         shared = tactical_state(game_state)
         taps = shared.get("defender_defuse_info") or {}
         if game_state.get("is_planted") and any(
@@ -87,7 +114,32 @@ class Ov1AttackerController(BaseController):
             return apply_shared_facing(char, game_state, escape)
         result = self._decide_phase_move(char, game_state)
         result = avoid_destruction_entry(char, game_state, result, game)
+        if hasattr(self, 'ability_advisor') and self._advice_cache:
+            # Candidate scoring is provisional. Track only the target actually returned.
+            self.ability_advisor.pending.pop(char.name, None)
+            payload = result[1]
+            if isinstance(payload, dict) and 'ability' in payload and 'target' in payload:
+                key = (payload['ability'], tuple(payload['target']))
+                if self._advice_cache.get(key):
+                    self.ability_advisor.pending[char.name] = (
+                        key[0], key[1], getattr(char, key[0].lower()+'_charges', 0),
+                        int(game_state.get('battle_tick', 0)))
         return apply_shared_facing(char, game_state, result)
+
+    def _advisor_context(self, char):
+        role = 'carry' if char.has_spike else 'escort'
+        site = 'L' if self.carry_controller._active_site == 'left' else 'R'
+        return self._advisor_scenarios[role + '_' + site]
+
+    def _lineup_advice(self, ability, point):
+        key = (ability, tuple(point))
+        if key not in self._advice_cache:
+            char, state = self._advice_char, self._advice_state
+            self._advice_cache[key] = self.ability_advisor.advise(
+                self._advisor_context(char), char, state,
+                defending_opponent(getattr(self, 'game', None)), ability,
+                point, point, getattr(self, 'game', None)).use
+        return self._advice_cache[key]
 
     def _decide_phase_move(self, char, game_state):
         if game_state.get("is_planted"):

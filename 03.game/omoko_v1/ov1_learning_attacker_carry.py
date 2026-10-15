@@ -1020,8 +1020,15 @@ class Ov1LearningAttackerCarryController:
                 or _has_los(grid, (r, c), cell)
             )
         ]
+        # Filter fixed targets before action selection so a save can still move.
+        rejected_lineups = False
+        advice = getattr(self, 'lineup_advice', None)
+        if advice is not None and not nearby_enemies:
+            accepted = [cell for cell in lineup_candidates if advice(char.ability_name, cell)]
+            rejected_lineups = bool(lineup_candidates) and not accepted
+            lineup_candidates = accepted
         ability_available = (
-            char.ability_name == "RECON"
+            (char.ability_name == "RECON" and not rejected_lineups)
             or bool(nearby_enemies)
             or bool(lineup_candidates)
             or (char.ability_name == "FLASH" and self._sighting is not None)
@@ -1096,7 +1103,7 @@ class Ov1LearningAttackerCarryController:
                 )
             if target_pos is None and self._sighting is not None:
                 target_pos = self._sighting["pos"]
-            if target_pos is None and self._plant_cells:
+            if target_pos is None and self._plant_cells and not rejected_lineups:
                 target_pos = random.choice(self._plant_cells)
 
             if target_pos is not None:

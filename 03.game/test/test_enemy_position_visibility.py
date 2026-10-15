@@ -43,6 +43,26 @@ def fixture():
 
 
 class EnemyPositionVisibilityTests(unittest.TestCase):
+    def test_disclosed_enemy_coordinates_are_exact_at_every_iq(self):
+        for iq in (0, 50, 100, 149, 200):
+            for source in ("los_revealed", "reveal_remaining"):
+                with self.subTest(iq=iq, source=source):
+                    game, ally, enemy = fixture()
+                    ally.iq = ally.effective_iq = iq
+                    setattr(enemy, source, 1)
+                    inner = RecordingController()
+                    controller = IQAwareController(inner, IQPerceptionEngine())
+                    controller.set_game(game)
+                    controller.decide_move(ally, {"chars": game.chars})
+                    disclosed = inner.seen[1]["chars"][1]
+                    self.assertTrue(disclosed.position_known)
+                    self.assertEqual(disclosed.pos, enemy.pos)
+                    self.assertIsNot(disclosed.pos, enemy.pos)
+                    self.assertEqual(inner.games[-1].chars[1].pos, enemy.pos)
+                    setattr(enemy, source, 0)
+                    controller.decide_move(ally, {"chars": game.chars})
+                    self.assert_hidden(game, inner.seen[1])
+
     def assert_hidden(self, game, state):
         enemy = state["chars"][1]
         self.assertEqual(tuple(enemy.pos), UNKNOWN_ENEMY_POS)

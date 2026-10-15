@@ -729,7 +729,9 @@ class Ov1LearningAttackerEscortController:
             carry_near = carry_pos is not None and _chebyshev(carry_pos, cell) <= LINEUP_TRIGGER_RADIUS
             los_ready = _chebyshev(pos, cell) <= max_range and _has_los_walls_only(grid, pos, cell)
             if carry_near and los_ready:
-                candidates.append(cell)
+                advice = getattr(self, 'lineup_advice', None)
+                if advice is None or advice(ability, cell):
+                    candidates.append(cell)
         if not candidates:
             return None
         return min(candidates, key=lambda cell: _chebyshev(pos, cell))
