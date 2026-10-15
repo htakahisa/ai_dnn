@@ -27,6 +27,10 @@ FEATURE_DIM = LEGACY_FEATURE_DIM + len(STATUS_FIELDS) + 5 + 2
 MEMORY_TICKS = 12
 
 
+def is_ordinary_ability(action):
+    return 40 <= int(action) < ULTIMATE_ACTION or int(action) >= SELF_SMOKE_ACTION
+
+
 def observation_dim(scenario):
     return MAP_CHANNELS * scenario.grid.size + FEATURE_DIM
 
@@ -294,6 +298,8 @@ def build_inputs(controller, char, state, *, counter_features=True):
             else:
                 mask[move_index * 8:(move_index + 1) * 8] = True
     for ability_index, ability in enumerate(ABILITIES):
+        if getattr(char,"ability_seal_remaining",0)>0:
+            continue
         if getattr(char, "ability_name", ability) != ability:
             continue
         if getattr(char, ability.lower() + "_charges", 0) <= 0:
@@ -313,12 +319,14 @@ def build_inputs(controller, char, state, *, counter_features=True):
             # ability ticks retain the current facing. Do not offer fictitious turns.
             mask[start + FACING_DIRECTIONS.index(char.facing)] = True
     ultimate_actions = {}
-    if getattr(char, "ability_name", "") == "SMOKE" and getattr(char, "smoke_charges", 0) > 0:
+    if (getattr(char, "ability_name", "") == "SMOKE" and getattr(char, "smoke_charges", 0) > 0
+            and getattr(char,"ability_seal_remaining",0)<=0):
         mask[SELF_SMOKE_ACTION + FACING_DIRECTIONS.index(char.facing)] = True
     name = str(getattr(char, "ultimate_name", "")).upper()
     cost = getattr(char, "ultimate_cost", 0)
     game = getattr(controller, "game", None)
-    ready = cost > 0 and getattr(char, "ultimate_points", 0) >= cost and char.is_alive
+    ready = (cost > 0 and getattr(char, "ultimate_points", 0) >= cost and char.is_alive
+             and getattr(char, "ability_seal_remaining", 0) <= 0)
     movement_blocked = (game is not None and name in ("RAID", "ESCAPE")
                         and game._ramp_blocks_movement(char))
     portal_active = (game is not None and name == "ESCAPE" and any(
@@ -352,12 +360,18 @@ def build_inputs(controller, char, state, *, counter_features=True):
                     payload["target"] = destination
                 mask[action] = True
                 ultimate_actions[action] = payload
-    # Keep movement and waiting available alongside casts so the model learns
+    # The user requests ready ultimates be used; the model chooses target/facing.
+    # Defender retake retains its existing mask and checkpoint semantics.
+    if counter_features and ultimate_actions:
+        mask[:] = False
+        mask[list(ultimate_actions)] = True
+    # Keep movement and waiting available alongside ordinary casts so the model learns
     # when to spend resources instead of exhausting them on phase entry.
     context = {
         "position": position, "goal": goal, "aim": aim, "spike": spike,
         "distance_goal": distance_goal, "distance_spike": distance_spike,
         "tap": tap_progress > 0, "fireable": target is not None,
+        "defuser_fireable": any(float(tap_info.get(enemy.name,(0,1))[0])>0 for enemy in fireable),
         "target": tuple(target.pos) if target is not None else None,
         "targets": targets, "stopped": stopped, "tick": tick,
         "can_move": any(0 <= position[0] + dr < height and 0 <= position[1] + dc < width

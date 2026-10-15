@@ -21,6 +21,7 @@ from concon_v1.co1_guard_scenarios import SCENARIOS, get_scenario, validate_chec
 from concon_v1.co1_guard_battle_training import GuardBattleEnv, GAMMA, OPPONENTS, START_MODES
 from concon_v1.evaluate_co1_guard import evaluate, print_summary
 from concon_v1.co1_guard_rewards import REWARD_VERSION
+from concon_v1.co1_guard_utility_training import preference_loss, UTILITY_LEARNING_VERSION
 from concon_v1.co1_guard_positioning import POSITIONING_VERSION, DEFAULT_POSITIONING_STEPS, prepare_positioning
 
 DEFAULT_EPISODES = 2000
@@ -29,7 +30,10 @@ TRAIN_RIGHT_SITE = True  # Train and save the right site.
 DEFAULT_SEED = 0
 DEFAULT_SAVE_DIR = None  # None uses the selected site's data/guard_*_data/.
 DEFAULT_RESUME = None  # e.g. Path("data/guard_L_data/co1_guard_L_best.pt")
-DEFAULT_RESUME_BY_MAP = {"L": None, "R": None}  # Resume paths when training both sites.
+DEFAULT_RESUME_BY_MAP = {
+    "L": None,  # Fresh positioning and combat training.
+    "R": None,
+}
 DEFAULT_OPPONENTS = tuple(OPPONENTS)  # All six AIs.
 DEFAULT_START_MODES = None  # None uses the curriculum, including utility pressure.
 DEFAULT_DEVICE = "cpu"
@@ -88,9 +92,9 @@ def epsilon_by_episode(episode, total=DEFAULT_EPISODES):
 def curriculum_modes(episode, total):
     fraction = episode / max(1, total)
     if fraction <= 0.2:
-        return ("hold",)
+        return ("hold", "reserve")
     if fraction <= 0.4:
-        return ("hold", "transition")
+        return ("hold", "transition", "reserve")
     return START_MODES
 
 
@@ -98,7 +102,7 @@ def optimize(model, target, optimizer, replay, batch_size=64):
     if len(replay) < batch_size:
         return None
     batch = random.sample(replay, batch_size)
-    obs, actions, rewards, next_obs, masks, dones, durations = zip(*batch)
+    obs, actions, rewards, next_obs, masks, dones, durations = zip(*(row[:7] for row in batch))
     device = next(model.parameters()).device
     obs = torch.as_tensor(np.asarray(obs), dtype=torch.float32, device=device)
     next_obs = torch.as_tensor(np.asarray(next_obs), dtype=torch.float32, device=device)
@@ -107,12 +111,15 @@ def optimize(model, target, optimizer, replay, batch_size=64):
     masks = torch.as_tensor(np.asarray(masks), dtype=torch.bool, device=device)
     dones = torch.as_tensor(dones, dtype=torch.float32, device=device)
     durations = torch.as_tensor(durations, dtype=torch.float32, device=device)
-    selected = model(obs).gather(1, actions[:, None]).squeeze(1)
+    values = model(obs)
+    selected = values.gather(1, actions[:, None]).squeeze(1)
     with torch.no_grad():
         greedy = model(next_obs).masked_fill(~masks, -torch.inf).argmax(1)
         next_values = target(next_obs).gather(1, greedy[:, None]).squeeze(1)
         expected = rewards + GAMMA ** durations * next_values * (1 - dones)
     loss = nn.functional.smooth_l1_loss(selected, expected)
+    teaching = np.asarray([row[7] if len(row)>7 else np.zeros((3,ACTION_DIM),dtype=bool) for row in batch])
+    loss = loss+preference_loss(values,teaching)
     optimizer.zero_grad()
     loss.backward()
     nn.utils.clip_grad_norm_(model.parameters(), 10)
@@ -126,6 +133,8 @@ def make_checkpoint(model, scenario, episode, opponents, start_modes):
             "n_actions": ACTION_DIM, "training_roster": list(GORIGONS.players),
             "attacker_perception": "production_iq", "episode": episode,
             "reward_version": REWARD_VERSION,
+            "utility_learning_version": UTILITY_LEARNING_VERSION,
+            "ultimate_policy": "use_when_executable",
             "utility_policy": "learned_movement_wait_abilities_and_ultimates",
             "positioning_version": POSITIONING_VERSION if model.navigation else None,
             "positioning_training": getattr(model, "positioning_training", None),

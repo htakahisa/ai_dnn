@@ -11,13 +11,17 @@ from concon_v1.co1_guard_scenarios import get_scenario
 from concon_v1.co1_guard_common import (
     GuardDQN, WAIT_ACTION, ACTION_DIM, ABILITIES, observation_dim, aim_alignment,
     bfs_distance_map, GORIGONS,
+    is_ordinary_ability,
 )
 from concon_v1.co1_learn_guard import ConconGuardController
 from concon_v1.co1_attacker_sighting import facing_towards
 from concon_v1.co1_attacker_scenarios import GAME_MAZE_STR
 from concon_v1.co1_guard_rewards import GAMMA, DEATH_PENALTY, ROUND_REWARD, decision_reward
+from concon_v1.co1_guard_utility_training import learning_masks
 
-START_MODES = ("hold", "transition", "smoke", "pressure", "pressure_tap")
+START_MODES = ("hold", "transition", "smoke", "pressure", "pressure_tap", "reserve")
+RESERVE_ATTACKER_DISTANCE = (0, 3)
+RESERVE_DEFENDER_DISTANCE = (8, 16)
 
 
 class TrainingGuardController(ConconGuardController):
@@ -31,7 +35,7 @@ class TrainingGuardController(ConconGuardController):
         valid = np.flatnonzero(mask)
         if self.env.forced_actions is not None:
             requested = self.env.forced_actions[index]
-            action = int(requested) if mask[int(requested)] else WAIT_ACTION
+            action = int(requested) if mask[int(requested)] else (WAIT_ACTION if mask[WAIT_ACTION] else int(valid[0]))
         elif (not (self.model.navigation and not context["tap"] and not context["fireable"]
                    and not context.get("impaired", False) and not mask[40:].any())
               and self.env.action_rng.random() < self.env.epsilon):
@@ -39,7 +43,8 @@ class TrainingGuardController(ConconGuardController):
         else:
             action = super().choose_action(char, observation, mask, context)
         self.env.pending[index] = {"obs": observation.astype(np.float16), "action": action,
-                                   "reward": 0.0, "duration": 0}
+                                   "reward": 0.0, "duration": 0,
+                                   "utility_learning":learning_masks(self,char,mask,context)}
         self.env.decisions[index] = (action, context)
         return action
 
@@ -103,7 +108,9 @@ class GuardBattleEnv:
                         "quiet_bad_facing_decisions": 0, "fireable_decisions": 0,
                         "moving_fire_decisions": 0, "bad_fire_facing_decisions": 0,
                         "impaired_decisions": 0, "exposed_wait_decisions": 0,
-                        "cover_moves": 0, "counter_utility_decisions": 0}
+                        "cover_moves": 0, "counter_utility_decisions": 0,
+                        "counter_available_decisions":0,"useful_counter_decisions":0,
+                        "ultimate_ready_decisions":0,"ultimate_decisions":0}
         attacker_ai = DualRoleTeamAI(
             "ConCon guard", attacker_factory=lambda: TrainingGuardController(self),
             defender_factory=DefaultDefenderController, use_iq_perception=True,
@@ -146,7 +153,8 @@ class GuardBattleEnv:
                 # Spent utility is part of the postplant start distribution.
                 for ability in ABILITIES:
                     attribute = ability.lower() + "_charges"
-                    if getattr(char, attribute, 0) and self.rng.random() < 0.4:
+                    if (not (self.start_mode=="reserve" and char.team=="A")
+                            and getattr(char, attribute, 0) and self.rng.random() < 0.4):
                         setattr(char, attribute, 0)
         self.controller.prepare_assignments(self.game.chars)
         self.game.is_planted = True
@@ -160,6 +168,8 @@ class GuardBattleEnv:
         if self.start_mode == "hold":
             attacker_positions = [self.scenario.positions[self.controller.assignments[char.name]]
                                   for char in alive_attackers]
+        elif self.start_mode == "reserve":
+            attacker_positions = self._sample_cells(distance_map,*RESERVE_ATTACKER_DISTANCE,len(alive_attackers),set())
         else:
             attacker_positions = self._sample_cells(distance_map, 2, 6, len(alive_attackers), set())
         for char, position in zip(alive_attackers, attacker_positions):
@@ -167,6 +177,11 @@ class GuardBattleEnv:
             aim = self.scenario.facing_points[self.controller.assignments[char.name]]
             char.facing = facing_towards(position, aim) or "N"
         occupied = set(attacker_positions)
+        if self.start_mode == "reserve":
+            for char,position in zip(alive_defenders,self._sample_cells(
+                    distance_map,*RESERVE_DEFENDER_DISTANCE,len(alive_defenders),occupied)):
+                char.pos = list(position)
+                char.facing = facing_towards(position,self.game.planted_pos) or "S"
         if self.start_mode in ("smoke", "pressure_tap"):
             # The defender model continues normally after this already-started tap.
             nearby = [(int(r), int(c)) for r, c in zip(*np.where(distance_map >= 0))
@@ -189,7 +204,7 @@ class GuardBattleEnv:
                 "remaining_ticks": 10, "owner": "postplant_snapshot", "team": "D",
                 "center": (r, c),
             }]
-        else:
+        elif self.start_mode != "reserve":
             positions = self._sample_cells(distance_map, 8, 20, len(alive_defenders), occupied)
             for char, position in zip(alive_defenders, positions):
                 char.pos = list(position)
@@ -229,7 +244,7 @@ class GuardBattleEnv:
             return
         self.transitions.append((pending["obs"], pending["action"], pending["reward"],
                                  observation.astype(np.float16), mask.copy(), float(terminal),
-                                 pending["duration"]))
+                                 pending["duration"],pending.get("utility_learning",np.zeros((3,ACTION_DIM),dtype=bool))))
         self.pending[index] = None
 
     def _terminal_inputs(self):
@@ -263,6 +278,8 @@ class GuardBattleEnv:
             char = self.attackers[index]
             position = tuple(char.pos)
             operation = action // 8
+            self.metrics['ultimate_ready_decisions'] += int(bool(context['ultimate_actions']))
+            self.metrics['ultimate_decisions'] += int(action in context['ultimate_actions'])
             facing = char.facing  # engine can override facing after incoming fire
             approach = context["tap"] and (not context["fireable"] or context.get("impaired", False))
             goal = context["spike"] if approach else context["goal"]
@@ -272,6 +289,10 @@ class GuardBattleEnv:
             reward += min(team_damage / 1000, 0.1)
             stationary = position == context["position"]
             if context.get("impaired", False):
+                teaching = self.pending[index].get('utility_learning') if self.pending[index] else None
+                if teaching is not None:
+                    self.metrics['counter_available_decisions'] += int(teaching[2].any())
+                    self.metrics['useful_counter_decisions'] += int(teaching[2,action])
                 self.metrics["impaired_decisions"] += 1
                 self.metrics["counter_utility_decisions"] += int(operation >= 5)
                 before = context["exposures"][context["position"]]
@@ -295,7 +316,7 @@ class GuardBattleEnv:
                         self.metrics["two_tick_fire_decisions"] += 1
             else:
                 self.metrics["quiet_decisions"] += 1
-                self.metrics["quiet_utility_decisions"] += int(operation >= 5)
+                self.metrics["quiet_utility_decisions"] += int(is_ordinary_ability(action))
                 self.metrics["quiet_bad_facing_decisions"] += int(
                     aim_alignment(position, context["aim"], facing) <= 0)
                 if context["position"] == context["goal"]:

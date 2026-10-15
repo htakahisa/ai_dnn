@@ -1,8 +1,8 @@
 """Postplant shaping; victory/defeat and death are applied by the rollout."""
 
-from concon_v1.co1_guard_common import aim_alignment
+from concon_v1.co1_guard_common import aim_alignment, is_ordinary_ability
 
-REWARD_VERSION = 4
+REWARD_VERSION = 5
 GAMMA = 0.99
 DEATH_PENALTY = 0.5
 ROUND_REWARD = 10.0
@@ -65,7 +65,7 @@ def decision_reward(action, context, position, facing, new_distance):
     # and even avoided the off-post waiting penalty. Charge quiet casts while
     # leaving contact/defuse responses above unchanged. Outcomes can still
     # justify proactive utility; every executable cast remains a candidate.
-    if operation >= 5:
+    if is_ordinary_ability(action):
         reward -= QUIET_UTILITY_COST
     reward += 0.02 * aim_alignment(position, context["aim"], facing)
     if not stationary:

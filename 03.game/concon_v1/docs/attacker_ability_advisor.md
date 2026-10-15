@@ -95,7 +95,19 @@ python ability_advisor_v1/co1_evaluate_attacker_ability_advisor.py
 
 今回の実装作業では収集全体・判定機の学習は実行していません。未作成のモデルで温存が始まることはありません。
 
-## テスト
+## guardのカウンター使用の診断
+
+作業ディレクトリ：`03.game/concon_v1/`（移動済み）。
+
+```powershell
+python ability_advisor_v1/co1_diagnose_attacker_guard.py
+```
+
+冒頭の `DEFAULT_MATCHES`（各条件10試合）、`DEFAULT_ROUNDS`（12）、`DEFAULT_OPPONENT`（omoko_v1）、`DEFAULT_SEED`、`DEFAULT_MODEL`、`DEFAULT_OUTPUT`、`DEFAULT_WORKERS`（2）で設定します。助言なし／ありを同じseedで2プロセスで比較し、通常のcarryからguardまで実行します。方策・モデル・ゲームの射線判定は変更しません。
+
+出力は `ability_advisor_v1/logs/co1_attacker_guard_diagnosis.json` です。`scopes` は判断回数で、blind・revealed・impairedは重複します。`utility_available` は本人が通常アビリティを選択可能だった判断数です。`counts` は実際の発動・拒否・命中を区別します。カウンターは使用者自身にblind/reveal/electricの効果が残っている間の使用と定義します。`hit_casts` は敵1人以上に命中した投射数、`hit_targets` は命中対象の延べ人数です。命中は実ゲームの効果適用から記録し、予測射線だけで命中扱いにしません。`casts` に設置後の発動時刻・交戦状況を保存するため、guard開始直後の消費も確認できます。実配置の参照は診断だけに使い、方策入力には追加しません。
+
+## テスト実行
 
 作業ディレクトリ：`03.game/concon_v1/`（移動済み）。
 

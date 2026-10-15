@@ -73,7 +73,7 @@ class RecordingAdvisor(FixedAbilityAdvisor):
         return Advice(True,'collection_baseline')
 
 
-def play_match(opponent, seed, rounds, advisor, map_names=MAPS):
+def play_match(opponent, seed, rounds, advisor, map_names=MAPS, *, tick_observer=None):
     from concon_v1.co1_battle_training import OPPONENTS as TEAMS, _run_from_project_root
 
     @_run_from_project_root
@@ -110,7 +110,11 @@ def play_match(opponent, seed, rounds, advisor, map_names=MAPS):
                 if game.current_round > rounds or game.match_over:
                     break
                 was_planted = game.is_planted
+                if tick_observer is not None:
+                    tick_observer(game,'before')
                 game.step_tick()
+                if tick_observer is not None:
+                    tick_observer(game,'after')
                 if game.is_planted and not was_planted:
                     plants.append({ability:sum(getattr(c,ability.lower()+'_charges',0)
                                                for c in game.chars if c.team == 'A' and c.is_alive)

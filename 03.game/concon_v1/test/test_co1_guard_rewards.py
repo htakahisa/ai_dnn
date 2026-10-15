@@ -13,7 +13,7 @@ import numpy as np
 
 from concon_v1.co1_guard_rewards import decision_reward, GAMMA, DEATH_PENALTY, ROUND_REWARD
 from concon_v1.co1_guard_battle_training import GuardBattleEnv
-from concon_v1.co1_guard_common import WAIT_ACTION, ACTION_DIM, ULTIMATE_ACTION, observation_dim
+from concon_v1.co1_guard_common import WAIT_ACTION, ACTION_DIM, ULTIMATE_ACTION, observation_dim, is_ordinary_ability
 from concon_v1.co1_guard_scenarios import get_scenario
 from concon_v1.co1_train_guard import qualifies_as_best
 from concon_v1.evaluate_co1_guard import behavior_summary
@@ -32,6 +32,8 @@ class GuardRewardTests(unittest.TestCase):
         for ctx in (context(), context(position=(2, 1), distance_goal=1),
                     context(position=(2, 1), distance_goal=1, can_move=False)):
             for action in range(40, ACTION_DIM, 8):
+                if not is_ordinary_ability(action):
+                    continue
                 with self.subTest(ctx=ctx, action=action):
                     wait = decision_reward(WAIT_ACTION, ctx, ctx['position'], 'E', ctx['distance_goal'])
                     cast = decision_reward(action, ctx, ctx['position'], 'E', ctx['distance_goal'])
@@ -41,7 +43,7 @@ class GuardRewardTests(unittest.TestCase):
     def test_quiet_return_is_better_than_spending_utility_to_stall(self):
         ctx = context(position=(2, 1), distance_goal=1)
         returning = decision_reward(24, ctx, (2, 2), 'E', 0)
-        for action in (40, 64, 88, ULTIMATE_ACTION):
+        for action in (40, 64, 88):
             self.assertGreater(returning, decision_reward(action, ctx, (2, 1), 'E', 1))
 
     def test_contact_and_tap_casts_do_not_receive_quiet_cost(self):

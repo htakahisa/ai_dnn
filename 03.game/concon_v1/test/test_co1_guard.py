@@ -203,7 +203,7 @@ class GuardContractTests(unittest.TestCase):
         checkpoint["scenario_signature"] = "changed"
         with self.assertRaises(ValueError):
             validate_checkpoint(checkpoint, "L")
-        self.assertEqual(curriculum_modes(1, 100), ("hold",))
+        self.assertEqual(curriculum_modes(1, 100), ("hold", "reserve"))
         self.assertIn("smoke", curriculum_modes(100, 100))
         self.assertFalse(qualifies_as_best({"mean_win_rate": .8, "min_team_win_rate": .2},
                                          {"mean_win_rate": .7, "min_team_win_rate": .3}))

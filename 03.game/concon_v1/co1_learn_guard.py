@@ -12,7 +12,60 @@ from concon_v1.co1_guard_scenarios import get_scenario, validate_checkpoint
 from concon_v1.co1_guard_common import (
     GuardDQN, ACTION_DIM, LEGACY_ACTION_DIM, PRE_COUNTER_ACTION_DIM, compatible_observation_dims,
     load_guard_weights, observation_dim, build_inputs, decode_action, GORIGONS,
+    MOVES, aim_alignment, bfs_distance_map,
 )
+from game_core import FACING_DIRECTIONS
+
+SMOKE_DEFUSE_APPROACH_ENABLED = True
+
+
+def smoke_defuse_mask(char,state,mask,context):
+    """Contest a publicly disclosed smoke tap without reading hidden positions."""
+    spike = context['spike']
+    if (not SMOKE_DEFUSE_APPROACH_ENABLED or not context['tap']
+            or spike not in set(map(tuple,state.get('smoke_cells',())))
+            or context['ultimate_actions']):
+        return mask
+    position = tuple(char.pos)
+    constrained = np.zeros_like(mask)
+    if context.get('defuser_fireable',False) or 0 <= context['distance_spike'] <= 1:
+        # Already alongside the spike: keep casts and face it while holding.
+        constrained[40:] = mask[40:]
+        candidates = list(np.flatnonzero(mask[32:40])+32)
+        if not candidates:
+            return mask
+        aim = context['target'] if context.get('defuser_fireable',False) else spike
+        best = max(aim_alignment(position,aim,FACING_DIRECTIONS[a%8]) for a in candidates)
+        for action in candidates:
+            if aim_alignment(position,aim,FACING_DIRECTIONS[action%8]) >= best-1e-6:
+                constrained[action] = True
+        context['smoke_defuse_hold'] = True
+        return constrained
+    grid = np.asarray(state['grid']).copy()
+    for other in state.get('chars',()):
+        if (other.name==char.name or not getattr(other,'is_alive',True)
+                or not getattr(other,'position_known',True)):
+            continue
+        cell = tuple(map(int,other.pos))
+        if cell!=spike and 0<=cell[0]<grid.shape[0] and 0<=cell[1]<grid.shape[1]:
+            grid[cell] = 1
+    distances = bfs_distance_map(grid,spike)
+    candidates = []
+    for action in np.flatnonzero(mask[:32]):
+        dr,dc = MOVES[action//8]
+        destination = (position[0]+dr,position[1]+dc)
+        distance = int(distances[destination])
+        if distance>=0:
+            candidates.append((int(action),distance,destination))
+    if not candidates:
+        # A temporarily occupied passage must not disable all responses.
+        return mask
+    nearest = min(distance for _,distance,_ in candidates)
+    for action,distance,destination in candidates:
+        if distance==nearest:
+            constrained[action] = True
+    context['smoke_defuse_approach'] = True
+    return constrained
 
 
 class ConconGuardController(BaseController):
@@ -79,7 +132,8 @@ class ConconGuardController(BaseController):
 
     def policy_inputs(self, char, state):
         self.prepare_assignments(state.get("chars", []))
-        return build_inputs(self, char, state)
+        observation,mask,context = build_inputs(self, char, state)
+        return observation,smoke_defuse_mask(char,state,mask,context),context
 
     def choose_action(self, char, observation, mask, context):
         device = next(self.model.parameters()).device
