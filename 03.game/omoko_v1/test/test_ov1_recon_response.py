@@ -98,76 +98,85 @@ class ReconResponseTests(unittest.TestCase):
         actor.pos = result[0]
         self.assertFalse(shot_clear(enemy, actor, state))
 
-    def test_revealed_defender_continues_active_defuse(self):
+    def test_defender_recon_preserves_policy_actions_in_search_and_retake(self):
+        # Test both public and hidden threats, with and without a clear shot.
+        # A prior retreat memory must never keep defense parked behind cover.
+        for planted in (False, True):
+            for visible in (False, True):
+                for wall in (False, True):
+                    for action in ("FLASH", "RECON", "SMOKE", "move", "DEFUSE"):
+                        with self.subTest(planted=planted, visible=visible,
+                                          wall=wall, action=action):
+                            actor, enemy, state = self.fixture()
+                            actor.team, enemy.team = "D", "A"
+                            actor.reveal_remaining = 10
+                            enemy.position_known = visible
+                            state.update(is_planted=planted, planted_pos=(4, 2),
+                                         detonate_timer=40)
+                            if wall:
+                                state["grid"][4, 3] = 1
+                            memory = {(1, actor.name): True, "unknown_previous": (3, 1)}
+                            self.assertIsNone(recon_response(actor, state, memory))
+                            self.assertEqual(memory, {})
+                            controller = Ov1DefenderController.__new__(Ov1DefenderController)
+                            controller.search_controller = Mock()
+                            controller.retake_controller = Mock()
+                            phase = (controller.retake_controller if planted
+                                     else controller.search_controller)
+                            other = (controller.search_controller if planted
+                                     else controller.retake_controller)
+                            if action == "move":
+                                decision = ([3, 1], {"facing": "N"})
+                            elif action == "DEFUSE":
+                                decision = ([4, 1], "DEFUSE")
+                            else:
+                                decision = ([4, 1], {"ability": action, "target": (4, 8)})
+                            phase.decide_move.return_value = decision
+                            result = controller.decide_move(actor, state)
+                            phase.decide_move.assert_called_once_with(actor, state)
+                            other.decide_move.assert_not_called()
+                            self.assertEqual(result[0], decision[0])
+                            if action in ("FLASH", "RECON", "SMOKE"):
+                                self.assertEqual(result[1]["ability"], action)
+                                self.assertEqual(result[1]["target"], (4, 8))
+                            elif action == "DEFUSE":
+                                self.assertEqual(result[1], "DEFUSE")
+
+    def test_defender_recon_does_not_interrupt_active_defuse(self):
         actor, enemy, state = self.fixture()
-        actor.team = "D"
-        actor.defuse_timer = 2
-        actor.reveal_remaining = 3
+        actor.team, enemy.team = "D", "A"
+        actor.reveal_remaining, actor.defuse_timer = 10, 2
         state.update(is_planted=True, planted_pos=(4, 2), detonate_timer=40,
                      defender_defuse_info={actor.name: (2, DEFUSE_REQUIRED_TICKS)})
-
-        self.assertEqual(recon_response(actor, state, {}), ([4, 1], "DEFUSE"))
-
         controller = Ov1DefenderController.__new__(Ov1DefenderController)
         controller.retake_controller = Mock()
+        controller.retake_controller.decide_move.return_value = ([4, 1], "DEFUSE")
         self.assertEqual(controller.decide_move(actor, state), ([4, 1], "DEFUSE"))
-        controller.retake_controller.decide_move.assert_not_called()
-
-    def test_revealed_defender_starts_defuse_when_timer_is_critical(self):
-        actor, _, state = self.fixture()
-        actor.team = "D"
-        actor.reveal_remaining = 3
-        state.update(is_planted=True, planted_pos=(4, 2),
-                     detonate_timer=DEFUSE_REQUIRED_TICKS + 4)
-
-        self.assertEqual(recon_response(actor, state, {}), ([4, 1], "DEFUSE"))
-
-    def test_urgent_revealed_defender_continues_toward_spike(self):
-        actor, _, state = self.fixture()
-        actor.team = "D"
-        actor.reveal_remaining = 3
-        state.update(is_planted=True, planted_pos=(4, 8), detonate_timer=16)
-
-        self.assertIsNone(recon_response(actor, state, {}))
-        controller = Ov1DefenderController.__new__(Ov1DefenderController)
-        controller.retake_controller = Mock()
-        controller.retake_controller.decide_move.return_value = ([4, 2], {"facing": "E"})
-        self.assertEqual(controller.decide_move(actor, state)[0], [4, 2])
         controller.retake_controller.decide_move.assert_called_once_with(actor, state)
 
-    def test_revealed_defender_still_escapes_when_defuse_has_time(self):
-        actor, _, state = self.fixture()
-        actor.team = "D"
-        actor.reveal_remaining = 3
-        state.update(is_planted=True, planted_pos=(4, 8), detonate_timer=55)
-        state["grid"][3, 2] = 1
-
-        self.assertEqual(recon_response(actor, state, {})[0], [3, 1])
-
-    def test_revealed_defender_pushes_after_blinding_an_attacker(self):
-        actor, enemy, state = self.fixture()
-        actor.team = "D"
-        enemy.team = "A"
-        actor.reveal_remaining = 3
-        enemy.blind_remaining = 5
-        state.update(is_planted=True, planted_pos=(4, 8), detonate_timer=55)
-
-        self.assertIsNone(recon_response(actor, state, {}))
-
-        controller = Ov1DefenderController.__new__(Ov1DefenderController)
-        controller.retake_controller = Mock()
-        controller.retake_controller.decide_move.return_value = ([4, 2], {"facing": "E"})
-        self.assertEqual(controller.decide_move(actor, state)[0], [4, 2])
-        controller.retake_controller.decide_move.assert_called_once_with(actor, state)
-
-    def test_revealed_defender_does_not_push_if_attacker_is_not_blinded(self):
-        actor, _, state = self.fixture()
-        actor.team = "D"
-        actor.reveal_remaining = 3
-        state.update(is_planted=True, planted_pos=(4, 8), detonate_timer=55)
-        state["grid"][3, 2] = 1
-
-        self.assertEqual(recon_response(actor, state, {})[0], [3, 1])
+    def test_revealed_defender_executes_utility_in_real_engine(self):
+        for name, ability, effect in (
+            ("いぬさん", "FLASH", "flash_projectiles"),
+            ("とりさん", "RECON", "recon_projectiles"),
+            ("ねこさん", "SMOKE", "smokes"),
+        ):
+            with self.subTest(ability=ability):
+                game = UltimateTestGame()
+                actor = make_character(name, "D", (4, 1))
+                enemy = make_character("Jean", "A", (4, 8))
+                actor.reveal_remaining = 10
+                game.chars = [actor, enemy]
+                game.is_planted, game.planted_pos = True, (4, 8)
+                controller = Ov1DefenderController.__new__(Ov1DefenderController)
+                controller.retake_controller = Mock()
+                controller.retake_controller.decide_move.return_value = (
+                    [4, 1], {"ability": ability, "target": (4, 8)})
+                game.defender_controller = controller
+                charge_attr = ability.lower() + "_charges"
+                before = getattr(actor, charge_attr)
+                game.move_character(actor)
+                self.assertEqual(getattr(actor, charge_attr), before - 1)
+                self.assertTrue(getattr(game, effect))
 
     def test_hidden_shooter_is_not_read_to_choose_evasion(self):
         actor, enemy, state = self.fixture()
@@ -178,16 +187,15 @@ class ReconResponseTests(unittest.TestCase):
         self.assertEqual(first, recon_response(actor, state, {}))
         self.assertNotEqual(first[0], actor.pos)
 
-    def test_all_six_phases_prioritize_own_recon_escape(self):
-        for phase in ("carry", "escort", "retrieve", "guard", "search", "retake"):
+    def test_attacker_phases_prioritize_own_recon_escape(self):
+        for phase in ("carry", "escort", "retrieve", "guard"):
             with self.subTest(phase=phase):
                 actor, enemy, state = self.fixture()
                 enemy.reveal_remaining = actor.reveal_remaining = 3
                 actor.has_spike = phase == "carry"
                 state["grid"][3, 2] = 1
-                state["is_planted"] = phase in ("guard", "retake")
-                cls = Ov1DefenderController if phase in ("search", "retake") else Ov1AttackerController
-                ctrl = cls.__new__(cls)
+                state["is_planted"] = phase == "guard"
+                ctrl = Ov1AttackerController.__new__(Ov1AttackerController)
                 for role in ("carry", "escort", "retrieve", "guard", "search", "retake"):
                     setattr(ctrl, role + "_controller", Mock())
                 result = ctrl.decide_move(actor, state)

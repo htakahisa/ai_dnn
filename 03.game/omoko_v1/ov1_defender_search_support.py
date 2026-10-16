@@ -16,16 +16,20 @@ class SupportAbilityPlan:
 
 def line_cells(start, end):
     """Use the same Bresenham steps as abilities_los._line_cells."""
+    return list(_iter_line_cells(start, end))
+
+
+def _iter_line_cells(start, end):
+    """Yield the original cells so blocked projectiles can stop immediately."""
     y0, x0 = map(int, start)
     y1, x1 = map(int, end)
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
     sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
     err = dx + dy
-    cells = []
     while True:
-        cells.append((y0, x0))
+        yield y0, x0
         if x0 == x1 and y0 == y1:
-            return cells
+            return
         e2 = 2 * err
         if e2 >= dy:
             err += dy
@@ -50,7 +54,9 @@ def projectile_impact(grid, start, aim, role):
     far = (start[0] + (aim[0] - start[0]) * scale,
            start[1] + (aim[1] - start[1]) * scale)
     path = [start]
-    for r, c in line_cells(start, far)[1:]:
+    ray = _iter_line_cells(start, far)
+    next(ray)  # The start cell is already in path.
+    for r, c in ray:
         if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]):
             break
         if grid[r, c] == 1:

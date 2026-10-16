@@ -101,11 +101,16 @@ from ov1_search_site_context import (
     walking_distance, regroup_pressure,
 )
 from ov1_defender_search_support import find_support_ability_plan
+from ov1_defender_search_geometry import SearchGeometryCache
 
 EPISODE_COUNT = 3000
 EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
 EVAL_EPISODES = 100       # 1回の評価で何エピソード分プレイして平均するか
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)  # epsilonが十分下がるまでbest更新の対象外にする
+GEOMETRY_CACHE_ENABLED = True  # 固定地形のBFS・射線計算を再利用する
+DISTANCE_CACHE_CAPACITY = 256  # メモリ内の距離マップ上限（ファイル出力なし）
+LOS_CACHE_CAPACITY = 8192      # メモリ内の方向付き射線上限
+_GEOMETRY_CACHE = SearchGeometryCache(DISTANCE_CACHE_CAPACITY, LOS_CACHE_CAPACITY)
 #MIN_EVAL_ARRIVAL_RATE = 0.70  # 配置到着率がこれ未満のモデルはbest候補から除外
 
 # 各キャラの監視座標(複数可、配列形式)。マップではなくコード上で直接指定する。
@@ -375,6 +380,8 @@ if not SITE_POSITIONS:
 # ============================================================================
 
 def has_los(p1, p2, smoke_cells=None):
+    if GEOMETRY_CACHE_ENABLED:
+        return _GEOMETRY_CACHE.has_los(GRID, p1, p2, smoke_cells)
     return ov1_common_rl.has_los(GRID, p1, p2, smoke_cells)
 
 
@@ -484,6 +491,8 @@ def _facing_memory_relevance(from_pos, memory):
 
 
 def bfs_distance_map(goal):
+    if GEOMETRY_CACHE_ENABLED:
+        return _GEOMETRY_CACHE.distance_map(GRID, goal)
     return ov1_common_rl.bfs_distance_map(GRID, goal)
 
 
