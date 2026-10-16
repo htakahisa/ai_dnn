@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-16T01:46:54.135020+00:00",
+  "map_signature": "fca7a40aa88684e68d1ae59e901f0505694f257a83574c62e90fa10da97c18f3",
+  "wall_los_version": "symmetric_supercover_v1",
+  "model_hashes": {
+    "omoko_v1/data/attacker_carry_data/dqn_attacker_carry_best_by_eval.pt": "31dcb91ca1a3bd54771efcf4e63191d07baa021f0592e3a2dbdf0508f63a89d9",
+    "omoko_v1/data/attacker_escort_data/dqn_attacker_escort_best_by_eval.pt": "0d38aeeebd812f45fb615a1f5c9077a5257ea247f8d51d9b94006196d7fceb81",
+    "omoko_v1/data/attacker_retrieve_data/dqn_attacker_retrieve_best_by_eval.pt": "c0fcbd23a5910f7d15aa6e0ff3b1438c7f927c4397d74e49fe63b10dd5114ffc",
+    "omoko_v1/data/attacker_guard_data/dqn_attacker_guard_best_by_eval.pt": "08cc0852803338ae2614a877dc8cb6cdf4ea747364785bf358fcff00c5c93a2a",
+    "omoko_v1/ability_advisor_v1/data/ov1_attacker_ability_advisor.pt": "c17c62164390f8c55569b05628f2547834b6d443dde87577733d94cf07973788",
+    "toruAI_v4/data/best/omoko_v1/search_best.pt": "cd88e924e6c8704e64f5c7ffe211bd88c3a6d1e1993ddf083fef0414992cc144",
+    "toruAI_v4/data/best/omoko_v1/defender_analysis_best.pt": "75f22dbc3e2095e4087fc69ec9f702ddf094b5b87aaea3a28baf20210fda4cbe",
+    "concon_v1/data/defender_search_data/co1_defender_search_best.pt": "8507f976f1b56f9d559bf4fa3c154031f1996300d47c8fd32c64be53e621c731",
+    "concon_v1/data/defender_retake_R_data/co1_defender_retake_R_best.pt": "24098de4cf57d533f89b3115958e51cb1e5e736abdd599d24e7a4d37899d524a",
+    "toruAI_v4/data/best/touyama_v2/defender_analysis_best.pt": "a3d051bbd3ab84a2e9e8159ad2ac9253c204e79413d39980630efec40aefaf41",
+    "toruAI_v4/data/best/touyama_v2/search_best.pt": "891c307b4657015b0efea91a57b92e98d95b04db180105aa3212a12b1848e1f8",
+    "toruAI_v4/data/best/touyama_v2/retake_L_best.pt": "e19900c4231ab24dc4a2b7ac5ea5f251347b47e44ed2cbd0db9f2a48eef7169c",
+    "toruAI_v4/data/best/touyama_v2/retake_R_best.pt": "6c3fd9b74d937fd3a614a8531aa3c393a96511da7289b216c5db9d8b439aa735",
+    "toruAI_v4/data/best/touyama_v2/attacker_analysis_best.pt": "80772e986ae48b4f4ded1f12cf47a98c38ef2b7964cc87fa5a7799cba67cddcf",
+    "toruAI_v4/data/best/touyama_v2/attacker_plant_best.pt": "47e7cb846ad82c159f6173e65c9a00ec69e1950d538c5a320d5c560a26315747",
+    "toruAI_v4/data/best/touyama_v2/attacker_guard_best.pt": "841f19a85dc8829ad3de77d42677f14752997c877358f10f6dcc5b04dbfcd039",
+    "touyama_v3/data/best/omoko_v1/search_best.pt": "f49de7af2b77cd6278985959136ff59958615f038b223e0774963fd43b4f9e9e",
+    "touyama_v3/data/best/omoko_v1/defender_analysis_best.pt": "615af499e72b7d0db8a19ea8a1c1fcda20d178ca5800e7730d87867dd87c2c22",
+    "touyama_v3/data/best/omoko_v1/retake_L_best.pt": "7eff5b6c90be6c1e8e8da5c0eeda99af0e4149c1c5ddc7613dd433bfc72ce3df",
+    "touyama_v3/data/best/omoko_v1/retake_R_best.pt": "f68a15912426116af7839b498a080dc791267abbdbcd5d5888b01cbe8e1ea8e9",
+    "frc_v1/runs/tactics_finetune_20260930/D_policy.pt": "2cfc891ad1db27ce3bb1c9f152bd33c50f04d8f3599b42e650cefdee8c97f578",
+    "gc_v1/data/defender_search_gc_data/dqn_defender_search_gc_best_by_eval.pt": "edb90295fe44ee69d10fb39680501c1acba02dd8885edff42e2c3669df248bed",
+    "gc_v1/data/defender_retake_gc_data/dqn_defender_retake_gc_best_by_eval.pt": "7d8e724692682ab2efd978401bd751c6c5871a9198f5c68a5c5af9135fc2491e",
+    "gc_v1/data/defender_setup_gc_data/dqn_defender_setup_gc_best.pt": "e651d504351c9839715028f4863a4ed07859593ece2d6124eff92c5cdf604ffd",
+    "gc_v1/data/defender_opening_macro_gc_data/dqn_defender_opening_macro_gc_final.pt": "29f0932a2c8cb9896f4f727188e03d385213fab2ea6bb060d743c98ff41f78a6",
+    "concon_v1/data/defender_retake_L_data/co1_defender_retake_L_best.pt": "b757e9da3e22031584accc8f9e2b302e3999f7b70968a73a6bba11dbc8a697fa"
+  },
+  "opponents": {
+    "toru_ai_v4": {
+      "roster": "Team Elites",
+      "players": [
+        "Tortlilyan",
+        "まーやまくん",
+        "おもこ",
+        "Demon1",
+        "Aspas"
+      ],
+      "win_rates": {
+        "right:8,33": 0.84375,
+        "right:14,37": 0.9375,
+        "left:9,15": 0.8333333333333334,
+        "left:15,5": 0.8958333333333334
+      }
+    },
+    "concon_v1": {
+      "roster": "Gorigons",
+      "players": [
+        "ごりまる",
+        "ごんごん",
+        "ごんた",
+        "くんた",
+        "くりまる"
+      ],
+      "win_rates": {
+        "right:8,33": 0.3958333333333333,
+        "right:14,37": 0.3125,
+        "left:9,15": 0.71875,
+        "left:15,5": 0.84375
+      }
+    },
+    "touyama_gaming_v3": {
+      "roster": "Touyama Gaming",
+      "players": [
+        "夢の街",
+        "いぐるん",
+        "ろびぃな",
+        "Tortlilyan",
+        "えんぺん"
+      ],
+      "win_rates": {
+        "right:8,33": 0.9166666666666666,
+        "right:14,37": 0.875,
+        "left:9,15": 0.6979166666666666,
+        "left:15,5": 0.7395833333333334
+      }
+    },
+    "fnatic_v3": {
+      "roster": "Fnatic2023",
+      "players": [
+        "Leo",
+        "Boaster",
+        "Derke",
+        "Chronicle",
+        "Alfajer"
+      ],
+      "win_rates": {
+        "right:8,33": 0.6354166666666666,
+        "right:14,37": 0.7604166666666666,
+        "left:9,15": 0.8958333333333334,
+        "left:15,5": 0.96875
+      }
+    },
+    "frc_v1": {
+      "roster": "Furina Classic",
+      "players": [
+        "Furina",
+        "Lisa",
+        "Lohen",
+        "Jean",
+        "Arlecchino"
+      ],
+      "win_rates": {
+        "right:8,33": 0.4791666666666667,
+        "right:14,37": 0.5208333333333334,
+        "left:9,15": 0.6145833333333334,
+        "left:15,5": 0.7604166666666666
+      }
+    },
+    "ghost_champions_v2": {
+      "roster": "Ghost Champions",
+      "players": [
+        "Xdll",
+        "SyouTa",
+        "Absol",
+        "eKo",
+        "SugarZ3ro"
+      ],
+      "win_rates": {
+        "right:8,33": 0.84375,
+        "right:14,37": 0.9270833333333334,
+        "left:9,15": 0.625,
+        "left:15,5": 0.6979166666666666
+      }
+    }
+  }
+}

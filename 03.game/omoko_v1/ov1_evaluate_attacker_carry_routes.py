@@ -36,6 +36,8 @@ SETS_PER_ROUTE = 8
 ROUNDS_PER_ROUTE = ROUNDS_PER_SET * SETS_PER_ROUTE  # 96
 BASE_SEED = 20261015
 RESUME = True
+# Keep compatible progress; replace obsolete results at the same output path.
+OVERWRITE_INCOMPATIBLE = True
 PARALLEL_WORKERS = 6  # One independent process per opponent; CPU inference.
 OUTPUT_PATH = AI_DIR / "data" / "carry_route_evaluation" / "route_win_rates_12round_sets.json"
 LOG_PATH = AI_DIR / "logs" / "ov1_evaluate_attacker_carry_routes.log"
@@ -310,6 +312,28 @@ def save_report(path, report, models):
             time.sleep(0.05)
 
 
+def reusable_report(path, manifest, base_seed, resume):
+    """Read compatible progress without writing, including for --check."""
+    if not path.exists() or not resume:
+        return None
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if (report.get("schema_version") != SCHEMA_VERSION
+                or not same_scenario(report.get("scenario", {}), manifest)
+                or report.get("base_seed") != base_seed):
+            raise ValueError("Saved scenario/source/seed differs")
+        FrozenModels(report.get("model_hashes")).validate()
+    except (ValueError, FileNotFoundError) as exc:
+        if not OVERWRITE_INCOMPATIBLE:
+            raise
+        print(f"Starting fresh at {path}: {exc}", flush=True)
+        return None
+    if report["scenario"]["fingerprint"] != manifest["fingerprint"]:
+        report.setdefault("infrastructure_resume_history", []).append(report["scenario"])
+        report["scenario"] = manifest
+    return report
+
+
 def evaluate(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
              output=OUTPUT_PATH, resume=RESUME, check_only=False,
              log_path=None, stop_event=None):
@@ -322,18 +346,8 @@ def evaluate(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
         raise ValueError("Select at least one known opponent from OPPONENTS")
     output = Path(output).resolve()
     manifest = scenario_manifest(routes)
-    if output.exists():
-        if not resume:
-            raise FileExistsError(f"Output exists; choose a new OUTPUT_PATH: {output}")
-        report = json.loads(output.read_text(encoding="utf-8"))
-        if (report.get("schema_version") != SCHEMA_VERSION
-                or not same_scenario(report.get("scenario", {}), manifest)
-                or report.get("base_seed") != base_seed):
-            raise ValueError("Saved scenario/source/seed differs; choose a new OUTPUT_PATH")
-        if report["scenario"]["fingerprint"] != manifest["fingerprint"]:
-            report.setdefault("infrastructure_resume_history", []).append(report["scenario"])
-            report["scenario"] = manifest
-    else:
+    report = reusable_report(output, manifest, base_seed, resume)
+    if report is None:
         report = {"schema_version": SCHEMA_VERSION, "scenario": manifest,
                   "base_seed": base_seed, "evaluation": EVALUATION_VERSION,
                   "our_team": "Omoko Gaming", "our_controller": "omoko_gaming_v1",
@@ -349,6 +363,9 @@ def evaluate(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
         for route in routes:
             print(f"  {route['id']}")
         return report
+    # Commit the reset before any new trials, so old results cannot survive an
+    # interrupted first set. Parallel shards are replaced in the parent too.
+    save_report(output, report, models)
     log_path = Path(log_path) if log_path is not None else LOG_PATH
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log, legacy_resources(), cpu_inference(), models.active():
@@ -392,9 +409,13 @@ def evaluate(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
             # Only complete sets are committed; restart an interrupted set
             # with its original seed so AI memory is never lost mid-set.
             save_report(output, report, models)
-    errors = [key for key in opponents if report["opponents"][key]["status"] != "complete"]
+    errors = {
+        key: report["opponents"][key].get("error", report["opponents"][key]["status"])
+        for key in opponents if report["opponents"][key]["status"] != "complete"
+    }
     if errors:
-        raise RuntimeError(f"Evaluation incomplete for {', '.join(errors)}; see output JSON")
+        details = "; ".join(f"{key}: {error}" for key, error in errors.items())
+        raise RuntimeError(f"Evaluation incomplete ({details}); see output JSON")
     return report
 
 
@@ -448,10 +469,9 @@ def evaluate_parallel(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
     models = FrozenModels(report.get("model_hashes"))
     paths = {opponent: shard_dir / f"{opponent}.json" for opponent in opponents}
     for opponent, path in paths.items():
-        if path.exists():
-            if not resume:
-                raise FileExistsError(f"Worker output exists: {path}")
-            merge_worker_report(report, json.loads(path.read_text(encoding="utf-8")), opponent, models)
+        child = reusable_report(path, report["scenario"], base_seed, resume)
+        if child is not None:
+            merge_worker_report(report, child, opponent, models)
         else:
             # Import existing serial progress into the new per-opponent file.
             child = copy.deepcopy(report)
@@ -512,7 +532,11 @@ def evaluate_parallel(opponents, rounds=ROUNDS_PER_ROUTE, base_seed=BASE_SEED,
     incomplete = [opponent for opponent in opponents
                   if report["opponents"].get(opponent, {}).get("status") != "complete"]
     if failures or incomplete:
-        raise RuntimeError(f"Parallel evaluation incomplete: {', '.join(sorted(set(incomplete) | set(failures)))}")
+        details = []
+        for opponent in sorted(set(incomplete) | set(failures)):
+            reason = failures.get(opponent) or report["opponents"].get(opponent, {}).get("error", "incomplete")
+            details.append(f"{opponent}: {reason}")
+        raise RuntimeError(f"Parallel evaluation incomplete ({'; '.join(details)})")
     return report
 
 

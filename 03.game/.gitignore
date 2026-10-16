@@ -1,4 +1,7 @@
 # Runtime logs, including rotated logs.
+# Generated adviser datasets and interrupted collection shards.
+**/ability_advisor_v1/data/datasets/
+
 *.log
 *.log.*
 

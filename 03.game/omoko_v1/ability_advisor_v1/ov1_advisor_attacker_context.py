@@ -7,6 +7,10 @@ import numpy as np
 
 AI_DIR = Path(__file__).resolve().parents[1]
 ROLES = ('carry', 'escort', 'retrieve', 'guard')
+# Change this only when the interpretation of the scenario inputs changes.
+# Inference source text (including comments and guard-only changes) is not an
+# input schema. Frozen checkpoint weights have their own provenance below.
+SCENARIO_CONTRACT_VERSION = 'omoko_lineup_geometry_v2'
 DEFAULT_POLICY_PATHS = {
     role: AI_DIR / 'data' / ('attacker_' + role + '_data') /
           ('dqn_attacker_' + role + '_best_by_eval.pt') for role in ROLES
@@ -37,17 +41,27 @@ def scenario(name):
         raise ValueError('unknown Omoko role/site: ' + name)
     rows = base.strip().splitlines()
     grid = np.array([[int(c) if c.isdigit() else 0 for c in row.strip()] for row in rows])
-    # Include role policy and placement sources as well as the visible map.
-    sources = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-               for pattern in ('ov1_map_data_*.py', 'ov1_learning_attacker_*.py', 'ov1_roster.py')
-               for path in sorted(AI_DIR.glob(pattern))}
-    signature = hashlib.sha256(json.dumps(dict(version='omoko_lineup_v1',
-        role_site=name, carry=carry, escort=escort, base=base, sources=sources),
-        sort_keys=True).encode()).hexdigest()
-    return SimpleNamespace(map_name=name, grid=grid, signature=signature)
+    # Hash the actual pre-plant layout inputs, never every policy/map source
+    # file. Previously any edit to guard placement or inference Python text
+    # invalidated all four routes even with exactly the same trained weights.
+    manifest = dict(version=SCENARIO_CONTRACT_VERSION, role_site=name,
+                    carry=carry.split(), escort=escort.split(), grid=grid.tolist())
+    signature = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+    return SimpleNamespace(map_name=name, grid=grid, signature=signature,
+                           manifest=manifest)
 
 
 def defending_opponent(game):
     from .ov1_learn_attacker_ability_advisor import OPPONENT_NAMES
     ai = getattr(game, 'current_defender_team_ai', None)
     return OPPONENT_NAMES.get(getattr(ai, 'name', None))
+
+
+def preflight_default_advisor():
+    """Validate every attacker route before a defender-start match can run."""
+    from .ov1_learn_attacker_ability_advisor import FixedAbilityAdvisor, MAPS
+    advisor = FixedAbilityAdvisor()
+    digest = policy_digest(DEFAULT_POLICY_PATHS)
+    for name in MAPS:
+        advisor.bind_route(scenario(name), digest)
+    return advisor

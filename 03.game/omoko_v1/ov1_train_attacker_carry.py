@@ -96,6 +96,8 @@ from ov1_common_attacker import (
 )
 
 EPISODE_COUNT = 3000
+COMBAT_RULE_VERSION = "carry_hs_modifiers_v2"
+MOVING_SHOOTER_HS_MULTIPLIER = 0.1
 EVAL_MIN_EPISODE = EPISODE_COUNT * 0.7   # これ未満のepisodeでは評価・保存を行わない(初期の不安定な重みを保存しないため)
 
 # ---------------------------------------------------------------------------
@@ -1296,23 +1298,30 @@ class CarryEnv:
                 continue
 
             accuracy = MOVING_ACCURACY if shooter.moved_this_tick else shooter.accuracy
+            hs_rate = shooter.hs_rate * (
+                MOVING_SHOOTER_HS_MULTIPLIER if shooter.moved_this_tick else 1.0
+            )
             # 正面からの角度差による補正(正面100%～真横50%、battle_logicと同一ロジック)
-            accuracy *= _facing_accuracy_multiplier(shooter, target)
+            facing_multiplier = _facing_accuracy_multiplier(shooter, target)
+            accuracy *= facing_multiplier
+            hs_rate *= facing_multiplier
             if shooter.blind_remaining > 0:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
+                hs_rate *= BLIND_ACCURACY_MULTIPLIER
 
             debuffed = target.blind_remaining > 0 or target.reveal_remaining > 0
             effective_dodge = target.dodge_rate * (REVEALED_DODGE_MULTIPLIER if debuffed else 1.0)
             hit_chance = accuracy * (1.0 - effective_dodge)
             if target.moved_this_tick:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+                hs_rate *= MOVING_TARGET_HIT_MULTIPLIER
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             # 命中・被弾を問わず、撃たれたら次のTickだけ相手の方向を強制的に向く(battle_logicと同一ロジック)。
             target.forced_facing_next_tick = _facing_towards(target.pos, shooter.pos)
 
             if random.random() < hit_chance:
-                headshot = random.random() < shooter.hs_rate
+                headshot = random.random() < max(0.0, hs_rate)
                 damage = HEADSHOT_DAMAGE if headshot else BODY_DAMAGE
                 target.hp = max(0, target.hp - damage)
                 if target.hp <= 0:
@@ -1483,6 +1492,8 @@ def train(
         torch.save(
             {
                 "model_state_dict": policy_net.state_dict(),
+                "combat_rule_version": COMBAT_RULE_VERSION,
+                "moving_shooter_hs_multiplier": MOVING_SHOOTER_HS_MULTIPLIER,
                 "obs_dim": OBS_DIM,
                 "n_actions": ACTION_DIM,
                 "episode": episode_no,

@@ -9,7 +9,6 @@ from pathlib import Path
 import random
 import sys
 import uuid
-import shutil
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -31,7 +30,58 @@ DEFAULT_MAPS = MAPS
 DEFAULT_SEED = 0
 DEFAULT_OUTPUT_DIR = ROOT / 'data' / 'datasets'
 DEFAULT_WORKERS = 6  # One independent process per opponent; 1 runs serially.
+DEFAULT_DELETE_INCOMPATIBLE_DATASETS = True
+MAX_DATASET_FILE_BYTES = 80_000_000  # Decimal bytes; applies to worker and published files.
 MAX_STEPS_PER_ROUND = 500
+
+
+class CappedJsonlWriter:
+    """Rotate UTF-8 records before the byte limit, including metadata and footer."""
+    def __init__(self, directory, prefix, suffix, metadata=None, max_bytes=None):
+        self.directory, self.prefix, self.suffix = Path(directory), prefix, suffix
+        self.metadata = metadata
+        self.max_bytes = MAX_DATASET_FILE_BYTES if max_bytes is None else max_bytes
+        self.paths, self.stream = [], None
+        self.header = (json.dumps(metadata) + '\n') if metadata is not None else ''
+        self.reserve = 100 if metadata is not None else 0
+        self.size, self.samples = 0, 0
+
+    def __enter__(self):
+        return self
+
+    def _finish(self, complete=True):
+        if self.stream is not None:
+            if self.metadata is not None and complete:
+                self.stream.write(json.dumps(dict(event='complete', samples=self.samples)) + '\n')
+            self.stream.close()
+            self.stream = None
+
+    def write(self, record):
+        for line in record.splitlines(keepends=True):
+            if not line.endswith('\n'):
+                raise ValueError('dataset records must end with a newline')
+            length = len(line.encode('utf-8'))
+            header_size = len(self.header.encode('utf-8'))
+            if header_size + length + self.reserve > self.max_bytes:
+                raise ValueError('one dataset record exceeds the file size limit')
+            if self.stream is not None and self.size + length + self.reserve > self.max_bytes:
+                self._finish()
+            if self.stream is None:
+                path = self.directory / f'{self.prefix}_{len(self.paths):04d}{self.suffix}'
+                self.stream = path.open('x', encoding='utf-8', newline='')
+                self.paths.append(path)
+                self.stream.write(self.header)
+                self.size, self.samples = header_size, 0
+            self.stream.write(line)
+            self.size += length
+            self.samples += 1
+
+    def flush(self):
+        if self.stream is not None:
+            self.stream.flush()
+
+    def __exit__(self, exc_type, exc, traceback):
+        self._finish(complete=exc_type is None)
 
 
 def route_metadata(map_names=MAPS):
@@ -39,14 +89,53 @@ def route_metadata(map_names=MAPS):
         scenario, policy_digest, DEFAULT_POLICY_PATHS,
     )
     digest = policy_digest(DEFAULT_POLICY_PATHS)
-    return {name: dict(signature=scenario(name).signature, carry_sha256=digest)
-            for name in map_names}
+    contexts = {name: scenario(name) for name in map_names}
+    return {name: dict(signature=context.signature, carry_sha256=digest,
+                       manifest=context.manifest)
+            for name, context in contexts.items()}
+
+
+def delete_incompatible_datasets(directory):
+    """Delete obsolete collection files, retaining compatible data and other files."""
+    if not DEFAULT_DELETE_INCOMPATIBLE_DATASETS:
+        return []
+    current = route_metadata()
+    deleted = []
+    for path in sorted(Path(directory).glob('*.jsonl')):
+        # Never follow a link outside the explicitly selected dataset directory.
+        if path.is_symlink() or not path.is_file():
+            continue
+        with path.open(encoding='utf-8') as stream:
+            try:
+                header = json.loads(stream.readline())
+            except ValueError:
+                continue
+        if not isinstance(header, dict) or header.get('event') != 'metadata':
+            continue
+        scenarios = header.get('scenarios')
+        contract_changed = (
+            header.get('version') != VERSION
+            or header.get('label_version') != LABEL_VERSION
+            or header.get('wall_los_version') != WALL_LOS_VERSION
+            or header.get('feature_names') != feature_names()
+        )
+        scenario_changed = (
+            not isinstance(scenarios, dict) or not scenarios
+            or any(name not in current or metadata != current[name]
+                   for name, metadata in scenarios.items())
+        )
+        if contract_changed or scenario_changed:
+            path.unlink()
+            deleted.append(path)
+            reason = 'feature/label contract changed' if contract_changed else 'policy/scenario changed'
+            print(f'[DELETE] incompatible dataset ({reason}): {path}', flush=True)
+    return deleted
 
 
 class RecordingAdvisor(FixedAbilityAdvisor):
     """Teacher state is isolated here; it never enters features or match memory."""
     def __init__(self, stream, dataset_id, match_id, opponent):
-        super().__init__(model_path=None)
+        super().__init__(model_path=None, enabled=False)
         self.stream,self.dataset_id,self.match_id,self.opponent = stream,dataset_id,match_id,opponent
         self.teacher_game = None
         self.groups = Counter()
@@ -130,7 +219,7 @@ def play_match(opponent, seed, rounds, advisor, map_names=MAPS, *, tick_observer
 def collect_opponent(task):
     opponent,index,opponent_count,matches,rounds,map_names,seed,metadata,path = task
     counts = Counter()
-    with Path(path).open('x',encoding='utf-8') as stream:
+    with CappedJsonlWriter(Path(path).parent, Path(path).stem, '.part') as stream:
         for match in range(matches):
             match_seed = seed+match*opponent_count+index
             match_id = f'{opponent}:seed={match_seed}:maps={",".join(map_names)}'
@@ -142,7 +231,7 @@ def collect_opponent(task):
             stream.flush()
             print(f'collect {opponent} match={match+1}/{matches} samples={sum(advisor.groups.values())} '
                   f'wins={result["attacker_wins"]}/{result["rounds"]}',flush=True)
-    return str(path),counts
+    return [str(p) for p in stream.paths],counts
 
 
 def collect(matches=DEFAULT_MATCHES_PER_OPPONENT,rounds=DEFAULT_ROUNDS_PER_MATCH,
@@ -159,7 +248,7 @@ def collect(matches=DEFAULT_MATCHES_PER_OPPONENT,rounds=DEFAULT_ROUNDS_PER_MATCH
     dataset_id = uuid.uuid4().hex
     directory = Path(output_dir)
     directory.mkdir(parents=True,exist_ok=True)
-    path = directory/(dataset_id+'.jsonl')
+    delete_incompatible_datasets(directory)
     metadata = dict(event='metadata',version=VERSION,label_version=LABEL_VERSION,
                     wall_los_version=WALL_LOS_VERSION,feature_names=feature_names(),
                     scenarios=route_metadata(map_names),dataset_id=dataset_id,
@@ -168,23 +257,29 @@ def collect(matches=DEFAULT_MATCHES_PER_OPPONENT,rounds=DEFAULT_ROUNDS_PER_MATCH
     parts.mkdir()
     tasks = [(opponent,index,len(opponents),matches,rounds,tuple(map_names),seed,
               metadata,parts/f'{index}.part') for index,opponent in enumerate(opponents)]
-    # Workers only write their own shards. The parent publishes one complete dataset.
+    # Bound worker shards as well as published files; never concatenate into one huge file.
     results = run_opponent_tasks(collect_opponent,tasks,workers)
     counts = Counter()
-    temporary = directory/(dataset_id+'.jsonl.partial')
-    with temporary.open('x',encoding='utf-8') as stream:
-        stream.write(json.dumps(metadata)+'\n')
-        for shard,groups in results:
+    with CappedJsonlWriter(directory, dataset_id, '.jsonl.partial', metadata) as stream:
+        for shards,groups in results:
             counts.update(groups)
-            with Path(shard).open(encoding='utf-8') as source:
-                shutil.copyfileobj(source,stream)
-        stream.write(json.dumps(dict(event='complete',samples=sum(counts.values())))+'\n')
-    temporary.replace(path)
-    for shard,_ in results:
-        Path(shard).unlink()
+            for shard in shards:
+                with Path(shard).open(encoding='utf-8') as source:
+                    for line in source:
+                        stream.write(line)
+    if not stream.paths:
+        raise ValueError('collection produced no samples')
+    paths = []
+    for temporary in stream.paths:
+        published = temporary.with_suffix('')
+        temporary.replace(published)
+        paths.append(published)
+    for shards,_ in results:
+        for shard in shards:
+            Path(shard).unlink()
     parts.rmdir()
-    print(f'dataset={path} samples={sum(counts.values())} groups={len(counts)}',flush=True)
-    return path
+    print(f'dataset={dataset_id} files={len(paths)} samples={sum(counts.values())} groups={len(counts)}',flush=True)
+    return paths
 
 
 def main():

@@ -24,7 +24,10 @@ from ov1_learning_attacker_escort import Ov1LearningAttackerEscortController
 from ov1_learning_attacker_retrieve import Ov1LearningAttackerRetrieveController
 from ov1_learning_attacker_guard import Ov1LearningAttackerGuardController
 from ov1_inference_damage_avoidance import escape_destruction_area, avoid_destruction_entry
-from ov1_inference_team_tactics import apply_shared_facing, tactical_state, known_enemies, shot_clear
+from ov1_inference_team_tactics import (
+    apply_shared_facing, tactical_state, known_enemies, shot_clear, search_hidden_defuser,
+)
+from ov1_inference_recon_response import recon_response
 
 
 class Ov1AttackerController(BaseController):
@@ -85,6 +88,8 @@ class Ov1AttackerController(BaseController):
                 ctrl.set_game(game)
 
     def reset_round(self):
+        self._recon_response_memory = {}
+        self._hidden_defuse_search_memory = {}
         for ctrl in (self.carry_controller, self.escort_controller, self.retrieve_controller, self.guard_controller):
             if hasattr(ctrl, "reset_round"):
                 ctrl.reset_round()
@@ -112,6 +117,19 @@ class Ov1AttackerController(BaseController):
         escape = escape_destruction_area(char, game_state, game)
         if escape is not None:
             return apply_shared_facing(char, game_state, escape)
+        if not hasattr(self, "_hidden_defuse_search_memory"):
+            self._hidden_defuse_search_memory = {}
+        search = search_hidden_defuser(
+            char, game_state, self._hidden_defuse_search_memory.setdefault(char.name, {}))
+        if search is not None:
+            search = avoid_destruction_entry(char, game_state, search, game)
+            return apply_shared_facing(char, game_state, search)
+        if not hasattr(self, "_recon_response_memory"):
+            self._recon_response_memory = {}
+        response = recon_response(char, game_state,
+                                  self._recon_response_memory.setdefault(char.name, {}))
+        if response is not None:
+            return response
         result = self._decide_phase_move(char, game_state)
         result = avoid_destruction_entry(char, game_state, result, game)
         if hasattr(self, 'ability_advisor') and self._advice_cache:

@@ -28,6 +28,8 @@ from ov1_learning_defender_retake import Ov1LearningDefenderRetakeController
 from ov1_learning_defender_search import Ov1LearningDefenderSearchController
 from ov1_inference_damage_avoidance import escape_destruction_area, avoid_destruction_entry
 from ov1_inference_team_tactics import apply_shared_facing
+from ov1_inference_recon_response import recon_response
+from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import preflight_default_advisor
 
 
 class Ov1DefenderController(BaseController):
@@ -46,6 +48,9 @@ class Ov1DefenderController(BaseController):
         device=None,
     ):
         super().__init__()
+        # The engine creates only the starting side's controller at startup.
+        # Validate the required attacker adviser now, before the side swap.
+        preflight_default_advisor()
         self.search_controller = Ov1LearningDefenderSearchController(
             model_path=search_model_path, greedy=greedy, device=device
         )
@@ -59,6 +64,7 @@ class Ov1DefenderController(BaseController):
         return DefaultDefenderController()
 
     def reset_round(self):
+        self._recon_response_memory = {}
         for ctrl in (self.search_controller, self.retake_controller):
             if hasattr(ctrl, "reset_round"):
                 ctrl.reset_round()
@@ -76,6 +82,12 @@ class Ov1DefenderController(BaseController):
         escape = escape_destruction_area(char, game_state, game)
         if escape is not None:
             return apply_shared_facing(char, game_state, escape)
+        if not hasattr(self, "_recon_response_memory"):
+            self._recon_response_memory = {}
+        response = recon_response(char, game_state,
+                                  self._recon_response_memory.setdefault(char.name, {}))
+        if response is not None:
+            return response
         if game_state.get("is_planted"):
             result = self.retake_controller.decide_move(char, game_state)
         else:

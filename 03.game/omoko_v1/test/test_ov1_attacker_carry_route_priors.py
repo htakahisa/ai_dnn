@@ -113,6 +113,32 @@ class SummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "incomplete"):
             exporter.summarize(report)
 
+    def test_existing_summary_outputs_are_replaced(self):
+        sources = {name: hashlib.sha256((exporter.PROJECT_DIR / name).read_bytes()).hexdigest()
+                   for name in ("omoko_v1/ov1_map_data_carry.py", "map_data.py", "party_presets.py", "grid_lines.py")}
+        report = {"schema_version": 2, "rounds_per_set": 12,
+                  "evaluation": "12round_attack_set_full_engine_fixed_carry_route_v2",
+                  "scenario": {"source_hashes": sources, "routes": [{"id": "left:4,11"}],
+                               "wall_los_version": priors.WALL_LOS_VERSION}, "model_hashes": {},
+                  "opponents": {"fnatic_v3": {"status": "complete", "roster": "Fnatic2023",
+                      "target_rounds_per_route": 96, "routes": {"left:4,11": {"rounds": 96, "wins": 48}}}}}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            input_path = root / "input.json"
+            output_path = root / "summary.json"
+            table_path = root / "table.md"
+            input_path.write_text(json.dumps(report), encoding="utf-8")
+            output_path.write_text("old summary", encoding="utf-8")
+            table_path.write_text("old table", encoding="utf-8")
+            with patch.object(exporter, "INPUT_PATH", input_path), \
+                    patch.object(exporter, "OUTPUT_PATH", output_path), \
+                    patch.object(exporter, "TABLE_PATH", table_path), \
+                    patch("sys.argv", ["ov1_summarize_attacker_carry_routes.py"]):
+                exporter.main()
+            self.assertEqual(json.loads(output_path.read_text(encoding="utf-8"))["opponents"]["fnatic_v3"]
+                             ["win_rates"], {"left:4,11": 0.5})
+            self.assertIn("50.0%", table_path.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

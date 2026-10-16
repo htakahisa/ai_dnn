@@ -42,7 +42,8 @@ def evaluate_opponent(task):
     arms = {'baseline':[],'advised':[]}
     for trial in range(matches):
         for name in arms:
-            advisor = FixedAbilityAdvisor(model_path if name == 'advised' else None)
+            advisor = FixedAbilityAdvisor(model_path if name == 'advised' else None,
+                                          enabled=name == 'advised')
             if name == 'advised' and advisor.model is None:
                 raise ValueError('adviser model could not be loaded')
             result = play_match(opponent,seed+index*matches+trial,rounds,advisor,maps)

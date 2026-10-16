@@ -18,7 +18,9 @@ from omoko_v1.ability_advisor_v1.ov1_learn_attacker_ability_advisor import (
     ROOT, VERSION, LABEL_VERSION, WALL_LOS_VERSION, DEFAULT_MODEL_PATH,
     AbilityJudge, feature_names,
 )
-from omoko_v1.ability_advisor_v1.ov1_collect_attacker_ability_advisor import route_metadata
+from omoko_v1.ability_advisor_v1.ov1_collect_attacker_ability_advisor import (
+    route_metadata, delete_incompatible_datasets,
+)
 
 DEFAULT_DATA_DIR = ROOT / 'data' / 'datasets'
 DEFAULT_OUTPUT = DEFAULT_MODEL_PATH
@@ -34,6 +36,7 @@ DEFAULT_SKIP_INCOMPLETE_DATASETS = True
 
 
 def load_samples(directory,skip_incomplete=DEFAULT_SKIP_INCOMPLETE_DATASETS):
+    delete_incompatible_datasets(directory)
     rows = []
     provenance = {}
     for path in sorted(Path(directory).glob('*.jsonl')):

@@ -6,7 +6,6 @@ from pathlib import Path
 import hashlib
 import math
 import pickle
-import warnings
 
 import numpy as np
 import torch
@@ -188,14 +187,24 @@ class Advice:
     score: float | None = None
 
 
+class AbilityAdvisorError(RuntimeError):
+    """Required ability advice is unavailable; the match must not continue."""
+
+
 class FixedAbilityAdvisor:
-    def __init__(self, model_path=DEFAULT_MODEL_PATH):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, *, enabled=True):
+        self.enabled = enabled
         self.memory = MatchMemory()
         self.model = self.checkpoint = self.last_advice = None
         self.pending = {}
         self.route_hashes = {}
         self.decisions = {'use':0,'save':0}
         self.last_match_round = None
+        self.model_path = model_path
+        if not enabled:
+            return
+        if model_path is None or not Path(model_path).is_file():
+            raise AbilityAdvisorError(f'Fixed ability adviser model not found: {model_path}')
         if model_path is not None and Path(model_path).is_file():
             try:
                 checkpoint = torch.load(model_path,map_location='cpu',weights_only=False)
@@ -213,9 +222,11 @@ class FixedAbilityAdvisor:
                 with torch.random.fork_rng(devices=[]):
                     model = AbilityJudge()
                 model.load_state_dict(checkpoint['model_state_dict'])
+                if not all(torch.isfinite(parameter).all().item() for parameter in model.parameters()):
+                    raise ValueError('adviser model contains non-finite weights')
                 self.model,self.checkpoint = model.eval(),checkpoint
             except (OSError,ValueError,KeyError,RuntimeError,TypeError,EOFError,pickle.UnpicklingError) as error:
-                warnings.warn(f'Fixed ability adviser unavailable; using fixed abilities: {error}')
+                raise AbilityAdvisorError(f'Fixed ability adviser load failed: {model_path}: {error}') from error
 
     def start_round(self,map_name,round_number=None):
         if (round_number is not None and self.last_match_round is not None
@@ -231,7 +242,20 @@ class FixedAbilityAdvisor:
                 self.memory.rounds.popleft()
 
     def bind_route(self,scenario,model_hash):
+        if self.enabled:
+            self._validate_route(scenario, model_hash)
         self.route_hashes[scenario.map_name] = model_hash
+
+    def _validate_route(self, scenario, model_hash):
+        if self.model is None or self.checkpoint is None:
+            raise AbilityAdvisorError(f'Fixed ability adviser is not loaded: {self.model_path}')
+        metadata = self.checkpoint['scenarios'].get(scenario.map_name)
+        if metadata is None or metadata['signature'] != scenario.signature:
+            raise AbilityAdvisorError(f'Fixed ability adviser scenario_mismatch: '
+                                      f'{scenario.map_name}: {self.model_path}')
+        if metadata['carry_sha256'] != model_hash:
+            raise AbilityAdvisorError(f'Fixed ability adviser policy_mismatch: '
+                                      f'{scenario.map_name}: {self.model_path}')
 
     def observe(self,scenario,char,state,opponent):
         if opponent != self.memory.opponent:
@@ -248,21 +272,28 @@ class FixedAbilityAdvisor:
                 self.pending.pop(char.name,None)
 
     def advise(self,scenario,char,state,opponent,ability,point,aim,game):
+        if self.enabled:
+            self._validate_route(scenario, self.route_hashes.get(scenario.map_name))
+            if opponent not in OPPONENTS:
+                raise AbilityAdvisorError(f'Fixed ability adviser unknown opponent: {opponent!r}')
         impact = impact_position(char,ability,aim,game)
         features,direct = build_features(scenario,char,state,opponent,ability,point,impact,self.memory)
-        advice = Advice(True,'no_validated_model')
-        if direct:
+        if not self.enabled:
+            advice = Advice(True,'advisor_disabled')
+        elif direct:
             advice = Advice(True,'observed_enemy_relevance',1.)
-        elif self.model is not None:
-            metadata = self.checkpoint['scenarios'].get(scenario.map_name)
-            report = self.checkpoint['groups'].get(group_key(scenario,opponent,ability,point),{})
-            if (metadata is not None and metadata['signature'] == scenario.signature
-                    and metadata['carry_sha256'] == self.route_hashes.get(scenario.map_name)
-                    and report.get('validated',False)):
+        else:
+            key = group_key(scenario,opponent,ability,point)
+            report = self.checkpoint['groups'].get(key,{})
+            if not report.get('validated',False):
+                advice = Advice(True,'unvalidated_use')
+            else:
                 with torch.no_grad():
                     score = float(torch.sigmoid(self.model(torch.from_numpy(features))).item())
-                if math.isfinite(score):
-                    advice = Advice(score >= self.checkpoint['skip_threshold'],'model',score)
+                if not math.isfinite(score):
+                    raise AbilityAdvisorError(f'Fixed ability adviser invalid_model_score: '
+                                              f'{key}: {self.model_path}')
+                advice = Advice(score >= self.checkpoint['skip_threshold'],'model',score)
         self.last_advice = advice
         self.decisions['use' if advice.use else 'save'] += 1
         if advice.use:

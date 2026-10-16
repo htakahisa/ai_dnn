@@ -11,14 +11,14 @@
     "EG2023": 1659.806,
     "Eine Kleine": 1581.333,
     "Fnatic2023": 1732.974,
-    "Furina Classic": 1686.468,
+    "Furina Classic": 1741.804,
     "Furina Tartaglia": 1581.735,
     "Ghost Champions": 1495.618,
     "Gorigons": 1310.606,
     "Japan All-Stars": 1464.362,
     "Leo And Friends": 1509.052,
     "Meta Beat": 1263.631,
-    "Omoko Gaming": 2008.584,
+    "Omoko Gaming": 1953.248,
     "Queen's Flower Gambit": 1438.239,
     "SUPES": 1762.083,
     "SereNade": 1500.0,
@@ -10409,6 +10409,35 @@
         "Furina Classic": 0.1477
       },
       "margin_multiplier": 1.4909
+    },
+    {
+      "event": 359,
+      "timestamp": "2026-10-16T10:52:54",
+      "type": "series",
+      "competition_id": "series_20261016_104746",
+      "context": "SERIES",
+      "team1": "Omoko Gaming",
+      "team2": "Furina Classic",
+      "score1": 0,
+      "score2": 1,
+      "winner": "Furina Classic",
+      "before": {
+        "Omoko Gaming": 2008.584,
+        "Furina Classic": 1686.468
+      },
+      "after": {
+        "Omoko Gaming": 1953.248,
+        "Furina Classic": 1741.804
+      },
+      "delta": {
+        "Omoko Gaming": -55.336,
+        "Furina Classic": 55.336
+      },
+      "expected": {
+        "Omoko Gaming": 0.8646,
+        "Furina Classic": 0.1354
+      },
+      "margin_multiplier": 1.6
     }
   ]
 }

@@ -13,6 +13,7 @@ import torch
 from omoko_v1.ability_advisor_v1 import ov1_learn_attacker_ability_advisor as advisor
 from omoko_v1.ability_advisor_v1.ov1_collect_attacker_ability_advisor import route_metadata
 from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import scenario
+from omoko_v1 import ov1_map_data_escort as escort_map
 import ov1_learning_attacker_escort as escort
 import ov1_learning_attacker_carry as carry
 from ov1_attacker_controller import Ov1AttackerController
@@ -39,7 +40,7 @@ class AbilityAdviceTests(unittest.TestCase):
                     groups={advisor.group_key(context, opponent, 'SMOKE', point): dict(validated=True)},
                     model_state_dict=model.state_dict())
 
-    def test_validated_model_saves_and_changed_policy_uses(self):
+    def test_validated_model_saves_and_changed_policy_stops(self):
         context, actor, state, game = self.fixture()
         point, opponent = (8, 3), advisor.OPPONENTS[0]
         with tempfile.TemporaryDirectory() as directory:
@@ -54,22 +55,123 @@ class AbilityAdviceTests(unittest.TestCase):
                                      pos=point, facing='W', position_known=True))
             self.assertTrue(judge.advise(context, actor, state, opponent, 'SMOKE', point, point, game).use)
             state['chars'].pop()
-            judge.bind_route(context, 'different')
-            self.assertTrue(judge.advise(context, actor, state, opponent, 'SMOKE', point, point, game).use)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'policy_mismatch'):
+                judge.bind_route(context, 'different')
 
-    def test_missing_and_concon_models_preserve_fixed_use(self):
+    def test_missing_and_incompatible_models_stop(self):
         context, actor, state, game = self.fixture()
-        judge = advisor.FixedAbilityAdvisor(None)
-        judge.observe(context, actor, state, advisor.OPPONENTS[0])
+        for path in (None, Path('missing_adviser.pt')):
+            with self.subTest(path=path), self.assertRaisesRegex(advisor.AbilityAdvisorError, 'not found'):
+                advisor.FixedAbilityAdvisor(path)
+        checkpoint = self.checkpoint(context, advisor.OPPONENTS[0], (8, 3))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            checkpoint['version'] = 1
+            torch.save(checkpoint, path)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'load failed'):
+                advisor.FixedAbilityAdvisor(path)
+            path.write_bytes(b'broken checkpoint')
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'load failed'):
+                advisor.FixedAbilityAdvisor(path)
+
+    def test_disabled_advisor_retains_evaluation_baseline(self):
+        context, actor, state, game = self.fixture()
+        judge = advisor.FixedAbilityAdvisor(None, enabled=False)
         self.assertTrue(judge.advise(context, actor, state, advisor.OPPONENTS[0],
                                      'SMOKE', (8, 3), (8, 3), game).use)
-        checkpoint = self.checkpoint(context, advisor.OPPONENTS[0], (8, 3))
-        checkpoint['version'] = 1
+        self.assertEqual(judge.last_advice.reason, 'advisor_disabled')
+
+    def test_compatible_model_can_choose_precontact_use(self):
+        context, actor, state, game = self.fixture()
+        point, opponent = (8, 3), advisor.OPPONENTS[0]
+        checkpoint = self.checkpoint(context, opponent, point)
+        checkpoint['model_state_dict']['layers.4.bias'].fill_(10.)
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'concon.pt'
+            path = Path(directory) / 'advisor.pt'
             torch.save(checkpoint, path)
-            with self.assertWarns(UserWarning):
-                self.assertIsNone(advisor.FixedAbilityAdvisor(path).model)
+            judge = advisor.FixedAbilityAdvisor(path)
+            judge.bind_route(context, 'frozen')
+            self.assertTrue(judge.advise(context, actor, state, opponent,
+                                         'SMOKE', point, point, game).use)
+            self.assertEqual(judge.last_advice.reason, 'model')
+
+    def test_scenario_mismatch_stops_at_binding_before_enemy_contact(self):
+        context, actor, state, game = self.fixture()
+        point, opponent = (8, 3), advisor.OPPONENTS[0]
+        checkpoint = self.checkpoint(context, opponent, point)
+        checkpoint['scenarios'][context.map_name]['signature'] = 'old'
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            torch.save(checkpoint, path)
+            judge = advisor.FixedAbilityAdvisor(path)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'scenario_mismatch'):
+                judge.bind_route(context, 'frozen')
+            state['chars'].append(NS(name='seen', team='D', is_alive=True,
+                                     pos=point, facing='W', position_known=True))
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'scenario_mismatch'):
+                judge.advise(context, actor, state, opponent, 'SMOKE', point, point, game)
+
+    def test_unvalidated_group_uses_ability_and_invalid_score_stops(self):
+        context, actor, state, game = self.fixture()
+        point, opponent = (8, 3), advisor.OPPONENTS[0]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            torch.save(self.checkpoint(context, opponent, point), path)
+            judge = advisor.FixedAbilityAdvisor(path)
+            judge.bind_route(context, 'frozen')
+            advice = judge.advise(context, actor, state, opponent, 'SMOKE', (8, 4), (8, 4), game)
+            self.assertTrue(advice.use)
+            self.assertEqual(advice.reason, 'unvalidated_use')
+            self.assertIn(actor.name, judge.pending)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'unknown opponent'):
+                judge.advise(context, actor, state, None, 'SMOKE', point, point, game)
+            judge.model.layers[-1].bias.data.fill_(float('nan'))
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'invalid_model_score'):
+                judge.advise(context, actor, state, opponent, 'SMOKE', point, point, game)
+            self.assertEqual(judge.decisions, {'use': 1, 'save': 0})
+
+    def test_model_without_validated_groups_uses_unvalidated_abilities(self):
+        context, actor, state, game = self.fixture()
+        checkpoint = self.checkpoint(context, advisor.OPPONENTS[0], (8, 3))
+        checkpoint['groups'] = {}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            torch.save(checkpoint, path)
+            judge = advisor.FixedAbilityAdvisor(path)
+            judge.bind_route(context, 'frozen')
+            advice = judge.advise(context, actor, state, advisor.OPPONENTS[0],
+                                  'SMOKE', (8, 3), (8, 3), game)
+            self.assertTrue(advice.use)
+            self.assertEqual(advice.reason, 'unvalidated_use')
+
+    def test_defender_start_checks_adviser_before_loading_defender_models(self):
+        import ov1_defender_controller as defender
+        with patch.object(defender, 'preflight_default_advisor',
+                          side_effect=advisor.AbilityAdvisorError('adviser startup failure')) as check, \
+                patch.object(defender, 'Ov1LearningDefenderSearchController') as search:
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'adviser startup failure'):
+                defender.Ov1DefenderController(device='cpu')
+            check.assert_called_once_with()
+            search.assert_not_called()
+
+    def test_defender_preflight_checks_all_four_attacker_routes(self):
+        from omoko_v1.ability_advisor_v1 import ov1_advisor_attacker_context as context
+        judge = advisor.FixedAbilityAdvisor(None, enabled=False)
+        with patch.object(advisor, 'FixedAbilityAdvisor', return_value=judge), \
+                patch.object(context, 'policy_digest', return_value='frozen'):
+            context.preflight_default_advisor()
+        self.assertEqual(judge.route_hashes, dict.fromkeys(advisor.MAPS, 'frozen'))
+
+    def test_signature_ignores_python_source_text_but_tracks_layout(self):
+        before = scenario('carry_L')
+        # Includes guard map edits and carry/escort inference edits. No raw
+        # Python source file may be consulted for the geometry contract.
+        with patch.object(Path, 'read_bytes', side_effect=AssertionError('source hash')):
+            self.assertEqual(scenario('carry_L').signature, before.signature)
+        with patch.object(escort_map, 'NEW_MAZE_STR', escort_map.NEW_MAZE_STR.replace('S', 'R', 1)):
+            self.assertNotEqual(scenario('carry_L').signature, before.signature)
+        with patch.object(escort_map, 'NEW_MAZE_STR', '\n' + escort_map.NEW_MAZE_STR + '\n'):
+            self.assertEqual(scenario('carry_L').signature, before.signature)
 
     def test_hidden_enemy_cannot_change_features_or_memory(self):
         context, actor, state, game = self.fixture()
@@ -85,7 +187,7 @@ class AbilityAdviceTests(unittest.TestCase):
 
     def test_use_history_requires_actual_charge_decrease(self):
         context, actor, state, _ = self.fixture()
-        judge = advisor.FixedAbilityAdvisor(None)
+        judge = advisor.FixedAbilityAdvisor(None, enabled=False)
         judge.observe(context, actor, state, 'concon_v1')
         judge.pending[actor.name] = ('SMOKE', (8, 3), 1, 30)
         judge.observe(context, actor, state, 'concon_v1')
@@ -126,13 +228,17 @@ class AbilityAdviceTests(unittest.TestCase):
         ctrl.ability_lineup_points = {'RECON': [(5, 6)]}
         actor = NS(name='carrier', team='A', pos=(5, 4), has_spike=True,
                    ability_name='RECON', is_alive=True, facing='N')
-        result = ctrl.decide_move(actor, dict(chars=[actor]))
-        self.assertEqual(availability, [False])
-        self.assertNotEqual(tuple(result[0]), actor.pos)
-        self.assertNotIn('ability', result[1])
+        for points in ([(5, 6)], []):
+            with self.subTest(points=points):
+                ctrl.ability_lineup_points = {'RECON': points}
+                availability.clear()
+                result = ctrl.decide_move(actor, dict(chars=[actor]))
+                self.assertEqual(availability, [False])
+                self.assertNotEqual(tuple(result[0]), actor.pos)
+                self.assertNotIn('ability', result[1])
 
     def test_controller_and_collector_bind_same_frozen_policies(self):
-        ctrl = Ov1AttackerController(device='cpu', ability_advisor=advisor.FixedAbilityAdvisor(None))
+        ctrl = Ov1AttackerController(device='cpu', ability_advisor=advisor.FixedAbilityAdvisor(None, enabled=False))
         metadata = route_metadata()
         self.assertEqual(set(metadata), set(advisor.MAPS))
         for name, contract in metadata.items():

@@ -14,6 +14,18 @@ from ov1_common_rl import select_action
 
 
 class EscortPerformanceTest(unittest.TestCase):
+    def test_single_wall_scan_matches_previous_los_with_dynamic_smoke(self):
+        rng = np.random.default_rng(214)
+        for _ in range(1000):
+            grid = (rng.random((8, 8)) < 0.2).astype(int)
+            start, end = [tuple(map(int, rng.integers(0, 8, size=2))) for _ in range(2)]
+            smoke = {tuple(map(int, rng.integers(0, 8, size=2))) for _ in range(5)}
+            if rng.random() < 0.5:
+                smoke.clear()
+            wall_clear = all(grid[r, c] != 1 for r, c in escort.wall_line_cells(start, end))
+            expected = wall_clear and escort.ov1_common_rl.has_los(grid, start, end, smoke)
+            self.assertEqual(escort._has_los(grid, smoke, start, end), expected)
+
     @classmethod
     def setUpClass(cls):
         cls.threads = torch.get_num_threads()

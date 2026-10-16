@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import time
 
 AI_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = AI_DIR.parent
@@ -79,7 +80,14 @@ def main():
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_text(text, encoding="utf-8")
-        temporary.replace(path)
+        for attempt in range(20):
+            try:
+                temporary.replace(path)
+                break
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                time.sleep(0.05)
     print(f"Saved {len(summary['opponents'])} opponent priors: {args.output}")
     print(f"Win-rate table: {args.table}")
 

@@ -48,6 +48,7 @@ import torch.nn as nn
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
 from ov1_map_data_carry import NEW_MAZE_STR as CARRY_MAZE_STR
 from ov1_attacker_carry_route_priors import RoutePriorCache
+from ov1_inference_carry_escape import awakened_carry_escape
 from ov1_ultimate_training import (
     nearest_orb,
     orb_context,
@@ -488,6 +489,7 @@ class Ov1LearningAttackerCarryController:
         if current_round_key is not None and current_round_key == self._last_reset_round_key:
             return
         self._last_reset_round_key = current_round_key
+        self._carry_escape_state = {}
         self._record_pending_route_result(current_round_key)
 
         self._sighting = None
@@ -906,6 +908,11 @@ class Ov1LearningAttackerCarryController:
 
     # -- メインエントリポイント -----------------------------------------
     def decide_move(self, char, game_state):
+        if not hasattr(self, "_carry_escape_state"):
+            self._carry_escape_state = {}
+        escape = awakened_carry_escape(char, game_state, self._carry_escape_state)
+        if escape is not None:
+            return escape
         chars = game_state.get("chars", [])
         grid = self.game.grid
         r, c = int(char.pos[0]), int(char.pos[1])
@@ -1021,14 +1028,12 @@ class Ov1LearningAttackerCarryController:
             )
         ]
         # Filter fixed targets before action selection so a save can still move.
-        rejected_lineups = False
         advice = getattr(self, 'lineup_advice', None)
         if advice is not None and not nearby_enemies:
             accepted = [cell for cell in lineup_candidates if advice(char.ability_name, cell)]
-            rejected_lineups = bool(lineup_candidates) and not accepted
             lineup_candidates = accepted
         ability_available = (
-            (char.ability_name == "RECON" and not rejected_lineups)
+            (char.ability_name == "RECON" and advice is None)
             or bool(nearby_enemies)
             or bool(lineup_candidates)
             or (char.ability_name == "FLASH" and self._sighting is not None)
@@ -1103,7 +1108,7 @@ class Ov1LearningAttackerCarryController:
                 )
             if target_pos is None and self._sighting is not None:
                 target_pos = self._sighting["pos"]
-            if target_pos is None and self._plant_cells and not rejected_lineups:
+            if target_pos is None and self._plant_cells and advice is None:
                 target_pos = random.choice(self._plant_cells)
 
             if target_pos is not None:

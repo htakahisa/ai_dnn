@@ -35,7 +35,7 @@ class CarryEvaluationTests(unittest.TestCase):
         self.assertEqual(factory().carry_controller._choose_route(1), ("left", 2))
         self.assertEqual(carry._choose_route(20), ("left", 2))
 
-    def test_resume_never_duplicates_trials_and_rejects_changed_scenario(self):
+    def test_resume_never_duplicates_trials_and_replaces_changed_scenario(self):
         routes = [{"id": "left:1,2", "site": "left", "waypoint": [1, 2]}]
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "results.json"
@@ -55,8 +55,11 @@ class CarryEvaluationTests(unittest.TestCase):
                 self.assertEqual((row["sets_completed"], row["rounds"], row["wins"], row["win_rate"]),
                                  (3, 36, 36, 1.0))
                 with patch.object(evaluation, "scenario_manifest", return_value={"fingerprint": "changed"}):
-                    with self.assertRaisesRegex(ValueError, "scenario"):
-                        evaluation.evaluate(["fnatic_v3"], rounds=36, output=path)
+                    evaluation.evaluate(["fnatic_v3"], rounds=36, output=path)
+                self.assertEqual(run.call_count, 6)
+                replaced = json.loads(path.read_text(encoding="utf-8"))
+                row = replaced["opponents"]["fnatic_v3"]["routes"]["left:1,2"]
+                self.assertEqual((row["sets_completed"], row["rounds"]), (3, 36))
 
     def test_missing_model_is_error_not_zero_win_rate(self):
         routes = [{"id": "right:2,3", "site": "right", "waypoint": [2, 3]}]
@@ -67,7 +70,7 @@ class CarryEvaluationTests(unittest.TestCase):
                     patch.object(evaluation, "run_set", side_effect=FileNotFoundError("checkpoint")), \
                     patch.object(evaluation, "LOG_PATH", Path(directory) / "run.log"), \
                     contextlib.redirect_stdout(io.StringIO()):
-                with self.assertRaisesRegex(RuntimeError, "incomplete"):
+                with self.assertRaisesRegex(RuntimeError, "incomplete.*FileNotFoundError: checkpoint"):
                     evaluation.evaluate(["fnatic_v3"], rounds=12, output=path)
             entry = json.loads(path.read_text(encoding="utf-8"))["opponents"]["fnatic_v3"]
             self.assertEqual(entry["status"], "error")
@@ -205,6 +208,7 @@ class CarryEvaluationTests(unittest.TestCase):
     def test_windows_atomic_save_retries_transient_reader_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "result.json"
+            path.write_text('{"value": 0}', encoding="utf-8")
             original = Path.replace
             attempts = []
 

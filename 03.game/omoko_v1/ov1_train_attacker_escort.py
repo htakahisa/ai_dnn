@@ -111,6 +111,7 @@ from game_core import (
 )
 
 from character_stats import CHARACTER_TABLE as STATS_TABLE
+from grid_lines import WALL_LOS_VERSION, wall_line_cells
 import ov1_common_rl
 from ov1_common_rl import DuelingQNet, ReplayBuffer, optimize_double_dqn_step
 from ov1_ultimate_training import (
@@ -142,6 +143,9 @@ _DEFENDER_SIM_GRID = ov1_common_rl.parse_grid(DEFENDER_SIM_MAZE_STR)
 EPISODE_COUNT = 4000
 EVAL_MIN_EPISODE = EPISODE_COUNT * 0.7
 CARRY_ROUTE_VERSION = "carry_map_waypoint_adjacent_v1"
+COMBAT_RULE_VERSION = "escort_hs_modifiers_v2"
+ENEMY_SIGHTING_VERSION = "smoke_recon_supercover_v2"
+MOVING_SHOOTER_HS_MULTIPLIER = 0.1  # battle_logic.py: moving shooter HS penalty
 SAVE_DIR = "data/attacker_escort_data/"
 MAX_TICKS = 90
 BATCH_SIZE = 256
@@ -303,9 +307,17 @@ def _carry_route_path(grid, start, waypoint, target):
 
 
 def _has_los(grid, smoke_cells, p1, p2):
-    """壁とスモークを考慮した射線判定(ov1_common_rl.has_los利用。引数順序が
-    異なる点に注意: このファイルはgrid, smoke_cells, p1, p2の順)。"""
-    return ov1_common_rl.has_los(grid, p1, p2, smoke_cells)
+    """Engine-compatible supercover walls plus the existing smoke path rule."""
+    for r, c in wall_line_cells(tuple(p1), tuple(p2)):
+        if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]) or grid[r, c] == 1:
+            return False
+    # Supercover already checked every wall on the Bresenham path. Only smoke
+    # needs the narrower path; do not scan the same walls a second time.
+    if smoke_cells:
+        cells = ov1_common_rl.line_cells(p1, p2)
+        if len(cells) > 2 and any(cell in smoke_cells for cell in cells):
+            return False
+    return True
 
 def _chebyshev(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
@@ -896,7 +908,8 @@ class EscortEnv:
             dist = _chebyshev(from_pos, self.enemy_pos[i])
             if max_range is not None and dist > max_range:
                 continue
-            if not _has_los(self.grid, smoke_cells, from_pos, self.enemy_pos[i]):
+            effective_smoke = () if self.enemy_reveal_remaining[i] > 0 else smoke_cells
+            if not _has_los(self.grid, effective_smoke, from_pos, self.enemy_pos[i]):
                 continue
             if best_dist is None or dist < best_dist:
                 best_idx, best_dist = i, dist
@@ -1452,12 +1465,18 @@ class EscortEnv:
             target_pos = self._pos_of(target_kind, target_idx)
 
             accuracy = MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
+            hs_rate = shooter_stats["hs_rate"] * (
+                MOVING_SHOOTER_HS_MULTIPLIER if shooter_stats["moved"] else 1.0
+            )
             # 正面からの角度差による補正(正面100%～真横50%、battle_logicと同一ロジック)
-            accuracy *= _facing_accuracy_multiplier(
+            facing_multiplier = _facing_accuracy_multiplier(
                 self._facing_of(shooter_kind, shooter_idx), shooter_pos, target_pos
             )
+            accuracy *= facing_multiplier
+            hs_rate *= facing_multiplier
             if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
+                hs_rate *= BLIND_ACCURACY_MULTIPLIER
 
             dodge = target_stats["dodge"]
             if target_kind == "enemy" and self.enemy_reveal_remaining[target_idx] > 0:
@@ -1466,6 +1485,7 @@ class EscortEnv:
             hit_chance = accuracy * (1.0 - dodge)
             if target_stats["moved"]:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+                hs_rate *= MOVING_TARGET_HIT_MULTIPLIER
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = self.rng.random() < hit_chance
@@ -1477,7 +1497,7 @@ class EscortEnv:
             if not hit:
                 continue
 
-            damage = HEADSHOT_DAMAGE if self.rng.random() < shooter_stats["hs_rate"] else BODY_DAMAGE
+            damage = HEADSHOT_DAMAGE if self.rng.random() < max(0.0, hs_rate) else BODY_DAMAGE
 
             if target_kind == "carry":
                 self.carry_hp = max(0, self.carry_hp - damage)
@@ -2127,6 +2147,10 @@ def main():
             "roster_order": list(ROSTER_ORDER),
             "spike_holder_default": SPIKE_HOLDER,
             "carry_route_version": CARRY_ROUTE_VERSION,
+            "combat_rule_version": COMBAT_RULE_VERSION,
+            "enemy_sighting_version": ENEMY_SIGHTING_VERSION,
+            "wall_los_version": WALL_LOS_VERSION,
+            "moving_shooter_hs_multiplier": MOVING_SHOOTER_HS_MULTIPLIER,
             "waypoint_cells": env.waypoint_cells_by_site,
             "plant_cells_by_site": env.plant_cells_by_site,
             "hold_ticks": args.hold_ticks,
