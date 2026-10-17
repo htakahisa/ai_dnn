@@ -97,6 +97,7 @@ def route_metadata(map_names=MAPS):
 
 def delete_incompatible_datasets(directory):
     """Delete obsolete collection files, retaining compatible data and other files."""
+    from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import compatible_route_metadata
     if not DEFAULT_DELETE_INCOMPATIBLE_DATASETS:
         return []
     current = route_metadata()
@@ -121,7 +122,7 @@ def delete_incompatible_datasets(directory):
         )
         scenario_changed = (
             not isinstance(scenarios, dict) or not scenarios
-            or any(name not in current or metadata != current[name]
+            or any(name not in current or not compatible_route_metadata(metadata, current[name])
                    for name, metadata in scenarios.items())
         )
         if contract_changed or scenario_changed:

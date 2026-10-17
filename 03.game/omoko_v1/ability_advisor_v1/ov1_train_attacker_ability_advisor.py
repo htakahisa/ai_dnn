@@ -22,6 +22,7 @@ from omoko_v1.ability_advisor_v1.ov1_learn_attacker_ability_advisor import (
 from omoko_v1.ability_advisor_v1.ov1_collect_attacker_ability_advisor import (
     route_metadata, delete_incompatible_datasets,
 )
+from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import compatible_route_metadata
 
 DEFAULT_DATA_DIR = ROOT / 'data' / 'datasets'
 DEFAULT_OUTPUT = ROOT / 'data' / 'ov1_attacker_ability_advisor_candidate.pt'
@@ -63,7 +64,8 @@ def load_samples(directory,skip_incomplete=DEFAULT_SKIP_INCOMPLETE_DATASETS):
                 or header.get('feature_names') != feature_names()):
             raise ValueError(f'dataset feature/label contract mismatch: {path}')
         current = route_metadata(tuple(header['scenarios']))
-        if header['scenarios'] != current:
+        if any(not compatible_route_metadata(metadata, current[name])
+               for name, metadata in header['scenarios'].items()):
             raise ValueError(f'carry model or scenario changed; recollect {path}')
         provenance.update(current)
         for row in records[1:-1]:

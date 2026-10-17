@@ -256,7 +256,8 @@ class FixedAbilityAdvisor:
         if metadata is None or metadata['signature'] != scenario.signature:
             raise AbilityAdvisorError(f'Fixed ability adviser scenario_mismatch: '
                                       f'{scenario.map_name}: {self.model_path}')
-        if metadata['carry_sha256'] != model_hash:
+        from .ov1_advisor_attacker_context import normalize_policy_digest
+        if normalize_policy_digest(metadata['carry_sha256']) != model_hash:
             raise AbilityAdvisorError(f'Fixed ability adviser policy_mismatch: '
                                       f'{scenario.map_name}: {self.model_path}')
 

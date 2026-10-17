@@ -7,6 +7,15 @@ import numpy as np
 
 AI_DIR = Path(__file__).resolve().parents[1]
 ROLES = ('carry', 'escort', 'retrieve', 'guard')
+ADVISOR_POLICY_ROLES = ('carry', 'escort')
+# Verified from checkpoint bytes in Git c11afd437062944b7719516b44edce65a50bd5f9.
+# Only this proven legacy bundle can be translated; unknown hashes still fail.
+LEGACY_POLICY_HASHES = {
+    'carry': '31dcb91ca1a3bd54771efcf4e63191d07baa021f0592e3a2dbdf0508f63a89d9',
+    'escort': '0d38aeeebd812f45fb615a1f5c9077a5257ea247f8d51d9b94006196d7fceb81',
+    'retrieve': 'c0fcbd23a5910f7d15aa6e0ff3b1438c7f927c4397d74e49fe63b10dd5114ffc',
+    'guard': '08cc0852803338ae2614a877dc8cb6cdf4ea747364785bf358fcff00c5c93a2a',
+}
 # Change this only when the interpretation of the scenario inputs changes.
 # Inference source text (including comments and guard-only changes) is not an
 # input schema. Frozen checkpoint weights have their own provenance below.
@@ -28,8 +37,24 @@ def policy_path(path):
 
 def policy_digest(paths):
     from .ov1_learn_attacker_ability_advisor import sha256_file
-    return hashlib.sha256(json.dumps({role: sha256_file(policy_path(path))
-        for role, path in paths.items()}, sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps({role: sha256_file(policy_path(paths[role]))
+        for role in ADVISOR_POLICY_ROLES}, sort_keys=True).encode()).hexdigest()
+
+
+def normalize_policy_digest(digest):
+    legacy = hashlib.sha256(json.dumps(LEGACY_POLICY_HASHES, sort_keys=True).encode()).hexdigest()
+    if digest == legacy:
+        return hashlib.sha256(json.dumps({role: LEGACY_POLICY_HASHES[role]
+            for role in ADVISOR_POLICY_ROLES}, sort_keys=True).encode()).hexdigest()
+    return digest
+
+
+def compatible_route_metadata(recorded, current):
+    if not isinstance(recorded, dict):
+        return False
+    normalized = dict(recorded)
+    normalized['carry_sha256'] = normalize_policy_digest(normalized.get('carry_sha256'))
+    return normalized == current
 
 
 def scenario(name):

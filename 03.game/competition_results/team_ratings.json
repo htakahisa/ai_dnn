@@ -4,28 +4,28 @@
   "k_factor": 40.0,
   "ratings": {
     "Alien Rex": 1349.021,
-    "BBL": 1279.853,
-    "Blood Moon": 1440.385,
+    "BBL": 1268.739,
+    "Blood Moon": 1490.647,
     "Carnal Lust Syndicate": 1238.436,
-    "Dragon Tail": 1371.378,
-    "EG2023": 1659.806,
-    "Eine Kleine": 1581.333,
-    "Fnatic2023": 1518.413,
-    "Furina Classic": 1628.572,
-    "Furina Tartaglia": 1581.735,
-    "Ghost Champions": 1519.194,
-    "Gorigons": 1683.814,
-    "Japan All-Stars": 1464.362,
+    "Dragon Tail": 1406.241,
+    "EG2023": 1577.734,
+    "Eine Kleine": 1512.398,
+    "Fnatic2023": 1563.416,
+    "Furina Classic": 1628.895,
+    "Furina Tartaglia": 1554.775,
+    "Ghost Champions": 1593.388,
+    "Gorigons": 1765.169,
+    "Japan All-Stars": 1390.918,
     "Leo And Friends": 1509.052,
     "Meta Beat": 1263.631,
-    "Omoko Gaming": 1981.22,
-    "Queen's Flower Gambit": 1438.239,
-    "SUPES": 1565.816,
+    "Omoko Gaming": 2026.447,
+    "Queen's Flower Gambit": 1416.513,
+    "SUPES": 1592.649,
     "SereNade": 1500.0,
     "Team Elites": 1447.175,
-    "Touyama Gaming": 1698.331,
+    "Touyama Gaming": 1669.99,
     "Vision Strikers": 1228.647,
-    "radiantdancer": 1551.585
+    "radiantdancer": 1506.118
   },
   "history": [
     {
@@ -11888,6 +11888,934 @@
         "Furina Classic": 0.126
       },
       "margin_multiplier": 1.6
+    },
+    {
+      "event": 410,
+      "timestamp": "2026-10-17T15:24:58",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M1",
+      "team1": "Furina Classic",
+      "team2": "Fnatic2023",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Furina Classic",
+      "before": {
+        "Furina Classic": 1628.572,
+        "Fnatic2023": 1518.413
+      },
+      "after": {
+        "Furina Classic": 1650.753,
+        "Fnatic2023": 1496.232
+      },
+      "delta": {
+        "Furina Classic": 22.181,
+        "Fnatic2023": -22.181
+      },
+      "expected": {
+        "Furina Classic": 0.6534,
+        "Fnatic2023": 0.3466
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 411,
+      "timestamp": "2026-10-17T15:25:05",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M2",
+      "team1": "EG2023",
+      "team2": "Furina Tartaglia",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Furina Tartaglia",
+      "before": {
+        "EG2023": 1659.806,
+        "Furina Tartaglia": 1581.735
+      },
+      "after": {
+        "EG2023": 1620.734,
+        "Furina Tartaglia": 1620.807
+      },
+      "delta": {
+        "EG2023": -39.072,
+        "Furina Tartaglia": 39.072
+      },
+      "expected": {
+        "EG2023": 0.6105,
+        "Furina Tartaglia": 0.3895
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 412,
+      "timestamp": "2026-10-17T15:26:30",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M3",
+      "team1": "Dragon Tail",
+      "team2": "Ghost Champions",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Ghost Champions",
+      "before": {
+        "Dragon Tail": 1371.378,
+        "Ghost Champions": 1519.194
+      },
+      "after": {
+        "Dragon Tail": 1352.226,
+        "Ghost Champions": 1538.346
+      },
+      "delta": {
+        "Dragon Tail": -19.152,
+        "Ghost Champions": 19.152
+      },
+      "expected": {
+        "Dragon Tail": 0.2992,
+        "Ghost Champions": 0.7008
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 413,
+      "timestamp": "2026-10-17T15:26:36",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M4",
+      "team1": "Japan All-Stars",
+      "team2": "Queen's Flower Gambit",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Queen's Flower Gambit",
+      "before": {
+        "Japan All-Stars": 1464.362,
+        "Queen's Flower Gambit": 1438.239
+      },
+      "after": {
+        "Japan All-Stars": 1429.961,
+        "Queen's Flower Gambit": 1472.64
+      },
+      "delta": {
+        "Japan All-Stars": -34.401,
+        "Queen's Flower Gambit": 34.401
+      },
+      "expected": {
+        "Japan All-Stars": 0.5375,
+        "Queen's Flower Gambit": 0.4625
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 414,
+      "timestamp": "2026-10-17T15:26:44",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M5",
+      "team1": "Blood Moon",
+      "team2": "radiantdancer",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Blood Moon",
+      "before": {
+        "Blood Moon": 1440.385,
+        "radiantdancer": 1551.585
+      },
+      "after": {
+        "Blood Moon": 1482.291,
+        "radiantdancer": 1509.679
+      },
+      "delta": {
+        "Blood Moon": 41.906,
+        "radiantdancer": -41.906
+      },
+      "expected": {
+        "Blood Moon": 0.3452,
+        "radiantdancer": 0.6548
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 415,
+      "timestamp": "2026-10-17T15:26:50",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M6",
+      "team1": "SUPES",
+      "team2": "Eine Kleine",
+      "score1": 3,
+      "score2": 0,
+      "winner": "SUPES",
+      "before": {
+        "SUPES": 1565.816,
+        "Eine Kleine": 1581.333
+      },
+      "after": {
+        "SUPES": 1599.244,
+        "Eine Kleine": 1547.905
+      },
+      "delta": {
+        "SUPES": 33.428,
+        "Eine Kleine": -33.428
+      },
+      "expected": {
+        "SUPES": 0.4777,
+        "Eine Kleine": 0.5223
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 416,
+      "timestamp": "2026-10-17T15:28:02",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M7",
+      "team1": "Touyama Gaming",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Touyama Gaming": 1698.331,
+        "Omoko Gaming": 1981.22
+      },
+      "after": {
+        "Touyama Gaming": 1687.832,
+        "Omoko Gaming": 1991.719
+      },
+      "delta": {
+        "Touyama Gaming": -10.499,
+        "Omoko Gaming": 10.499
+      },
+      "expected": {
+        "Touyama Gaming": 0.164,
+        "Omoko Gaming": 0.836
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 417,
+      "timestamp": "2026-10-17T15:28:29",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R1 M8",
+      "team1": "Gorigons",
+      "team2": "BBL",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Gorigons",
+      "before": {
+        "Gorigons": 1683.814,
+        "BBL": 1279.853
+      },
+      "after": {
+        "Gorigons": 1689.513,
+        "BBL": 1274.154
+      },
+      "delta": {
+        "Gorigons": 5.699,
+        "BBL": -5.699
+      },
+      "expected": {
+        "Gorigons": 0.911,
+        "BBL": 0.089
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 418,
+      "timestamp": "2026-10-17T15:29:42",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R1 M1",
+      "team1": "BBL",
+      "team2": "Touyama Gaming",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Touyama Gaming",
+      "before": {
+        "BBL": 1274.154,
+        "Touyama Gaming": 1687.832
+      },
+      "after": {
+        "BBL": 1268.739,
+        "Touyama Gaming": 1693.247
+      },
+      "delta": {
+        "BBL": -5.415,
+        "Touyama Gaming": 5.415
+      },
+      "expected": {
+        "BBL": 0.0846,
+        "Touyama Gaming": 0.9154
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 419,
+      "timestamp": "2026-10-17T15:29:49",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R1 M2",
+      "team1": "Eine Kleine",
+      "team2": "radiantdancer",
+      "score1": 0,
+      "score2": 3,
+      "winner": "radiantdancer",
+      "before": {
+        "Eine Kleine": 1547.905,
+        "radiantdancer": 1509.679
+      },
+      "after": {
+        "Eine Kleine": 1512.398,
+        "radiantdancer": 1545.186
+      },
+      "delta": {
+        "Eine Kleine": -35.507,
+        "radiantdancer": 35.507
+      },
+      "expected": {
+        "Eine Kleine": 0.5548,
+        "radiantdancer": 0.4452
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 420,
+      "timestamp": "2026-10-17T15:29:56",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R1 M3",
+      "team1": "Japan All-Stars",
+      "team2": "Dragon Tail",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Dragon Tail",
+      "before": {
+        "Japan All-Stars": 1429.961,
+        "Dragon Tail": 1352.226
+      },
+      "after": {
+        "Japan All-Stars": 1390.918,
+        "Dragon Tail": 1391.269
+      },
+      "delta": {
+        "Japan All-Stars": -39.042,
+        "Dragon Tail": 39.042
+      },
+      "expected": {
+        "Japan All-Stars": 0.61,
+        "Dragon Tail": 0.39
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 421,
+      "timestamp": "2026-10-17T15:31:03",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R1 M4",
+      "team1": "EG2023",
+      "team2": "Fnatic2023",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Fnatic2023",
+      "before": {
+        "EG2023": 1620.734,
+        "Fnatic2023": 1496.232
+      },
+      "after": {
+        "EG2023": 1577.734,
+        "Fnatic2023": 1539.232
+      },
+      "delta": {
+        "EG2023": -43.0,
+        "Fnatic2023": 43.0
+      },
+      "expected": {
+        "EG2023": 0.6719,
+        "Fnatic2023": 0.3281
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 422,
+      "timestamp": "2026-10-17T15:31:47",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R2 M1",
+      "team1": "Furina Classic",
+      "team2": "Furina Tartaglia",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Furina Classic",
+      "before": {
+        "Furina Classic": 1650.753,
+        "Furina Tartaglia": 1620.807
+      },
+      "after": {
+        "Furina Classic": 1680.002,
+        "Furina Tartaglia": 1591.558
+      },
+      "delta": {
+        "Furina Classic": 29.249,
+        "Furina Tartaglia": -29.249
+      },
+      "expected": {
+        "Furina Classic": 0.543,
+        "Furina Tartaglia": 0.457
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 423,
+      "timestamp": "2026-10-17T15:32:56",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R2 M2",
+      "team1": "Ghost Champions",
+      "team2": "Queen's Flower Gambit",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Ghost Champions",
+      "before": {
+        "Ghost Champions": 1538.346,
+        "Queen's Flower Gambit": 1472.64
+      },
+      "after": {
+        "Ghost Champions": 1564.365,
+        "Queen's Flower Gambit": 1446.621
+      },
+      "delta": {
+        "Ghost Champions": 26.019,
+        "Queen's Flower Gambit": -26.019
+      },
+      "expected": {
+        "Ghost Champions": 0.5934,
+        "Queen's Flower Gambit": 0.4066
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 424,
+      "timestamp": "2026-10-17T15:33:06",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R2 M3",
+      "team1": "Blood Moon",
+      "team2": "SUPES",
+      "score1": 2,
+      "score2": 3,
+      "winner": "SUPES",
+      "before": {
+        "Blood Moon": 1482.291,
+        "SUPES": 1599.244
+      },
+      "after": {
+        "Blood Moon": 1467.159,
+        "SUPES": 1614.376
+      },
+      "delta": {
+        "Blood Moon": -15.132,
+        "SUPES": 15.132
+      },
+      "expected": {
+        "Blood Moon": 0.3378,
+        "SUPES": 0.6622
+      },
+      "margin_multiplier": 1.12
+    },
+    {
+      "event": 425,
+      "timestamp": "2026-10-17T15:34:17",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R2 M4",
+      "team1": "Omoko Gaming",
+      "team2": "Gorigons",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Omoko Gaming": 1991.719,
+        "Gorigons": 1689.513
+      },
+      "after": {
+        "Omoko Gaming": 2001.278,
+        "Gorigons": 1679.954
+      },
+      "delta": {
+        "Omoko Gaming": 9.559,
+        "Gorigons": -9.559
+      },
+      "expected": {
+        "Omoko Gaming": 0.8506,
+        "Gorigons": 0.1494
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 426,
+      "timestamp": "2026-10-17T15:37:45",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R2 M1",
+      "team1": "Touyama Gaming",
+      "team2": "Gorigons",
+      "score1": 2,
+      "score2": 3,
+      "winner": "Gorigons",
+      "before": {
+        "Touyama Gaming": 1693.247,
+        "Gorigons": 1679.954
+      },
+      "after": {
+        "Touyama Gaming": 1669.99,
+        "Gorigons": 1703.21
+      },
+      "delta": {
+        "Touyama Gaming": -23.257,
+        "Gorigons": 23.257
+      },
+      "expected": {
+        "Touyama Gaming": 0.5191,
+        "Gorigons": 0.4809
+      },
+      "margin_multiplier": 1.12
+    },
+    {
+      "event": 427,
+      "timestamp": "2026-10-17T15:37:53",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R2 M2",
+      "team1": "radiantdancer",
+      "team2": "Blood Moon",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Blood Moon",
+      "before": {
+        "radiantdancer": 1545.186,
+        "Blood Moon": 1467.159
+      },
+      "after": {
+        "radiantdancer": 1506.118,
+        "Blood Moon": 1506.227
+      },
+      "delta": {
+        "radiantdancer": -39.068,
+        "Blood Moon": 39.068
+      },
+      "expected": {
+        "radiantdancer": 0.6104,
+        "Blood Moon": 0.3896
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 428,
+      "timestamp": "2026-10-17T15:38:04",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R2 M3",
+      "team1": "Dragon Tail",
+      "team2": "Queen's Flower Gambit",
+      "score1": 3,
+      "score2": 1,
+      "winner": "Dragon Tail",
+      "before": {
+        "Dragon Tail": 1391.269,
+        "Queen's Flower Gambit": 1446.621
+      },
+      "after": {
+        "Dragon Tail": 1421.376,
+        "Queen's Flower Gambit": 1416.513
+      },
+      "delta": {
+        "Dragon Tail": 30.108,
+        "Queen's Flower Gambit": -30.108
+      },
+      "expected": {
+        "Dragon Tail": 0.421,
+        "Queen's Flower Gambit": 0.579
+      },
+      "margin_multiplier": 1.3
+    },
+    {
+      "event": 429,
+      "timestamp": "2026-10-17T15:38:56",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R2 M4",
+      "team1": "Fnatic2023",
+      "team2": "Furina Tartaglia",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Fnatic2023",
+      "before": {
+        "Fnatic2023": 1539.232,
+        "Furina Tartaglia": 1591.558
+      },
+      "after": {
+        "Fnatic2023": 1576.016,
+        "Furina Tartaglia": 1554.775
+      },
+      "delta": {
+        "Fnatic2023": 36.783,
+        "Furina Tartaglia": -36.783
+      },
+      "expected": {
+        "Fnatic2023": 0.4253,
+        "Furina Tartaglia": 0.5747
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 430,
+      "timestamp": "2026-10-17T15:39:55",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R3 M1",
+      "team1": "Furina Classic",
+      "team2": "Ghost Champions",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Ghost Champions",
+      "before": {
+        "Furina Classic": 1680.002,
+        "Ghost Champions": 1564.365
+      },
+      "after": {
+        "Furina Classic": 1637.728,
+        "Ghost Champions": 1606.639
+      },
+      "delta": {
+        "Furina Classic": -42.274,
+        "Ghost Champions": 42.274
+      },
+      "expected": {
+        "Furina Classic": 0.6605,
+        "Ghost Champions": 0.3395
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 431,
+      "timestamp": "2026-10-17T15:40:57",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R3 M2",
+      "team1": "SUPES",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Omoko Gaming",
+      "before": {
+        "SUPES": 1614.376,
+        "Omoko Gaming": 2001.278
+      },
+      "after": {
+        "SUPES": 1608.147,
+        "Omoko Gaming": 2007.507
+      },
+      "delta": {
+        "SUPES": -6.229,
+        "Omoko Gaming": 6.229
+      },
+      "expected": {
+        "SUPES": 0.0973,
+        "Omoko Gaming": 0.9027
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 432,
+      "timestamp": "2026-10-17T15:41:29",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R3 M1",
+      "team1": "Gorigons",
+      "team2": "Blood Moon",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Gorigons",
+      "before": {
+        "Gorigons": 1703.21,
+        "Blood Moon": 1506.227
+      },
+      "after": {
+        "Gorigons": 1718.79,
+        "Blood Moon": 1490.647
+      },
+      "delta": {
+        "Gorigons": 15.58,
+        "Blood Moon": -15.58
+      },
+      "expected": {
+        "Gorigons": 0.7566,
+        "Blood Moon": 0.2434
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 433,
+      "timestamp": "2026-10-17T15:43:02",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R3 M2",
+      "team1": "Dragon Tail",
+      "team2": "Fnatic2023",
+      "score1": 1,
+      "score2": 3,
+      "winner": "Fnatic2023",
+      "before": {
+        "Dragon Tail": 1421.376,
+        "Fnatic2023": 1576.016
+      },
+      "after": {
+        "Dragon Tail": 1406.241,
+        "Fnatic2023": 1591.151
+      },
+      "delta": {
+        "Dragon Tail": -15.136,
+        "Fnatic2023": 15.136
+      },
+      "expected": {
+        "Dragon Tail": 0.2911,
+        "Fnatic2023": 0.7089
+      },
+      "margin_multiplier": 1.3
+    },
+    {
+      "event": 434,
+      "timestamp": "2026-10-17T15:44:10",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R4 M1",
+      "team1": "Gorigons",
+      "team2": "SUPES",
+      "score1": 3,
+      "score2": 2,
+      "winner": "Gorigons",
+      "before": {
+        "Gorigons": 1718.79,
+        "SUPES": 1608.147
+      },
+      "after": {
+        "Gorigons": 1734.289,
+        "SUPES": 1592.649
+      },
+      "delta": {
+        "Gorigons": 15.498,
+        "SUPES": -15.498
+      },
+      "expected": {
+        "Gorigons": 0.6541,
+        "SUPES": 0.3459
+      },
+      "margin_multiplier": 1.12
+    },
+    {
+      "event": 435,
+      "timestamp": "2026-10-17T15:44:52",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R4 M2",
+      "team1": "Fnatic2023",
+      "team2": "Furina Classic",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Furina Classic",
+      "before": {
+        "Fnatic2023": 1591.151,
+        "Furina Classic": 1637.728
+      },
+      "after": {
+        "Fnatic2023": 1563.416,
+        "Furina Classic": 1665.463
+      },
+      "delta": {
+        "Fnatic2023": -27.736,
+        "Furina Classic": 27.736
+      },
+      "expected": {
+        "Fnatic2023": 0.4334,
+        "Furina Classic": 0.5666
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 436,
+      "timestamp": "2026-10-17T15:45:46",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "WINNERS R4 M1",
+      "team1": "Ghost Champions",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 3,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Ghost Champions": 1606.639,
+        "Omoko Gaming": 2007.507
+      },
+      "after": {
+        "Ghost Champions": 1600.847,
+        "Omoko Gaming": 2013.299
+      },
+      "delta": {
+        "Ghost Champions": -5.792,
+        "Omoko Gaming": 5.792
+      },
+      "expected": {
+        "Ghost Champions": 0.0905,
+        "Omoko Gaming": 0.9095
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 437,
+      "timestamp": "2026-10-17T15:46:29",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOSERS R5 M1",
+      "team1": "Gorigons",
+      "team2": "Furina Classic",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Gorigons",
+      "before": {
+        "Gorigons": 1734.289,
+        "Furina Classic": 1665.463
+      },
+      "after": {
+        "Gorigons": 1760.031,
+        "Furina Classic": 1639.721
+      },
+      "delta": {
+        "Gorigons": 25.743,
+        "Furina Classic": -25.743
+      },
+      "expected": {
+        "Gorigons": 0.5978,
+        "Furina Classic": 0.4022
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 438,
+      "timestamp": "2026-10-17T15:47:25",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "LOWER FINAL",
+      "team1": "Gorigons",
+      "team2": "Ghost Champions",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Gorigons",
+      "before": {
+        "Gorigons": 1760.031,
+        "Ghost Champions": 1600.847
+      },
+      "after": {
+        "Gorigons": 1778.316,
+        "Ghost Champions": 1582.562
+      },
+      "delta": {
+        "Gorigons": 18.285,
+        "Ghost Champions": -18.285
+      },
+      "expected": {
+        "Gorigons": 0.7143,
+        "Ghost Champions": 0.2857
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 439,
+      "timestamp": "2026-10-17T15:48:29",
+      "type": "series",
+      "competition_id": "swiss_20261017_152403",
+      "context": "GRAND FINAL",
+      "team1": "Omoko Gaming",
+      "team2": "Gorigons",
+      "score1": 3,
+      "score2": 0,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Omoko Gaming": 2013.299,
+        "Gorigons": 1778.316
+      },
+      "after": {
+        "Omoko Gaming": 2026.447,
+        "Gorigons": 1765.169
+      },
+      "delta": {
+        "Omoko Gaming": 13.148,
+        "Gorigons": -13.148
+      },
+      "expected": {
+        "Omoko Gaming": 0.7946,
+        "Gorigons": 0.2054
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 440,
+      "timestamp": "2026-10-17T15:57:06",
+      "type": "series",
+      "competition_id": "series_20261017_155227",
+      "context": "SERIES",
+      "team1": "Furina Classic",
+      "team2": "Ghost Champions",
+      "score1": 0,
+      "score2": 1,
+      "winner": "Ghost Champions",
+      "before": {
+        "Furina Classic": 1639.721,
+        "Ghost Champions": 1582.562
+      },
+      "after": {
+        "Furina Classic": 1602.503,
+        "Ghost Champions": 1619.78
+      },
+      "delta": {
+        "Furina Classic": -37.218,
+        "Ghost Champions": 37.218
+      },
+      "expected": {
+        "Furina Classic": 0.5815,
+        "Ghost Champions": 0.4185
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 441,
+      "timestamp": "2026-10-17T16:02:52",
+      "type": "series",
+      "competition_id": "series_20261017_155721",
+      "context": "SERIES",
+      "team1": "Furina Classic",
+      "team2": "Ghost Champions",
+      "score1": 10,
+      "score2": 4,
+      "winner": "Furina Classic",
+      "before": {
+        "Furina Classic": 1602.503,
+        "Ghost Champions": 1619.78
+      },
+      "after": {
+        "Furina Classic": 1628.895,
+        "Ghost Champions": 1593.388
+      },
+      "delta": {
+        "Furina Classic": 26.392,
+        "Ghost Champions": -26.392
+      },
+      "expected": {
+        "Furina Classic": 0.4752,
+        "Ghost Champions": 0.5248
+      },
+      "margin_multiplier": 1.2571
     }
   ]
 }

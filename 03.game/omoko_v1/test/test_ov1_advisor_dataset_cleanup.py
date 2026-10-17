@@ -15,6 +15,21 @@ from omoko_v1.ability_advisor_v1 import ov1_train_attacker_ability_advisor as tr
 
 
 class DatasetCleanupTests(unittest.TestCase):
+    def test_legacy_datasets_survive_cleanup_and_training_load(self):
+        from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import normalize_policy_digest
+        legacy = '08f4bf3e7fc3995a0ce15e37615e6a2c7c9d17661f4170110ebbbb6683ddbfa1'
+        current = {'carry_L': dict(signature='layout', carry_sha256=normalize_policy_digest(legacy))}
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_dataset(directory, scenarios={
+                'carry_L': dict(signature='layout', carry_sha256=legacy)})
+            before = path.read_bytes()
+            with patch.object(collection, 'route_metadata', return_value=current), \
+                    patch.object(training, 'route_metadata', return_value=current):
+                rows, provenance = training.load_samples(directory)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(provenance, current)
+            self.assertEqual(path.read_bytes(), before)
+
     current = {'carry_L': {'signature': 'current', 'carry_sha256': 'weights'}}
 
     def write_dataset(self, directory, name='data.jsonl', **changes):

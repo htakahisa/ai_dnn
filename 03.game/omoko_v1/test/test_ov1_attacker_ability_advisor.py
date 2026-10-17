@@ -20,6 +20,38 @@ from ov1_attacker_controller import Ov1AttackerController
 
 
 class AbilityAdviceTests(unittest.TestCase):
+    def test_policy_digest_tracks_only_carry_and_escort(self):
+        from omoko_v1.ability_advisor_v1 import ov1_advisor_attacker_context as context
+        with tempfile.TemporaryDirectory() as directory:
+            paths = {role: Path(directory) / role for role in context.ROLES}
+            for role, path in paths.items():
+                path.write_bytes(role.encode())
+            before = context.policy_digest(paths)
+            for role in ('guard', 'retrieve'):
+                paths[role].unlink()
+            self.assertEqual(context.policy_digest(paths), before)
+            for role in ('carry', 'escort'):
+                original = paths[role].read_bytes()
+                paths[role].write_bytes(b'updated')
+                self.assertNotEqual(context.policy_digest(paths), before)
+                paths[role].write_bytes(original)
+
+    def test_known_legacy_bundle_binds_but_changed_carry_stops(self):
+        from omoko_v1.ability_advisor_v1 import ov1_advisor_attacker_context as context
+        legacy = '08f4bf3e7fc3995a0ce15e37615e6a2c7c9d17661f4170110ebbbb6683ddbfa1'
+        scoped = '716403b8a6e794e3d211e4289aeb9ad0da7a4e69c784020ca5da96ebcf1e66be'
+        scenario_context, _, _, _ = self.fixture()
+        checkpoint = self.checkpoint(scenario_context, advisor.OPPONENTS[0], (8, 3))
+        checkpoint['scenarios']['carry_L']['carry_sha256'] = legacy
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            torch.save(checkpoint, path)
+            judge = advisor.FixedAbilityAdvisor(path)
+            judge.bind_route(scenario_context, scoped)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'policy_mismatch'):
+                judge.bind_route(scenario_context, 'changed')
+        self.assertEqual(context.normalize_policy_digest('unknown'), 'unknown')
+
     def fixture(self):
         context = scenario('carry_L')
         actor = NS(name='a', team='A', is_alive=True, pos=(8, 2), facing='N',
