@@ -25,6 +25,8 @@ OPPONENT_NAMES = {
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_MODEL_PATH = ROOT / 'data' / 'ov1_attacker_ability_advisor.pt'
+DEFAULT_FLASH_SMOKE_MODEL_PATH = ROOT / 'data' / 'ov1_attacker_ability_advisor_flash_smoke.pt'
+DEPLOYED_CANDIDATE_ABILITIES = ('FLASH', 'SMOKE')
 DEFAULT_HISTORY_ROUNDS = 5
 MAPS = ('carry_L', 'carry_R', 'escort_L', 'escort_R')
 OPPONENTS = tuple(sorted(set(OPPONENT_NAMES.values())))
@@ -217,7 +219,8 @@ class FixedAbilityAdvisor:
                     raise ValueError('adviser checkpoint contract changed')
                 if (any(not isinstance(v,dict) or not isinstance(v.get('signature'),str)
                         or not isinstance(v.get('carry_sha256'),str) for v in checkpoint['scenarios'].values())
-                        or any(not isinstance(v,dict) for v in checkpoint['groups'].values())):
+                        or any(not isinstance(v,dict) or not 0 < v.get('skip_threshold', checkpoint['skip_threshold']) < 1
+                               for v in checkpoint['groups'].values())):
                     raise ValueError('invalid adviser group metadata')
                 with torch.random.fork_rng(devices=[]):
                     model = AbilityJudge()
@@ -293,12 +296,39 @@ class FixedAbilityAdvisor:
                 if not math.isfinite(score):
                     raise AbilityAdvisorError(f'Fixed ability adviser invalid_model_score: '
                                               f'{key}: {self.model_path}')
-                advice = Advice(score >= self.checkpoint['skip_threshold'],'model',score)
+                threshold = report.get('skip_threshold', self.checkpoint['skip_threshold'])
+                advice = Advice(score >= threshold,'model',score)
         self.last_advice = advice
         self.decisions['use' if advice.use else 'save'] += 1
         if advice.use:
             self.pending[char.name] = (ability,tuple(point),getattr(char,ability.lower()+'_charges',0),int(state.get('battle_tick',0)))
         return advice
+
+
+class DeployedAbilityAdvisor(FixedAbilityAdvisor):
+    """Use adopted FLASH/SMOKE weights and reference RECON with one match memory."""
+
+    def __init__(self, recon_path=DEFAULT_MODEL_PATH,
+                 flash_smoke_path=DEFAULT_FLASH_SMOKE_MODEL_PATH):
+        super().__init__(recon_path)
+        self.flash_smoke_advisor = FixedAbilityAdvisor(flash_smoke_path)
+        self.recon_bundle = self.model, self.checkpoint, self.model_path
+        self.flash_smoke_bundle = (self.flash_smoke_advisor.model,
+                                   self.flash_smoke_advisor.checkpoint,
+                                   self.flash_smoke_advisor.model_path)
+
+    def bind_route(self, scenario, model_hash):
+        # Validate both sources at startup, even if the round initially uses RECON.
+        super().bind_route(scenario, model_hash)
+        self.flash_smoke_advisor.bind_route(scenario, model_hash)
+
+    def advise(self, scenario, char, state, opponent, ability, point, aim, game):
+        bundle = self.flash_smoke_bundle if ability in DEPLOYED_CANDIDATE_ABILITIES else self.recon_bundle
+        self.model, self.checkpoint, self.model_path = bundle
+        try:
+            return super().advise(scenario, char, state, opponent, ability, point, aim, game)
+        finally:
+            self.model, self.checkpoint, self.model_path = self.recon_bundle
 
 
 def sha256_file(path):

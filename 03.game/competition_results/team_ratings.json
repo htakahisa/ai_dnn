@@ -11,19 +11,19 @@
     "EG2023": 1659.806,
     "Eine Kleine": 1581.333,
     "Fnatic2023": 1518.413,
-    "Furina Classic": 1636.633,
+    "Furina Classic": 1628.572,
     "Furina Tartaglia": 1581.735,
-    "Ghost Champions": 1524.355,
-    "Gorigons": 1694.148,
+    "Ghost Champions": 1519.194,
+    "Gorigons": 1683.814,
     "Japan All-Stars": 1464.362,
     "Leo And Friends": 1509.052,
     "Meta Beat": 1263.631,
-    "Omoko Gaming": 1940.731,
+    "Omoko Gaming": 1981.22,
     "Queen's Flower Gambit": 1438.239,
-    "SUPES": 1572.199,
+    "SUPES": 1565.816,
     "SereNade": 1500.0,
     "Team Elites": 1447.175,
-    "Touyama Gaming": 1708.88,
+    "Touyama Gaming": 1698.331,
     "Vision Strikers": 1228.647,
     "radiantdancer": 1551.585
   },
@@ -11741,6 +11741,151 @@
       "expected": {
         "Ghost Champions": 0.3142,
         "SUPES": 0.6858
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 405,
+      "timestamp": "2026-10-16T19:18:53",
+      "type": "series",
+      "competition_id": "series_20261016_191449",
+      "context": "SERIES",
+      "team1": "SUPES",
+      "team2": "Omoko Gaming",
+      "score1": 1,
+      "score2": 10,
+      "winner": "Omoko Gaming",
+      "before": {
+        "SUPES": 1572.199,
+        "Omoko Gaming": 1940.731
+      },
+      "after": {
+        "SUPES": 1565.816,
+        "Omoko Gaming": 1947.114
+      },
+      "delta": {
+        "SUPES": -6.383,
+        "Omoko Gaming": 6.383
+      },
+      "expected": {
+        "SUPES": 0.107,
+        "Omoko Gaming": 0.893
+      },
+      "margin_multiplier": 1.4909
+    },
+    {
+      "event": 406,
+      "timestamp": "2026-10-17T07:22:45",
+      "type": "series",
+      "competition_id": "series_20261017_071938",
+      "context": "SERIES",
+      "team1": "Ghost Champions",
+      "team2": "Omoko Gaming",
+      "score1": 0,
+      "score2": 10,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Ghost Champions": 1524.355,
+        "Omoko Gaming": 1947.114
+      },
+      "after": {
+        "Ghost Champions": 1519.194,
+        "Omoko Gaming": 1952.275
+      },
+      "delta": {
+        "Ghost Champions": -5.161,
+        "Omoko Gaming": 5.161
+      },
+      "expected": {
+        "Ghost Champions": 0.0806,
+        "Omoko Gaming": 0.9194
+      },
+      "margin_multiplier": 1.6
+    },
+    {
+      "event": 407,
+      "timestamp": "2026-10-17T07:30:59",
+      "type": "series",
+      "competition_id": "series_20261017_072548",
+      "context": "SERIES",
+      "team1": "Gorigons",
+      "team2": "Omoko Gaming",
+      "score1": 2,
+      "score2": 10,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Gorigons": 1694.148,
+        "Omoko Gaming": 1952.275
+      },
+      "after": {
+        "Gorigons": 1683.814,
+        "Omoko Gaming": 1962.609
+      },
+      "delta": {
+        "Gorigons": -10.334,
+        "Omoko Gaming": 10.334
+      },
+      "expected": {
+        "Gorigons": 0.1845,
+        "Omoko Gaming": 0.8155
+      },
+      "margin_multiplier": 1.4
+    },
+    {
+      "event": 408,
+      "timestamp": "2026-10-17T07:38:36",
+      "type": "series",
+      "competition_id": "series_20261017_073239",
+      "context": "SERIES",
+      "team1": "Touyama Gaming",
+      "team2": "Omoko Gaming",
+      "score1": 2,
+      "score2": 10,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Touyama Gaming": 1708.88,
+        "Omoko Gaming": 1962.609
+      },
+      "after": {
+        "Touyama Gaming": 1698.331,
+        "Omoko Gaming": 1973.159
+      },
+      "delta": {
+        "Touyama Gaming": -10.549,
+        "Omoko Gaming": 10.549
+      },
+      "expected": {
+        "Touyama Gaming": 0.1884,
+        "Omoko Gaming": 0.8116
+      },
+      "margin_multiplier": 1.4
+    },
+    {
+      "event": 409,
+      "timestamp": "2026-10-17T08:58:17",
+      "type": "series",
+      "competition_id": "series_20261017_085403",
+      "context": "SERIES",
+      "team1": "Omoko Gaming",
+      "team2": "Furina Classic",
+      "score1": 10,
+      "score2": 0,
+      "winner": "Omoko Gaming",
+      "before": {
+        "Omoko Gaming": 1973.159,
+        "Furina Classic": 1636.633
+      },
+      "after": {
+        "Omoko Gaming": 1981.22,
+        "Furina Classic": 1628.572
+      },
+      "delta": {
+        "Omoko Gaming": 8.061,
+        "Furina Classic": -8.061
+      },
+      "expected": {
+        "Omoko Gaming": 0.874,
+        "Furina Classic": 0.126
       },
       "margin_multiplier": 1.6
     }

@@ -59,8 +59,8 @@ def defending_opponent(game):
 
 def preflight_default_advisor():
     """Validate every attacker route before a defender-start match can run."""
-    from .ov1_learn_attacker_ability_advisor import FixedAbilityAdvisor, MAPS
-    advisor = FixedAbilityAdvisor()
+    from .ov1_learn_attacker_ability_advisor import DeployedAbilityAdvisor, MAPS
+    advisor = DeployedAbilityAdvisor()
     digest = policy_digest(DEFAULT_POLICY_PATHS)
     for name in MAPS:
         advisor.bind_route(scenario(name), digest)

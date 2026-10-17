@@ -46,6 +46,8 @@ carry は、コントローラーの初期化時にサマリJSONを読み込み�
 
 ## 定点アビリティアドバイザーを再学習する場合
 
+2026-10-17 採用：通常対戦の定点アドバイザーは、FLASH・SMOKEを採用済みの再学習モデルで判定し、RECONを従来のモデルで判定します。ユーザーは、[採用内容と確認結果](docs/ov1_attacker_advisor_deployment.md) でモデルの保存先と設定を確認できます。ユーザーがゲームを再起動すると、通常対戦はこの組合せを使用します。
+
 対象モデルは、omoko v1 の carry・escort が SMOKE・FLASH・RECON の定点を使用するか温存するかを助言する定点アビリティアドバイザーです。
 
 作業ディレクトリ：`C:\Users\ronet\MyProject\git\AI_dnn\03.game\omoko_v1`（ユーザーがこのディレクトリへ移動済みの状態）。
@@ -59,11 +61,13 @@ python ability_advisor_v1/ov1_collect_attacker_ability_advisor.py
 # 2. 学習スクリプトが収集データから定点アドバイザーモデルを作り直す
 python ability_advisor_v1/ov1_train_attacker_ability_advisor.py
 
-# 3. 評価スクリプトが定点アドバイザーの助言あり・なしを比較する
+# 3. 評価スクリプトが助言なし・現在のモデル・再学習候補を比較する
 python ability_advisor_v1/ov1_evaluate_attacker_ability_advisor.py
 ```
 
-収集・学習スクリプトは、現在のモデル・シナリオ・観測仕様と互換性のない旧収集データを自動削除し、互換性のある収集データを残します。学習スクリプトは、既定の定点アドバイザーモデルを更新します。通常対戦の `Ov1AttackerController` は、そのモデルを自動で読み込みます。
+収集・学習スクリプトは、現在のモデル・シナリオ・観測仕様と互換性のない旧収集データを自動削除し、互換性のある収集データを残します。学習スクリプトは、途中の判断データも保持して学習し、検証データで不要な使用許可を減らすモデルと区分ごとの閾値を選びます。学習スクリプトは、候補を `ability_advisor_v1/data/ov1_attacker_ability_advisor_candidate.pt` に保存します。通常対戦の `Ov1AttackerController` は、FLASH・SMOKE用の採用済み `_flash_smoke.pt` とRECON用の従来モデルを読み込みます。学習処理は、これらの採用済みモデルを上書きしません。
+
+評価スクリプトは、助言なし・従来モデル・全種類を再学習候補で判定する条件・通常対戦の採用済み組合せを、同じseedで比較します。評価スクリプトは、実消費、投擲時の教師判定、着弾時の効果、勝率・設置率を記録します。ユーザーは、通常対戦の組合せと次の再学習候補の比較を `candidate_vs_deployed`、従来モデルと採用済み組合せの比較を `deployed_vs_advised` で確認できます。ユーザーは、候補の勝利数を確認してから次の採用を判断してください。
 
 ユーザーが現在の仕様と互換性のある収集済みデータだけで定点アドバイザーモデルを学習し直す場合は、ユーザーは手順2と手順3を実行してください。ユーザーが carry・escort・retrieve・guard の重み、関連配置・定点、観測仕様、相手AIを更新した場合は、ユーザーは手順1から実行してください。
 
@@ -74,8 +78,8 @@ python ability_advisor_v1/ov1_evaluate_attacker_ability_advisor.py
 | 対象スクリプト | ユーザーが編集する主な定数 |
 | --- | --- |
 | `ov1_collect_attacker_ability_advisor.py` | `DEFAULT_MATCHES_PER_OPPONENT`（既定40）、`DEFAULT_ROUNDS_PER_MATCH`（既定12）、`DEFAULT_WORKERS`（既定6）、`DEFAULT_SEED`（既定0） |
-| `ov1_train_attacker_ability_advisor.py` | `DEFAULT_EPOCHS`（既定80）、`DEFAULT_BATCH_SIZE`（既定256）、`DEFAULT_LEARNING_RATE`（既定0.001） |
-| `ov1_evaluate_attacker_ability_advisor.py` | `DEFAULT_MATCHES_PER_OPPONENT`（既定10）、`DEFAULT_ROUNDS_PER_MATCH`（既定12）、`DEFAULT_WORKERS`（既定6） |
+| `ov1_train_attacker_ability_advisor.py` | `DEFAULT_EPOCHS`（既定80）、`DEFAULT_BATCH_SIZE`（既定256）、`DEFAULT_LEARNING_RATE`（既定0.001）、`DEFAULT_THRESHOLD_CANDIDATES`、`DEFAULT_OUTPUT` |
+| `ov1_evaluate_attacker_ability_advisor.py` | `DEFAULT_MATCHES_PER_OPPONENT`（既定10）、`DEFAULT_ROUNDS_PER_MATCH`（既定12）、`DEFAULT_WORKERS`（既定6）、`DEFAULT_MODEL`、`DEFAULT_CANDIDATE_MODEL` |
 
 ユーザーが追加収集で異なる対戦データを増やす場合は、ユーザーは収集スクリプトの `DEFAULT_SEED` を変更してください。
 

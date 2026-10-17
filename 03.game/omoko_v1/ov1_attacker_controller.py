@@ -14,7 +14,7 @@ for _p in (_THIS_DIR, _ROOT_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from omoko_v1.ability_advisor_v1.ov1_learn_attacker_ability_advisor import FixedAbilityAdvisor, MAPS
+from omoko_v1.ability_advisor_v1.ov1_learn_attacker_ability_advisor import DeployedAbilityAdvisor, MAPS
 from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import (
     policy_path, policy_digest, scenario, defending_opponent,
 )
@@ -60,7 +60,7 @@ class Ov1AttackerController(BaseController):
 
         # 💡追加: チーム内で「サイト内で誰かが既にアビリティを使用したか」を共有する状態。
         # ラウンドごとにreset_roundでクリアする。
-        self.ability_advisor = ability_advisor if ability_advisor is not None else FixedAbilityAdvisor()
+        self.ability_advisor = ability_advisor if ability_advisor is not None else DeployedAbilityAdvisor()
         self._advisor_scenarios = {name: scenario(name) for name in MAPS}
         digest = policy_digest(paths)
         for context in self._advisor_scenarios.values():

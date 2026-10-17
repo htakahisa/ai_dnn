@@ -150,6 +150,7 @@ class RecordingAdvisor(FixedAbilityAdvisor):
         row = dict(event='sample',dataset_id=self.dataset_id,match_id=self.match_id,
                    round_number=teacher.current_round,group=key,map_name=scenario.map_name,
                    opponent=self.opponent,ability=ability,point=list(point),
+                   caster=str(char.name),
                    tick=int(state.get('battle_tick',0)),features=features.tolist(),label=int(label))
         self.stream.write(json.dumps(row,separators=(',',':'))+'\n')
         self.groups[key] += 1

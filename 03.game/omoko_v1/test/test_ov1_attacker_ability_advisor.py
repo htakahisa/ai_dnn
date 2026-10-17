@@ -95,6 +95,25 @@ class AbilityAdviceTests(unittest.TestCase):
                                          'SMOKE', point, point, game).use)
             self.assertEqual(judge.last_advice.reason, 'model')
 
+    def test_per_group_threshold_is_used_and_invalid_threshold_stops(self):
+        context, actor, state, game = self.fixture()
+        opponent, point = advisor.OPPONENTS[0], (8, 3)
+        checkpoint = self.checkpoint(context, opponent, point)
+        checkpoint['model_state_dict']['layers.4.bias'].zero_()  # score=0.5
+        key = advisor.group_key(context, opponent, 'SMOKE', point)
+        checkpoint['groups'][key]['skip_threshold'] = .8
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'advisor.pt'
+            torch.save(checkpoint, path)
+            judge = advisor.FixedAbilityAdvisor(path)
+            judge.bind_route(context, 'frozen')
+            self.assertFalse(judge.advise(context, actor, state, opponent,
+                                         'SMOKE', point, point, game).use)
+            checkpoint['groups'][key]['skip_threshold'] = float('nan')
+            torch.save(checkpoint, path)
+            with self.assertRaisesRegex(advisor.AbilityAdvisorError, 'load failed'):
+                advisor.FixedAbilityAdvisor(path)
+
     def test_scenario_mismatch_stops_at_binding_before_enemy_contact(self):
         context, actor, state, game = self.fixture()
         point, opponent = (8, 3), advisor.OPPONENTS[0]
@@ -157,7 +176,7 @@ class AbilityAdviceTests(unittest.TestCase):
     def test_defender_preflight_checks_all_four_attacker_routes(self):
         from omoko_v1.ability_advisor_v1 import ov1_advisor_attacker_context as context
         judge = advisor.FixedAbilityAdvisor(None, enabled=False)
-        with patch.object(advisor, 'FixedAbilityAdvisor', return_value=judge), \
+        with patch.object(advisor, 'DeployedAbilityAdvisor', return_value=judge), \
                 patch.object(context, 'policy_digest', return_value='frozen'):
             context.preflight_default_advisor()
         self.assertEqual(judge.route_hashes, dict.fromkeys(advisor.MAPS, 'frozen'))
