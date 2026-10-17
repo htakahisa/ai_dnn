@@ -85,7 +85,9 @@ class CorneredOmokoMixin:
                 pos = (enemy.pos[0] + dr, enemy.pos[1] + dc)
                 if (0 <= pos[0] < self.height and 0 <= pos[1] < self.width
                         and self.grid[pos] != 1
-                        and not self._is_position_occupied(char, pos, old_pos)):
+                        and not self._is_position_occupied(char, pos, old_pos)
+                        and self.check_cell_line_of_sight(
+                            pos, tuple(enemy.pos), block_smoke=False)):
                     cells.append(pos)
             if cells:
                 return cells

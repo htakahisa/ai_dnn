@@ -67,7 +67,8 @@ class CorneredOmokoTests(unittest.TestCase):
         game.chars.append(make_character("Leo", actor.team, (2, 2)))
         game.defender_setup_phase = SimpleNamespace(active=True, ticks_elapsed=30)
         game.battle_tick = 0
-        with patch.object(ability, "DEBUG_OMOKO_CORNERED_ENABLED", True):
+        with patch.object(ability, "DEBUG_OMOKO_CORNERED_ENABLED", True), patch.object(
+                ability, "DEBUG_OMOKO_CORNERED_START_TICK", 35):
             self.assertFalse(game._omoko_cornered_active(actor))
             game.defender_setup_phase.active = False
             game.battle_tick = 3  # 次の移動フェーズは通算34tick。
@@ -105,8 +106,27 @@ class CorneredOmokoTests(unittest.TestCase):
                 with self.subTest(facing=facing, offsets=offsets):
                     self.assertEqual(set(game._omoko_cornered_destinations(actor, enemy)), expected)
                 for cell in expected:
-                    game.grid[cell] = 1
+                    game.chars.append(make_character("Leo", enemy.team, cell))
             self.assertEqual(game._omoko_cornered_destinations(actor, enemy), [])
+
+    def test_real_map_corner_does_not_repeat_wall_blocked_current_position(self):
+        import numpy as np
+        from map_data import NEW_MAZE_STR
+        game, actor, enemy = self.fixture()
+        game.grid = np.array([[int(value) for value in row]
+                              for row in NEW_MAZE_STR.strip().splitlines()])
+        game.height, game.width = game.grid.shape
+        actor.pos, enemy.pos = [9, 3], [10, 2]
+        enemy.facing = "S"
+        self.assertFalse(game.check_shot_line_of_sight(actor, enemy))
+        self.assertEqual(set(game._omoko_cornered_destinations(actor, enemy)),
+                         {(10, 1), (10, 3)})
+        for _ in range(3):
+            self.tick(game)
+            self.assertIs(actor.omoko_cornered_target, enemy)
+            self.assertTrue(game.check_shot_line_of_sight(actor, enemy))
+            self.assertTrue(any(shot["shooter"] is actor and shot["target"] is enemy
+                                for shot in game.last_shots))
 
     def test_occupied_reserved_outside_and_wall_cells_are_excluded(self):
         game, actor, enemy = self.fixture()

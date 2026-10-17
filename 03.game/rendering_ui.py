@@ -12,6 +12,7 @@ from character_stats import get_awakening_description
 from public_effects import displayed_projectile_path, displayed_area_cells
 from pathlib import Path
 import tkinter as tk
+from types import SimpleNamespace
 from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
                             draw_contract_status, draw_serenade_flash,
                             draw_ash_projectiles, draw_balemoon_warnings,
@@ -27,6 +28,8 @@ from game_core import (
     EXPLOSION_FILL_COLOR, EXPLOSION_OUTLINE_COLOR, EXPLOSION_OUTLINE_WIDTH,
     ORB_COLLECT_REQUIRED_TICKS,
 )
+
+USER_SELECTION_DRAG_THRESHOLD_PIXELS = 5
 
 class RenderingUIMixin:
     def _get_ace_effect_frames(self, effect):
@@ -98,7 +101,135 @@ class RenderingUIMixin:
         return True
     def _is_character_selected(self, character):
         ctrl = self._controller_for_team(character.team)
-        return bool(ctrl and ctrl.selected_char == character.name)
+        return bool(ctrl and character.name in ctrl.selected_chars)
+
+    def on_canvas_press(self, event):
+        self.canvas.focus_set()
+        self._selection_drag_start = None
+        self._selection_drag_end = None
+        in_map = (self.map_offset_x <= event.x < self.map_offset_x + self.map_pixel_width
+                  and COMBO_BANNER_HEIGHT <= event.y < COMBO_BANNER_HEIGHT + self.map_pixel_height)
+        if in_map and self.get_user_controllers() and not (self.ability_mode or self.ultimate_mode):
+            self._selection_drag_start = (event.x, event.y)
+        else:
+            self.on_canvas_click(SimpleNamespace(x=event.x, y=event.y))
+
+    def on_canvas_drag(self, event):
+        start = getattr(self, "_selection_drag_start", None)
+        if start is None:
+            return
+        if max(abs(event.x - start[0]), abs(event.y - start[1])) >= USER_SELECTION_DRAG_THRESHOLD_PIXELS:
+            self._selection_drag_end = (
+                min(max(event.x, self.map_offset_x), self.map_offset_x + self.map_pixel_width),
+                min(max(event.y, COMBO_BANNER_HEIGHT), COMBO_BANNER_HEIGHT + self.map_pixel_height),
+            )
+            self._draw_user_selection_box()
+
+    def _draw_user_selection_box(self):
+        self.canvas.delete("user_selection_box")
+        start = getattr(self, "_selection_drag_start", None)
+        end = getattr(self, "_selection_drag_end", None)
+        if start and end:
+            self.canvas.create_rectangle(*start, *end, outline="#ffe066", width=2,
+                                         dash=(5, 3), tags="user_selection_box")
+
+    def on_canvas_release(self, event):
+        start = getattr(self, "_selection_drag_start", None)
+        if start is None:
+            return
+        self.on_canvas_drag(event)
+        end = self._selection_drag_end
+        self._selection_drag_start = self._selection_drag_end = None
+        self.canvas.delete("user_selection_box")
+        if end is None:
+            self.on_canvas_click(SimpleNamespace(x=event.x, y=event.y))
+            return
+        x1, x2 = sorted((start[0], end[0]))
+        y1, y2 = sorted((start[1], end[1]))
+        enclosed = [ch for ch in self.chars if ch.is_alive
+                    and self._controller_for_team(ch.team) is not None
+                    and x1 <= self.map_offset_x + (ch.pos[1] + 0.5) * self.cell_size <= x2
+                    and y1 <= COMBO_BANNER_HEIGHT + (ch.pos[0] + 0.5) * self.cell_size <= y2]
+        team = getattr(self, "active_user_team", None)
+        if enclosed:
+            if not any(ch.team == team for ch in enclosed):
+                team = enclosed[0].team
+            self._clear_other_user_selections(team)
+            self._controller_for_team(team).select_characters(ch.name for ch in enclosed if ch.team == team)
+            self.active_user_team = team
+            self.ability_mode = self.ultimate_mode = None
+        else:
+            for ctrl, _ in self.get_user_controllers():
+                ctrl.selected_char = None
+        self.draw()
+
+    def on_canvas_right_click(self, event):
+        team = getattr(self, "active_user_team", None)
+        ctrl = self._controller_for_team(team) if team in ("A", "D") else None
+        if ctrl is None:
+            return
+        c = int((event.x - self.map_offset_x) // self.cell_size)
+        r = int((event.y - COMBO_BANNER_HEIGHT) // self.cell_size)
+        if not (0 <= r < self.height and 0 <= c < self.width):
+            return
+        for char in self.chars:
+            if char.team != team or not char.is_alive or char.name not in ctrl.selected_chars:
+                continue
+            facing = self._facing_towards(char.pos, (r, c))
+            if facing is not None:
+                ctrl.facings[char.name] = facing
+                if not getattr(char, "facing_forced_this_tick", False):
+                    char.facing = facing
+        self.draw()
+
+    def on_ability_shortcut(self, event):
+        if getattr(self, "_ability_shortcut_held", False):
+            return "break"
+        self._ability_shortcut_held = True
+        self._cast_selected_ability_at(SimpleNamespace(
+            x=self.canvas.winfo_pointerx() - self.canvas.winfo_rootx(),
+            y=self.canvas.winfo_pointery() - self.canvas.winfo_rooty(),
+        ))
+        return "break"
+
+    def on_ability_shortcut_release(self, event):
+        self._ability_shortcut_held = False
+        return "break"
+
+    def _cast_selected_ability_at(self, event):
+        selected = self._selected_user_character()
+        if not selected or not selected.is_alive or getattr(selected, "ability_seal_remaining", 0) > 0:
+            return
+        c = int((event.x - self.map_offset_x) // self.cell_size)
+        r = int((event.y - COMBO_BANNER_HEIGHT) // self.cell_size)
+        if not (0 <= r < self.height and 0 <= c < self.width):
+            return
+        ability = selected.ability_name
+        if ability == "RAMP":
+            self.execute_ai_ability(selected, {"ability": "RAMP"})
+            self.ability_mode = self.ultimate_mode = None
+            self.draw()
+        elif ability in ("SMOKE", "FLASH", "RECON", "DANCE", "ASH"):
+            if self.grid[r, c] == 1 or getattr(selected, ability.lower() + "_charges", 0) <= 0:
+                return
+            self.ability_mode = (ability, selected.team, selected.name)
+            self.ultimate_mode = None
+            self.on_canvas_click(SimpleNamespace(x=event.x, y=event.y))
+
+    def on_ultimate_shortcut(self, event):
+        if getattr(self, "_ultimate_shortcut_held", False):
+            return "break"
+        self._ultimate_shortcut_held = True
+        bounds = self._ultimate_button_bounds()
+        if bounds:
+            x1, y1, x2, y2 = bounds
+            self.on_canvas_click(SimpleNamespace(x=(x1 + x2) / 2,
+                                                 y=(y1 + y2) / 2 + COMBO_BANNER_HEIGHT))
+        return "break"
+
+    def on_ultimate_shortcut_release(self, event):
+        self._ultimate_shortcut_held = False
+        return "break"
 
     def _try_dance_target(self, target):
         if not self.ability_mode or self.ability_mode[0] != "DANCE":
@@ -428,6 +559,13 @@ class RenderingUIMixin:
         return self.map_offset_x + x
 
 
+    @staticmethod
+    def _ability_display_state(char):
+        charges = 1 if char.ability_name == "HUNT" else getattr(
+            char, char.ability_name.lower() + "_charges", 0
+        )
+        return charges, char.is_alive and charges > 0
+
     def _draw_compact_ability_icon(self, ability_name, cx, cy, available):
         """構えるUIと同じ意匠の小型アビリティアイコンを描く。"""
         active_color = {"SMOKE": "#e67e22", "FLASH": "#f1c40f", "RECON": "#65d8e8", "HUNT": "#e74c3c", "RAMP": "#329cff", "DANCE": "#ff79c9", "ASH": "#dc2638"}[ability_name]
@@ -445,9 +583,10 @@ class RenderingUIMixin:
             self.canvas.create_polygon(cx-8, cy+3, cx+5, cy-5, cx+8, cy-2, cx-4, cy+6,
                                        fill=fill, outline=outline)
         elif ability_name == "RAMP":
-            self.canvas.create_oval(cx-7, cy-7, cx+7, cy+7, fill=fill, outline="#bdefff", width=2)
+            self.canvas.create_oval(cx-7, cy-7, cx+7, cy+7, fill=fill,
+                                    outline="#bdefff" if available else outline, width=2)
             self.canvas.create_line(cx-2, cy-5, cx+2, cy-1, cx-2, cy+1, cx+2, cy+5,
-                                    fill="#ecfcff", width=2)
+                                    fill="#ecfcff" if available else outline, width=2)
         elif ability_name == "DANCE":
             self.canvas.create_line(cx-6, cy, cx+6, cy, fill=fill, width=3)
             self.canvas.create_line(cx, cy-6, cx, cy+6, fill=fill, width=3)
@@ -609,16 +748,7 @@ class RenderingUIMixin:
 
             # ロールに対応するアビリティ
             ability = char.ability_name
-            charges = {
-                "SMOKE": char.smoke_charges,
-                "FLASH": char.flash_charges,
-                "RECON": char.recon_charges,
-                "RAMP": getattr(char, "ramp_charges", 0),
-                "DANCE": getattr(char, "dance_charges", 0),
-                "ASH": getattr(char, "ash_charges", 0),
-                "HUNT": 1,
-            }[ability]
-            available = char.is_alive and (charges > 0 or ability == "HUNT")
+            charges, available = self._ability_display_state(char)
             self._draw_compact_ability_icon(ability, x0 + 27, y + 95, available)
             label = {"SMOKE": "SMOKE", "FLASH": "FLASH", "RECON": "RECON", "HUNT": "HUNT +50HP", "RAMP": "Lamp", "DANCE": "DANCE", "ASH": "ASH"}[ability]
             status = "PASSIVE" if ability == "HUNT" else f"残り {charges}"
@@ -1024,7 +1154,7 @@ class RenderingUIMixin:
                 font=("Arial", 6, "bold"),
             )
 
-        selected_names = {ctrl.selected_char for ctrl, _ in self.get_user_controllers() if ctrl.selected_char is not None}
+        selected_names = {name for ctrl, _ in self.get_user_controllers() for name in ctrl.selected_chars}
         viewer_team = self.get_viewer_team()
         visible_chars = [
             c for c in self.chars
@@ -1077,10 +1207,13 @@ class RenderingUIMixin:
                 draw_contract_status(self.canvas, row, col, self.cell_size, char.life_contract_remaining, self.map_offset_x)
 
             # キャラクター上部の名前・HPパネル
+            show_ability = self._controller_for_team(char.team) is not None
             panel_w = max(56, min(150, 16 + len(char.display_name) * 7))
+            if show_ability:
+                panel_w += 24
             kill_star_count = min(5, char.round_kills)
             star_row_h = 10 if kill_star_count > 0 else 0
-            panel_h = 23 + star_row_h
+            panel_h = (27 if show_ability else 23) + star_row_h
             px1 = cx - panel_w / 2
             py2 = row*self.cell_size - 3
             py1 = py2 - panel_h
@@ -1096,7 +1229,12 @@ class RenderingUIMixin:
                 stars_text = "★" * kill_star_count
                 self.canvas.create_text(cx, py1+7, text=stars_text, fill="#ffd700", font=("Arial", 8, "bold"))
             name_color = "#d6d9de" if has_adjacent else ("yellow" if char.has_spike else "white")
-            self.canvas.create_text(cx, py1+8+star_row_h, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
+            name_cx = cx + 12 if show_ability else cx
+            name_cy = py1 + (10 if show_ability else 8) + star_row_h
+            if show_ability:
+                _, available = self._ability_display_state(char)
+                self._draw_compact_ability_icon(char.ability_name, px1 + 12, name_cy, available)
+            self.canvas.create_text(name_cx, name_cy, text=char.display_name, fill=name_color, font=("Arial", 8, "bold"))
             hp_ratio = min(1, char.hp / char.max_hp) if char.max_hp > 0 else 0
             self.canvas.create_rectangle(px1+4, py2-7, px1+panel_w-4, py2-3, fill="#3a404a", outline="")
             self.canvas.create_rectangle(px1+4, py2-7, px1+4+(panel_w-8)*hp_ratio, py2-3, fill=char.bg_color, outline="")
@@ -1174,6 +1312,9 @@ class RenderingUIMixin:
                 self.canvas.create_text(text_cx, y1+22, text=state,
                                         fill=accent if charges else "#777", font=("Arial", 10, "bold"))
                 self.canvas.create_text(text_cx, y1+48, text=help_text, fill="white", font=("Arial", 9))
+                if ability_name != "HUNT":
+                    self.canvas.create_text(x2 - 6, y1 + 5, text="[A]",
+                                            anchor="ne", fill="#aab7c4", font=("Arial", 7))
 
                 ultimate_bounds = self._ultimate_button_bounds()
                 if ultimate_bounds:
@@ -1192,7 +1333,7 @@ class RenderingUIMixin:
                     self.canvas.create_text(
                         (ux1 + ux2) / 2, uy1 + 22,
                         text=(
-                            f"{'ネオン' if ultimate_name == 'NEON' else ultimate_name}  "
+                            f"[Space] {'ネオン' if ultimate_name == 'NEON' else ultimate_name}  "
                             f"{selected.ultimate_points}/{selected.ultimate_cost}"
                         ),
                         fill=ult_accent, font=("Arial", 10, "bold"),
@@ -1262,6 +1403,7 @@ class RenderingUIMixin:
         # 既存ゲーム画面を下へずらし、告知がマップへ重ならない専用領域を確保する。
         self.canvas.move("!render_cached", 0, COMBO_BANNER_HEIGHT)
         self._draw_combo_announcement_banner()
+        self._draw_user_selection_box()
 
 
     def _draw_round_score_banner(self, total_w):

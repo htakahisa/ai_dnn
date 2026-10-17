@@ -7,12 +7,13 @@
 素材名と演出時間の説明は `docs/personal_ability_effects.md`（いずれも03.game基準）を参照。
 
 設定場所は `omoko_v1/ov1_ability_cornered_omoko.py` 冒頭の
-`OMOKO_CORNERED_DURATION_TICKS`。初期値は10tick。
+`OMOKO_CORNERED_DURATION_TICKS`。現在の設定値は99tick。
 99なら99tick継続し、0なら無効になる。移動候補がないtickも時間は消費する。
 
-現在は動作確認用の `DEBUG_OMOKO_CORNERED_ENABLED = True` にしている。
-味方が生存していても、setup phaseを含むラウンド開始後35tick目
-（`DEBUG_OMOKO_CORNERED_START_TICK = 35`）に発動する。
+現在の通常設定は `DEBUG_OMOKO_CORNERED_ENABLED = False`。
+動作確認用の設定をTrueにすると、おもこは味方が生存していても、
+setup phaseを含むラウンド開始後65tick目
+（`DEBUG_OMOKO_CORNERED_START_TICK = 65`）に能力を発動する。
 setup phase中は発動せず、指定tickを過ぎてもsetup中なら終了後に発動する。
 死亡済みのおもこは復活させない。通常条件に戻す場合は
 `DEBUG_OMOKO_CORNERED_ENABLED = False` に変更する。
@@ -22,6 +23,10 @@ setup phase中は発動せず、指定tickを過ぎてもsetup中なら終了後
 対象の現在の向きを基準として、後方3マス、左右2マス、斜め前2マス、正面の
 優先順で空きマスを探し、最初に見つかった優先順位の中からランダムに選ぶ。
 壁・範囲外・生存キャラクター・他者のESCAPE予約マスには移動しない。
+能力の移動処理は、移動先から対象の敵への射線を壁が遮るマスも候補から除く。
+この判定は角に接する壁も対象とし、後方に射線の通る候補がなければ、
+能力の移動処理は左右以降の優先順位へ進む。
+この候補判定はスモークを無視し、通常の射撃処理がスモークによる射撃可否を判定する。
 通常移動と同様に移動禁止効果を受け、移動先の罠なども発動する。
 
 敵は直前に実際に射撃した相手を除いてランダムに選ぶ。

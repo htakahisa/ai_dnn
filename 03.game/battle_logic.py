@@ -58,6 +58,8 @@ KILL_SOUND_FILENAMES = [
     ["kill4.mp3", 0.5],
     ["kill5.mp3", 0.5],
 ]
+DEFUSE_START_SOUND = ["sound/defuse.mp3", 0.5]
+PLANTED_SOUND = ["sound/planted.mp3", 0.5]
 _kill_sound_cache = {}
 _ace_sound_cache = {}
 _mixer_ready = False
@@ -141,6 +143,13 @@ from match_playback import MatchPlaybackMixin
 
 
 class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPlaybackMixin):
+
+    def _play_spike_sound(self, sound_config):
+        if self.headless:
+            return
+        sound = _get_ace_sound({"sound": sound_config})
+        if sound is not None:
+            sound.play()
 
     def _play_personal_ability_effect_sound(self, effect):
         sound = _get_ace_sound(effect)
@@ -833,6 +842,7 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                     char.has_spike = False
                     char.plant_timer = 0
                     char.is_planting = False
+                    self._play_spike_sound(PLANTED_SOUND)
 
                 # 設置中は移動・射撃を行わない。
                 char.moved_this_tick = False
@@ -857,6 +867,8 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                     # 同時に解除できるのは一人だけ。
                     if self.active_defuser_name in (None, char.name):
                         self.active_defuser_name = char.name
+                        if char.defuse_timer == 0:
+                            self._play_spike_sound(DEFUSE_START_SOUND)
                         char.defuse_timer += 1
                         # 解除完了は射撃解決後に判定する。
                         self._finalize_movement_transition_state(char)

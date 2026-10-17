@@ -652,11 +652,54 @@ class UserInputController(BaseController):
         super().__init__()
         self.selected_char = None
         self.targets = {}
+        self.facings = {}
+
+    @property
+    def selected_char(self):
+        return self._selected_char
+
+    @selected_char.setter
+    def selected_char(self, name):
+        self._selected_char = name
+        self.selected_chars = [name] if name is not None else []
+
+    def select_characters(self, names):
+        self.selected_chars = list(dict.fromkeys(names))
+        self._selected_char = next(iter(self.selected_chars), None)
+
+    def issue_move(self, r, c, grid, chars, my_team):
+        r, c = int(r), int(c)
+        if not self._in_bounds((r, c), grid) or grid[r, c] == 1:
+            return
+        selected = [ch for ch in chars if ch.team == my_team
+                    and ch.is_alive and ch.name in self.selected_chars]
+        if len(selected) <= 1:
+            for ch in selected:
+                self.targets[ch.name] = (r, c)
+            return
+
+        # Search the destination's walkable component, nearest cells first.
+        occupied = {tuple(ch.pos) for ch in chars if ch.is_alive and ch not in selected}
+        queue, seen, destinations = deque([(r, c)]), {(r, c)}, []
+        while queue:
+            cell = queue.popleft()
+            if cell not in occupied:
+                destinations.append(cell)
+            for dr, dc in self.CARDINAL_MOVES:
+                neighbor = (cell[0] + dr, cell[1] + dc)
+                if neighbor not in seen and self._in_bounds(neighbor, grid) and grid[neighbor] != 1:
+                    seen.add(neighbor)
+                    queue.append(neighbor)
+        for ch in selected:
+            if tuple(ch.pos) not in seen or not destinations:
+                continue
+            self.targets[ch.name] = destinations.pop(0)
 
     def reset_round(self):
         """ラウンド開始時に選択状態・目的地をリセットする。"""
         self.selected_char = None
         self.targets.clear()
+        self.facings.clear()
 
     def handle_click(self, r, c, grid, chars, my_team):
         """
@@ -695,10 +738,20 @@ class UserInputController(BaseController):
             return
 
         if self.selected_char is not None:
-            self.targets[self.selected_char] = (r, c)
-            self.selected_char = None
+            self.issue_move(r, c, grid, chars, my_team)
 
     def decide_move(self, char, game_state):
+        result = self._decide_user_move(char, game_state)
+        facing = self.facings.get(char.name)
+        if facing is None:
+            return result
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+        if isinstance(result, tuple):
+            return result
+        return result, {"facing": facing}
+
+    def _decide_user_move(self, char, game_state):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         is_planted = bool(game_state.get("is_planted", False))
