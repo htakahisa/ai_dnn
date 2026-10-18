@@ -60,6 +60,8 @@ KILL_SOUND_FILENAMES = [
 ]
 DEFUSE_START_SOUND = ["sound/defuse.mp3", 0.5]
 PLANTED_SOUND = ["sound/planted.mp3", 0.5]
+PLANT_TIME_WARNING_TICKS = 30
+PLANT_TIME_WARNING_SOUND = ["sound/30secleft.mp3", 0.5]
 _kill_sound_cache = {}
 _ace_sound_cache = {}
 _mixer_ready = False
@@ -1767,6 +1769,8 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                 )
         else:
             self.round_timer -= 1
+            if self.round_timer == PLANT_TIME_WARNING_TICKS and alive_A and alive_D:
+                self._play_spike_sound(PLANT_TIME_WARNING_SOUND)
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")

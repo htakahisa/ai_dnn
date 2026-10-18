@@ -163,6 +163,31 @@ class RenderingUIMixin:
                 ctrl.selected_char = None
         self.draw()
 
+    def _name_panel_is_hovered(self, bounds, character_name):
+        selected_names = {name for ctrl, _ in self.get_user_controllers()
+                          for name in ctrl.selected_chars}
+        selected_names.intersection_update(ch.name for ch in self.chars if ch.is_alive)
+        if not selected_names or character_name in selected_names:
+            return False
+        position = getattr(self, "_name_panel_hover_position", None)
+        if position is None:
+            return False
+        x, y = position
+        x1, y1, x2, y2 = bounds
+        return x1 <= x <= x2 and y1 <= y <= y2
+
+    def on_canvas_hover(self, event):
+        self._name_panel_hover_position = (event.x, event.y - COMBO_BANNER_HEIGHT)
+        hidden = {name for name, bounds in getattr(self, "_name_panel_bounds", {}).items()
+                  if self._name_panel_is_hovered(bounds, name)}
+        if hidden != getattr(self, "_hidden_name_panels", set()):
+            self.draw()
+
+    def on_canvas_leave(self, event):
+        self._name_panel_hover_position = None
+        if getattr(self, "_hidden_name_panels", set()):
+            self.draw()
+
     def on_canvas_right_click(self, event):
         team = getattr(self, "active_user_team", None)
         ctrl = self._controller_for_team(team) if team in ("A", "D") else None
@@ -428,21 +453,18 @@ class RenderingUIMixin:
             self.draw()
             return
 
-        clicked_char = next(
-            (
-                ch for ch in self.chars
-                if ch.is_alive
-                and tuple(ch.pos) == (r, c)
-                and self._controller_for_team(ch.team) is not None
-            ),
-            None,
+        clicked_char = UserInputController.find_clicked_character(
+            r, c,
+            (ch for ch in self.chars if self._controller_for_team(ch.team) is not None),
+            click_position=(event.y / self.cell_size - 0.5,
+                            (event.x - self.map_offset_x) / self.cell_size - 0.5),
         )
 
         if clicked_char is not None:
             self._clear_other_user_selections(clicked_char.team)
             self.active_user_team = clicked_char.team
             ctrl = self._controller_for_team(clicked_char.team)
-            ctrl.handle_click(r, c, self.grid, self.chars, clicked_char.team)
+            ctrl.select_character_and_stop(clicked_char.name)
             self.ability_mode = None
             self.ultimate_mode = None
         else:
@@ -456,7 +478,11 @@ class RenderingUIMixin:
                     self.active_user_team = active_team
 
             if ctrl is not None:
-                ctrl.handle_click(r, c, self.grid, self.chars, active_team)
+                ctrl.handle_click(
+                    r, c, self.grid, self.chars, active_team,
+                    click_position=(event.y / self.cell_size - 0.5,
+                                    (event.x - self.map_offset_x) / self.cell_size - 0.5),
+                )
                 self.ultimate_mode = None
 
         self.draw()
@@ -1160,6 +1186,8 @@ class RenderingUIMixin:
             c for c in self.chars
             if self.is_visible_to_team(c, viewer_team) and (c.is_alive or c.just_died)
         ]
+        self._name_panel_bounds = {}
+        self._hidden_name_panels = set()
         for char in visible_chars:
             row, col = char.pos
             x1 = self._map_x(col*self.cell_size)
@@ -1217,6 +1245,11 @@ class RenderingUIMixin:
             px1 = cx - panel_w / 2
             py2 = row*self.cell_size - 3
             py1 = py2 - panel_h
+            bounds = (px1, py1, px1 + panel_w, py2)
+            self._name_panel_bounds[char.name] = bounds
+            if self._name_panel_is_hovered(bounds, char.name):
+                self._hidden_name_panels.add(char.name)
+                continue
             has_adjacent = any(
                 other is not char and other.is_alive
                 and max(abs(other.pos[0] - char.pos[0]), abs(other.pos[1] - char.pos[1])) <= 1

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>チャット操作・試験プレイ</title>
+<style>
+body{margin:24px auto;padding:0 16px;max-width:1100px;background:#111827;color:#e5e7eb;font:16px system-ui}
+canvas{width:100%;background:#0b1220;border:1px solid #374151;border-radius:8px}button,input{font:inherit}button{padding:6px 18px;background:#334155;color:white;border:0;border-radius:6px}input{width:65%;vertical-align:middle}p{line-height:1.7}.attack{color:#fca5a5}.defense{color:#93c5fd}#rosters{display:flex;gap:40px;flex-wrap:wrap;font-size:14px;white-space:pre-line}
+</style>
+<h1>チャット操作・試験プレイ</h1>
+<p>???????AI??????????????????????????????????????????????????</p>
+<p><span class="attack" id="attack-team"></span>　<span class="defense" id="defense-team"></span></p>
+<canvas id="map" width="1056" height="624"></canvas>
+<p><button id="play">再生</button> <input id="seek" type="range" min="0" value="0"> <span id="time"></span></p>
+<p id="status"></p><div id="rosters"><div id="attack"></div><div id="defense"></div></div>
+<script id="recording" type="application/json">__REPLAY_DATA__</script>
+<script>
+const data=JSON.parse(document.getElementById('recording').textContent),frames=data.frames,grid=data.grid;
+document.getElementById('attack-team').textContent='● 攻撃：'+data.attack_team;
+document.getElementById('defense-team').textContent='● 守備：'+data.defense_team;
+const canvas=document.getElementById('map'),ctx=canvas.getContext('2d'),seek=document.getElementById('seek'),play=document.getElementById('play');
+seek.max=frames.length-1;let cursor=0,timer=null;
+function draw(){
+ const f=frames[cursor],cell=24;ctx.clearRect(0,0,canvas.width,canvas.height);
+ grid.forEach((row,r)=>row.forEach((v,c)=>{ctx.fillStyle=v===1?'#334155':v===2?'#524315':v===3?'#38282e':v===4?'#1e3654':'#111827';ctx.fillRect(c*cell,r*cell,cell-1,cell-1)}));
+ f.chars.forEach(p=>{const x=p.pos[1]*cell+12,y=p.pos[0]*cell+12;ctx.globalAlpha=p.alive?1:.25;ctx.fillStyle=p.team==='A'?'#fb7185':'#60a5fa';ctx.beginPath();ctx.arc(x,y,p.alive?8:4,0,2*Math.PI);ctx.fill();if(p.has_spike){ctx.strokeStyle='#facc15';ctx.lineWidth=2;ctx.stroke()}if(p.alive){const delta={N:[0,-10],S:[0,10],W:[-10,0],E:[10,0]}[p.facing];if(delta){ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+delta[0],y+delta[1]);ctx.stroke()}}ctx.globalAlpha=1});
+ if(f.planted_pos){ctx.fillStyle='#fde047';ctx.fillRect(f.planted_pos[1]*cell+8,f.planted_pos[0]*cell+8,8,8)}
+ document.getElementById('time').textContent=`${cursor+1} / ${frames.length}`;
+ const survivors=team=>f.chars.filter(p=>p.team===team&&p.alive).length;
+ document.getElementById('status').textContent=f.round_over?`${f.attacker_wins>f.defender_wins?'攻撃側':'守備側'}が勝利 / 攻撃側${survivors('A')}人生存・守備側${survivors('D')}人生存`:f.setup?`準備フェーズ：残り${f.setup_ticks_remaining}tick`:`戦闘 ${f.tick}tick / ${f.planted?'スパイク設置済み・爆発まで'+f.detonate_timer+'tick':'設置前・残り'+f.round_timer+'tick'}`;
+ ['A','D'].forEach(team=>document.getElementById(team==='A'?'attack':'defense').textContent=f.chars.filter(p=>p.team===team).map(p=>`${p.alive?'●':'×'} ${p.name}　HP ${Math.round(p.hp)}${p.has_spike?'　[スパイク]':''}`).join('\n'));
+ seek.value=cursor;
+}
+function stop(){clearInterval(timer);timer=null;play.textContent='再生'}
+play.onclick=()=>{if(timer){stop();return}if(cursor===frames.length-1)cursor=0;play.textContent='一時停止';timer=setInterval(()=>{draw();if(cursor===frames.length-1)stop();else cursor++},250)};
+seek.oninput=()=>{cursor=Number(seek.value);draw()};draw();
+</script></html>

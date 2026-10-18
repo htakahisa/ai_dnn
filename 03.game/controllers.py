@@ -151,6 +151,7 @@ class BaseController:
         chars=None,
         moving_char=None,
         allow_adjacent_goal=False,
+        wait_for_allies=False,
     ):
         """
         BFSで壁と生存キャラクターを避けながら、目標へ1マス進む。
@@ -160,11 +161,18 @@ class BaseController:
 
         allow_adjacent_goal=Trueの場合は、targetが空いていても
         target周辺の隣接マスへの到達を許可する。護衛・追従向け。
+
+        wait_for_allies=Trueの場合、経路探索は味方の位置を無視し、
+        移動先に味方がいればキャラクターは迂回せず待機する。
         """
         start = (int(pos[0]), int(pos[1]))
         goal = (int(target[0]), int(target[1]))
 
-        blocked = self._alive_occupied_positions(chars, moving_char)
+        path_chars = chars
+        if wait_for_allies and moving_char is not None:
+            path_chars = [other for other in chars or []
+                          if other.team != moving_char.team]
+        blocked = self._alive_occupied_positions(path_chars, moving_char)
         blocked.discard(start)
 
         if start == goal:
@@ -178,6 +186,8 @@ class BaseController:
         )
 
         if not candidate_goals:
+            if wait_for_allies:
+                return list(start)
             return self.get_next_pos_random(
                 pos=start,
                 grid=grid,
@@ -210,6 +220,8 @@ class BaseController:
                 queue.append(nxt)
 
         if reached_goal is None:
+            if wait_for_allies:
+                return list(start)
             return self.get_next_pos_random(
                 pos=start,
                 grid=grid,
@@ -224,6 +236,8 @@ class BaseController:
             route.append(parent[route[-1]])
         route.reverse()
         step = route[1] if len(route) > 1 else start
+        if wait_for_allies and step in self._alive_occupied_positions(chars, moving_char):
+            return list(start)
         if moving_char is not None and len(route) > 1:
             direction = (step[0] - start[0], step[1] - start[1])
             straight_steps = 1
@@ -701,7 +715,22 @@ class UserInputController(BaseController):
         self.targets.clear()
         self.facings.clear()
 
-    def handle_click(self, r, c, grid, chars, my_team):
+    @staticmethod
+    def find_clicked_character(r, c, chars, click_position=None):
+        """クリック選択は半径0.5マスのキャラ本体の円内だけを対象にする。"""
+        click_r, click_c = click_position if click_position is not None else (r, c)
+        candidates = (char for char in chars
+                      if getattr(char, "is_alive", True)
+                      and (char.pos[0] - click_r) ** 2 + (char.pos[1] - click_c) ** 2 <= 0.25)
+        return min(candidates,
+                   key=lambda char: (char.pos[0] - click_r) ** 2 + (char.pos[1] - click_c) ** 2,
+                   default=None)
+
+    def select_character_and_stop(self, name):
+        self.selected_char = name
+        self.targets.pop(name, None)
+
+    def handle_click(self, r, c, grid, chars, my_team, click_position=None):
         """
         r, c:
             クリックされたマス座標
@@ -718,23 +747,17 @@ class UserInputController(BaseController):
             self.selected_char = None
             return
 
-        if grid[r, c] == 1:
-            self.selected_char = None
-            return
-
-        clicked_char = next(
-            (
-                char
-                for char in chars
-                if getattr(char, "is_alive", True)
-                and getattr(char, "team", None) == my_team
-                and tuple(map(int, char.pos)) == (r, c)
-            ),
-            None,
+        clicked_char = self.find_clicked_character(
+            r, c, (char for char in chars if getattr(char, "team", None) == my_team),
+            click_position=click_position,
         )
 
         if clicked_char is not None:
-            self.selected_char = clicked_char.name
+            self.select_character_and_stop(clicked_char.name)
+            return
+
+        if grid[r, c] == 1:
+            self.selected_char = None
             return
 
         if self.selected_char is not None:
@@ -780,6 +803,7 @@ class UserInputController(BaseController):
             grid,
             chars=chars,
             moving_char=char,
+            wait_for_allies=True,
         )
 
         # 他キャラクターにより一時的に経路が塞がれても、

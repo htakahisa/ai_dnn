@@ -73,6 +73,7 @@ CONTROLLER_OPTIONS = {
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
 DEFAULT_CONTROLLER_DISPLAY = next(iter(CONTROLLER_OPTIONS))
 DEFAULT_SHIELD_ABILITIES_ENABLED = False
+LIVE_CONTROLLER_KEYS = {"user"}
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
@@ -757,7 +758,6 @@ def play_map(
 
     if "user" in {team1_controller_key, team2_controller_key} and not render:
         raise ValueError("ユーザー操作を使う試合は描画が必要です")
-
     ai1 = _build_team_ai(team1_controller_key)
     ai2 = _build_team_ai(team2_controller_key)
     check_competition_cancelled(stop_event)
@@ -5793,11 +5793,11 @@ class CompetitionApp:
         ) -> MResult:
             stop_event = getattr(self.app, "stop_event", None)
             check_competition_cancelled(stop_event)
-            user_match = "user" in {
+            requires_live = bool(LIVE_CONTROLLER_KEYS.intersection({
                 team1_controller_key,
                 team2_controller_key,
-            }
-            if not self.app.live_render_enabled and not user_match:
+            }))
+            if not self.app.live_render_enabled and not requires_live:
                 return play_map(
                     team1,
                     team2,
