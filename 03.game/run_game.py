@@ -468,6 +468,7 @@ class VisualFPSBattle(
                     "life_contract": int(getattr(char, "life_contract_remaining", 0)),
                     "ability_seal": int(getattr(char, "ability_seal_remaining", 0)),
                     "fate_loom_root": int(getattr(char, "fate_loom_remaining", 0)),
+                    "active_awakening": str(getattr(char, "active_awakening", "") or ""),
                     "alive": bool(getattr(char, "is_alive", False)),
                     "facing": str(getattr(char, "facing", "")),
                     "has_spike": bool(getattr(char, "has_spike", False)),
@@ -736,7 +737,10 @@ class VisualFPSBattle(
         if self.disable_side_swap:
             return
 
-        if not self.sides_swapped and self.current_round >= 13:
+        side_swap_after_rounds = max(
+            1, int(getattr(self, "side_swap_after_rounds", 12))
+        )
+        if not self.sides_swapped and self.current_round >= side_swap_after_rounds + 1:
             self.halftime_attacker_score = int(self.attacker_wins)
             self.halftime_defender_score = int(self.defender_wins)
             self._swap_sides()
@@ -746,7 +750,7 @@ class VisualFPSBattle(
         # 12-12の次に始まる25Rから、OT中は毎ラウンド交代する。
         if (
             self.overtime
-            and self.current_round >= 25
+            and self.current_round >= side_swap_after_rounds * 2 + 1
             and self.last_overtime_swap_round != self.current_round
         ):
             self._swap_sides()

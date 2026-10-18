@@ -1033,10 +1033,11 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                 self._analytics_defender_wins = self.defender_wins
         """通常戦は13本先取、12-12以降は2点差が付くまで継続する。"""
         # 12-12に到達した瞬間からオーバータイムへ移行する。
+        winning_rounds = max(1, int(getattr(self, "winning_rounds", WINNING_ROUNDS)))
         if (
             not self.overtime
-            and self.attacker_wins == WINNING_ROUNDS - 1
-            and self.defender_wins == WINNING_ROUNDS - 1
+            and self.attacker_wins == winning_rounds - 1
+            and self.defender_wins == winning_rounds - 1
         ):
             self.overtime = True
 
@@ -1044,8 +1045,8 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
             match_finished = abs(self.attacker_wins - self.defender_wins) >= 2
         else:
             match_finished = (
-                self.attacker_wins >= WINNING_ROUNDS
-                or self.defender_wins >= WINNING_ROUNDS
+                self.attacker_wins >= winning_rounds
+                or self.defender_wins >= winning_rounds
             )
 
         if match_finished:
