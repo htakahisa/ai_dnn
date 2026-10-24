@@ -107,7 +107,7 @@ class PreviousBestTests(unittest.TestCase):
             path = Path(directory) / get_scenario("L").model_path("best").name
             path.write_bytes(b"old")
             scores, protected = training.previous_best_scores({"L": torch.nn.Linear(1, 1)},
-                {"L": Path(directory)}, None, 10, 0, ["omoko_v1"], {"L": 6}, "cpu", None)
+                {"L": Path(directory)}, None, 10, 0, ["omoko_v1"], {"L": 6}, "cpu")
             self.assertIsNone(scores["L"])
             self.assertEqual(protected, {"L"})
             self.assertEqual(path.read_bytes(), b"old")
@@ -144,21 +144,19 @@ class PreviousBestTests(unittest.TestCase):
             training.main(["--no-compare-previous-best"])
             self.assertFalse(train.call_args.kwargs["compare_previous_best"])
 
-    def test_previous_loader_preserves_saved_weights_and_checks_model_target(self):
+    def test_previous_loader_preserves_saved_weights(self):
         original = torch.nn.Linear(1, 1)
-        checkpoint = dict(model_opponent="gc_v1", foundation_version=0,
+        checkpoint = dict(foundation_version=0,
                           model_state_dict=original.state_dict())
         state = torch.get_rng_state()
         with patch.object(training.torch, "load", return_value=checkpoint), \
              patch.object(training, "validate_checkpoint"), \
              patch.object(training, "RetakeDQN", side_effect=lambda *args, **kwargs: torch.nn.Linear(1, 1)):
-            loaded = training.load_previous_best("L", Path("best.pt"), 6, "cpu", "gc_v1")
+            loaded = training.load_previous_best("L", Path("best.pt"), 6, "cpu")
             self.assertTrue(torch.equal(torch.get_rng_state(), state))
             torch.testing.assert_close(loaded.weight, original.weight)
             self.assertFalse(loaded.training)
             self.assertTrue(all(not parameter.requires_grad for parameter in loaded.parameters()))
-            with self.assertRaisesRegex(ValueError, "different model target"):
-                training.load_previous_best("L", Path("best.pt"), 6, "cpu", None)
 
 
 if __name__ == "__main__":

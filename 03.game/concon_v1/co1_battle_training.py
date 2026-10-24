@@ -21,10 +21,10 @@ from concon_v1.co1_attacker_rewards import avoidable_wait_penalty
 
 OPPONENTS = {
     "omoko_v1": ("omoko_gaming_v1", "Omoko Gaming"),
-    "touyama_v2": ("touyama_gaming_v2", "Touyama Gaming"),
+    "touyama_v3": ("touyama_gaming_v3", "Touyama Gaming"),
     "fnatic_v3": ("fnatic_v3", "Fnatic2023"),
-    "gc_v1": ("gc_v1", "Ghost Champions"),
-    "toru_ai_v3.1": ("toru_ai_v3.1", "Team Elites"),
+    "gc_v2": ("ghost_champions_v2", "Ghost Champions"),
+    "toru_ai_v4": ("toru_ai_v4", "Team Elites"),
     "frc_v1": ("frc_v1", "Furina Classic"),
 }
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

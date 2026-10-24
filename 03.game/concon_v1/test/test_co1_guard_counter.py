@@ -112,8 +112,8 @@ class GuardCounterTests(unittest.TestCase):
         np.testing.assert_array_equal(obs, obs2)
 
     def test_pressure_snapshots_use_all_six_opponents_and_record_effects(self):
-        self.assertEqual(set(OPPONENTS), {'omoko_v1', 'touyama_v2', 'gc_v1',
-                                         'frc_v1', 'fnatic_v3', 'toru_ai_v3.1'})
+        self.assertEqual(set(OPPONENTS), {'omoko_v1', 'touyama_v3', 'gc_v2',
+                                         'frc_v1', 'fnatic_v3', 'toru_ai_v4'})
         for site in ('L', 'R'):
             for mode in ('pressure', 'pressure_tap'):
                 env = GuardBattleEnv(map_name=site, opponents=['omoko_v1'])

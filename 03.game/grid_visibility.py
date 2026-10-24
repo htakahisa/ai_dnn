@@ -1,4 +1,4 @@
-"""Exact batched Bresenham visibility with bounded immutable-result caches."""
+"""Batched symmetric wall occlusion and engine-compatible smoke visibility."""
 
 from functools import lru_cache
 import numpy as np
@@ -34,7 +34,7 @@ def _rays(shape, origin):
 @lru_cache(maxsize=256)
 def _clear_mask(shape, walls, origin, smoke):
     rays = _rays(shape, origin)
-    clear = ~np.frombuffer(walls, dtype=np.bool_)[rays].any(axis=0).reshape(shape)
+    clear = ~np.frombuffer(walls, dtype=np.bool_)[_wall_rays(shape,origin)].any(axis=0).reshape(shape)
     if smoke:
         smoke_grid = np.zeros(shape, bool)
         for sr, sc in smoke:
@@ -46,6 +46,35 @@ def _clear_mask(shape, walls, origin, smoke):
         clear &= ~smoky | nearby
     clear.setflags(write=False)
     return clear
+
+
+@lru_cache(maxsize=64)
+def _wall_rays(shape, origin):
+    rr, cc = np.indices(shape)
+    r, c = np.full(shape,origin[0]),np.full(shape,origin[1])
+    nx, ny = abs(cc-origin[1]),abs(rr-origin[0])
+    sx, sy = np.where(cc>origin[1],1,-1),np.where(rr>origin[0],1,-1)
+    ix, iy = np.zeros(shape,int),np.zeros(shape,int)
+    rays = []
+    while True:
+        cells = r*shape[1]+c
+        rays.append(cells.ravel().copy())
+        pending = (ix<nx)|(iy<ny)
+        if not pending.any():
+            break
+        horizontal, vertical = (1+2*ix)*ny,(1+2*iy)*nx
+        tie = pending & (horizontal==vertical)
+        if tie.any():
+            rays.append(np.where(tie,cells+sx,cells).ravel())
+            rays.append(np.where(tie,cells+sy*shape[1],cells).ravel())
+        move_x,move_y = pending & (horizontal<=vertical),pending & (horizontal>=vertical)
+        c += move_x*sx
+        r += move_y*sy
+        ix += move_x
+        iy += move_y
+    result = np.asarray(rays,dtype=np.int32)
+    result.setflags(write=False)
+    return result
 
 
 def visible_cells(grid, viewers, smoke_cells):

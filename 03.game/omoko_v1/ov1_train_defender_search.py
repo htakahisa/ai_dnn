@@ -73,6 +73,10 @@ from map_data_defender_setup import DEFENDER_SETUP_MASK_STR, DEFENDER_SETUP_TICK
 
 
 from ov1_map_data_search import SEARCH_MAZE_STR
+from ov1_defender_search_routes import (
+    setup_distance_map, deployment_step, moving_deployment_cells, DEPLOYMENT_VERSION,
+)
+from ov1_defender_search_orb import IdleOrbOuting, IDLE_ORB_VERSION
 from character_stats import CHARACTER_TABLE as STATS_TABLE
 import ov1_common_rl
 from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
@@ -97,11 +101,16 @@ from ov1_search_site_context import (
     walking_distance, regroup_pressure,
 )
 from ov1_defender_search_support import find_support_ability_plan
+from ov1_defender_search_geometry import SearchGeometryCache
 
 EPISODE_COUNT = 3000
 EVAL_EVERY = 200          # 何エピソードごとにepsilon=0評価を行うか
 EVAL_EPISODES = 100       # 1回の評価で何エピソード分プレイして平均するか
 EVAL_MIN_EPISODE = int(EPISODE_COUNT * 0.7)  # epsilonが十分下がるまでbest更新の対象外にする
+GEOMETRY_CACHE_ENABLED = True  # 固定地形のBFS・射線計算を再利用する
+DISTANCE_CACHE_CAPACITY = 256  # メモリ内の距離マップ上限（ファイル出力なし）
+LOS_CACHE_CAPACITY = 8192      # メモリ内の方向付き射線上限
+_GEOMETRY_CACHE = SearchGeometryCache(DISTANCE_CACHE_CAPACITY, LOS_CACHE_CAPACITY)
 #MIN_EVAL_ARRIVAL_RATE = 0.70  # 配置到着率がこれ未満のモデルはbest候補から除外
 
 # 各キャラの監視座標(複数可、配列形式)。マップではなくコード上で直接指定する。
@@ -203,6 +212,7 @@ CROSSFIRE_MAINTAIN_REWARD = 0.015  # 2人以上の射線を維持（毎tickは�
 DEFENSE_POSITION_PULL_REWARD = 0.03   # 平常時、担当7地点へ寄る(ポテンシャル差分)
 HOLD_POSITION_BONUS = 0.02            # 担当地点到着後、静止
 HOLD_POSITION_PENALTY = -0.01         # 担当地点到着後、無駄にうろつく
+IDLE_ORB_COMPLETION_REWARD = 0.02     # 戦闘・生存より十分低い回収ボーナス
 ABILITY_WHIFF_PENALTY = -0.05
 ABILITY_OVERLAP_PENALTY = -0.05
 ABILITY_AIMED_REWARD = 0.03      # 視認あり・射程内で使用(外れても付与、whiffとは排他)
@@ -271,14 +281,7 @@ if len(DEFENDER_SPAWNS) < len(ROSTER_ORDER):
         f"固定ロースター{len(ROSTER_ORDER)}人分を配置できません。"
     )
 
-# ロースター順(ROSTER_ORDER)に、マップ上の文字 a,b,c,d,e (Setup Phase
-# 到達地点) / A,B,C,D,E (Search Phase最終担当地点) をそのまま1:1で対応させる。
-# a/A=roster[0], b/B=roster[1], c/C=roster[2], d/D=roster[3], e/E=roster[4]。
-# 5人×5地点の総当たり最適化は不要で、マップ側で明示的に指定された担当地点へ
-# ロースター順のままそのまま割り当てるだけでよい。
-SETUP_POSITION_CHARS = {
-    name: chr(ord("a") + i) for i, name in enumerate(ROSTER_ORDER)
-}
+# A-E are final destinations in roster order for both phases.
 DEFENSE_POSITION_CHARS = {
     name: chr(ord("A") + i) for i, name in enumerate(ROSTER_ORDER)
 }
@@ -314,14 +317,7 @@ DEFENSE_ASSIGNMENT = {
     name: _find_marker_position(SEARCH_MAZE_STR, ch)
     for name, ch in DEFENSE_POSITION_CHARS.items()
 }
-SETUP_ASSIGNMENT = {
-    name: (
-        _find_marker_position(SEARCH_MAZE_STR, ch)
-        if ch in SEARCH_MAZE_STR
-        else DEFENSE_ASSIGNMENT[name]
-    )
-    for name, ch in SETUP_POSITION_CHARS.items()
-}
+SETUP_ASSIGNMENT = dict(DEFENSE_ASSIGNMENT)
 
 # SETUP_POSITIONS/DEFENSE_POSITIONS はロースター順の担当地点リスト(既存コードとの互換用)。
 SETUP_POSITIONS = [SETUP_ASSIGNMENT[name] for name in ROSTER_ORDER]
@@ -384,6 +380,8 @@ if not SITE_POSITIONS:
 # ============================================================================
 
 def has_los(p1, p2, smoke_cells=None):
+    if GEOMETRY_CACHE_ENABLED:
+        return _GEOMETRY_CACHE.has_los(GRID, p1, p2, smoke_cells)
     return ov1_common_rl.has_los(GRID, p1, p2, smoke_cells)
 
 
@@ -493,6 +491,8 @@ def _facing_memory_relevance(from_pos, memory):
 
 
 def bfs_distance_map(goal):
+    if GEOMETRY_CACHE_ENABLED:
+        return _GEOMETRY_CACHE.distance_map(GRID, goal)
     return ov1_common_rl.bfs_distance_map(GRID, goal)
 
 
@@ -577,19 +577,9 @@ def bfs_distance_map_avoiding(goal, avoid_cells):
     return ov1_common_rl.bfs_distance_map(grid, goal)
 
 
-def bfs_best_direction_detour(dist_map_static, goal, r0, c0, avoid_cells):
-    """position phase専用: まず静的な距離マップ(dist_map_static)上で
-    占有マスを避けた隣接方向を試す(bfs_best_direction_unoccupied、安価)。
-    それが(0,0)を返し、かつ未到着の場合(=隣接候補が全て塞がっている等で
-    詰まっている)のみ、avoid_cellsを一時的に壁として扱った動的BFSを
-    再計算し、実際に迂回可能な経路の方向を返す(必要な時だけ呼ぶため
-    毎tickフルBFSするより許容コスト)。"""
-    cur = dist_map_static[r0, c0]
-    dr, dc = bfs_best_direction_unoccupied(dist_map_static, r0, c0, avoid_cells)
-    if (dr, dc) != (0, 0) or cur <= REACH_RADIUS:
-        return dr, dc
-    dynamic_map = bfs_distance_map_avoiding(goal, avoid_cells)
-    return bfs_best_direction(dynamic_map, r0, c0)
+def bfs_best_direction_detour(dist_map_static, goal, r0, c0, avoid_cells, transit_cells=()):
+    """Use the same occupied-cell detours as runtime deployment."""
+    return deployment_step(GRID, dist_map_static, (r0, c0), avoid_cells, transit_cells)
 
 
 SITE_DIST_MAPS = [bfs_distance_map(tuple(map(int, s))) for s in SITE_POSITIONS]
@@ -612,13 +602,11 @@ SETUP_WALK_GRID = np.where(
 ).astype(np.int32)
 
 
-def bfs_distance_map_setup(goal):
-    return ov1_common_rl.bfs_distance_map(SETUP_WALK_GRID, goal)
-
-
 SETUP_DEFENSE_POS_DIST_MAPS = [
-    bfs_distance_map_setup(pos) for pos in SETUP_POSITIONS
+    setup_distance_map(SETUP_WALK_GRID, dist_map, spawn)
+    for dist_map, spawn in zip(DEFENSE_POS_DIST_MAPS, DEFENDER_SPAWNS)
 ]
+
 
 # --- 整合性チェック: 各キャラのスポーンから担当ポジションへ実際に到達可能か検証する ---
 # map_data_search.py(担当地点)と map_data.py / map_data_defender_setup.py
@@ -630,7 +618,7 @@ for _i, _name in enumerate(ROSTER_ORDER):
     _pos = DEFENSE_POSITIONS[_i]
     _spawn = DEFENDER_SPAWNS[_i]
     _setup_dist = SETUP_DEFENSE_POS_DIST_MAPS[_i][_spawn[0], _spawn[1]]
-    _normal_dist = DEFENSE_POS_DIST_MAPS[_i][_setup_pos[0], _setup_pos[1]]
+    _normal_dist = DEFENSE_POS_DIST_MAPS[_i][_spawn[0], _spawn[1]]
     if _setup_dist < 0:
         raise RuntimeError(
             f"[整合性エラー] {_name}: setup担当ポジション{_setup_pos}へSetup Phase中のグリッドで到達不能です。"
@@ -1223,6 +1211,8 @@ class SearchEnv:
         self.sighting_dist_map = None
         self.spike_ground_pos = None
         self.available_orbs = set()
+        self.idle_orb_outing = IdleOrbOuting()
+        self._orb_plan_names = set()
         self.in_setup_phase = False
         self.setup_ticks_remaining = 0
         self.scheduled_smoke_fired = False
@@ -1260,6 +1250,8 @@ class SearchEnv:
         self.team_memory.reset()
         self.smokes = []
         self.available_orbs = valid_orb_cells(GRID)
+        self.idle_orb_outing = IdleOrbOuting()
+        self._orb_plan_names = set()
         self.round_timer = MAX_TICKS
         self.planted = False
         self.match_over_reason = None
@@ -1474,6 +1466,9 @@ class SearchEnv:
             )
             if (
                 not self.in_setup_phase
+                and not has_enemy_los
+                and self.team_memory.last_seen_enemy is None
+                and self.team_memory.spike_pos is None
                 and tuple(d.pos) in self.available_orbs
                 and orb_priority(d, self.defenders)
             ):
@@ -1540,21 +1535,11 @@ class SearchEnv:
             if d.is_alive and d.assigned_setup_dist_map is not None
         }
 
-        # position mode(スパイク情報も敵目撃情報も無い状態)かつ担当地点未到着の
-        # 間は、スポーン・担当地点がどちらも毎エピソード固定である以上、移動方向を
-        # RLに手探りさせる意味がない。既知のBFS最短方向をそのまま強制適用する。
-        in_position_phase = (
-            self.team_memory.last_seen_enemy is None
-            and (
-                self.team_memory.spike_pos is None
-                or not self.team_memory.spike_held
-            )
-        )
-
-        # search phase(in_position_phase)と同様、担当地点は毎エピソード固定のため
-        # 移動方向はBFS最短(占有マス回避付き)で強制する。RLに委ねるのは今後の
-        # アビリティ使用判断のみとし、行き止まりでの迷走を防ぐ。
+        # Setup movement always follows the restricted deployment route.
         occupied_now = {tuple(u.pos) for u in self.defenders if u.is_alive}
+        transit_cells = moving_deployment_cells(
+            self.defenders, {d.name: d.assigned_setup_dist_map for d in self.defenders},
+        )
 
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
@@ -1572,17 +1557,11 @@ class SearchEnv:
             if forced_facing is not None:
                 facing = forced_facing
 
-            if in_position_phase and d.assigned_defense_dist_map is not None:
-                r0, c0 = int(d.pos[0]), int(d.pos[1])
-                cur_dist = d.assigned_defense_dist_map[r0, c0]
-                if cur_dist > REACH_RADIUS:
-                    dr, dc = bfs_best_direction_detour(
-                        d.assigned_defense_dist_map, d.assigned_defense_pos, r0, c0, self_occupied
-                    )
-                else:
-                    dr, dc = 0, 0
-            # 向き(facing)は移動先の決定方法(BFS強制/ネットワーク)と無関係に、
-            # ネットワークが選んだ向きをそのまま毎tick適用する。
+            if d.assigned_setup_dist_map is not None:
+                dr, dc = deployment_step(
+                    SETUP_WALK_GRID, d.assigned_setup_dist_map, d.pos, self_occupied,
+                    transit_cells,
+                )
             d.facing = facing
             d._facing_eval_pos = tuple(d.pos)
             d._facing_route_map = d.assigned_setup_dist_map
@@ -1746,9 +1725,18 @@ class SearchEnv:
             and self.team_memory.last_seen_enemy is None
             and not team_sees_enemy
         )
+        outing_active = self.idle_orb_outing.update(
+            GRID, self.defenders, DEFENSE_ASSIGNMENT, self.available_orbs,
+            MAX_TICKS - self.round_timer + 1, self.round_timer,
+            threat=not in_position_phase, planted=self.planted,
+        )
+        self._orb_plan_names = set()
 
         actual_action_dict = {}
         defenders_occupied_now = {tuple(u.pos) for u in self.defenders if u.is_alive}
+        transit_cells = moving_deployment_cells(
+            self.defenders, {d.name: d.assigned_defense_dist_map for d in self.defenders},
+        )
 
         for d in self.defenders:
             if not d.is_alive or d.name not in action_dict:
@@ -1759,6 +1747,17 @@ class SearchEnv:
                 a for a in self.attackers if a.is_alive and has_los(d.pos, a.pos, smoke_cells)
             ]
             has_enemy_los = bool(visible_enemies)
+            orb_plan = self.idle_orb_outing.plan(
+                d, GRID, defenders_occupied_now - {tuple(d.pos)},
+            ) if outing_active and d.name not in scheduled_smoke_targets else None
+            if not in_position_phase:
+                use_orb = False
+            if orb_plan is not None:
+                use_ability = use_ultimate = False
+                use_orb = orb_plan.collect
+                self._orb_plan_names.add(d.name)
+            if not use_orb:
+                d.orb_collect_timer = 0
             support_plan = None if has_enemy_los or d.charges <= 0 else find_support_ability_plan(
                 GRID, d, self.defenders, self.attackers, d.role, smoke_cells,
                 max_aim_range=ABILITY_RANGE,
@@ -1810,13 +1809,17 @@ class SearchEnv:
                 dr, dc = 0, 0
                 use_ability = False
 
-            if in_position_phase and d.assigned_defense_dist_map is not None:
+            if orb_plan is not None:
+                dr, dc = orb_plan.move
+                facing = orb_plan.facing
+            elif in_position_phase and d.assigned_defense_dist_map is not None:
                 r0, c0 = int(d.pos[0]), int(d.pos[1])
                 cur_dist = d.assigned_defense_dist_map[r0, c0]
                 if cur_dist > REACH_RADIUS:
                     self_occupied = defenders_occupied_now - {tuple(d.pos)}
                     dr, dc = bfs_best_direction_detour(
-                        d.assigned_defense_dist_map, d.assigned_defense_pos, r0, c0, self_occupied
+                        d.assigned_defense_dist_map, d.assigned_defense_pos, r0, c0, self_occupied,
+                        transit_cells,
                     )
                 else:
                     dr, dc = 0, 0
@@ -1832,7 +1835,10 @@ class SearchEnv:
                 dr, dc = 0, 0
             d.facing = facing
             d._facing_eval_pos = tuple(d.pos)
-            d._facing_route_map = d.assigned_defense_dist_map if in_position_phase else None
+            d._facing_route_map = (
+                self.idle_orb_outing.maps.get(d.name) if orb_plan is not None
+                else d.assigned_defense_dist_map if in_position_phase else None
+            )
             d._facing_move = (dr, dc)
             actual_action_dict[d.name] = encode_action(
                 (dr, dc), use_ability, facing, use_ultimate=use_ultimate, use_orb=use_orb
@@ -2018,7 +2024,7 @@ class SearchEnv:
             rewards[name] = rewards.get(name, 0.0) + ultimate_use_reward(tactical)
             rewards[name] += 0.25 * ultimate_alignment.get(name, 0.0)
         for name, orb_reward in orb_rewards.items():
-            rewards[name] = rewards.get(name, 0.0) + orb_reward
+            rewards[name] = rewards.get(name, 0.0) + min(orb_reward, IDLE_ORB_COMPLETION_REWARD)
 
         self._prev_kills = {u.name: u.kills for u in self.defenders + self.attackers}
         self._prev_alive = {u.name: u.is_alive for u in self.defenders + self.attackers}
@@ -2151,6 +2157,10 @@ class SearchEnv:
             return "sighting", self.sighting_dist_map, self.team_memory.last_seen_enemy["name"]
         if visible_enemies and not visible_spike_holder and not active_spike_target:
             return "combat_hold", None, "combat_hold"
+        if defender.name in self._orb_plan_names:
+            return "orb", self.idle_orb_outing.maps.get(defender.name), (
+                "orb", self.idle_orb_outing.phase, self.idle_orb_outing.goals.get(defender.name)
+            )
         return "position", defender.assigned_defense_dist_map, "position"
 
     def _compute_rewards(
@@ -2460,6 +2470,7 @@ def train(
     target_update_every=1000,
     warm_start=True,
 ):
+    print(f"[SEARCH RULE] deployment={DEPLOYMENT_VERSION} idle_orb={IDLE_ORB_VERSION}")
     policy_net = DuelingQNet(OBS_DIM, ACTION_DIM).to(DEVICE)
     legacy_path = os.path.join(DATA_DIR, "dqn_defender_search_best_by_eval.pt")
     if warm_start and os.path.exists(legacy_path):

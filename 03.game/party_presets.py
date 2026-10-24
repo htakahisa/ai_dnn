@@ -158,7 +158,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Touyama Gaming": TeamPreset(
         name="Touyama Gaming",
-        default_ai="touyama_gaming_v2",
+        default_ai="touyama_gaming_v3",
         short_name="TYG",
         players=("夢の街", "いぐるん", "ろびぃな", "Tortlilyan", "えんぺん"),
         igl="えんぺん",

@@ -40,10 +40,11 @@ class GuardTrainingScheduleTests(unittest.TestCase):
 
     def test_full_cycles_use_every_opponent_and_shuffle_reproducibly(self):
         schedules = [training.BalancedTrainingSchedule(OPPONENTS, 42) for _ in range(2)]
-        sequences = [[schedule.next_match(START_MODES) for _ in range(180)] for schedule in schedules]
+        count = len(OPPONENTS)*len(START_MODES)*6
+        sequences = [[schedule.next_match(START_MODES) for _ in range(count)] for schedule in schedules]
         self.assertEqual(*sequences)
         cycles = [tuple(team for team, _ in sequences[0][i:i + len(OPPONENTS)])
-                  for i in range(0, 180, len(OPPONENTS))]
+                  for i in range(0, count, len(OPPONENTS))]
         self.assertTrue(all(set(cycle) == set(OPPONENTS) for cycle in cycles))
         self.assertGreater(len(set(cycles)), 1)
         pairs = Counter(sequences[0])

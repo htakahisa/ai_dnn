@@ -151,6 +151,7 @@ class BaseController:
         chars=None,
         moving_char=None,
         allow_adjacent_goal=False,
+        wait_for_allies=False,
     ):
         """
         BFSで壁と生存キャラクターを避けながら、目標へ1マス進む。
@@ -160,11 +161,18 @@ class BaseController:
 
         allow_adjacent_goal=Trueの場合は、targetが空いていても
         target周辺の隣接マスへの到達を許可する。護衛・追従向け。
+
+        wait_for_allies=Trueの場合、経路探索は味方の位置を無視し、
+        移動先に味方がいればキャラクターは迂回せず待機する。
         """
         start = (int(pos[0]), int(pos[1]))
         goal = (int(target[0]), int(target[1]))
 
-        blocked = self._alive_occupied_positions(chars, moving_char)
+        path_chars = chars
+        if wait_for_allies and moving_char is not None:
+            path_chars = [other for other in chars or []
+                          if other.team != moving_char.team]
+        blocked = self._alive_occupied_positions(path_chars, moving_char)
         blocked.discard(start)
 
         if start == goal:
@@ -178,6 +186,8 @@ class BaseController:
         )
 
         if not candidate_goals:
+            if wait_for_allies:
+                return list(start)
             return self.get_next_pos_random(
                 pos=start,
                 grid=grid,
@@ -210,6 +220,8 @@ class BaseController:
                 queue.append(nxt)
 
         if reached_goal is None:
+            if wait_for_allies:
+                return list(start)
             return self.get_next_pos_random(
                 pos=start,
                 grid=grid,
@@ -217,10 +229,23 @@ class BaseController:
                 moving_char=moving_char,
             )
 
-        # startの直後の1マスまで親をたどる
-        step = reached_goal
-        while parent[step] is not None and parent[step] != start:
-            step = parent[step]
+        # 高速キャラも経路の曲がり角・ゴールを通り越さないよう、
+        # 最初の直線部分の長さを移動処理へ渡す。
+        route = [reached_goal]
+        while parent[route[-1]] is not None:
+            route.append(parent[route[-1]])
+        route.reverse()
+        step = route[1] if len(route) > 1 else start
+        if wait_for_allies and step in self._alive_occupied_positions(chars, moving_char):
+            return list(start)
+        if moving_char is not None and len(route) > 1:
+            direction = (step[0] - start[0], step[1] - start[1])
+            straight_steps = 1
+            for previous, following in zip(route[1:], route[2:]):
+                if (following[0] - previous[0], following[1] - previous[1]) != direction:
+                    break
+                straight_steps += 1
+            moving_char._navigation_step_limit = straight_steps
 
         if parent[step] is None:
             return [start[0], start[1]]
@@ -641,13 +666,71 @@ class UserInputController(BaseController):
         super().__init__()
         self.selected_char = None
         self.targets = {}
+        self.facings = {}
+
+    @property
+    def selected_char(self):
+        return self._selected_char
+
+    @selected_char.setter
+    def selected_char(self, name):
+        self._selected_char = name
+        self.selected_chars = [name] if name is not None else []
+
+    def select_characters(self, names):
+        self.selected_chars = list(dict.fromkeys(names))
+        self._selected_char = next(iter(self.selected_chars), None)
+
+    def issue_move(self, r, c, grid, chars, my_team):
+        r, c = int(r), int(c)
+        if not self._in_bounds((r, c), grid) or grid[r, c] == 1:
+            return
+        selected = [ch for ch in chars if ch.team == my_team
+                    and ch.is_alive and ch.name in self.selected_chars]
+        if len(selected) <= 1:
+            for ch in selected:
+                self.targets[ch.name] = (r, c)
+            return
+
+        # Search the destination's walkable component, nearest cells first.
+        occupied = {tuple(ch.pos) for ch in chars if ch.is_alive and ch not in selected}
+        queue, seen, destinations = deque([(r, c)]), {(r, c)}, []
+        while queue:
+            cell = queue.popleft()
+            if cell not in occupied:
+                destinations.append(cell)
+            for dr, dc in self.CARDINAL_MOVES:
+                neighbor = (cell[0] + dr, cell[1] + dc)
+                if neighbor not in seen and self._in_bounds(neighbor, grid) and grid[neighbor] != 1:
+                    seen.add(neighbor)
+                    queue.append(neighbor)
+        for ch in selected:
+            if tuple(ch.pos) not in seen or not destinations:
+                continue
+            self.targets[ch.name] = destinations.pop(0)
 
     def reset_round(self):
         """ラウンド開始時に選択状態・目的地をリセットする。"""
         self.selected_char = None
         self.targets.clear()
+        self.facings.clear()
 
-    def handle_click(self, r, c, grid, chars, my_team):
+    @staticmethod
+    def find_clicked_character(r, c, chars, click_position=None):
+        """クリック選択は半径0.5マスのキャラ本体の円内だけを対象にする。"""
+        click_r, click_c = click_position if click_position is not None else (r, c)
+        candidates = (char for char in chars
+                      if getattr(char, "is_alive", True)
+                      and (char.pos[0] - click_r) ** 2 + (char.pos[1] - click_c) ** 2 <= 0.25)
+        return min(candidates,
+                   key=lambda char: (char.pos[0] - click_r) ** 2 + (char.pos[1] - click_c) ** 2,
+                   default=None)
+
+    def select_character_and_stop(self, name):
+        self.selected_char = name
+        self.targets.pop(name, None)
+
+    def handle_click(self, r, c, grid, chars, my_team, click_position=None):
         """
         r, c:
             クリックされたマス座標
@@ -664,30 +747,34 @@ class UserInputController(BaseController):
             self.selected_char = None
             return
 
+        clicked_char = self.find_clicked_character(
+            r, c, (char for char in chars if getattr(char, "team", None) == my_team),
+            click_position=click_position,
+        )
+
+        if clicked_char is not None:
+            self.select_character_and_stop(clicked_char.name)
+            return
+
         if grid[r, c] == 1:
             self.selected_char = None
             return
 
-        clicked_char = next(
-            (
-                char
-                for char in chars
-                if getattr(char, "is_alive", True)
-                and getattr(char, "team", None) == my_team
-                and tuple(map(int, char.pos)) == (r, c)
-            ),
-            None,
-        )
-
-        if clicked_char is not None:
-            self.selected_char = clicked_char.name
-            return
-
         if self.selected_char is not None:
-            self.targets[self.selected_char] = (r, c)
-            self.selected_char = None
+            self.issue_move(r, c, grid, chars, my_team)
 
     def decide_move(self, char, game_state):
+        result = self._decide_user_move(char, game_state)
+        facing = self.facings.get(char.name)
+        if facing is None:
+            return result
+        if not getattr(char, "facing_forced_this_tick", False):
+            char.facing = facing
+        if isinstance(result, tuple):
+            return result
+        return result, {"facing": facing}
+
+    def _decide_user_move(self, char, game_state):
         grid = game_state["grid"]
         chars = game_state.get("chars", [])
         is_planted = bool(game_state.get("is_planted", False))
@@ -716,6 +803,7 @@ class UserInputController(BaseController):
             grid,
             chars=chars,
             moving_char=char,
+            wait_for_allies=True,
         )
 
         # 他キャラクターにより一時的に経路が塞がれても、

@@ -22,7 +22,7 @@ class GuardUtilityTests(unittest.TestCase):
         torch.set_num_threads(1)
 
     def environment(self, site="L"):
-        env = GuardBattleEnv(map_name=site, opponents=["touyama_v2"])
+        env = GuardBattleEnv(map_name=site, opponents=["touyama_v3"])
         env.reset("hold", attacker_count=5, defender_count=5)
         for char in env.attackers:
             char.smoke_charges = char.flash_charges = char.recon_charges = 0
@@ -67,21 +67,21 @@ class GuardUtilityTests(unittest.TestCase):
                     state = self.state(env)
                     _, mask, _ = env.controller.policy_inputs(char, state)
                     self.assertTrue(mask[ULTIMATE_ACTION:].any())
-                    self.assertTrue(mask[:40].any())
-                    self.prefer(env.model, slice(ULTIMATE_ACTION, None))
+                    self.assertFalse(mask[:40].any())
+                    self.prefer(env.model, slice(WAIT_ACTION, WAIT_ACTION+8))
                     _, payload = env.controller.decide_move(char, state)
                     self.assertEqual(payload["ultimate"], char.ultimate_name)
                     self.assertTrue(env.game.execute_ai_ultimate(char, payload))
                     self.assertEqual(char.ultimate_points, 0)
 
-    def test_ability_and_ultimate_remain_candidates_at_same_priority(self):
+    def test_ready_ultimate_precedes_ability_then_ability_becomes_available(self):
         env = self.environment()
         char = env.attackers[2]  # MONITOR does not move the caster.
         char.recon_charges = 1
         char.ultimate_points = char.ultimate_cost
         _, mask, _ = env.controller.policy_inputs(char, self.state(env))
-        self.assertTrue(mask[:40].any())
-        self.assertTrue(mask[40:ULTIMATE_ACTION].any())
+        self.assertFalse(mask[:40].any())
+        self.assertFalse(mask[40:ULTIMATE_ACTION].any())
         self.assertTrue(mask[ULTIMATE_ACTION:].any())
         self.prefer(env.model, slice(ULTIMATE_ACTION, None))
         _, payload = env.controller.decide_move(char, self.state(env))
@@ -109,7 +109,7 @@ class GuardUtilityTests(unittest.TestCase):
         _, payload = controller.decide_move(char, self.state(env))
         self.assertEqual(payload["ultimate"], "MONITOR")
 
-    def test_actual_tick_can_wait_with_resources_ready_and_records_learning(self):
+    def test_actual_tick_uses_ready_ultimates_even_when_wait_has_highest_value(self):
         env = self.environment()
         for char in env.attackers:
             if char.ability_name in ABILITIES:
@@ -122,8 +122,8 @@ class GuardUtilityTests(unittest.TestCase):
             if char.ability_name not in ABILITIES:  # HUNT is a passive on-kill heal.
                 continue
             self.assertEqual(getattr(char, char.ability_name.lower() + "_charges"), 1)
-            self.assertEqual(char.ultimate_points, char.ultimate_cost)
-            self.assertLess(env.pending[env.indices[char.name]]["action"], 40)
+            self.assertEqual(char.ultimate_points, 0)
+            self.assertGreaterEqual(env.pending[env.indices[char.name]]["action"], ULTIMATE_ACTION)
 
     def test_actual_tick_records_quiet_resource_spending(self):
         env = self.environment()

@@ -14,6 +14,8 @@ from analytics.combat_tracker import CombatTracker
 from controllers import UserInputController
 from iq_perception import build_team_position_view, enemy_position_known
 from roster_utils import roster_information
+from omoko_v1.ov1_ability_cornered_omoko import CorneredOmokoMixin
+from effects.personal_ability_effects import PersonalAbilityEffectsMixin
 from game_core import (
     absorb_shield_damage,
     apply_on_hp_damage,
@@ -57,6 +59,10 @@ KILL_SOUND_FILENAMES = [
     ["kill4.mp3", 0.5],
     ["kill5.mp3", 0.5],
 ]
+DEFUSE_START_SOUND = ["sound/defuse.mp3", 0.5]
+PLANTED_SOUND = ["sound/planted.mp3", 0.5]
+PLANT_TIME_WARNING_TICKS = 30
+PLANT_TIME_WARNING_SOUND = ["sound/30secleft.mp3", 0.5]
 _kill_sound_cache = {}
 _ace_sound_cache = {}
 _mixer_ready = False
@@ -65,6 +71,10 @@ _mixer_ready = False
 # 確認後はFalseへ戻す。
 DEBUG_FORCE_ACE_EFFECT = False
 DEBUG_ACE_CHARACTER_NAME = "Tortlilyan"  # 確認したいキャラ名指定
+
+# 高速移動で折り返した場合、この回数の移動判断を1マスに制限する。
+FAST_MOVE_SLOW_TICKS = 4
+FAST_MOVE_HISTORY_TICKS = 6
 
 
 def _load_ace_effects():
@@ -135,7 +145,19 @@ def _get_ace_sound(effect):
 from match_playback import MatchPlaybackMixin
 
 
-class BattleLogicMixin(MatchPlaybackMixin):
+class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPlaybackMixin):
+
+    def _play_spike_sound(self, sound_config):
+        if self.headless:
+            return
+        sound = _get_ace_sound({"sound": sound_config})
+        if sound is not None:
+            sound.play()
+
+    def _play_personal_ability_effect_sound(self, effect):
+        sound = _get_ace_sound(effect)
+        if sound is not None:
+            sound.play()
 
     def _tick_delay_ms(self):
         value = getattr(self, "tick_time_ms", TICK_TIME)
@@ -434,12 +456,81 @@ class BattleLogicMixin(MatchPlaybackMixin):
         char.forced_facing_next_tick = None
         if locked_facing is not None:
             char.facing = locked_facing
+        old_pos = tuple(char.pos)
+        char._navigation_step_limit = None
         try:
+            if self._omoko_cornered_active(char):
+                return self._prepare_omoko_cornered_movement(char)
             return self._move_character_with_rule_facing(char, locked_facing)
         finally:
+            if int(getattr(char, "move_steps_per_tick", 1)) > 1:
+                new_pos = tuple(char.pos)
+                char._fast_move_last_transition = (old_pos, new_pos)
+                recent = getattr(char, "_fast_move_recent_positions", [])
+                char._fast_move_recent_positions = (
+                    recent + [old_pos]
+                )[-FAST_MOVE_HISTORY_TICKS:]
             if locked_facing is not None:
                 char.facing = locked_facing
                 char.facing_forced_this_tick = True
+
+    def _fast_move_extra_steps(self, char, old_pos, direction):
+        """折り返しを検出して、目標の前後を高速で往復するのを防ぐ。"""
+        steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+        if not steps or abs(direction[0]) + abs(direction[1]) != 1:
+            return 0
+        previous = getattr(char, "_fast_move_last_transition", None)
+        slow_ticks = int(getattr(char, "_fast_move_slow_ticks", 0))
+        if previous is not None:
+            start, end = previous
+            if end != old_pos:
+                # テレポートなどで位置が変わった場合は履歴を引き継がない。
+                slow_ticks = 0
+                char._fast_move_recent_positions = []
+            elif ((end[0] - start[0]) * direction[0]
+                  + (end[1] - start[1]) * direction[1]) < 0:
+                slow_ticks = FAST_MOVE_SLOW_TICKS
+        landing = (old_pos[0] + (steps + 1) * direction[0],
+                   old_pos[1] + (steps + 1) * direction[1])
+        if landing in getattr(char, "_fast_move_recent_positions", []):
+            slow_ticks = FAST_MOVE_SLOW_TICKS
+        char._fast_move_slow_ticks = max(0, slow_ticks - 1)
+        if slow_ticks:
+            return 0
+        limit = getattr(char, "_navigation_step_limit", None)
+        return min(steps, max(0, int(limit) - 1)) if limit is not None else steps
+
+    def _fast_move_should_stop(self, char, previous, direction):
+        """曲がれる地点や操作が必要な地点を追加移動で通り越さない。"""
+        current = tuple(char.pos)
+        if current in getattr(self, "available_orbs", set()):
+            return True
+        if char.team == "A" and not self.is_planted:
+            if self.spike_pos is not None and current == tuple(self.spike_pos):
+                return True
+            if char.has_spike and (
+                self.grid[current] == 2
+                or (self.target_plant_pos is not None
+                    and current == tuple(self.target_plant_pos))
+            ):
+                return True
+        if char.team == "D" and self.is_planted and self.planted_pos is not None:
+            if max(abs(current[i] - self.planted_pos[i]) for i in (0, 1)) <= 1:
+                return True
+
+        # 進行方向の横に新たな通路が開く地点で止まる。広場や直線では
+        # 横の通行可否が変わらないため、従来の高速移動を維持できる。
+        dr, dc = direction
+        def walkable(pos):
+            r, c = pos
+            return (0 <= r < self.height and 0 <= c < self.width
+                    and self.grid[r, c] != 1)
+        for sr, sc in ((-dc, dr), (dc, -dr)):
+            before = (previous[0] + sr, previous[1] + sc)
+            after = (current[0] + sr, current[1] + sc)
+            if walkable(after) and not walkable(before):
+                return True
+        return False
 
     def _move_character_with_rule_facing(self, char, locked_facing):
         self._trigger_cell_effects(char)
@@ -754,6 +845,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     char.has_spike = False
                     char.plant_timer = 0
                     char.is_planting = False
+                    self._play_spike_sound(PLANTED_SOUND)
 
                 # 設置中は移動・射撃を行わない。
                 char.moved_this_tick = False
@@ -778,6 +870,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     # 同時に解除できるのは一人だけ。
                     if self.active_defuser_name in (None, char.name):
                         self.active_defuser_name = char.name
+                        if char.defuse_timer == 0:
+                            self._play_spike_sound(DEFUSE_START_SOUND)
                         char.defuse_timer += 1
                         # 解除完了は射撃解決後に判定する。
                         self._finalize_movement_transition_state(char)
@@ -862,14 +956,16 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 char.pos = [nr, nc]
                 self._trigger_cell_effects(char)
 
-                # 覚醒等でmove_steps_per_tickが2以上のキャラは、
-                # コントローラーが選んだ1手の方向へそのまま延長して進む。
-                extra_steps = max(0, int(getattr(char, "move_steps_per_tick", 1)) - 1)
+                # 通常の1手を実行した後、安全な直線部分だけ高速移動する。
+                extra_steps = self._fast_move_extra_steps(char, old_pos, (dr, dc))
                 if action_type == "MOVE" and isinstance(ability_payload, dict):
                     step_limit = ability_payload.get("move_step_limit")
                     if step_limit is not None:
                         extra_steps = min(extra_steps, max(0, int(step_limit) - 1))
+                previous = old_pos
                 for _ in range(extra_steps):
+                    if self._fast_move_should_stop(char, previous, (dr, dc)):
+                        break
                     if getattr(char, "fate_loom_remaining", 0) > 0 or self._ramp_blocks_movement(char):
                         break
                     prev = tuple(char.pos)
@@ -884,6 +980,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     self._update_occupancy_after_move(prev, (cand_r, cand_c))
                     char.pos = [cand_r, cand_c]
                     self._trigger_cell_effects(char)
+                    previous = prev
 
         char.moved_this_tick = tuple(char.pos) != old_pos
         self._finalize_movement_transition_state(char)
@@ -944,10 +1041,11 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 self._analytics_defender_wins = self.defender_wins
         """通常戦は13本先取、12-12以降は2点差が付くまで継続する。"""
         # 12-12に到達した瞬間からオーバータイムへ移行する。
+        winning_rounds = max(1, int(getattr(self, "winning_rounds", WINNING_ROUNDS)))
         if (
             not self.overtime
-            and self.attacker_wins == WINNING_ROUNDS - 1
-            and self.defender_wins == WINNING_ROUNDS - 1
+            and self.attacker_wins == winning_rounds - 1
+            and self.defender_wins == winning_rounds - 1
         ):
             self.overtime = True
 
@@ -955,8 +1053,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
             match_finished = abs(self.attacker_wins - self.defender_wins) >= 2
         else:
             match_finished = (
-                self.attacker_wins >= WINNING_ROUNDS
-                or self.defender_wins >= WINNING_ROUNDS
+                self.attacker_wins >= winning_rounds
+                or self.defender_wins >= winning_rounds
             )
 
         if match_finished:
@@ -1207,6 +1305,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
         """キル数(そのラウンド)に応じた効果音を再生する。学習(headless)中は鳴らさない。"""
         if self.headless:
             return
+        enemy_total = sum(1 for c in self.chars if c.team != shooter.team)
+        if enemy_total > 0 and shooter.round_kills >= enemy_total:
+            effect = ACE_EFFECTS.get(getattr(shooter, "base_name", shooter.name))
+            # 専用ACE音はラウンド終了時に再生するため、通常のキル音と重ねない。
+            if _get_ace_sound(effect) is not None:
+                return
         sound = _get_kill_sound(shooter.round_kills)
         if sound is not None:
             sound.play()
@@ -1294,6 +1398,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
             if not possible_targets:
                 continue
 
+            if getattr(shooter, "omoko_cornered_this_tick", False):
+                possible_targets = [t for t in possible_targets
+                                    if t is shooter.omoko_cornered_target]
+                if not possible_targets:
+                    continue
+
             defusers = [
                 target
                 for target in possible_targets
@@ -1330,7 +1440,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
             # the shot so movement/smoke/blind penalties cannot leak between
             # engagements or depend on an older code path.
             shot_quality_multiplier = 1.0
-            if shooter.moved_this_tick:
+            # 瞬間移動からの能力射撃は、通常の命中率・HS率を使用する。
+            cornered_shot = (
+                getattr(shooter, "omoko_cornered_this_tick", False)
+                and target is getattr(shooter, "omoko_cornered_target", None)
+            )
+            if shooter.moved_this_tick and not cornered_shot:
                 shooter_accuracy = MOVING_ACCURACY
                 shooter_hs_rate = shooter.hs_rate * 0.1
             else:
@@ -1358,7 +1473,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 shooter_hs_rate *= 0.75
 
             # 前Tickに移動し、今Tick停止した最初のTick: x0.75
-            if getattr(shooter, "stopped_after_move_this_tick", False):
+            if getattr(shooter, "stopped_after_move_this_tick", False) and not cornered_shot:
                 shot_quality_multiplier *= 0.75
                 shooter_accuracy *= 0.75
                 shooter_hs_rate *= 0.75
@@ -1422,6 +1537,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 "reaction": shooter.reaction,
             }
             executed_shots.append(shot)
+            if getattr(shooter, "omoko_cornered_this_tick", False):
+                shooter.omoko_cornered_last_target = target.name
 
             if damage > 0 and not getattr(target, "is_ultimate_drone", False):
                 tracker = getattr(self, "analytics_tracker", None)
@@ -1457,6 +1574,7 @@ class BattleLogicMixin(MatchPlaybackMixin):
             drone for drone in getattr(self, "monitor_drones", []) if drone.is_alive
         ]
 
+        self._finish_omoko_cornered_combat()
         self.last_shots = executed_shots
         self.last_shot = executed_shots[-1] if executed_shots else None
 
@@ -1522,6 +1640,9 @@ class BattleLogicMixin(MatchPlaybackMixin):
         for smoke in self.smokes:
             smoke["remaining_ticks"] -= 1
         self.smokes = [smoke for smoke in self.smokes if smoke["remaining_ticks"] > 0]
+
+        # 全員の移動・振り向きと持続効果の更新後、射撃前に瞬間移動する。
+        self._advance_omoko_cornered()
 
         if self.spike_pos is not None:
             for c in self.chars:
@@ -1657,6 +1778,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 )
         else:
             self.round_timer -= 1
+            if self.round_timer == PLANT_TIME_WARNING_TICKS and alive_A and alive_D:
+                self._play_spike_sound(PLANT_TIME_WARNING_SOUND)
             if self.round_timer <= 0:
                 self.defender_wins += 1
                 self._record_round_mental_result("D")
@@ -1744,6 +1867,8 @@ class BattleLogicMixin(MatchPlaybackMixin):
         if self.defender_setup_phase.active:
             self._run_defender_setup_tick()
         else:
+            if self._prepare_personal_ability_effects():
+                return False
             # Carnal Lust Syndicate loses 1 HP per live tick after setup.
             for char in self.chars:
                 if char.is_alive and getattr(char, "carnal_lust_syndicate_active", False):
@@ -1784,16 +1909,24 @@ class BattleLogicMixin(MatchPlaybackMixin):
         self._begin_match_callback()
         if getattr(self, "paused", False):
             return
+        if getattr(self, "personal_ability_effect", None):
+            self._advance_personal_ability_effect()
+            return
         if not self.round_over and not self.match_over:
             self._simulate_tick()
+            if getattr(self, "personal_ability_effect", None):
+                self._advance_personal_ability_effect()
+                return
             self.draw()
             self._update_playback_controls()
             if not self.round_over and not self.match_over:
                 self._schedule_match_callback(self.loop)
 
-    def run_headless_loop(self):
+    def run_headless_loop(self, stop_event=None):
         """Run normal game ticks without drawing."""
         while not self.match_over:
+            if stop_event is not None and stop_event.is_set():
+                break
             if not self.step_tick():
                 break
             if self.round_over and getattr(self, "stop_after_round", False):

@@ -17,10 +17,11 @@ class InferenceDeviceTests(unittest.TestCase):
     def test_all_learned_opponent_factories_forward_explicit_cpu(self):
         from run_game import _build_team_ai
         factories = {
-            "touyama_gaming_v2": ("touyama_v2.tv2_touyama_attacker_controller.Tv2TouyamaAttackerController", "touyama_v2.tv2_touyama_defender_controller.Tv2TouyamaDefenderController"),
-            "omoko_gaming_v1": ("omoko_v1.ov1_attacker_controller.Ov1AttackerController", "omoko_v1.ov1_defender_controller.Ov1DefenderController"),
-            "gc_v1": ("ghost_champions_v1_macro.GhostChampionsV1AttackerController", "ghost_champions_v1_macro.GhostChampionsV1DefenderController"),
-            "toru_ai_v3.1": ("attacker_v3.multi_role_attacker_controller.MultiRoleAttackerController", "defender_v3.multi_role_defender_controller.MultiRoleDefenderController"),
+            "touyama_gaming_v3": ("run_game.Tv3TouyamaAttackerController", "run_game.Tv3TouyamaDefenderController"),
+            "touyama_gaming_v2": ("run_game.Tv2TouyamaAttackerController", "run_game.Tv2TouyamaDefenderController"),
+            "omoko_gaming_v1": ("run_game.Ov1AttackerController", "run_game.Ov1DefenderController"),
+            "gc_v1": ("run_game.GhostChampionsV1AttackerController", "run_game.GhostChampionsV1DefenderController"),
+            "toru_ai_v3.1": ("run_game.MultiRoleAttackerController", "run_game.MultiRoleDefenderController"),
             "frc_v1": ("frc_v1.controller.FrcAttackerController", "frc_v1.controller.FrcDefenderController"),
         }
         for key, (attacker, defender) in factories.items():

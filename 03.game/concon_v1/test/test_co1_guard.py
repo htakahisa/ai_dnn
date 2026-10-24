@@ -203,7 +203,7 @@ class GuardContractTests(unittest.TestCase):
         checkpoint["scenario_signature"] = "changed"
         with self.assertRaises(ValueError):
             validate_checkpoint(checkpoint, "L")
-        self.assertEqual(curriculum_modes(1, 100), ("hold",))
+        self.assertEqual(curriculum_modes(1, 100), ("hold", "reserve"))
         self.assertIn("smoke", curriculum_modes(100, 100))
         self.assertFalse(qualifies_as_best({"mean_win_rate": .8, "min_team_win_rate": .2},
                                          {"mean_win_rate": .7, "min_team_win_rate": .3}))
@@ -260,10 +260,10 @@ class GuardEngineTests(unittest.TestCase):
             numpy_state = np.random.get_state()
             torch_state = torch.get_rng_state().clone()
             with contextlib.redirect_stdout(io.StringIO()):
-                result = evaluate(site, rounds=len(START_MODES), opponents=["touyama_v2"],
+                result = evaluate(site, rounds=len(START_MODES), opponents=["touyama_v3"],
                                   frozen_checkpoint=buffer.getvalue())
             self.assertEqual(result["epsilon"], 0)
-            self.assertEqual(set(result["opponents"]["touyama_v2"]["by_start_mode"]), set(START_MODES))
+            self.assertEqual(set(result["opponents"]["touyama_v3"]["by_start_mode"]), set(START_MODES))
             self.assertEqual(random.getstate(), python_state)
             np.testing.assert_array_equal(np.random.get_state()[1], numpy_state[1])
             self.assertTrue(torch.equal(torch.get_rng_state(), torch_state))

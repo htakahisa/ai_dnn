@@ -37,11 +37,11 @@ _ensure_defense_assignment と同じ方式(名前順で決定的に、各キャ�
 
 優先順位ツリー(_build_observation / decide_move):
     1. 解除進行中(game_state["defender_defuse_info"]、LOS不要)
-    2. 敵目撃情報(sighting)
-    3. どちらも無い場合、担当ガードポジションへ向かい到着後は静止
-       (ただし到着後も敵未視認時は多少の索敵行動を許容する設計。
-       これは学習側の報酬設計で反映済みで、本ファイル側は行動マスクを
-       敵視認時のみ固定するだけで足りる)
+       撃てる解除者へ向いて静止。見えない・射線を味方に塞がれた場合は
+       占有を考慮したBFSでスパイクへ接近する。
+    2. 射線が通る敵を向いて静止する
+    3. 担当ガードポジションへ移動。到着後は向きとアビリティをモデルが
+       選び、移動・ウルト・オーブより持ち場の維持を優先する。
 --------------------------------------------------------------------------
 
 OBS_DIM=34: train_attacker_guard.py と完全に一致させること。
@@ -69,6 +69,7 @@ from ov1_roster import ROSTER_ORDER
 from ov1_map_data_guard import NEW_MAZE_STR as GUARD_MAZE_STR
 from ov1_train_attacker_guard import GUARD_WATCH_POINT_CELLS, _facing_towards
 from ov1_ultimate_training import orb_context, orb_priority, ultimate_context, ultimate_ready
+from ov1_inference_team_tactics import tactical_state, known_enemies, shot_clear
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -470,10 +471,87 @@ class Ov1LearningAttackerGuardController:
         """game_state["defender_defuse_info"](LOS不要、battle_logic.py提供)
         から、現在解除中の敵がいれば進捗率を返す。"""
         info = game_state.get("defender_defuse_info") or {}
-        for _name, (timer, required) in info.items():
+        for name, (timer, required) in info.items():
             if timer > 0:
-                return {"progress_ratio": min(timer / required if required else 0.0, 1.0)}
+                return {"name": name, "progress_ratio": min(timer / required if required else 0.0, 1.0)}
         return None
+
+    def _route_step(self, char, grid, chars, goal):
+        """Route around occupied cells, allowing a temporary increase in distance.
+
+        Prefer the exact goal; use a free adjacent cell only if it is unreachable.
+        """
+        start, goal = tuple(char.pos), tuple(goal)
+        occupied = {tuple(other.pos) for other in chars
+                    if other.name != char.name and other.is_alive}
+        queue = deque([start])
+        first_steps = {start: start}
+        fallback = None
+        while queue:
+            cell = queue.popleft()
+            if cell == goal:
+                return first_steps[cell]
+            if fallback is None and max(abs(cell[0] - goal[0]), abs(cell[1] - goal[1])) <= 1:
+                fallback = first_steps[cell]
+            for dr, dc in CARDINAL:
+                nxt = (cell[0] + dr, cell[1] + dc)
+                if (0 <= nxt[0] < grid.shape[0] and 0 <= nxt[1] < grid.shape[1]
+                        and grid[nxt] != 1 and nxt not in occupied and nxt not in first_steps):
+                    first_steps[nxt] = nxt if cell == start else first_steps[cell]
+                    queue.append(nxt)
+        return fallback if fallback is not None else start
+
+    def _combat_target(self, char, game_state, name=None):
+        """Use perceived enemies only; avoid holding fire behind another player."""
+        targets = []
+        for enemy in known_enemies(char, game_state):
+            if name is not None and enemy.name != name:
+                continue
+            if shot_clear(char, enemy, game_state):
+                targets.append(enemy)
+        return min(targets, key=lambda e: max(abs(e.pos[0] - char.pos[0]),
+                                             abs(e.pos[1] - char.pos[1]))) if targets else None
+
+    def _defuse_interrupt(self, char, game_state, active_defuse_info):
+        if active_defuse_info is None:
+            return None
+        target = self._combat_target(char, game_state, active_defuse_info["name"])
+        if target is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, target.pos)}
+        known_defuser = next((enemy for enemy in known_enemies(char, game_state)
+                              if enemy.name == active_defuse_info["name"]), None)
+        if known_defuser is not None:
+            # The spike itself can be a bad firing position (body blocking or
+            # a corner). Find the nearest reachable position with a clear shot.
+            grid = game_state["grid"]
+            start = tuple(char.pos)
+            occupied = {tuple(other.pos) for other in game_state.get("chars", ())
+                        if other.name != char.name and other.is_alive}
+            queue, steps = deque([start]), {start: start}
+            while queue:
+                cell = queue.popleft()
+                if shot_clear(char, known_defuser, game_state, cell):
+                    step = steps[cell]
+                    return list(step), {"facing": _facing_towards(step, known_defuser.pos)}
+                for dr, dc in CARDINAL:
+                    nxt = (cell[0] + dr, cell[1] + dc)
+                    if (0 <= nxt[0] < grid.shape[0] and 0 <= nxt[1] < grid.shape[1]
+                            and grid[nxt] != 1 and nxt not in occupied and nxt not in steps):
+                        steps[nxt] = nxt if cell == start else steps[cell]
+                        queue.append(nxt)
+        # A public tap reveals the spike, not the hidden defender's position.
+        spike = tuple(game_state["planted_pos"])
+        step = self._route_step(char, game_state["grid"], game_state.get("chars", ()), spike)
+        facing = (_facing_towards(step, spike) if step != spike
+                  else _facing_towards(char.pos, step) if tuple(char.pos) != step
+                  else getattr(char, "facing", "N"))
+        if step == tuple(char.pos) and max(abs(step[0] - spike[0]), abs(step[1] - spike[1])) <= 1:
+            # An unrevealed defuser may be behind us. Do not hold the same
+            # facing forever at the spike while waiting for a visual reveal.
+            facing = FACING_DIRS[(FACING_DIRS.index(getattr(char, "facing", "N")) + 2) % len(FACING_DIRS)]
+            if not getattr(char, "facing_forced_this_tick", False):
+                char.facing = facing
+        return list(step), {"facing": facing}
 
     # -- 観測構築 ----------------------------------------------------------
     # train_attacker_guard.py の build_observation() と要素・並び順を
@@ -682,6 +760,11 @@ class Ov1LearningAttackerGuardController:
 
         smoke_cells = game_state.get("smoke_cells")
 
+        shared = tactical_state(game_state)
+        interrupt = self._defuse_interrupt(char, shared, self._active_defuse_info(shared))
+        if interrupt is not None:
+            return interrupt
+
         smoke_enemy = _smoke_visible_enemy(char, chars, grid, smoke_cells)
         if smoke_enemy is not None:
             return list(char.pos), {"facing": _facing_towards(char.pos, smoke_enemy.pos)}
@@ -694,34 +777,21 @@ class Ov1LearningAttackerGuardController:
         unit_has_spike_los = _has_los(grid, tuple(char.pos), tuple(planted_pos), smoke_cells)
         active_defuse_info = self._active_defuse_info(game_state)
 
-        # Defuse progress is shared information even when smoke hides the
-        # defender. The learned policy can otherwise repeatedly choose stay
-        # because neither the enemy position nor LOS to the spike is visible.
-        # Commit to the shortest legal route to the spike until an enemy is
-        # visible (the normal combat policy then takes over).
-        if active_defuse_info is not None:
-            visible_to_unit = [
-                e for e in chars
-                if e.is_alive and e.team != char.team
-                and _has_los(grid, char.pos, e.pos, smoke_cells)
-            ]
-            if not visible_to_unit:
-                r, c = int(char.pos[0]), int(char.pos[1])
-                current_dist = int(self.spike_dist_map[r, c])
-                occupied = {
-                    tuple(map(int, other.pos)) for other in chars
-                    if other is not char and getattr(other, "is_alive", True)
-                }
-                progress = []
-                for dr, dc in CARDINAL:
-                    nr, nc = r + dr, c + dc
-                    if (0 <= nr < grid.shape[0] and 0 <= nc < grid.shape[1]
-                            and grid[nr, nc] != 1 and (nr, nc) not in occupied
-                            and 0 <= int(self.spike_dist_map[nr, nc]) < current_dist):
-                        progress.append((int(self.spike_dist_map[nr, nc]), (nr, nc)))
-                if progress:
-                    _, next_pos = min(progress)
-                    return list(next_pos), {"facing": _facing_towards(next_pos, planted_pos)}
+        target = self._combat_target(char, shared)
+        if target is not None:
+            return list(char.pos), {"facing": _facing_towards(char.pos, target.pos)}
+
+        # Stale team sightings and utility/orb actions must not prevent arrival.
+        assigned = self._assigned_dist_maps.get(char.name)
+        if assigned is not None:
+            goals = np.argwhere(assigned == 0)
+            if len(goals):
+                goal = tuple(map(int, goals[0]))
+                if tuple(char.pos) != goal:
+                    step = self._route_step(char, grid, chars, goal)
+                    facing = (_facing_towards(char.pos, step) if step != tuple(char.pos)
+                              else getattr(char, "facing", "N"))
+                    return list(step), {"facing": facing}
 
         obs, visible_enemies = self._build_observation(
             char, game_state, unit_has_spike_los, active_defuse_info, detonate_timer, smoke_cells
@@ -742,6 +812,10 @@ class Ov1LearningAttackerGuardController:
                 tuple(map(int, cell)) for cell in game_state.get("available_orbs", ())
             },
         )
+
+        if assigned is not None and int(assigned[tuple(char.pos)]) == 0:
+            # Keep the assigned position; retain learned facing and utility.
+            mask[2 * len(FACING_DIRS):] = False
 
         obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         mask_t = torch.from_numpy(mask).to(self.device)

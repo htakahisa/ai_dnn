@@ -84,7 +84,7 @@ class EvaluationDropTests(unittest.TestCase):
                     side_effect=lambda checkpoint_bytes, map_name: loaded_checkpoints.append(checkpoint_bytes)),
               patch("concon_v1.evaluate_co1_attacker.torch.load",
                     return_value={"episode": 1450, "success_rate": 0.91})):
-            result = evaluate("gc_v1", rounds=3, seed=4,
+            result = evaluate("gc_v2", rounds=3, seed=4,
                               frozen_checkpoint=b"fixed-model")
         self.assertEqual(len(games), 3)
         self.assertEqual(result["rounds"], 3)

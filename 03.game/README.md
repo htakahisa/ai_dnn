@@ -1,4 +1,201 @@
-# 分割版 run_game
+# Python 5v5 タクティカルゲーム
+
+グリッド上で攻撃側・防衛側の5人チームが対戦する、Tkinter製のゲームです。スパイクの設置・解除、アビリティ、AI同士の対戦、ユーザー操作に対応しています。単発の試合に加えて、チーム育成や契約を管理するシーズンモード、大会管理、試合結果の分析を利用できます。
+
+## 目次
+
+- [環境構築](#環境構築)
+- [ゲームの起動](#ゲームの起動)
+- [設定の変更](#設定の変更)
+- [データと保存先](#データと保存先)
+- [AIの学習](#aiの学習)
+- [テスト](#テスト)
+- [トラブルシューティング](#トラブルシューティング)
+- [ゲーム実装と機能の詳細](#ゲーム実装と機能の詳細)
+
+## 環境構築
+
+### 必要なもの
+
+- Pythonとpip。手元の既存環境では **Python 3.10.6** でゲームモジュールの読み込みを確認しています。ただし、`requirements.txt` の全パッケージを新規インストールした環境での動作確認は未実施です。
+- Tkinter（GUI用）。WindowsのPythonインストーラーでは Tcl/Tk と IDLE を含めてインストールしてください。
+- Git、またはGitHubからダウンロード・展開したリポジトリ一式。
+- GUIを表示できるデスクトップ環境。
+
+以下は **Windows / PowerShell** の手順です。通常のゲーム実行はCPUでも利用できます。GPUを使う学習では、PyTorchとGPUドライバー・CUDAの組み合わせを別途合わせてください。
+
+### 1. プロジェクトの取得
+
+GitHubからリポジトリをcloneするか、ZIPをダウンロードして展開します。`run_game.py` だけでなく、AIのディレクトリとデータを含むプロジェクト一式を取得してください。
+
+取得したリポジトリのルート（`AI_dnn`）から、ゲームのディレクトリへ移動します。
+
+```powershell
+Set-Location .\03.game
+```
+
+以降、特に指定がないコマンドの作業ディレクトリは **`AI_dnn/03.game/`** です。
+
+### 2. 仮想環境の作成
+
+```powershell
+python --version
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+`python` が見つからない場合は、Pythonのインストール先とPATHを確認してください。複数のPythonがある場合は、使いたいPythonの実行ファイルで `-m venv .venv` を実行します。
+
+`requirements.txt` にはNumPy、PyTorch、Gymnasium、Stable-Baselines3、Matplotlib、pandas、Flask、XGBoost、scikit-learnなど、ゲーム・学習・分析で使うパッケージが含まれています。Tkinterはpipではなく、Python本体側で用意します。
+
+PowerShellで仮想環境の有効化が制限されている場合は、仮想環境のPythonを直接使えます。
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run_game.py
+```
+
+### 3. 環境の確認
+
+仮想環境を有効化した状態で実行します。
+
+```powershell
+python -m pip check
+python -m tkinter
+python -c "import numpy, torch; print('NumPy:', numpy.__version__); print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available())"
+```
+
+Tkinterの確認ウィンドウが開けば閉じてください。`CUDA: False` でもCPUでの実行は可能です。
+
+次回以降は `03.game` に移動して `.\.venv\Scripts\Activate.ps1` を実行すると、同じ環境を使えます。終了時は `deactivate` で仮想環境を解除します。
+
+## ゲームの起動
+
+### 単発の試合
+
+作業ディレクトリ: `AI_dnn/03.game/`
+
+```powershell
+python run_game.py
+```
+
+1. 編成画面のAttacker・Defenderの操作方法を選びます。初回の動作確認は、両側を **「ロジック」** にすると選択したAI用の学習済みモデルが不要です。画面の初期選択はToru AI v4なので、必要に応じて切り替えてください。
+2. 両チームの選手を5人ずつ選びます。プリセットの適用でも編成できます。
+3. 両チームのIGLと、攻撃側になったときのスパイク所持者を設定し、試合開始ボタンを押します。
+
+AIを選ぶと自動で対戦します。「ユーザー操作」では、味方をクリックして選択し、移動先のマスをクリックして移動を指示します。アビリティ・アルティメットは画面の操作欄から使用します。射撃は自動です。
+
+試合画面には一時停止・再開、ラウンド／サイド／マップのスキップ、`1tick (ms)` の変更があります。操作や再生の詳細は下記の既存機能説明を参照してください。
+
+### シーズンモード
+
+作業ディレクトリ: `AI_dnn/03.game/`
+
+```powershell
+python run_realtime_season.py
+```
+
+セーブの新規作成またはロードと章の選択を行い、新規ゲームでは初期選手5人を選びます。ホームからチーム編成、スクリム、スカウト、契約管理、大会、研究、エイムラボを利用できます。進行や編成は自動保存されます。
+
+### 大会管理
+
+作業ディレクトリ: `AI_dnn/03.game/`
+
+```powershell
+python run_competition_manager.py
+```
+
+画面で出場チーム・Controller・大会形式を設定して開始します。学習型AIを選ぶ場合は、そのAIに必要なモデルを先に用意してください。
+
+### 大会結果の分析
+
+作業ディレクトリ: `AI_dnn/03.game/`
+
+```powershell
+python analytics/run_analytics_ui.py
+```
+
+大会結果JSONを読み込んで、試合・選手の成績を確認できます。
+
+## 設定の変更
+
+通常はスクリプトを **オプションなし** で実行します。日常的に使う設定は画面、または対象ファイルの名前付き定数で変更してください。
+
+| 設定 | 主な変更場所 |
+| --- | --- |
+| 対戦AI、編成、IGL、スパイク所持者 | 起動後の編成画面 |
+| 描画のtick間隔 | 試合画面の `1tick (ms)`、初期値は `game_core.py` の `TICK_TIME` |
+| 選手の能力・説明 | `character_stats.py` |
+| 編成プリセット | `party_presets.py` |
+| マップ | `map_data.py` |
+| コンボ・覚醒 | `player_combos.py`、`awakening_events.py` |
+| シーズンの初期選手・既定AI | `realtime_season_config.py` の `INITIAL_OWNED_PLAYERS`、`DEFAULT_TEAM_AI` |
+| 章・所属チーム | `realtime_season_leagues.py`、`realtime_season_teams.py` |
+| 学習回数・対象AI・保存先・seed・再開 | 各学習スクリプト冒頭の名前付き定数 |
+
+既存セーブに保存済みの設定は、ソース変更だけでは反映されない場合があります。再取り込みなどの手順は、下記のシーズンモードの説明を参照してください。コマンドラインオプションは検証や一時的な上書きに使います。
+
+## データと保存先
+
+| 種類 | 保存先 |
+| --- | --- |
+| シーズンのセーブ | `data/realtime_season/teams/team-<チーム名>-<識別子>/save.json` |
+| シーズンの履歴・スクリム・大会ログ | セーブと同じチームフォルダ内の `save_history.json`、`scrims/`、`tournaments/` |
+| 大会管理の結果・レート | `competition_results/`、`competition_results/team_ratings.json` |
+| AIのモデル・チェックポイント | 各AIの `data/` など、そのAIのコードが指定する場所 |
+| AIの学習ログ | 各AIの `logs/` など |
+
+旧形式のモデルにはゲーム直下や `attacker_ai_v2_data/` などに保存されるものもあります。既存ファイルの移動や改名は、読み込み先を確認してから行ってください。セーブをバックアップするときは、関連する履歴・ログを含めてチームフォルダごとコピーします。
+
+## AIの学習
+
+ゲームの動作確認には再学習は不要です。学習型AIを利用する場合は、対象AIの推論コードが指定するモデルと、対応するシナリオ・依存モデルを用意します。モデルの構成や学習順序はAIごとに異なります。
+
+- [Toru AI v4 学習手順](toruAI_v4/docs/training.md)
+- [Touyama Gaming v3 利用手順](touyama_v3/docs/tv3_usage.md)
+- [Touyama Gaming v3 チェックポイント復旧](touyama_v3/docs/tv3_checkpoint_recovery.md)
+- [FRC v1](frc_v1/README.md)
+- [Fnatic v3](fnatic_v3/README.md)
+
+例えばTouyama Gaming v3の守備側では、各スクリプト冒頭の学習設定（`TRAINING_SETS`、`TARGET_OPPONENTS`、`RANDOM_SEED`、`RESUME_TRAINING` など、対象スクリプトにある定数）を確認・変更し、次の順番で実行します。学習は時間と計算資源を使うため、必要な場合に実行してください。
+
+作業ディレクトリ: `AI_dnn/03.game/touyama_v3/`（下記は `03.game` から移動する例）
+
+```powershell
+Set-Location .\touyama_v3
+python tv3_train_defender_analysis.py
+python tv3_train_defender_search.py
+python tv3_train_defender_retake.py
+```
+
+**モデル互換性:** 2026-10-10に壁の射線判定が `symmetric_supercover_v1` に変更されました。Touyama v3では退避位置とシナリオ識別値にも影響します。旧設定の守備モデルが不一致になる場合は、`defender_analysis → defender_search → defender_retake` の順で影響するモデルを再学習する必要があります。識別値やハッシュの書き換え、互換性チェックの無効化では対応しないでください。詳細は [Touyama v3 の指示と互換性情報](touyama_v3/AGENTS.md) を参照してください。
+
+## テスト
+
+作業ディレクトリ: `AI_dnn/03.game/`
+
+```powershell
+python -m unittest discover -s test -p "test_*.py"
+```
+
+共通テストの実行方法は [test/README.md](test/README.md) を参照してください。AI固有のテストは各AIの `test/` や説明書を確認してください。
+
+## トラブルシューティング
+
+| 症状 | 確認・対処 |
+| --- | --- |
+| `ModuleNotFoundError` | 仮想環境を有効化し、同じPythonで `python -m pip install -r requirements.txt` を実行します。`python -c "import sys; print(sys.executable)"` で使用中のPythonを確認できます。 |
+| `No matching distribution found` | `python --version` とエラーに示されたパッケージ名・版を確認します。`requirements.txt` は固定版を多く含み、Pythonの版・OS・利用するパッケージ配布元によってインストール可否が変わります。 |
+| Tkinterがない／画面が開かない | PythonのTcl/Tkコンポーネントと、デスクトップ環境を確認します。`python -m tkinter` で切り分けられます。 |
+| モデルが見つからない | 選択したAIのモデル保存先を確認します。まず単発試合の両側を「ロジック」にして起動を確認できます。 |
+| `Site analysis checkpoint mismatch` など | モデルと現在のシナリオ・射線仕様・依存モデルの整合性を確認し、上記の互換性情報に従います。 |
+| 相対パスのファイルが見つからない | 通常のゲーム起動は `03.game`、AIの学習は各AIで指定する作業ディレクトリから実行します。 |
+| 描画が遅い | 試合画面のtick間隔やスキップ操作、大会・スクリムの描画なし設定を利用します。 |
+
+## ゲーム実装と機能の詳細
 
 同じフォルダへ以下の6ファイルを置き、`run_game.py`を実行してください。
 

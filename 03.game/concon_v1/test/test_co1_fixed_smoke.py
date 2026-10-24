@@ -17,11 +17,14 @@ class FixedSmokeTests(unittest.TestCase):
     def test_battle_controller_casts_fixed_smoke_with_real_charge(self):
         with contextlib.redirect_stdout(io.StringIO()):
             from concon_v1.co1_battle_training import BattleRouteEnv
-            original = get_scenario("A1")
-            point = original.attacker_spawns[0]
-            scenario = replace(original, smoke_points=(point,), smoke_trigger_bfs_distance=0)
-            env = BattleRouteEnv(seed=0, opponents=["gc_v1"], map_name=scenario)
+            env = BattleRouteEnv(seed=0, opponents=["gc_v2"], map_name="A1")
             smoker = next(char for char in env.attackers if char.ability_name == "SMOKE")
+            # Setup itself can move attackers. Anchor the zero-distance
+            # trigger to the caster's position when the battle actually starts.
+            point = tuple(smoker.pos)
+            scenario = replace(env.scenario, smoke_points=(point,), smoke_trigger_bfs_distance=0)
+            env.controller.fixed_smokes = FixedSmokePlan(scenario)
+            env.route_controller.scenario = scenario
             self.assertEqual(smoker.smoke_charges, 1)
             env.step(actions=[4] * 5)
         self.assertEqual(smoker.smoke_charges, 0)

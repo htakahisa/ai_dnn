@@ -57,6 +57,32 @@ class DefenderMacroTests(unittest.TestCase):
         second = GCFeatureHistory(self.scenario).encode(public_snapshot(self.allies[0], self.state, 1), [])
         np.testing.assert_array_equal(first, second)
 
+    def test_public_snapshot_includes_ally_capabilities_for_shared_observer(self):
+        ally = self.allies[0]
+        ally.max_hp = 100
+        ally.accuracy = .8
+        ally.hs_rate = .4
+        ally.dodge_rate = .2
+        ally.reaction = 120
+        ally.effective_iq = 150
+        ally.ability_name = "SMOKE"
+        ally.smoke_charges = 1
+        ally.ultimate_points = 3
+        ally.ultimate_cost = 6
+        ally.ultimate_name = "ESCAPE"
+
+        snapshot = public_snapshot(ally, self.state, 1)
+        features = self.analysis.history.encode(snapshot, [])
+        fields = self.analysis.history.fields
+        self.assertEqual(features[fields.index("ally_0_max_hp")], 1)
+        self.assertEqual(features[fields.index("ally_0_accuracy")], .8)
+        self.assertEqual(features[fields.index("ally_0_dodge")], .2)
+        self.assertEqual(features[fields.index("ally_0_iq")], .75)
+        self.assertEqual(features[fields.index("ally_0_charges")], .1)
+        self.assertEqual(features[fields.index("ally_0_ultimate_points")], .3)
+        self.assertEqual(features[fields.index("ally_0_ability_SMOKE")], 1)
+        self.assertEqual(features[fields.index("ally_0_ultimate_ESCAPE")], 1)
+
     def test_setup_cannot_observe_raw_enemy_positions(self):
         self.state.update(defender_setup_active=True)
         self.state["chars"] += [unit("enemy", (8, 3), "A")]

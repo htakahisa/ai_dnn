@@ -93,6 +93,7 @@ DANCE_MAX_HP = 100
 SERENADE_REVEAL_TICKS = 3
 DANCE_SPARKLE_TICKS = 5
 ASH_RANGE_CELLS = 8
+ASH_CHARGES_PER_ROUND = 2
 DESTRUCTION_AREA_TICKS = 10
 BALEMOON_WARNING_TICKS = 3
 CONTRACT_DAMAGE_PER_TICK = 10
@@ -705,12 +706,19 @@ class Character:
         self.ultimate_cost = ULTIMATE_COSTS.get(self.role, 5)
         self.ultimate_points = min(self.ultimate_points, self.ultimate_cost)
         self.moved_this_tick = False
+        # 個人能力「追い詰められたおもこ」。Characterはラウンドごとに作り直す。
+        self.omoko_cornered_triggered = False
+        self.omoko_cornered_remaining = 0
+        self.omoko_cornered_last_target = None
+        self.omoko_cornered_target = None
+        self.omoko_cornered_this_tick = False
+        self.omoko_cornered_blocked_this_tick = False
         self.smoke_charges = 1 if self.ability_name == "SMOKE" else 0
         self.flash_charges = 1 if self.ability_name == "FLASH" else 0
         self.recon_charges = 2 if self.ability_name == "RECON" else 0
         self.ramp_charges = 2 if self.ability_name == "RAMP" else 0
         self.dance_charges = 3 if self.ability_name == "DANCE" else 0
-        self.ash_charges = 3 if self.ability_name == "ASH" else 0
+        self.ash_charges = ASH_CHARGES_PER_ROUND if self.ability_name == "ASH" else 0
         self.heal_sparkle_remaining = 0
         self.heal_sparkle_applied_tick = None
         self.life_contract_remaining = 0
@@ -750,6 +758,10 @@ class Character:
 
         # 覚醒・コンボで一時的に上昇させる、1Tickあたりの移動マス数。既定は1。
         self.move_steps_per_tick = 1
+        self._fast_move_last_transition = None
+        self._fast_move_recent_positions = []
+        self._fast_move_slow_ticks = 0
+        self._navigation_step_limit = None
         self.movement_disabled_remaining = 0
 
         # 覚醒等でスモーク越しに視認・射撃できるようになったかどうか。既定はFalse。

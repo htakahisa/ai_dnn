@@ -1,0 +1,38 @@
+{
+  "abilities": {
+    "FLASH": "ov1_attacker_ability_advisor_flash_smoke.pt",
+    "SMOKE": "ov1_attacker_ability_advisor_flash_smoke.pt",
+    "RECON": "ov1_attacker_ability_advisor.pt"
+  },
+  "sha256": {
+    "flash_smoke": "60c80815222748a1709959e9c2bba99aa7dad6bf5414845b7f8b84dde69e5610",
+    "recon": "c17c62164390f8c55569b05628f2547834b6d443dde87577733d94cf07973788"
+  },
+  "evaluation": "ov1_attacker_flash_smoke_holdout.json",
+  "opponent": "frc_v1",
+  "seeds": [
+    810000,
+    810001,
+    810002,
+    810003,
+    810004,
+    810005,
+    810006,
+    810007,
+    810008,
+    810009,
+    810010,
+    810011,
+    810012,
+    810013,
+    810014,
+    810015,
+    810016,
+    810017,
+    810018,
+    810019
+  ],
+  "wins": 146,
+  "reference_wins": 133,
+  "rounds": 240
+}

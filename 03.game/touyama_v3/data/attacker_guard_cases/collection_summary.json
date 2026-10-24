@@ -1,0 +1,43 @@
+{
+  "complete": true,
+  "target_per_ai": 100,
+  "target_per_site": 50,
+  "sites": [
+    "L",
+    "R"
+  ],
+  "counts": {
+    "concon_v1": 100,
+    "omoko_v1": 100,
+    "fnatic_v3": 100,
+    "frc_v1": 100,
+    "toru_ai_v4": 100,
+    "ghost_champions_v2": 100
+  },
+  "by_site": {
+    "concon_v1": {
+      "L": 50,
+      "R": 50
+    },
+    "omoko_v1": {
+      "L": 50,
+      "R": 50
+    },
+    "fnatic_v3": {
+      "L": 50,
+      "R": 50
+    },
+    "frc_v1": {
+      "L": 50,
+      "R": 50
+    },
+    "toru_ai_v4": {
+      "L": 50,
+      "R": 50
+    },
+    "ghost_champions_v2": {
+      "L": 50,
+      "R": 50
+    }
+  }
+}

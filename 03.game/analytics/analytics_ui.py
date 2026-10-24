@@ -52,7 +52,7 @@ class AnalyticsViewer(tk.Tk):
     def _build_widgets(self):
         toolbar = ttk.Frame(self, padding=8)
         toolbar.pack(fill=tk.X)
-        ttk.Button(toolbar, text="Refresh", command=self.refresh_results).pack(
+        ttk.Button(toolbar, text="Reload matches", command=self.refresh_results).pack(
             side=tk.LEFT
         )
         ttk.Button(
@@ -330,34 +330,42 @@ class AnalyticsViewer(tk.Tk):
     def refresh_results(self):
         self.file_tree.delete(*self.file_tree.get_children())
         self.result_paths = []
+        self.loaded_series = None
         if not self.results_dir.exists():
             self.file_count_var.set("Folder not found")
             self.status_var.set(str(self.results_dir))
             self._show_empty_state()
             return
-        self.result_paths = sorted(
-            (
-                p
-                for p in self.results_dir.iterdir()
-                if p.is_file() and p.suffix.lower() == ".json"
-            ),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-        for i, path in enumerate(self.result_paths):
-            stat = path.stat()
+        entries = []
+        try:
+            for path in self.results_dir.glob("series_*.json"):
+                try:
+                    if path.is_file():
+                        stat = path.stat()
+                        entries.append((stat.st_mtime, stat.st_size, path))
+                except OSError:
+                    # A result may be deleted while the list is rebuilding.
+                    continue
+        except OSError as exc:
+            self.file_count_var.set("Unable to read results folder")
+            self.status_var.set(f"{self.results_dir}: {exc}")
+            self._show_empty_state()
+            return
+        entries.sort(key=lambda item: item[0], reverse=True)
+        self.result_paths = [path for _, _, path in entries]
+        for i, (modified, size, path) in enumerate(entries):
             self.file_tree.insert(
                 "",
                 tk.END,
                 iid=str(i),
                 text=path.name,
                 values=(
-                    datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                    f"{stat.st_size / 1024:.1f} KB",
+                    datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M:%S"),
+                    f"{size / 1024:.1f} KB",
                 ),
             )
         self.file_count_var.set(f"{len(self.result_paths)} files")
-        self.status_var.set("List refreshed")
+        self.status_var.set(f"Match results: {self.results_dir}")
         if self.result_paths:
             first = self.file_tree.get_children()[0]
             self.file_tree.selection_set(first)

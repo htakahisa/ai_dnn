@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-import copy
-import hashlib
+import gc
 import io
 import json
 import math
@@ -23,7 +22,7 @@ from strongest_ranking import load_rankings
 
 import numpy as np
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from map_data import NEW_MAZE_STR
 from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
@@ -50,12 +49,13 @@ from tactical_simulator import (
 )
 from competition_bracket import double_elimination_bracket, project_bracket
 from tournament_bracket_ui import BracketRenderer, bind_bracket_scroll
-from simulation_runtime import competition_match, MatchRandomState
+from simulation_runtime import cpu_inference
 
 CONTROLLER_OPTIONS = {
     "Toru AI v4": "toru_ai_v4",
     "Toru AI v3.1": "toru_ai_v3.1",
     "ConCon v1": "concon_v1",
+    "Touyama Gaming v3": "touyama_gaming_v3",
     "Touyama Gaming v2": "touyama_gaming_v2",
     "Omoko Gaming v1": "omoko_gaming_v1",
     "Fnatic v3": "fnatic_v3",
@@ -66,22 +66,31 @@ CONTROLLER_OPTIONS = {
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
     "Ghost Champions v2": "ghost_champions_v2",
-    "Ghost Champions v3": "ghost_champions_v3",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
 }
 CONTROLLER_KEY_TO_DISPLAY = {key: label for label, key in CONTROLLER_OPTIONS.items()}
 DEFAULT_CONTROLLER_DISPLAY = next(iter(CONTROLLER_OPTIONS))
+DEFAULT_SHIELD_ABILITIES_ENABLED = False
+LIVE_CONTROLLER_KEYS = {"user"}
 
 RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
 # 1500が基準。2000対1500の期待勝率は約95%となるElo尺度。
 DEFAULT_TEAM_RATING = 1500.0
-MATCH_REPRODUCTION_VERSION = 1
 RATING_K_FACTOR = 40.0
 UNUSED = "（未使用）"
 MAX_TEAM_SLOTS = 30
+
+
+class CompetitionCancelled(Exception):
+    """Normal shutdown, never a match result or an application error."""
+
+
+def check_competition_cancelled(stop_event: threading.Event | None) -> None:
+    if stop_event is not None and stop_event.is_set():
+        raise CompetitionCancelled()
 
 
 class TeamPlayerKey(str):
@@ -166,7 +175,6 @@ class MResult:
     defender_side_stats: dict[str, Any] = field(default_factory=dict)
     round_records: list[dict[str, Any]] = field(default_factory=list)
     replay_frames: list[dict[str, Any]] = field(default_factory=list)
-    reproduction: dict[str, Any] = field(default_factory=dict)
 
 
 from datetime import datetime
@@ -659,7 +667,6 @@ def compact_map_result(result: MResult) -> dict[str, Any]:
         "overtime": result.overtime,
         "player_stats": [asdict(stat) for stat in result.player_stats],
         "total_rounds": result.total_rounds,
-        "reproduction": copy.deepcopy(result.reproduction),
     }
 
 
@@ -680,7 +687,6 @@ def compact_map_model(result: MResult) -> MResult:
         halftime_team1_score=result.halftime_team1_score,
         halftime_team2_score=result.halftime_team2_score,
         total_rounds=result.total_rounds,
-        reproduction=copy.deepcopy(result.reproduction),
     )
 
 
@@ -725,7 +731,6 @@ def original_scores(
     raise RuntimeError("試合終了後のチームとスコアを対応付けられません")
 
 
-@competition_match
 def play_map(
     team1: Any,
     team2: Any,
@@ -741,35 +746,21 @@ def play_map(
     series_tactical_state: dict[str, Any] | None = None,
     tick_time_ms: int | Callable[[], int] = TICK_TIME,
     shield_abilities_enabled: bool = True,
+    stop_event: threading.Event | None = None,
+    on_close: Callable[[], None] | None = None,
+    on_game_ready: Callable[[Any], None] | None = None,
 ) -> MResult:
+    check_competition_cancelled(stop_event)
+    seed_all(seed)
+
     team1_controller_key = str(team1_controller_key or "fnatic_v1")
     team2_controller_key = str(team2_controller_key or "fnatic_v1")
 
-    def team_input(team):
-        return dict(name=team.name, players=list(map(str, team.players)),
-                    igl=str(team.igl), spike_holder=str(team.spike_holder))
-
-    reproduction = dict(
-        version=MATCH_REPRODUCTION_VERSION,
-        team1=team_input(team1), team2=team_input(team2),
-        map_number=int(map_number), seed=int(seed),
-        team1_controller_key=team1_controller_key,
-        team2_controller_key=team2_controller_key,
-        team1_series_wins=int(team1_series_wins),
-        team2_series_wins=int(team2_series_wins),
-        series_maps_to_win=int(series_maps_to_win),
-        mental_fatigue_state=copy.deepcopy(mental_fatigue_state or {}),
-        series_tactical_state=copy.deepcopy(series_tactical_state or {}),
-        shield_abilities_enabled=bool(shield_abilities_enabled),
-        map_sha256=hashlib.sha256(NEW_MAZE_STR.encode()).hexdigest(),
-        inference_device="cpu",
-    )
-
     if "user" in {team1_controller_key, team2_controller_key} and not render:
         raise ValueError("ユーザー操作を使う試合は描画が必要です")
-
     ai1 = _build_team_ai(team1_controller_key)
     ai2 = _build_team_ai(team2_controller_key)
+    check_competition_cancelled(stop_event)
 
     team1_keys = [TeamPlayerKey(name, f"team1:{team1.name}") for name in team1.players]
     team2_keys = [TeamPlayerKey(name, f"team2:{team2.name}") for name in team2.players]
@@ -821,7 +812,7 @@ def play_map(
         if render
         else contextlib.redirect_stdout(io.StringIO())
     )
-    with output_context:
+    with output_context, cpu_inference(enabled=not render):
         game = VisualFPSBattle(
             NEW_MAZE_STR,
             attacker_ai,
@@ -840,16 +831,14 @@ def play_map(
             tick_time_ms=tick_time_ms,
             shield_abilities_enabled=shield_abilities_enabled,
         )
-        game._match_random_state = MatchRandomState()
 
+        watch_after_id = None
         if render:
             # 管理画面は隠さず、観戦画面と同時に表示する。
             # VisualFPSBattle側のmainloopはネストされるが、
             # 同じTkイベント系の管理画面も更新され続ける。
-            # destroy()で観戦用Tkを破棄すると、大会管理画面側の
-            # Tcl/Tkイベント処理まで止まる環境がある。
-            # quit()でこの観戦画面のmainloopだけを抜け、
-            # ウィンドウ自体はwithdraw()で非表示にする。
+            # quit()で観戦画面のmainloopを抜けてから、
+            # タイマーを取り消してウィンドウを破棄する。
             closing_started = False
 
             def finish_rendered_match() -> None:
@@ -857,6 +846,7 @@ def play_map(
                 if closing_started:
                     return
                 closing_started = True
+                game.stop_playback()
                 try:
                     game.root.withdraw()
                 except tk.TclError:
@@ -867,38 +857,70 @@ def play_map(
                     pass
 
             def watch_match_end() -> None:
+                nonlocal watch_after_id
                 try:
+                    if closing_started:
+                        return
+                    if stop_event is not None and stop_event.is_set():
+                        finish_rendered_match()
+                        return
                     if bool(getattr(game, "match_over", False)):
                         # 最終スコアを少し表示してから次のマップへ進む。
-                        game.root.after(
+                        watch_after_id = game.root.after(
                             1200,
                             finish_rendered_match,
                         )
                         return
-                    game.root.after(100, watch_match_end)
+                    watch_after_id = game.root.after(100, watch_match_end)
                 except tk.TclError:
                     return
 
-            # 手動で閉じた場合も大会自体は継続する。
+            def close_rendered_match() -> None:
+                if stop_event is not None:
+                    stop_event.set()
+                if on_close is not None:
+                    on_close()
+                finish_rendered_match()
+
             game.root.protocol(
                 "WM_DELETE_WINDOW",
-                finish_rendered_match,
+                close_rendered_match,
             )
-            game.root.after(100, watch_match_end)
+            watch_after_id = game.root.after(100, watch_match_end)
 
-        game.run()
+        try:
+            if on_game_ready is not None:
+                on_game_ready(game)
+            check_competition_cancelled(stop_event)
+            if stop_event is None:
+                game.run()
+            else:
+                game.run(stop_event=stop_event)
+            check_competition_cancelled(stop_event)
+            if render and not game.match_over:
+                raise CompetitionCancelled()
+        finally:
+            if render:
+                # Destroy only after the nested match mainloop has returned.
+                # Cancel timers first so hidden games cannot keep simulating.
+                with contextlib.suppress(tk.TclError):
+                    game.stop_playback()
+                    if watch_after_id is not None:
+                        game.root.after_cancel(watch_after_id)
+                    game.root.update_idletasks()
+                    game.root.destroy()
+                # Controllers can retain the game in cycles collected by the
+                # worker. Release Tcl resources here, on the Tk thread.
+                for name, value in list(vars(game).items()):
+                    if isinstance(value, (tk.Misc, tk.Variable, tk.Image)):
+                        setattr(game, name, None)
+                game.skip_buttons = []
+                if hasattr(game, "_ace_effect_image_cache"):
+                    game._ace_effect_image_cache.clear()
 
         if mental_fatigue_state is not None:
             mental_fatigue_state.clear()
             mental_fatigue_state.update(getattr(game, "player_mental_fatigue", {}))
-
-        if render:
-            # run()内のmainloopから戻ったことを保証したうえで非表示化。
-            try:
-                game.root.withdraw()
-                game.root.update_idletasks()
-            except tk.TclError:
-                pass
 
     score1, score2 = original_scores(
         game,
@@ -959,45 +981,7 @@ def play_map(
             exported.get("round_records", []) if analytics is not None else []
         ),
         replay_frames=list(getattr(game, "replay_frames", [])),
-        reproduction=reproduction,
     )
-
-
-def reproduce_map_result(saved_map: dict[str, Any], *, render: bool = False,
-                         tick_time_ms: int = TICK_TIME) -> MResult:
-    """Re-simulate a saved map using its original pre-map series state."""
-    from types import SimpleNamespace
-    settings = copy.deepcopy(saved_map.get("reproduction") or {})
-    if settings.get("version") != MATCH_REPRODUCTION_VERSION:
-        raise ValueError("この試合には再現用の開始状態が保存されていません。更新後に行った試合を選択してください。")
-    if settings.pop("map_sha256") != hashlib.sha256(NEW_MAZE_STR.encode()).hexdigest():
-        raise ValueError("保存試合と現在のマップが異なります。")
-    settings.pop("version")
-    settings.pop("inference_device")
-    if "user" in {settings["team1_controller_key"], settings["team2_controller_key"]}:
-        raise ValueError("ユーザー操作の試合は保存済みリプレイで確認してください。")
-    for key in ("team1", "team2"):
-        settings[key] = SimpleNamespace(**settings[key])
-        validate_preset(settings[key])
-    return play_map(**settings, render=render, tick_time_ms=tick_time_ms)
-
-
-def match_result_digest(result: MResult | dict[str, Any]) -> str:
-    """Compare every tick and statistic, excluding diagnostic log filenames."""
-    data = asdict(result) if isinstance(result, MResult) else copy.deepcopy(result)
-    data.pop("reproduction", None)
-    def state_only(value):
-        if isinstance(value, dict):
-            # GC3 writes each run to a separate UUID-named journal. Keep the
-            # original paths in results, but do not treat a new log filename
-            # as a difference in the simulated match.
-            return {key: state_only(item) for key, item in value.items() if key != "history_file"}
-        if isinstance(value, list):
-            return [state_only(item) for item in value]
-        return value
-    data = state_only(data)
-    return hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True,
-                                    separators=(",", ":")).encode()).hexdigest()
 
 
 def run_series_core(
@@ -2670,6 +2654,10 @@ class CompetitionApp:
         self.events: queue.Queue = queue.Queue()
         self.render_requests: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
+        self.stop_event = threading.Event()
+        self._closing = False
+        self._active_game = None
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.live_render_enabled = False
         self.names = all_preset_names()
         if len(self.names) < 2:
@@ -2694,8 +2682,8 @@ class CompetitionApp:
         self.tick_time_var.trace_add("write", self._on_tick_time_change)
         self.rating_enabled_var = tk.BooleanVar(value=True)
         self.current_rating_enabled = True
-        self.shield_abilities_var = tk.BooleanVar(value=True)
-        self.current_shield_abilities_enabled = True
+        self.shield_abilities_var = tk.BooleanVar(value=DEFAULT_SHIELD_ABILITIES_ENABLED)
+        self.current_shield_abilities_enabled = DEFAULT_SHIELD_ABILITIES_ENABLED
         self.status_var = tk.StringVar(value="モードとチームを設定してください")
         self.series_score_var = tk.StringVar(value="-")
         self.team_power_reports: dict[str, dict[str, Any]] = {}
@@ -2840,44 +2828,7 @@ class CompetitionApp:
             variable=self.shield_abilities_var,
         )
         self.shield_abilities_check.pack(side="left", padx=(20, 0))
-        self.reproduce_button = tk.Button(
-            timing_frame, text="保存試合を再現", command=self.reproduce_saved_match,
-        )
-        self.reproduce_button.pack(side="left", padx=(12, 0))
         self._update_seed_entry_state()
-
-    def reproduce_saved_match(self) -> None:
-        if self.worker is not None and self.worker.is_alive():
-            return
-        path = filedialog.askopenfilename(
-            parent=self.root, title="再現する試合のJSONを選択",
-            initialdir="series_data", filetypes=[("試合結果", "*.json")],
-        )
-        if not path:
-            return
-        try:
-            with open(path, encoding="utf-8") as file:
-                saved = json.load(file)
-            maps = saved.get("maps") or []
-            if not maps:
-                raise ValueError("マップ結果を含む試合JSONを選択してください。")
-            number = 1 if len(maps) == 1 else simpledialog.askinteger(
-                "試合の再現", f"再現するマップ番号（1〜{len(maps)}）",
-                parent=self.root, minvalue=1, maxvalue=len(maps), initialvalue=1,
-            )
-            if number is None:
-                return
-            original = maps[number - 1]
-            self.set_enabled(False)
-            try:
-                result = reproduce_map_result(original, render=True, tick_time_ms=self.tick_time_ms)
-            finally:
-                self.set_enabled(True)
-            if match_result_digest(original) != match_result_digest(result):
-                raise ValueError("保存試合と結果が一致しません。AIモデル・選手能力・ゲームコードの変更、または途中終了を確認してください。")
-            messagebox.showinfo("試合の再現", "全tickの状態と試合結果が保存試合と一致しました。", parent=self.root)
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            messagebox.showerror("試合の再現", str(error), parent=self.root)
 
     def _on_tick_time_change(self, *_args) -> None:
         try:
@@ -3190,6 +3141,7 @@ class CompetitionApp:
         available_ais = [
             ("Toru AI v4", "toru_ai_v4"),
             ("Toru AI v3.1", "toru_ai_v3.1"),
+            ("Touyama Gaming v3", "touyama_gaming_v3"),
             ("Touyama Gaming v2", "touyama_gaming_v2"),
             ("Touyama Gaming v1", "touyama_gaming_v1"),
             ("Fnatic v3", "fnatic_v3"),
@@ -3198,7 +3150,6 @@ class CompetitionApp:
             ("Omoko Gaming v1", "omoko_gaming_v1"),
             ("Ghost Champions v1", "ghost_champions_v1"),
             ("Ghost Champions v2", "ghost_champions_v2"),
-            ("Ghost Champions v3", "ghost_champions_v3"),
             ("ロジック（デフォルト）", "default"),
         ]
         ai_names = [name for name, key in available_ais]
@@ -4675,6 +4626,8 @@ class CompetitionApp:
                 messages.put(("error", str(exc)))
 
         def poll() -> None:
+            if self._closing:
+                return
             while not messages.empty():
                 kind, value = messages.get_nowait()
                 if kind == "progress":
@@ -5640,6 +5593,7 @@ class CompetitionApp:
             y += 42
 
     def emit(self, event: tuple[Any, ...]) -> None:
+        check_competition_cancelled(getattr(self, "stop_event", None))
         self.events.put(event)
 
     def append(self, value: str) -> None:
@@ -5675,8 +5629,6 @@ class CompetitionApp:
         )
 
     def set_enabled(self, enabled: bool) -> None:
-        if hasattr(self, "reproduce_button"):
-            self.reproduce_button.config(state="normal" if enabled else "disabled")
         state = "normal" if enabled else "disabled"
         self.maps_entry.config(state=state)
         self.lower_final_maps_entry.config(state=state)
@@ -5839,11 +5791,13 @@ class CompetitionApp:
             mental_fatigue_state: dict[str, float] | None = None,
             series_tactical_state: dict[str, Any] | None = None,
         ) -> MResult:
-            user_match = "user" in {
+            stop_event = getattr(self.app, "stop_event", None)
+            check_competition_cancelled(stop_event)
+            requires_live = bool(LIVE_CONTROLLER_KEYS.intersection({
                 team1_controller_key,
                 team2_controller_key,
-            }
-            if not self.app.live_render_enabled and not user_match:
+            }))
+            if not self.app.live_render_enabled and not requires_live:
                 return play_map(
                     team1,
                     team2,
@@ -5858,6 +5812,7 @@ class CompetitionApp:
                     mental_fatigue_state,
                     series_tactical_state,
                     shield_abilities_enabled=getattr(self.app, "current_shield_abilities_enabled", True),
+                    stop_event=stop_event,
                 )
 
             request = {
@@ -5878,7 +5833,9 @@ class CompetitionApp:
                 "error": None,
             }
             self.app.render_requests.put(request)
-            request["done"].wait()
+            while not request["done"].wait(0.1):
+                check_competition_cancelled(stop_event)
+            check_competition_cancelled(stop_event)
 
             if request["error"] is not None:
                 raise request["error"]
@@ -5894,6 +5851,8 @@ class CompetitionApp:
 
     def _process_render_requests(self) -> None:
         """描画マップをTkメインスレッドで1件ずつ実行する。"""
+        if getattr(self, "_closing", False):
+            return
         try:
             request = self.render_requests.get_nowait()
         except queue.Empty:
@@ -5915,11 +5874,23 @@ class CompetitionApp:
                 request.get("series_tactical_state"),
                 tick_time_ms=lambda: self.tick_time_ms,
                 shield_abilities_enabled=request.get("shield_abilities_enabled", True),
+                stop_event=getattr(self, "stop_event", None),
+                on_close=self.close,
+                on_game_ready=self._set_active_game,
             )
         except BaseException as exc:
-            request["error"] = exc
+            # Do not send frames holding Tk objects to the worker thread.
+            request["error"] = exc.with_traceback(None)
         finally:
+            self._active_game = None
+            # play_map has returned, so its render callbacks and local widgets
+            # can now be collected on their owning Tk thread. Do this before
+            # waking the worker: its next simulation can trigger cyclic GC.
+            gc.collect()
             request["done"].set()
+
+    def _set_active_game(self, game: Any) -> None:
+        self._active_game = game
 
     def _execute_job(
         self,
@@ -6003,8 +5974,11 @@ class CompetitionApp:
                     self.emit,
                     team_controllers,
                 )
+        except CompetitionCancelled:
+            pass
         except Exception:
-            self.emit(("error", traceback.format_exc()))
+            if not self.stop_event.is_set():
+                self.events.put(("error", traceback.format_exc()))
         finally:
             # Tk操作は_poll_events側のメインスレッドだけで行う。
             pass
@@ -6098,8 +6072,14 @@ class CompetitionApp:
         return "\n".join(lines) + "\n"
 
     def _poll_events(self) -> None:
+        if self._closing:
+            self.root.quit()
+            return
         # 描画要求は必ずTkメインスレッドで処理する。
         self._process_render_requests()
+        if self._closing:
+            self.root.quit()
+            return
 
         try:
             while True:
@@ -6270,8 +6250,42 @@ class CompetitionApp:
             pass
         self.root.after(100, self._poll_events)
 
+    def close(self) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        self.stop_event.set()
+        # Release workers waiting for a map that will no longer be rendered.
+        while True:
+            try:
+                request = self.render_requests.get_nowait()
+            except queue.Empty:
+                break
+            request["error"] = CompetitionCancelled()
+            request["done"].set()
+        game = self._active_game
+        if game is not None:
+            with contextlib.suppress(tk.TclError):
+                game.stop_playback()
+                game.root.withdraw()
+                game.root.quit()
+        with contextlib.suppress(tk.TclError):
+            self.root.withdraw()
+            self.root.quit()
+
     def run(self) -> None:
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            self.close()
+            if self.worker is not None:
+                self.worker.join()
+            # Also remove callbacks owned by auxiliary windows before destroy.
+            with contextlib.suppress(tk.TclError):
+                for handle in self.root.tk.splitlist(self.root.tk.call("after", "info")):
+                    self.root.after_cancel(handle)
+                self.root.update_idletasks()
+                self.root.destroy()
 
 
 if __name__ == "__main__":

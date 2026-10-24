@@ -153,7 +153,7 @@ class CaseTrainingTests(unittest.TestCase):
              patch("concon_v1.co1_train_defender_retake.print_evaluation_summary"), \
              patch("concon_v1.co1_train_defender_retake.optimize") as optimize, \
              patch("concon_v1.co1_train_defender_retake.torch.save") as save:
-            train(episodes=300, checkpoint_interval=100, save_dir=temporary, opponents=["omoko_v1"])
+            train(episodes=300, checkpoint_interval=100, save_dir=temporary, opponents=["omoko_v1"], sites=("L","R"))
             evaluate.assert_called_once()
             optimize.assert_not_called()
             latest = [call.args[0] for call in save.call_args_list if str(call.args[1]).endswith("latest.pt")]

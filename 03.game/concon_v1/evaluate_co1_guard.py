@@ -44,7 +44,9 @@ def behavior_summary(details):
               for pair in pairs.values() for key in pair}
     rates = {rate: totals[numerator] / totals[denominator] if totals[denominator] else 0.0
              for rate, (numerator, denominator) in pairs.items()}
-    pressure_keys = ("impaired_decisions", "exposed_wait_decisions", "cover_moves", "counter_utility_decisions")
+    pressure_keys = ("impaired_decisions", "exposed_wait_decisions", "cover_moves", "counter_utility_decisions",
+                     "counter_available_decisions","useful_counter_decisions",
+                     "ultimate_ready_decisions","ultimate_decisions")
     pressure = {key: sum(record.get(key, 0) for record in details) for key in pressure_keys}
     return {**totals, **rates, **pressure, "behavior_error": sum(rates.values()) / len(rates)}
 
@@ -149,6 +151,9 @@ def print_summary(result):
               f"bad_fire_facing={counts['bad_fire_facing_rate']:.1%}", flush=True)
         print(f"  impaired={counts['impaired_decisions']} exposed_wait={counts['exposed_wait_decisions']} "
               f"cover_moves={counts['cover_moves']} counter_utility={counts['counter_utility_decisions']}", flush=True)
+        print(f"  useful_counter={counts.get('useful_counter_decisions',0)}/"
+              f"{counts.get('counter_available_decisions',0)} "
+              f"ultimate={counts.get('ultimate_decisions',0)}/{counts.get('ultimate_ready_decisions',0)}",flush=True)
         for mode, mode_counts in counts["by_start_mode"].items():
             if mode_counts["rounds"]:
                 print(f"  {mode}: wins={mode_counts['attacker_wins']}/{mode_counts['rounds']} "

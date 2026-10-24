@@ -22,6 +22,7 @@ from concon_v1.co1_attacker_scenarios import SCENARIOS, get_scenario
 from concon_v1.co1_battle_training import BattleRouteEnv, OPPONENTS
 from game_core import ROUND_DURATION_TICKS
 
+DEFAULT_OPPONENTS = ("gc_v2",)
 
 def bfs_action(position, route, mask):
     """Follow BFS distances while respecting synchronization and ally yielding."""
@@ -155,7 +156,7 @@ slider.max=report.trials[0].frames.length-1;draw();
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-map", "--map", choices=SCENARIOS, default="A1", dest="map_name")
-    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=["gc_v1"])
+    parser.add_argument("--opponents", nargs="+", choices=OPPONENTS, default=list(DEFAULT_OPPONENTS))
     parser.add_argument("--rounds", type=int, default=3, help="rounds per opponent")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-ticks", type=int, default=ROUND_DURATION_TICKS)

@@ -149,7 +149,7 @@ class VariableWaypointTests(unittest.TestCase):
 
     def test_training_checkpoint_uses_variable_dimensions_without_training_steps(self):
         finished = SimpleNamespace(
-            opponents=("gc_v1",), opponent="gc_v1", done=True, success=True,
+            opponents=("gc_v2",), opponent="gc_v2", done=True, success=True,
             had_spike_drop=False, spike_recovered=False, elapsed_ticks=0,
             reset=lambda: ([], []),
         )
@@ -182,7 +182,7 @@ class VariableWaypointTests(unittest.TestCase):
                 random.seed(0)
                 np.random.seed(0)
                 torch.manual_seed(0)
-                env = BattleRouteEnv(seed=0, opponents=["gc_v1"], model=model, map_name=scenario)
+                env = BattleRouteEnv(seed=0, opponents=["gc_v2"], model=model, map_name=scenario)
                 observations, _ = env._collect()
                 self.assertTrue(all(obs.shape == (scenario.obs_dim,) for obs in observations))
                 training_frames = []
@@ -202,7 +202,7 @@ class VariableWaypointTests(unittest.TestCase):
                         return advanced
 
                 with patch.object(evaluation, "LimitedRoundBattle", TracedBattle):
-                    evaluation.evaluate("gc_v1", rounds=1, seed=0, map_name=scenario,
+                    evaluation.evaluate("gc_v2", rounds=1, seed=0, map_name=scenario,
                                         frozen_checkpoint=serialize(make_checkpoint(scenario, model)))
                 # Carry training stops at planting; evaluation continues the round.
                 self.assertEqual(training_frames, evaluation_frames[:len(training_frames)])

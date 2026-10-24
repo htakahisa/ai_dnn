@@ -26,7 +26,7 @@ def metrics(mean, minimum):
 def finished_training_env():
     """Finish rounds without policy steps so scheduling can be tested cheaply."""
     return SimpleNamespace(
-        opponents=("gc_v1", "omoko_v1"), opponent="gc_v1", done=True,
+        opponents=("gc_v2", "omoko_v1"), opponent="gc_v2", done=True,
         success=True, had_spike_drop=False, spike_recovered=False,
         elapsed_ticks=0, reset=lambda: ([], []),
         game=SimpleNamespace(round_over=True, round_timer=1, attacker_wins=1),
@@ -46,10 +46,10 @@ class BestSelectionTests(unittest.TestCase):
             training.train(episodes=20, save_dir=directory)
         lines = output.getvalue().splitlines()
         plant_index = next(i for i, line in enumerate(lines) if "  team100 " in line)
-        self.assertIn("gc_v1=0/20(0.000)", lines[plant_index])
-        self.assertIn("team_win100 gc_v1=20/20(1.000)", lines[plant_index + 1])
+        self.assertIn("gc_v2=0/20(0.000)", lines[plant_index])
+        self.assertIn("team_win100 gc_v2=20/20(1.000)", lines[plant_index + 1])
         self.assertIn("plant_or_elimination", lines[plant_index + 1])
-        self.assertEqual(save.call_args_list[0].args[0]["team_win100"]["gc_v1"]["plants"], 20)
+        self.assertEqual(save.call_args_list[0].args[0]["team_win100"]["gc_v2"]["plants"], 20)
 
     def test_epsilon_reaches_the_exact_configured_floor(self):
         self.assertGreater(training.epsilon_by_episode(1399, 2000), training.EPSILON_END)
@@ -80,7 +80,7 @@ class BestSelectionTests(unittest.TestCase):
 
     def test_evaluation_uses_equal_rounds_seed_and_frozen_weights_for_every_team(self):
         checkpoint = {
-            "training_mode": "battle", "opponents": ("gc_v1", "omoko_v1", "gc_v1"),
+            "training_mode": "battle", "opponents": ("gc_v2", "omoko_v1", "gc_v2"),
             "model_state_dict": {"weight": torch.tensor([1.0])},
         }
         states = random.getstate(), np.random.get_state(), torch.get_rng_state()
@@ -98,7 +98,7 @@ class BestSelectionTests(unittest.TestCase):
             np.random.seed(seed)
             torch.manual_seed(seed)
             random.random(), np.random.random(), torch.rand(1)
-            plants = {"gc_v1": 16, "omoko_v1": 10}[opponent]
+            plants = {"gc_v2": 16, "omoko_v1": 10}[opponent]
             return {"plants": plants, "rounds": rounds, "plant_success_rate": plants / rounds}
 
         with (patch.object(evaluation_module, "evaluate", side_effect=fake_evaluate) as evaluate,
@@ -109,7 +109,7 @@ class BestSelectionTests(unittest.TestCase):
         self.assertEqual(result["epsilon"], 0.0)
         self.assertAlmostEqual(result["success_rate"], 0.65)
         self.assertEqual(result["min_team_plant_rate"], 0.5)
-        self.assertEqual(result["team_plants"]["gc_v1"]["episodes"], 20)
+        self.assertEqual(result["team_plants"]["gc_v2"]["episodes"], 20)
         self.assertEqual(checkpoint["model_state_dict"]["weight"].item(), 1.0)
         self.assert_rng_states_equal(states)
 
@@ -122,7 +122,7 @@ class BestSelectionTests(unittest.TestCase):
 
         with patch.object(evaluation_module, "evaluate", side_effect=fail):
             with self.assertRaisesRegex(RuntimeError, "evaluation failed"):
-                training.evaluate_checkpoint({"training_mode": "battle", "opponents": ("gc_v1",)})
+                training.evaluate_checkpoint({"training_mode": "battle", "opponents": ("gc_v2",)})
         self.assert_rng_states_equal(states)
 
     def test_training_skips_warmup_and_saves_only_balanced_candidates(self):
@@ -190,7 +190,7 @@ class BestSelectionTests(unittest.TestCase):
             original_bytes = best_path.read_bytes()
 
             def evaluate(checkpoint, rounds, seed):
-                self.assertEqual(checkpoint["opponents"], ("gc_v1", "omoko_v1"))
+                self.assertEqual(checkpoint["opponents"], ("gc_v2", "omoko_v1"))
                 self.assertEqual((rounds, seed), (3, 4))
                 return metrics(0.9, 0.8) if checkpoint["episode"] == 99 else metrics(0.95, 0.7)
 

@@ -26,12 +26,19 @@ for _p in (_THIS_DIR, _ROOT_DIR):
 from controllers import BaseController, DefaultDefenderController
 from ov1_learning_defender_retake import Ov1LearningDefenderRetakeController
 from ov1_learning_defender_search import Ov1LearningDefenderSearchController
+from ov1_inference_damage_avoidance import escape_destruction_area, avoid_destruction_entry
+from ov1_inference_team_tactics import apply_shared_facing
+from ov1_inference_recon_response import recon_response
+from omoko_v1.ability_advisor_v1.ov1_advisor_attacker_context import preflight_default_advisor
 
 
 class Ov1DefenderController(BaseController):
     """defender側の窓口となる単一コントローラー。
     内部でsearchモデル・retakeモデルを保持し、is_plantedに応じて使い分ける。
     run_game.py からは通常のコントローラー1つとして扱われる(isinstance判定にはこのクラスを追加する)。"""
+
+    requires_public_effects = True
+    requires_exact_team_tactics = True
 
     def __init__(
         self,
@@ -41,6 +48,9 @@ class Ov1DefenderController(BaseController):
         device=None,
     ):
         super().__init__()
+        # The engine creates only the starting side's controller at startup.
+        # Validate the required attacker adviser now, before the side swap.
+        preflight_default_advisor()
         self.search_controller = Ov1LearningDefenderSearchController(
             model_path=search_model_path, greedy=greedy, device=device
         )
@@ -54,12 +64,33 @@ class Ov1DefenderController(BaseController):
         return DefaultDefenderController()
 
     def reset_round(self):
+        self._recon_response_memory = {}
         for ctrl in (self.search_controller, self.retake_controller):
             if hasattr(ctrl, "reset_round"):
                 ctrl.reset_round()
 
-    def decide_move(self, char, game_state):
-        if game_state.get("is_planted"):
-            return self.retake_controller.decide_move(char, game_state)
+    def set_game(self, game):
+        self.game = game
+        for ctrl in (self.search_controller, self.retake_controller):
+            if hasattr(ctrl, "set_game"):
+                ctrl.set_game(game)
+            else:
+                ctrl.game = game
 
-        return self.search_controller.decide_move(char, game_state)
+    def decide_move(self, char, game_state):
+        game = getattr(self, "game", None)
+        escape = escape_destruction_area(char, game_state, game)
+        if escape is not None:
+            return apply_shared_facing(char, game_state, escape)
+        if not hasattr(self, "_recon_response_memory"):
+            self._recon_response_memory = {}
+        response = recon_response(char, game_state,
+                                  self._recon_response_memory.setdefault(char.name, {}))
+        if response is not None:
+            return response
+        if game_state.get("is_planted"):
+            result = self.retake_controller.decide_move(char, game_state)
+        else:
+            result = self.search_controller.decide_move(char, game_state)
+        result = avoid_destruction_entry(char, game_state, result, game)
+        return apply_shared_facing(char, game_state, result)

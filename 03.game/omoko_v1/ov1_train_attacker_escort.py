@@ -52,7 +52,8 @@ Attacker Carry Phase「escort(護衛)」学習スクリプト(Dueling DQN)。
 
 【キャリアーはスクリプトAI】
 キャリアーは学習対象ではない。エピソード開始時に決めたプラントサイトへ、
-固定のBFS最短経路を1tickごとに1マスずつ進む。経路上の次のマスが
+carry用マップの中継点(6=右、7=左)を経由するBFS経路を1tickごとに1マスずつ進む。
+中継点はcarryと同じく隣接1マス以内で到達扱いとする。経路上の次のマスが
 (escortまたは敵に)占有されている場合、実際のゲーム(battle_logic.py
 move_character)と同じく「移動できずその場に留まる」。この「キャリアーが
 実際に進んだ距離」をescort全員の共有報酬にすることで、道を塞ぐと損、
@@ -89,6 +90,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from map_data import NEW_MAZE_STR
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
+from ov1_map_data_carry import NEW_MAZE_STR as CARRY_MAZE_STR
 from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
 
 from game_core import (
@@ -109,8 +111,9 @@ from game_core import (
 )
 
 from character_stats import CHARACTER_TABLE as STATS_TABLE
+from grid_lines import WALL_LOS_VERSION, wall_line_cells
 import ov1_common_rl
-from ov1_common_rl import DEVICE, DuelingQNet, ReplayBuffer, select_action, optimize_double_dqn_step
+from ov1_common_rl import DuelingQNet, ReplayBuffer, optimize_double_dqn_step
 from ov1_ultimate_training import (
     ESCORT_ORB_MAX_PATH_DISTANCE,
     ESCORT_ORB_MIN_REMAINING_TICKS,
@@ -137,8 +140,32 @@ from ov1_common_attacker import (
 
 _DEFENDER_SIM_GRID = ov1_common_rl.parse_grid(DEFENDER_SIM_MAZE_STR)
 
-EPISODE_COUNT = 5000
+EPISODE_COUNT = 4000
 EVAL_MIN_EPISODE = EPISODE_COUNT * 0.7
+CARRY_ROUTE_VERSION = "carry_map_waypoint_adjacent_v1"
+COMBAT_RULE_VERSION = "escort_hs_modifiers_v2"
+ENEMY_SIGHTING_VERSION = "smoke_recon_supercover_v2"
+MOVING_SHOOTER_HS_MULTIPLIER = 0.1  # battle_logic.py: moving shooter HS penalty
+SAVE_DIR = "data/attacker_escort_data/"
+MAX_TICKS = 90
+BATCH_SIZE = 256
+BUFFER_SIZE = 200_000
+GAMMA = 0.98
+LEARNING_RATE = 1e-4
+EPSILON_START = 1.0
+EPSILON_END = 0.05
+EPSILON_DECAY_EPISODES = int(EPISODE_COUNT * 0.8)
+TARGET_UPDATE_EVERY = 800
+EVAL_EVERY = 200
+EVAL_EPISODES = 50
+WARMUP_STEPS = 3000
+POTENTIAL_COEF = 0.15
+SEED = 0
+# 計算方法のみの設定。報酬・観測・更新頻度は変更しない。
+BATCH_ACTION_INFERENCE = True
+CACHE_WALL_DISTANCE_MAPS = True
+# 一括演算の丸め誤差で順位が変わりそうな場合は従来の個別推論を使う。
+BATCH_ARGMAX_TOLERANCE = 1e-5
 
 # ---------------------------------------------------------------------------
 # マップ上の意味付け(map_data.py準拠)
@@ -240,10 +267,57 @@ def _bfs_shortest_path(grid, start, goal):
     return path
 
 
+def _parse_carry_routes(maze_str, grid):
+    """Read route markers without importing another phase's training code."""
+    carry_grid = ov1_common_rl.parse_grid(maze_str)
+    if carry_grid.shape != grid.shape or not np.array_equal(carry_grid == 1, grid == 1):
+        raise ValueError("carryマップとescortマップのサイズ・壁配置が一致しません")
+    midpoint = grid.shape[1] // 2
+    waypoints = {"left": [], "right": []}
+    plants = {"left": [], "right": []}
+    priorities = {"left": [], "right": []}
+    for r in range(grid.shape[0]):
+        for c in range(grid.shape[1]):
+            value = int(carry_grid[r, c])
+            site = "left" if c < midpoint else "right"
+            if value in (6, 7):
+                waypoints["right" if value == 6 else "left"].append((r, c))
+            if value in (2, 5):
+                plants[site].append((r, c))
+            if value == 5:
+                priorities[site].append((r, c))
+    return waypoints, {site: priorities[site] or plants[site] for site in plants}
+
+
+def _carry_route_path(grid, start, waypoint, target):
+    """Follow a waypoint until adjacent, then head to the exact plant cell."""
+    path = [tuple(start)]
+    if waypoint is not None and _chebyshev(start, waypoint) > 1:
+        to_waypoint = _bfs_shortest_path(grid, start, waypoint)
+        if to_waypoint[-1] != tuple(waypoint):
+            raise ValueError(f"中継点に到達できません: {waypoint}")
+        for cell in to_waypoint[1:]:
+            path.append(cell)
+            if _chebyshev(cell, waypoint) <= 1:
+                break
+    to_target = _bfs_shortest_path(grid, path[-1], target)
+    if to_target[-1] != tuple(target):
+        raise ValueError(f"設置場所に到達できません: {target}")
+    return path + to_target[1:]
+
+
 def _has_los(grid, smoke_cells, p1, p2):
-    """壁とスモークを考慮した射線判定(ov1_common_rl.has_los利用。引数順序が
-    異なる点に注意: このファイルはgrid, smoke_cells, p1, p2の順)。"""
-    return ov1_common_rl.has_los(grid, p1, p2, smoke_cells)
+    """Engine-compatible supercover walls plus the existing smoke path rule."""
+    for r, c in wall_line_cells(tuple(p1), tuple(p2)):
+        if not (0 <= r < grid.shape[0] and 0 <= c < grid.shape[1]) or grid[r, c] == 1:
+            return False
+    # Supercover already checked every wall on the Bresenham path. Only smoke
+    # needs the narrower path; do not scan the same walls a second time.
+    if smoke_cells:
+        cells = ov1_common_rl.line_cells(p1, p2)
+        if len(cells) > 2 and any(cell in smoke_cells for cell in cells):
+            return False
+    return True
 
 def _chebyshev(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
@@ -329,14 +403,15 @@ def _build_distance_map_walls_only(grid, source_cells):
     return dist
 
 
-def _bfs_next_step(grid, start, goal, blocked=()):
+def _bfs_next_step(grid, start, goal, blocked=(), dist_map=None):
     """Return one walkable step from start toward goal, if one exists."""
     start = tuple(map(int, start))
     goal = tuple(map(int, goal))
     if start == goal:
         return start
     blocked = {tuple(map(int, cell)) for cell in blocked}
-    dist_map = _build_distance_map_walls_only(grid, [goal])
+    if dist_map is None:
+        dist_map = _build_distance_map_walls_only(grid, [goal])
     r, c = start
     best = start
     best_dist = dist_map[r, c]
@@ -436,9 +511,15 @@ class EscortEnv:
         handoff_augment_prob=HANDOFF_AUGMENT_PROB,
         hold_ticks=ESCORT_HOLD_TICKS,
         seed=None,
+        carry_maze_str=CARRY_MAZE_STR,
     ):
         self.grid, self.ability_lineup_points = _parse_escort_map(maze_str)
+        self._wall_distance_maps = {}
+        self._wall_distance_terrain = None
         self.height, self.width = self.grid.shape
+        self.waypoint_cells_by_site, self.plant_cells_by_site = _parse_carry_routes(
+            carry_maze_str, self.grid,
+        )
 
         self.max_ticks = max_ticks
         self.n_escorts = n_escorts
@@ -700,9 +781,16 @@ class EscortEnv:
         self.escort_stuck = [0] * self.n_escorts
         self._refresh_watch_assignments()
 
-        # --- キャリアー：スポーンからサイトのどれか1点へ固定経路 ---
-        target = self.rng.choice(self.site_cells) if self.site_cells else self.carry_pos
-        self.carry_path = _bfs_shortest_path(self.grid, self.carry_pos, target)
+        # 左右を等確率、そのサイトの中継点を等確率で選ぶ。
+        sites = [site for site, cells in self.plant_cells_by_site.items() if cells]
+        self.active_site = self.rng.choice(sites) if sites else None
+        candidates = self.waypoint_cells_by_site.get(self.active_site, [])
+        self.carry_waypoint = self.rng.choice(candidates) if candidates else None
+        targets = self.plant_cells_by_site.get(self.active_site, [])
+        target = self.rng.choice(targets) if targets else self.carry_pos
+        self.carry_path = _carry_route_path(
+            self.grid, self.carry_pos, self.carry_waypoint, target,
+        )
         self.carry_path_index = 0
         self.carry_hp = MAX_HP
         self.carry_alive = True
@@ -712,7 +800,7 @@ class EscortEnv:
         self.carry_facing_forced_this_tick = False
         self.goal_pos = target
         # goal(設置目標地点)は1ラウンド中固定なので、reset時に1回だけ計算する。
-        self._goal_dist_map = _build_distance_map_walls_only(self.grid, [target])
+        self._goal_dist_map = self._wall_distance_map(target)
         self._refresh_carry_dist_map()
         # 常時距離短縮shaping用: 各escortの直前tickでのcarryまでのBFS距離を記録しておく
         self.escort_prev_dist = [self._carry_bfs_dist(pos) for pos in self.escort_pos]
@@ -820,7 +908,8 @@ class EscortEnv:
             dist = _chebyshev(from_pos, self.enemy_pos[i])
             if max_range is not None and dist > max_range:
                 continue
-            if not _has_los(self.grid, smoke_cells, from_pos, self.enemy_pos[i]):
+            effective_smoke = () if self.enemy_reveal_remaining[i] > 0 else smoke_cells
+            if not _has_los(self.grid, effective_smoke, from_pos, self.enemy_pos[i]):
                 continue
             if best_dist is None or dist < best_dist:
                 best_idx, best_dist = i, dist
@@ -841,7 +930,7 @@ class EscortEnv:
         pos = tuple(self.escort_pos[i])
         candidates = []
         for orb in sorted(self.available_orbs):
-            dist_map = _build_distance_map_walls_only(self.grid, [orb])
+            dist_map = self._wall_distance_map(orb)
             distance = dist_map[pos[0], pos[1]]
             if np.isfinite(distance) and distance <= ESCORT_ORB_MAX_PATH_DISTANCE:
                 candidates.append((int(distance), tuple(orb)))
@@ -916,9 +1005,28 @@ class EscortEnv:
             if self.team_sighting["tick_ago"] > SIGHTING_STALENESS_CAP:
                 self.team_sighting = None
 
+    def _wall_distance_map(self, source):
+        """Reuse exact wall-only BFS results, including across episode resets.
+
+        Occupancy and smoke are intentionally absent: neither affects this BFS.
+        Detect terrain changes before lookup; cached arrays must not be mutated.
+        """
+        source = tuple(map(int, source))
+        if not CACHE_WALL_DISTANCE_MAPS:
+            return _build_distance_map_walls_only(self.grid, [source])
+        terrain = (self.grid.shape, (self.grid == 1).tobytes())
+        if terrain != self._wall_distance_terrain:
+            self._wall_distance_maps.clear()
+            self._wall_distance_terrain = terrain
+        if source not in self._wall_distance_maps:
+            distances = _build_distance_map_walls_only(self.grid, [source])
+            distances.setflags(write=False)
+            self._wall_distance_maps[source] = distances
+        return self._wall_distance_maps[source]
+
     def _refresh_carry_dist_map(self):
         """carry_pos が変化した際に呼び、BFS距離マップを更新する。"""
-        self._carry_dist_map = _build_distance_map_walls_only(self.grid, [self.carry_pos])
+        self._carry_dist_map = self._wall_distance_map(self.carry_pos)
 
     def _carry_bfs_dist(self, pos):
         """posからcarry_posまでの壁のみBFS実距離。_get_obs()と同じ計算元
@@ -1357,12 +1465,18 @@ class EscortEnv:
             target_pos = self._pos_of(target_kind, target_idx)
 
             accuracy = MOVING_ACCURACY if shooter_stats["moved"] else shooter_stats["accuracy"]
+            hs_rate = shooter_stats["hs_rate"] * (
+                MOVING_SHOOTER_HS_MULTIPLIER if shooter_stats["moved"] else 1.0
+            )
             # 正面からの角度差による補正(正面100%～真横50%、battle_logicと同一ロジック)
-            accuracy *= _facing_accuracy_multiplier(
+            facing_multiplier = _facing_accuracy_multiplier(
                 self._facing_of(shooter_kind, shooter_idx), shooter_pos, target_pos
             )
+            accuracy *= facing_multiplier
+            hs_rate *= facing_multiplier
             if shooter_kind == "enemy" and self.enemy_blind_remaining[shooter_idx] > 0:
                 accuracy *= BLIND_ACCURACY_MULTIPLIER
+                hs_rate *= BLIND_ACCURACY_MULTIPLIER
 
             dodge = target_stats["dodge"]
             if target_kind == "enemy" and self.enemy_reveal_remaining[target_idx] > 0:
@@ -1371,6 +1485,7 @@ class EscortEnv:
             hit_chance = accuracy * (1.0 - dodge)
             if target_stats["moved"]:
                 hit_chance *= MOVING_TARGET_HIT_MULTIPLIER
+                hs_rate *= MOVING_TARGET_HIT_MULTIPLIER
             hit_chance = max(0.0, min(1.0, hit_chance))
 
             hit = self.rng.random() < hit_chance
@@ -1382,7 +1497,7 @@ class EscortEnv:
             if not hit:
                 continue
 
-            damage = HEADSHOT_DAMAGE if self.rng.random() < shooter_stats["hs_rate"] else BODY_DAMAGE
+            damage = HEADSHOT_DAMAGE if self.rng.random() < max(0.0, hs_rate) else BODY_DAMAGE
 
             if target_kind == "carry":
                 self.carry_hp = max(0, self.carry_hp - damage)
@@ -1656,7 +1771,8 @@ class EscortEnv:
             if i in orb_requested:
                 occupied = self._occupied_by_others("escort", i)
                 next_pos = _bfs_next_step(
-                    self.grid, (r, c), orb_targets[i], occupied
+                    self.grid, (r, c), orb_targets[i], occupied,
+                    dist_map=self._wall_distance_map(orb_targets[i]),
                 )
                 if next_pos == (r, c):
                     self.escort_last_delta[i] = (0.0, 0.0)
@@ -1871,6 +1987,57 @@ Transition = namedtuple("Transition", ("state", "action", "reward", "next_state"
 # 常にTrueのため)。ov1_common_rl.select_actionはfallback_action引数を持つが、
 # デフォルト0でも実質未使用となる想定。
 
+def _select_escort_actions(policy_net, observations, masks, device, epsilon=None):
+    """Batch greedy rows while preserving per-agent exploration RNG order.
+
+    epsilon=None is evaluation: it must not consume exploration random numbers.
+    Batching can introduce floating-point differences; near ties are recomputed
+    with the original single-row forward pass. Bitwise equality of an entire
+    training run across numerical backends is not guaranteed.
+    """
+    actions = [None] * len(masks)
+    greedy = []
+    invalid_q = -1e9 if epsilon is None else -np.inf
+    for i, mask in enumerate(masks):
+        if mask is None:
+            continue
+        valid = np.flatnonzero(mask)
+        if not len(valid):
+            actions[i] = 0 if epsilon is None else EscortEnv.ACTION_STAY
+        elif epsilon is not None and random.random() < epsilon:
+            actions[i] = int(random.choice(valid))
+        else:
+            greedy.append(i)
+    if not greedy:
+        return actions
+
+    with torch.no_grad():
+        if BATCH_ACTION_INFERENCE:
+            states = torch.as_tensor(
+                np.asarray([observations[i] for i in greedy]),
+                dtype=torch.float32, device=device,
+            )
+            values = policy_net(states).cpu().numpy()
+        else:
+            values = np.stack([
+                policy_net(torch.as_tensor(
+                    observations[i], dtype=torch.float32, device=device,
+                ).unsqueeze(0)).squeeze(0).cpu().numpy()
+                for i in greedy
+            ])
+        for row, i in enumerate(greedy):
+            q = values[row]
+            valid_q = q[masks[i]]
+            if BATCH_ACTION_INFERENCE and len(greedy) > 1 and len(valid_q) > 1:
+                top = np.partition(valid_q, -2)[-2:]
+                tolerance = BATCH_ARGMAX_TOLERANCE * (1.0 + float(np.max(np.abs(valid_q))))
+                if not np.isfinite(valid_q).all() or top[-1] - top[-2] <= tolerance:
+                    state = torch.as_tensor(observations[i], dtype=torch.float32, device=device)
+                    q = policy_net(state.unsqueeze(0)).squeeze(0).cpu().numpy()
+            actions[i] = int(np.argmax(np.where(masks[i], q, invalid_q)))
+    return actions
+
+
 def evaluate(env, policy_net, device, episodes=20):
     successes = 0
     total_reward = 0.0
@@ -1884,17 +2051,9 @@ def evaluate(env, policy_net, device, episodes=20):
         info = {"success": False}
 
         while not done:
-            actions = []
-            for i in range(env.n_escorts):
-                if not env.escort_alive[i]:
-                    actions.append(None)
-                    continue
-                mask = env.get_action_mask(i)
-                with torch.no_grad():
-                    state_t = torch.as_tensor(obs_list[i], dtype=torch.float32, device=device).unsqueeze(0)
-                    q = policy_net(state_t).squeeze(0).cpu().numpy()
-                q = np.where(mask, q, -1e9)
-                actions.append(int(np.argmax(q)))
+            masks = [env.get_action_mask(i) if env.escort_alive[i] else None
+                     for i in range(env.n_escorts)]
+            actions = _select_escort_actions(policy_net, obs_list, masks, device)
 
             next_obs_list, rewards, done, info = env.step(actions)
             if env._blocking_escort_idx is not None:
@@ -1916,29 +2075,29 @@ def evaluate(env, policy_net, device, episodes=20):
 def main():
     parser = argparse.ArgumentParser(description="omoko_v1 Attacker Escort Phase 学習スクリプト")
     parser.add_argument("--episodes", type=int, default=EPISODE_COUNT)
-    parser.add_argument("--max-ticks", type=int, default=90)
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--buffer-size", type=int, default=200_000)
-    parser.add_argument("--gamma", type=float, default=0.98)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--eps-start", type=float, default=1.0)
-    parser.add_argument("--eps-end", type=float, default=0.05)
-    parser.add_argument("--eps-decay-episodes", type=int, default=int(EPISODE_COUNT * 0.8))
-    parser.add_argument("--target-update-every", type=int, default=800)
-    parser.add_argument("--eval-every", type=int, default=200)
-    parser.add_argument("--eval-episodes", type=int, default=50)  # 20だと分散が大きいため引き上げ
-    parser.add_argument("--warmup-steps", type=int, default=3000)
+    parser.add_argument("--max-ticks", type=int, default=MAX_TICKS)
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--buffer-size", type=int, default=BUFFER_SIZE)
+    parser.add_argument("--gamma", type=float, default=GAMMA)
+    parser.add_argument("--lr", type=float, default=LEARNING_RATE)
+    parser.add_argument("--eps-start", type=float, default=EPSILON_START)
+    parser.add_argument("--eps-end", type=float, default=EPSILON_END)
+    parser.add_argument("--eps-decay-episodes", type=int, default=EPSILON_DECAY_EPISODES)
+    parser.add_argument("--target-update-every", type=int, default=TARGET_UPDATE_EVERY)
+    parser.add_argument("--eval-every", type=int, default=EVAL_EVERY)
+    parser.add_argument("--eval-episodes", type=int, default=EVAL_EPISODES)  # 20だと分散が大きいため引き上げ
+    parser.add_argument("--warmup-steps", type=int, default=WARMUP_STEPS)
     parser.add_argument("--hold-ticks", type=int, default=ESCORT_HOLD_TICKS)
     parser.add_argument("--best-model-eps-threshold", type=float, default=BEST_MODEL_EPS_THRESHOLD)
     parser.add_argument("--best-model-smooth-window", type=int, default=BEST_MODEL_SMOOTH_WINDOW)
     parser.add_argument("--ahead-block-penalty-coef", type=float, default=AHEAD_BLOCK_PENALTY_COEF)
-    parser.add_argument("--potential-coef", type=float, default=0.15)
+    parser.add_argument("--potential-coef", type=float, default=POTENTIAL_COEF)
     parser.add_argument(
         "--save-dir",
         type=str,
-        default="data/attacker_escort_data/",
+        default=SAVE_DIR,
     )
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=SEED)
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -1987,6 +2146,13 @@ def main():
             "avg_block_events": avg_block_events,
             "roster_order": list(ROSTER_ORDER),
             "spike_holder_default": SPIKE_HOLDER,
+            "carry_route_version": CARRY_ROUTE_VERSION,
+            "combat_rule_version": COMBAT_RULE_VERSION,
+            "enemy_sighting_version": ENEMY_SIGHTING_VERSION,
+            "wall_los_version": WALL_LOS_VERSION,
+            "moving_shooter_hs_multiplier": MOVING_SHOOTER_HS_MULTIPLIER,
+            "waypoint_cells": env.waypoint_cells_by_site,
+            "plant_cells_by_site": env.plant_cells_by_site,
             "hold_ticks": args.hold_ticks,
             "ability_lineup_points": {k: list(v) for k, v in env.ability_lineup_points.items()},
         }
@@ -2002,20 +2168,9 @@ def main():
         info = {"success": False}
 
         while not done:
-            actions = []
-            masks = []
-            for i in range(env.n_escorts):
-                if not env.escort_alive[i]:
-                    actions.append(None)
-                    masks.append(None)
-                    continue
-                mask = env.get_action_mask(i)
-                action = select_action(
-                    policy_net, obs_list[i], mask, epsilon,
-                    device=device, fallback_action=EscortEnv.ACTION_STAY,
-                )
-                actions.append(action)
-                masks.append(mask)
+            masks = [env.get_action_mask(i) if env.escort_alive[i] else None
+                     for i in range(env.n_escorts)]
+            actions = _select_escort_actions(policy_net, obs_list, masks, device, epsilon)
 
             next_obs_list, rewards, done, info = env.step(actions)
 

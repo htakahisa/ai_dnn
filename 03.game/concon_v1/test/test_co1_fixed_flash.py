@@ -92,7 +92,7 @@ class FixedFlashTests(unittest.TestCase):
     def test_battle_controller_launches_fixed_flash(self):
         with contextlib.redirect_stdout(io.StringIO()):
             from concon_v1.co1_battle_training import BattleRouteEnv
-            env = BattleRouteEnv(seed=0, opponents=["gc_v1"])
+            env = BattleRouteEnv(seed=0, opponents=["gc_v2"])
             flasher = next(char for char in env.attackers if char.ability_name == "FLASH")
             from game_core import FLASH_MAX_FLIGHT_TICKS, FLASH_SPEED_CELLS_PER_TICK
             # Select an actual endpoint; spawn cells need not be within the flash's flight limit.

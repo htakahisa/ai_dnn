@@ -2,7 +2,7 @@
 
 `co1_collect_defender_retake.py` は既存の本番 search 重みを固定し、通常の setup/search から各AIと対戦します。スクリプトは設置が完了した tick の終了時点でゲームを保存します。設置完了と同じ tick の残りの defender 行動は待機にし、リテイクモデルの判断はまだ実行しません。収集スクリプトは学習・重みの更新を行いません。
 
-既定の対象は omoko_v1、touyama_v2、fnatic_v3、gc_v1、toru_ai_v3.1 です。各チーム・各サイト50件、合計500件を収集します。スクリプトは設置位置や人数を作り替えません。設置前に終了した試合、設置時点でラウンドが終了した試合、defender が全滅した試合、収集済みサイトの追加試合は保存件数に含みません。
+既定の対象は omoko_v1、touyama_v3、fnatic_v3、gc_v2、toru_ai_v4 です。各チーム・各サイト50件、合計500件を収集します。スクリプトは設置位置や人数を作り替えません。設置前に終了した試合、設置時点でラウンドが終了した試合、defender が全滅した試合、収集済みサイトの追加試合は保存件数に含みません。
 
 収集数は `co1_collect_defender_retake.py` 冒頭の `DEFAULT_CASES_PER_SITE = 50` で設定します。合計件数は「この定数 × 対象AI数 × 対象サイト数」です。定数を100に変更すると、既定の5チーム・左右2サイトでは合計1000件になります。`--cases-per-site` を指定した場合は引数を優先します。試行上限は同じ場所の `DEFAULT_MAX_ATTEMPTS_PER_TEAM`、1試合のtick上限は `DEFAULT_MAX_TICKS` です。
 
@@ -27,7 +27,7 @@ python co1_collect_defender_retake.py --resume
 python co1_collect_defender_retake.py --resume --max-attempts-per-team 3000
 
 # 特定のAI・サイトのみ収集する場合
-python co1_collect_defender_retake.py --opponents omoko_v1 gc_v1 --sites L --cases-per-site 50 --output-dir data/retake_cases_left
+python co1_collect_defender_retake.py --opponents omoko_v1 gc_v2 --sites L --cases-per-site 50 --output-dir data/retake_cases_left
 ```
 
 既定の保存先は `data/defender_retake_cases` です。既存データへの上書きは拒否し、`--resume` で件数を引き継ぎます。再開時は対象AI・対象サイト・seed・search 重みの内容・マップが一致する必要があります。`--cases-per-site` を増やして同じデータセットに追加収集できます。

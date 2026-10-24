@@ -135,7 +135,7 @@ class AttackerPerformanceTests(unittest.TestCase):
 
     def test_explicit_device_takes_priority_over_match_default(self):
         checkpoint = {"model_state_dict": carry.AttackerCarryDuelingDQN().state_dict()}
-        with patch.object(carry, "match_inference_device", return_value="cuda"), \
+        with patch("simulation_runtime.match_inference_device", return_value="cuda"), \
                 patch.object(carry.os.path, "isfile", return_value=True), \
                 patch.object(torch, "load", return_value=checkpoint):
             controller = carry.Ov1LearningAttackerCarryController(model_path="unused.pt", device="cpu")

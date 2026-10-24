@@ -29,6 +29,7 @@ from game_core import ROUND_DURATION_TICKS
 
 ACTION_NAMES = ("UP", "DOWN", "LEFT", "RIGHT", "WAIT", "PLANT")
 OPPONENT_NAMES = tuple(OPPONENTS)
+DEFAULT_OPPONENTS = ("gc_v2",)
 
 
 def waypoint_checks(scenario):
@@ -278,7 +279,7 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--model", type=Path, help="checkpoint for one map; default is latest, then best")
     parser.add_argument("--epsilon", type=float, default=0.0, help="exploration probability with --policy model")
-    parser.add_argument("--opponents", nargs="+", choices=OPPONENT_NAMES, default=["gc_v1"])
+    parser.add_argument("--opponents", nargs="+", choices=OPPONENT_NAMES, default=list(DEFAULT_OPPONENTS))
     parser.add_argument("--output", type=Path, help="save all events, actor states, and neighbor cells as JSON")
     args = parser.parse_args()
     if min(args.rounds, args.max_ticks, args.stuck_ticks) < 1:

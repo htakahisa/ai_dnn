@@ -34,10 +34,10 @@ facing onehotの4→8方向化(44→52)。】
    「自分がその理想進行方向のマスに立っているかどうか」を
    ブロック中フラグとして使える。
 
-2. スモークによる射線遮蔽は考慮できない
-   battle_logic.pyのmove_characterが渡すgame_stateには、現在有効な
-   スモークの情報が含まれていないため、視界判定は壁のみを考慮した
-   Bresenham判定になる(学習環境よりやや楽観的)。
+2. 敵の直接視認とリコン公開
+   game_stateのsmoke_cellsを考慮し、通常の敵は煙越しの直接視認候補にしない。
+   リコンで公開中の敵、および煙透視中の射手は煙を無視できる。
+   壁は共通のsupercover判定を使う。共有された座標の記憶とは区別する。
 
 3. アビリティの発動判定
    char.ability_name / char.flash_charges / char.smoke_charges /
@@ -55,6 +55,7 @@ run_game.pyからは他のlearning_attacker_*.py系コントローラーと同�
 
 import os
 from collections import deque
+from types import SimpleNamespace
 
 import numpy as np
 import torch
@@ -64,6 +65,7 @@ from character_stats import CHARACTER_TABLE as STATS_TABLE
 from ov1_roster import ROSTER_ORDER
 from ov1_map_data_escort import NEW_MAZE_STR as ESCORT_MAZE_STR
 from ov1_map_data_defender_simulate import NEW_MAZE_STR as DEFENDER_SIM_MAZE_STR
+from ov1_inference_team_tactics import known_enemies, shot_clear, tactical_state
 from ov1_train_attacker_escort import (
     LINEUP_ABILITY_MARKERS,
     LINEUP_TRIGGER_RADIUS,
@@ -635,16 +637,23 @@ class Ov1LearningAttackerEscortController:
 
         return best_cell
 
-    def _nearest_visible_enemy(self, grid, chars, my_team, from_pos, max_range=None):
+    def _nearest_visible_enemy(self, grid, chars, my_team, from_pos, max_range=None,
+                               *, game_state=None, viewer=None):
+        state = {"grid": grid, "chars": chars, "smoke_cells": ()} if game_state is None else game_state
+        viewer = viewer or next((c for c in chars if c.team == my_team and tuple(c.pos) == tuple(from_pos)),
+                                SimpleNamespace(name="viewer", pos=from_pos, team=my_team))
         best_char, best_dist = None, None
         for c in chars:
             if not getattr(c, "is_alive", True) or getattr(c, "team", None) == my_team:
                 continue
             enemy_pos = (int(c.pos[0]), int(c.pos[1]))
+            if (not getattr(c, "position_known", True) or not
+                    (0 <= enemy_pos[0] < grid.shape[0] and 0 <= enemy_pos[1] < grid.shape[1])):
+                continue
             dist = _chebyshev(from_pos, enemy_pos)
             if max_range is not None and dist > max_range:
                 continue
-            if not _has_los_walls_only(grid, from_pos, enemy_pos):
+            if not shot_clear(viewer, c, state, position=from_pos, block_players=False):
                 continue
             if best_dist is None or dist < best_dist:
                 best_char, best_dist = c, dist
@@ -729,16 +738,19 @@ class Ov1LearningAttackerEscortController:
             carry_near = carry_pos is not None and _chebyshev(carry_pos, cell) <= LINEUP_TRIGGER_RADIUS
             los_ready = _chebyshev(pos, cell) <= max_range and _has_los_walls_only(grid, pos, cell)
             if carry_near and los_ready:
-                candidates.append(cell)
+                advice = getattr(self, 'lineup_advice', None)
+                if advice is None or advice(ability, cell):
+                    candidates.append(cell)
         if not candidates:
             return None
         return min(candidates, key=lambda cell: _chebyshev(pos, cell))
 
-    def _team_effect_active(self, chars, my_team):
+    def _team_effect_active(self, chars, my_team, smoke_cells=()):
         """味方の誰かが敵にかけたblind/revealが現在有効かどうか。
-        スモークの有無はgame_stateから取得できないため考慮しない
-        (既知の制約)。
+        学習側と同様、公開されたスモークの存在も含む。
         """
+        if smoke_cells:
+            return True
         for c in chars:
             if getattr(c, "team", None) == my_team or not getattr(c, "is_alive", True):
                 continue
@@ -830,7 +842,8 @@ class Ov1LearningAttackerEscortController:
         obs.append(band_dev)
 
         # 最寄りの視認可能な敵
-        enemy_char, enemy_dist = self._nearest_visible_enemy(grid, chars, char.team, (r, c))
+        enemy_char, enemy_dist = self._nearest_visible_enemy(
+            grid, chars, char.team, (r, c), game_state=game_state, viewer=char)
         if enemy_char is not None:
             er, ec = int(enemy_char.pos[0]), int(enemy_char.pos[1])
             obs.append(1.0)
@@ -857,7 +870,7 @@ class Ov1LearningAttackerEscortController:
             obs.append(1.0 if char.ability_name == ability else 0.0)
 
         # チーム状況：誰かの効果(blind/reveal)が現在有効か
-        obs.append(1.0 if self._team_effect_active(chars, char.team) else 0.0)
+        obs.append(1.0 if self._team_effect_active(chars, char.team, game_state.get("smoke_cells", ())) else 0.0)
 
         obs.append(st["last_delta"][0])
         obs.append(st["last_delta"][1])
@@ -948,7 +961,7 @@ class Ov1LearningAttackerEscortController:
         if self.team_sighting.last_seen_enemy is not None:
             return None
         pos = (int(char.pos[0]), int(char.pos[1]))
-        if self._nearest_visible_enemy(grid, chars, char.team, pos)[0] is not None:
+        if self._nearest_visible_enemy(grid, chars, char.team, pos, game_state=game_state, viewer=char)[0] is not None:
             return None
 
         remaining = int(game_state.get("round_timer", self.max_ticks - self._get_char_state(char)["tick"]))
@@ -963,7 +976,7 @@ class Ov1LearningAttackerEscortController:
                 candidates.append((int(distance), tuple(orb)))
         return min(candidates)[1] if candidates else None
 
-    def _action_mask(self, char, grid, chars, carry_pos, available_orbs=(), orb_target=None):
+    def _action_mask(self, char, grid, chars, carry_pos, available_orbs=(), orb_target=None, game_state=None):
         r, c = int(char.pos[0]), int(char.pos[1])
         base_mask = np.ones(BASE_N_ACTIONS, dtype=bool)
         for a, (dr, dc) in _MOVE_DELTA.items():
@@ -999,7 +1012,7 @@ class Ov1LearningAttackerEscortController:
             # 発動するよう学習側・推論側を揃えた)。
             enemy_range = FLASH_RANGE if char.ability_name == "FLASH" else ABILITY_RANGE
             enemy_char, _ = self._nearest_visible_enemy(
-                grid, chars, char.team, (r, c), max_range=enemy_range
+                grid, chars, char.team, (r, c), max_range=enemy_range, game_state=game_state, viewer=char
             )
             has_target = enemy_char is not None
             if not has_target:
@@ -1041,7 +1054,8 @@ class Ov1LearningAttackerEscortController:
                 for enemy in chars
                 if getattr(enemy, "is_alive", True)
                 and getattr(enemy, "team", None) != char.team
-                and _has_los_walls_only(grid, pos, (int(enemy.pos[0]), int(enemy.pos[1])))
+                and getattr(enemy, "position_known", True)
+                and shot_clear(char, enemy, game_state)
                 and any(cell in smoke_cells for cell in _line_cells(pos, tuple(enemy.pos)))
             ]
             if smoke_targets:
@@ -1085,7 +1099,7 @@ class Ov1LearningAttackerEscortController:
             return [r, c], "COLLECT_ORB"
         obs = self._build_obs(char, game_state, st)
         mask = self._action_mask(
-            char, grid, chars, carry_pos, available_orbs, orb_target=orb_target
+            char, grid, chars, carry_pos, available_orbs, orb_target=orb_target, game_state=game_state
         )
 
         if (not self.greedy) and np.random.random() < self.epsilon:
@@ -1130,18 +1144,31 @@ class Ov1LearningAttackerEscortController:
             st["stuck"] += 1
             return [r, c], payload
 
-        # Keep inference deterministic with the combat action mask used during
-        # training, including pre-existing checkpoints.
-        visible_enemy, _ = self._nearest_visible_enemy(grid, chars, char.team, (r, c))
-        if visible_enemy is not None and action != ACTION_ABILITY:
+        # Direct contact retains stationary fire. Shared warnings behind smoke
+        # are handled separately and are never encoded as direct sightings.
+        visible_enemy, _ = self._nearest_visible_enemy(
+            grid, chars, char.team, (r, c), game_state=game_state, viewer=char)
+        hold_target = visible_enemy
+        if hold_target is None and game_state.get("smoke_cells"):
+            # A teammate's disclosed position behind smoke is a warning to
+            # wait, not a direct sighting or permission to fire through smoke.
+            # Keep the old readiness protection without encoding that enemy as
+            # visible in the model observation or the ability target picker.
+            shared = tactical_state(game_state)
+            without_smoke = {**shared, "smoke_cells": ()}
+            warned = [e for e in known_enemies(char, shared)
+                      if shot_clear(char, e, without_smoke, block_players=False)]
+            if warned:
+                hold_target = min(warned, key=lambda e: _chebyshev((r, c), tuple(e.pos)))
+        if hold_target is not None and action != ACTION_ABILITY:
             st["last_delta"] = (0.0, 0.0)
             st["stuck"] += 1
-            return [r, c], {"facing": _facing_towards((r, c), tuple(visible_enemy.pos))}
+            return [r, c], {"facing": _facing_towards((r, c), tuple(hold_target.pos))}
 
         if action == ACTION_ABILITY:
             enemy_range = FLASH_RANGE if char.ability_name == "FLASH" else ABILITY_RANGE
             enemy_char, _ = self._nearest_visible_enemy(
-                grid, chars, char.team, (r, c), max_range=enemy_range
+                grid, chars, char.team, (r, c), max_range=enemy_range, game_state=game_state, viewer=char
             )
             if enemy_char is not None:
                 st["last_delta"] = (0.0, 0.0)
