@@ -6,6 +6,7 @@ import random
 import json
 from pathlib import Path
 import numpy as np
+from simulation_runtime import isolated_match_randomness
 import json
 
 from analytics.combat_tracker import CombatTracker
@@ -932,6 +933,13 @@ class BattleLogicMixin(MatchPlaybackMixin):
                     self._analytics_tactic_snapshot(),
                     self.special_round_banner,
                 )
+                # Opt-in memory receives only the now-public round outcome.
+                # Notify before stop_after_round/map completion can end the loop.
+                public_result = dict(success=winning_team == "A", planted=bool(self.is_planted), reason=reason)
+                for controller in (self.attacker_controller, self.defender_controller):
+                    callback = getattr(controller, "on_round_finished", None)
+                    if callable(callback):
+                        callback(dict(public_result))
                 self._analytics_attacker_wins = self.attacker_wins
                 self._analytics_defender_wins = self.defender_wins
         """通常戦は13本先取、12-12以降は2点差が付くまで継続する。"""
@@ -1727,10 +1735,12 @@ class BattleLogicMixin(MatchPlaybackMixin):
         others = [c for c in self.chars if c.is_alive and not c.has_spike]
         return carriers + others
 
+    @isolated_match_randomness
     def step_tick(self):
         """Advance one normal game tick for GUI, headless, and rollout callers."""
         if self.round_over or self.match_over:
             return False
+        started_round = self.current_round
         if self.defender_setup_phase.active:
             self._run_defender_setup_tick()
         else:
@@ -1759,7 +1769,11 @@ class BattleLogicMixin(MatchPlaybackMixin):
                 ]
             self.process_battle()
             self._advance_combo_announcement()
-        self._record_replay_frame()
+        # check_match_winner records the terminal frame before either GUI or
+        # headless transitions. Do not record it twice or record a new round
+        # here only because headless mode initialized that round immediately.
+        if not self.round_over and self.current_round == started_round:
+            self._record_replay_frame()
         return True
 
     def _simulate_tick(self):

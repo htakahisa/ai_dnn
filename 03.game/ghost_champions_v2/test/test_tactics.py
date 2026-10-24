@@ -32,6 +32,40 @@ class TacticsTests(unittest.TestCase):
         self.policy=AttackerTactics(self.config)
         self.policy.opening_strategy="DEFAULT"
 
+    def test_scout_in_clear_contact_stops_and_aims_while_using_recon(self):
+        grid=np.zeros((21,21),int)
+        grid[2,2]=grid[2,18]=2
+        scout=unit("scout",(16,4),ability="RECON")
+        holder=unit("holder",(18,10),spike=True)
+        enemy=unit("enemy",(16,8),team="D")
+        s=state([scout,holder,enemy],planted=False,grid=grid,tick=5)
+        settings,flags=self.policy.observe(scout,s)
+        action=self.policy.preplant(scout,s,settings,flags)
+        self.assertEqual(action[0],scout.pos)
+        self.assertEqual(action[1]["ability"],"RECON")
+        self.assertEqual(action[1]["facing"],"E")
+
+    def test_flash_in_clear_contact_keeps_gun_facing_the_observed_enemy(self):
+        grid=np.zeros((21,21),int)
+        grid[2,2]=grid[2,18]=2
+        actor=unit("entry",(10,10),ability="FLASH")
+        holder=unit("holder",(18,10),spike=True)
+        enemy=unit("enemy",(10,14),team="D")
+        s=state([actor,holder,enemy],planted=False,grid=grid,tick=5)
+        settings,flags=self.policy.observe(actor,s)
+        action=self.policy.preplant(actor,s,settings,flags)
+        self.assertEqual(action[0],actor.pos)
+        self.assertEqual(action[1]["ability"],"FLASH")
+        self.assertEqual(action[1]["facing"],"E")
+
+    def test_preset_display_abbreviation_does_not_change_trained_opponent_slot(self):
+        from party_presets import get_preset
+        actor=unit("self",(10,10))
+        s=state([actor],planted=False)
+        s["enemy_roster"]=[dict(base_name=n) for n in get_preset("Gorigons").players]
+        self.policy.observe(actor,s)
+        self.assertEqual(self.policy.opponent,"GG")
+
     def test_config_rejects_opponent_specific_settings(self):
         self.assertNotIn("profiles",self.config)
         legacy=copy.deepcopy(self.config)
@@ -337,7 +371,7 @@ class TacticsTests(unittest.TestCase):
         self.policy.observe(second,s)
         self.assertEqual(self.policy.scout_axis(second,self.policy.allies(second,s)),"B")
 
-    def test_frc_contact_does_not_spend_last_recon_before_reaching_vantage(self):
+    def test_frc_contact_stops_scout_and_reserves_last_recon_until_vantage(self):
         from party_presets import get_preset
         grid=np.zeros((26,44),int)
         grid[8,3]=grid[7,40]=2
@@ -352,8 +386,8 @@ class TacticsTests(unittest.TestCase):
         self.policy.recon_sequences["b"]=1
         self.policy.config["recon"]["secondary_waypoints"]["B"]=[7,23]
         action=self.policy.preplant(second,s,profile,flags)
-        self.assertEqual(action[0],[7,23])
-        self.assertEqual(action[1],"MOVE")
+        self.assertEqual(action[0],second.pos)
+        self.assertEqual(action[1],{"facing":"E"})
         self.assertEqual(self.policy.recon_sequences["b"],1)
 
     def test_frc_escort_keeps_its_scout_after_the_other_scout_finishes(self):

@@ -1,0 +1,34 @@
+{
+  "source_hash": "a31c17c9f1b3adea92795260106c76fb896b7fbd008d1e048d58626ba8409c81",
+  "schema_hash": "a75303e99753d5b63bab0b3b00456ed831edbc81ab31e59142fec90cd1c0047c",
+  "initialization": "scratch",
+  "reward": "terminal_outcome_only",
+  "config": {
+    "RUN_NAME": "defender_search_scratch",
+    "PHASE": "search",
+    "SEED": 20261012,
+    "TRAINING_STEPS": 20000,
+    "EVALUATE_EVERY_STEPS": 5000,
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "OPPONENT_CODES": [
+      "TYG",
+      "OMG",
+      "FRC",
+      "FNC",
+      "GG",
+      "SPS"
+    ],
+    "RESUME": false,
+    "DATA_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data",
+    "LOG_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs",
+    "LEARNING_RATE": 0.0003,
+    "BATCH_SIZE": 128,
+    "ROLLOUT_DECISIONS": 1024,
+    "PPO_EPOCHS": 3,
+    "GAMMA": 0.99,
+    "GAE_LAMBDA": 0.95,
+    "PPO_CLIP": 0.2,
+    "ENTROPY_WEIGHT": 0.01,
+    "TORCH_THREADS": 1
+  }
+}

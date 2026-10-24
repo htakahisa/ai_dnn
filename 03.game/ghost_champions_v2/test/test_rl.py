@@ -35,6 +35,19 @@ class RLTests(unittest.TestCase):
         self.proposal=([10,11],"MOVE",{"move_step_limit":1})
         self.tactics.observe(self.char,self.state)
 
+    def test_unknown_opponent_label_uses_existing_unknown_slot_without_schema_change(self):
+        self.tactics.opponent="GRG_unrecognized"
+        obs=ObservationEncoder().encode(self.char,self.state,self.tactics,self.proposal)
+        np.testing.assert_array_equal(obs[:8],[0,0,0,0,0,0,1,0])
+        self.assertEqual(len(obs),OBS_DIM)
+
+    def test_gorigons_public_roster_uses_trained_GG_input_slot(self):
+        from party_presets import get_preset
+        self.state["enemy_roster"]=[dict(base_name=n) for n in get_preset("Gorigons").players]
+        self.tactics.observe(self.char,self.state)
+        obs=ObservationEncoder().encode(self.char,self.state,self.tactics,self.proposal)
+        np.testing.assert_array_equal(obs[:8],[0,0,0,0,1,0,0,0])
+
     def test_hidden_enemy_coordinates_and_hp_do_not_change_observation(self):
         hidden=NS(name="hidden",team="D",pos=[-1,-1],hp=100,is_alive=True,position_known=False)
         self.state["chars"].append(hidden)

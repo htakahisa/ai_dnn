@@ -24,7 +24,7 @@ import random
 
 import numpy as np
 import torch
-from simulation_runtime import resolve_inference_device
+from simulation_runtime import resolve_inference_device, resolve_random_seed
 import torch.nn as nn
 
 from gc_v1.roster_observation_gc import (
@@ -130,6 +130,7 @@ class LearningDefenderOpeningMacroGCRuntime(_BaseOpeningMacro):
         device=None,
     ):
         # Base class owns pattern parsing, BFS movement and emergency cancellation.
+        seed = resolve_random_seed(seed, namespace="gc.opening_macro")
         super().__init__(
             model_path=None,
             greedy=greedy,

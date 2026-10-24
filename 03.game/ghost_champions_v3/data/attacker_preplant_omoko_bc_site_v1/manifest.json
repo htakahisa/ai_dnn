@@ -1,0 +1,41 @@
+{
+  "source_hash": "1a26438b78f02cf8d9c68bc9e99475cc6cc31c49326838657fabff8c2c72fe60",
+  "input_hash": "add092c1b1c6d194809df48309dc6e6580a4d7bad8da35942dca7bd126485025",
+  "stage": "bc",
+  "initialization": "gc3_bc_finetune",
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_preplant_omoko_bc_site_v1",
+    "DATASET_NAME": "attacker_preplant_omoko_site_v1",
+    "INITIAL_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_rl_history_v2\\best.pt",
+    "SITE_GOAL_POLICY": true,
+    "REUSE_DAGGER_RUN_PATH": null,
+    "SEED": 20261015,
+    "LEARNING_RATE": 0.0001,
+    "BATCH_SIZE": 128,
+    "BC_ORB_LABEL_WEIGHT": 5.0,
+    "TORCH_THREADS": 1,
+    "FIXED_OPPONENT_AI": "default",
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "MIN_BC_PLANT_RATE": 0.01,
+    "MIN_BC_ORB_COLLECTIONS": 1,
+    "ENABLE_DAGGER": false,
+    "TEACHER_KIND": "omoko",
+    "DAGGER_ROUNDS_PER_EPOCH": 7,
+    "DAGGER_TEACHER_MAPS": [],
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_site_v1",
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_bc_site_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_omoko_bc_site_v1"
+  },
+  "reward_settings": null,
+  "model_partition": "one preplant model shared by all five attackers; separate existing postplant model"
+}

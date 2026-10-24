@@ -1,0 +1,63 @@
+{
+  "source_hash": "bdf78ec03f9d1eb43a0ecbd8f46928dee149a2ca71715e3f7a3aeeebc7eb36a6",
+  "input_hashes": {
+    "PREPLANT_CHECKPOINT": "dfbe3ab0b8948714033503c09b9e94cab765966af2f8fa58f047a6cef5d4d821",
+    "POSTPLANT_CHECKPOINT": "27ea220b016b921354721c5799e97090c153b310c08dd909f20d52cbe99f5b0a"
+  },
+  "config": {
+    "MACRO_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v2",
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_macro_three_outputs_v1",
+    "PREPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v2\\data\\attacker_micro_directives_v5\\best.pt",
+    "POSTPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_postplant_fixed_v1\\best.pt",
+    "SEED": 20261014,
+    "FIXED_OPPONENT_AI": "default",
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "BC_WARMUP_STEPS": 2048,
+    "BC_WARMUP_EPOCHS": 8,
+    "BC_LEARNING_RATE": 0.0003,
+    "SIMPLE_RETREAT_AFTER_TICKS": 4,
+    "SIMPLE_RETREAT_MIN_DISTANCE": 6,
+    "SIMPLE_RETREAT_MAX_DISTANCE": 10,
+    "SIMPLE_RETREAT_TICKS": 20,
+    "SIMPLE_RETREAT_WAIT_TICKS": 2,
+    "LEARNING_RATE": 0.0001,
+    "BATCH_SIZE": 64,
+    "ROLLOUT_DECISIONS": 512,
+    "PPO_EPOCHS": 3,
+    "PPO_CLIP": 0.2,
+    "ENTROPY_WEIGHT": 0.01,
+    "GAMMA": 0.99,
+    "GAE_LAMBDA": 0.95,
+    "ROUNDS_PER_MATCH": 7,
+    "EVALUATE_EVERY_STEPS": 2000,
+    "EVALUATION_ROUNDS_PER_OPPONENT": 2,
+    "TORCH_THREADS": 1,
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v2\\data\\attacker_macro_three_outputs_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v2\\logs\\attacker_macro_three_outputs_v1"
+  },
+  "candidate_signature": "99c655fd85693db0dc4c144657f4b6bb60d4c7e3a7e96f17e62370187db4b02e",
+  "reward_settings": {
+    "REWARD_VERSION": "gc3-attacker-macro-user-events-v1",
+    "KILL_REWARD": 1.0,
+    "DEATH_REWARD": -1.0,
+    "PLANT_REWARD": 10.0,
+    "WIN_REWARD": 30.0,
+    "LOSS_REWARD": -30.0,
+    "NO_DEFUSE_START_REWARD": 10.0,
+    "scope": "attacking team totals, including frozen postplant",
+    "no_defuse_start": "actual plant, attacker round win and no actual defuse start at any time"
+  },
+  "lower_models_frozen": true,
+  "initialization": "fresh_macro_with_optional_simple_logic_bc",
+  "outputs": "five player destinations, team plant coordinate, five WAIT/ADVANCE/RETREAT instructions",
+  "learning_scope": "preplant macro decisions only; actual full-round reward including fixed guard"
+}

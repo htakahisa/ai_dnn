@@ -276,12 +276,13 @@ class CombatTracker:
         result = []
         unseen = set(graph)
         while unseen:
-            root = unseen.pop()
+            root = min(unseen)
+            unseen.remove(root)
             component = {root}
             stack = [root]
             while stack:
                 node = stack.pop()
-                for nxt in graph[node]:
+                for nxt in sorted(graph[node]):
                     if nxt in unseen:
                         unseen.remove(nxt)
                         component.add(nxt)
@@ -291,7 +292,7 @@ class CombatTracker:
 
     def _finish(self, session, chars_by_name, reason):
         participants = session["participants"]
-        chars = [chars_by_name[name] for name in participants if name in chars_by_name]
+        chars = [chars_by_name[name] for name in sorted(participants) if name in chars_by_name]
         alive_by_team = {
             team: any(c.is_alive for c in chars if c.team == team)
             for team in ("A", "D")
@@ -362,12 +363,12 @@ class CombatTracker:
                 "result": result,
                 "attacker_players": [
                     name
-                    for name in participants
+                    for name in sorted(participants)
                     if name in chars_by_name and chars_by_name[name].team == "A"
                 ],
                 "defender_players": [
                     name
-                    for name in participants
+                    for name in sorted(participants)
                     if name in chars_by_name and chars_by_name[name].team == "D"
                 ],
                 "individual_results": individual,
@@ -383,7 +384,7 @@ class CombatTracker:
 
         for component in components:
             component_chars = [
-                chars_by_name[name] for name in component if name in chars_by_name
+                chars_by_name[name] for name in sorted(component) if name in chars_by_name
             ]
             for char in component_chars:
                 angles = []

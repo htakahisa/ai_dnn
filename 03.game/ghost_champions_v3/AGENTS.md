@@ -1,0 +1,1 @@
+「メジャーチーム」は、Party Presetの中のFNC, FRC, TYG, OMG, SPS, GRG, GCのことです。 

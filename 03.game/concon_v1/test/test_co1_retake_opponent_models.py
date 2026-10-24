@@ -114,6 +114,25 @@ class OpponentModelTests(unittest.TestCase):
             self.assertEqual(locations.game_opponent(game), key)
         self.assertIsNone(locations.game_opponent(SimpleNamespace()))
 
+    def test_phase_entry_driver_cannot_select_a_different_rosters_model(self):
+        from party_presets import get_preset
+        gc_chars = [SimpleNamespace(name=name, team="A") for name in get_preset("Ghost Champions").players]
+        game = SimpleNamespace(current_attacker_team_ai=SimpleNamespace(name="FRC v1"), chars=gc_chars)
+        self.assertIsNone(locations.game_opponent(game))
+        self.assertEqual(locations.runtime_model_path("L", locations.game_opponent(game)),
+                         get_scenario("L").model_path())
+        game.current_attacker_team_ai.name = "Fnatic v3"
+        self.assertIsNone(locations.game_opponent(game))
+
+    def test_named_opponent_with_matching_roster_keeps_specialized_selection(self):
+        from party_presets import get_preset
+        for name, key in locations.OPPONENT_NAMES.items():
+            chars = [SimpleNamespace(name=player, team="A")
+                     for player in get_preset(locations.OPPONENT_PRESETS[key]).players]
+            chars += [SimpleNamespace(name="other", team="D")]
+            self.assertEqual(locations.game_opponent(SimpleNamespace(
+                current_attacker_team_ai=SimpleNamespace(name=name), chars=chars)), key)
+
 
 if __name__ == "__main__":
     unittest.main()

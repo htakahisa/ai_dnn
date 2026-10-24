@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+/data/*.jsonl
+/data/checkpoints/
+/data/conversations/
+/logs/*.jsonl
+/logs/*.log
+/logs/*.request
+/test/artifacts/

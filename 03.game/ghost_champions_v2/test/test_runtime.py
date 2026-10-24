@@ -24,11 +24,56 @@ class RuntimeTests(unittest.TestCase):
         from run_game import _build_team_ai
         from roster_select import TEAM_AI_OPTIONS
         from run_competition_manager import CONTROLLER_OPTIONS
-        team=_build_team_ai("ghost_champions_v2")
-        self.assertIs(team.attacker_factory,GhostChampionsV2AttackerController)
+        from ghost_champions_v2 import DEFAULT_ATTACKER_CHECKPOINT
+        from ghost_champions_v2.rl.controller import LearnedAttackerController
+        with patch.dict(os.environ, {"GC_V2_ATTACKER_MODE":"learned", "GC_V2_RL_CHECKPOINT":""}):
+            team=_build_team_ai("ghost_champions_v2")
+        self.assertIs(team.attacker_factory.func,LearnedAttackerController)
+        self.assertEqual(team.attacker_factory.keywords["checkpoint"],DEFAULT_ATTACKER_CHECKPOINT.resolve())
         self.assertIs(team.defender_factory,GhostChampionsV2DefenderController)
         self.assertEqual(TEAM_AI_OPTIONS["Ghost Champions v2"],"ghost_champions_v2")
         self.assertEqual(CONTROLLER_OPTIONS["Ghost Champions v2"],"ghost_champions_v2")
+
+    def test_rule_mode_is_explicit_and_missing_checkpoint_never_silently_falls_back(self):
+        from ghost_champions_v2 import build_team_ai,resolve_attacker_checkpoint
+        with patch.dict(os.environ,{"GC_V2_ATTACKER_MODE":"rule"}):
+            self.assertIs(build_team_ai().attacker_factory,GhostChampionsV2AttackerController)
+            self.assertIsNone(resolve_attacker_checkpoint())
+        with patch.dict(os.environ,{"GC_V2_ATTACKER_MODE":"learned","GC_V2_RL_CHECKPOINT":str(Path(__file__).parent/"missing.pt")}):
+            with self.assertRaises(FileNotFoundError):
+                build_team_ai()
+
+    def test_actual_competition_constructor_and_live_view_load_the_same_checkpoint(self):
+        from ghost_champions_v2 import resolve_attacker_checkpoint
+        from ghost_champions_v2.rl.controller import LearnedAttackerController
+        from ghost_champions_v2.tools.watch_match import build_match
+        from party_presets import get_preset
+        from run_game import VisualFPSBattle
+        from simulation_runtime import cpu_inference
+        import run_competition_manager as competition
+        class Captured(Exception):
+            pass
+        recorded={}
+        def capture(*args,**kwargs):
+            game=VisualFPSBattle(*args,**kwargs)
+            inner=game.attacker_controller.inner
+            recorded.update(controller=inner, roster=[str(c.name) for c in game.chars if c.team=="A"])
+            raise Captured()
+        with patch.dict(os.environ,{"GC_V2_ATTACKER_MODE":"learned","GC_V2_RL_CHECKPOINT":""}), \
+             contextlib.redirect_stdout(io.StringIO()), cpu_inference():
+            checkpoint=resolve_attacker_checkpoint()
+            watched=build_match(checkpoint,"OMG",seed=3751291956,headless=True)
+            with patch.object(competition,"VisualFPSBattle",side_effect=capture):
+                with self.assertRaises(Captured):
+                    competition.play_map(get_preset("Ghost Champions"),get_preset("Omoko Gaming"),
+                        1,3751291956,False,"ghost_champions_v2","omoko_gaming_v1")
+            live=watched.attacker_controller.inner
+            actual=recorded["controller"]
+            self.assertIsInstance(actual,LearnedAttackerController)
+            self.assertEqual(actual.checkpoint_path,live.checkpoint_path)
+            self.assertEqual(actual.checkpoint_sha256,live.checkpoint_sha256)
+            self.assertEqual(recorded["roster"],[str(c.name) for c in watched.chars if c.team=="A"])
+            self.assertEqual(actual.attacker_snapshot()["runtime"]["mode"],"learned")
 
     def test_disabled_features_return_v1_decision_for_every_roster(self):
         from party_presets import get_preset
@@ -302,7 +347,9 @@ class RuntimeTests(unittest.TestCase):
                         self.assertFalse(game.round_over)
 
     def test_real_engine_frc_recon_identifies_b_when_a_has_three(self):
-        self._assert_frc_recon_site([(7,1),(10,2),(8,8),(2,40),(7,38)],"B")
+        # All three A defenders are inside the survey's 9x9 reveal area;
+        # detecting the third must not require walking through active fire.
+        self._assert_frc_recon_site([(7,1),(10,2),(8,6),(2,40),(7,38)],"B")
 
     def _assert_frc_recon_site(self,positions,expected):
         import torch
@@ -321,7 +368,7 @@ class RuntimeTests(unittest.TestCase):
         np.random.seed(125)
         torch.manual_seed(125)
         gc,enemy=get_preset("Ghost Champions"),get_preset("Furina Classic")
-        with contextlib.redirect_stdout(io.StringIO()), cpu_inference(), patch.dict(os.environ,{"GC_V2_STAGE":"entry"}):
+        with contextlib.redirect_stdout(io.StringIO()), cpu_inference(), patch.dict(os.environ,{"GC_V2_STAGE":"entry", "GC_V2_ATTACKER_MODE":"rule"}):
             game=VisualFPSBattle(NEW_MAZE_STR,build_team_ai(),
                 DualRoleTeamAI("Stationary",DefaultAttackerController,Stay),headless=True,
                 attacker_roster=list(gc.players),defender_roster=list(enemy.players),

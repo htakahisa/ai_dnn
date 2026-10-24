@@ -201,7 +201,7 @@ PARTY_PRESETS: Dict[str, TeamPreset] = {
     ),
     "Ghost Champions": TeamPreset(
         name="Ghost Champions",
-        default_ai="ghost_champions_v1",
+        default_ai="ghost_champions_v2",
         short_name="GC",
         players=("Xdll", "SyouTa", "Absol", "eKo", "SugarZ3ro"),
         igl="SugarZ3ro",

@@ -2,6 +2,7 @@
 
 import random
 import hashlib
+from simulation_runtime import resolve_random_seed
 
 from controllers import BaseController, DefaultAttackerController
 
@@ -108,7 +109,7 @@ class ConconRoundAttackerController(BaseController):
         names = (map_names,) if isinstance(map_names, str) else tuple(map_names)
         if not names or len(set(names)) != len(names):
             raise ValueError("attacker map candidates must be non-empty and unique")
-        self.rng = random.Random(seed)
+        self.rng = random.Random(resolve_random_seed(seed, namespace="concon.round_attack"))
         self.map_names = names
         self.controllers = {}
         self.model_hashes = {}

@@ -7,47 +7,18 @@ five focused modules beside it.
 import random
 import tkinter as tk
 from pathlib import Path
-from simulation_runtime import match_inference_device
+from simulation_runtime import match_inference_device, isolated_match_randomness
 import numpy as np
 
 
-from learning_attacker_ai_v2 import LearningAttackerAIv2Controller
 from controllers import (
     DefaultAttackerController,
     DefaultDefenderController,
     UserInputController,
 )
-from learning_defender import (
-    LearningDefenderController,
-    LearningDefenderAllAIController,
-)
-from learning_attacker import LearningAttackerController
-from learning_attacker_multi import LearningAttackerMultiController
-from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
-from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
-from policy_attacker_controller import PolicyAttackerController
-from policy_ppo_attacker_controller import PolicyPPOAttackerController
-from policy_defender_controller import PolicyDefenderController
-from touyama_v1.touyama_defender_controller import TouyamaDefenderController
-from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
-
-from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
-from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
-
-from omoko_v1.ov1_attacker_controller import Ov1AttackerController
-from omoko_v1.ov1_defender_controller import Ov1DefenderController
-# from omoko_v1.ov1_attacker_real_controller import Ov1AttackerRealController
-# from omoko_v1.ov1_defender_real_controller import Ov1DefenderRealController
-
-from ghost_champions_v1_macro import (
-    GhostChampionsV1AttackerController,
-    GhostChampionsV1DefenderController,
-)
 from map_data import NEW_MAZE_STR
 from roster_select import RosterSelectScreen
 from team_ai import DualRoleTeamAI
-from fnatic_v1_rules import FnaticV1AttackerController, FnaticV1DefenderController
-from fnatic_v3.controller import FnaticV3AttackerController, FnaticV3DefenderController
 
 from game_core import (
     Character,
@@ -118,6 +89,7 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized in {"fnatic_v3", "fnatic v3"}:
+        from fnatic_v3.controller import FnaticV3AttackerController, FnaticV3DefenderController
         return DualRoleTeamAI(
             name="Fnatic v3",
             attacker_factory=FnaticV3AttackerController,
@@ -125,6 +97,7 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "fnatic_v1":
+        from fnatic_v1_rules import FnaticV1AttackerController, FnaticV1DefenderController
         return DualRoleTeamAI(
             name="Fnatic v1",
             attacker_factory=FnaticV1AttackerController,
@@ -132,17 +105,23 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "fnatic_legacy_v1":
+        from policy_attacker_controller import PolicyAttackerController
+        from policy_defender_controller import PolicyDefenderController
         return DualRoleTeamAI(
             name="Fnatic v1",
             attacker_factory=lambda: PolicyAttackerController(
                 model_path=FNATIC_V1_ATTACKER_MODEL_PATH,
-                device="auto",
+                device=device or "auto",
             ),
             defender_factory=lambda: PolicyDefenderController(
                 model_path=FNATIC_V1_DEFENDER_MODEL_PATH,
-                device="auto",
+                device=device or "auto",
             ),
         )
+
+    if normalized in {"ghost_champions_v3", "gc_v3"}:
+        from ghost_champions_v3 import build_team_ai
+        return build_team_ai()
 
     if normalized == "ghost_champions_v2":
         from ghost_champions_v2 import build_team_ai
@@ -154,15 +133,17 @@ def _build_team_ai(key, *, device=None):
         "fnatic2",
         "fnatic v2",
     }:
+        from policy_ppo_attacker_controller import PolicyPPOAttackerController
+        from policy_defender_controller import PolicyDefenderController
         return DualRoleTeamAI(
             name="Fnatic v2",
             attacker_factory=lambda: PolicyPPOAttackerController(
                 model_path=FNATIC_V2_ATTACKER_MODEL_PATH,
-                device="auto",
+                device=device or "auto",
             ),
             defender_factory=lambda: PolicyDefenderController(
                 model_path=FNATIC_V2_DEFENDER_MODEL_PATH,
-                device="auto",
+                device=device or "auto",
             ),
         )
 
@@ -175,6 +156,8 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "toru_ai_v3.1":
+        from attacker_v3.multi_role_attacker_controller import MultiRoleAttackerController
+        from defender_v3.multi_role_defender_controller import MultiRoleDefenderController
         return DualRoleTeamAI(
             name="Toru AI v3.1",
             attacker_factory=lambda: MultiRoleAttackerController(device=device),
@@ -182,6 +165,8 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "touyama_gaming_v1":
+        from touyama_v1.touyama_attacker_controller import TouyamaAttackerController
+        from touyama_v1.touyama_defender_controller import TouyamaDefenderController
         return DualRoleTeamAI(
             name="Touyama Gaming v1",
             attacker_factory=lambda: TouyamaAttackerController(),
@@ -189,6 +174,8 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "touyama_gaming_v2":
+        from touyama_v2.tv2_touyama_attacker_controller import Tv2TouyamaAttackerController
+        from touyama_v2.tv2_touyama_defender_controller import Tv2TouyamaDefenderController
         return DualRoleTeamAI(
             name="Touyama Gaming v2",
             attacker_factory=lambda: Tv2TouyamaAttackerController(device=device),
@@ -196,6 +183,8 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "omoko_gaming_v1":
+        from omoko_v1.ov1_attacker_controller import Ov1AttackerController
+        from omoko_v1.ov1_defender_controller import Ov1DefenderController
         return DualRoleTeamAI(
             name="Omoko Gaming v1",
             attacker_factory=lambda: Ov1AttackerController(device=device),
@@ -215,6 +204,9 @@ def _build_team_ai(key, *, device=None):
         "gc_v1",
         "gc",
     }:
+        from ghost_champions_v1_macro import (
+            GhostChampionsV1AttackerController, GhostChampionsV1DefenderController,
+        )
         return DualRoleTeamAI(
             name="Ghost Champions v1",
             attacker_factory=lambda: GhostChampionsV1AttackerController(
@@ -226,6 +218,10 @@ def _build_team_ai(key, *, device=None):
         )
 
     if normalized == "learning_v1":
+        # Its legacy training modules require gymnasium. Load them only when
+        # this AI is selected, not when importing the engine for other AIs.
+        from learning_attacker import LearningAttackerController
+        from learning_defender import LearningDefenderAllAIController
         return DualRoleTeamAI(
             name="AI v1",
             attacker_factory=lambda: LearningAttackerController(
@@ -850,6 +846,7 @@ class VisualFPSBattle(
                 min(0.75, current),
             )
 
+    @isolated_match_randomness
     def init_round(self):
         self._swap_sides_if_needed()
         # OT starts every round from zero, even when side swaps are disabled.

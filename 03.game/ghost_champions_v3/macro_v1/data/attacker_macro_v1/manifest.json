@@ -1,0 +1,52 @@
+{
+  "source_hash": "5f29d05dadd418b1c0f35ed9b0e9b07ef652d4f5d0d4e9f13eaca4109a092cd6",
+  "input_hashes": {
+    "PREPLANT_CHECKPOINT": "0d2aa770809222d7eeb3ad70397d84fec27dda8dcbb304d6b440c2bf17be48cf",
+    "POSTPLANT_CHECKPOINT": "27ea220b016b921354721c5799e97090c153b310c08dd909f20d52cbe99f5b0a"
+  },
+  "config": {
+    "MACRO_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1",
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_macro_v1",
+    "PREPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_rl_handoff_v3\\best.pt",
+    "POSTPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_postplant_fixed_v1\\best.pt",
+    "SEED": 20261022,
+    "FIXED_OPPONENT_AI": "default",
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "EVALUATE_EVERY_STEPS": 1000,
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "LEARNING_RATE": 0.0001,
+    "BATCH_SIZE": 128,
+    "ROLLOUT_DECISIONS": 1024,
+    "PPO_EPOCHS": 3,
+    "GAMMA": 0.99,
+    "GAE_LAMBDA": 0.95,
+    "PPO_CLIP": 0.2,
+    "ENTROPY_WEIGHT": 0.01,
+    "ROUNDS_PER_MATCH": 7,
+    "TORCH_THREADS": 1,
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\data\\attacker_macro_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\logs\\attacker_macro_v1"
+  },
+  "reward_settings": {
+    "REWARD_VERSION": "gc3-attacker-macro-user-events-v1",
+    "KILL_REWARD": 1.0,
+    "DEATH_REWARD": -1.0,
+    "PLANT_REWARD": 10.0,
+    "WIN_REWARD": 30.0,
+    "LOSS_REWARD": -30.0,
+    "NO_DEFUSE_START_REWARD": 10.0,
+    "scope": "attacking team totals, including frozen postplant",
+    "no_defuse_start": "actual plant, attacker round win and no actual defuse start at any time"
+  },
+  "lower_models_frozen": true,
+  "initialization": "fresh_macro_only"
+}

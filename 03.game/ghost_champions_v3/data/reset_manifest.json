@@ -1,0 +1,38 @@
+{
+  "initialization": "scratch",
+  "inherited_weights": false,
+  "training_started": false,
+  "optimizer_updates": 0,
+  "schema_hash": "a75303e99753d5b63bab0b3b00456ed831edbc81ab31e59142fec90cd1c0047c",
+  "models": {
+    "attacker": {
+      "path": "data\\attacker_postplant_scratch\\initial.pt",
+      "seed": 20261011,
+      "step": 0,
+      "trained": false,
+      "optimizer_updates": 0,
+      "sha256": "58a6676e0b3265bfad4eafeb498aeb661d062bd1220f15418000b7073303cfdc"
+    },
+    "defender": {
+      "path": "data\\defender_search_scratch\\initial.pt",
+      "seed": 20261012,
+      "step": 0,
+      "trained": false,
+      "optimizer_updates": 0,
+      "sha256": "f2094d1275d3b404bc3fd02e69c36db14180be43ea1424c92f52aabaad07abeb"
+    }
+  },
+  "maps": {
+    "gc3_map_attacker_postplant.py": {
+      "unchanged": true,
+      "sha256": "0e6298272947ce09ac1e1f36862a5730f4c38abe16121b09c02fba1ef6dce23b"
+    },
+    "gc3_map_defender_initial.py": {
+      "unchanged": true,
+      "sha256": "220116664aab7b293f6579620e648286520ebe7d1a703a8696cd9c0d27f0534c"
+    }
+  },
+  "archive": "data\\archive\\before_scratch_20261010_205508",
+  "validation": "logs/reset_validation/report.json",
+  "tests_passed": 12
+}

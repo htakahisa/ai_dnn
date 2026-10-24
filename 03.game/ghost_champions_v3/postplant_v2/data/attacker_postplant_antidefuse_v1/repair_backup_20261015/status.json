@@ -1,0 +1,27 @@
+{
+  "step": 17920,
+  "episode": 245,
+  "complete": false,
+  "stage": "guard_rl",
+  "last_update": {
+    "optimizer_version": "gc3-objective-guard-conditional-kl-v1",
+    "actor_updates": 24,
+    "rejected_actor_updates": 0,
+    "actor_loss_mean": -0.06397005822509527,
+    "joint_kl": 0.001939164249051828,
+    "target_kl": 0.005,
+    "max_kl": 0.01,
+    "stop_reason": null,
+    "value_warmup": {},
+    "value_mse_before": 252.17709350585938,
+    "value_mse_after": 231.65936279296875,
+    "value_updates": 40,
+    "step": 17920,
+    "start_step": 17408,
+    "episode": 245
+  },
+  "entry_macro_step": 20000,
+  "entry_micro_step": 189327,
+  "entry_models_frozen": true,
+  "best_score": 0.6785714285714286
+}

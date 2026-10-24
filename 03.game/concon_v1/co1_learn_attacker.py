@@ -2,6 +2,7 @@
 
 import io
 import random
+from simulation_runtime import resolve_random_seed
 from pathlib import Path
 
 import numpy as np
@@ -90,7 +91,7 @@ class ConconAttackerRouteController:
                  model=None, map_name="A1"):
         self.scenario = get_scenario(map_name)
         self.model_path = Path(model_path) if model_path is not None else self.scenario.model_path
-        self.rng = random.Random(seed)
+        self.rng = random.Random(resolve_random_seed(seed, namespace="concon.route_attack"))
         if model is None and checkpoint_bytes is None and not self.model_path.is_file():
             raise FileNotFoundError(
                 f"ConCon {self.scenario.map_name} model not found: {self.model_path}. "

@@ -1,0 +1,81 @@
+{
+  "source_hash": "0eb50aa01577f4c3126cba5ba7e21c49f94d07e5d885cbcbc51215ecd99f3103",
+  "input_hashes": {
+    "PREPLANT_CHECKPOINT": "0d2aa770809222d7eeb3ad70397d84fec27dda8dcbb304d6b440c2bf17be48cf",
+    "POSTPLANT_CHECKPOINT": "27ea220b016b921354721c5799e97090c153b310c08dd909f20d52cbe99f5b0a",
+    "INITIAL_CHECKPOINT": "0135114138d01e8632b7013436bf8fc47a3c6b64b060b123adeddac47994861a",
+    "OPPONENT_CHECKPOINTS": {
+      "D:\\git\\ai_dnn\\03.game\\concon_v1\\data\\defender_retake_L_data\\co1_defender_retake_L_best.pt": "5b9c4bed6017ff6fe52148902cc93f5fd7660cc2f584598ddaebb2e289c76e11",
+      "D:\\git\\ai_dnn\\03.game\\concon_v1\\data\\defender_retake_R_data\\co1_defender_retake_R_best.pt": "24098de4cf57d533f89b3115958e51cb1e5e736abdd599d24e7a4d37899d524a",
+      "D:\\git\\ai_dnn\\03.game\\frc_v1\\runs\\tactics_finetune_20260930\\D_policy.pt": "2cfc891ad1db27ce3bb1c9f152bd33c50f04d8f3599b42e650cefdee8c97f578",
+      "D:\\git\\ai_dnn\\03.game\\touyama_v2\\data\\defender_search_touyama_data\\dqn_defender_search_touyama_best_by_eval.pt": "a57d73d5113f7ae8f154f80c12d6b6f4ee04bca58a71f5a8896df501f9a5c12e",
+      "D:\\git\\ai_dnn\\03.game\\touyama_v2\\data\\defender_retake_touyama_data\\dqn_defender_retake_touyama_best_by_eval.pt": "3f29dc07eba44bb0bb247683fc592be9b9f0dad97cb92cb7ab6da164983db652",
+      "D:\\git\\ai_dnn\\03.game\\omoko_v1\\data\\defender_search_data\\dqn_defender_search_best_by_eval.pt": "fc09bb904fc8d664caac8f079d2540182699277219908aed22ff79cc342e7905",
+      "D:\\git\\ai_dnn\\03.game\\omoko_v1\\data\\defender_retake_data\\dqn_defender_retake_best_by_eval.pt": "4d48d0c1fa8abfa6fcfcc9704d5ba34944ba39dcf2afa478d99c663fc2af6e97",
+      "D:\\git\\ai_dnn\\03.game\\defender_v3\\data\\defender_search_data\\dqn_defender_search_best_by_eval.pt": "18c241552e46d00574ad42c51d888464f3c3260e371021de5ea886b3d6afa282",
+      "D:\\git\\ai_dnn\\03.game\\defender_v3\\data\\defender_retake_data\\dqn_defender_retake_best_by_eval.pt": "a70784b685ba18330e718d997e5599b4ee53bc4dad1de8a12ed68f3691750930",
+      "D:\\git\\ai_dnn\\03.game\\concon_v1\\data\\defender_search_data\\co1_defender_search_best.pt": "8507f976f1b56f9d559bf4fa3c154031f1996300d47c8fd32c64be53e621c731",
+      "D:\\git\\ai_dnn\\03.game\\ghost_champions_v2\\defender_macro_v1\\data\\active\\analysis.pt": "72f9350c16cd25facdc3f767e29f98751486fb867f93abd63197409d6dcd34a3",
+      "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\defender_search_gc_data\\dqn_defender_search_gc_best_by_eval.pt": "edb90295fe44ee69d10fb39680501c1acba02dd8885edff42e2c3669df248bed",
+      "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\defender_retake_gc_data\\dqn_defender_retake_gc_best_by_eval.pt": "7d8e724692682ab2efd978401bd751c6c5871a9198f5c68a5c5af9135fc2491e",
+      "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\defender_setup_gc_data\\dqn_defender_setup_gc_best.pt": "e651d504351c9839715028f4863a4ed07859593ece2d6124eff92c5cdf604ffd",
+      "D:\\git\\ai_dnn\\03.game\\gc_v1\\data\\defender_opening_macro_gc_data\\dqn_defender_opening_macro_gc_final.pt": "29f0932a2c8cb9896f4f727188e03d385213fab2ea6bb060d743c98ff41f78a6"
+    }
+  },
+  "config": {
+    "MACRO_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1",
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_macro_major_v1",
+    "INITIAL_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\data\\attacker_macro_v1\\best.pt",
+    "PREPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_rl_handoff_v3\\best.pt",
+    "POSTPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_postplant_fixed_v1\\best.pt",
+    "OPPONENT_MODE": "major_main",
+    "OPPONENT_AIS": {
+      "FNC": "fnatic_v3",
+      "FRC": "frc_v1",
+      "TYG": "touyama_gaming_v2",
+      "OMG": "omoko_gaming_v1",
+      "SPS": "toru_ai_v3.1",
+      "GRG": "concon_v1",
+      "GC": "ghost_champions_v2"
+    },
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "OPPONENT_VALIDATION": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\logs\\validation\\gc3_macro_major_opponents.json",
+    "SEED": 20261023,
+    "EVALUATE_EVERY_STEPS": 1000,
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "LEARNING_RATE": 0.0001,
+    "BATCH_SIZE": 128,
+    "ROLLOUT_DECISIONS": 1024,
+    "PPO_EPOCHS": 3,
+    "GAMMA": 0.99,
+    "GAE_LAMBDA": 0.95,
+    "PPO_CLIP": 0.2,
+    "ENTROPY_WEIGHT": 0.01,
+    "ROUNDS_PER_MATCH": 7,
+    "TORCH_THREADS": 1,
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\data\\attacker_macro_major_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\macro_v1\\logs\\attacker_macro_major_v1"
+  },
+  "reward_settings": {
+    "REWARD_VERSION": "gc3-attacker-macro-user-events-v1",
+    "KILL_REWARD": 1.0,
+    "DEATH_REWARD": -1.0,
+    "PLANT_REWARD": 10.0,
+    "WIN_REWARD": 30.0,
+    "LOSS_REWARD": -30.0,
+    "NO_DEFUSE_START_REWARD": 10.0,
+    "scope": "attacking team totals, including frozen postplant",
+    "no_defuse_start": "actual plant, attacker round win and no actual defuse start at any time"
+  },
+  "lower_models_frozen": true,
+  "initialization": "warm_start_macro_only"
+}

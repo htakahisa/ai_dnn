@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import copy
+import hashlib
 import io
 import json
 import math
@@ -21,7 +23,7 @@ from strongest_ranking import load_rankings
 
 import numpy as np
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from map_data import NEW_MAZE_STR
 from ability_effects import (draw_raid_wind, draw_heal_sparkle, draw_destruction_areas,
@@ -48,7 +50,7 @@ from tactical_simulator import (
 )
 from competition_bracket import double_elimination_bracket, project_bracket
 from tournament_bracket_ui import BracketRenderer, bind_bracket_scroll
-from simulation_runtime import cpu_inference
+from simulation_runtime import competition_match, MatchRandomState
 
 CONTROLLER_OPTIONS = {
     "Toru AI v4": "toru_ai_v4",
@@ -64,6 +66,7 @@ CONTROLLER_OPTIONS = {
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
     "Ghost Champions v2": "ghost_champions_v2",
+    "Ghost Champions v3": "ghost_champions_v3",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",
@@ -75,6 +78,7 @@ RESULT_DIR = Path("competition_results")
 RATING_FILE = RESULT_DIR / "team_ratings.json"
 # 1500が基準。2000対1500の期待勝率は約95%となるElo尺度。
 DEFAULT_TEAM_RATING = 1500.0
+MATCH_REPRODUCTION_VERSION = 1
 RATING_K_FACTOR = 40.0
 UNUSED = "（未使用）"
 MAX_TEAM_SLOTS = 30
@@ -162,6 +166,7 @@ class MResult:
     defender_side_stats: dict[str, Any] = field(default_factory=dict)
     round_records: list[dict[str, Any]] = field(default_factory=list)
     replay_frames: list[dict[str, Any]] = field(default_factory=list)
+    reproduction: dict[str, Any] = field(default_factory=dict)
 
 
 from datetime import datetime
@@ -654,6 +659,7 @@ def compact_map_result(result: MResult) -> dict[str, Any]:
         "overtime": result.overtime,
         "player_stats": [asdict(stat) for stat in result.player_stats],
         "total_rounds": result.total_rounds,
+        "reproduction": copy.deepcopy(result.reproduction),
     }
 
 
@@ -674,6 +680,7 @@ def compact_map_model(result: MResult) -> MResult:
         halftime_team1_score=result.halftime_team1_score,
         halftime_team2_score=result.halftime_team2_score,
         total_rounds=result.total_rounds,
+        reproduction=copy.deepcopy(result.reproduction),
     )
 
 
@@ -718,6 +725,7 @@ def original_scores(
     raise RuntimeError("試合終了後のチームとスコアを対応付けられません")
 
 
+@competition_match
 def play_map(
     team1: Any,
     team2: Any,
@@ -734,10 +742,28 @@ def play_map(
     tick_time_ms: int | Callable[[], int] = TICK_TIME,
     shield_abilities_enabled: bool = True,
 ) -> MResult:
-    seed_all(seed)
-
     team1_controller_key = str(team1_controller_key or "fnatic_v1")
     team2_controller_key = str(team2_controller_key or "fnatic_v1")
+
+    def team_input(team):
+        return dict(name=team.name, players=list(map(str, team.players)),
+                    igl=str(team.igl), spike_holder=str(team.spike_holder))
+
+    reproduction = dict(
+        version=MATCH_REPRODUCTION_VERSION,
+        team1=team_input(team1), team2=team_input(team2),
+        map_number=int(map_number), seed=int(seed),
+        team1_controller_key=team1_controller_key,
+        team2_controller_key=team2_controller_key,
+        team1_series_wins=int(team1_series_wins),
+        team2_series_wins=int(team2_series_wins),
+        series_maps_to_win=int(series_maps_to_win),
+        mental_fatigue_state=copy.deepcopy(mental_fatigue_state or {}),
+        series_tactical_state=copy.deepcopy(series_tactical_state or {}),
+        shield_abilities_enabled=bool(shield_abilities_enabled),
+        map_sha256=hashlib.sha256(NEW_MAZE_STR.encode()).hexdigest(),
+        inference_device="cpu",
+    )
 
     if "user" in {team1_controller_key, team2_controller_key} and not render:
         raise ValueError("ユーザー操作を使う試合は描画が必要です")
@@ -795,7 +821,7 @@ def play_map(
         if render
         else contextlib.redirect_stdout(io.StringIO())
     )
-    with output_context, cpu_inference(enabled=not render):
+    with output_context:
         game = VisualFPSBattle(
             NEW_MAZE_STR,
             attacker_ai,
@@ -814,6 +840,7 @@ def play_map(
             tick_time_ms=tick_time_ms,
             shield_abilities_enabled=shield_abilities_enabled,
         )
+        game._match_random_state = MatchRandomState()
 
         if render:
             # 管理画面は隠さず、観戦画面と同時に表示する。
@@ -932,7 +959,45 @@ def play_map(
             exported.get("round_records", []) if analytics is not None else []
         ),
         replay_frames=list(getattr(game, "replay_frames", [])),
+        reproduction=reproduction,
     )
+
+
+def reproduce_map_result(saved_map: dict[str, Any], *, render: bool = False,
+                         tick_time_ms: int = TICK_TIME) -> MResult:
+    """Re-simulate a saved map using its original pre-map series state."""
+    from types import SimpleNamespace
+    settings = copy.deepcopy(saved_map.get("reproduction") or {})
+    if settings.get("version") != MATCH_REPRODUCTION_VERSION:
+        raise ValueError("この試合には再現用の開始状態が保存されていません。更新後に行った試合を選択してください。")
+    if settings.pop("map_sha256") != hashlib.sha256(NEW_MAZE_STR.encode()).hexdigest():
+        raise ValueError("保存試合と現在のマップが異なります。")
+    settings.pop("version")
+    settings.pop("inference_device")
+    if "user" in {settings["team1_controller_key"], settings["team2_controller_key"]}:
+        raise ValueError("ユーザー操作の試合は保存済みリプレイで確認してください。")
+    for key in ("team1", "team2"):
+        settings[key] = SimpleNamespace(**settings[key])
+        validate_preset(settings[key])
+    return play_map(**settings, render=render, tick_time_ms=tick_time_ms)
+
+
+def match_result_digest(result: MResult | dict[str, Any]) -> str:
+    """Compare every tick and statistic, excluding diagnostic log filenames."""
+    data = asdict(result) if isinstance(result, MResult) else copy.deepcopy(result)
+    data.pop("reproduction", None)
+    def state_only(value):
+        if isinstance(value, dict):
+            # GC3 writes each run to a separate UUID-named journal. Keep the
+            # original paths in results, but do not treat a new log filename
+            # as a difference in the simulated match.
+            return {key: state_only(item) for key, item in value.items() if key != "history_file"}
+        if isinstance(value, list):
+            return [state_only(item) for item in value]
+        return value
+    data = state_only(data)
+    return hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True,
+                                    separators=(",", ":")).encode()).hexdigest()
 
 
 def run_series_core(
@@ -2775,7 +2840,44 @@ class CompetitionApp:
             variable=self.shield_abilities_var,
         )
         self.shield_abilities_check.pack(side="left", padx=(20, 0))
+        self.reproduce_button = tk.Button(
+            timing_frame, text="保存試合を再現", command=self.reproduce_saved_match,
+        )
+        self.reproduce_button.pack(side="left", padx=(12, 0))
         self._update_seed_entry_state()
+
+    def reproduce_saved_match(self) -> None:
+        if self.worker is not None and self.worker.is_alive():
+            return
+        path = filedialog.askopenfilename(
+            parent=self.root, title="再現する試合のJSONを選択",
+            initialdir="series_data", filetypes=[("試合結果", "*.json")],
+        )
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8") as file:
+                saved = json.load(file)
+            maps = saved.get("maps") or []
+            if not maps:
+                raise ValueError("マップ結果を含む試合JSONを選択してください。")
+            number = 1 if len(maps) == 1 else simpledialog.askinteger(
+                "試合の再現", f"再現するマップ番号（1〜{len(maps)}）",
+                parent=self.root, minvalue=1, maxvalue=len(maps), initialvalue=1,
+            )
+            if number is None:
+                return
+            original = maps[number - 1]
+            self.set_enabled(False)
+            try:
+                result = reproduce_map_result(original, render=True, tick_time_ms=self.tick_time_ms)
+            finally:
+                self.set_enabled(True)
+            if match_result_digest(original) != match_result_digest(result):
+                raise ValueError("保存試合と結果が一致しません。AIモデル・選手能力・ゲームコードの変更、または途中終了を確認してください。")
+            messagebox.showinfo("試合の再現", "全tickの状態と試合結果が保存試合と一致しました。", parent=self.root)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            messagebox.showerror("試合の再現", str(error), parent=self.root)
 
     def _on_tick_time_change(self, *_args) -> None:
         try:
@@ -3096,6 +3198,7 @@ class CompetitionApp:
             ("Omoko Gaming v1", "omoko_gaming_v1"),
             ("Ghost Champions v1", "ghost_champions_v1"),
             ("Ghost Champions v2", "ghost_champions_v2"),
+            ("Ghost Champions v3", "ghost_champions_v3"),
             ("ロジック（デフォルト）", "default"),
         ]
         ai_names = [name for name, key in available_ais]
@@ -5572,6 +5675,8 @@ class CompetitionApp:
         )
 
     def set_enabled(self, enabled: bool) -> None:
+        if hasattr(self, "reproduce_button"):
+            self.reproduce_button.config(state="normal" if enabled else "disabled")
         state = "normal" if enabled else "disabled"
         self.maps_entry.config(state=state)
         self.lower_final_maps_entry.config(state=state)

@@ -1,0 +1,20 @@
+{
+  "source_hash": "7d2700480270367b0888d3b2b3e5a6fa2c0281ea80b62c5bc9b24a6e10ee6b9b",
+  "input_hash": "239f9dd0b26d16c7472d71b4ddd79b9bebf00f9dbf4140382b8412fc91ba6f0d",
+  "stage": "bc",
+  "initialization": "scratch",
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_preplant_bc_v1",
+    "DATASET_NAME": "attacker_preplant_concon_v1",
+    "SEED": 20261013,
+    "LEARNING_RATE": 0.0003,
+    "BATCH_SIZE": 128,
+    "TORCH_THREADS": 1,
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_concon_v1",
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_bc_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_bc_v1"
+  },
+  "reward_settings": null,
+  "model_partition": "one preplant model shared by all five attackers; separate existing postplant model"
+}

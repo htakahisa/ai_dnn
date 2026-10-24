@@ -33,7 +33,14 @@ def public_snapshot(char, state, round_number):
         allies.append(NS(slot=i, name=str(c.name) if c else f"missing_{i}",
                          alive=bool(c and c.is_alive), hp=float(getattr(c, "hp", 0)),
                          position=tuple(c.pos) if c else (0, 0),
-                         blind=int(getattr(c, "blind_remaining", 0))))
+                         blind=int(getattr(c, "blind_remaining", 0)),
+                         max_hp=float(getattr(c, "max_hp", 100)),
+                         accuracy=float(getattr(c, "accuracy", 0)),
+                         hs_rate=float(getattr(c, "hs_rate", 0)),
+                         dodge=float(getattr(c, "dodge", 0)),
+                         reaction=float(getattr(c, "reaction", 0)),
+                         effective_iq=float(getattr(c, "effective_iq", 0)),
+                         charges=0, points=0, cost=0, ability_name=None, ultimate_name=None))
         e = opponents[i] if i < len(opponents) else None
         enemies.append(NS(enemy_id=i, alive=bool(e and e.is_alive)))
         if (e and e.is_alive and getattr(e, "position_known", False)
@@ -48,7 +55,15 @@ def public_snapshot(char, state, round_number):
 class GCFeatureHistory(FeatureHistory):
     def __init__(self, scenario):
         super().__init__(scenario)
-        self.base_fields = list(self.fields)
+        self.upstream_fields = list(self.fields)
+        # GC v1 was trained before TV4 appended ally capability fields. Keep
+        # the GC input order fixed while allowing TV4 to extend its encoder.
+        original_ally_fields = {f"ally_{i}_{key}" for i in range(5)
+                                for key in ("alive", "hp", "row", "column", "blind")}
+        self.base_fields = [f for f in self.fields
+                            if not f.startswith("ally_") or f in original_ally_fields]
+        self.base_indices = [self.upstream_fields.index(f) for f in self.base_fields]
+        self.fields = list(self.base_fields)
         self.fields += [f"recent_{i}_{key}" for i in range(1, 7) for key in
                         ("site_known", "A", "B", "no_plant", "contacts_A", "contacts_Mid", "contacts_B")]
         self.fields += ["match_round", "past_defense_rounds"]
@@ -60,9 +75,9 @@ class GCFeatureHistory(FeatureHistory):
     def encode(self, snapshot, rounds):
         # The parent validates against its own field count.
         fields = self.fields
-        self.fields = self.base_fields
+        self.fields = self.upstream_fields
         try:
-            base = super().encode(snapshot, rounds[-HISTORY_LIMIT:])
+            base = super().encode(snapshot, rounds[-HISTORY_LIMIT:])[self.base_indices]
         finally:
             self.fields = fields
         counts = dict.fromkeys(self.max_contacts, 0)

@@ -1,0 +1,4 @@
+data/train.jsonl
+data/eval.jsonl
+data/kurose_lora/
+__pycache__/
