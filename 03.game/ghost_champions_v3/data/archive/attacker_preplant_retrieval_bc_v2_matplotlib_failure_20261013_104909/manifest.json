@@ -1,0 +1,42 @@
+{
+  "source_hash": "994ad05f8f04f6398225a44acaa36d3bc424041a4bc3fdc6816e67e3994fdb75",
+  "input_hash": "54228a9dc63426a64fe56a7d6fe7fd6c0e9efd5809e0764d20a4cfb0c28925a2",
+  "stage": "bc",
+  "initialization": "scratch",
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_preplant_retrieval_bc_v2",
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_site_v1",
+    "INITIAL_CHECKPOINT": null,
+    "REQUIRE_FRESH_INITIALIZATION": true,
+    "REUSE_DAGGER_RUN_PATH": null,
+    "SITE_GOAL_POLICY": true,
+    "NAVIGATION_FEATURES": true,
+    "RETRIEVAL_FEATURES": true,
+    "SEED": 20261025,
+    "LEARNING_RATE": 0.0001,
+    "BATCH_SIZE": 128,
+    "BC_ORB_LABEL_WEIGHT": 5.0,
+    "TORCH_THREADS": 1,
+    "FIXED_OPPONENT_AI": "default",
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "MIN_BC_PLANT_RATE": 0.5,
+    "MIN_BC_ORB_COLLECTIONS": 1,
+    "POSTPLANT_CHECKPOINT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_postplant_fixed_v1\\best.pt",
+    "ENABLE_DAGGER": false,
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_retrieval_bc_v2",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_retrieval_bc_v2"
+  },
+  "reward_settings": null,
+  "inherited_step": 0,
+  "model_partition": "one preplant model shared by all five attackers; separate existing postplant model"
+}

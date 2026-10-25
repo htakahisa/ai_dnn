@@ -1,8 +1,52 @@
 # GC v2 実装と検証
 
-2026-10-09更新。controller 名は `ghost_champions_v2`。
+2026-10-10更新。controller 名は `ghost_champions_v2`。
 対戦画面・大会画面では「Ghost Champions v2」を選択する。
 既存プリセットのデフォルトは v1 のまま。
+
+2026-10-10: v2の通常起動は学習済みアタッカーを使用する。
+competition・編成からの起動と、オプションなしの `tools/watch_match.py` は
+`ghost_champions_v2/__init__.py` 冒頭の `DEFAULT_ATTACKER_MODE`・`DEFAULT_ATTACKER_CHECKPOINT` を共通で読む。
+現在は `data/attacker_rl_unitstatus_20261009_recovered/latest.pt`。
+従来はcompetitionのv2が環境変数なしでは規則制御になり、モデルを指定した観戦と異なっていた。
+モデルが見つからない場合は起動時に明示的なエラーとし、別の制御へ自動で切り替えない。
+規則版を使う場合は `DEFAULT_ATTACKER_MODE = "rule"` を明示する。
+一時変更には `GC_V2_ATTACKER_MODE`・`GC_V2_RL_CHECKPOINT` を使える。
+モデルの学習完了と目標達成は別で、この350,160判断のモデルは最終TYG目標80%に未達。合格済みモデルとは扱わない。
+
+competitionの通常実行（作業ディレクトリ: `03.game/`）:
+
+```powershell
+Set-Location D:\git\ai_dnn\03.game
+py run_competition_manager.py
+```
+
+GCの使用AIは「Ghost Champions v2」を選択する。起動済みの旧プロセスは閉じて再起動する。
+通常観戦（作業ディレクトリ: `ghost_champions_v2/`）:
+
+```powershell
+Set-Location D:\git\ai_dnn\03.game\ghost_champions_v2
+py tools/watch_match.py
+```
+
+攻撃側の実行クラス・rule／learned・モデルパス・モデルSHA256はラウンドの
+`gc_attacker_v2.runtime` に記録する。公開ロスターを入力するモデルのGGスロットは
+画面上の略称GRGと区別し、未知の略称でも既存のunknownスロットへ格納する。
+設置前に射線の通る敵を観測したら、索敵地点への移動より交戦を優先する。
+未到着の索敵地点向けのRECONは温存し、交戦中のRECON・FLASHにも敵への射撃方向を指定する。
+
+攻撃の比較検証は、`ghost_champions_v2/` を作業ディレクトリとして
+`py tools/gc_evaluate_attacker.py` を実行する。通常設定は同ファイル冒頭の
+`DEFAULT_OPPONENTS`・`DEFAULT_SEEDS`・`DEFAULT_MODES`・`DEFAULT_COMPETITION` などで変更する。
+ログと実行時のソース・モデルのハッシュは `logs/attacker_diagnosis_日時/` に保存する。
+`DEFAULT_COMPETITION = True` なら実際のcompetitionの `play_map` を呼び、攻守交代も含めて試合終了まで確認する。
+
+2026-10-10の修正後に、実際の `play_map` 経路を画面なしで各1マップ検証した。
+OMG（seed 3751291956）は5–13、攻撃3/12勝・設置9/12・設置前全滅3回。
+GG（seed 3443860541）は7–13、攻撃7/12勝・設置10/12・設置前全滅2回。
+両試合とも攻守交代して完走し、攻撃の記録は `LearnedAttackerController` と共通モデルのSHA256だった。
+起動経路の差は修正済みだが、勝率や設置前全滅の問題が解決したとは評価しない。
+関連110テストは成功。結果は [competition実行ログ](../logs/attack_competition_actual_compatible_20261010/summary.json) に保存した。
 
 防衛側には `defender_macro_v1/` の攻め先解析・増援マクロを追加した。
 GCのIQ知覚と過去防衛ラウンドの公開履歴でA／Bを推定する。
@@ -14,6 +58,8 @@ LIVEでは増員したSetupの担当側を索敵目標へ引き継ぎ、現在�
 設置後は、観測したスモークで覆われた解除位置へ担当者1人を誘導し、手前での左右往復を防ぐ。
 隣接する確認済みの敵がいる位置は避け、既存の能力使用・解除進捗を優先する。通常のリテイク交戦は既存GCが判断する。
 解析モデルの確率は画面とログに残す。全員の移動や固定地点での待機を上書きする旧制御は外した。
+TV4側に追加された味方能力入力はGC解析v1の入力には含めず、既存の学習済み入力順序を維持する。
+これにより攻守交代時も既存の `defender_macro_v1/data/active/analysis.pt` を読み込める。
 学習と防衛から始める観戦の手順は [防衛マクロの利用方法](../defender_macro_v1/docs/usage.md) を参照。
 
 2026-10-08の能力・状態対応で、残差モデルの観測はv4・1475要素となった。
@@ -21,7 +67,8 @@ LIVEでは増員したSetupの担当側を索敵目標へ引き継ぎ、現在�
 自分の移動・アビリティ・ウルト使用可否を追加した。未確認の敵の現在状態は未知マスクで区別する。
 飛翔物・警告/発動範囲を味方の視界でクリップし、公開表示からの危険推定、回避教師、個人別の誘導報酬を追加した。
 未表示のスキル予告カウントや未来の弾道は入力しない。詳細・新規学習コマンド・旧モデルの観戦方法は
-[training.md](training.md) 冒頭を参照。本学習は未実行であり、回避能力の向上はまだ測定していない。
+[training.md](training.md) 冒頭を参照。v4の学習は350,160判断まで完了している。
+回避能力の向上についての独立した比較検証は未実施。
 
 ## 実装した範囲
 

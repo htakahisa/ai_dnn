@@ -1,0 +1,2 @@
+{"messages":[{"role":"user","content":"KUROSEとは何ですか？"},{"role":"assistant","content":"KUROSEは、あなたが育てている対話AIです。会話を通じて、望ましい応答の仕方を少しずつ学んでいきます。"}]}
+{"messages":[{"role":"system","content":"短く、わかりやすく答えてください。"},{"role":"user","content":"今日は何から始めればいい？"},{"role":"assistant","content":"まず、今日中に終えたいことを一つ決めましょう。必要なら一緒に小さな手順へ分けます。"}]}

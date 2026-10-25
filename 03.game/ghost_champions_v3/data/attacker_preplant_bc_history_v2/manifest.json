@@ -1,0 +1,41 @@
+{
+  "source_hash": "0bcc7e08f57034d7e5f4fea2ff8936e6bb411071fe1b06bd1339cdb8114f4a91",
+  "input_hash": "ef3d633106cb637684c34396d4a0886622dfe6bbf36d5ad354c7e3acc93755b2",
+  "stage": "bc",
+  "initialization": "scratch",
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "RUN_NAME": "attacker_preplant_bc_history_v2",
+    "DATASET_NAME": "attacker_preplant_concon_history_v1",
+    "REUSE_DAGGER_RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_bc_history_v1",
+    "SEED": 20261013,
+    "LEARNING_RATE": 0.0003,
+    "BATCH_SIZE": 128,
+    "TORCH_THREADS": 1,
+    "FIXED_OPPONENT_AI": "default",
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "EVALUATION_ROUNDS_PER_OPPONENT": 4,
+    "MIN_BC_PLANT_RATE": 0.5,
+    "ENABLE_DAGGER": false,
+    "DAGGER_ROUNDS_PER_EPOCH": 7,
+    "DAGGER_TEACHER_MAPS": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_concon_history_v1",
+    "RUN_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_bc_history_v2",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_bc_history_v2"
+  },
+  "reward_settings": null,
+  "model_partition": "one preplant model shared by all five attackers; separate existing postplant model"
+}

@@ -1,0 +1,24 @@
+{
+  "selected_step": 5622,
+  "selection_evaluation": {
+    "rounds": 24,
+    "win_rate": 0.20833333333333334,
+    "plant_losses": 19,
+    "abilities_per_round": 4.041666666666667,
+    "reveals_per_round": 0.0,
+    "blinds_per_round": 0.0,
+    "coverage_ratio": 0.57260101010101,
+    "preaim_ratio": 0.80239898989899
+  },
+  "spatial_weight_max_changes": {
+    "spatial.position.0.weight": 0.0099325031042099,
+    "spatial.position.0.bias": 0.00959361344575882,
+    "spatial.position.2.weight": 0.009848958812654018,
+    "spatial.position.2.bias": 5.5624001106480137e-05,
+    "spatial.watch.0.weight": 0.013919241726398468,
+    "spatial.watch.0.bias": 0.013919204473495483,
+    "spatial.watch.2.weight": 0.01497821044176817,
+    "spatial.watch.2.bias": 5.803668318549171e-05
+  },
+  "finite_weights": true
+}

@@ -1,0 +1,430 @@
+{
+  "schema_hash": "aad15a443e398fd76032d2f54eec519e7c3aaf69eff9615cfbc763aab359aaed",
+  "source_hash": "1a26438b78f02cf8d9c68bc9e99475cc6cc31c49326838657fabff8c2c72fe60",
+  "complete": true,
+  "teacher": "Omoko Gaming v1 (frozen, roster-slot adapter)",
+  "teacher_kind": "omoko",
+  "teacher_roster": "Ghost Champions",
+  "student_roster": "Ghost Champions",
+  "opponent_ai": "default",
+  "opponent_codes": [
+    "FNC",
+    "FRC",
+    "TYG",
+    "OMG",
+    "SPS",
+    "GRG",
+    "GC"
+  ],
+  "teacher_maps": [],
+  "split": "whole matches including all context rounds, disjoint seeds",
+  "shards": [
+    {
+      "file": "match_000000.npz",
+      "sha256": "83072f8f269af107e0085aefe6dfbd1d5c9336a3389e42adfa4092e59becc3f0",
+      "decisions": 1918,
+      "seed": 2026101506,
+      "opponent": "OMG",
+      "teacher_map": "Omoko B",
+      "split": "validation"
+    },
+    {
+      "file": "match_000001.npz",
+      "sha256": "a77dad75bea74741469d5b15bbd554cf9e3eaaed1e63ab46c9fe0703ba03437e",
+      "decisions": 1900,
+      "seed": 2026101513,
+      "opponent": "FNC",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000002.npz",
+      "sha256": "5ff5aadcc8a4ae5129a7f7a72aaeefdc8947e04ffdd5ff67473c652eb9a4fd3d",
+      "decisions": 1937,
+      "seed": 2026101520,
+      "opponent": "OMG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000003.npz",
+      "sha256": "8589b2c8ac42d1707e0d11ea697416bcc6c909c7b2ca29d331a4a57c1d72ff5a",
+      "decisions": 1902,
+      "seed": 2026101527,
+      "opponent": "FRC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000004.npz",
+      "sha256": "98a4900c72683fdc7a619e7a1aedbf978c61b3d406b33b87fc32dc98013b850b",
+      "decisions": 2394,
+      "seed": 2026101534,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000005.npz",
+      "sha256": "88ee9875149215252b451f7f4d1cd210f9de0db7911b573f0c7b1d14fb038f90",
+      "decisions": 1889,
+      "seed": 2026101541,
+      "opponent": "SPS",
+      "teacher_map": "Omoko B",
+      "split": "validation"
+    },
+    {
+      "file": "match_000006.npz",
+      "sha256": "44f27a60bc828bb374f1147dea8c573bb2fcd91537c9a055be37e1ad0efc9565",
+      "decisions": 2232,
+      "seed": 2026101548,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000007.npz",
+      "sha256": "525312059223625df61a9defd8d36af043ef95dd0765c36cea95c9ace9255341",
+      "decisions": 2074,
+      "seed": 2026101555,
+      "opponent": "OMG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000008.npz",
+      "sha256": "b40ef44b87bfd7289e7d8d02fe26117d60233cae710f1b89cec2740361d30326",
+      "decisions": 2154,
+      "seed": 2026101562,
+      "opponent": "FRC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000009.npz",
+      "sha256": "39afeacdc9c70e9056a14efd293ccea95a20e9ea79c6824ca424b38daed9b86d",
+      "decisions": 2023,
+      "seed": 2026101569,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000010.npz",
+      "sha256": "9d6b966785b9632c92c03573103cf63f4030b4ce54a766083c327c5eb36e46f9",
+      "decisions": 1967,
+      "seed": 2026101576,
+      "opponent": "GRG",
+      "teacher_map": "Omoko B",
+      "split": "validation"
+    },
+    {
+      "file": "match_000011.npz",
+      "sha256": "b07302800205a8342a57bb9989c4e1249cc745d08688d97b0bae9a83d1cbcefd",
+      "decisions": 2053,
+      "seed": 2026101583,
+      "opponent": "OMG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000012.npz",
+      "sha256": "0909a5464af6589671e934e743726bbb1d0e8b18ba577cb6d3590db14ef3371a",
+      "decisions": 2200,
+      "seed": 2026101590,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000013.npz",
+      "sha256": "89bd33dd80bcaea96c663dd939faa5ec4b061f85140724badcb5aa98bdc998cb",
+      "decisions": 1923,
+      "seed": 2026101597,
+      "opponent": "TYG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000014.npz",
+      "sha256": "fbd17fbd470cb266c4172362674de2bf3cd1a21ddd094fc9ff915ac1b40ee594",
+      "decisions": 1962,
+      "seed": 2026101604,
+      "opponent": "TYG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000015.npz",
+      "sha256": "21d2dff8ae0288641e89ec9be81e6d8af51afa97fcbb2f81f2598f847bad88c2",
+      "decisions": 1959,
+      "seed": 2026101611,
+      "opponent": "FRC",
+      "teacher_map": "Omoko B",
+      "split": "validation"
+    },
+    {
+      "file": "match_000016.npz",
+      "sha256": "dd6643298655bb80b852b154b5bf1cf91f32628a71049133dc5bf25f21033eda",
+      "decisions": 2187,
+      "seed": 2026101618,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000017.npz",
+      "sha256": "7c7ae70efec2ad4197078dcab1d193903729dc55219dfbea0ea42f31ce0d097e",
+      "decisions": 1743,
+      "seed": 2026101625,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000018.npz",
+      "sha256": "5b42edca9dd470f1aad5533b4182f143314be62c56514afce0eae6ffd8555aa7",
+      "decisions": 2160,
+      "seed": 2026101632,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000019.npz",
+      "sha256": "27641f4b36c79689e2ca89b01eb61d47d82dce71ff701b1421bee9c10b3b3f6a",
+      "decisions": 2191,
+      "seed": 2026101639,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000020.npz",
+      "sha256": "85ff360915bf3c76013af53c4eb61ef149be68a9f18419797481b6de3e2b5665",
+      "decisions": 1996,
+      "seed": 2026101646,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "validation"
+    },
+    {
+      "file": "match_000021.npz",
+      "sha256": "2678b239ec244ff396a8e307bafe7679f4f92cb5a8ca9668cf4d527e83285967",
+      "decisions": 1704,
+      "seed": 2026101653,
+      "opponent": "GC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000022.npz",
+      "sha256": "faac684ffed766375dd8a6c1f6162b3969952a7a6e6982871af55d92fcc61ff1",
+      "decisions": 1890,
+      "seed": 2026101660,
+      "opponent": "TYG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000023.npz",
+      "sha256": "90ae3a31daebdd1c5c9450d61f91275a7f54a9dd50b2e4c22733e7c52716f66c",
+      "decisions": 1787,
+      "seed": 2026101667,
+      "opponent": "GC",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000024.npz",
+      "sha256": "63908885847ab60ac63d7f2e304d261277d5dd294d933a815471986d86bf7700",
+      "decisions": 2182,
+      "seed": 2026101674,
+      "opponent": "GC",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000025.npz",
+      "sha256": "c82202cf06379d4ffb88e9221ef8a24b0f06eed6628e7b5f5fe5cce204711c71",
+      "decisions": 2073,
+      "seed": 2026101681,
+      "opponent": "OMG",
+      "teacher_map": "Omoko A",
+      "split": "validation"
+    },
+    {
+      "file": "match_000026.npz",
+      "sha256": "52d50aeb8eba2849bdfff1c24465641d576948c0dca313b301c2134390bf242e",
+      "decisions": 2033,
+      "seed": 2026101688,
+      "opponent": "OMG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000027.npz",
+      "sha256": "a967e782960847f5414b0adbef0332f10026c7cd14814ac4c3ed93ebb0a79a26",
+      "decisions": 1946,
+      "seed": 2026101695,
+      "opponent": "GRG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000028.npz",
+      "sha256": "23311768565bc788d4a950a4ff20f8377616867c1262dcf44dfbf8c85fc61704",
+      "decisions": 1940,
+      "seed": 2026101702,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000029.npz",
+      "sha256": "edfa2eaf5650412116cb277d9cb99f949f405ce6fe3d6d508573d1dd1a677e46",
+      "decisions": 2273,
+      "seed": 2026101709,
+      "opponent": "FNC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000030.npz",
+      "sha256": "61e3fe1ceb323f545fa284e9a93853e8fa2fb58f109483bd1d3c26b3f2b6b136",
+      "decisions": 1842,
+      "seed": 2026101716,
+      "opponent": "FNC",
+      "teacher_map": "Omoko A",
+      "split": "validation"
+    },
+    {
+      "file": "match_000031.npz",
+      "sha256": "958e9b3106bfe50e2375cb431a41e152a420161a7fd31d4ebf1d4be044aa4ea1",
+      "decisions": 2036,
+      "seed": 2026101723,
+      "opponent": "TYG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000032.npz",
+      "sha256": "a8c4dfe61c95ecda9155335c3a785638e0cae1f2f4aae20bfff87a797c244d28",
+      "decisions": 2139,
+      "seed": 2026101730,
+      "opponent": "TYG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000033.npz",
+      "sha256": "7629482053ea8a440c400b6b24d36c87f3f48eac905f29f0e0fdbb78a17cd49d",
+      "decisions": 2382,
+      "seed": 2026101737,
+      "opponent": "FRC",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000034.npz",
+      "sha256": "a397d8cf7207250bbded0a7600674802f4edbf3e8efa9050f2f11f17757acf9d",
+      "decisions": 2021,
+      "seed": 2026101744,
+      "opponent": "GC",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    },
+    {
+      "file": "match_000035.npz",
+      "sha256": "6ae4feacb6cbe38b95442b83fa8d90cc4b2aec5060439dd5227d222ca45dbced",
+      "decisions": 1927,
+      "seed": 2026101751,
+      "opponent": "GRG",
+      "teacher_map": "Omoko A",
+      "split": "validation"
+    },
+    {
+      "file": "match_000036.npz",
+      "sha256": "ffdc6d93d37cc477ce2c752e89df05f622b23b93a192a446b4b18cfc5fa065f0",
+      "decisions": 1905,
+      "seed": 2026101758,
+      "opponent": "OMG",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000037.npz",
+      "sha256": "c7e57a0a6c483c075e509546ee4c48d88e3c16499ae69b864a8909bdaab3f97c",
+      "decisions": 2088,
+      "seed": 2026101765,
+      "opponent": "SPS",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000038.npz",
+      "sha256": "6c8a1b2397e2273c563e7a84a2f12adc2193fcd0777482ec735dcf07af53ccd8",
+      "decisions": 1924,
+      "seed": 2026101772,
+      "opponent": "SPS",
+      "teacher_map": "Omoko B",
+      "split": "train"
+    },
+    {
+      "file": "match_000039.npz",
+      "sha256": "7746b2fb6e7737da2a681d4a2dda053c35d67f86aaba644b8a0fbea0e3505e46",
+      "decisions": 2240,
+      "seed": 2026101779,
+      "opponent": "OMG",
+      "teacher_map": "Omoko A",
+      "split": "train"
+    }
+  ],
+  "history": "all public observations/issued actions/finished outcomes; causal attention; no window truncation",
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "DATASET_NAME": "attacker_preplant_omoko_site_v1",
+    "TEACHER_KIND": "omoko",
+    "TEACHER_MAPS": [],
+    "COLLECTION_ROUNDS": 280,
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "FIXED_OPPONENT_AI": "default",
+    "SEED": 2026101500,
+    "ROUNDS_PER_MATCH": 7,
+    "VALIDATION_EVERY_MATCHES": 5,
+    "MAX_SKIPPED_FRACTION": 0.05,
+    "REQUIRE_ORB_LABELS": true,
+    "TORCH_THREADS": 1,
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_omoko_site_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_omoko_site_v1"
+  },
+  "rounds": 280,
+  "decisions": 81096,
+  "skipped": 2260,
+  "mode_counts": {
+    "WATCH": 19843,
+    "MOVE_WATCH": 44980,
+    "MOVE": 12802,
+    "COLLECT_ORB": 1351,
+    "ABILITY": 988,
+    "PLANT": 1132
+  },
+  "teacher_model_hashes": {
+    "carry": "46734270acb50ee946f353131ab8d6abfc213ae1246d4777893883869f28536b",
+    "escort": "aa2868305af7415730cf55050c414f5a20d0073cfa454509cbdb5d0b1f5c6069",
+    "retrieve": "c0fcbd23a5910f7d15aa6e0ff3b1438c7f927c4397d74e49fe63b10dd5114ffc",
+    "guard": "72edb4112fdecf1809587e459ea2c88c25ee5f1687307dbcfbebda40f8a39bbe"
+  },
+  "carrying_decisions": 17181,
+  "retrieval_decisions": 811,
+  "orb_collections": 261,
+  "skipped_fraction": 0.027112625365900474
+}

@@ -2,6 +2,7 @@
 from collections import deque
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 import random
 from pathlib import Path
 import sys
@@ -17,7 +18,7 @@ class LearningDefenderController(BaseController):
     def __init__(self, model_path="dqn_gridworld_fixedmap.pt", obs_dim=16, n_actions=4):
         super().__init__()
         # GPUが使えるならGPU、なければCPU
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = resolve_inference_device()
         
         # モデルの読み込み
         import sys
@@ -203,7 +204,7 @@ class LearningDefenderAllAIController(BaseController):
     """【AIモデル適用】ディフェンダー操作クラス（敵の目撃情報対応・ローテーション強化版）"""
     def __init__(self, model_path="dqn_defender_combined_best.pt", obs_dim=20, n_actions=5):
         super().__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = resolve_inference_device()
         
         current_dir = Path(__file__).resolve().parent
         full_model_path = current_dir / model_path if not Path(model_path).is_absolute() else Path(model_path)

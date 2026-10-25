@@ -29,6 +29,7 @@ TEAM_AI_OPTIONS = {
     "Touyama Gaming v1": "touyama_gaming_v1",
     "Ghost Champions v1": "ghost_champions_v1",
     "Ghost Champions v2": "ghost_champions_v2",
+    "Ghost Champions v3": "ghost_champions_v3",
     "AI v1": "learning_v1",
     "ロジック": "default",
     "ユーザー操作": "user",

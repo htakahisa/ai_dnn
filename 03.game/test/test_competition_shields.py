@@ -132,14 +132,16 @@ class CompetitionShieldUITests(unittest.TestCase):
         self.assertTrue(app.shield_abilities_var.get())
         app.shield_abilities_check.invoke()
         self.assertFalse(app.shield_abilities_var.get())
-        for name in ("power_refresh_button", "team1_box", "team2_box", "team1_controller_box",
+        for name in ("team_power_refresh_button", "player_power_refresh_button", "team1_box", "team2_box", "team1_controller_box",
                      "team2_controller_box", "swiss_slots", "tournament_seed_editor",
                      "qualifier_count_spin", "qualifier_import_button", "league_slots"):
             setattr(app, name, Mock())
         app.set_enabled(False)
         self.assertEqual(str(app.shield_abilities_check.cget("state")), "disabled")
+        self.assertEqual(str(app.reproduce_button.cget("state")), "disabled")
         app.set_enabled(True)
         self.assertEqual(str(app.shield_abilities_check.cget("state")), "normal")
+        self.assertEqual(str(app.reproduce_button.cget("state")), "normal")
         app.shield_abilities_check.invoke()
         self.assertTrue(app.shield_abilities_var.get())
 

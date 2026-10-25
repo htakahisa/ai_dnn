@@ -4,6 +4,7 @@ from pathlib import Path
 import random
 import numpy as np
 import torch
+from simulation_runtime import resolve_inference_device
 
 from controllers import BaseController
 from train_attacker_combined import DuelingQNetwork
@@ -15,7 +16,7 @@ class LearningAttackerController(BaseController):
 
     def __init__(self, model_path="dqn_attacker_combined_best.pt", obs_dim=25, n_actions=5, greedy=False):
         super().__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = resolve_inference_device()
 
         model_path_obj = Path(model_path)
         full_path = model_path_obj if model_path_obj.is_absolute() else Path(__file__).resolve().parent / model_path_obj

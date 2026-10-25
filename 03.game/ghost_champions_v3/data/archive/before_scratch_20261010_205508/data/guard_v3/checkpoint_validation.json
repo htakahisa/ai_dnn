@@ -1,0 +1,24 @@
+{
+  "selected_step": 20031,
+  "selection_evaluation": {
+    "rounds": 36,
+    "win_rate": 0.6666666666666666,
+    "defuse_losses": 12,
+    "abilities_per_round": 3.0555555555555554,
+    "reveals_per_round": 1.6111111111111112,
+    "blinds_per_round": 0.6944444444444444,
+    "coverage_ratio": 0.7246861924686192,
+    "preaim_ratio": 0.19581589958158996
+  },
+  "spatial_weight_max_changes": {
+    "spatial.position.0.weight": 0.026567336171865463,
+    "spatial.position.0.bias": 0.019655562937259674,
+    "spatial.position.2.weight": 0.012216015718877316,
+    "spatial.position.2.bias": 0.0002984075399581343,
+    "spatial.watch.0.weight": 0.0278957337141037,
+    "spatial.watch.0.bias": 0.019133970141410828,
+    "spatial.watch.2.weight": 0.01923256926238537,
+    "spatial.watch.2.bias": 0.0001179559767479077
+  },
+  "finite_weights": true
+}

@@ -15,6 +15,13 @@ sys.path.insert(0,str(ROOT))
 OPPONENTS={"TYG":"Touyama Gaming","OMG":"Omoko Gaming","FRC":"Furina Classic",
            "FNC":"Fnatic2023","GG":"Gorigons","SPS":"SUPES"}
 OPENING_LABELS={"DEFAULT":"両側索敵", "RUSH":"ラッシュ", "SPLIT":"スプリット"}
+DEFAULT_RUN = None  # None uses the same checkpoint as competition.
+DEFAULT_OPPONENT = "OMG"
+DEFAULT_SEED = None
+DEFAULT_TICK_MS = 150
+DEFAULT_OPENING = "random"
+DEFAULT_ATTACK_ONLY = False
+DEFAULT_AUTOPLAY = False
 
 
 def save_match_log(game,path,metadata):
@@ -40,11 +47,12 @@ def build_match(checkpoint,opponent,*,seed,tick_ms=150,opening="random",attack_o
     from ghost_champions_v2.defender_macro_v1.controller import GhostChampionsV2DefenderController
     from ghost_champions_v2.config import load_config
     from ghost_champions_v2.rl.controller import LearnedAttackerController
+    from ghost_champions_v2.controller import GhostChampionsV2AttackerController
     policy=None
     if legacy_checkpoint:
         from ghost_champions_v2.tools.upgrade_observation_checkpoint import upgraded_policy
         policy,_=upgraded_policy(checkpoint)
-    else:
+    elif checkpoint is not None:
         from ghost_champions_v2.rl.policy import ResidualPolicy
         policy,payload=ResidualPolicy.load(checkpoint)
         if payload.get("hazard_trained") is False:
@@ -57,9 +65,11 @@ def build_match(checkpoint,opponent,*,seed,tick_ms=150,opening="random",attack_o
     np.random.seed(seed%(2**32))
     torch.manual_seed(seed)
     gc,enemy=get_preset("Ghost Champions"),get_preset(OPPONENTS[opponent])
+    factory=(partial(LearnedAttackerController,checkpoint=str(checkpoint),policy=policy,
+                     config=config,stage="entry",mode="greedy") if checkpoint is not None else
+             partial(GhostChampionsV2AttackerController,config=config,stage="entry"))
     team=DualRoleTeamAI(name="Ghost Champions v2",
-        attacker_factory=partial(LearnedAttackerController,checkpoint=str(checkpoint),policy=policy,
-                                 config=config,stage="entry",mode="greedy"),
+        attacker_factory=factory,
         defender_factory=GhostChampionsV2DefenderController)
     return VisualFPSBattle(NEW_MAZE_STR,team,_build_team_ai(enemy.default_ai),headless=headless,
         attacker_roster=list(gc.players),defender_roster=list(enemy.players),
@@ -71,23 +81,27 @@ def build_match(checkpoint,opponent,*,seed,tick_ms=150,opening="random",attack_o
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run",default="attacker_rl_defuse_20261007_eval2")
+    parser.add_argument("--run",default=DEFAULT_RUN)
     parser.add_argument("--checkpoint",type=Path,help="Override the trained checkpoint")
-    parser.add_argument("--opponent",choices=OPPONENTS,default="OMG")
-    parser.add_argument("--seed",type=int,help="Repeat a match seed; omitted means a new draw")
-    parser.add_argument("--tick-ms",type=int,default=150)
-    parser.add_argument("--opening",choices=("random",*OPENING_LABELS),default="random",
+    parser.add_argument("--opponent",choices=OPPONENTS,default=DEFAULT_OPPONENT)
+    parser.add_argument("--seed",type=int,default=DEFAULT_SEED,help="Repeat a match seed; omitted means a new draw")
+    parser.add_argument("--tick-ms",type=int,default=DEFAULT_TICK_MS)
+    parser.add_argument("--opening",choices=("random",*OPENING_LABELS),default=DEFAULT_OPENING,
                         help="Draw every round, or watch one chosen strategy")
-    parser.add_argument("--attack-only",action="store_true",help="Keep GC attacking across rounds")
-    parser.add_argument("--autoplay",action="store_true",help="Start moving as soon as the window opens")
+    parser.add_argument("--attack-only",action="store_true",default=DEFAULT_ATTACK_ONLY,help="Keep GC attacking across rounds")
+    parser.add_argument("--autoplay",action="store_true",default=DEFAULT_AUTOPLAY,help="Start moving as soon as the window opens")
     parser.add_argument("--legacy-checkpoint",action="store_true",
                         help="Explicitly pad a v2 checkpoint for viewing; hazard avoidance is untrained")
     args=parser.parse_args()
-    if Path(args.run).name!=args.run or args.run in (".",".."):
+    if args.run and (Path(args.run).name!=args.run or args.run in (".","..")):
         parser.error("run must be a directory name")
-    checkpoint=(args.checkpoint or AI_ROOT/"data"/args.run/"last_passed_guardrail.pt").resolve()
-    if not checkpoint.is_file():
+    from ghost_champions_v2 import resolve_attacker_checkpoint
+    checkpoint=(args.checkpoint.resolve() if args.checkpoint else
+                (AI_ROOT/"data"/args.run/"last_passed_guardrail.pt").resolve() if args.run else resolve_attacker_checkpoint())
+    if checkpoint is not None and not checkpoint.is_file():
         parser.error(f"Trained checkpoint not found: {checkpoint}")
+    if args.legacy_checkpoint and checkpoint is None:
+        parser.error("Legacy checkpoint viewing requires a checkpoint")
     if args.tick_ms<1:
         parser.error("tick-ms must be positive")
     seed=args.seed if args.seed is not None else random.SystemRandom().randrange(2**32)
@@ -106,13 +120,13 @@ def main():
                              opening=args.opening,attack_only=args.attack_only,legacy_checkpoint=args.legacy_checkpoint)
             game.root.title(f"GC v2 vs {args.opponent} — 実況観戦")
             log_path=AI_ROOT/"logs/live"/f"{datetime.now():%Y%m%d_%H%M%S_%f}_{args.opponent}_{seed}.json"
-            metadata=dict(opponent=args.opponent,seed=seed,checkpoint=str(checkpoint),
-                checkpoint_sha256=hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+            metadata=dict(opponent=args.opponent,seed=seed,checkpoint=str(checkpoint) if checkpoint else None,
+                checkpoint_sha256=hashlib.sha256(checkpoint.read_bytes()).hexdigest() if checkpoint else None,
                 opening=args.opening,attack_only=args.attack_only,
                 legacy_input_padding=args.legacy_checkpoint,
                 config=game.attacker_controller.inner.config,
                 source_hashes={name:hashlib.sha256((AI_ROOT/name).read_bytes()).hexdigest()
-                               for name in ("tactics.py","hazards.py","controller.py","rl/actions.py","rl/controller.py","rl/observation.py")},
+                               for name in ("__init__.py","tactics.py","hazards.py","controller.py","rl/actions.py","rl/controller.py","rl/observation.py")},
                 perception_source_hashes={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
                                for name in ("public_effects.py","grid_visibility.py","iq_controller_adapter.py","team_ai.py")})
             save_match_log(game,log_path,metadata)

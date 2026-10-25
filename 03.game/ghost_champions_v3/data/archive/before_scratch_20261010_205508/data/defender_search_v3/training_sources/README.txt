@@ -1,0 +1,1 @@
+GC v3 source files used by this completed training run, before the post-run Windows status-write retry fix. Model algorithm and maps were unchanged by the retry fix. Original hashes are in ../manifest.json.

@@ -1,0 +1,2594 @@
+{
+  "schema_hash": "d6f391fe6811058cb0e152e34c9ccfd5a3fe3e399def65d542526b48f096cc78",
+  "source_hash": "7d2700480270367b0888d3b2b3e5a6fa2c0281ea80b62c5bc9b24a6e10ee6b9b",
+  "complete": true,
+  "teacher": "ConCon v1",
+  "teacher_roster": "Gorigons",
+  "student_roster": "Ghost Champions",
+  "opponent_ai": "default",
+  "opponent_codes": [
+    "FNC",
+    "FRC",
+    "TYG",
+    "OMG",
+    "SPS",
+    "GRG",
+    "GC"
+  ],
+  "teacher_maps": [
+    "A1",
+    "A2",
+    "A3",
+    "A4"
+  ],
+  "split": "whole rounds, disjoint seeds",
+  "shards": [
+    {
+      "file": "round_000000.npz",
+      "sha256": "de334057c66b9a8f4edc204346872be0e4b0e4546b84aca29c2ec8c61e426ab4",
+      "decisions": 332,
+      "seed": 2026101300,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000001.npz",
+      "sha256": "6ae751133d0c67a2752fc85c9d0cde65681895836339e1178c76159ced9dc1ca",
+      "decisions": 396,
+      "seed": 2026101301,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000002.npz",
+      "sha256": "dcdbfb5a7b739d5ba51a79b978530a4c486eeb2eca88974fd224759461143211",
+      "decisions": 391,
+      "seed": 2026101302,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000003.npz",
+      "sha256": "18417875547a24c4d53c8cab78b9868dfde53e80c98ca5f5f750fa7472df5c88",
+      "decisions": 166,
+      "seed": 2026101303,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000004.npz",
+      "sha256": "dede3934bc83bb5aa76c20505fc0b9ffd0afb15572b2ddb5e88c7159979c8917",
+      "decisions": 191,
+      "seed": 2026101304,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000005.npz",
+      "sha256": "ba4eb57f26c498b46de83ae2310b2b1ffbc8380eed522397997b066131b8eba4",
+      "decisions": 191,
+      "seed": 2026101305,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000006.npz",
+      "sha256": "a68c143c476066374d6063242351db1bcd94371887f7477cbab18d9359b60fbd",
+      "decisions": 263,
+      "seed": 2026101306,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000007.npz",
+      "sha256": "d8563ebabea31ea0bbff8f58912c25669c381ee21ff2ac667b94ddd4a375309b",
+      "decisions": 379,
+      "seed": 2026101307,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000008.npz",
+      "sha256": "f41ece7d390324127ea88c9cae1e0ee563f7056a13963638c54ca1accf403ca6",
+      "decisions": 171,
+      "seed": 2026101308,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000009.npz",
+      "sha256": "d4a4f51c23e69edfe81b4bf84b3c3721411c27169c9b9ff1fb9373d569443ab6",
+      "decisions": 205,
+      "seed": 2026101309,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000010.npz",
+      "sha256": "5f878f131b123aed9788f3c4e3d6b42430b3722486e890da3be9ec22882dcc20",
+      "decisions": 329,
+      "seed": 2026101310,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000011.npz",
+      "sha256": "9177d49b87bde72e78d70788ffa1825bdd92357fbd4a8390d63f887b4e37949b",
+      "decisions": 274,
+      "seed": 2026101311,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000012.npz",
+      "sha256": "4e6398907de583257daf23b12ae11efff2e1f4fd9543a99deb0e57a9ae21a0e4",
+      "decisions": 191,
+      "seed": 2026101312,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000013.npz",
+      "sha256": "d012fccebfc7586df3382f14be6ffe33660661f7877c7df9ffe4854c2123a7f9",
+      "decisions": 327,
+      "seed": 2026101313,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000014.npz",
+      "sha256": "d81ef2a16dec76cecff2dad1ea2a89867f30238eb6f5d5063d46297769236806",
+      "decisions": 191,
+      "seed": 2026101314,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000015.npz",
+      "sha256": "1a9fbc45b18a1af269c40d4478839351eeb686156b95022cde5f9cdaae2daad6",
+      "decisions": 191,
+      "seed": 2026101315,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000016.npz",
+      "sha256": "222b81463e8f023a23926472c00ecb8fbb3c75ddf908534f4464ec3cf2998ce9",
+      "decisions": 256,
+      "seed": 2026101316,
+      "opponent": "TYG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000017.npz",
+      "sha256": "acc073c6951afb95fc3399c3ed0c5783c39ba75efd522db232b463d27f23c1f1",
+      "decisions": 181,
+      "seed": 2026101317,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000018.npz",
+      "sha256": "8900c42a4da9c5d57f8588fa465a272df9a65c33831961fdad4962c17a5e050a",
+      "decisions": 366,
+      "seed": 2026101318,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000019.npz",
+      "sha256": "2ae4e5b2e6edd3bad7eb8fd684d0bb0254af446fbdf0b7c67b408305caed0455",
+      "decisions": 191,
+      "seed": 2026101319,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000020.npz",
+      "sha256": "4d36015f0e2c3a39a3a0a7a42f4115118770c2d6549b5c800f900ebddd1503aa",
+      "decisions": 309,
+      "seed": 2026101320,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000021.npz",
+      "sha256": "e647441d8a8482f8ed1da8d523ee53a6adf2b31ff890d9c9b84956b356129684",
+      "decisions": 191,
+      "seed": 2026101321,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000022.npz",
+      "sha256": "6cf9a97087de4149bc1aad6784251c0210c75c1f390be2236b1d05f99761f862",
+      "decisions": 338,
+      "seed": 2026101322,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000023.npz",
+      "sha256": "488a75a064ad82716ae97526dd1b334508a8b27a3485b48ac3f94eb1cc99ab50",
+      "decisions": 355,
+      "seed": 2026101323,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000024.npz",
+      "sha256": "db88572c01b45ff9898497e4bc93b8ac7faf74c914b2486806c2a4db788f1318",
+      "decisions": 285,
+      "seed": 2026101324,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000025.npz",
+      "sha256": "7fff3c803cab94d85df4fec76b07e30dd5cd5216df12f7cdddb96e81e92541a9",
+      "decisions": 453,
+      "seed": 2026101325,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000026.npz",
+      "sha256": "d117ca0c605f780a943976e68289cd2287a6374255c3026b23e848dc825b6234",
+      "decisions": 181,
+      "seed": 2026101326,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000027.npz",
+      "sha256": "bcccd6d6fdbedcd3de625a79e4f630ac1e8c8e6004ec5a45772fc764d03453f7",
+      "decisions": 389,
+      "seed": 2026101327,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000028.npz",
+      "sha256": "acce492cb5dc478f3a9b878e02880a783469f20c0070f3fff05299b27ec305e6",
+      "decisions": 226,
+      "seed": 2026101328,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000029.npz",
+      "sha256": "8aa100eeebfbb20f5a23ec10136c28a7b3c136af1f2cd6c8209adba04a8fc58f",
+      "decisions": 294,
+      "seed": 2026101329,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000030.npz",
+      "sha256": "d9bdd52bd32f49a5644e2e1c43e3241f745d7dc813bb209e8a7bde4ac07b0b75",
+      "decisions": 191,
+      "seed": 2026101330,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000031.npz",
+      "sha256": "f7d7d9d0c0a965a80a4516847db790b5a5802f3cf9b73211dba19c566cfcd0ad",
+      "decisions": 191,
+      "seed": 2026101331,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000032.npz",
+      "sha256": "aaf641e82ddb10e90ee1416da21a9745260ff4c55c231037bbe14336256cd5b5",
+      "decisions": 191,
+      "seed": 2026101332,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000033.npz",
+      "sha256": "01a215db5e109701305426e4d4e1b04aa44bb785d3a91e01457d7253d03379d7",
+      "decisions": 166,
+      "seed": 2026101333,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000034.npz",
+      "sha256": "aa43f970461154e0a458a766a5d762149dbbce2529166502f94052b44963e165",
+      "decisions": 350,
+      "seed": 2026101334,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000035.npz",
+      "sha256": "35f2e35fe4d18ec8a248b97759327b809210601a5c87a719561920630c294448",
+      "decisions": 191,
+      "seed": 2026101335,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000036.npz",
+      "sha256": "59320910bf13a36f24ec0f9030bbc328c02c45418a5cbdb586eb8024a83aa10f",
+      "decisions": 208,
+      "seed": 2026101336,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000037.npz",
+      "sha256": "54e358ba4908a037606cdbcf558e7ad16080df0e215a5c37e854dee6f37fdcde",
+      "decisions": 181,
+      "seed": 2026101337,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000038.npz",
+      "sha256": "50b8d1b0942edbc342434a2b50f614119d9a526de79576b504946b7ccace8118",
+      "decisions": 379,
+      "seed": 2026101338,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000039.npz",
+      "sha256": "ab158ed6f6bcc2b025bf2d9fa817d66620b5e091cb4d6f81ba564cd2632a5648",
+      "decisions": 416,
+      "seed": 2026101339,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000040.npz",
+      "sha256": "5b5185e0e9ea77d97ebb68f3b891c0ed646c1f0c9adcc4e39b6bdf316b6313c1",
+      "decisions": 386,
+      "seed": 2026101340,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000041.npz",
+      "sha256": "b4091543768f18c591a5beb966a7951faefa3731b8c082bcb7ec5d17fbc3200c",
+      "decisions": 191,
+      "seed": 2026101341,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000042.npz",
+      "sha256": "dc6d06625b3e5dcf74699332f67a7222c7a519b2b341debbee988c7fdff28ba0",
+      "decisions": 329,
+      "seed": 2026101342,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000043.npz",
+      "sha256": "82080793117328696e2bb10de97a29b738256bfc886da2494b47e9afa3baf488",
+      "decisions": 186,
+      "seed": 2026101343,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000044.npz",
+      "sha256": "a21810c4832344f4946815641dbc00f8f86e6ce470e775a1f2d94b09fd14006b",
+      "decisions": 421,
+      "seed": 2026101344,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000045.npz",
+      "sha256": "1b328ac23c18ea9f7d8df2a631531e5748450de5ca1269afec96afeb7b015ff1",
+      "decisions": 343,
+      "seed": 2026101345,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000046.npz",
+      "sha256": "595a71935d66c7ed58f991c2ccd1505abe62ecf27a9f81e455cf8f69be582c71",
+      "decisions": 191,
+      "seed": 2026101346,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000047.npz",
+      "sha256": "7db9aed59dec432c914c44fde62b7bd7d30e2018dc076f223473c38acbf38261",
+      "decisions": 171,
+      "seed": 2026101347,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000048.npz",
+      "sha256": "7334dcd36a73472dfd40a51a0859033ad75f3d7b405bf4c0154d983bde3999e4",
+      "decisions": 191,
+      "seed": 2026101348,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000049.npz",
+      "sha256": "feead056d593008762ac1e53db1bb2a9dead684d04ebd681d734609c9faf2cc0",
+      "decisions": 216,
+      "seed": 2026101349,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000050.npz",
+      "sha256": "42a900387b0df64eaf6539be4050cc3e49bbf196c4c204404ca44f48976722ca",
+      "decisions": 292,
+      "seed": 2026101350,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000051.npz",
+      "sha256": "b44c8fce02d4d25a841fa23a9791c8424426542558ba14d3417b351ff49ded8e",
+      "decisions": 373,
+      "seed": 2026101351,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000052.npz",
+      "sha256": "eac5ba2ddc035487051113143a57a9b6f0b15e0838a5ca1c51a5c4be3780cca4",
+      "decisions": 181,
+      "seed": 2026101352,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000053.npz",
+      "sha256": "47e0c05aa3b4be62fef9f5cd9e6695b7d7428891b041907a94d80dfa5123ff12",
+      "decisions": 226,
+      "seed": 2026101353,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000054.npz",
+      "sha256": "f1586507acd74320709dcadbc3e645fa8d86da0df57216d04c33b329d489427f",
+      "decisions": 239,
+      "seed": 2026101354,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000055.npz",
+      "sha256": "8cb41b58a308da0d71ea90751da6acb90fe060323c04f224bc57b1dff597d379",
+      "decisions": 325,
+      "seed": 2026101355,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000056.npz",
+      "sha256": "bf1f3e28eb0db4b370e0149fddee4889eaa37666cc83e95cfebfc2fa4a912bb0",
+      "decisions": 191,
+      "seed": 2026101356,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000057.npz",
+      "sha256": "8deb78ec86a0c2bca936fe2fb4181862e08422e438bc375ef176a9d628796e7a",
+      "decisions": 191,
+      "seed": 2026101357,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000058.npz",
+      "sha256": "939dec6154a8a650945fe72eb142016bc315a4190576331c3ab429bec609faac",
+      "decisions": 355,
+      "seed": 2026101358,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000059.npz",
+      "sha256": "5083ebb0ed6e6b5caf97d0d7c12117dfa715a9a9c5bea98f76497d5a2e8d5acb",
+      "decisions": 263,
+      "seed": 2026101359,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000060.npz",
+      "sha256": "7535aec87a084c073c5fe0f0b439725fba9684ec2ee744373cf296daaa93a465",
+      "decisions": 221,
+      "seed": 2026101360,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000061.npz",
+      "sha256": "6b194d3f31530146700701de7e561851a386f4d1cc6ded8a83d719c20c111194",
+      "decisions": 381,
+      "seed": 2026101361,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000062.npz",
+      "sha256": "47ab7e870aedc944d22006afb8d3311a7d777b2b91c2ccc21d21fe8bf5675ba2",
+      "decisions": 191,
+      "seed": 2026101362,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000063.npz",
+      "sha256": "38e590b076fa0e7b27743d5d8c6aa368b2618b2efdbe4105aced6008aef5dc82",
+      "decisions": 156,
+      "seed": 2026101363,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000064.npz",
+      "sha256": "1744372869633ba3a8a0e29f61c40817947dde4eb6b3fe4aa6d145e327e32a74",
+      "decisions": 249,
+      "seed": 2026101364,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000065.npz",
+      "sha256": "00c8e2ff76295e5ad82586f8237e356b89e493f2a632ba7c89cd5afe984350be",
+      "decisions": 401,
+      "seed": 2026101365,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000066.npz",
+      "sha256": "7aaf55c454b6ebdf751dcf4a57d39d18917ef1a15ca44578efc343b16f419847",
+      "decisions": 191,
+      "seed": 2026101366,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000067.npz",
+      "sha256": "cf3ecd540d9b2bc9d95fa02444a4cc2ab0acde0c97e79e53d066b304ec7075f6",
+      "decisions": 191,
+      "seed": 2026101367,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000068.npz",
+      "sha256": "6f934c2cd952215b3a661cb2edca6eb2986f623ea949e8dc59e8d6fd28d3ca4a",
+      "decisions": 191,
+      "seed": 2026101368,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000069.npz",
+      "sha256": "17faec465ec8b3af1d805cc01c0856be7442cab4cfae6bb4af4dbc2d9c6a76e8",
+      "decisions": 366,
+      "seed": 2026101369,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000070.npz",
+      "sha256": "6364c6cee58be258fbfaaa961e8e3fb9940718ebfe2e9c5f7104ea70ae0ef683",
+      "decisions": 221,
+      "seed": 2026101370,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000071.npz",
+      "sha256": "5cf641c841b4efaee51e45531a144921ba6c7dab7dfd08f9c926281c09101c96",
+      "decisions": 191,
+      "seed": 2026101371,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000072.npz",
+      "sha256": "fb0266a8d9533a26d706c66789bb5dddb13850acea3b43f01490cf44e5629ec2",
+      "decisions": 191,
+      "seed": 2026101372,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000073.npz",
+      "sha256": "45a602c6bf8231b487f421d8e963750189b491f1748a2c4f16b01e7d1f57e8f8",
+      "decisions": 375,
+      "seed": 2026101373,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000074.npz",
+      "sha256": "85e4356f00fb706211a52de9c506d6f8d1119b5684e9668cb5e015e4670671d3",
+      "decisions": 231,
+      "seed": 2026101374,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000075.npz",
+      "sha256": "a13ad9c0bd3fe3275f80d8cb910c09c31f2e7c150ba3796792b65a01718db3d4",
+      "decisions": 401,
+      "seed": 2026101375,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000076.npz",
+      "sha256": "011c8d3ae3da5aeaec149f3122de12dc185f683223caa5100d83b40e08972238",
+      "decisions": 181,
+      "seed": 2026101376,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000077.npz",
+      "sha256": "8fd11ea3a1036814b1ebbd2d233e6df320663684880852ceb24283061eb19726",
+      "decisions": 191,
+      "seed": 2026101377,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000078.npz",
+      "sha256": "aec8a2c0fccb87ecd4dd48947e48feb2798f060577aeb3f16d5f575588d74624",
+      "decisions": 316,
+      "seed": 2026101378,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000079.npz",
+      "sha256": "12cf2392c75eae285da4486d02422bb08bee19795545ad8942b2a2a684ba8184",
+      "decisions": 416,
+      "seed": 2026101379,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000080.npz",
+      "sha256": "adf49c9c331cd6bf5dc75868945ad662dd07d9e3689030bccaf280c11334ee8b",
+      "decisions": 191,
+      "seed": 2026101380,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000081.npz",
+      "sha256": "20cdb887ea5772835b49332cfca2877964b084e8a5bee61a99a5c31c72058aa9",
+      "decisions": 246,
+      "seed": 2026101381,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000082.npz",
+      "sha256": "37b96b0462f1840b6039cda1ceb0983a1a1501a4f42c6a720f116337784fd780",
+      "decisions": 191,
+      "seed": 2026101382,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000083.npz",
+      "sha256": "fd74fe494d1ab77da9097f697291d504d32b7dd8e14f3aa267484188cb657bae",
+      "decisions": 344,
+      "seed": 2026101383,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000084.npz",
+      "sha256": "065c754a81611da64f40a41e40e5cac29ae6dde4ae4ab0768499ece2c834f151",
+      "decisions": 171,
+      "seed": 2026101384,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000085.npz",
+      "sha256": "811d9833c2e9e29e5523ce410233f841bdb92f6400887158d8ba2ba8fd9a6539",
+      "decisions": 191,
+      "seed": 2026101385,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000086.npz",
+      "sha256": "0179a056533ca0a16fb53a44892efcbfac7911c3795d9c3e3b077dafd6888030",
+      "decisions": 176,
+      "seed": 2026101386,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000087.npz",
+      "sha256": "29f98c68b5b7b3db032c6a8738ae57db30a07021e2c2399656fc546b43d086c9",
+      "decisions": 339,
+      "seed": 2026101387,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000088.npz",
+      "sha256": "5acce86fdd46850a628d33be1ab376e28e37d7c686e051b2c30f27e7c364b9d2",
+      "decisions": 316,
+      "seed": 2026101388,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000089.npz",
+      "sha256": "1b4a16591c570e6b13930742c85aa8a93abaf0dab1020776c23735567e893815",
+      "decisions": 286,
+      "seed": 2026101389,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000090.npz",
+      "sha256": "e3433c88c05f96605b5708002a6efb80f8d76c809714dd635db38df6b05746c0",
+      "decisions": 191,
+      "seed": 2026101390,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000091.npz",
+      "sha256": "aae221aade2cf735dee76b01deef195b07e0e043cafa72cdc769849954970126",
+      "decisions": 293,
+      "seed": 2026101391,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000092.npz",
+      "sha256": "b103129441dd33a9c5d8379516fc7b4cf39c53aa4a13b8420e163abf493764be",
+      "decisions": 191,
+      "seed": 2026101392,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000093.npz",
+      "sha256": "531f785bbaaf9aa7bef8309f652e70cf1ac2f2c051b919182ab1c91380db1967",
+      "decisions": 344,
+      "seed": 2026101393,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000094.npz",
+      "sha256": "2a8ad01609fdcd1858bbebaa0e4aea3ec9d5e06e73e39cdc4e9728c8cbc46e70",
+      "decisions": 259,
+      "seed": 2026101394,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000095.npz",
+      "sha256": "6b8afc65ca09b6ce11ce230a94ea834cec790dbc6ab5deb769775a8359283dfb",
+      "decisions": 221,
+      "seed": 2026101395,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000096.npz",
+      "sha256": "e7e6a47a13219fba5f032c1d5e82fe59097d4c1e808da87117457fddb8bee6f9",
+      "decisions": 230,
+      "seed": 2026101396,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000097.npz",
+      "sha256": "72d7727fad44a1e9fbfc91b7e30a82bfe26406877e77eefa09271ec7de3397e5",
+      "decisions": 381,
+      "seed": 2026101397,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000098.npz",
+      "sha256": "b438ec17ee1bfb926b004b3f8f942d8cdc914d8eb01e34e96d69bc9b58817b7a",
+      "decisions": 195,
+      "seed": 2026101398,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000099.npz",
+      "sha256": "e1b2cbbce3f7d67ec20b448e5db563427223024158e4679fcd1f449bfdddd633",
+      "decisions": 323,
+      "seed": 2026101399,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000100.npz",
+      "sha256": "8fea79b94f1c2362f473318e5ffd08bad4a010707b6abb6c81e426e8464db6b1",
+      "decisions": 191,
+      "seed": 2026101400,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000101.npz",
+      "sha256": "602b003f23c2fbecfe66c1eb2069972edc7fb189f5f707f5d2e3ba267654e9b3",
+      "decisions": 321,
+      "seed": 2026101401,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000102.npz",
+      "sha256": "6a8fb706764a417708bf364e57a9016af20ef29730a463a44854dc7aa05e540c",
+      "decisions": 421,
+      "seed": 2026101402,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000103.npz",
+      "sha256": "cf919fa54a5f7fadad675b81595139f816e36df48660f66dc05c873c5e8fae78",
+      "decisions": 191,
+      "seed": 2026101403,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000104.npz",
+      "sha256": "586d5a4ce88458528847f2579ca264ed426eb22a3e8797cb3264531ec3809baf",
+      "decisions": 191,
+      "seed": 2026101404,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000105.npz",
+      "sha256": "88eeea8c712843417aea1fad3c096781cce14d51bd0744c6b2856184a5812739",
+      "decisions": 499,
+      "seed": 2026101405,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000106.npz",
+      "sha256": "d164df8b5527e0b1e4eb1fe9555a48e186e77cbaea9e4fcbe0da1e9ce849ee9f",
+      "decisions": 353,
+      "seed": 2026101406,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000107.npz",
+      "sha256": "4f510bf044e806082160c463c3be0a1e218c964e0d00ac521f97858f6e4de139",
+      "decisions": 191,
+      "seed": 2026101407,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000108.npz",
+      "sha256": "034521e696eaaeac02ae2796c294df8566c5b6e98d486e6c04bf3eec3aa0075f",
+      "decisions": 236,
+      "seed": 2026101408,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000109.npz",
+      "sha256": "9a6be79002c5ad68dd42faa93366f59bc3a966d7c15d3297df616e7653415278",
+      "decisions": 285,
+      "seed": 2026101409,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000110.npz",
+      "sha256": "08d3ca45f18b9368f218fd95169bf7b3c47af1bd70ea4e1517186d1c12e6ad43",
+      "decisions": 241,
+      "seed": 2026101410,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000111.npz",
+      "sha256": "30adf5cecbe95aa823c4f6c6feeee89cc4983c9f188703fc793e53a22d763a44",
+      "decisions": 181,
+      "seed": 2026101411,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000112.npz",
+      "sha256": "581136dbc56499eda9ce81808aaae1f0bd248efe9adc8385aca6692ecd5f5eb9",
+      "decisions": 181,
+      "seed": 2026101412,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000113.npz",
+      "sha256": "cf56b98aecc93c33edea8c52457ba9308c42c000228ea91c2317c65756b7d6ce",
+      "decisions": 325,
+      "seed": 2026101413,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000114.npz",
+      "sha256": "611961f1e80e4d603e7eca7c4e4c5413494b8727d524e142bd187607245cb3c7",
+      "decisions": 241,
+      "seed": 2026101414,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000115.npz",
+      "sha256": "74cf5518b3e4a70b1b41588c4c482ea22def8d3ca48b32454ea3ec6c2b477d15",
+      "decisions": 166,
+      "seed": 2026101415,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000116.npz",
+      "sha256": "f5b31f85ffb648e6282b6257768335b2441cee4148ac3885a2b6b6352b922098",
+      "decisions": 181,
+      "seed": 2026101416,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000117.npz",
+      "sha256": "0ce012780e9c153952dca30cb3e9539aebaa5231508effabfd82a40385953b84",
+      "decisions": 385,
+      "seed": 2026101417,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000118.npz",
+      "sha256": "a332547c87b448c3eadb9a329d0ae5b43a08834f12b3254b023ffb5d98dd45db",
+      "decisions": 373,
+      "seed": 2026101418,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000119.npz",
+      "sha256": "dec1855f897cc3fac5e7e8a892c2db18951172773b5cb4c912a4fc49d80a4157",
+      "decisions": 380,
+      "seed": 2026101419,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000120.npz",
+      "sha256": "232feb90c3037d1dbb37587c3938876300b1dab332b49b4456878557df3bfe1a",
+      "decisions": 191,
+      "seed": 2026101420,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000121.npz",
+      "sha256": "df022607a4e0b9577d22486e4e50fc76b8397ed66e367254ef9d25d2b874116d",
+      "decisions": 191,
+      "seed": 2026101421,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000122.npz",
+      "sha256": "6d08fb1877b3182ba371dc7400af12fe18389fb1caa97694702b25865fde2490",
+      "decisions": 191,
+      "seed": 2026101422,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000123.npz",
+      "sha256": "fa4aa89275b06c1150a2df98e90206dd08b1f06a4c695573f0915ce2308e2ff1",
+      "decisions": 386,
+      "seed": 2026101423,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000124.npz",
+      "sha256": "fb76a3416584465318eb1d31c8fb698cbc5542efa615b78e1735d62fbf47556a",
+      "decisions": 181,
+      "seed": 2026101424,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000125.npz",
+      "sha256": "6add8e6059975ae0a81fd76be2e8b62f1255fc90c5072b00f472ba55323bc7d9",
+      "decisions": 337,
+      "seed": 2026101425,
+      "opponent": "TYG",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000126.npz",
+      "sha256": "647d0d6cdd57b2ddf1eb145054d34b920de7a7de0f2d865cf7727b96888c2208",
+      "decisions": 191,
+      "seed": 2026101426,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000127.npz",
+      "sha256": "ebaaff259eb2fa9459b313efd630e17523128d7d28e571321c9920698a2b8785",
+      "decisions": 302,
+      "seed": 2026101427,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000128.npz",
+      "sha256": "d1181118ae56cee583e7fc489131ecc3f7c2b0ba61e5642ee88124cb097e78e9",
+      "decisions": 171,
+      "seed": 2026101428,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000129.npz",
+      "sha256": "e58ec1cee5a9eb4c90eee71300c317a077b9cafe1cde1ba36ae1005d6e54e8c5",
+      "decisions": 400,
+      "seed": 2026101429,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000130.npz",
+      "sha256": "14fa803e26c92151d3a607153b04e0083801603e93e29726b5343a237a193b84",
+      "decisions": 191,
+      "seed": 2026101430,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000131.npz",
+      "sha256": "c7387d02b5c5106b418f965198faed794e4c564f351234c222b8088439b9b142",
+      "decisions": 391,
+      "seed": 2026101431,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000132.npz",
+      "sha256": "aba776aee79ba44bc97a4abf191a666945efdf42193a5317dc438c8022cf57f9",
+      "decisions": 320,
+      "seed": 2026101432,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000133.npz",
+      "sha256": "f595c3e4bdc56e9cd49a8702577a1e7894580c9197d281856df6d7b7efebe4a8",
+      "decisions": 191,
+      "seed": 2026101433,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000134.npz",
+      "sha256": "a29cdc8bb548b456687ccbb9fc883064c264a73dba1ecdc8adc4fba5724e0956",
+      "decisions": 381,
+      "seed": 2026101434,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000135.npz",
+      "sha256": "2b07f3de85ea74bdab49bb4b8c4e536af6808c67e88decb67cd51ff478353a65",
+      "decisions": 221,
+      "seed": 2026101435,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000136.npz",
+      "sha256": "575ab1c0ba5f53a26c7360bcf2710ce4aad0dbd83b428768fd36903c83abe7ac",
+      "decisions": 191,
+      "seed": 2026101436,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000137.npz",
+      "sha256": "6eac69ed39abc53fb1dd6491d7c09aef88d4dce4f3a4a3fe234ae6270a22f0e2",
+      "decisions": 361,
+      "seed": 2026101437,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000138.npz",
+      "sha256": "2708bc713cd8dbb90729811350b73514f9915fd4f3241274c9d2c087b869665a",
+      "decisions": 226,
+      "seed": 2026101438,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000139.npz",
+      "sha256": "269cb9f0f0986b38a570f5187c8c5dd46e4243b7e1278a3176ed836c48ff33ae",
+      "decisions": 171,
+      "seed": 2026101439,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000140.npz",
+      "sha256": "391a8f9da8a7d79f24f4ea2bf08d5bdc44b73a26bb564bd04340d7600a1eb581",
+      "decisions": 500,
+      "seed": 2026101440,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000141.npz",
+      "sha256": "621a7434fed9fc0f79ecb7f5d1118ce9af6bc78d0d93072f9ea8c5e3087462e1",
+      "decisions": 411,
+      "seed": 2026101441,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000142.npz",
+      "sha256": "a967dbaafbd8455c9df549cc08013e36e54a9bcda0f3c797f6fce2254461a889",
+      "decisions": 221,
+      "seed": 2026101442,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000143.npz",
+      "sha256": "1ef2d2ba5c8cf998e27b91e3eb0633f95a3976098ed6e23354eb68bbec072749",
+      "decisions": 191,
+      "seed": 2026101443,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000144.npz",
+      "sha256": "b29f01ca96663ce7ebfab18fd2a8a237138b319bad382c5b620436d5ee08fb83",
+      "decisions": 368,
+      "seed": 2026101444,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000145.npz",
+      "sha256": "409bf75ef33be9a23be4d44d7c61c136dfae88474f2c0a78c6bc83665b7de031",
+      "decisions": 236,
+      "seed": 2026101445,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000146.npz",
+      "sha256": "a8d25381a781752fcbba023aa6557743fcf0848f53a903b2849697ea29df16c6",
+      "decisions": 402,
+      "seed": 2026101446,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000147.npz",
+      "sha256": "934efca5fd13180bd9c544ae9075b836afed55193ced4d671aea0aa45890a081",
+      "decisions": 291,
+      "seed": 2026101447,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000148.npz",
+      "sha256": "b9a86d1e06a5d43f116f9da185d9fd616119c3c6783a9bf1b3d7d7e4f798c83e",
+      "decisions": 181,
+      "seed": 2026101448,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000149.npz",
+      "sha256": "832f43074638c6fa8e2d81778d91ae474b946808d9a9c1b9365afe3fc751aab9",
+      "decisions": 257,
+      "seed": 2026101449,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000150.npz",
+      "sha256": "c296a6dfd1a1a0d76d2beee70a6de517de1eebb82b26cce7737669c5f1fa7302",
+      "decisions": 176,
+      "seed": 2026101450,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000151.npz",
+      "sha256": "cdbf0cdc7888b47a665d0ace80dfa4b87d92886968e370e2ea8ba070a8a500ec",
+      "decisions": 211,
+      "seed": 2026101451,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000152.npz",
+      "sha256": "0490f6a4f64e86c6622252fb6095511a866d73af55e6b7d6b091b01a7179a515",
+      "decisions": 181,
+      "seed": 2026101452,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000153.npz",
+      "sha256": "2fdd26bcce04df8e47a796e38e077908c9351cfe3af2c8f6bf93aa6e148eaeaa",
+      "decisions": 256,
+      "seed": 2026101453,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000154.npz",
+      "sha256": "8871661391a340c10c5accd10121f4c02dabba15222fbe6a364e5266ddf5d807",
+      "decisions": 456,
+      "seed": 2026101454,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000155.npz",
+      "sha256": "265570edd18e26f5c89a30b4bbfe0719f56c87a7673972269d18e4a5bbfb107f",
+      "decisions": 181,
+      "seed": 2026101455,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000156.npz",
+      "sha256": "51f1ad3f855adf0894fa3b24e4bb6a368ae9c93338066a3d6baf3d25c47bd8e7",
+      "decisions": 171,
+      "seed": 2026101456,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000157.npz",
+      "sha256": "518c2f0f675d50e4c0d032f314fb7e86d03e033e9d5acb26ad4133f617bdf6aa",
+      "decisions": 328,
+      "seed": 2026101457,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000158.npz",
+      "sha256": "442965faf6be9996bdf93512060b0a59b5b038d4fc60918fb2691aed87298828",
+      "decisions": 181,
+      "seed": 2026101458,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000159.npz",
+      "sha256": "ee397afeb438d3eacdf77c9ef4e1a6490cfa8c7aca5f3e6023b5fc4429143a27",
+      "decisions": 360,
+      "seed": 2026101459,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000160.npz",
+      "sha256": "689867ff0d3162ad079930a53f41cfd3fbf4b71897b094a82673d3a76d4c69c7",
+      "decisions": 443,
+      "seed": 2026101460,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000161.npz",
+      "sha256": "d3077a5b98e6f9cd2b5704f20a87d41f81ce07858d85d0d8c641f8d267a4207d",
+      "decisions": 191,
+      "seed": 2026101461,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000162.npz",
+      "sha256": "e27df7f7b0eeb105688282b070b836e9cd2a3debd7d99f613e9959dd562ac829",
+      "decisions": 436,
+      "seed": 2026101462,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000163.npz",
+      "sha256": "6c0a409f745a9908f86bd80217c4b090f06e7b3f818c801bdb3e5634e4451a3c",
+      "decisions": 243,
+      "seed": 2026101463,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000164.npz",
+      "sha256": "4044d481aa39e77f38fe16536b12543984e2ce7d7da793c6951275b04bb5e929",
+      "decisions": 389,
+      "seed": 2026101464,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000165.npz",
+      "sha256": "5066b69701070f4241c6a395a2c8c2be1692f5c7303d84e22a72d85226db1c4b",
+      "decisions": 160,
+      "seed": 2026101465,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000166.npz",
+      "sha256": "700c6b41dba82becbb1fdd2fe241631020ca16268bfae83f3e6125eb2d61156e",
+      "decisions": 191,
+      "seed": 2026101466,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000167.npz",
+      "sha256": "0fa50135b064a089810ca1ce115116ae4dfcc3528a1a33a35b7af26b3f038efb",
+      "decisions": 388,
+      "seed": 2026101467,
+      "opponent": "TYG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000168.npz",
+      "sha256": "5919e1f18424ee33af48c6c8ca8971ca4e526f1f87a4dc1580763c5ab48b39ba",
+      "decisions": 171,
+      "seed": 2026101468,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000169.npz",
+      "sha256": "5caf3090be20c113583964db6bc9d0f687b7d0be10a735d8104f1023fe7a993c",
+      "decisions": 251,
+      "seed": 2026101469,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000170.npz",
+      "sha256": "e074bc6b11b6b4145ca5730016933cfcca06976f745b4f6e5377bf7b9faa0699",
+      "decisions": 362,
+      "seed": 2026101470,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000171.npz",
+      "sha256": "79f8c4fab91a12ac2bc4a5f8694acebceb586f91ae4b1e828c0b8e8457d48f7e",
+      "decisions": 312,
+      "seed": 2026101471,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000172.npz",
+      "sha256": "3a8b391faa6c75f41549d7c0a6f35634caa724010e0ae655d8ab70a761a39f0d",
+      "decisions": 346,
+      "seed": 2026101472,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000173.npz",
+      "sha256": "1e2fd164ace9e2d7a8a5dbe403ce412028ca692fde926e337df2cf0753ab4d1e",
+      "decisions": 406,
+      "seed": 2026101473,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000174.npz",
+      "sha256": "f589f91e759d7112e866d224636f8a3b9408de672360b521f7e500adf523646b",
+      "decisions": 309,
+      "seed": 2026101474,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000175.npz",
+      "sha256": "99bbb4dc1ff02fa589f6c25e4e1f340d33878e2deab7bcfe3d377587d5741bdf",
+      "decisions": 336,
+      "seed": 2026101475,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000176.npz",
+      "sha256": "17f94de3df523857c7e047d4610d18bf3d77a7d8c5e144f9a5dfd406a8ed1ca4",
+      "decisions": 354,
+      "seed": 2026101476,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000177.npz",
+      "sha256": "a4d2736a5a9422506fb5da54bb052be596266c9ee781bf2c676d31abe30bd654",
+      "decisions": 365,
+      "seed": 2026101477,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000178.npz",
+      "sha256": "7df3e98cb4390ae1cf6fd22d08c63c01cd8713c845c5b73963ca1bc7ee659a03",
+      "decisions": 181,
+      "seed": 2026101478,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000179.npz",
+      "sha256": "282edf79eceae7eef085976a934318b398ecf2a3f1f31f80610ff54e58e027aa",
+      "decisions": 181,
+      "seed": 2026101479,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000180.npz",
+      "sha256": "3fef3b3956df82acaf9d587356084edbd8594a67c30e7119084578ed0ede0480",
+      "decisions": 277,
+      "seed": 2026101480,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000181.npz",
+      "sha256": "1a4e9e755793b2e930af7deedf4a72b57091895f12ff8cdc84436f6ef79ba51a",
+      "decisions": 215,
+      "seed": 2026101481,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000182.npz",
+      "sha256": "ae64febb864f7565692cc1abcf209cba2ddffb601b76b5a494b7b8ebc6328714",
+      "decisions": 366,
+      "seed": 2026101482,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000183.npz",
+      "sha256": "5bf053f87a5edf1734f01df7a788c18fb5d437417ac252fe2047b0d168fe907f",
+      "decisions": 168,
+      "seed": 2026101483,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000184.npz",
+      "sha256": "f03381564c1bc2b433f6230ac944239ba0f57da7ea2d6bf3e8550283f3bce4bf",
+      "decisions": 396,
+      "seed": 2026101484,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000185.npz",
+      "sha256": "89833ab6afc7e1dc6d5db53e02cb0147d74ae81d05827f8cf3114469957ba116",
+      "decisions": 273,
+      "seed": 2026101485,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000186.npz",
+      "sha256": "5d9cbcee42e46bac00db2957b11a11690f37c109ec14e1832b66304f729ea3b9",
+      "decisions": 338,
+      "seed": 2026101486,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000187.npz",
+      "sha256": "79589f4174471b81d505fd96f81eb56e1e3d7a2441b0b99b735d2606c7e117a6",
+      "decisions": 205,
+      "seed": 2026101487,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000188.npz",
+      "sha256": "1a14d2e8907f1ecaf6e6bf020b24f585bcc9e664a4067b0db1935c7cb53dc969",
+      "decisions": 279,
+      "seed": 2026101488,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000189.npz",
+      "sha256": "30c221119f836e7d2df478d7923e956c501331d9ba09b18966b4ddf852f43ad8",
+      "decisions": 201,
+      "seed": 2026101489,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000190.npz",
+      "sha256": "bb346ab5674304a7269e030c6b7a6b96d4e7fa864303580c424cc1113d77208b",
+      "decisions": 446,
+      "seed": 2026101490,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000191.npz",
+      "sha256": "c87cf0dd3923c4b8b639e9c80b7c386242f67c98521382885abf26d2c02a4f61",
+      "decisions": 361,
+      "seed": 2026101491,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000192.npz",
+      "sha256": "257a3c13fd8bec46a8d0c09263c4e709029523db2a66abc4f4891bb1bf04f8ff",
+      "decisions": 166,
+      "seed": 2026101492,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000193.npz",
+      "sha256": "f69bfef26f8b5f5acd69b61b5891a68e6505de2c107b791e989e596b5ea147da",
+      "decisions": 191,
+      "seed": 2026101493,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000194.npz",
+      "sha256": "3fef3fbd8bf19e06cd6928d9c86a695bef24907a030f268bf8b8a7e7f893e034",
+      "decisions": 363,
+      "seed": 2026101494,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000195.npz",
+      "sha256": "f894ed3bbd09f6a7c1e51f015f361c67bcafc20b1d865b8ec31a2e3a1ffa6f10",
+      "decisions": 166,
+      "seed": 2026101495,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "validation"
+    },
+    {
+      "file": "round_000196.npz",
+      "sha256": "c6231e4ba2cd06917e3595430976a39aa59bdce909b8facd8fbe662a5081d1c8",
+      "decisions": 411,
+      "seed": 2026101496,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000197.npz",
+      "sha256": "8840a3b4f2edc09573d5ac66c0ee392f3869e7e69be1556eb78cbaac58ab3e57",
+      "decisions": 469,
+      "seed": 2026101497,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000198.npz",
+      "sha256": "246da15e933f5ae531cd563c3f90c45534b18479dd4900a6dfb5753ee9509399",
+      "decisions": 181,
+      "seed": 2026101498,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000199.npz",
+      "sha256": "2d9328d93d238ce7951db874128ceed7539535c0d760678265ffa93b454877c7",
+      "decisions": 456,
+      "seed": 2026101499,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000200.npz",
+      "sha256": "fd4f429fbc9c9bf6ba97540074ef2cacbfa3c5d4ba399f912e90ce2f36496ec6",
+      "decisions": 375,
+      "seed": 2026101500,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000201.npz",
+      "sha256": "2c8b1191891adffa6f78edcf2a769cf27a29547f54862e328de56e21e625cdb6",
+      "decisions": 313,
+      "seed": 2026101501,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000202.npz",
+      "sha256": "dc3eeb8aaa82a50cbd942ec2ec922c0b10601d076d6e7b7476c53b7883a0aa4a",
+      "decisions": 241,
+      "seed": 2026101502,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000203.npz",
+      "sha256": "3eba34c178111cab114c4c964675093f5f32e3fb0ce36f831db3d880bc33fa48",
+      "decisions": 333,
+      "seed": 2026101503,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000204.npz",
+      "sha256": "edf4f1d7834f1c2156550bd0abfc9428a3fe6d3118c3b7c0df936034dc2e32ef",
+      "decisions": 326,
+      "seed": 2026101504,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000205.npz",
+      "sha256": "ffad2f888e9de2ece18ec2f18ae074d4b81b891f16e2173bfde640b96fe81039",
+      "decisions": 191,
+      "seed": 2026101505,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000206.npz",
+      "sha256": "e3c18979b81f24a2c78e91bf82786923272859233ceeb821f068154764289bc2",
+      "decisions": 370,
+      "seed": 2026101506,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000207.npz",
+      "sha256": "88163ecbdbdd5387913918d411945b2828a669af25de742900d6933ffef03383",
+      "decisions": 500,
+      "seed": 2026101507,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000208.npz",
+      "sha256": "4b8523a03d9bc4196435fb51252c2f5317fe8ae3ad1a80602d373fbdb732201f",
+      "decisions": 371,
+      "seed": 2026101508,
+      "opponent": "TYG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000209.npz",
+      "sha256": "5e3adb47a0d978dbe6f2618b29e170528ce1e0f94ca18034f13c39318b63ff2e",
+      "decisions": 272,
+      "seed": 2026101509,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000210.npz",
+      "sha256": "c5274b9f9c9e268b4c90fd2872f8d26370336c4994366dfadb8a6022d9206876",
+      "decisions": 311,
+      "seed": 2026101510,
+      "opponent": "FRC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000211.npz",
+      "sha256": "31de0093d55a52cacefeac714aefe6e0e07c0941ce4aeadf1e46582532944b66",
+      "decisions": 191,
+      "seed": 2026101511,
+      "opponent": "OMG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000212.npz",
+      "sha256": "a8270d7408b8bf9df48a0964b80cecec40640e8b4494dd17cfb1ad6cecfe5960",
+      "decisions": 307,
+      "seed": 2026101512,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000213.npz",
+      "sha256": "4cedfcabae21c9a53608a6bf4f48dc424eafd7142d28422d944c318f80976659",
+      "decisions": 191,
+      "seed": 2026101513,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000214.npz",
+      "sha256": "977766d9bb2d1504d74108e3c06928f38c6a28d51a37a41f89e4a36eaedcd1bc",
+      "decisions": 246,
+      "seed": 2026101514,
+      "opponent": "GC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000215.npz",
+      "sha256": "13cab71f9c08a548fa9e8836cc72d33a6cb007e0f19205e4ca094d735cfef0dd",
+      "decisions": 351,
+      "seed": 2026101515,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000216.npz",
+      "sha256": "3a39f36a088868c00849fd2b6ed46ca88bb483f5552f3e95795b6fb6144a57aa",
+      "decisions": 165,
+      "seed": 2026101516,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000217.npz",
+      "sha256": "85d8a29535aff8b3877aae3af7b2d495feee6398cfc1acbc246aa799746ad1fc",
+      "decisions": 191,
+      "seed": 2026101517,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000218.npz",
+      "sha256": "b3f879758f195878a8086756e5a39f67f5522cdb561efe502e96eaf81be555cf",
+      "decisions": 171,
+      "seed": 2026101518,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000219.npz",
+      "sha256": "85814adb5fffbd3e5e5ed119953b1014e1496cb93ef109991bd67e11cf69dd05",
+      "decisions": 333,
+      "seed": 2026101519,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000220.npz",
+      "sha256": "2de312c5f400ce9372949f5dca482ee535298a16614c5d3b2cd1e6f493581ffd",
+      "decisions": 426,
+      "seed": 2026101520,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000221.npz",
+      "sha256": "7d51eaf727988d4c9e6a24fe14c75bc772a18632d19a1fc09f8389ec0a849625",
+      "decisions": 166,
+      "seed": 2026101521,
+      "opponent": "FNC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000222.npz",
+      "sha256": "637cdc10302b7d6ff4853b90857d6c0b14f91e0830960b66c1cc53c5fdb27e22",
+      "decisions": 241,
+      "seed": 2026101522,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000223.npz",
+      "sha256": "05286c684df8fa1a1c2a127d04305bbae6383d9ab4796c5e6caaa7551a5d2332",
+      "decisions": 301,
+      "seed": 2026101523,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000224.npz",
+      "sha256": "7067ad213f324eb21be140aee049b0cf4e5f23b9c200dbd80706d35e4a4e40fa",
+      "decisions": 181,
+      "seed": 2026101524,
+      "opponent": "TYG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000225.npz",
+      "sha256": "e489d24ad44530c05e0f1c3fba45f865f86e66c77e438496368c56ed5c89635c",
+      "decisions": 191,
+      "seed": 2026101525,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000226.npz",
+      "sha256": "f433de2c70da36ad7211e3ca6b12b7bae79525cb2f8d85cfcc6e68ebfdf5e373",
+      "decisions": 348,
+      "seed": 2026101526,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000227.npz",
+      "sha256": "f7a2c7f2d8d51a05bae543dbc57416f141296ee687f00e055b16fa6241eac0d5",
+      "decisions": 191,
+      "seed": 2026101527,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000228.npz",
+      "sha256": "00474b4a58677b6001ba3e2f5c3029f0a31357caf6120cbdebae6a512f174991",
+      "decisions": 166,
+      "seed": 2026101528,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000229.npz",
+      "sha256": "6e617739bd972404f01f46c80b37a95685024c03f306e05923ff76e0877aad68",
+      "decisions": 191,
+      "seed": 2026101529,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000230.npz",
+      "sha256": "1a6a1436582bd201fa720dcbc0a9fae6203f3eeff07be80b81f0bdad1688d968",
+      "decisions": 191,
+      "seed": 2026101530,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000231.npz",
+      "sha256": "de81fa789a2040ed782ba5d4e830029dabbe1bd791fd660907c3c00f5aca595d",
+      "decisions": 255,
+      "seed": 2026101531,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000232.npz",
+      "sha256": "43a892a76f89ede67c05bfc14c3b74f0fc1e1ab47327f8e8f465b043705d13dc",
+      "decisions": 191,
+      "seed": 2026101532,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000233.npz",
+      "sha256": "9d7acf2de51d26d0e6dc9c788fc7b75fc9291297c8ad7665a3216ffa2b668c0b",
+      "decisions": 191,
+      "seed": 2026101533,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000234.npz",
+      "sha256": "f2629b53d4a546cd293f53a50d95fd19678299b4a55dc12660e96fa32ef109a9",
+      "decisions": 416,
+      "seed": 2026101534,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000235.npz",
+      "sha256": "b4f1932b0b0e37586b4b736e6efea00b6fbb14e1290fc157c73be4e6a1970a3e",
+      "decisions": 371,
+      "seed": 2026101535,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000236.npz",
+      "sha256": "7b2aac0fa4413c9ea81b1290d9328360f71323693411ebc7212fc5cf88e195ee",
+      "decisions": 166,
+      "seed": 2026101536,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000237.npz",
+      "sha256": "24397772a4d4966383b0cd485fdecfad54ff531a383b097f778095a745f52cf7",
+      "decisions": 272,
+      "seed": 2026101537,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000238.npz",
+      "sha256": "ee73e95ec3ff9702756fcc0a86a3a16f32723fcec80d06c7dada92cc409a3b06",
+      "decisions": 340,
+      "seed": 2026101538,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000239.npz",
+      "sha256": "bfe58eb43328b9348eec1605d479e054878dab5daae140afb6353e97cd154779",
+      "decisions": 236,
+      "seed": 2026101539,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000240.npz",
+      "sha256": "2a633f7452123443c844222511655b6f0b9310ec90bdef9d9eccfad8ed72fb3b",
+      "decisions": 303,
+      "seed": 2026101540,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000241.npz",
+      "sha256": "009a77d19f9278f386c4125d1de30da433543c570fa87f1ac78cc272f3354b4e",
+      "decisions": 358,
+      "seed": 2026101541,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000242.npz",
+      "sha256": "3820a3fab8c06f390c45a328ea89c4bbeaf6eb1783c9889ed62f9b9d1c81e44c",
+      "decisions": 316,
+      "seed": 2026101542,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000243.npz",
+      "sha256": "dcdb31218922baaba25ab8a90bc8a42d41fac773672dac1dd55e30bd47ca739f",
+      "decisions": 378,
+      "seed": 2026101543,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000244.npz",
+      "sha256": "4d68d5a6a1fa80725359e91f61415da40b20481304bc6d74236b0ba19d5b2354",
+      "decisions": 191,
+      "seed": 2026101544,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000245.npz",
+      "sha256": "16bba5e435ba730065b843137e73e2de4949b2f228aef3d0631c4f36e523d604",
+      "decisions": 296,
+      "seed": 2026101545,
+      "opponent": "FRC",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000246.npz",
+      "sha256": "c06448cac49234cafc5d70d6de12dbcecd369672233665840411a3de4a32c329",
+      "decisions": 226,
+      "seed": 2026101546,
+      "opponent": "OMG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000247.npz",
+      "sha256": "559ab1c21a18a78a36994ad8d8050d2dbbb2f5ac6fa7586c63f1e1ea4c93f6fd",
+      "decisions": 191,
+      "seed": 2026101547,
+      "opponent": "FNC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000248.npz",
+      "sha256": "af529787e5997cf9ec73b34d3fe74967f182b159198082973c042ccdb2ef3492",
+      "decisions": 189,
+      "seed": 2026101548,
+      "opponent": "SPS",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000249.npz",
+      "sha256": "fe25df7cff04fc39fd660f2b0cfee23e5128a591bd55f5992d7f69ff68980576",
+      "decisions": 276,
+      "seed": 2026101549,
+      "opponent": "TYG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000250.npz",
+      "sha256": "72395a80efce05b3f496480be23d0e48034458be050da8d37b9db9d68c3a071f",
+      "decisions": 353,
+      "seed": 2026101550,
+      "opponent": "GC",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000251.npz",
+      "sha256": "4cd2fb3fa739ca8a51636c87488222533af2748326719d769484c068a203cadb",
+      "decisions": 366,
+      "seed": 2026101551,
+      "opponent": "GRG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000252.npz",
+      "sha256": "ff39e44559ef74b14691028f2b72282a77521a858e636701dd8dc66f676fc591",
+      "decisions": 176,
+      "seed": 2026101552,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000253.npz",
+      "sha256": "88c9288747e95ef077e9c9cf2d3a701959207cbbf33cb6f6aeab0df619e2422e",
+      "decisions": 191,
+      "seed": 2026101553,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000254.npz",
+      "sha256": "cd5d7c3119769c68168fae59aa18086a1c21dcfc7fb9dec6e735b5f326cf74cf",
+      "decisions": 191,
+      "seed": 2026101554,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000255.npz",
+      "sha256": "b91d7a2379052c1b57385796c4f7b339e70b96fafca5cbb927361edee40a22d0",
+      "decisions": 304,
+      "seed": 2026101555,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "validation"
+    },
+    {
+      "file": "round_000256.npz",
+      "sha256": "61d02b326bada93be4b7f0135306b66dfff3da146b450a8e3998438fec6f7de4",
+      "decisions": 250,
+      "seed": 2026101556,
+      "opponent": "SPS",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000257.npz",
+      "sha256": "4b45549f35eedb6957b451c1d3c9076fcfd2288556da2026ef7f664f675550de",
+      "decisions": 230,
+      "seed": 2026101557,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000258.npz",
+      "sha256": "30ee5d5a867d896b294f3df93a2c779e7425ffd76a30e7b3404ab0d0bfc46328",
+      "decisions": 348,
+      "seed": 2026101558,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000259.npz",
+      "sha256": "7f923296d905cd875f7532b45c728f70beb26c4a0e2b9b5564170b8e99bb571a",
+      "decisions": 166,
+      "seed": 2026101559,
+      "opponent": "GRG",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000260.npz",
+      "sha256": "3164b5850257275607daa98e84cf522159c2df33ab131a151f13513880772d84",
+      "decisions": 307,
+      "seed": 2026101560,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000261.npz",
+      "sha256": "a03952c22f9da9b9c558717e6bc190ed16b8202b131e6ca30b21b356dbd52fb9",
+      "decisions": 176,
+      "seed": 2026101561,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000262.npz",
+      "sha256": "95116025f5bf702c85d2c759e0d515d7c1304ab0c6f1669fb58f923ba56b7700",
+      "decisions": 259,
+      "seed": 2026101562,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000263.npz",
+      "sha256": "30b0c78257dbbf334d78f5a03557c733ee969b9ce5297db8dd82af11f35657d7",
+      "decisions": 191,
+      "seed": 2026101563,
+      "opponent": "GC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000264.npz",
+      "sha256": "287198da1244fcd54470edec3ab659d4dd230ca41f62d8877623decf0be5cadc",
+      "decisions": 431,
+      "seed": 2026101564,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000265.npz",
+      "sha256": "0a912e06ab1ef6cee0a63b20a9b7ea3fdf079c8af98e2dfc8b1726389c9bd484",
+      "decisions": 191,
+      "seed": 2026101565,
+      "opponent": "TYG",
+      "teacher_map": "A3",
+      "split": "validation"
+    },
+    {
+      "file": "round_000266.npz",
+      "sha256": "e859157336e0833c074a90ceef393f9a791d311262d662077c96c8c12488c684",
+      "decisions": 372,
+      "seed": 2026101566,
+      "opponent": "SPS",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000267.npz",
+      "sha256": "17fcad798280ceeb954c92adfa9b8c71718aa4994e0571443f5ab4d6f51dbf14",
+      "decisions": 191,
+      "seed": 2026101567,
+      "opponent": "GRG",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000268.npz",
+      "sha256": "56d9b413ec5cc378843625adafaacf6badb94c3926428cacc64d0dbac34968f4",
+      "decisions": 431,
+      "seed": 2026101568,
+      "opponent": "OMG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000269.npz",
+      "sha256": "5c60cffcd01c2cdd98ac2cad51c6346be8ef1cbfcfbb098526bb5675e0b96fb6",
+      "decisions": 181,
+      "seed": 2026101569,
+      "opponent": "FRC",
+      "teacher_map": "A1",
+      "split": "train"
+    },
+    {
+      "file": "round_000270.npz",
+      "sha256": "610cb87a5be0daac1373c5c451aa641d8dacda85452a805b9b0c16da5ecbdb78",
+      "decisions": 426,
+      "seed": 2026101570,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000271.npz",
+      "sha256": "9ff9df9b8778db5195af64923d642c17e156080e6e26df542138963c7bac8ce2",
+      "decisions": 338,
+      "seed": 2026101571,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000272.npz",
+      "sha256": "611728eb7d48c50c1bf5037e4ddf3e4b71f912f301018ea4c447c9f335a8e5d2",
+      "decisions": 391,
+      "seed": 2026101572,
+      "opponent": "FNC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000273.npz",
+      "sha256": "ba7de949ed4b153797775467aeb30612c018ede728ad739f233a6f027d25e80d",
+      "decisions": 369,
+      "seed": 2026101573,
+      "opponent": "FNC",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000274.npz",
+      "sha256": "58fe38cf0f52c308fa1d4ebaa7b3fbce637f8963df52bb50a6c166708cdfb730",
+      "decisions": 349,
+      "seed": 2026101574,
+      "opponent": "GRG",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000275.npz",
+      "sha256": "723023fa7fc1a4162f08a04cddeeb3e2cc8c6dd9a0add558e6ebe674a5dd0340",
+      "decisions": 366,
+      "seed": 2026101575,
+      "opponent": "TYG",
+      "teacher_map": "A4",
+      "split": "validation"
+    },
+    {
+      "file": "round_000276.npz",
+      "sha256": "5451461a94c0f79507c3b0718e9c978a1b9d995b86800036271d8c06d262fca0",
+      "decisions": 191,
+      "seed": 2026101576,
+      "opponent": "FRC",
+      "teacher_map": "A3",
+      "split": "train"
+    },
+    {
+      "file": "round_000277.npz",
+      "sha256": "3df0549ef338e155f509b4738d200cccf428ad235f45a89a8cb46383ec91f02d",
+      "decisions": 375,
+      "seed": 2026101577,
+      "opponent": "OMG",
+      "teacher_map": "A2",
+      "split": "train"
+    },
+    {
+      "file": "round_000278.npz",
+      "sha256": "229ddfda52b75b9a857573e3388ee28380b8d79e65339a526210aec28b71d3bf",
+      "decisions": 395,
+      "seed": 2026101578,
+      "opponent": "GC",
+      "teacher_map": "A4",
+      "split": "train"
+    },
+    {
+      "file": "round_000279.npz",
+      "sha256": "e34e672b82e18e79cd0031bf6aea955f870cbe1a52f93e389725b109fb1045b7",
+      "decisions": 249,
+      "seed": 2026101579,
+      "opponent": "SPS",
+      "teacher_map": "A4",
+      "split": "train"
+    }
+  ],
+  "config": {
+    "AI_ROOT": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3",
+    "DATASET_NAME": "attacker_preplant_concon_v1",
+    "COLLECTION_ROUNDS": 280,
+    "TEACHER_MAPS": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "OPPONENT_CODES": [
+      "FNC",
+      "FRC",
+      "TYG",
+      "OMG",
+      "SPS",
+      "GRG",
+      "GC"
+    ],
+    "FIXED_OPPONENT_AI": "default",
+    "SEED": 2026101300,
+    "VALIDATION_EVERY_ROUNDS": 5,
+    "MAX_SKIPPED_FRACTION": 0.05,
+    "TORCH_THREADS": 1,
+    "DATASET_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\data\\attacker_preplant_concon_v1",
+    "LOG_PATH": "D:\\git\\ai_dnn\\03.game\\ghost_champions_v3\\logs\\attacker_preplant_concon_v1"
+  },
+  "rounds": 280,
+  "decisions": 76737,
+  "skipped": 73,
+  "mode_counts": {
+    "MOVE": 48708,
+    "WATCH": 11205,
+    "MOVE_WATCH": 14491,
+    "ABILITY": 1287,
+    "PLANT": 1024,
+    "ULTIMATE": 22
+  },
+  "teacher_model_hashes": {
+    "A1": "74bc2c03c7bd877d0e5f8a7f3c694241095b7ddbbbea82c71e5709414a444ec7",
+    "A2": "cac2c207ff14bf6d012924d12c86af09af080e522a0d750badf965bd32956b1a",
+    "A3": "6115d8f7e69789900a8002a288940e7307aeac470d118e3ca6fb165df96ee870",
+    "A4": "55016d81b6f8e4d65733fd1ae4db4e1ac4282384d3ae47fca496b4eac5af3c9c"
+  },
+  "carrying_decisions": 16563,
+  "retrieval_decisions": 455,
+  "skipped_fraction": 0.0009503970837130581
+}

@@ -1,5 +1,7 @@
-"""Opt-in residual controller. Its defender factory remains exactly GC v1."""
+"""Learned attacker residual policy; defense is selected by the team factory."""
 import os
+from pathlib import Path
+import hashlib
 import numpy as np
 import torch
 from ..controller import GhostChampionsV2AttackerController
@@ -14,6 +16,8 @@ class LearnedAttackerController(GhostChampionsV2AttackerController):
         self.recorder=recorder
         self.mode=mode
         self.policy=policy
+        self.checkpoint_path = Path(checkpoint or os.environ["GC_V2_RL_CHECKPOINT"]).resolve() if policy is None and mode!="teacher" else (Path(checkpoint).resolve() if checkpoint else None)
+        self.checkpoint_sha256 = hashlib.sha256(self.checkpoint_path.read_bytes()).hexdigest() if self.checkpoint_path else None
         self.last_policy_action=None
         if policy is None and mode!="teacher":
             self.policy,_=ResidualPolicy.load(checkpoint or os.environ["GC_V2_RL_CHECKPOINT"])
@@ -75,5 +79,7 @@ class LearnedAttackerController(GhostChampionsV2AttackerController):
 
     def attacker_snapshot(self):
         snapshot=super().attacker_snapshot()
+        snapshot["runtime"] = dict(controller=type(self).__name__, mode="teacher" if self.policy is None else "learned",
+            checkpoint=str(self.checkpoint_path) if self.checkpoint_path else None, checkpoint_sha256=self.checkpoint_sha256)
         snapshot["residual_policy"]=dict(schema_version=OBSERVATION_SCHEMA["version"],action=self.last_policy_action)
         return snapshot

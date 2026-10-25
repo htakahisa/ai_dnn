@@ -38,6 +38,15 @@ class DefenderMacroTests(unittest.TestCase):
     def ready_history(self):
         self.analysis.previous_rounds = [dict(site=s, winner="A", contacts=dict(A=0, Mid=0, B=0)) for s in ("L", "R")*2]
 
+    def test_active_checkpoint_preserves_gc_inputs_after_tv4_capability_extension(self):
+        from ghost_champions_v2.defender_macro_v1.analysis import ACTIVE_MODEL
+        model, payload = load_model(ACTIVE_MODEL, self.scenario)
+        history = GCFeatureHistory(self.scenario)
+        self.assertEqual(history.fields, payload["schema"]["fields"])
+        features = history.encode(public_snapshot(self.allies[0], self.state, 1), [])
+        self.assertEqual(features.shape, (len(history.fields),))
+        self.assertTrue(np.isfinite(model.probabilities(features)).all())
+
     def test_hidden_enemy_trajectory_has_no_effect_on_inputs(self):
         enemy = unit("hidden", (8, 3), "A", False)
         self.state["chars"] += [enemy]

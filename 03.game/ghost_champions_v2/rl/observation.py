@@ -58,7 +58,8 @@ class ObservationEncoder:
         allies=sorted((c for c in state.get("chars",()) if c.team==char.team),key=lambda c:str(c.name))
         enemies=sorted((c for c in state.get("chars",()) if c.team!=char.team),key=lambda c:str(c.name))
         opponent=np.zeros(len(OPPONENTS),np.float32)
-        opponent[OPPONENTS.index(tactics.opponent)]=1
+        label=tactics.opponent if tactics.opponent in OPPONENTS else "unknown"
+        opponent[OPPONENTS.index(label)]=1
         observed=[tactics.observed_defenders_by_axis[a]/5 for a in ("A","Mid","B")]
         observed += [tactics.max_observed_defenders_by_axis[a]/5 for a in ("A","Mid","B")]
         spike=[planted,(tick-self.planted_at)/SPIKE_DETONATION_TICKS if planted else 0,

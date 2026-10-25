@@ -32,10 +32,13 @@ class AttackerTactics:
         self.config, self.stage = config, stage
         # Labels are observation metadata; they never select tactical settings.
         self.roster_labels = {}
-        for name in ("Touyama Gaming", "Omoko Gaming", "Furina Classic",
-                     "Fnatic2023", "Gorigons", "SUPES"):
+        for code, name in (("TYG", "Touyama Gaming"), ("OMG", "Omoko Gaming"),
+                           ("FRC", "Furina Classic"), ("FNC", "Fnatic2023"),
+                           ("GG", "Gorigons"), ("SPS", "SUPES")):
             preset = get_preset(name)
-            self.roster_labels[tuple(sorted(map(str, preset.players)))] = preset.short_name
+            # Checkpoint input slots are stable even when a UI abbreviation
+            # changes (for example, Gorigons is now displayed as GRG).
+            self.roster_labels[tuple(sorted(map(str, preset.players)))] = code
         # Validate the stage even before the first live decision.
         active_flags(config, stage)
         self.reset_round()
@@ -652,23 +655,31 @@ class AttackerTactics:
         enemies = self.enemies(char,state)
         in_los = [c for c in enemies if los(grid,pos(char),pos(c),state.get("smoke_cells",()),self.occupied(char,state))]
         scouting=self.opening_strategy=="DEFAULT" and not committed
+        if in_los:
+            nearest = min(in_los,key=lambda c:(max(abs(pos(char)[0]-pos(c)[0]),
+                abs(pos(char)[1]-pos(c)[1])),float(getattr(c,"hp",100)),str(c.name)))
+            facing = facing_towards(pos(char),pos(nearest))
+            reserve_survey = (getattr(char,"ability_name",None)=="RECON"
+                and scouting and settings["complete_site_survey"]
+                and self.tick < self.config["recon"]["scout_cast_tick"]
+                and math.dist(pos(char),self.scout_waypoint(char,state,allies)) > self.config["recon"]["waypoint_radius"])
+            if flags["early_recon"] and not reserve_survey:
+                cast = self.recon(char,state)
+                if cast:
+                    return cast[0], dict(cast[1], facing=facing)
+            flash_targets = [c for c in in_los if math.dist(pos(c),pos(char))
+                             <= self.config["entry"]["flash_before_contact_radius"]]
+            flash = self._flash(char,state,flash_targets) if flags["entry_discipline"] else None
+            if flash:
+                return flash[0], dict(flash[1], facing=facing)
+            return self.move_action(char,pos(char),pos(nearest))
+        # An observed, unobstructed engagement takes priority over travelling
+        # to a survey waypoint. Utility casts keep the gun on that opponent.
         if flags["early_recon"] and scouting and settings["complete_site_survey"]:
             cast=self.recon(char,state,scouting=True,
                 discipline=flags["entry_discipline"])
             if cast:
                 return cast
-        if in_los:
-            if flags["early_recon"]:
-                cast = self.recon(char,state)
-                if cast:
-                    return cast
-            flash_targets = [c for c in in_los if math.dist(pos(c),pos(char))
-                             <= self.config["entry"]["flash_before_contact_radius"]]
-            flash = self._flash(char,state,flash_targets) if flags["entry_discipline"] else None
-            if flash:
-                return flash
-            nearest = min(in_los,key=lambda c:(math.dist(pos(char),pos(c)),str(c.name)))
-            return self.move_action(char,pos(char),pos(nearest))
         near_entry=len(route(grid,pos(char),[target]))-1<=self.config["opening"]["utility_distance"]
         split_ready=self.split_progress.get(str(char.name),0)>0
         if flags["early_recon"] and (scouting or near_entry or split_ready):

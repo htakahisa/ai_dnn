@@ -53,4 +53,6 @@ class GhostChampionsV2AttackerController(GhostChampionsV1AttackerController):
         return result
 
     def attacker_snapshot(self):
-        return self.tactics.snapshot()
+        snapshot = self.tactics.snapshot()
+        snapshot["runtime"] = dict(controller=type(self).__name__, mode="rule", checkpoint=None)
+        return snapshot
