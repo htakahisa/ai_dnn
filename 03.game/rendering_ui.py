@@ -32,6 +32,9 @@ from game_core import (
 USER_SELECTION_DRAG_THRESHOLD_PIXELS = 5
 
 class RenderingUIMixin:
+    def _emit_network_user_action(self, action):
+        """Let network clients route user controls to their authoritative server."""
+        return False
     def _get_ace_effect_frames(self, effect):
         if not isinstance(effect, dict):
             return []
@@ -202,6 +205,9 @@ class RenderingUIMixin:
                 continue
             facing = self._facing_towards(char.pos, (r, c))
             if facing is not None:
+                if self._emit_network_user_action({"kind": "facing", "character": char.name,
+                                                   "direction": facing}):
+                    continue
                 ctrl.facings[char.name] = facing
                 if not getattr(char, "facing_forced_this_tick", False):
                     char.facing = facing
@@ -320,6 +326,11 @@ class RenderingUIMixin:
         # プラント可能な選択キャラクターにだけ表示されるPLANTボタン。
         plant_bounds = self._plant_button_bounds()
         if selected and plant_bounds and plant_bounds[0] <= event.x <= plant_bounds[2] and plant_bounds[1] <= event.y <= plant_bounds[3]:
+            enabled = not selected.is_planting
+            if self._emit_network_user_action({"kind": "plant", "character": selected.name,
+                                               "enabled": enabled}):
+                self.draw()
+                return
             selected.is_planting = not selected.is_planting
             selected.plant_timer = 0
             selected.is_collecting_orb = False
@@ -330,6 +341,11 @@ class RenderingUIMixin:
 
         orb_bounds = self._orb_button_bounds()
         if selected and orb_bounds and orb_bounds[0] <= event.x <= orb_bounds[2] and orb_bounds[1] <= event.y <= orb_bounds[3]:
+            enabled = not selected.is_collecting_orb
+            if self._emit_network_user_action({"kind": "collect", "character": selected.name,
+                                               "enabled": enabled}):
+                self.draw()
+                return
             selected.is_collecting_orb = not selected.is_collecting_orb
             if not selected.is_collecting_orb:
                 selected.orb_collect_timer = 0
@@ -426,6 +442,13 @@ class RenderingUIMixin:
             owner = next((ch for ch in self.chars if ch.name == owner_name and ch.is_alive), None)
             if (owner and owner.team == team and owner.ability_name == ability_name
                     and getattr(owner, "ability_seal_remaining", 0) <= 0 and self.grid[r, c] != 1):
+                if self._emit_network_user_action({
+                    "kind": "ability", "character": owner.name,
+                    "payload": {"ability": ability_name, "target": [r, c]},
+                }):
+                    self.ability_mode = None
+                    self.draw()
+                    return
                 if ability_name == "SMOKE" and owner.smoke_charges > 0:
                     cells = {(rr, cc) for rr in range(r-1, r+2) for cc in range(c-1, c+2)
                              if 0 <= rr < self.height and 0 <= cc < self.width and self.grid[rr, cc] != 1}
@@ -1044,6 +1067,25 @@ class RenderingUIMixin:
                     f"{getattr(self, 'defender_setup_ticks_remaining', 0)}"
                 ),
                 fill="#5e4a00",
+                font=("Arial", 12, "bold"),
+            )
+        else:
+            remaining_ticks = max(0, int(getattr(self, "round_timer", 0)))
+            urgent = remaining_ticks <= 30
+            self.canvas.create_rectangle(
+                self.map_offset_x + 8,
+                8,
+                self.map_offset_x + 230,
+                42,
+                fill="#fde2e2" if urgent else "#dceeff",
+                outline="#d64545" if urgent else "#3b78a6",
+                width=2,
+            )
+            self.canvas.create_text(
+                self.map_offset_x + 119,
+                25,
+                text=f"LIVE  {remaining_ticks}",
+                fill="#b42323" if urgent else "#174f78",
                 font=("Arial", 12, "bold"),
             )
 

@@ -146,8 +146,20 @@ from match_playback import MatchPlaybackMixin
 
 class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPlaybackMixin):
 
+    def _emit_network_sound_event(self, sound_config):
+        """Forward a sound cue to an attached network transport, if present."""
+        if not isinstance(sound_config, (list, tuple)) or len(sound_config) != 2:
+            return
+        callback = getattr(self, "network_sound_event_sink", None)
+        if callable(callback):
+            try:
+                callback(str(sound_config[0]), float(sound_config[1]))
+            except (TypeError, ValueError):
+                return
+
     def _play_spike_sound(self, sound_config):
         if self.headless:
+            self._emit_network_sound_event(sound_config)
             return
         sound = _get_ace_sound({"sound": sound_config})
         if sound is not None:
@@ -1169,6 +1181,8 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                     sound = _get_ace_sound(effect)
                     if sound is not None:
                         sound.play()
+                elif isinstance(effect, dict):
+                    self._emit_network_sound_event(effect.get("sound"))
                 return
 
         enemy_team = "D" if winning_team == "A" else "A"
@@ -1197,6 +1211,8 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                 sound = _get_ace_sound(effect)
                 if sound is not None:
                     sound.play()
+            elif isinstance(effect, dict):
+                self._emit_network_sound_event(effect.get("sound"))
             return
 
         # CLUTCH: 自チーム1人生存の状態からそのまま勝利
@@ -1294,15 +1310,21 @@ class BattleLogicMixin(PersonalAbilityEffectsMixin, CorneredOmokoMixin, MatchPla
                 self.clutch_watch[watch_team] = alive_members[0].name
 
     def _play_kill_sound(self, shooter):
-        """キル数(そのラウンド)に応じた効果音を再生する。学習(headless)中は鳴らさない。"""
-        if self.headless:
-            return
         enemy_total = sum(1 for c in self.chars if c.team != shooter.team)
         if enemy_total > 0 and shooter.round_kills >= enemy_total:
             effect = ACE_EFFECTS.get(getattr(shooter, "base_name", shooter.name))
-            # 専用ACE音はラウンド終了時に再生するため、通常のキル音と重ねない。
+            if self.headless and isinstance(effect, dict):
+                sound_config = effect.get("sound")
+                if isinstance(sound_config, (list, tuple)) and len(sound_config) == 2:
+                    # The round-end ACE handler emits its sound once the win is confirmed.
+                    return
             if _get_ace_sound(effect) is not None:
                 return
+        if self.headless:
+            index = min(max(1, int(shooter.round_kills)), len(KILL_SOUND_FILENAMES))
+            filename, volume = KILL_SOUND_FILENAMES[index - 1]
+            self._emit_network_sound_event((f"sound/{filename}", volume))
+            return
         sound = _get_kill_sound(shooter.round_kills)
         if sound is not None:
             sound.play()
