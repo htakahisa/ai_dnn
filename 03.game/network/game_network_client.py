@@ -20,12 +20,26 @@ except ImportError:  # pragma: no cover - direct script execution
 
 # Normal local-debug settings. Use 127.0.0.1 for two clients on one machine.
 SERVER_HOST = "127.0.0.1"
-SERVER_PORT = 8765
+SERVER_PORT = 7777
 REQUESTED_TEAM = "auto"
 
 
 def get_private_lan_ipv4() -> str | None:
-    """Return a local 192.168.x.x address when hostname lookup exposes one."""
+    """Return a local 192.168.x.x address using routes and hostname lookup."""
+    # A UDP connect selects the outbound interface without sending a packet.
+    # Hostname lookup alone often returns only loopback on Windows.
+    for destination in ("192.168.0.1", "8.8.8.8"):
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect((destination, 9))
+            candidate = probe.getsockname()[0]
+            parsed = ipaddress.IPv4Address(candidate)
+            if parsed in ipaddress.ip_network("192.168.0.0/16"):
+                return str(parsed)
+        except (OSError, ipaddress.AddressValueError):
+            pass
+        finally:
+            probe.close()
     try:
         addresses = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
     except OSError:

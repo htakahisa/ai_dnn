@@ -19,7 +19,7 @@ except ImportError:  # pragma: no cover - direct script execution
 
 # Change these named settings for another server host or local tick cadence.
 SERVER_HOST = "0.0.0.0"
-SERVER_PORT = 8765
+SERVER_PORT = 7777
 CLIENTS_PER_MATCH = 2
 READ_TIMEOUT_SECONDS = 120
 TICK_INTERVAL_SECONDS = 1.0
