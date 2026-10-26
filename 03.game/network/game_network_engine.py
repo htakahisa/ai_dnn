@@ -56,12 +56,18 @@ class NetworkGameAdapter:
             defender_team_name="Defenders",
         )
         self._pending_sound_events = []
+        self._pending_visual_events = []
+        self._last_visual_banner = None
         self._sound_event_sequence = 0
         self._attach_sound_event_sink()
         self.perception = IQPerceptionEngine()
 
     def _attach_sound_event_sink(self):
         self.game.network_sound_event_sink = self._queue_sound_event
+        self.game.network_visual_event_sink = self._queue_visual_event
+
+    def _queue_visual_event(self, event: dict) -> None:
+        self._pending_visual_events.append(dict(event))
 
     def _queue_sound_event(self, filename: str, volume: float) -> None:
         self._sound_event_sequence += 1
@@ -74,6 +80,7 @@ class NetworkGameAdapter:
     def initial_observations(self) -> dict[str, dict]:
         observations = {team: self.observation(team) for team in ("A", "D")}
         self._pending_sound_events.clear()
+        self._pending_visual_events.clear()
         return observations
 
     def configure_rosters(self, selections: dict[str, dict]) -> dict:
@@ -98,6 +105,9 @@ class NetworkGameAdapter:
             defender_team_name=selection_d.get("team_name") or "Team D",
         )
         self._attach_sound_event_sink()
+        self._last_visual_banner = None
+        self._pending_visual_events.clear()
+        self._pending_sound_events.clear()
         self.perception.clear_cache()
         return {
             "observations": self.initial_observations(),
@@ -150,7 +160,25 @@ class NetworkGameAdapter:
     def advance_match(self) -> dict[str, dict]:
         if self.game.match_over:
             return self.initial_observations()
+        before_omoko = {
+            id(char): bool(getattr(char, "omoko_cornered_triggered", False))
+            for char in self.game.chars
+        }
         self.game.step_tick()
+        from omoko_v1.ov1_ability_cornered_omoko import (
+            OMOKO_CORNERED_NAME,
+        )
+        for char in self.game.chars:
+            if (char.name == "おもこ"
+                    and not before_omoko.get(id(char), False)
+                    and bool(getattr(char, "omoko_cornered_triggered", False))):
+                self.game._queue_personal_ability_effect(char, OMOKO_CORNERED_NAME)
+        banner = getattr(self.game, "special_round_banner", None)
+        signature = (self.game.current_round, banner.get("type"), banner.get("name")) if banner else None
+        if banner and signature != self._last_visual_banner:
+            self._queue_visual_event({key: value for key, value in banner.items()
+                                      if key in {"type", "name", "base_name", "effect"}})
+        self._last_visual_banner = signature
         return self.initial_observations()
 
     def _controller_for_identity(self, identity: str):
@@ -216,6 +244,7 @@ class NetworkGameAdapter:
             "role": role,
             "grid": [[int(cell) for cell in row] for row in game.grid],
             "sound_events": [dict(event) for event in self._pending_sound_events],
+            "visual_events": [dict(event) for event in self._pending_visual_events],
             "available_orbs": [
                 [int(row), int(col)] for row, col in sorted(game.available_orbs)
             ],

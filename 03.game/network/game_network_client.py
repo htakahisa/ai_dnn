@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
+import socket
 from typing import Any
 
 try:  # Support both package imports and scripts using this directory directly.
@@ -20,6 +22,23 @@ except ImportError:  # pragma: no cover - direct script execution
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 8765
 REQUESTED_TEAM = "auto"
+
+
+def get_private_lan_ipv4() -> str | None:
+    """Return a local 192.168.x.x address when hostname lookup exposes one."""
+    try:
+        addresses = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
+    except OSError:
+        return None
+    for address in addresses:
+        candidate = address[4][0]
+        try:
+            parsed = ipaddress.IPv4Address(candidate)
+        except ipaddress.AddressValueError:
+            continue
+        if parsed in ipaddress.ip_network("192.168.0.0/16"):
+            return str(parsed)
+    return None
 
 
 class NetworkMatchClient:

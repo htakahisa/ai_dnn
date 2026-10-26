@@ -6,6 +6,7 @@ import asyncio
 import random
 import threading
 import queue
+import time
 import tkinter as tk
 from tkinter import ttk
 import sys
@@ -31,9 +32,15 @@ except ImportError:  # pragma: no cover
     from game_network_selection_ui import NetworkRosterSelectionWindow
 
 try:
-    from .game_network_client import NetworkMatchClient, SERVER_HOST, SERVER_PORT, REQUESTED_TEAM
+    from .game_network_client import (
+        NetworkMatchClient, SERVER_HOST, SERVER_PORT, REQUESTED_TEAM,
+        get_private_lan_ipv4,
+    )
 except ImportError:  # pragma: no cover
-    from game_network_client import NetworkMatchClient, SERVER_HOST, SERVER_PORT, REQUESTED_TEAM
+    from game_network_client import (
+        NetworkMatchClient, SERVER_HOST, SERVER_PORT, REQUESTED_TEAM,
+        get_private_lan_ipv4,
+    )
 
 POLL_INTERVAL_MS = 40
 
@@ -222,10 +229,34 @@ class NetworkClientBattle(VisualFPSBattle):
                 self.network_status.set("Network: " + str(message.get("message", kind)))
         if changed:
             self.draw()
+        banner = getattr(self, "_network_effect_banner", None)
+        if banner is not None:
+            elapsed = int((time.monotonic() - banner["started_at"]) * 1000)
+            if elapsed >= banner["duration_ms"]:
+                self._network_effect_banner = None
+                self.special_round_banner = None
+                self.personal_ability_effect = None
+                self.draw()
+            else:
+                banner["value"]["animation_elapsed_ms"] = elapsed
+                self.draw()
         self.root.after(POLL_INTERVAL_MS, self._poll_network)
 
     def _apply_observation(self, observation):
         self._play_network_sound_events(observation.get("sound_events", []))
+        for event in observation.get("visual_events", []):
+            effect = event.get("effect") if isinstance(event.get("effect"), dict) else {}
+            try:
+                duration_ms = max(1, int(effect.get("duration_ms", 2000)))
+            except (TypeError, ValueError):
+                duration_ms = 2000
+            banner = {**event, "animation_elapsed_ms": 0}
+            self._network_effect_banner = {
+                "value": banner, "started_at": time.monotonic(),
+                "duration_ms": duration_ms,
+            }
+            self.special_round_banner = banner if event.get("type") == "ACE" else None
+            self.personal_ability_effect = banner if event.get("type") == "ABILITY" else None
         by_name = {str(char.name): char for char in self._network_all_characters}
         visible = []
         for item in observation.get("characters", []):
@@ -351,7 +382,7 @@ if __name__ == "__main__":
 
     selector = NetworkRosterSelectionWindow(
         on_confirm=start_network_match,
-        default_host=SERVER_HOST,
+        default_host=get_private_lan_ipv4() or SERVER_HOST,
         default_port=SERVER_PORT,
         default_team=REQUESTED_TEAM,
     )

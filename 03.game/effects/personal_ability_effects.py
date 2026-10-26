@@ -26,7 +26,7 @@ def effect_duration_ms(effect):
 class PersonalAbilityEffectsMixin:
     def _queue_personal_ability_effect(self, char, ability_name):
         """各能力の発動境界から呼ぶ共通入口。未設定・高速処理では表示しない。"""
-        if self.headless or getattr(self, "fast_forward_mode", None):
+        if getattr(self, "fast_forward_mode", None):
             return
         settings = load_personal_ability_effects()
         character_settings = settings.get(getattr(char, "base_name", char.name), {})
@@ -34,6 +34,17 @@ class PersonalAbilityEffectsMixin:
             return
         effect = character_settings.get(ability_name)
         if not isinstance(effect, dict) or effect_duration_ms(effect) == 0:
+            return
+        if self.headless:
+            visual_sink = getattr(self, "network_visual_event_sink", None)
+            if callable(visual_sink):
+                visual_sink({
+                    "type": "ABILITY", "name": str(char.name),
+                    "ability_name": ability_name, "effect": effect,
+                })
+                sound_sink = getattr(self, "_emit_network_sound_event", None)
+                if callable(sound_sink):
+                    sound_sink(effect.get("sound"))
             return
         banner = {"type": "ABILITY", "name": char.name, "ability_name": ability_name,
                   "effect": effect, "animation_elapsed_ms": 0, "sound_started": False}
