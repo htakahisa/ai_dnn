@@ -23,13 +23,18 @@ if str(GAME_ROOT) not in sys.path:
 from run_game import VisualFPSBattle, _build_team_ai
 from map_data import NEW_MAZE_STR
 from controllers import UserInputController
-from game_core import Character, FACING_VECTORS
+from game_core import Character, COMBO_BANNER_HEIGHT, FACING_VECTORS
 from character_stats import all_names
 from battle_logic import _ensure_mixer_ready, pygame as pygame_audio
 try:
     from .game_network_selection_ui import NetworkRosterSelectionWindow
 except ImportError:  # pragma: no cover
     from game_network_selection_ui import NetworkRosterSelectionWindow
+
+try:
+    from .game_network_controller import network_character_id
+except ImportError:  # pragma: no cover
+    from game_network_controller import network_character_id
 
 try:
     from .game_network_client import (
@@ -125,8 +130,40 @@ class NetworkClientBattle(VisualFPSBattle):
 
     def is_visible_to_team(self, character, team):
         observation = self.network_observation
-        return bool(observation and any(item.get("name") == str(character.name)
+        identity = getattr(character, "network_id", None)
+        if identity is None:
+            identity = network_character_id(team, str(character.name))
+        return bool(observation and any(item.get("id") == identity
                                         for item in observation.get("characters", [])))
+
+    def _network_character_id_for_name(self, name):
+        role = self._current_network_role()
+        value = str(name)
+        if value.startswith(("A:", "D:")):
+            return value
+        for char in self.chars:
+            if (char.team == role
+                    and (str(char.name) == value
+                         or str(getattr(char, "network_raw_name", "")) == value)):
+                raw_name = getattr(char, "network_raw_name", str(char.name))
+                return network_character_id(role, raw_name)
+        return network_character_id(role, value)
+
+    def _encode_network_action(self, action):
+        encoded = dict(action)
+        encoded["character"] = self._network_character_id_for_name(action["character"])
+        payload = encoded.get("payload")
+        if isinstance(payload, dict) and "target_name" in payload:
+            payload = dict(payload)
+            target_name = str(payload["target_name"])
+            payload["target_name"] = next(
+                (getattr(char, "network_raw_name", str(char.name))
+                 for char in self.chars
+                 if char.team == self._current_network_role() and str(char.name) == target_name),
+                target_name,
+            )
+            encoded["payload"] = payload
+        return encoded
 
     def _network_thread(self):
         asyncio.run(self._network_loop())
@@ -148,7 +185,15 @@ class NetworkClientBattle(VisualFPSBattle):
     def _emit_network_user_action(self, action):
         if not self.network_ready or self.network_loop is None:
             return True
-        asyncio.run_coroutine_threadsafe(self.network_client.send_actions([action]), self.network_loop)
+        encoded = self._encode_network_action(action)
+        asyncio.run_coroutine_threadsafe(self.network_client.send_actions([encoded]), self.network_loop)
+        return True
+
+    def _emit_network_user_actions(self, actions):
+        if not actions or not self.network_ready or self.network_loop is None:
+            return True
+        encoded = [self._encode_network_action(action) for action in actions]
+        asyncio.run_coroutine_threadsafe(self.network_client.send_actions(encoded), self.network_loop)
         return True
 
     def execute_ai_ability(self, owner, ability_action, *, during_battle=False):
@@ -164,18 +209,54 @@ class NetworkClientBattle(VisualFPSBattle):
         return self._emit_network_user_action({"kind": "ultimate", "character": str(owner.name), "payload": payload})
 
     def on_canvas_click(self, event):
+        row = int((event.y - COMBO_BANNER_HEIGHT) // self.cell_size)
+        column = int((event.x - self.map_offset_x) // self.cell_size)
+        clicked_target = None
+        if (0 <= row < self.height and 0 <= column < self.width
+                and self.grid[row, column] != 1):
+            clicked_target = (row, column)
+
         before = {}
         for controller, role in self.get_user_controllers():
             before.update(controller.targets)
         super().on_canvas_click(event)
         after = {}
+        group_move_names = []
         for controller, role in self.get_user_controllers():
+            selected_names = [name for name in controller.selected_chars
+                              if any(char.name == name and char.team == role and char.is_alive
+                                     for char in self.chars)]
+            group_changed = any(
+                name in controller.targets and before.get(name) != controller.targets[name]
+                for name in selected_names
+            )
+            if clicked_target is not None and len(selected_names) > 1 and group_changed:
+                character_by_name = {str(char.name): char for char in self.chars}
+                selected_names.sort(
+                    key=lambda name: (
+                        controller.shortest_path_distance(
+                            character_by_name[name].pos, clicked_target, self.grid,
+                        ),
+                        (int(character_by_name[name].pos[0]) - clicked_target[0]) ** 2
+                        + (int(character_by_name[name].pos[1]) - clicked_target[1]) ** 2,
+                        name,
+                    )
+                )
+                for name in selected_names:
+                    controller.targets[name] = clicked_target
+                group_move_names.extend(selected_names)
             after.update(controller.targets)
-        for name, target in after.items():
-            if before.get(name) != target:
-                self._emit_network_user_action({"kind": "move", "character": name, "target": list(target)})
-        for name in before.keys() - after.keys():
-            self._emit_network_user_action({"kind": "hold", "character": name})
+        ordered_names = list(dict.fromkeys(group_move_names + list(after)))
+        actions = [
+            {"kind": "move", "character": name, "target": list(after[name])}
+            for name in ordered_names if name in after
+            if name in group_move_names or before.get(name) != after[name]
+        ]
+        actions.extend(
+            {"kind": "hold", "character": name}
+            for name in before.keys() - after.keys()
+        )
+        self._emit_network_user_actions(actions)
 
     def on_canvas_right_click(self, event):
         role = self._current_network_role()
@@ -257,20 +338,36 @@ class NetworkClientBattle(VisualFPSBattle):
             }
             self.special_round_banner = banner if event.get("type") == "ACE" else None
             self.personal_ability_effect = banner if event.get("type") == "ABILITY" else None
-        by_name = {str(char.name): char for char in self._network_all_characters}
+        own_names = set(map(str, self.selection["roster"]))
+        other_owner = "D" if self.network_team == "A" else "A"
+        by_owner_name = {}
+        for char in self._network_all_characters:
+            raw_name = str(getattr(char, "network_raw_name", char.name))
+            owner = getattr(char, "network_owner", None)
+            if owner is None:
+                owner = self.network_team if raw_name in own_names else other_owner
+                char.network_owner = owner
+                char.network_raw_name = raw_name
+            by_owner_name[(owner, raw_name)] = char
         visible = []
         for item in observation.get("characters", []):
-            char = by_name.get(item["name"])
+            raw_name = str(item["name"])
+            owner = str(item.get("owner", self.network_team))
+            char = by_owner_name.get((owner, raw_name))
             if char is None:
                 team = item["team"]
                 char = Character(
-                    item["name"], team, item["pos"], "white",
+                    raw_name, team, item["pos"], "white",
                     "#c0392b" if team == "A" else "#27ae60",
                     has_spike=bool(item.get("has_spike", False)),
                 )
                 self._network_all_characters.append(char)
-                by_name[item["name"]] = char
+                by_owner_name[(owner, raw_name)] = char
+            char.network_owner = owner
+            char.network_raw_name = raw_name
+            char.network_id = item.get("id", network_character_id(item["team"], raw_name))
             char.team = item["team"]
+            char.name = f"{item['team']} · {raw_name}"
             # Local placeholder characters may have been created on the
             # opposite side before the server assigned this client's role.
             char.bg_color = "#c0392b" if char.team == "A" else "#27ae60"

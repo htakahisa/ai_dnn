@@ -18,9 +18,9 @@ from run_game import VisualFPSBattle
 from team_ai import DualRoleTeamAI
 from game_core import FACING_VECTORS
 try:
-    from .game_network_controller import NetworkUserInputController
+    from .game_network_controller import NetworkUserInputController, network_character_id
 except ImportError:  # pragma: no cover - direct script execution
-    from game_network_controller import NetworkUserInputController
+    from game_network_controller import NetworkUserInputController, network_character_id
 
 NETWORK_MATCH_SEED = 20261025
 NETWORK_TICK_TIME_MS = 1000
@@ -55,6 +55,7 @@ class NetworkGameAdapter:
             attacker_team_name="Attackers",
             defender_team_name="Defenders",
         )
+        self._install_network_move_order()
         self._pending_sound_events = []
         self._pending_visual_events = []
         self._last_visual_banner = None
@@ -65,6 +66,32 @@ class NetworkGameAdapter:
     def _attach_sound_event_sink(self):
         self.game.network_sound_event_sink = self._queue_sound_event
         self.game.network_visual_event_sink = self._queue_visual_event
+
+    def _install_network_move_order(self):
+        """Apply selected leader-to-follower order only inside network matches."""
+        game = self.game
+        original_move_order = game._move_order
+
+        def network_move_order():
+            for controller in (game.attacker_controller, game.defender_controller):
+                get_order = getattr(controller, "follow_order", None)
+                order = get_order() if callable(get_order) else []
+                if not order:
+                    continue
+                by_id = {
+                    network_character_id(char.team, str(char.name)): char
+                    for char in game.chars if char.is_alive
+                }
+                group = [by_id[identity] for identity in order if identity in by_id]
+                if len(group) < 2:
+                    continue
+                group_names = {network_character_id(char.team, str(char.name)) for char in group}
+                remaining = [char for char in original_move_order()
+                             if network_character_id(char.team, str(char.name)) not in group_names]
+                return group + remaining
+            return original_move_order()
+
+        game._move_order = network_move_order
 
     def _queue_visual_event(self, event: dict) -> None:
         self._pending_visual_events.append(dict(event))
@@ -104,6 +131,7 @@ class NetworkGameAdapter:
             attacker_team_name=selection_a.get("team_name") or "Team A",
             defender_team_name=selection_d.get("team_name") or "Team D",
         )
+        self._install_network_move_order()
         self._attach_sound_event_sink()
         self._last_visual_banner = None
         self._pending_visual_events.clear()
@@ -123,7 +151,7 @@ class NetworkGameAdapter:
                             if action["kind"] in {"move", "hold"}]
         role_controller.submit_actions(movement_actions, self.game.chars, self.game.grid)
         role = self._role_for_identity(identity)
-        own_chars = {str(char.name): char for char in self.game.chars
+        own_chars = {network_character_id(char.team, str(char.name)): char for char in self.game.chars
                      if char.team == role}
         for action in actions:
             kind = action["kind"]
@@ -164,6 +192,10 @@ class NetworkGameAdapter:
             id(char): bool(getattr(char, "omoko_cornered_triggered", False))
             for char in self.game.chars
         }
+        for controller in (self.game.attacker_controller, self.game.defender_controller):
+            prepare = getattr(controller, "prepare_follow_positions", None)
+            if callable(prepare):
+                prepare(self.game.chars)
         self.game.step_tick()
         from omoko_v1.ov1_ability_cornered_omoko import (
             OMOKO_CORNERED_NAME,
@@ -223,6 +255,7 @@ class NetworkGameAdapter:
         for real, proxy in zip(game.chars, perceived["chars"]):
             if real.team == role:
                 characters.append({
+                    "id": network_character_id(role, str(real.name)),
                     "name": str(real.name), "team": role, "owner": identity,
                     "pos": [int(real.pos[0]), int(real.pos[1])],
                     "hp": int(real.hp), "alive": bool(real.is_alive),
@@ -233,6 +266,7 @@ class NetworkGameAdapter:
                     and getattr(proxy, "position_known", False)
                     and min(map(int, proxy.pos)) >= 0):
                 characters.append({
+                    "id": network_character_id(real.team, str(real.name)),
                     "name": str(real.name), "team": real.team,
                     "owner": "D" if identity == "A" else "A",
                     "pos": [int(proxy.pos[0]), int(proxy.pos[1])],
@@ -273,8 +307,11 @@ class NetworkGameAdapter:
                 ),
             },
             "is_planted": bool(game.is_planted),
-            "spike_pos": _position(perceived.get("spike_pos")),
-            "planted_pos": _position(perceived.get("planted_pos")),
+            # Network UI markers must match the authoritative spike cell.
+            # Keep the IQ-blurred positions for AI/perception consumers above,
+            # but serialize exact objective coordinates for rendering.
+            "spike_pos": _position(game.spike_pos),
+            "planted_pos": _position(game.planted_pos),
             "target_plant_pos": _position(perceived.get("target_plant_pos")),
             "round_timer": int(perceived.get("round_timer", 0)),
             "detonate_timer": int(perceived.get("detonate_timer", 0)),
@@ -284,6 +321,7 @@ class NetworkGameAdapter:
 def _position(value):
     if value is None:
         return None
+    return [int(value[0]), int(value[1])]
 
 
 def _public_character_state(char):

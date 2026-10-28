@@ -116,18 +116,6 @@ class NetworkMatchServer:
                     "waiting_for": [side for side in ("A", "D") if side not in self.room.peers],
                 })
                 if len(self.room.peers) == CLIENTS_PER_MATCH:
-                    overlap = (set(self.room.peers["A"].selection["roster"])
-                               & set(self.room.peers["D"].selection["roster"]))
-                    if overlap:
-                        error = {
-                            "type": "error",
-                            "message": "Both teams selected overlapping characters. Choose a different preset or custom roster.",
-                        }
-                        for connected in tuple(self.room.peers.values()):
-                            await self._send(connected, error)
-                            connected.writer.close()
-                        self.room.peers.clear()
-                        return
                     match_configuration = None
                     try:
                         if self.on_match_ready is not None:
@@ -247,20 +235,38 @@ class NetworkMatchServer:
 
                 if result is not None:
                     for team, peer in tuple(self.room.peers.items()):
-                        await self._send(peer, {
-                            "type": "observation", "sequence": self.room.tick_sequence,
-                            "observation": result[team],
-                        })
-                        if match_over:
-                            await self._send(peer, {"type": "match_over", "sequence": self.room.tick_sequence})
+                        try:
+                            await self._send(peer, {
+                                "type": "observation", "sequence": self.room.tick_sequence,
+                                "observation": result[team],
+                            })
+                            if match_over:
+                                await self._send(peer, {
+                                    "type": "match_over", "sequence": self.room.tick_sequence,
+                                })
+                        except (ConnectionError, OSError) as exc:
+                            print(
+                                f"[SERVER][CLIENT_SEND_ERROR] team={team} "
+                                f"sequence={self.room.tick_sequence} {type(exc).__name__}: {exc}",
+                                flush=True,
+                            )
+                            peer.writer.close()
                 elif self.observe_match is not None:
                     try:
                         observations = self.observe_match()
                         for team, peer in tuple(self.room.peers.items()):
-                            await self._send(peer, {
-                                "type": "observation", "sequence": self.room.tick_sequence,
-                                "observation": observations[team],
-                            })
+                            try:
+                                await self._send(peer, {
+                                    "type": "observation", "sequence": self.room.tick_sequence,
+                                    "observation": observations[team],
+                                })
+                            except (ConnectionError, OSError) as exc:
+                                print(
+                                    f"[SERVER][CLIENT_SEND_ERROR] team={team} "
+                                    f"sequence={self.room.tick_sequence} {type(exc).__name__}: {exc}",
+                                    flush=True,
+                                )
+                                peer.writer.close()
                     except Exception as exc:
                         print(f"[SERVER][OBSERVATION_ERROR] {type(exc).__name__}: {exc}", flush=True)
                 if tick_failed:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-PROTOCOL_VERSION = 3
+PROTOCOL_VERSION = 4
 MAX_MESSAGE_BYTES = 64_000
 VALID_TEAMS = ("A", "D")
 VALID_ABILITIES = {"SMOKE", "FLASH", "RECON", "RAMP", "DANCE", "ASH"}
@@ -85,7 +85,7 @@ def validate_command(message: dict[str, Any], expected_sequence: int) -> dict[st
             raise ProtocolError("Each action must be an object")
         kind = action.get("kind")
         name = action.get("character")
-        if not isinstance(name, str) or not name or len(name) > 80:
+        if not isinstance(name, str) or not name or len(name) > 82:
             raise ProtocolError(f"{kind}.character must be a non-empty name")
         if kind in {"move", "facing", "plant", "collect", "hold"}:
             if kind == "move":
